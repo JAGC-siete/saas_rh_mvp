@@ -1,4 +1,5 @@
 require('dotenv').config();
+console.log('JWT_SECRET desde .env:', process.env.JWT_SECRET);
 const express = require('express');
 const axios = require('axios');
 const PDFDocument = require('pdfkit');
@@ -15,7 +16,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// === Funciones utilitarias ===
 function calcularISR(salarioBase) {
   const ingresoAnual = salarioBase * 12;
   const rentaNeta = ingresoAnual - 40000;
@@ -37,14 +37,16 @@ function authenticateToken(req, res, next) {
   });
 }
 
-// === Rutas ===
+const formatoLempiras = n => new Intl.NumberFormat('es-HN', {
+  style: 'currency',
+  currency: 'HNL',
+  minimumFractionDigits: 2
+}).format(n);
 
-// Prueba de vida
 app.get('/health', (req, res) => {
   res.status(200).send('Nomina OK');
 });
 
-// Login para obtener token
 app.post('/login', (req, res) => {
   const { usuario, password } = req.body;
   if (usuario === 'admin' && password === '1234') {
@@ -54,7 +56,6 @@ app.post('/login', (req, res) => {
   return res.status(401).json({ error: 'Credenciales inválidas' });
 });
 
-// Generar PDF de planilla
 app.post('/planilla', authenticateToken, async (req, res) => {
   const { periodo, quincena } = req.body;
   if (!/^\d{4}-\d{2}$/.test(periodo)) return res.status(400).json({ error: 'Periodo inválido (YYYY-MM)' });
@@ -69,25 +70,41 @@ app.post('/planilla', authenticateToken, async (req, res) => {
 
   try {
     const [empRes, asisRes] = await Promise.all([
-      axios.get('http://bases-de-datos:3000/employees'),
-      axios.get('http://bases-de-datos:3000/attendance')
+      axios.get('http://bases_de_datos:3000/employees'),
+      axios.get('http://bases_de_datos:3000/attendance')
     ]);
 
     const empleados = empRes.data;
     const asistencia = asisRes.data;
 
     const planilla = empleados.map(emp => {
-      const registros = asistencia.filter(r =>
-        r.employeeId === emp.id &&
-        r.date >= fechaInicio &&
-        r.date <= fechaFin &&
-        r.check_in && r.check_out
-      );
+      if (!emp.dni) {
+        console.log(`⚠️ Empleado sin DNI: ${emp.name}`);
+        return null;
+      }
+
+      const registros = asistencia.filter(r => {
+        if (!r.last5 || !r.check_in || !r.check_out || !r.date) return false;
+
+        const matchLast5 = r.last5.toString().trim() === emp.dni.slice(-5).trim();
+        const recordDate = new Date(r.date);
+        const startDate = new Date(fechaInicio);
+        const endDate = new Date(fechaFin);
+        const matchDate = recordDate >= startDate && recordDate <= endDate;
+
+        return matchLast5 && matchDate;
+      });
 
       const horas = registros.reduce((sum, r) => {
-        const [hIn, mIn] = r.check_in.split(':').map(Number);
-        const [hOut, mOut] = r.check_out.split(':').map(Number);
-        return sum + ((hOut * 60 + mOut) - (hIn * 60 + mIn)) / 60;
+        try {
+          const [hIn, mIn] = r.check_in.slice(0,5).split(':').map(Number);
+          const [hOut, mOut] = r.check_out.slice(0,5).split(':').map(Number);
+          const minutos = (hOut * 60 + mOut) - (hIn * 60 + mIn);
+          const horas = minutos / 60;
+          return horas > 0 ? sum + horas : sum;
+        } catch (err) {
+          return sum;
+        }
       }, 0);
 
       const dias = registros.length;
@@ -104,20 +121,18 @@ app.post('/planilla', authenticateToken, async (req, res) => {
       return {
         nombre: emp.name,
         cargo: emp.role || '',
-        salarioMensual: salarioBase.toFixed(2),
+        salarioMensual: formatoLempiras(salarioBase),
         dias,
-        salarioQuincenal: salarioQuincenal.toFixed(2),
-        ihss: ihss.toFixed(2),
-        rap: rap.toFixed(2),
-        isr: isr.toFixed(2),
-        deducciones: totalDeducciones.toFixed(2),
-        neto: pagoNeto.toFixed(2),
-        banco: emp.banco || '',
-        cuenta: emp.cuenta || ''
+        salarioQuincenal: formatoLempiras(salarioQuincenal),
+        ihss: formatoLempiras(ihss),
+        rap: formatoLempiras(rap),
+        isr: formatoLempiras(isr),
+        deducciones: formatoLempiras(totalDeducciones),
+        neto: formatoLempiras(pagoNeto),
+        banco: emp.bank || '',
+        cuenta: emp.account || ''
       };
-    });
-
-    // === PDF ===
+    }).filter(Boolean);
 
     const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 20 });
     let buffers = [];
@@ -171,7 +186,5 @@ app.post('/planilla', authenticateToken, async (req, res) => {
   }
 });
 
-// === Arrancar el servidor ===
 const PORT = process.env.PORT || 3002;
 app.listen(PORT, '0.0.0.0', () => console.log(`✅ Nómina corriendo en puerto ${PORT}`));
-
