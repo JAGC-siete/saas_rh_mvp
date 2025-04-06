@@ -1,0 +1,44 @@
+
+services:
+  postgres:
+    image: postgres:17
+    container_name: saas-proyecto-postgres-1
+    environment:
+      POSTGRES_DB: saas_db
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: secret
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./postgres-init:/docker-entrypoint-initdb.d
+      - postgres-data:/var/lib/postgresql/data
+
+  bases_de_datos:
+    build: ./bases_de_datos
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./bases_de_datos/.env
+    depends_on:
+      - postgres
+
+  asistencia:
+    build: ./asistencia
+    ports:
+      - "3003:3003"
+    env_file:
+      - ./asistencia/.env
+    depends_on:
+      - bases_de_datos
+
+  nomina:
+    build: ./nomina
+    ports:
+      - "3002:3002"
+    env_file:
+      - ./nomina/.env
+    depends_on:
+      - bases_de_datos
+
+volumes:
+  postgres-data:
