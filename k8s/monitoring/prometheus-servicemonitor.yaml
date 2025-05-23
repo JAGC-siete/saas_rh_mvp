@@ -1,0 +1,20 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: deployment-metrics
+  namespace: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: saas-hr
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics
+    metricRelabelings:
+    - sourceLabels: [__name__]
+      regex: 'deployment_.+'
+      action: keep
+  - port: health
+    interval: 10s
+    path: /health

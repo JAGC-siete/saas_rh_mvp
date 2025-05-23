@@ -1,0 +1,42 @@
+name: Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to rollback to (commit SHA)'
+        required: true
+
+env:
+  AWS_REGION: us-west-2
+  ECR_REPOSITORY_PREFIX: saas-rh
+
+jobs:
+  rollback:
+    name: Rollback Deployment
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+    
+    - name: Update ECS task definitions
+      run: |
+        # Update task definitions to use the specified version
+        for service in bases-de-datos asistencia nomina; do
+          aws ecs update-service \
+            --cluster saas-rh-cluster-prod \
+            --service $service \
+            --force-new-deployment \
+            --task-definition $service:${{ github.event.inputs.version }}
+        done
+    
+    - name: Wait for rollback to complete
+      run: |
+        aws ecs wait services-stable \
+          --cluster saas-rh-cluster-prod \
+          --services bases-de-datos asistencia nomina

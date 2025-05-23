@@ -1,0 +1,182 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: saas-staging-postgres-1
+    user: postgres
+    environment:
+      POSTGRES_DB: saas_db_staging
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres_staging_password_123}
+    ports:
+      - "127.0.0.1:5434:5432"  # Different port from production
+    volumes:
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
+      - postgres-staging-data:/var/lib/postgresql/data
+    networks:
+      - backend-staging
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d saas_db_staging"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'  # Lower resource limits for staging
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  redis:
+    image: redis:7-alpine
+    container_name: saas-staging-redis-1
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:-redis_staging_secret}", "--appendonly", "yes"]
+    user: redis
+    ports:
+      - "127.0.0.1:6380:6379"  # Different port from production
+    volumes:
+      - redis-staging-data:/data
+    networks:
+      - backend-staging
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+
+  bases_de_datos:
+    build: ./bases_de_datos
+    user: node
+    ports:
+      - "127.0.0.1:3010:3000"  # Different port from production
+    environment:
+      - NODE_ENV=staging
+      - DB_HOST=postgres
+      - DB_USER=admin
+      - DB_NAME=saas_db_staging
+      - REDIS_HOST=redis
+      - PORT=3000
+    networks:
+      - backend-staging
+      - frontend-staging
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
+  asistencia:
+    build: ./asistencia
+    user: node
+    ports:
+      - "127.0.0.1:3013:3003"  # Different port from production
+    environment:
+      - NODE_ENV=staging
+      - DB_HOST=postgres
+      - DB_USER=admin
+      - DB_NAME=saas_db_staging
+      - REDIS_HOST=redis
+      - PORT=3003
+    networks:
+      - frontend-staging
+      - backend-staging
+    depends_on:
+      - bases_de_datos
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
+  nomina:
+    build: ./nomina
+    user: node
+    ports:
+      - "127.0.0.1:3012:3002"  # Different port from production
+    environment:
+      - NODE_ENV=staging
+      - DB_HOST=postgres
+      - DB_USER=admin
+      - DB_NAME=saas_db_staging
+      - REDIS_HOST=redis
+      - PORT=3002
+    networks:
+      - frontend-staging
+      - backend-staging
+    depends_on:
+      - bases_de_datos
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
+networks:
+  frontend-staging:
+    driver: bridge
+  backend-staging:
+    driver: bridge
+    internal: true
+
+volumes:
+  postgres-staging-data:
+    driver: local
+  redis-staging-data:
+    driver: local
+
+secrets:
+  db_password_staging:
+    file: ./secrets/db_password_staging.txt

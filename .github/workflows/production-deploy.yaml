@@ -1,0 +1,104 @@
+name: Production Deployment
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Run SAST scan
+      uses: github/codeql-action/analyze@v2
+      with:
+        languages: javascript
+        
+    - name: Run container security scan
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        ignore-unfixed: true
+        format: 'table'
+        exit-code: '1'
+        severity: 'CRITICAL,HIGH'
+
+  build-and-push:
+    needs: security-scan
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+    
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+      
+    - name: Build and push images
+      run: |
+        # Extract version from tag
+        VERSION=${GITHUB_REF#refs/tags/v}
+        
+        # Build and push all services
+        for service in bases_de_datos asistencia nomina; do
+          docker build -t $ECR_REGISTRY/$service:$VERSION -t $ECR_REGISTRY/$service:latest ./$service
+          docker push $ECR_REGISTRY/$service:$VERSION
+          docker push $ECR_REGISTRY/$service:latest
+        done
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+        
+    - name: Update kubeconfig
+      run: aws eks update-kubeconfig --name saas-rh-production --region ${{ secrets.AWS_REGION }}
+      
+    - name: Deploy to production
+      run: |
+        # Apply production overlays
+        kubectl apply -k k8s/overlays/production
+        
+        # Wait for rollout completion
+        for deployment in bases-de-datos asistencia nomina; do
+          kubectl rollout status deployment/prod-$deployment -n default --timeout=5m
+        done
+        
+    - name: Verify deployment
+      run: |
+        # Run health checks
+        ./verify_fixes.sh
+        ./verify_backups.sh
+        
+  notify:
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+    - name: Notify deployment status
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        fields: repo,message,commit,author,action,eventName,ref,workflow
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

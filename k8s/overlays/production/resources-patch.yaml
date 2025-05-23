@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "*"
+spec:
+  replicas: 3
+  template:
+    spec:
+      containers:
+      - name: "*"
+        resources:
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        readinessProbe:
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        livenessProbe:
+          initialDelaySeconds: 60
+          periodSeconds: 15

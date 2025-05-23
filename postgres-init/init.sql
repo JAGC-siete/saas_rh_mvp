@@ -1,8 +1,6 @@
 -- init.sql
-CREATE TABLE IF NOT EXISTS employees (...);  -- sin depender de roles externos
-
 -- Crear tabla de empleados
-CREATE TABLE employees (
+CREATE TABLE IF NOT EXISTS employees (
     id UUID PRIMARY KEY,
     name TEXT NOT NULL,
     role TEXT,
@@ -16,17 +14,18 @@ CREATE TABLE employees (
 );
 
 -- Tabla para control diario de asistencia
-CREATE TABLE asistance (
-    id SERIAL PRIMARY KEY,
-    id_empleado UUID REFERENCES employees(id),
+CREATE TABLE IF NOT EXISTS attendance (
+    id_empleado UUID NOT NULL,
     date DATE NOT NULL,
     check_in TIME,
     check_out TIME,
-    justificacion TEXT
+    justificacion TEXT,
+    PRIMARY KEY (id_empleado, date),
+    FOREIGN KEY (id_empleado) REFERENCES employees(id)
 );
 
 -- Tabla de payroll (planilla)
-CREATE TABLE payroll (
+CREATE TABLE IF NOT EXISTS payroll (
     id SERIAL PRIMARY KEY,
     id_empleado UUID REFERENCES employees(id),
     periodo TEXT NOT NULL,

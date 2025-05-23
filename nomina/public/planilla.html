@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generar Planilla</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/main.css" />
+</head>
+<body>
+    <div class="container">
+        <div class="form-container fade-in">
+            <h2>Generar Planilla</h2>
+            <div id="userInfo" class="user-info fade-in"></div>
+            <div id="error" class="message error"></div>
+            
+            <form id="planillaForm">
+                <div class="input-group">
+                    <label for="periodo">Periodo (YYYY-MM):</label>
+                    <input type="month" id="periodo" required>
+                </div>
+                <div class="input-group">
+                    <label for="quincena">Quincena:</label>
+                    <select id="quincena" required>
+                        <option value="1">Primera Quincena</option>
+                        <option value="2">Segunda Quincena</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary">Generar PDF</button>
+            </form>
+            
+            <button onclick="cerrarSesion()" class="btn-secondary">Cerrar Sesión</button>
+        </div>
+    </div>
+
+    <script>
+        // Check authentication on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            const token = sessionStorage.getItem('token');
+            const userData = sessionStorage.getItem('userData');
+            
+            if (!token || !userData) {
+                window.location.href = '/index.html';
+                return;
+            }
+            
+            try {
+                const user = JSON.parse(userData);
+                document.getElementById('userInfo').innerHTML = `
+                    <p>Usuario: <strong>${user.nombre || 'N/A'}</strong></p>
+                    <p>Rol: <strong>${user.rol || 'N/A'}</strong></p>
+                `;
+            } catch (err) {
+                console.error('Error parsing user data:', err);
+                cerrarSesion();
+            }
+        });
+
+        document.getElementById('planillaForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = '';
+            errorDiv.style.display = 'none';
+
+            const token = sessionStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/index.html';
+                return;
+            }
+
+            const periodo = document.getElementById('periodo').value;
+            const quincena = document.getElementById('quincena').value;
+            
+            // Show loading state
+            const submitButton = e.target.querySelector('button[type="submit"]');
+            const originalText = submitButton.textContent;
+            submitButton.disabled = true;
+            submitButton.textContent = 'Generando...';
+
+            try {
+                const response = await fetch('/planilla', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ periodo, quincena })
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `planilla_${periodo}_q${quincena}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    a.remove();
+
+                    // Show success message
+                    errorDiv.textContent = '✅ Planilla generada exitosamente';
+                    errorDiv.className = 'message success';
+                    errorDiv.style.display = 'block';
+                } else {
+                    if (response.status === 401) {
+                        cerrarSesion();
+                        return;
+                    }
+                    const data = await response.json();
+                    errorDiv.textContent = data.error || '❌ Error generando la planilla';
+                    errorDiv.className = 'message error';
+                    errorDiv.style.display = 'block';
+                    errorDiv.style.display = 'block';
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Error de conexión';
+                errorDiv.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

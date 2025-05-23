@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- ../../base
+
+namePrefix: staging-
+
+patches:
+- path: resources-patch.yaml
+  target:
+    kind: Deployment
+    name: .*
+
+configMapGenerator:
+- name: app-config
+  literals:
+    - ENVIRONMENT=staging
+    - LOG_LEVEL=debug
+    - API_URL=https://staging-api.saas-rh.com
+
+secretGenerator:
+- name: db-credentials
+  files:
+    - db-password=../../../secrets/db_password.staging.txt
+  type: Opaque

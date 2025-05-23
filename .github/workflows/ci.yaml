@@ -1,0 +1,116 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+  ENVIRONMENT: ${{ github.ref == 'refs/heads/main' && 'staging' || 'development' }}
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Run dependency scan
+      run: npm audit
+      
+    - name: Run SAST
+      uses: github/codeql-action/analyze@v2
+      with:
+        languages: javascript
+
+  test:
+    needs: security-scan
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '18'
+        
+    - name: Install dependencies
+      run: |
+        npm ci
+        
+    - name: Run tests
+      run: npm test
+      
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+    
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+      
+    - name: Build and push images
+      run: |
+        # Build bases_de_datos
+        docker build -t $ECR_REGISTRY/bases-de-datos:${{ github.sha }} ./bases_de_datos
+        docker push $ECR_REGISTRY/bases-de-datos:${{ github.sha }}
+        
+        # Build asistencia
+        docker build -t $ECR_REGISTRY/asistencia:${{ github.sha }} ./asistencia
+        docker push $ECR_REGISTRY/asistencia:${{ github.sha }}
+        
+        # Build nomina
+        docker build -t $ECR_REGISTRY/nomina:${{ github.sha }} ./nomina
+        docker push $ECR_REGISTRY/nomina:${{ github.sha }}
+        
+  deploy-staging:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+        
+    - name: Update kubeconfig
+      run: aws eks update-kubeconfig --name saas-rh-staging --region ${{ secrets.AWS_REGION }}
+      
+    - name: Deploy to staging
+      run: |
+        # Update image tags in kustomization
+        cd k8s/overlays/staging
+        kustomize edit set image bases-de-datos=$ECR_REGISTRY/bases-de-datos:${{ github.sha }}
+        kustomize edit set image asistencia=$ECR_REGISTRY/asistencia:${{ github.sha }}
+        kustomize edit set image nomina=$ECR_REGISTRY/nomina:${{ github.sha }}
+        
+        # Apply staging overlays
+        kubectl apply -k .
+        
+        # Wait for rollout completion
+        for deployment in bases-de-datos asistencia nomina; do
+          kubectl rollout status deployment/staging-$deployment -n default --timeout=5m
+        done
+        
+    - name: Run integration tests
+      run: ./test_integration.sh
+      
+    - name: Verify deployment
+      run: |
+        ./verify_fixes.sh
+        ./security_check.sh

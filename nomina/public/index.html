@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Sistema de Nómina</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+  <div class="container">
+    <div class="form-container fade-in">
+      <h2>Iniciar Sesión</h2>
+      <div class="input-group">
+        <input id="usuario" placeholder="Usuario" required />
+        <input id="password" placeholder="Contraseña" type="password" required />
+        <button onclick="login()" class="btn-primary">Iniciar sesión</button>
+      </div>
+      <p id="status" class="message"></p>
+    </div>
+
+    <div id="planilla-form" class="form-container fade-in" style="display: none;">
+      <h2>Generar Planilla</h2>
+      <div class="input-group">
+        <input id="periodo" placeholder="Periodo (YYYY-MM)" required />
+        <select id="quincena">
+          <option value="1">Quincena 1</option>
+          <option value="2">Quincena 2</option>
+        </select>
+        <button onclick="generarPlanilla()" class="btn-primary">Generar PDF</button>
+      </div>
+      <p id="status"></p>
+    </div>
+  </div>
+  <script>
+    const BASE_URL = window.location.hostname === 'localhost' ? 'http://localhost:3002' : '';
+    
+    // Check if already authenticated
+    document.addEventListener('DOMContentLoaded', () => {
+      const token = sessionStorage.getItem('token');
+      if (token) {
+        window.location.href = '/planilla.html';
+      }
+    });
+  
+    async function login() {
+      const usuario = document.getElementById('usuario').value;
+      const password = document.getElementById('password').value;
+      const statusEl = document.getElementById('status');
+      
+      if (!usuario || !password) {
+        mostrarError('Por favor, complete todos los campos');
+        return;
+      }
+  
+      try {
+        const res = await fetch(`${BASE_URL}/login`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: JSON.stringify({ 
+            usuario: usuario.trim(), 
+            password: password 
+          })
+        });
+  
+        const data = await res.json();
+        if (res.ok && data.token) {
+          // Store user data securely
+          sessionStorage.setItem('token', data.token);
+          sessionStorage.setItem('userData', JSON.stringify({
+            nombre: data.nombre,
+            rol: data.rol,
+            permisos: data.permisos
+          }));
+          
+          // Redirect to planilla page
+          window.location.href = '/planilla.html';
+        } else {
+          mostrarError(data.error || 'Credenciales inválidas');
+        }
+      } catch (err) {
+        mostrarError('Error de conexión al servidor');
+        console.error('Login error:', err);
+      }
+    }
+    
+    function mostrarError(mensaje) {
+      const statusEl = document.getElementById('status');
+      statusEl.textContent = '❌ ' + mensaje;
+      statusEl.className = 'message error';
+  
+    function mostrarMensaje(mensaje, tipo = 'success') {
+      const statusEl = document.getElementById('status');
+      statusEl.textContent = mensaje;
+      statusEl.className = `message ${tipo}`;
+    }
+
+    // Add enter key support
+    document.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        const activeEl = document.activeElement;
+        if (activeEl.id === 'usuario') {
+          document.getElementById('password').focus();
+        } else if (activeEl.id === 'password') {
+          login();
+        }
+      }
+    });
+  </script>  
+</body>
+</html>

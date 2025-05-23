@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudwatch-agent-config
+  namespace: monitoring
+data:
+  cwagentconfig.json: |
+    {
+      "agent": {
+        "metrics_collection_interval": 60
+      },
+      "metrics": {
+        "metrics_collected": {
+          "kubernetes": {
+            "cluster_name": "${ClusterName}",
+            "metrics_collection_interval": 60
+          }
+        },
+        "force_flush_interval": 5
+      }
+    }

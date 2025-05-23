@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nomina
+  labels:
+    app: nomina
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nomina
+  template:
+    metadata:
+      labels:
+        app: nomina
+    spec:
+      containers:
+      - name: nomina
+        image: ${ECR_REGISTRY}/nomina:${IMAGE_TAG}
+        ports:
+        - containerPort: 3000
+        env:
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: db-config
+              key: host
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: redis-config
+              key: host
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: username
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: password
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "400m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        volumeMounts:
+        - name: pdf-storage
+          mountPath: /app/pdfs
+      volumes:
+      - name: pdf-storage
+        persistentVolumeClaim:
+          claimName: nomina-pvc
