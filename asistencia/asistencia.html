@@ -2,108 +2,138 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Registro de Asistencia</title>
-  <style>
-    body { font-family: sans-serif; padding: 2rem; max-width: 500px; margin: auto; }
-    input, button, textarea { width: 100%; padding: 0.5rem; margin-top: 1rem; font-size: 1rem; }
-    #mensaje { margin-top: 2rem; font-weight: bold; }
-    #justificacion-container { display: none; }
-  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/main.css" />
 </head>
 <body>
-  <h1>Verificación de Asistencia</h1>
+  <div class="container">
+    <div class="form-container fade-in">
+      <h1>Verificación de Asistencia</h1>
+      
+      <div class="clock" id="clock">00:00:00</div>
+      
+      <div class="input-group">
+        <label for="id_empleado">ID del Empleado:</label>
+        <input id="id_empleado" type="text" maxlength="10" placeholder="Ingresa los últimos 5 dígitos" />
+      </div>
 
-  <label for="last5">Últimos 5 dígitos del DNI:</label>
-  <input id="last5" type="text" maxlength="5" placeholder="Ej: 00731" />
+      <div id="justificacion-container" class="input-group" style="display: none;">
+        <label for="justificacion">Justificación:</label>
+        <textarea id="justificacion" rows="3" placeholder="¿Por qué llegaste tarde?"></textarea>
+        <button id="btn-justificar" class="btn-primary" onclick="enviarJustificacion()">Enviar Justificación</button>
+      </div>
 
-  <div id="justificacion-container">
-    <label for="justificacion">Justificación:</label>
-    <textarea id="justificacion" placeholder="¿Por qué llegaste tarde?"></textarea>
-    <button onclick="enviarJustificacion()">Enviar Justificación</button>
+      <button id="btn-registrar" class="btn-primary" onclick="verificarDNI()">Registrar Asistencia</button>
+
+      <div id="mensaje" class="message"></div>
+    </div>
   </div>
-
-  <button onclick="registrarAsistencia()" id="btn-registrar">Registrar asistencia</button>
-  <div id="mensaje"></div>
-
+  
   <script>
-    let last5Actual = "";
+    // Add clock functionality
+    function updateClock() {
+      const now = new Date();
+      const clockEl = document.getElementById('clock');
+      clockEl.textContent = now.toLocaleTimeString();
+    }
+    
+    setInterval(updateClock, 1000);
+    updateClock();
 
-    async function registrarAsistencia() {
-      const last5 = document.getElementById("last5").value.trim();
-      const mensajeEl = document.getElementById("mensaje");
+    let last5Actual = '';
 
-      if (!/^\d{5}$/.test(last5)) {
-        mensajeEl.innerHTML = "⚠️ <b>Ingresá exactamente 5 dígitos del DNI.</b>";
+    async function verificarDNI() {
+      const id_empleado = document.getElementById('id_empleado').value.trim();
+      const mensajeEl = document.getElementById('mensaje');
+      mensajeEl.className = 'message';
+
+      if (!/^\d{5}$/.test(id_empleado)) {
+        mensajeEl.textContent = '⚠️ Ingresá exactamente 5 dígitos del DNI.';
+        mensajeEl.classList.add('error');
         return;
       }
 
-      last5Actual = last5;
-      mensajeEl.textContent = "⏳ Procesando...";
+      mensajeEl.textContent = '🔍 Verificando...';
+      last5Actual = id_empleado;
 
       try {
-        const res = await fetch("/attendance", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ last5 })
+        const res = await fetch('/attendance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id_empleado })
         });
 
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
 
         if (res.status === 200) {
-          mensajeEl.textContent = data.message;
-          limpiarTodo();
+          mensajeEl.textContent = data.message || '✅ ¡Asistencia registrada!';
+          mensajeEl.classList.add('success');
+          reiniciarFormulario();
         } else if (res.status === 422 && data.requireJustification) {
           mensajeEl.textContent = data.message;
-          document.getElementById("justificacion-container").style.display = "block";
-          document.getElementById("btn-registrar").style.display = "none";
+          mensajeEl.classList.add('error');
+          document.getElementById('justificacion-container').style.display = 'block';
+          document.getElementById('btn-registrar').style.display = 'none';
         } else {
-          mensajeEl.textContent = data.message || "⚠️ Error al registrar asistencia.";
+          mensajeEl.textContent = data.message || '❌ Error al registrar asistencia.';
+          mensajeEl.classList.add('error');
         }
       } catch (err) {
-        mensajeEl.textContent = "❌ Error de conexión.";
+        mensajeEl.textContent = '❌ Error de conexión con el servidor.';
+        mensajeEl.classList.add('error');
+        console.error(err);
       }
     }
 
     async function enviarJustificacion() {
-      const justific = document.getElementById("justificacion").value.trim();
-      const mensajeEl = document.getElementById("mensaje");
+      const justific = document.getElementById('justificacion').value.trim();
+      const mensajeEl = document.getElementById('mensaje');
+      mensajeEl.className = 'message';
 
       if (!justific) {
-        mensajeEl.textContent = "⚠️ Debes escribir una justificación.";
+        mensajeEl.textContent = '⚠️ Por favor, escribe una justificación.';
+        mensajeEl.classList.add('error');
         return;
       }
 
-      mensajeEl.textContent = "Enviando justificación...";
+      mensajeEl.textContent = '📝 Enviando justificación...';
 
       try {
-        const res = await fetch("/attendance", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ last5: last5Actual, justification: justific })
+        const res = await fetch('/attendance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id_empleado: last5Actual, justification: justific })
         });
 
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
 
         if (res.status === 200) {
-          mensajeEl.textContent = data.message || "✅ Registrado.";
-          limpiarTodo();
+          mensajeEl.textContent = data.message || '📝 Justificación enviada correctamente.';
+          mensajeEl.classList.add('success');
+          reiniciarFormulario();
         } else {
-          mensajeEl.textContent = data.message || "❌ Error al registrar.";
+          mensajeEl.textContent = data.message || '⚠️ No se pudo registrar.';
+          mensajeEl.classList.add('error');
         }
       } catch (err) {
-        mensajeEl.textContent = "❌ Error de conexión.";
+        mensajeEl.textContent = '❌ Error al enviar la justificación.';
+        mensajeEl.classList.add('error');
+        console.error(err);
       }
     }
 
-    function limpiarTodo() {
+    function reiniciarFormulario() {
       setTimeout(() => {
-        document.getElementById("last5").value = "";
-        document.getElementById("justificacion").value = "";
-        document.getElementById("mensaje").textContent = "";
-        document.getElementById("justificacion-container").style.display = "none";
-        document.getElementById("btn-registrar").style.display = "block";
-        last5Actual = "";
-      }, 4000);
+        document.getElementById('id_empleado').value = '';
+        document.getElementById('justificacion').value = '';
+        document.getElementById('mensaje').textContent = '';
+        document.getElementById('mensaje').className = 'message';
+        document.getElementById('justificacion-container').style.display = 'none';
+        document.getElementById('btn-registrar').style.display = 'block';
+        last5Actual = '';
+      }, 3000);
     }
   </script>
 </body>

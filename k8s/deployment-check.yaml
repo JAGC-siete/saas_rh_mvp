@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: deployment-readiness-checks
+  namespace: default
+data:
+  readiness-criteria.yaml: |
+    checks:
+      - name: resource-requirements
+        criteria:
+          cpu_request: "100m"
+          memory_request: "256Mi"
+          storage_request: "1Gi"
+      
+      - name: high-availability
+        criteria:
+          min_replicas: 2
+          pod_anti_affinity: required
+      
+      - name: security
+        criteria:
+          pod_security_context: required
+          network_policies: required
+          rbac_configured: true
+      
+      - name: monitoring
+        criteria:
+          prometheus_metrics: enabled
+          health_probes: configured
+          resource_limits: set
+      
+      - name: backup
+        criteria:
+          persistent_volumes: backed_up
+          backup_schedule: "daily"
+          retention_period: "30d"

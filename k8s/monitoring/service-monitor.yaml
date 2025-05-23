@@ -1,0 +1,13 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: app-metrics
+  namespace: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: saas-hr
+  endpoints:
+  - port: metrics
+    interval: 15s
+    path: /metrics

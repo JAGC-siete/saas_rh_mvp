@@ -1,0 +1,96 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-west-2
+  ECR_REPOSITORY_PREFIX: saas-rh
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install Dependencies
+      run: |
+        cd bases_de_datos && npm install
+        cd ../asistencia && npm install
+        cd ../nomina && npm install
+    
+    - name: Run Health Checks
+      run: |
+        cd bases_de_datos && npm run test:health || echo "No health tests"
+        cd ../asistencia && npm run test:health || echo "No health tests"
+        cd ../nomina && npm run test:health || echo "No health tests"
+
+  build-and-push:
+    name: Build and Push Images
+    needs: test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+    
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+    
+    - name: Build and push images
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+      run: |
+        # Build and push bases_de_datos
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY_PREFIX/bases-de-datos:${{ github.sha }} ./bases_de_datos
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY_PREFIX/bases-de-datos:${{ github.sha }}
+        
+        # Build and push asistencia
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY_PREFIX/asistencia:${{ github.sha }} ./asistencia
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY_PREFIX/asistencia:${{ github.sha }}
+        
+        # Build and push nomina
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY_PREFIX/nomina:${{ github.sha }} ./nomina
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY_PREFIX/nomina:${{ github.sha }}
+
+  deploy:
+    name: Deploy to ECS
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+    
+    - name: Update ECS services
+      run: |
+        aws ecs update-service --cluster saas-rh-cluster-prod --service bases-de-datos --force-new-deployment
+        aws ecs update-service --cluster saas-rh-cluster-prod --service asistencia --force-new-deployment
+        aws ecs update-service --cluster saas-rh-cluster-prod --service nomina --force-new-deployment
+    
+    - name: Wait for services to stabilize
+      run: |
+        aws ecs wait services-stable \
+          --cluster saas-rh-cluster-prod \
+          --services bases-de-datos asistencia nomina

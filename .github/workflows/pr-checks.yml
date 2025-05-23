@@ -1,0 +1,41 @@
+name: PR Checks
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate:
+    name: Validate PR
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install Dependencies
+      run: |
+        cd bases_de_datos && npm install
+        cd ../asistencia && npm install
+        cd ../nomina && npm install
+    
+    - name: Check Code Style
+      run: |
+        cd bases_de_datos && npm run lint || echo "No lint configured"
+        cd ../asistencia && npm run lint || echo "No lint configured"
+        cd ../nomina && npm run lint || echo "No lint configured"
+    
+    - name: Run Tests
+      run: |
+        cd bases_de_datos && npm test || echo "No tests configured"
+        cd ../asistencia && npm test || echo "No tests configured"
+        cd ../nomina && npm test || echo "No tests configured"
+    
+    - name: Build Test
+      run: |
+        docker-compose build

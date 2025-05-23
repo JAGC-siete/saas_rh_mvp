@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- ../../base
+
+namePrefix: prod-
+
+patches:
+- path: resources-patch.yaml
+  target:
+    kind: Deployment
+    name: .*
+
+configMapGenerator:
+- name: app-config
+  literals:
+    - ENVIRONMENT=production
+    - LOG_LEVEL=info
+    - API_URL=https://api.saas-rh.com
+
+secretGenerator:
+- name: db-credentials
+  files:
+    - db-password=../../../secrets/db_password.txt
+  type: Opaque

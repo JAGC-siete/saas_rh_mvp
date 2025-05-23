@@ -1,0 +1,141 @@
+/* Paleta y fuente */
+:root {
+  --azul-logo: #4682b4;
+  --gris-logo: #4a5568;
+  --gris-fondo: #f7f9fb;
+  --gris-claro: #e0e0e2;
+  --blanco: #fff;
+  --negro: #2e2e3a;
+  --transition-speed: 0.3s;
+}
+
+/* Base styles */
+body {
+  font-family: 'Montserrat', Arial, sans-serif;
+  background: var(--gris-fondo);
+  color: var(--negro);
+  margin: 0;
+  line-height: 1.7;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Container styles */
+.container {
+  max-width: 600px;
+  margin: 40px auto;
+  padding: 20px;
+}
+
+/* Form styling */
+.form-container {
+  background: var(--blanco);
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+}
+
+input, select, button {
+  width: 100%;
+  padding: 12px;
+  margin: 8px 0;
+  border: 2px solid var(--gris-claro);
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+input:focus, select:focus {
+  outline: none;
+  border-color: var(--azul-logo);
+  box-shadow: 0 0 0 3px rgba(70, 130, 180, 0.2);
+}
+
+button {
+  background: var(--azul-logo);
+  color: var(--blanco);
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+button:hover {
+  background: var(--gris-logo);
+  transform: translateY(-2px);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+/* Status messages */
+#status {
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+  font-weight: 500;
+  text-align: center;
+}
+
+#status.success {
+  background: rgba(72, 187, 120, 0.1);
+  color: #2f855a;
+}
+
+#status.error {
+  background: rgba(245, 101, 101, 0.1);
+  color: #c53030;
+}
+
+/* Transitions */
+.fade-in {
+  animation: fadeIn 0.6s ease forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Dark mode */
+[data-theme="dark"] {
+  --azul-logo: #6ca0d1;
+  --gris-logo: #a0aec0;
+  --gris-fondo: #1a1a1a;
+  --gris-claro: #2d2d2d;
+  --blanco: #232526;
+  --negro: #e0e0e2;
+}
+
+[data-theme="dark"] .form-container {
+  background: var(--gris-claro);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] input,
+[data-theme="dark"] select {
+  background: var(--gris-fondo);
+  color: var(--negro);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .container {
+    margin: 20px;
+    padding: 10px;
+  }
+  
+  .form-container {
+    padding: 1.5rem;
+  }
+}
