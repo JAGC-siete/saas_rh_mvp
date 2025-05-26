@@ -51,3 +51,4 @@
 {"level":"info","message":"Environment: development","service":"bases_de_datos","timestamp":"2025-05-26T04:06:41.580Z"}
 {"level":"info","message":"Database host: postgres:5432","service":"bases_de_datos","timestamp":"2025-05-26T04:06:41.580Z"}
 {"duration":500,"ip":"::ffff:192.168.65.1","level":"info","message":"HTTP Request","method":"GET","requestId":"bc2bbf57-cc76-43db-856b-005635d5cced","service":"bases_de_datos","status":200,"timestamp":"2025-05-26T04:06:55.561Z","url":"/api/session-test","userAgent":"curl/8.7.1"}
+{"level":"info","message":"Received kill signal, shutting down gracefully","service":"bases_de_datos","timestamp":"2025-05-26T04:56:12.642Z"}
