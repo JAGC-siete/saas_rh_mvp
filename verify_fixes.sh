@@ -1,33 +1,35 @@
 #!/bin/bash
 
-echo "🔍 Verificando correcciones implementadas..."
-echo ""
+echo "🔧 Verificando y creando carpeta logs con permisos adecuados..."
 
-echo "1️⃣ Verificando esquema de base de datos..."
-docker exec -it saas-proyecto-postgres-1 psql -U admin -d saas_db -c "\dt" || echo "❌ Error al conectar a Postgres"
+# Navega a la raíz del proyecto
+cd "$(dirname "$0")"
 
-echo ""
-echo "2️⃣ Verificando estructura de tablas y fields:"
-docker exec -it saas-proyecto-postgres-1 psql -U admin -d saas_db -c "\d employees" || echo "❌ No se pudo obtener estructura de employees"
-docker exec -it saas-proyecto-postgres-1 psql -U admin -d saas_db -c "\d asistencia" || echo "❌ No se pudo obtener estructura de asistencia"
-docker exec -it saas-proyecto-postgres-1 psql -U admin -d saas_db -c "\d payroll" || echo "❌ No se pudo obtener estructura de payroll"
+# Crear carpeta logs si no existe
+if [ ! -d "./logs" ]; then
+    echo "📂 Carpeta ./logs no existe. Creando..."
+    mkdir -p logs
+else
+    echo "📂 Carpeta ./logs ya existe. Continuando..."
+fi
 
-echo ""
-echo "3️⃣ Verificando endpoint /attendance con employee_id:"
-curl -s -X POST -H "Content-Type: application/json" \
-  -d '{"employee_id": "12345", "justificacion": "Prueba de endpoint"}' \
-  http://localhost:3003/attendance | jq . || echo "❌ Error en endpoint attendance"
+# Asignar permisos 777
+echo "🔒 Asignando permisos 777 a ./logs"
+chmod -R 777 logs
 
-echo ""
-echo "4️⃣ Verificando conexión entre servicios:"
-curl -s http://localhost:3002/diagnose | jq . || echo "❌ Error en servicio de nómina"
+# Verificar si docker-compose.yml contiene el volumen
+if ! grep -q "./logs:/app/logs" docker-compose.yml; then
+    echo "⚠️  Asegurate de tener el volumen './logs:/app/logs' en tu docker-compose.yml bajo el servicio bases_de_datos."
+else
+    echo "✅ Volumen ./logs:/app/logs detectado en docker-compose.yml"
+fi
 
-echo ""
-echo "5️⃣ Verificando nombres consistentes en API:"
-echo "Nómina → employees:"
-curl -s http://localhost:3000/employees | jq '.[0] | keys' || echo "❌ Error en API employees"
-echo "Nómina → asistencia:"
-curl -s http://localhost:3000/attendance | jq '.[0] | keys' || echo "❌ Error en API asistencia"
+# Reconstruir servicio bases_de_datos
+echo "♻️  Reiniciando servicio bases_de_datos sin caché..."
+docker-compose down
+docker-compose build --no-cache bases_de_datos
+docker-compose up -d
 
-echo ""
-echo "✅ Verificación completada"
+# Mostrar logs
+echo "📜 Logs del servicio bases_de_datos:"
+docker-compose logs -f bases_de_datos

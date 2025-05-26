@@ -1,6 +1,6 @@
-const winston = require('winston');
-require('winston-daily-rotate-file');
-const path = require('path');
+import winston from 'winston';
+import 'winston-daily-rotate-file';
+import path from 'path';
 
 const logDir = process.env.LOG_DIR || 'logs';
 

@@ -1,8 +1,20 @@
-const winston = require('winston');
-require('winston-daily-rotate-file');
-const path = require('path');
+import winston from 'winston';
+import 'winston-daily-rotate-file';
+import path from 'path';
+import fs from 'fs';
 
 const logDir = process.env.LOG_DIR || 'logs';
+
+// Intenta crear el directorio de logs de manera segura
+try {
+  fs.mkdirSync(logDir, { recursive: true });
+  console.log(`✅ Directorio de logs creado/verificado: ${logDir}`);
+} catch (err) {
+  if (err.code !== 'EEXIST') {
+    console.error('⚠️ No se pudo crear la carpeta logs:', err.message);
+    console.warn('Los logs se escribirán solo en consola');
+  }
+}
 
 const logFormat = winston.format.combine(
   winston.format.timestamp(),
@@ -71,4 +83,4 @@ logger.errorLogger = (err, req, res, next) => {
   next(err);
 };
 
-module.exports = logger;
+export default logger;

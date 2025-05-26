@@ -14,9 +14,19 @@ spec:
       labels:
         app: bases-de-datos
     spec:
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 1000
       containers:
       - name: bases-de-datos
-        image: ${ECR_REGISTRY}/bases-de-datos:${IMAGE_TAG}
+        image: 826726045450.dkr.ecr.us-east-1.amazonaws.com/bases_de_datos:latest
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
         ports:
         - containerPort: 3000
         env:
@@ -25,6 +35,31 @@ spec:
             configMapKeyRef:
               name: db-config
               key: host
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: db-config
+              key: port
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: db-config
+              key: database
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: redis-config
+              key: host
+        - name: REDIS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: redis-config
+              key: port
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: redis-credentials
+              key: password
         - name: DB_USER
           valueFrom:
             secretKeyRef:
@@ -35,22 +70,54 @@ spec:
             secretKeyRef:
               name: db-credentials
               key: password
+        - name: NODE_ENV
+          value: "production"
+        - name: DB_MAX_CLIENTS
+          value: "20"
+        - name: DB_IDLE_TIMEOUT
+          value: "30000"
+        - name: DB_CONNECT_TIMEOUT
+          value: "5000"
+        - name: DB_STATEMENT_TIMEOUT
+          value: "30000"
+        - name: DB_QUERY_TIMEOUT
+          value: "30000"
+        - name: SESSION_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: session-secret
         resources:
           requests:
-            memory: "128Mi"
-            cpu: "100m"
-          limits:
             memory: "256Mi"
             cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
         livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 60
+          periodSeconds: 20
+          timeoutSeconds: 10
+          failureThreshold: 3
+          successThreshold: 1
+        readinessProbe:
           httpGet:
             path: /health
             port: 3000
           initialDelaySeconds: 30
           periodSeconds: 10
-        readinessProbe:
+          timeoutSeconds: 5
+          failureThreshold: 3
+          successThreshold: 1
+        startupProbe:
           httpGet:
             path: /health
             port: 3000
-          initialDelaySeconds: 5
-          periodSeconds: 5
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 12
+          successThreshold: 1

@@ -112,12 +112,6 @@ variable "database_subnets" {
   default     = ["10.0.201.0/24", "10.0.202.0/24", "10.0.203.0/24"]
 }
 
-variable "db_instance_class" {
-  description = "RDS instance class"
-  type        = string
-  default     = "db.t3.micro" # MVP: Start small, can scale up
-}
-
 variable "redis_node_type" {
   description = "ElastiCache node type"
   type        = string
@@ -125,7 +119,54 @@ variable "redis_node_type" {
 }
 
 variable "domain_name" {
-  description = "Main domain name for the application"
+  description = "Domain name for the application"
   type        = string
-  default     = "saas-rh.com" # Change this to your actual domain
+  default     = "humanosisu.com"
+}
+
+variable "cluster_version" {
+  description = "Kubernetes version to use for the EKS cluster"
+  type        = string
+  default     = "1.27"
+}
+
+variable "instance_types" {
+  description = "List of EC2 instance types for the EKS node group"
+  type        = list(string)
+  default     = ["t3.medium"]
+}
+
+variable "min_size" {
+  description = "Minimum size of the EKS node group"
+  type        = number
+  default     = 2
+}
+
+variable "max_size" {
+  description = "Maximum size of the EKS node group"
+  type        = number
+  default     = 5
+}
+
+variable "desired_size" {
+  description = "Desired size of the EKS node group"
+  type        = number
+  default     = 2
+}
+
+variable "enable_kms_key_rotation" {
+  description = "Enable automatic key rotation for KMS keys"
+  type        = bool
+  default     = true
+}
+
+variable "kms_deletion_window_in_days" {
+  description = "Duration in days after which the key is deleted after destruction of the resource"
+  type        = number
+  default     = 7
+}
+
+variable "alert_email" {
+  description = "Email address to send monitoring alerts to"
+  type        = string
 }

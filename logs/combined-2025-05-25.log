@@ -1,0 +1,21 @@
+{"level":"info","message":"✅ Bases de datos corriendo en puerto 3000","service":"bases_de_datos","timestamp":"2025-05-25T23:28:25.072Z"}
+{"level":"info","message":"✅ Bases de datos corriendo en puerto 3000","service":"bases_de_datos","timestamp":"2025-05-25T23:28:27.690Z"}
+{"level":"info","message":"✅ Bases de datos corriendo en puerto 3000","service":"bases_de_datos","timestamp":"2025-05-25T23:28:30.211Z"}
+{"level":"info","message":"✅ Bases de datos corriendo en puerto 3000","service":"bases_de_datos","timestamp":"2025-05-25T23:28:33.124Z"}
+{"level":"info","message":"✅ Bases de datos corriendo en puerto 3000","service":"bases_de_datos","timestamp":"2025-05-25T23:28:36.379Z"}
+{"level":"info","message":"✅ Bases de datos corriendo en puerto 3000","service":"bases_de_datos","timestamp":"2025-05-25T23:28:40.335Z"}
+{"level":"info","message":"✅ Bases de datos corriendo en puerto 3000","service":"bases_de_datos","timestamp":"2025-05-25T23:28:46.424Z"}
+{"level":"info","message":"✅ Bases de datos corriendo en puerto 3000","service":"bases_de_datos","timestamp":"2025-05-25T23:28:55.496Z"}
+{"level":"info","message":"✅ Bases de datos corriendo en puerto 3000","service":"bases_de_datos","timestamp":"2025-05-25T23:29:11.768Z"}
+{"level":"info","message":"✅ Bases de datos corriendo en puerto 3000","service":"bases_de_datos","timestamp":"2025-05-25T23:29:39.967Z"}
+{"level":"info","message":"✅ Bases de datos corriendo en puerto 3000","service":"bases_de_datos","timestamp":"2025-05-25T23:30:33.748Z"}
+{"level":"info","message":"✅ Bases de datos corriendo en puerto 3000","service":"bases_de_datos","timestamp":"2025-05-25T23:31:37.000Z"}
+{"level":"info","message":"✅ Bases de datos corriendo en puerto 3000","service":"bases_de_datos","timestamp":"2025-05-25T23:32:39.807Z"}
+{"level":"info","message":"✅ Bases de datos corriendo en puerto 3000","service":"bases_de_datos","timestamp":"2025-05-25T23:33:42.149Z"}
+{"level":"info","message":"✅ Bases de datos corriendo en puerto 3000","service":"bases_de_datos","timestamp":"2025-05-25T23:34:45.258Z"}
+{"level":"info","message":"✅ Bases de datos corriendo en puerto 3000","service":"bases_de_datos","timestamp":"2025-05-25T23:35:47.480Z"}
+{"level":"info","message":"✅ Bases de datos corriendo en puerto 3000","service":"bases_de_datos","timestamp":"2025-05-25T23:40:51.375Z"}
+{"level":"info","message":"Environment: development","service":"bases_de_datos","timestamp":"2025-05-25T23:40:51.378Z"}
+{"level":"info","message":"Database host: postgres:5432","service":"bases_de_datos","timestamp":"2025-05-25T23:40:51.378Z"}
+{"level":"info","message":"Received kill signal, shutting down gracefully","service":"bases_de_datos","timestamp":"2025-05-25T23:58:02.683Z"}
+{"level":"info","message":"Closed out remaining connections","service":"bases_de_datos","timestamp":"2025-05-25T23:58:02.707Z"}

@@ -1,36 +1,63 @@
-const session = require('express-session');
-const RedisStore = require('connect-redis').default;
-const Redis = require('redis');
-const crypto = require('crypto');
+import session from 'express-session';
+import { createClient } from 'redis';
+import { RedisStore } from 'connect-redis';
 
-const redisClient = Redis.createClient({
-  url: process.env.REDIS_URL || 'redis://localhost:6379',
-  password: process.env.REDIS_PASSWORD || 'redis_secret'
+const redisHost = process.env.REDIS_HOST || 'redis';
+const redisPortStr = process.env.REDIS_PORT || '6379';
+const redisPort = parseInt(redisPortStr, 10);
+
+if (isNaN(redisPort)) {
+  console.error('Invalid REDIS_PORT value:', redisPortStr);
+  process.exit(1);
+}
+
+const redisClient = createClient({
+  socket: {
+    host: redisHost,
+    port: redisPort
+  },
+  password: process.env.REDIS_PASSWORD,
+  retry_strategy: function(options) {
+    if (options.error && options.error.code === 'ECONNREFUSED') {
+      console.warn('Connection to Redis refused. Retrying...');
+      return Math.min(options.attempt * 100, 3000);
+    }
+    return Math.min(options.attempt * 100, 3000);
+  }
 });
 
-redisClient.on('error', (err) => console.error('Redis Client Error:', err));
-redisClient.on('connect', () => console.log('Connected to Redis'));
+await redisClient.connect();
 
-redisClient.connect().catch(console.error);
+redisClient.on('error', (err) => {
+  console.error('Redis Client Error:', err);
+});
 
-const sessionConfig = {
-  store: new RedisStore({ client: redisClient }),
-  secret: process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex'),
-  name: 'sessionId',
+redisClient.on('connect', () => {
+  console.log('Connected to Redis successfully');
+});
+
+const store = new RedisStore({
+  client: redisClient,
+  prefix: 'sess:',
+});
+
+const sessionMiddleware = session({
+  store,
+  secret: process.env.SESSION_SECRET || 'mi_secreto_supersecreto',
+  name: 'sid',
   resave: false,
   saveUninitialized: false,
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    maxAge: 1000 * 60 * 60,
-    sameSite: 'strict'
-  },
-  rolling: true
-};
+    sameSite: 'strict',
+    maxAge: parseInt(process.env.COOKIE_MAX_AGE) || 24 * 60 * 60 * 1000 // 24 hours
+  }
+});
 
-// Add security headers middleware with specific CSP for attendance service
+// Add security headers middleware
 const securityHeaders = (req, res, next) => {
-  // Content Security Policy for attendance service
+  // Content Security Policy for data service
   res.setHeader('Content-Security-Policy', [
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline'",
@@ -54,8 +81,4 @@ const securityHeaders = (req, res, next) => {
   next();
 };
 
-module.exports = {
-  sessionMiddleware: session(sessionConfig),
-  securityHeaders,
-  redisClient
-};
+export { sessionMiddleware, redisClient, securityHeaders };

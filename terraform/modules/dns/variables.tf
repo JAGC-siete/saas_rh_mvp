@@ -1,5 +1,5 @@
 variable "domain_name" {
-  description = "Main domain name for the application"
+  description = "Domain name for the application"
   type        = string
 }
 
@@ -9,7 +9,7 @@ variable "alb_dns_name" {
 }
 
 variable "alb_zone_id" {
-  description = "Route53 zone ID of the ALB"
+  description = "Zone ID of the ALB"
   type        = string
 }
 

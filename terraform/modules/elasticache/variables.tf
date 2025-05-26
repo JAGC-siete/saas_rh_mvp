@@ -13,7 +13,7 @@ variable "vpc_id" {
   type        = string
 }
 
-variable "subnets" {
+variable "subnet_ids" {
   description = "List of subnet IDs for the ElastiCache cluster"
   type        = list(string)
 }
@@ -33,11 +33,39 @@ variable "num_cache_nodes" {
 variable "engine_version" {
   description = "Redis engine version"
   type        = string
-  default     = "7.x"
+  default     = "7.0"
 }
 
 variable "port" {
   description = "Redis port"
   type        = number
   default     = 6379
+}
+
+variable "kms_key_arn" {
+  description = "ARN of KMS key for encryption"
+  type        = string
+}
+
+variable "snapshot_retention_limit" {
+  description = "Number of days for which ElastiCache will retain automatic cache cluster snapshots"
+  type        = number
+  default     = 7
+}
+
+variable "eks_security_group_id" {
+  description = "Security group ID of the EKS cluster nodes"
+  type        = string
+}
+
+variable "log_retention_days" {
+  description = "Number of days to retain CloudWatch logs"
+  type        = number
+  default     = 30
+}
+
+variable "tags" {
+  description = "Additional tags for resources"
+  type        = map(string)
+  default     = {}
 }
