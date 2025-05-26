@@ -50,3 +50,57 @@ variable "enable_vpn_gateway" {
   type        = bool
   default     = false
 }
+
+variable "tags" {
+  description = "A map of tags to add to all resources"
+  type        = map(string)
+  default     = {}
+}
+
+variable "vpc_flow_logs_retention" {
+  description = "Number of days to retain VPC flow logs"
+  type        = number
+  default     = 30
+}
+
+variable "vpc_tags" {
+  description = "Additional tags for the VPC"
+  type        = map(string)
+  default     = {}
+}
+
+variable "public_subnet_tags" {
+  description = "Additional tags for the public subnets"
+  type        = map(string)
+  default     = {}
+}
+
+variable "private_subnet_tags" {
+  description = "Additional tags for the private subnets"
+  type        = map(string)
+  default     = {}
+}
+
+variable "database_subnet_tags" {
+  description = "Additional tags for the database subnets"
+  type        = map(string)
+  default     = {}
+}
+
+variable "security_group_rules" {
+  description = "Map of security group rule configurations"
+  type = map(object({
+    type        = string
+    from_port   = number
+    to_port     = number
+    protocol    = string
+    cidr_blocks = list(string)
+    description = string
+  }))
+  default = {}
+}
+
+variable "aws_region" {
+  description = "AWS region"
+  type        = string
+}

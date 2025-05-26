@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- services/bases_de_datos-deployment.yaml
+- services/bases_de_datos-service.yaml
+- services/asistencia-deployment.yaml
+- services/asistencia-service.yaml
+- services/nomina-deployment.yaml
+- services/nomina-service.yaml
+- shared/ingress.yaml
+- shared/secrets-configmaps.yaml
+- shared/redis-config.yaml
+- shared/redis.yaml
+- shared/redis-service-pvc.yaml
+
+commonLabels:
+  app.kubernetes.io/part-of: saas-rh
+  app.kubernetes.io/managed-by: kustomize

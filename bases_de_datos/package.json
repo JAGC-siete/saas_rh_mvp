@@ -1,10 +1,12 @@
 {
   "name": "bases_de_datos",
   "version": "1.0.0",
-  "main": "index.js",
+  "type": "module",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "test:health": "node ../test/health.js",
+    "test:redis": "node redis-test.js",
     "lint": "eslint .",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -14,19 +16,19 @@
   "description": "",
   "dependencies": {
     "aws-sdk": "^2.1490.0",
-    "connect-redis": "^8.1.0",
+    "connect-redis": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
-    "express": "^4.21.2",
+    "express": "^4.18.2",
     "express-mongo-sanitize": "^2.2.0",
     "express-rate-limit": "^7.5.0",
     "express-request-id": "^3.0.0",
-    "express-session": "^1.18.1",
+    "express-session": "^1.17.3",
     "express-validator": "^7.2.1",
     "helmet": "^8.1.0",
     "hpp": "^0.2.3",
     "pg": "^8.14.1",
-    "redis": "^5.1.0",
+    "redis": "^4.6.7",
     "winston": "^3.17.0",
     "winston-daily-rotate-file": "^5.0.0",
     "xss-clean": "^0.1.4"

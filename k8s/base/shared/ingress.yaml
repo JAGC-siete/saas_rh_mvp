@@ -2,17 +2,20 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: saas-rh-ingress
+  namespace: default
   annotations:
-    kubernetes.io/ingress.class: "nginx"
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
+    alb.ingress.kubernetes.io/group.name: "saas-rh"
+    alb.ingress.kubernetes.io/tags: Environment=staging,Project=saas-rh
+    alb.ingress.kubernetes.io/healthcheck-path: "/health"
+    external-dns.alpha.kubernetes.io/hostname: "*.humanosisu.com"
 spec:
-  tls:
-  - hosts:
-    - asistencia.saas-rh.com
-    - nomina.saas-rh.com
-    secretName: saas-rh-tls
   rules:
-  - host: asistencia.saas-rh.com
+  - host: app.humanosisu.com
     http:
       paths:
       - path: /
@@ -22,7 +25,7 @@ spec:
             name: asistencia
             port:
               number: 80
-  - host: nomina.saas-rh.com
+  - host: api.humanosisu.com
     http:
       paths:
       - path: /

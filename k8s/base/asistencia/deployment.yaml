@@ -14,11 +14,21 @@ spec:
       labels:
         app: asistencia
     spec:
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 1001
       containers:
       - name: asistencia
-        image: ${ECR_REGISTRY}/asistencia:${IMAGE_TAG}
+        image: 826726045450.dkr.ecr.us-east-1.amazonaws.com/asistencia:latest
+        securityContext:
+          runAsUser: 1001
+          runAsGroup: 1001
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
         ports:
-        - containerPort: 3000
+        - containerPort: 3003
         env:
         - name: DB_HOST
           valueFrom:
@@ -30,6 +40,16 @@ spec:
             configMapKeyRef:
               name: redis-config
               key: host
+        - name: REDIS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: redis-config
+              key: port
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: redis-credentials
+              key: password
         - name: DB_USER
           valueFrom:
             secretKeyRef:
@@ -40,6 +60,8 @@ spec:
             secretKeyRef:
               name: db-credentials
               key: password
+        - name: NODE_ENV
+          value: "production"
         resources:
           requests:
             memory: "128Mi"
@@ -50,12 +72,14 @@ spec:
         livenessProbe:
           httpGet:
             path: /health
-            port: 3000
+            port: 3003
           initialDelaySeconds: 30
           periodSeconds: 10
+          timeoutSeconds: 5
         readinessProbe:
           httpGet:
             path: /health
-            port: 3000
+            port: 3003
           initialDelaySeconds: 5
           periodSeconds: 5
+          timeoutSeconds: 3

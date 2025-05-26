@@ -1,16 +1,28 @@
-const AWS = require('aws-sdk');
-const cloudwatch = new AWS.CloudWatch();
+import AWS from 'aws-sdk';
 
-class Monitoring {
+export default class Monitoring {
   constructor(serviceName) {
+    if (!serviceName) {
+      throw new Error('Service name is required');
+    }
     this.serviceName = serviceName;
     this.namespace = 'SAAS-RH';
+    try {
+      this.cloudwatch = new AWS.CloudWatch({
+        apiVersion: '2010-08-01',
+        region: process.env.AWS_REGION || 'us-east-1'
+      });
+      console.log('CloudWatch client initialized successfully');
+    } catch (error) {
+      console.error('Failed to initialize CloudWatch:', error);
+      throw error;
+    }
   }
 
   // Basic metrics for MVP monitoring
   async recordMetric(metricName, value, unit = 'Count') {
     try {
-      await cloudwatch.putMetricData({
+      await this.cloudwatch.putMetricData({
         Namespace: this.namespace,
         MetricData: [{
           MetricName: metricName,
@@ -55,7 +67,7 @@ class Monitoring {
 
   // Record memory usage
   async recordMemoryUsage() {
-    const used = process.memoryUsage().heapUsed / 1024 / 1024;
-    await this.recordMetric('MemoryUsageMB', Math.round(used * 100) / 100, 'Megabytes');
+    const used = process.memoryUsage();
+    await this.recordMetric('HeapUsed', used.heapUsed / 1024 / 1024, 'Megabytes');
   }
 }

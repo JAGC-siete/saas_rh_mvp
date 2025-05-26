@@ -4,10 +4,13 @@ resource "aws_vpc" "main" {
   enable_dns_hostnames = true
   enable_dns_support   = true
 
-  tags = {
-    Name        = "${var.project_name}-vpc-${var.environment}"
-    Environment = var.environment
-  }
+  tags = merge(
+    local.common_tags,
+    var.vpc_tags,
+    {
+      Name = "${var.project_name}-vpc-${var.environment}"
+    }
+  )
 }
 
 # Public Subnets
@@ -17,10 +20,14 @@ resource "aws_subnet" "public" {
   cidr_block        = var.public_subnets[count.index]
   availability_zone = var.azs[count.index]
 
-  tags = {
-    Name        = "${var.project_name}-public-${count.index + 1}"
-    Environment = var.environment
-  }
+  tags = merge(
+    local.common_tags,
+    var.public_subnet_tags,
+    {
+      Name = "${var.project_name}-public-${count.index + 1}"
+      "kubernetes.io/role/elb" = "1"
+    }
+  )
 }
 
 # Private Subnets
@@ -30,39 +37,79 @@ resource "aws_subnet" "private" {
   cidr_block        = var.private_subnets[count.index]
   availability_zone = var.azs[count.index]
 
-  tags = {
-    Name        = "${var.project_name}-private-${count.index + 1}"
-    Environment = var.environment
-  }
+  tags = merge(
+    local.common_tags,
+    var.private_subnet_tags,
+    {
+      Name = "${var.project_name}-private-${count.index + 1}"
+      "kubernetes.io/role/internal-elb" = "1"
+    }
+  )
+}
+
+# Database Subnets
+resource "aws_subnet" "database" {
+  count             = length(var.azs)
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = var.database_subnets[count.index]
+  availability_zone = var.azs[count.index]
+
+  tags = merge(
+    local.common_tags,
+    var.database_subnet_tags,
+    {
+      Name = "${var.project_name}-database-${count.index + 1}"
+    }
+  )
+}
+
+# Database Subnet Group
+resource "aws_db_subnet_group" "database" {
+  name       = "${var.project_name}-${var.environment}-db-subnet-group"
+  subnet_ids = aws_subnet.database[*].id
+
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "${var.project_name}-db-subnet-group"
+    }
+  )
 }
 
 # Internet Gateway
 resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id
 
-  tags = {
-    Name        = "${var.project_name}-igw"
-    Environment = var.environment
-  }
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "${var.project_name}-igw"
+    }
+  )
 }
 
-# NAT Gateway
-resource "aws_nat_gateway" "main" {
-  allocation_id = aws_eip.nat.id
-  subnet_id     = aws_subnet.public[0].id
-
-  tags = {
-    Name        = "${var.project_name}-nat"
-    Environment = var.environment
-  }
+# VPC Endpoint for S3
+resource "aws_vpc_endpoint" "s3" {
+  vpc_id       = aws_vpc.main.id
+  service_name = "com.amazonaws.${var.aws_region}.s3"
+  
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "${var.project_name}-s3-endpoint"
+    }
+  )
 }
 
-# Elastic IP for NAT Gateway
-resource "aws_eip" "nat" {
-  domain = "vpc"
-
-  tags = {
-    Name        = "${var.project_name}-nat-eip"
-    Environment = var.environment
-  }
+# Tags for VPC Resources
+locals {
+  common_tags = merge(
+    var.tags,
+    {
+      Environment = var.environment
+      ManagedBy   = "terraform"
+    }
+  )
 }
+
+

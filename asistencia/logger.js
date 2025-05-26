@@ -1,6 +1,10 @@
-const winston = require('winston');
-require('winston-daily-rotate-file');
-const path = require('path');
+import winston from 'winston';
+import 'winston-daily-rotate-file';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const logDir = process.env.LOG_DIR || 'logs';
 
@@ -58,17 +62,4 @@ logger.requestLogger = (req, res, next) => {
   next();
 };
 
-// Create an error logger middleware
-logger.errorLogger = (err, req, res, next) => {
-  logger.error('Unhandled Error', {
-    error: err.message,
-    stack: err.stack,
-    method: req.method,
-    url: req.originalUrl,
-    ip: req.ip,
-    requestId: req.id
-  });
-  next(err);
-};
-
-module.exports = logger;
+export default logger;

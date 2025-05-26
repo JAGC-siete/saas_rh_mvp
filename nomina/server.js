@@ -1,22 +1,28 @@
-<<<<<<< Updated upstream
-require('dotenv').config();
-=======
->>>>>>> Stashed changes
-const express = require('express');
-const { Pool } = require('pg');
-const PDFDocument = require('pdfkit');
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
-const { DateTime } = require('luxon');
-const axios = require('axios');
-const jwt = require('jsonwebtoken');
-require('dotenv').config();
+import dotenv from 'dotenv';
+import helmet from 'helmet';
+import cors from 'cors';
+import rateLimit from 'express-rate-limit';
+import { body, validationResult } from 'express-validator';
+import xssClean from 'xss-clean';
+import mongoSanitize from 'express-mongo-sanitize';
+import hpp from 'hpp';
+import requestId from 'express-request-id';
 
-// Security packages
-const helmet = require('helmet');
-const cors = require('cors');
-const rateLimit = require('express-rate-limit');
+dotenv.config();
+
+// Custom modules
+import logger from './logger.js';
+import { getSessionMiddleware, securityHeaders } from './session.js';
+import express from 'express';
+import pg from 'pg';
+const { Pool } = pg;
+import PDFDocument from 'pdfkit';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
+import { DateTime } from 'luxon';
+import axios from 'axios';
+import jwt from 'jsonwebtoken';
 const { body, validationResult } = require('express-validator');
 const xssClean = require('xss-clean');
 const mongoSanitize = require('express-mongo-sanitize');
@@ -25,9 +31,37 @@ const requestId = require('express-request-id')();
 
 // Custom modules
 const logger = require('./logger');
-const { sessionMiddleware, securityHeaders, redisClient } = require('./session');
+const { getSessionMiddleware, securityHeaders } = require('./session');
 
 const app = express();
+
+// Initialize session middleware first
+const initializeApp = async () => {
+  // Wait until session middleware is available
+  const waitForSession = (retries = 30) => new Promise((resolve, reject) => {
+    const sessionMiddleware = getSessionMiddleware();
+    if (sessionMiddleware) {
+      resolve(sessionMiddleware);
+    } else if (retries <= 0) {
+      reject(new Error('Timed out waiting for session middleware'));
+    } else {
+      setTimeout(() => waitForSession(retries - 1).then(resolve, reject), 1000);
+    }
+  });
+
+  try {
+    const sessionMiddleware = await waitForSession();
+    app.use(sessionMiddleware);
+  } catch (err) {
+    console.error('Failed to initialize session middleware:', err);
+    process.exit(1);
+  }
+};
+
+initializeApp().catch(err => {
+  console.error('Failed to initialize app:', err);
+  process.exit(1);
+});
 
 // Security middleware
 app.use(helmet({
@@ -54,7 +88,67 @@ app.use(cors({
   maxAge: 600 // Cache preflight requests for 10 minutes
 }));
 
-<<<<<<< Updated upstream
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.'
+});
+app.use(limiter);
+
+// Specific rate limit for login attempts
+const loginLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5, // limit each IP to 5 login requests per windowMs
+  message: 'Too many login attempts from this IP, please try again after an hour.'
+});
+
+// Body parsing
+app.use(express.json({ limit: '10kb' })); // Body limit is 10kb
+app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+
+// Data sanitization
+app.use(xssClean()); // Clean user input from XSS
+app.use(mongoSanitize()); // Prevent NoSQL injection
+app.use(hpp()); // Prevent HTTP Parameter Pollution
+
+// Static files with security headers
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders: (res, path, stat) => {
+    res.set('X-Content-Type-Options', 'nosniff');
+    res.set('X-Frame-Options', 'DENY');
+    res.set('X-XSS-Protection', '1; mode=block');
+  }
+}));
+
+// Helper function for basic templating
+function render_template_string(template, context) {
+    return template.replace(/\{\{\s*([^}]+)\s*\}\}/g, (match, p1) => {
+        return context[p1.trim()] || '';
+    });
+}
+
+// Configuración de rutas
+const BASE_DIR = path.dirname(__filename);
+const DB_PATH = path.join(BASE_DIR, '../db/rh.db');
+const VOUCHERS_DIR = path.join(BASE_DIR, 'vouchers');
+
+// Health check endpoint
+app.get('/health', async (req, res) => {
+  try {
+    // Check database connection
+    await pool.query('SELECT NOW()');
+    // Check Redis connection if used
+    if (redisClient) {
+      await redisClient.ping();
+    }
+    res.status(200).json({ status: 'healthy', service: 'nomina' });
+  } catch (error) {
+    logger.error('Health check failed:', error);
+    res.status(503).json({ status: 'unhealthy', error: error.message });
+  }
+});
+
 // === Funciones utilitarias ===
 function calcularISR(salarioBase) {
   const ingresoAnual = salarioBase * 12;
@@ -90,172 +184,8 @@ app.post('/login', (req, res) => {
   if (usuario === 'admin' && password === '1234') {
     const token = jwt.sign({ usuario }, JWT_SECRET, { expiresIn: '1h' });
     return res.json({ token });
-=======
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.'
-});
-app.use(limiter);
-
-// Specific rate limit for login attempts
-const loginLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 5, // limit each IP to 5 login requests per windowMs
-  message: 'Too many login attempts from this IP, please try again after an hour.'
-});
-
-// Body parsing
-app.use(express.json({ limit: '10kb' })); // Body limit is 10kb
-app.use(express.urlencoded({ extended: true, limit: '10kb' }));
-
-// Data sanitization
-app.use(xssClean()); // Clean user input from XSS
-app.use(mongoSanitize()); // Prevent NoSQL injection
-app.use(hpp()); // Prevent HTTP Parameter Pollution
-
-// Static files with security headers
-app.use(express.static(path.join(__dirname, 'public'), {
-  setHeaders: (res, path, stat) => {
-    res.set('X-Content-Type-Options', 'nosniff');
-    res.set('X-Frame-Options', 'DENY');
-    res.set('X-XSS-Protection', '1; mode=block');
->>>>>>> Stashed changes
-  }
-}));
-
-// Helper function for basic templating
-function render_template_string(template, context) {
-    return template.replace(/\{\{\s*([^}]+)\s*\}\}/g, (match, p1) => {
-        return context[p1.trim()] || '';
-    });
-}
-
-// Configuración de rutas
-const BASE_DIR = path.dirname(__filename);
-const DB_PATH = path.join(BASE_DIR, '../db/rh.db');
-const VOUCHERS_DIR = path.join(BASE_DIR, 'vouchers');
-
-// Health check endpoint
-app.get('/health', async (req, res) => {
-  try {
-    const client = await pool.connect();
-    await client.query('SELECT 1');
-    client.release();
-    res.status(200).json({ status: 'healthy' });
-  } catch (err) {
-    res.status(500).json({ status: 'unhealthy', error: err.message });
   }
 });
-
-// Add API endpoints to get employees and attendance data
-app.get('/employees', async (req, res) => {
-  try {
-    const client = await pool.connect();
-    const result = await client.query(`SELECT * FROM ${EMPLOYEES_TABLE}`);
-    client.release();
-    res.status(200).json(result.rows);
-  } catch (err) {
-    console.error('Error fetching employees:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-app.get('/attendance', async (req, res) => {
-  try {
-    const client = await pool.connect();
-    const result = await client.query(`SELECT * FROM ${ATTENDANCE_TABLE}`);
-    client.release();
-    res.status(200).json(result.rows);
-  } catch (err) {
-    console.error('Error fetching attendance records:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Diagnóstico de conexiones
-app.get('/diagnose', async (req, res) => {
-  try {
-    const results = {
-      database: false,
-      bases_de_datos_service: false,
-      asistencia_service: false
-    };
-    
-    // Check database connection
-    try {
-      const client = await pool.connect();
-      await client.query('SELECT 1');
-      client.release();
-      results.database = true;
-    } catch (err) {
-      console.error('Database connection error:', err);
-    }
-    
-    // Check bases_de_datos service
-    try {
-      const response = await axios.get('http://localhost:3000/health', { timeout: 5000 });
-      results.bases_de_datos_service = response.status === 200;
-    } catch (err) {
-      console.error('Bases de datos service error:', err.message);
-    }
-    
-    // Check asistencia service
-    try {
-      const response = await axios.get('http://localhost:3003/health', { timeout: 5000 });
-      results.asistencia_service = response.status === 200;
-    } catch (err) {
-      console.error('Asistencia service error:', err.message);
-    }
-    
-    res.status(200).json(results);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-const ADMIN_USER = "admin";
-const ADMIN_PASS = "1234";
-
-const SALARIO_MINIMO = 11903.13;
-const ISSS = 595.16;
-
-// Database table constants
-const EMPLOYEES_TABLE = 'employees';
-const ATTENDANCE_TABLE = 'asistencia'; // Changed from 'attendance' to 'asistencia'
-const PAYROLL_TABLE = 'payroll';
-
-// Database column mappings to handle any discrepancies
-const EMPLOYEES_COLUMNS = {
-    ID: 'id',
-    NAME: 'nombre', // Updated field names to match actual schema
-    ROLE: 'puesto',
-    DEPARTMENT: 'departamento',
-    BASE_SALARY: 'salario',
-    CHECKIN_TIME: 'check_in',
-    CHECKOUT_TIME: 'check_out',
-    FECHA_INGRESO: 'fecha_ingreso',
-    BANCO: 'banco',
-    CUENTA: 'cuenta'
-};
-
-const ATTENDANCE_COLUMNS = {
-    ID_EMPLEADO: 'id_empleado',
-    DATE: 'date',
-    CHECK_IN: 'check_in',
-    CHECK_OUT: 'check_out',
-    JUSTIFICACION: 'justificacion'
-};
-
-const PAYROLL_COLUMNS = {
-    ID: 'id',
-    ID_EMPLEADO: 'id_empleado',
-    PERIODO: 'periodo',
-    SALARIO_BRUTO: 'salario_bruto',
-    DEDUCCIONES: 'deducciones',
-    SALARIO_NETO: 'salario_neto'
-};
 
 // Decorador de autenticación
 function requiere_autenticacion(f) {
@@ -557,119 +487,14 @@ app.post('/login', loginLimiter, [
   return res.status(401).json({ error: 'Credenciales inválidas' });
 });
 
-<<<<<<< Updated upstream
-// Generar PDF de planilla
-app.post('/planilla', authenticateToken, async (req, res) => {
-=======
 // Apply validation to planilla generation
 app.post('/planilla', validatePlanillaInput, authenticateToken, async (req, res) => {
->>>>>>> Stashed changes
   const { periodo, quincena } = req.body;
 
   try {
-<<<<<<< Updated upstream
-    const [empRes, asisRes] = await Promise.all([
-      axios.get('http://bases-de-datos:3000/employees'),
-      axios.get('http://bases-de-datos:3000/attendance')
-    ]);
-
-    const empleados = empRes.data;
-    const asistencia = asisRes.data;
-
-    const planilla = empleados.map(emp => {
-      const registros = asistencia.filter(r =>
-        r.employeeId === emp.id &&
-        r.date >= fechaInicio &&
-        r.date <= fechaFin &&
-        r.check_in && r.check_out
-      );
-
-      const horas = registros.reduce((sum, r) => {
-        const [hIn, mIn] = r.check_in.split(':').map(Number);
-        const [hOut, mOut] = r.check_out.split(':').map(Number);
-        return sum + ((hOut * 60 + mOut) - (hIn * 60 + mIn)) / 60;
-      }, 0);
-
-      const dias = registros.length;
-      const salarioBase = emp.base_salary || 15000;
-      const salarioHora = salarioBase / 30 / 8;
-      const salarioQuincenal = salarioHora * horas;
-
-      const ihss = aplicarDeducciones ? Math.min(salarioBase, SALARIO_MINIMO) * 0.05 : 0;
-      const rap = aplicarDeducciones ? Math.max(0, salarioBase - SALARIO_MINIMO) * RAP_PORCENTAJE : 0;
-      const isr = aplicarDeducciones ? calcularISR(salarioBase) : 0;
-      const totalDeducciones = ihss + rap + isr;
-      const pagoNeto = salarioQuincenal - totalDeducciones;
-
-      return {
-        nombre: emp.name,
-        cargo: emp.role || '',
-        salarioMensual: salarioBase.toFixed(2),
-        dias,
-        salarioQuincenal: salarioQuincenal.toFixed(2),
-        ihss: ihss.toFixed(2),
-        rap: rap.toFixed(2),
-        isr: isr.toFixed(2),
-        deducciones: totalDeducciones.toFixed(2),
-        neto: pagoNeto.toFixed(2),
-        banco: emp.banco || '',
-        cuenta: emp.cuenta || ''
-      };
-    });
-
-    // === PDF ===
-
-    const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 20 });
-    let buffers = [];
-
-    doc.on('data', buffers.push.bind(buffers));
-    doc.on('end', () => {
-      const pdf = Buffer.concat(buffers);
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `attachment; filename=planilla_${periodo}_q${q}.pdf`);
-      res.send(pdf);
-    });
-
-    doc.fontSize(10).text(`PLANILLA QUINCENAL - ${periodo} Q${q}`, { align: 'center' }).moveDown();
-    doc.fontSize(8);
-
-    const headers = [
-      'Nombre', 'Cargo', 'Días', 'Sal. Mensual', 'Sal. Quin.',
-      'IHSS', 'RAP', 'ISR', 'Deducciones', 'Pago Neto', 'Banco', 'Cuenta'
-    ];
-    const colWidths = [100, 80, 30, 60, 60, 40, 40, 40, 60, 60, 60, 80];
-    const startX = 20;
-    let y = 100;
-    const rowHeight = 14;
-
-    headers.forEach((h, i) => {
-      const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0);
-      doc.rect(x, y, colWidths[i], rowHeight).fillAndStroke('#e0e0e0', '#000');
-      doc.fillColor('#000').text(h, x + 2, y + 4, { width: colWidths[i] - 4 });
-    });
-
-    y += rowHeight;
-
-    planilla.forEach(row => {
-      const values = [
-        row.nombre, row.cargo, row.dias, row.salarioMensual, row.salarioQuincenal,
-        row.ihss, row.rap, row.isr, row.deducciones, row.neto,
-        row.banco, row.cuenta
-      ];
-      values.forEach((val, i) => {
-        const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0);
-        doc.rect(x, y, colWidths[i], rowHeight).stroke();
-        doc.text(val.toString(), x + 2, y + 3, { width: colWidths[i] - 4 });
-      });
-      y += rowHeight;
-    });
-
-    doc.end();
-=======
     const client = await pool.connect();
     // ... rest of your existing planilla generation code ...
 
->>>>>>> Stashed changes
   } catch (err) {
     console.error('Error:', err);
     res.status(500).json({ 
@@ -681,11 +506,6 @@ app.post('/planilla', validatePlanillaInput, authenticateToken, async (req, res)
 
 // === Arrancar el servidor ===
 const PORT = process.env.PORT || 3002;
-<<<<<<< Updated upstream
-app.listen(PORT, '0.0.0.0', () => console.log(`✅ Nómina corriendo en puerto ${PORT}`));
-
-=======
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Servidor corriendo en http://0.0.0.0:${PORT}`);
 });
->>>>>>> Stashed changes

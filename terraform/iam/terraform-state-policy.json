@@ -1,0 +1,34 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:CreateTable",
+                "dynamodb:DeleteTable",
+                "dynamodb:DescribeTable",
+                "dynamodb:GetItem",
+                "dynamodb:PutItem",
+                "dynamodb:DeleteItem",
+                "dynamodb:UpdateItem",
+                "s3:*",
+                "kms:CreateKey",
+                "kms:CreateAlias",
+                "kms:DeleteAlias",
+                "kms:DescribeKey",
+                "kms:EnableKey",
+                "kms:DisableKey",
+                "kms:GenerateDataKey",
+                "kms:TagResource",
+                "kms:ListResourceTags",
+                "kms:PutKeyPolicy"
+            ],
+            "Resource": [
+                "arn:aws:dynamodb:us-east-1:826726045450:table/terraform-lock",
+                "arn:aws:s3:::saas-rh-terraform-state",
+                "arn:aws:s3:::saas-rh-terraform-state/*",
+                "arn:aws:kms:us-east-1:826726045450:key/*"
+            ]
+        }
+    ]
+}

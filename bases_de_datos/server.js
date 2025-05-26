@@ -1,33 +1,91 @@
-// asistencia/server.js
+// bases_de_datos/server.js
 
 // Required packages
-const express = require('express');
-const { Pool } = require('pg');
-const path = require('path');
-require('dotenv').config();
+import express from 'express';
+import pg from 'pg';
+const { Pool } = pg;
+import path from 'path';
+import dotenv from 'dotenv';
+dotenv.config();
+
+// Database configuration
+const dbConfig = {
+  user: process.env.DB_USER || 'admin',
+  host: process.env.DB_HOST || 'postgres',
+  database: process.env.DB_NAME || 'saas_db',
+  password: process.env.DB_PASSWORD || 'secret',
+  port: parseInt(process.env.DB_PORT || '5432'),
+  max: parseInt(process.env.DB_MAX_CLIENTS || '20'),
+  idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT || '30000'),
+  connectionTimeoutMillis: parseInt(process.env.DB_CONNECT_TIMEOUT || '2000'),
+  application_name: 'bases_de_datos_service',
+  keepAlive: true,
+  statement_timeout: parseInt(process.env.DB_STATEMENT_TIMEOUT || '30000'),
+  query_timeout: parseInt(process.env.DB_QUERY_TIMEOUT || '30000'),
+  keepAliveInitialDelayMillis: 10000,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+};
 
 // Monitoring
-const Monitoring = require('./monitoring');
-const monitoring = new Monitoring('bases_de_datos');
+let monitoring;
+try {
+  // Importing the monitoring module using dynamic import
+  const { default: Monitoring } = await import('./monitoring.js');
+  monitoring = new Monitoring('bases_de_datos');
+  console.log('Monitoring initialized successfully');
+} catch (error) {
+  console.error('Failed to initialize monitoring:', error);
+  // Continue without monitoring if it fails
+  monitoring = {
+    recordMetric: () => Promise.resolve(),
+    recordMemoryUsage: () => {},
+    recordResponseTime: () => {},
+    recordError: () => {},
+    recordSuccess: () => {}
+  };
+}
 
 // Security packages
-const helmet = require('helmet');
-const cors = require('cors');
-const rateLimit = require('express-rate-limit');
-const { body, validationResult } = require('express-validator');
-const xssClean = require('xss-clean');
-const mongoSanitize = require('express-mongo-sanitize');
-const hpp = require('hpp');
-const requestId = require('express-request-id')();
+import helmet from 'helmet';
+import cors from 'cors';
+import rateLimit from 'express-rate-limit';
+import { body, validationResult } from 'express-validator';
+import xssClean from 'xss-clean';
+import mongoSanitize from 'express-mongo-sanitize';
+import hpp from 'hpp';
+import requestId from 'express-request-id';
 
 // Custom modules
-const logger = require('./logger');
-const { sessionMiddleware, securityHeaders, redisClient } = require('./session');
+import logger from './logger.js';
+import { sessionMiddleware, securityHeaders, redisClient, initializeRedis } from './session.js';
+import healthCheck from './health.js';
+
+// Initialize Redis
+await initializeRedis();
+
+// Initialize the database pool
+const pool = new Pool(dbConfig);
+
+// Log database configuration (without password)
+console.log('Database configuration:', {
+  user: dbConfig.user,
+  host: dbConfig.host,
+  database: dbConfig.database,
+  port: dbConfig.port,
+  max: dbConfig.max
+});
 
 const app = express();
 
 // Add request ID to each request
-app.use(requestId);
+app.use(requestId());
+
+// Configure health check endpoint
+app.get('/health', healthCheck.createHealthCheckMiddleware(
+  pool,
+  `redis://${process.env.REDIS_HOST || 'redis'}:${process.env.REDIS_PORT || '6379'}`,
+  process.env.REDIS_PASSWORD || 'redis_secret'
+));
 
 // Performance monitoring middleware
 app.use((req, res, next) => {
@@ -86,18 +144,33 @@ app.use(xssClean()); // Clean user input from XSS
 app.use(mongoSanitize()); // Prevent NoSQL injection
 app.use(hpp()); // Prevent HTTP Parameter Pollution
 
-// Database configuration
-const pool = new Pool({
-  user: process.env.DB_USER || 'admin',
-  host: process.env.DB_HOST || 'postgres',
-  database: process.env.DB_NAME || 'saas_db',
-  password: process.env.DB_PASSWORD || 'secret',
-  port: process.env.DB_PORT || 5432,
+// Test database connection on startup
+pool.connect((err, client, release) => {
+  if (err) {
+    console.error('Error acquiring client from pool:', err);
+    console.error('Connection details:', {
+      host: dbConfig.host,
+      port: dbConfig.port,
+      database: dbConfig.database,
+      user: dbConfig.user
+    });
+  } else {
+    console.log('✅ Successfully connected to PostgreSQL database');
+    client.query('SELECT NOW()', (err, result) => {
+      release();
+      if (err) {
+        console.error('Error executing test query:', err);
+      } else {
+        console.log('Database time:', result.rows[0].now);
+      }
+    });
+  }
 });
 
 pool.on('error', (err) => {
   console.error('Unexpected error on idle client', err);
-  process.exit(-1);
+  // Don't exit immediately, try to recover
+  // process.exit(-1);
 });
 
 // Request validation middleware
@@ -113,24 +186,54 @@ const validateAttendanceInput = [
   }
 ];
 
-// Health check endpoint
+// Health check endpoint with detailed status
 app.get('/health', async (req, res) => {
+  const health = {
+    status: 'healthy',
+    service: 'bases_de_datos',
+    timestamp: new Date().toISOString(),
+    checks: {
+      database: false,
+      redis: false
+    }
+  };
+
   try {
-    const client = await pool.connect();
-    await client.query('SELECT 1');
-    client.release();
-    res.status(200).json({ status: 'healthy' });
-  } catch (err) {
-    res.status(500).json({ status: 'unhealthy', error: err.message });
+    // Check database connection
+    const dbResult = await pool.query('SELECT NOW()');
+    health.checks.database = true;
+    health.database_time = dbResult.rows[0].now;
+  } catch (error) {
+    health.status = 'unhealthy';
+    health.errors = health.errors || {};
+    health.errors.database = error.message;
+    logger.error('Database health check failed:', error);
   }
+
+  try {
+    // Check Redis connection if used
+    if (redisClient && redisClient.ping) {
+      await redisClient.ping();
+      health.checks.redis = true;
+    }
+  } catch (error) {
+    // Redis is optional, don't mark as unhealthy
+    health.checks.redis = false;
+    health.errors = health.errors || {};
+    health.errors.redis = error.message;
+    logger.warn('Redis health check failed:', error);
+  }
+
+  const statusCode = health.status === 'healthy' ? 200 : 503;
+  res.status(statusCode).json(health);
 });
 
 // Get all employees
 app.get('/employees', async (req, res) => {
+  let client;
   try {
-    const client = await pool.connect();
+    client = await pool.connect();
     const result = await client.query('SELECT * FROM employees');
-    client.release();
     
     // Ensure the response is valid JSON
     if (result.rows.length === 0) {
@@ -158,16 +261,21 @@ app.get('/employees', async (req, res) => {
     res.status(200).json(formattedRows);
   } catch (err) {
     console.error('Error fetching employees:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  } finally {
+    if (client) client.release();
   }
 });
 
 // Get all attendance records
 app.get('/attendance', async (req, res) => {
+  let client;
   try {
-    const client = await pool.connect();
-    const result = await client.query('SELECT * FROM asistencia');
-    client.release();
+    client = await pool.connect();
+    const result = await client.query('SELECT * FROM asistencia ORDER BY date DESC, id DESC');
     
     // Format the response to ensure compatibility
     const formattedRows = result.rows.map(row => ({
@@ -182,15 +290,22 @@ app.get('/attendance', async (req, res) => {
     res.status(200).json(formattedRows);
   } catch (err) {
     console.error('Error fetching attendance records:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  } finally {
+    if (client) client.release();
   }
 });
 
+// Create attendance record
 app.post('/attendance', validateAttendanceInput, async (req, res) => {
   const { employee_id, justificacion } = req.body;
-  const client = await pool.connect();
+  let client;
 
   try {
+    client = await pool.connect();
     console.log('Received attendance request:', { employee_id, justificacion });
     
     // Special case for the test verification
@@ -256,7 +371,9 @@ app.post('/attendance', validateAttendanceInput, async (req, res) => {
       await client.query(
         `INSERT INTO asistencia (id_empleado, date, check_in, justificacion)
          VALUES ($1, $2, $3, $4)
-         ON CONFLICT (id_empleado, date) DO UPDATE SET check_in = EXCLUDED.check_in, justificacion = EXCLUDED.justificacion`,
+         ON CONFLICT (id_empleado, date) DO UPDATE SET 
+         check_in = EXCLUDED.check_in, 
+         justificacion = EXCLUDED.justificacion`,
         [empleado.id, fechaHoy, horaActual, justificacion || null]
       );
 
@@ -294,16 +411,30 @@ app.post('/attendance', validateAttendanceInput, async (req, res) => {
     console.error('❌ Error registrando asistencia:', err);
     return res.status(500).json({ 
       message: 'Error interno del servidor.',
-      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined,
+      details: process.env.NODE_ENV === 'development' ? {
+        host: dbConfig.host,
+        port: dbConfig.port,
+        database: dbConfig.database
+      } : undefined
     });
   } finally {
-    client.release();
+    if (client) client.release();
   }
 });
 
-// Sirve el HTML de registro
-app.get('/attendance', (req, res) => {
-  res.sendFile(path.join(__dirname, 'asistencia.html'));
+// Test endpoint for session verification
+app.get('/api/session-test', (req, res) => {
+  if (!req.session.visits) {
+    req.session.visits = 0;
+  }
+  req.session.visits++;
+  
+  res.json({
+    sessionId: req.sessionID,
+    visits: req.session.visits,
+    redisStatus: redisClient.isReady
+  });
 });
 
 // Error handling middleware
@@ -326,23 +457,30 @@ app.use((err, req, res, next) => {
 const gracefulShutdown = async () => {
   logger.info('Received kill signal, shutting down gracefully');
   
-  // Close Redis connection
-  await redisClient.quit();
-  
-  // Close database pool
-  await pool.end();
-  
-  // Stop accepting new requests
-  server.close(() => {
-    logger.info('Closed out remaining connections');
-    process.exit(0);
-  });
+  try {
+    // Close Redis connection if it exists
+    if (redisClient && redisClient.quit) {
+      await redisClient.quit();
+    }
+    
+    // Close database pool
+    await pool.end();
+    
+    // Stop accepting new requests
+    server.close(() => {
+      logger.info('Closed out remaining connections');
+      process.exit(0);
+    });
 
-  // Force close if graceful shutdown fails
-  setTimeout(() => {
-    logger.error('Could not close connections in time, forcefully shutting down');
+    // Force close if graceful shutdown fails
+    setTimeout(() => {
+      logger.error('Could not close connections in time, forcefully shutting down');
+      process.exit(1);
+    }, 10000);
+  } catch (error) {
+    logger.error('Error during graceful shutdown:', error);
     process.exit(1);
-  }, 10000);
+  }
 };
 
 process.on('SIGTERM', gracefulShutdown);
@@ -351,4 +489,6 @@ process.on('SIGINT', gracefulShutdown);
 const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT, () => {
   logger.info(`✅ Bases de datos corriendo en puerto ${PORT}`);
+  logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  logger.info(`Database host: ${dbConfig.host}:${dbConfig.port}`);
 });

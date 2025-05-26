@@ -1,11 +1,7 @@
-# Route53 Zone
-resource "aws_route53_zone" "main" {
-  name = var.domain_name
-  
-  tags = {
-    Environment = var.environment
-    Project     = var.project_name
-  }
+# Use existing Route53 zone
+data "aws_route53_zone" "selected" {
+  name         = var.domain_name
+  private_zone = false
 }
 
 # ACM Certificate
@@ -24,8 +20,8 @@ resource "aws_acm_certificate" "main" {
   }
 }
 
-# DNS Validation
-resource "aws_route53_record" "acm_validation" {
+# Certificate validation records
+resource "aws_route53_record" "cert_validation" {
   for_each = {
     for dvo in aws_acm_certificate.main.domain_validation_options : dvo.domain_name => {
       name   = dvo.resource_record_name
@@ -39,20 +35,20 @@ resource "aws_route53_record" "acm_validation" {
   records         = [each.value.record]
   ttl             = 60
   type            = each.value.type
-  zone_id         = aws_route53_zone.main.zone_id
+  zone_id         = data.aws_route53_zone.selected.zone_id
 }
 
-# Certificate Validation
+# Wait for certificate validation
 resource "aws_acm_certificate_validation" "main" {
   certificate_arn         = aws_acm_certificate.main.arn
-  validation_record_fqdns = [for record in aws_route53_record.acm_validation : record.fqdn]
+  validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
 }
 
-# ALB DNS Records
+# A Records for services
 resource "aws_route53_record" "services" {
-  for_each = toset(["app", "api", "admin"])
+  for_each = var.alb_dns_name != "" ? toset(["app", "api", "admin"]) : toset([])
 
-  zone_id = aws_route53_zone.main.zone_id
+  zone_id = data.aws_route53_zone.selected.zone_id
   name    = "${each.key}.${var.domain_name}"
   type    = "A"
 
@@ -61,13 +57,4 @@ resource "aws_route53_record" "services" {
     zone_id               = var.alb_zone_id
     evaluate_target_health = true
   }
-}
-
-# Outputs
-output "domain_nameservers" {
-  value = aws_route53_zone.main.name_servers
-}
-
-output "certificate_arn" {
-  value = aws_acm_certificate.main.arn
 }

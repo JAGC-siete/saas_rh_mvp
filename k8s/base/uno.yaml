@@ -1,0 +1,186 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: "2025-05-25T14:03:48Z"
+  generateName: asistencia-c5b99c86f-
+  labels:
+    app: asistencia
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/part-of: saas-rh
+    pod-template-hash: c5b99c86f
+  name: asistencia-c5b99c86f-bb744
+  namespace: default
+  ownerReferences:
+  - apiVersion: apps/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: ReplicaSet
+    name: asistencia-c5b99c86f
+    uid: 5407e88a-5bf6-4bb3-a474-b1d007924d52
+  resourceVersion: "414428"
+  uid: 17b13cd7-6575-4fa1-83e3-0ae41cff6e15
+spec:
+  containers:
+  - env:
+    - name: NODE_ENV
+      value: production
+    - name: DB_HOST
+      valueFrom:
+        secretKeyRef:
+          key: host
+          name: db-secret
+    - name: DB_USER
+      valueFrom:
+        secretKeyRef:
+          key: username
+          name: db-secret
+    - name: DB_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          key: password
+          name: db-secret
+    - name: DB_NAME
+      valueFrom:
+        secretKeyRef:
+          key: database
+          name: db-secret
+    - name: PORT
+      value: "3000"
+    - name: CORS_ORIGIN
+      value: https://app.humanosisu.com,https://api.humanosisu.com
+    image: 826726045450.dkr.ecr.us-east-1.amazonaws.com/asistencia:latest
+    imagePullPolicy: Always
+    livenessProbe:
+      failureThreshold: 3
+      httpGet:
+        path: /health
+        port: 3000
+        scheme: HTTP
+      initialDelaySeconds: 15
+      periodSeconds: 30
+      successThreshold: 1
+      timeoutSeconds: 5
+    name: asistencia
+    ports:
+    - containerPort: 3000
+      protocol: TCP
+    readinessProbe:
+      failureThreshold: 3
+      httpGet:
+        path: /health
+        port: 3000
+        scheme: HTTP
+      initialDelaySeconds: 5
+      periodSeconds: 10
+      successThreshold: 1
+      timeoutSeconds: 3
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 100m
+        memory: 256Mi
+    startupProbe:
+      failureThreshold: 30
+      httpGet:
+        path: /health
+        port: 3000
+        scheme: HTTP
+      initialDelaySeconds: 10
+      periodSeconds: 5
+      successThreshold: 1
+      timeoutSeconds: 1
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+    volumeMounts:
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-xxvt7
+      readOnly: true
+  dnsPolicy: ClusterFirst
+  enableServiceLinks: true
+  nodeName: ip-10-0-3-30.ec2.internal
+  preemptionPolicy: PreemptLowerPriority
+  priority: 0
+  restartPolicy: Always
+  schedulerName: default-scheduler
+  securityContext: {}
+  serviceAccount: default
+  serviceAccountName: default
+  terminationGracePeriodSeconds: 30
+  tolerations:
+  - effect: NoExecute
+    key: node.kubernetes.io/not-ready
+    operator: Exists
+    tolerationSeconds: 300
+  - effect: NoExecute
+    key: node.kubernetes.io/unreachable
+    operator: Exists
+    tolerationSeconds: 300
+  volumes:
+  - name: kube-api-access-xxvt7
+    projected:
+      defaultMode: 420
+      sources:
+      - serviceAccountToken:
+          expirationSeconds: 3607
+          path: token
+      - configMap:
+          items:
+          - key: ca.crt
+            path: ca.crt
+          name: kube-root-ca.crt
+      - downwardAPI:
+          items:
+          - fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+            path: namespace
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: "2025-05-25T14:03:48Z"
+    status: "True"
+    type: Initialized
+  - lastProbeTime: null
+    lastTransitionTime: "2025-05-25T14:03:48Z"
+    message: 'containers with unready status: [asistencia]'
+    reason: ContainersNotReady
+    status: "False"
+    type: Ready
+  - lastProbeTime: null
+    lastTransitionTime: "2025-05-25T14:03:48Z"
+    message: 'containers with unready status: [asistencia]'
+    reason: ContainersNotReady
+    status: "False"
+    type: ContainersReady
+  - lastProbeTime: null
+    lastTransitionTime: "2025-05-25T14:03:48Z"
+    status: "True"
+    type: PodScheduled
+  containerStatuses:
+  - containerID: containerd://3d34796855a90bdfc10e662dc7817d0e8a3b6aeefa65c22bfbecf2b956b8ab91
+    image: 826726045450.dkr.ecr.us-east-1.amazonaws.com/asistencia:latest
+    imageID: 826726045450.dkr.ecr.us-east-1.amazonaws.com/asistencia@sha256:dfe1beb4ad63f76520c0e3378c5dcb4c448ca2f4f04a9d0d3f5801cc4962d659
+    lastState:
+      terminated:
+        containerID: containerd://3d34796855a90bdfc10e662dc7817d0e8a3b6aeefa65c22bfbecf2b956b8ab91
+        exitCode: 1
+        finishedAt: "2025-05-25T15:06:05Z"
+        reason: Error
+        startedAt: "2025-05-25T15:06:05Z"
+    name: asistencia
+    ready: false
+    restartCount: 17
+    started: false
+    state:
+      waiting:
+        message: back-off 5m0s restarting failed container=asistencia pod=asistencia-c5b99c86f-bb744_default(17b13cd7-6575-4fa1-83e3-0ae41cff6e15)
+        reason: CrashLoopBackOff
+  hostIP: 10.0.3.30
+  phase: Running
+  podIP: 10.0.3.61
+  podIPs:
+  - ip: 10.0.3.61
+  qosClass: Burstable
+  startTime: "2025-05-25T14:03:48Z"

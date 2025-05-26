@@ -1,115 +1,93 @@
-provider "aws" {
-  region = var.aws_region
+# Locals
+locals {
+  cluster_name = coalesce(var.cluster_name, "${var.project_name}-${var.environment}")
+  
+  common_tags = merge(
+    var.tags,
+    {
+      Environment = var.environment
+      Project     = var.project_name
+      ManagedBy   = "terraform"
+    }
+  )
 }
 
-data "aws_eks_cluster" "cluster" {
-  name = module.eks.cluster_name
-}
-
-data "aws_eks_cluster_auth" "cluster" {
-  name = module.eks.cluster_name
-}
-
-provider "kubernetes" {
-  host                   = data.aws_eks_cluster.cluster.endpoint
-  cluster_ca_certificate = base64decode(data.aws_eks_cluster.cluster.certificate_authority.0.data)
-  token                  = data.aws_eks_cluster_auth.cluster.token
-}
-
+# EKS Cluster
 module "eks" {
-  source          = "terraform-aws-modules/eks/aws"
-  version         = "~> 19.0"
-  cluster_name    = "saas-rh-${var.environment}"
+  source  = "terraform-aws-modules/eks/aws"
+  version = "~> 19.0"
+  
+  cluster_name    = local.cluster_name
   cluster_version = var.cluster_version
   
-  vpc_id          = var.vpc_id
-  subnet_ids      = var.private_subnets
+  vpc_id     = var.vpc_id
+  subnet_ids = var.private_subnets
 
   cluster_endpoint_private_access = true
   cluster_endpoint_public_access  = true
 
+  # Enable encryption for secrets
+  cluster_encryption_config = [{
+    provider_key_arn = var.kms_key_arn
+    resources        = ["secrets"]
+  }]
+
+  # EKS Managed Node Group(s)
   eks_managed_node_groups = {
     general = {
+      name = "${local.cluster_name}-general"
+
+      # Instance configuration
+      instance_types = var.instance_types
+      capacity_type  = "ON_DEMAND"
+
+      # Scaling configuration
       desired_size = var.desired_size
       min_size     = var.min_size
       max_size     = var.max_size
 
-      instance_types = var.instance_types
-      capacity_type  = "ON_DEMAND"
+      # Disk configuration
+      block_device_mappings = {
+        xvda = {
+          device_name = "/dev/xvda"
+          ebs = {
+            volume_size = 50
+            volume_type = "gp3"
+            encrypted   = true
+            kms_key_id  = var.kms_key_arn
+          }
+        }
+      }
 
+      # Labels and taints
       labels = {
         Environment = var.environment
+        NodeGroup   = "general"
       }
 
-      tags = {
-        Environment = var.environment
-        Project     = var.project_name
-      }
+      taints = []
 
-      # Add scaling configurations
-      scaling_config = {
-        desired_size = var.desired_size
-        max_size     = var.max_size
-        min_size     = var.min_size
-      }
+      # Enable detailed monitoring
+      enable_monitoring = true
 
-      # Add instance health checks
-      health_check_config = {
-        timeout_seconds      = 5
-        interval_seconds     = 30
-        healthy_threshold   = 2
-        unhealthy_threshold = 2
-      }
-
-      # Add resource monitoring
-      resources_monitoring = {
-        enabled = true
-        metrics = ["cpu", "memory"]
-      }
+      # Additional security groups
+      vpc_security_group_ids = [aws_security_group.eks_nodes.id]
     }
   }
 
+  # Enable IRSA for service accounts
   enable_irsa = true
 
   # Enable CloudWatch logging
-  cluster_enabled_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
+  cluster_enabled_log_types = [
+    "api",
+    "audit",
+    "authenticator",
+    "controllerManager",
+    "scheduler"
+  ]
 
-  # Add cluster autoscaler configuration
-  cluster_autoscaler = {
-    enabled = true
-    version = "v1.22.0"
-    resources = {
-      limits = {
-        cpu    = "100m"
-        memory = "300Mi"
-      }
-      requests = {
-        cpu    = "100m"
-        memory = "300Mi"
-      }
-    }
-  }
-
-  eks_managed_node_group_defaults = {
-    iam_role_additional_policies = {
-      AmazonEBSCSIDriverPolicy = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
-      AmazonEKSClusterPolicy    = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
-      CloudWatchAgentServerPolicy = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
-      AWSLoadBalancerControllerIAMPolicy = aws_iam_policy.alb_controller.arn
-    }
-  }
-
-  cluster_security_group_additional_rules = {
-    egress_nodes_ephemeral_ports_tcp = {
-      description                 = "To node 1025-65535"
-      protocol                    = "tcp"
-      from_port                  = 1025
-      to_port                    = 65535
-      type                       = "egress"
-      source_node_security_group = true
-    }
-  }
-
+  # Node security group additional rules
   node_security_group_additional_rules = {
     ingress_self_all = {
       description = "Node to node all ports/protocols"
@@ -120,27 +98,98 @@ module "eks" {
       self        = true
     }
     egress_all = {
-      description      = "Node all egress"
-      protocol         = "-1"
-      from_port        = 0
-      to_port          = 0
-      type            = "egress"
-      cidr_blocks      = ["0.0.0.0/0"]
-      ipv6_cidr_blocks = ["::/0"]
+      description = "Node all egress"
+      protocol    = "-1"
+      from_port   = 0
+      to_port     = 0
+      type        = "egress"
+      cidr_blocks = ["0.0.0.0/0"]
     }
   }
 
-  tags = {
-    Environment = var.environment
-    Terraform   = "true"
+  tags = local.common_tags
+}
+
+# Additional Security Group for EKS nodes
+resource "aws_security_group" "eks_nodes" {
+  name_prefix = "${local.cluster_name}-nodes"
+  description = "Additional security group for EKS nodes"
+  vpc_id      = var.vpc_id
+
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "${local.cluster_name}-nodes"
+    }
+  )
+
+  lifecycle {
+    create_before_destroy = true
   }
 }
 
-# Create IAM policy for ALB Ingress Controller
+# Allow traffic from ALB to nodes
+resource "aws_security_group_rule" "nodes_ingress_alb" {
+  description              = "Allow inbound traffic from ALB"
+  type                     = "ingress"
+  from_port                = 0
+  to_port                  = 65535
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.alb.id
+  security_group_id        = aws_security_group.eks_nodes.id
+}
+
+# Security Group for ALB
+resource "aws_security_group" "alb" {
+  name_prefix = "${local.cluster_name}-alb"
+  description = "Security group for ALB"
+  vpc_id      = var.vpc_id
+
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "${local.cluster_name}-alb"
+    }
+  )
+}
+
+# Allow HTTPS inbound to ALB
+resource "aws_security_group_rule" "alb_ingress_https" {
+  description       = "Allow HTTPS inbound"
+  type             = "ingress"
+  from_port        = 443
+  to_port          = 443
+  protocol         = "tcp"
+  cidr_blocks      = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.alb.id
+}
+
+# Allow HTTP inbound to ALB (redirect to HTTPS)
+resource "aws_security_group_rule" "alb_ingress_http" {
+  description       = "Allow HTTP inbound"
+  type             = "ingress"
+  from_port        = 80
+  to_port          = 80
+  protocol         = "tcp"
+  cidr_blocks      = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.alb.id
+}
+
+# Allow all outbound from ALB
+resource "aws_security_group_rule" "alb_egress" {
+  description       = "Allow all outbound"
+  type             = "egress"
+  from_port        = 0
+  to_port          = 0
+  protocol         = "-1"
+  cidr_blocks      = ["0.0.0.0/0"]
+  security_group_id = aws_security_group.alb.id
+}
+
+# AWS Load Balancer Controller IAM policy
 resource "aws_iam_policy" "alb_controller" {
-  name        = "AWSLoadBalancerControllerIAMPolicy-${var.environment}"
-  path        = "/"
-  description = "ALB Ingress Controller IAM Policy"
+  name_prefix = "${local.cluster_name}-alb-controller"
+  description = "IAM policy for AWS Load Balancer Controller"
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -148,7 +197,6 @@ resource "aws_iam_policy" "alb_controller" {
       {
         Effect = "Allow"
         Action = [
-          "iam:CreateServiceLinkedRole",
           "ec2:DescribeAccountAttributes",
           "ec2:DescribeAddresses",
           "ec2:DescribeAvailabilityZones",
@@ -159,6 +207,8 @@ resource "aws_iam_policy" "alb_controller" {
           "ec2:DescribeInstances",
           "ec2:DescribeNetworkInterfaces",
           "ec2:DescribeTags",
+          "ec2:GetCoipPoolUsage",
+          "ec2:DescribeCoipPools",
           "elasticloadbalancing:DescribeLoadBalancers",
           "elasticloadbalancing:DescribeLoadBalancerAttributes",
           "elasticloadbalancing:DescribeListeners",
@@ -171,7 +221,56 @@ resource "aws_iam_policy" "alb_controller" {
           "elasticloadbalancing:DescribeTags"
         ]
         Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "cognito-idp:DescribeUserPoolClient",
+          "acm:ListCertificates",
+          "acm:DescribeCertificate",
+          "iam:ListServerCertificates",
+          "iam:GetServerCertificate",
+          "waf-regional:GetWebACL",
+          "waf-regional:GetWebACLForResource",
+          "waf-regional:AssociateWebACL",
+          "waf-regional:DisassociateWebACL",
+          "wafv2:GetWebACL",
+          "wafv2:GetWebACLForResource",
+          "wafv2:AssociateWebACL",
+          "wafv2:DisassociateWebACL",
+          "shield:GetSubscriptionState",
+          "shield:DescribeProtection",
+          "shield:CreateProtection",
+          "shield:DeleteProtection"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:AuthorizeSecurityGroupIngress",
+          "ec2:RevokeSecurityGroupIngress"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "elasticloadbalancing:CreateListener",
+          "elasticloadbalancing:DeleteListener",
+          "elasticloadbalancing:CreateRule",
+          "elasticloadbalancing:DeleteRule"
+        ]
+        Resource = "*"
       }
     ]
   })
+}
+
+# CloudWatch Log Group for EKS cluster logging
+resource "aws_cloudwatch_log_group" "eks" {
+  name              = "/aws/eks/${local.cluster_name}/cluster"
+  retention_in_days = var.log_retention_days
+
+  tags = local.common_tags
 }
