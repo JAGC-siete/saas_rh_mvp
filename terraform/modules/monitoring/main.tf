@@ -21,7 +21,7 @@ locals {
 
 # SNS Topic for alerts
 resource "aws_sns_topic" "alerts" {
-  name = "${var.project_name}-${var.environment}-alerts"
+  name = "${var.project_name}-${var.environment}-alerts-v2"
 
   tags = local.common_tags
 }
@@ -35,7 +35,7 @@ resource "aws_sns_topic_subscription" "email" {
 
 # Enhanced monitoring role for RDS
 resource "aws_iam_role" "rds_enhanced_monitoring" {
-  name_prefix = "${var.project_name}-${var.environment}-rds-monitoring-"
+  name_prefix = "${var.project_name}-${var.environment}-rds-monitoring-v2-"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -60,7 +60,7 @@ resource "aws_iam_role_policy_attachment" "rds_enhanced_monitoring" {
 
 # RDS Monitoring
 resource "aws_cloudwatch_metric_alarm" "rds_cpu" {
-  alarm_name          = "${var.project_name}-${var.environment}-rds-cpu"
+  alarm_name          = "${var.project_name}-${var.environment}-rds-cpu-v2"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
   metric_name         = "CPUUtilization"
@@ -81,7 +81,7 @@ resource "aws_cloudwatch_metric_alarm" "rds_cpu" {
 
 # ElastiCache Monitoring
 resource "aws_cloudwatch_metric_alarm" "elasticache_cpu" {
-  alarm_name          = "${var.project_name}-${var.environment}-elasticache-cpu"
+  alarm_name          = "${var.project_name}-${var.environment}-elasticache-cpu-v2"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
   metric_name         = "CPUUtilization"
@@ -102,7 +102,7 @@ resource "aws_cloudwatch_metric_alarm" "elasticache_cpu" {
 
 # EKS Monitoring
 resource "aws_cloudwatch_metric_alarm" "eks_node_count" {
-  alarm_name          = "${var.project_name}-${var.environment}-eks-node-count"
+  alarm_name          = "${var.project_name}-${var.environment}-eks-node-count-v2"
   comparison_operator = "LessThanThreshold"
   evaluation_periods  = "2"
   metric_name         = "cluster_node_count"
@@ -123,28 +123,7 @@ resource "aws_cloudwatch_metric_alarm" "eks_node_count" {
 
 # Log Groups
 resource "aws_cloudwatch_log_group" "application" {
-  name              = "/aws/${var.project_name}/${var.environment}/application"
-  retention_in_days = var.log_retention_days
-
-  tags = local.common_tags
-}
-
-resource "aws_cloudwatch_log_group" "eks" {
-  name              = "/aws/eks/${var.eks_cluster_name}/cluster"
-  retention_in_days = var.log_retention_days
-
-  tags = local.common_tags
-}
-
-resource "aws_cloudwatch_log_group" "rds" {
-  name              = "/aws/rds/instance/${var.rds_instance_id}/postgresql"
-  retention_in_days = var.log_retention_days
-
-  tags = local.common_tags
-}
-
-resource "aws_cloudwatch_log_group" "elasticache" {
-  name              = "/aws/elasticache/${var.elasticache_cluster_id}"
+  name              = "/aws/${var.project_name}/${var.environment}-v2/application"
   retention_in_days = var.log_retention_days
 
   tags = local.common_tags
@@ -152,13 +131,13 @@ resource "aws_cloudwatch_log_group" "elasticache" {
 
 # Log Metric Filters
 resource "aws_cloudwatch_log_metric_filter" "error_logs" {
-  name           = "${var.project_name}-${var.environment}-error-logs"
+  name           = "${var.project_name}-${var.environment}-error-logs-v2"
   pattern        = "ERROR"
   log_group_name = aws_cloudwatch_log_group.application.name
 
   metric_transformation {
     name          = "ErrorCount"
-    namespace     = "${var.project_name}/${var.environment}"
+    namespace     = "${var.project_name}/${var.environment}-v2"
     value         = "1"
     default_value = "0"
   }
@@ -166,11 +145,11 @@ resource "aws_cloudwatch_log_metric_filter" "error_logs" {
 
 # Error Count Alarm
 resource "aws_cloudwatch_metric_alarm" "error_logs" {
-  alarm_name          = "${var.project_name}-${var.environment}-error-count"
+  alarm_name          = "${var.project_name}-${var.environment}-error-count-v2"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "1"
   metric_name         = "ErrorCount"
-  namespace           = "${var.project_name}/${var.environment}"
+  namespace           = "${var.project_name}/${var.environment}-v2"
   period              = "300"
   statistic           = "Sum"
   threshold           = "10"

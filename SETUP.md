@@ -59,7 +59,7 @@ SESSION_SECRET=dev-secret
 CORS_ORIGIN=http://localhost:3000
 
 # AWS (for local development)
-AWS_REGION=us-west-2
+AWS_REGION=us-east-1
 AWS_PROFILE=saas-rh-dev
 ```
 

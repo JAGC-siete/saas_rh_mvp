@@ -19,7 +19,7 @@ resource "random_password" "master" {
 
 # Store the password in AWS Secrets Manager
 resource "aws_secretsmanager_secret" "rds_password" {
-  name        = "${var.project_name}-${var.environment}-rds-password"
+  name        = "${var.project_name}-${var.environment}-rds-password-v2"
   description = "RDS master user password"
   kms_key_id  = var.kms_key_arn
 
@@ -38,7 +38,7 @@ resource "aws_secretsmanager_secret_version" "rds_password" {
 
 # RDS Parameter Group
 resource "aws_db_parameter_group" "main" {
-  name_prefix = "${var.project_name}-${var.environment}"
+  name_prefix = "${var.project_name}-${var.environment}-v2"
   family      = "postgres14"
   description = "Custom parameter group for PostgreSQL"
 
@@ -87,7 +87,7 @@ resource "aws_db_parameter_group" "main" {
 
 # RDS DB subnet group
 resource "aws_db_subnet_group" "main" {
-  name_prefix = "${var.project_name}-${var.environment}"
+  name_prefix = "${var.project_name}-${var.environment}-v2"
   subnet_ids  = var.subnet_ids
 
   tags = local.common_tags
@@ -95,7 +95,7 @@ resource "aws_db_subnet_group" "main" {
 
 # RDS Instance
 resource "aws_db_instance" "main" {
-  identifier     = "${var.project_name}-db-${var.environment}"
+  identifier     = "${var.project_name}-db-${var.environment}-v2"
   engine         = "postgres"
   engine_version = var.engine_version
   instance_class = var.instance_class
@@ -143,7 +143,7 @@ resource "aws_db_instance" "main" {
 
   # Final snapshot configuration
   skip_final_snapshot       = false
-  final_snapshot_identifier = "${var.project_name}-db-${var.environment}-final"
+  final_snapshot_identifier = "${var.project_name}-db-${var.environment}-v2-final"
   delete_automated_backups  = false
 
   tags = local.common_tags
@@ -151,14 +151,14 @@ resource "aws_db_instance" "main" {
 
 # RDS Security Group
 resource "aws_security_group" "rds" {
-  name_prefix = "${var.project_name}-rds-${var.environment}"
+  name_prefix = "${var.project_name}-rds-${var.environment}-v2"
   description = "Security group for RDS PostgreSQL"
   vpc_id      = var.vpc_id
 
   tags = merge(
     local.common_tags,
     {
-      Name = "${var.project_name}-rds-${var.environment}"
+      Name = "${var.project_name}-rds-${var.environment}-v2"
     }
   )
 

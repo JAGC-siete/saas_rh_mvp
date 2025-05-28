@@ -1,7 +1,7 @@
 -- init.sql
 -- Crear tabla de empleados
 CREATE TABLE IF NOT EXISTS employees (
-    id UUID PRIMARY KEY,
+    id VARCHAR(20) PRIMARY KEY,
     name TEXT NOT NULL,
     role TEXT,
     departament TEXT,
@@ -10,12 +10,13 @@ CREATE TABLE IF NOT EXISTS employees (
     checkout_time TIME,
     fecha_ingreso DATE,
     banco TEXT,
-    cuenta TEXT
+    cuenta TEXT,
+    status TEXT DEFAULT 'Activo'
 );
 
 -- Tabla para control diario de asistencia
 CREATE TABLE IF NOT EXISTS attendance (
-    id_empleado UUID NOT NULL,
+    id_empleado VARCHAR(20) NOT NULL,
     date DATE NOT NULL,
     check_in TIME,
     check_out TIME,
@@ -27,7 +28,7 @@ CREATE TABLE IF NOT EXISTS attendance (
 -- Tabla de payroll (planilla)
 CREATE TABLE IF NOT EXISTS payroll (
     id SERIAL PRIMARY KEY,
-    id_empleado UUID REFERENCES employees(id),
+    id_empleado VARCHAR(20) REFERENCES employees(id),
     periodo TEXT NOT NULL,
     salario_bruto REAL NOT NULL,
     deducciones REAL DEFAULT 0,

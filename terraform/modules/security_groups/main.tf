@@ -1,39 +1,39 @@
 # Security groups for inter-service communication
 resource "aws_security_group" "eks" {
-  name_prefix = "${var.project_name}-eks-${var.environment}"
+  name_prefix = "${var.project_name}-eks-${var.environment}-v2"
   description = "Security group for EKS cluster nodes"
   vpc_id      = var.vpc_id
 
   tags = merge(
     var.tags,
     {
-      Name = "${var.project_name}-eks-${var.environment}"
+      Name = "${var.project_name}-eks-${var.environment}-v2"
     }
   )
 }
 
 resource "aws_security_group" "rds" {
-  name_prefix = "${var.project_name}-rds-${var.environment}"
+  name_prefix = "${var.project_name}-rds-${var.environment}-v2"
   description = "Security group for RDS"
   vpc_id      = var.vpc_id
 
   tags = merge(
     var.tags,
     {
-      Name = "${var.project_name}-rds-${var.environment}"
+      Name = "${var.project_name}-rds-${var.environment}-v2"
     }
   )
 }
 
 resource "aws_security_group" "elasticache" {
-  name_prefix = "${var.project_name}-elasticache-${var.environment}"
+  name_prefix = "${var.project_name}-elasticache-${var.environment}-v2"
   description = "Security group for ElastiCache"
   vpc_id      = var.vpc_id
 
   tags = merge(
     var.tags,
     {
-      Name = "${var.project_name}-elasticache-${var.environment}"
+      Name = "${var.project_name}-elasticache-${var.environment}-v2"
     }
   )
 }

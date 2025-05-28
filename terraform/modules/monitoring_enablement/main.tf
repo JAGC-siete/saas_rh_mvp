@@ -20,7 +20,7 @@ locals {
 
 # CloudWatch Dashboard for overall infrastructure monitoring
 resource "aws_cloudwatch_dashboard" "main" {
-  dashboard_name = "${var.project_name}-${var.environment}"
+  dashboard_name = "${var.project_name}-${var.environment}-v2"
 
   dashboard_body = jsonencode({
     widgets = [
@@ -80,21 +80,21 @@ resource "aws_cloudwatch_dashboard" "main" {
 
 # Create CloudWatch Log Groups
 resource "aws_cloudwatch_log_group" "rds" {
-  name              = "/aws/rds/instance/${var.rds_instance_id}/postgresql"
+  name              = "/aws/rds/instance/${var.rds_instance_id}-v2/postgresql"
   retention_in_days = var.log_retention_days
 
   tags = local.common_tags
 }
 
 resource "aws_cloudwatch_log_group" "eks" {
-  name              = "/aws/eks/${var.eks_cluster_name}/cluster"
+  name              = "/aws/eks/${var.eks_cluster_name}-v2/cluster"
   retention_in_days = var.log_retention_days
 
   tags = local.common_tags
 }
 
 resource "aws_cloudwatch_log_group" "elasticache" {
-  name              = "/aws/elasticache/${var.elasticache_cluster_id}"
+  name              = "/aws/elasticache/${var.elasticache_cluster_id}-v2"
   retention_in_days = var.log_retention_days
 
   tags = local.common_tags

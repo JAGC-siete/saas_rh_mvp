@@ -33,6 +33,12 @@ variable "monitoring_role_arn" {
   type        = string
 }
 
+variable "sns_topic_arn" {
+  description = "ARN of the SNS topic for alerts"
+  type        = string
+  default     = ""  # No requerido temporalmente
+}
+
 variable "log_retention_days" {
   description = "Number of days to retain CloudWatch logs"
   type        = number

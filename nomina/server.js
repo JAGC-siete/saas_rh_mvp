@@ -7,55 +7,35 @@ import xssClean from 'xss-clean';
 import mongoSanitize from 'express-mongo-sanitize';
 import hpp from 'hpp';
 import requestId from 'express-request-id';
-
-dotenv.config();
-
-// Custom modules
-import logger from './logger.js';
-import { getSessionMiddleware, securityHeaders } from './session.js';
 import express from 'express';
 import pg from 'pg';
-const { Pool } = pg;
 import PDFDocument from 'pdfkit';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import os from 'os';
 import { DateTime } from 'luxon';
 import axios from 'axios';
 import jwt from 'jsonwebtoken';
-const { body, validationResult } = require('express-validator');
-const xssClean = require('xss-clean');
-const mongoSanitize = require('express-mongo-sanitize');
-const hpp = require('hpp');
-const requestId = require('express-request-id')();
+
+dotenv.config();
 
 // Custom modules
-const logger = require('./logger');
-const { getSessionMiddleware, securityHeaders } = require('./session');
+import * as logger from './logger.js';
+import { sessionMiddleware } from './session.js';
+const { Pool } = pg;
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Initialize Express application
 const app = express();
 
 // Initialize session middleware first
 const initializeApp = async () => {
-  // Wait until session middleware is available
-  const waitForSession = (retries = 30) => new Promise((resolve, reject) => {
-    const sessionMiddleware = getSessionMiddleware();
-    if (sessionMiddleware) {
-      resolve(sessionMiddleware);
-    } else if (retries <= 0) {
-      reject(new Error('Timed out waiting for session middleware'));
-    } else {
-      setTimeout(() => waitForSession(retries - 1).then(resolve, reject), 1000);
-    }
-  });
+  // Use the sessionMiddleware directly since it's already available
+  app.use(sessionMiddleware);
 
-  try {
-    const sessionMiddleware = await waitForSession();
-    app.use(sessionMiddleware);
-  } catch (err) {
-    console.error('Failed to initialize session middleware:', err);
-    process.exit(1);
-  }
 };
 
 initializeApp().catch(err => {
