@@ -27,7 +27,7 @@
     "express-validator": "^7.2.1",
     "helmet": "^8.1.0",
     "hpp": "^0.2.3",
-    "pg": "^8.14.1",
+    "pg": "^8.15.6",
     "redis": "^4.6.7",
     "winston": "^3.17.0",
     "winston-daily-rotate-file": "^5.0.0",
