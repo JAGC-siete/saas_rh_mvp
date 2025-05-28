@@ -1,9 +1,24 @@
-require('dotenv').config();
-const express = require('express');
-const axios = require('axios');
-const PDFDocument = require('pdfkit');
-const jwt = require('jsonwebtoken');
-const path = require('path');
+import 'dotenv/config';
+import express from 'express';
+import axios from 'axios';
+import PDFDocument from 'pdfkit';
+import jwt from 'jsonwebtoken';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import Redis from 'ioredis';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const redisClient = new Redis({
+  host: process.env.REDIS_HOST || 'redis',
+  port: process.env.REDIS_PORT || 6379,
+  password: process.env.REDIS_PASSWORD,
+  retryStrategy: (times) => {
+    const delay = Math.min(times * 50, 2000);
+    return delay;
+  }
+});
 
 const app = express();
 
@@ -15,7 +30,64 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// === Funciones utilitarias ===
+// Update CORS configuration to use environment variable
+const corsOrigin = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ['http://localhost:3000'];
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (corsOrigin.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  }
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  next();
+});
+
+// Health check endpoint
+app.get('/health', async (req, res) => {
+  try {
+    const [dbResponse, redisHealth] = await Promise.allSettled([
+      axios.get(process.env.BASES_DE_DATOS_URL + '/health'),
+      redisClient.ping()
+    ]);
+
+    const redisStatus = redisHealth.status === 'fulfilled' && redisHealth.value === 'PONG';
+    const dbStatus = dbResponse.status === 'fulfilled' && dbResponse.value.data.status === 'healthy';
+
+    const health = {
+      status: dbStatus && redisStatus ? 'healthy' : 'unhealthy',
+      service: 'nomina',
+      timestamp: new Date().toISOString(),
+      dependencies: {
+        basesDeDatos: {
+          status: dbStatus ? 'healthy' : 'unhealthy',
+          details: dbResponse.status === 'fulfilled' ? dbResponse.value.data : dbResponse.reason.message
+        },
+        redis: {
+          status: redisStatus ? 'healthy' : 'unhealthy',
+          details: redisHealth.status === 'fulfilled' ? 'Connected' : redisHealth.reason.message
+        }
+      }
+    };
+
+    res.status(health.status === 'healthy' ? 200 : 503).json(health);
+  } catch (error) {
+    res.status(503).json({ 
+      status: 'unhealthy',
+      service: 'nomina',
+      timestamp: new Date().toISOString(),
+      error: error.message,
+      details: {
+        basesDeDatosConnection: error.code === 'ECONNREFUSED' ? 'failed' : 'error',
+        redisConnection: 'failed'
+      }
+    });
+  }
+});
+
 function calcularISR(salarioBase) {
   const ingresoAnual = salarioBase * 12;
   const rentaNeta = ingresoAnual - 40000;
@@ -37,14 +109,14 @@ function authenticateToken(req, res, next) {
   });
 }
 
-// === Rutas ===
+const formatoLempiras = n => new Intl.NumberFormat('es-HN', {
+  style: 'currency',
+  currency: 'HNL',
+  minimumFractionDigits: 2
+}).format(n);
 
-// Prueba de vida
-app.get('/health', (req, res) => {
-  res.status(200).send('Nomina OK');
-});
+// Simple health check removed in favor of the detailed one above
 
-// Login para obtener token
 app.post('/login', (req, res) => {
   const { usuario, password } = req.body;
   if (usuario === 'admin' && password === '1234') {
@@ -54,7 +126,6 @@ app.post('/login', (req, res) => {
   return res.status(401).json({ error: 'Credenciales inválidas' });
 });
 
-// Generar PDF de planilla
 app.post('/planilla', authenticateToken, async (req, res) => {
   const { periodo, quincena } = req.body;
   if (!/^\d{4}-\d{2}$/.test(periodo)) return res.status(400).json({ error: 'Periodo inválido (YYYY-MM)' });
@@ -69,25 +140,41 @@ app.post('/planilla', authenticateToken, async (req, res) => {
 
   try {
     const [empRes, asisRes] = await Promise.all([
-      axios.get('http://bases-de-datos:3000/employees'),
-      axios.get('http://bases-de-datos:3000/attendance')
+      axios.get(`${process.env.BASES_DE_DATOS_URL}/employees`),
+      axios.get(`${process.env.BASES_DE_DATOS_URL}/attendance`)
     ]);
 
     const empleados = empRes.data;
     const asistencia = asisRes.data;
 
     const planilla = empleados.map(emp => {
-      const registros = asistencia.filter(r =>
-        r.employeeId === emp.id &&
-        r.date >= fechaInicio &&
-        r.date <= fechaFin &&
-        r.check_in && r.check_out
-      );
+      if (!emp.dni) {
+        console.log(`⚠️ Empleado sin DNI: ${emp.name}`);
+        return null;
+      }
+
+      const registros = asistencia.filter(r => {
+        if (!r.last5 || !r.check_in || !r.check_out || !r.date) return false;
+
+        const matchLast5 = r.last5.toString().trim() === emp.dni.slice(-5).trim();
+        const recordDate = new Date(r.date);
+        const startDate = new Date(fechaInicio);
+        const endDate = new Date(fechaFin);
+        const matchDate = recordDate >= startDate && recordDate <= endDate;
+
+        return matchLast5 && matchDate;
+      });
 
       const horas = registros.reduce((sum, r) => {
-        const [hIn, mIn] = r.check_in.split(':').map(Number);
-        const [hOut, mOut] = r.check_out.split(':').map(Number);
-        return sum + ((hOut * 60 + mOut) - (hIn * 60 + mIn)) / 60;
+        try {
+          const [hIn, mIn] = r.check_in.slice(0,5).split(':').map(Number);
+          const [hOut, mOut] = r.check_out.slice(0,5).split(':').map(Number);
+          const minutos = (hOut * 60 + mOut) - (hIn * 60 + mIn);
+          const horas = minutos / 60;
+          return horas > 0 ? sum + horas : sum;
+        } catch (err) {
+          return sum;
+        }
       }, 0);
 
       const dias = registros.length;
@@ -104,20 +191,18 @@ app.post('/planilla', authenticateToken, async (req, res) => {
       return {
         nombre: emp.name,
         cargo: emp.role || '',
-        salarioMensual: salarioBase.toFixed(2),
+        salarioMensual: formatoLempiras(salarioBase),
         dias,
-        salarioQuincenal: salarioQuincenal.toFixed(2),
-        ihss: ihss.toFixed(2),
-        rap: rap.toFixed(2),
-        isr: isr.toFixed(2),
-        deducciones: totalDeducciones.toFixed(2),
-        neto: pagoNeto.toFixed(2),
-        banco: emp.banco || '',
-        cuenta: emp.cuenta || ''
+        salarioQuincenal: formatoLempiras(salarioQuincenal),
+        ihss: formatoLempiras(ihss),
+        rap: formatoLempiras(rap),
+        isr: formatoLempiras(isr),
+        deducciones: formatoLempiras(totalDeducciones),
+        neto: formatoLempiras(pagoNeto),
+        banco: emp.bank || '',
+        cuenta: emp.account || ''
       };
-    });
-
-    // === PDF ===
+    }).filter(Boolean);
 
     const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 20 });
     let buffers = [];
@@ -171,7 +256,33 @@ app.post('/planilla', authenticateToken, async (req, res) => {
   }
 });
 
-// === Arrancar el servidor ===
-const PORT = process.env.PORT || 3002;
-app.listen(PORT, '0.0.0.0', () => console.log(`✅ Nómina corriendo en puerto ${PORT}`));
+// Mejorar el logging
+function logInfo(message, ...args) {
+  console.log(`[${new Date().toISOString()}] INFO: ${message}`, ...args);
+}
 
+function logError(message, error) {
+  console.error(`[${new Date().toISOString()}] ERROR: ${message}`, error);
+}
+
+// Inicialización del servidor
+const port = process.env.PORT || 3002;
+app.listen(port, '0.0.0.0', () => {
+  logInfo(`Servidor de nómina escuchando en puerto ${port}`);
+  logInfo('Configuración:', {
+    JWT_SECRET: JWT_SECRET ? 'Configurado' : 'No configurado',
+    STATIC_PATH: path.join(__dirname, 'public'),
+    NODE_ENV: process.env.NODE_ENV
+  });
+});
+
+// Manejo de errores no capturados
+process.on('unhandledRejection', (reason, promise) => {
+  logError('Unhandled Rejection at:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  logError('Uncaught Exception:', error);
+  // Dar tiempo para logging y limpieza
+  setTimeout(() => process.exit(1), 1000);
+});
