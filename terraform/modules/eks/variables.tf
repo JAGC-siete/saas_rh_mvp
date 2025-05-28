@@ -60,12 +60,6 @@ variable "cluster_name" {
   default     = null
 }
 
-variable "log_retention_days" {
-  description = "Number of days to retain CloudWatch logs"
-  type        = number
-  default     = 30
-}
-
 variable "tags" {
   description = "Additional tags for resources"
   type        = map(string)
@@ -77,17 +71,26 @@ variable "aws_region" {
   type        = string
 }
 
-variable "security_group_id" {
-  description = "ID of the EKS cluster security group"
-  type        = string
+variable "create_iam_role" {
+  description = "Determina si se debe crear un rol IAM para los nodos de EKS"
+  type        = bool
+  default     = true
 }
 
-variable "rds_security_group_id" {
-  description = "ID of the RDS security group"
-  type        = string
+variable "iam_role_attach_cni_policy" {
+  description = "Whether to attach the Amazon EKS CNI IAM policy to the node IAM role"
+  type        = bool
+  default     = true
 }
 
-variable "elasticache_security_group_id" {
-  description = "ID of the ElastiCache security group"
-  type        = string
+variable "enable_cluster_encryption" {
+  description = "Whether to enable cluster encryption"
+  type        = bool
+  default     = true
+}
+
+variable "log_retention_days" {
+  description = "Number of days to retain CloudWatch logs"
+  type        = number
+  default     = 30
 }

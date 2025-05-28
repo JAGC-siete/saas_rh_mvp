@@ -1,76 +1,46 @@
 import session from 'express-session';
+import RedisStore from 'connect-redis';
 import { createClient } from 'redis';
-import { RedisStore } from 'connect-redis';
 
+// ❌ ELIMINA esta línea - no es necesaria en v7 y está causando el error
+// const RedisStore = connectRedis(session);
+
+// 2. Instancia el cliente de Redis
 const redisClient = createClient({
-  legacyMode: true,
-  socket: {
-    host: process.env.REDIS_HOST || 'redis',
-    port: parseInt(process.env.REDIS_PORT || '6379')
-  },
-  password: process.env.REDIS_PASSWORD,
-  retry_strategy: function(options) {
-    if (options.error && options.error.code === 'ECONNREFUSED') {
-      console.warn('Connection to Redis refused. Retrying...');
-      return Math.min(options.attempt * 100, 3000);
-    }
-    return Math.min(options.attempt * 100, 3000);
-  }
+  url: process.env.REDIS_URL || `redis://${process.env.REDIS_HOST || 'redis'}:${process.env.REDIS_PORT || '6379'}`,
+  password: process.env.REDIS_PASSWORD || 'redis_secret'
 });
+redisClient.connect().catch(console.error);
 
-await redisClient.connect();
+// Event listeners
+redisClient.on('error', err => console.error('Redis Client Error:', err));
+redisClient.on('connect', () => console.log('Connected to Redis'));
+redisClient.on('ready', () => console.log('Redis Client Ready'));
 
-redisClient.on('error', (err) => {
-  console.error('Redis Client Error:', err);
-});
-
-redisClient.on('connect', () => {
-  console.log('Connected to Redis successfully');
-});
-
+// 3. Instancia el store
 const store = new RedisStore({
   client: redisClient,
-  prefix: 'sess:',
+  prefix: 'sess:'
 });
 
-const sessionMiddleware = session({
+export const sessionMiddleware = session({
   store,
-  secret: process.env.SESSION_SECRET || 'mi_secreto_supersecreto',
-  name: 'sid',
+  secret: process.env.SESSION_SECRET || 'super-secret',
   resave: false,
   saveUninitialized: false,
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    sameSite: 'strict',
-    maxAge: parseInt(process.env.COOKIE_MAX_AGE) || 24 * 60 * 60 * 1000 // 24 hours
+    maxAge: 1000 * 60 * 60 * 24 // 24 hours
   }
 });
 
-// Add security headers middleware
-const securityHeaders = (req, res, next) => {
-  // Content Security Policy for data service
-  res.setHeader('Content-Security-Policy', [
-    "default-src 'self'",
-    "script-src 'self' 'unsafe-inline'",
-    "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob:",
-    "font-src 'self' data:",
-    "object-src 'none'",
-    "base-uri 'self'",
-    "form-action 'self'",
-    "frame-ancestors 'none'",
-    "block-all-mixed-content",
-    "upgrade-insecure-requests"
-  ].join('; '));
-
-  // Other security headers
+export const securityHeaders = (req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('X-XSS-Protection', '1; mode=block');
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
   next();
 };
 
-export { sessionMiddleware, redisClient, securityHeaders };
+export { redisClient };

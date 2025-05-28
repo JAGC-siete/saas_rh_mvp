@@ -1,8 +1,12 @@
 import winston from 'winston';
 import 'winston-daily-rotate-file';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
-const logDir = process.env.LOG_DIR || 'logs';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const logDir = process.env.LOG_DIR || path.join('/app', 'logs');
 
 const logFormat = winston.format.combine(
   winston.format.timestamp(),
@@ -71,4 +75,4 @@ logger.errorLogger = (err, req, res, next) => {
   next(err);
 };
 
-module.exports = logger;
+export { logger };

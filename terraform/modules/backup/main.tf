@@ -1,6 +1,6 @@
 # S3 Bucket for backups
 resource "aws_s3_bucket" "backups" {
-  bucket = "${var.project_name}-backups-${var.environment}"
+  bucket = "${var.project_name}-backups-${var.environment}-v2"
 
   # For MVP, we'll enable versioning to maintain backup history
   versioning {
@@ -38,7 +38,7 @@ resource "aws_s3_bucket" "backups" {
 
 # Backup IAM Role
 resource "aws_iam_role" "backup" {
-  name = "${var.project_name}-backup-role-${var.environment}"
+  name = "${var.project_name}-backup-role-${var.environment}-v2"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -62,7 +62,7 @@ resource "aws_iam_role_policy_attachment" "backup" {
 
 # AWS Backup Vault
 resource "aws_backup_vault" "main" {
-  name = "${var.project_name}-vault-${var.environment}"
+  name = "${var.project_name}-vault-${var.environment}-v2"
 
   tags = {
     Environment = var.environment
@@ -72,7 +72,7 @@ resource "aws_backup_vault" "main" {
 
 # AWS Backup Plan
 resource "aws_backup_plan" "main" {
-  name = "${var.project_name}-backup-plan-${var.environment}"
+  name = "${var.project_name}-backup-plan-${var.environment}-v2"
 
   rule {
     rule_name         = "daily_backup"

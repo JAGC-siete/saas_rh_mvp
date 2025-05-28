@@ -18,7 +18,7 @@ resource "random_password" "redis_auth" {
 
 # Store the auth token in Secrets Manager
 resource "aws_secretsmanager_secret" "redis_auth" {
-  name        = "${var.project_name}-${var.environment}-redis-auth"
+  name        = "${var.project_name}-${var.environment}-redis-auth-v2"
   description = "Redis AUTH token"
   kms_key_id  = var.kms_key_arn
 
@@ -36,8 +36,8 @@ resource "aws_secretsmanager_secret_version" "redis_auth" {
 
 # ElastiCache Redis Replication Group
 resource "aws_elasticache_replication_group" "main" {
-  replication_group_id = "${var.project_name}-${var.environment}"
-  description          = "Redis cluster for ${var.project_name} ${var.environment}"
+  replication_group_id = "${var.project_name}-${var.environment}-v2"
+  description          = "Redis cluster for ${var.project_name} ${var.environment} v2"
 
   engine         = "redis"
   engine_version = var.engine_version
@@ -86,7 +86,7 @@ resource "aws_elasticache_replication_group" "main" {
 # Redis Parameter Group
 resource "aws_elasticache_parameter_group" "main" {
   family = "redis7"
-  name   = "${var.project_name}-redis-params-${var.environment}"
+  name   = "${var.project_name}-redis-params-${var.environment}-v2"
 
   # Performance and memory optimizations
   parameter {
@@ -110,7 +110,7 @@ resource "aws_elasticache_parameter_group" "main" {
 
 # Redis Subnet Group
 resource "aws_elasticache_subnet_group" "main" {
-  name        = "${var.project_name}-redis-subnet-${var.environment}"
+  name        = "${var.project_name}-redis-subnet-${var.environment}-v2"
   subnet_ids  = var.subnet_ids
   description = "Subnet group for Redis cluster"
 
@@ -119,14 +119,14 @@ resource "aws_elasticache_subnet_group" "main" {
 
 # Redis Security Group
 resource "aws_security_group" "redis" {
-  name_prefix = "${var.project_name}-redis-${var.environment}"
+  name_prefix = "${var.project_name}-redis-${var.environment}-v2"
   description = "Security group for Redis cluster"
   vpc_id      = var.vpc_id
 
   tags = merge(
     local.common_tags,
     {
-      Name = "${var.project_name}-redis-${var.environment}"
+      Name = "${var.project_name}-redis-${var.environment}-v2"
     }
   )
 
@@ -159,7 +159,7 @@ resource "aws_security_group_rule" "redis_egress" {
 
 # CloudWatch Log Group for Redis
 resource "aws_cloudwatch_log_group" "redis" {
-  name              = "/aws/elasticache/${var.project_name}-${var.environment}/redis"
+  name              = "/aws/elasticache/${var.project_name}-${var.environment}-v2/redis"
   retention_in_days = var.log_retention_days
 
   tags = local.common_tags

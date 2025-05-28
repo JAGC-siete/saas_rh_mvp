@@ -1,23 +1,23 @@
 # asistencia/Dockerfile
-# Use Node.js 18 with Alpine Linux
 FROM node:18-alpine
 
-# Install dependencies required for node-gyp and health checks
+# Install required tools
 RUN apk add --no-cache python3 make g++ curl
 
-# Create app directory and set ownership
+# WORK AS ROOT FIRST
 WORKDIR /app
-
-# Copy package files first for better caching
 COPY package*.json ./
+RUN npm install --package-lock-only
+RUN npm ci
 
-# Install dependencies
-RUN npm ci --only=production && \
-    # Clean npm cache to reduce image size
-    npm cache clean --force
+# Explicit dependency verification
+RUN npm list express-session && npm list connect-redis
 
-# Copy application code
-COPY . .
+# Use existing node user from base image
+RUN chown -R node:node /app
+
+# Copy application code with correct ownership
+COPY --chown=node:node . .
 
 # Set environment variables
 ENV NODE_ENV=production \
@@ -25,13 +25,11 @@ ENV NODE_ENV=production \
     # Add platform specification for M1 Macs
     DOCKER_DEFAULT_PLATFORM=linux/amd64
 
-# Create non-root user for security
-RUN addgroup -g 1001 nodejs && \
-    adduser -S -u 1001 -G nodejs nodejs && \
-    chown -R nodejs:nodejs /app
+# Create logs directory and set permissions
+RUN mkdir -p /app/logs && chown -R node:node /app/logs
 
-# Switch to non-root user
-USER nodejs
+# Switch to non-root user - DO THIS LAST
+USER node
 
 EXPOSE 3003
 

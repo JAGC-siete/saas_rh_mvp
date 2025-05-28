@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const logDir = process.env.LOG_DIR || 'logs';
+const logDir = process.env.LOG_DIR || path.join('/app', 'logs');
 
 const logFormat = winston.format.combine(
   winston.format.timestamp(),
@@ -62,4 +62,5 @@ logger.requestLogger = (req, res, next) => {
   next();
 };
 
+// Export logger methods
 export default logger;

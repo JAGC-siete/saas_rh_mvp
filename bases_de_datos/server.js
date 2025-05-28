@@ -57,11 +57,8 @@ import requestId from 'express-request-id';
 
 // Custom modules
 import logger from './logger.js';
-import { sessionMiddleware, securityHeaders, redisClient, initializeRedis } from './session.js';
+import { sessionMiddleware, securityHeaders, redisClient } from './session.js';
 import healthCheck from './health.js';
-
-// Initialize Redis
-await initializeRedis();
 
 // Initialize the database pool
 const pool = new Pool(dbConfig);

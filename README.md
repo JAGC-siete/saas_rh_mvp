@@ -45,7 +45,7 @@ SESSION_SECRET=<generated-secret>
 CORS_ORIGIN=https://app.yourdomain.com
 
 # AWS
-AWS_REGION=us-west-2
+AWS_REGION=us-east-1
 ```
 
 ## Architecture
