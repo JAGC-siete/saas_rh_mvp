@@ -1,10 +1,24 @@
-require('dotenv').config();
-console.log('JWT_SECRET desde .env:', process.env.JWT_SECRET);
-const express = require('express');
-const axios = require('axios');
-const PDFDocument = require('pdfkit');
-const jwt = require('jsonwebtoken');
-const path = require('path');
+import 'dotenv/config';
+import express from 'express';
+import axios from 'axios';
+import PDFDocument from 'pdfkit';
+import jwt from 'jsonwebtoken';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import Redis from 'ioredis';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const redisClient = new Redis({
+  host: process.env.REDIS_HOST || 'redis',
+  port: process.env.REDIS_PORT || 6379,
+  password: process.env.REDIS_PASSWORD,
+  retryStrategy: (times) => {
+    const delay = Math.min(times * 50, 2000);
+    return delay;
+  }
+});
 
 const app = express();
 
@@ -15,6 +29,64 @@ const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key';
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Update CORS configuration to use environment variable
+const corsOrigin = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ['http://localhost:3000'];
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (corsOrigin.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  }
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  next();
+});
+
+// Health check endpoint
+app.get('/health', async (req, res) => {
+  try {
+    const [dbResponse, redisHealth] = await Promise.allSettled([
+      axios.get(process.env.BASES_DE_DATOS_URL + '/health'),
+      redisClient.ping()
+    ]);
+
+    const redisStatus = redisHealth.status === 'fulfilled' && redisHealth.value === 'PONG';
+    const dbStatus = dbResponse.status === 'fulfilled' && dbResponse.value.data.status === 'healthy';
+
+    const health = {
+      status: dbStatus && redisStatus ? 'healthy' : 'unhealthy',
+      service: 'nomina',
+      timestamp: new Date().toISOString(),
+      dependencies: {
+        basesDeDatos: {
+          status: dbStatus ? 'healthy' : 'unhealthy',
+          details: dbResponse.status === 'fulfilled' ? dbResponse.value.data : dbResponse.reason.message
+        },
+        redis: {
+          status: redisStatus ? 'healthy' : 'unhealthy',
+          details: redisHealth.status === 'fulfilled' ? 'Connected' : redisHealth.reason.message
+        }
+      }
+    };
+
+    res.status(health.status === 'healthy' ? 200 : 503).json(health);
+  } catch (error) {
+    res.status(503).json({ 
+      status: 'unhealthy',
+      service: 'nomina',
+      timestamp: new Date().toISOString(),
+      error: error.message,
+      details: {
+        basesDeDatosConnection: error.code === 'ECONNREFUSED' ? 'failed' : 'error',
+        redisConnection: 'failed'
+      }
+    });
+  }
+});
 
 function calcularISR(salarioBase) {
   const ingresoAnual = salarioBase * 12;
@@ -43,9 +115,7 @@ const formatoLempiras = n => new Intl.NumberFormat('es-HN', {
   minimumFractionDigits: 2
 }).format(n);
 
-app.get('/health', (req, res) => {
-  res.status(200).send('Nomina OK');
-});
+// Simple health check removed in favor of the detailed one above
 
 app.post('/login', (req, res) => {
   const { usuario, password } = req.body;
@@ -70,8 +140,8 @@ app.post('/planilla', authenticateToken, async (req, res) => {
 
   try {
     const [empRes, asisRes] = await Promise.all([
-      axios.get('http://bases_de_datos:3000/employees'),
-      axios.get('http://bases_de_datos:3000/attendance')
+      axios.get(`${process.env.BASES_DE_DATOS_URL}/employees`),
+      axios.get(`${process.env.BASES_DE_DATOS_URL}/attendance`)
     ]);
 
     const empleados = empRes.data;
@@ -186,5 +256,33 @@ app.post('/planilla', authenticateToken, async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3002;
-app.listen(PORT, '0.0.0.0', () => console.log(`✅ Nómina corriendo en puerto ${PORT}`));
+// Mejorar el logging
+function logInfo(message, ...args) {
+  console.log(`[${new Date().toISOString()}] INFO: ${message}`, ...args);
+}
+
+function logError(message, error) {
+  console.error(`[${new Date().toISOString()}] ERROR: ${message}`, error);
+}
+
+// Inicialización del servidor
+const port = process.env.PORT || 3002;
+app.listen(port, '0.0.0.0', () => {
+  logInfo(`Servidor de nómina escuchando en puerto ${port}`);
+  logInfo('Configuración:', {
+    JWT_SECRET: JWT_SECRET ? 'Configurado' : 'No configurado',
+    STATIC_PATH: path.join(__dirname, 'public'),
+    NODE_ENV: process.env.NODE_ENV
+  });
+});
+
+// Manejo de errores no capturados
+process.on('unhandledRejection', (reason, promise) => {
+  logError('Unhandled Rejection at:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  logError('Uncaught Exception:', error);
+  // Dar tiempo para logging y limpieza
+  setTimeout(() => process.exit(1), 1000);
+});
