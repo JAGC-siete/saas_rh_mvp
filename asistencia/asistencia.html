@@ -62,7 +62,7 @@
         const res = await fetch('/attendance', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id_empleado })
+          body: JSON.stringify({ last5: id_empleado, justification: '' })
         });
 
         const data = await res.json().catch(() => ({}));
@@ -88,11 +88,17 @@
     }
 
     async function enviarJustificacion() {
-      const justific = document.getElementById('justificacion').value.trim();
+      const justification = document.getElementById('justificacion').value.trim();
       const mensajeEl = document.getElementById('mensaje');
       mensajeEl.className = 'message';
 
-      if (!justific) {
+      if (!last5Actual) {
+        mensajeEl.textContent = '⚠️ Error: ID de empleado no disponible';
+        mensajeEl.classList.add('error');
+        return;
+      }
+
+      if (!justification) {
         mensajeEl.textContent = '⚠️ Por favor, escribe una justificación.';
         mensajeEl.classList.add('error');
         return;
@@ -104,21 +110,26 @@
         const res = await fetch('/attendance', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id_empleado: last5Actual, justification: justific })
+          body: JSON.stringify({ 
+            last5: last5Actual, 
+            justification: justification 
+          })
         });
 
         const data = await res.json().catch(() => ({}));
 
         if (res.status === 200) {
-          mensajeEl.textContent = data.message || '📝 Justificación enviada correctamente.';
+          mensajeEl.textContent = data.message || '✅ ¡Asistencia registrada!';
           mensajeEl.classList.add('success');
+          document.getElementById('justificacion-container').style.display = 'none';
+          document.getElementById('btn-registrar').style.display = 'block';
           reiniciarFormulario();
         } else {
-          mensajeEl.textContent = data.message || '⚠️ No se pudo registrar.';
+          mensajeEl.textContent = data.message || '❌ Error al registrar asistencia.';
           mensajeEl.classList.add('error');
         }
       } catch (err) {
-        mensajeEl.textContent = '❌ Error al enviar la justificación.';
+        mensajeEl.textContent = '❌ Error de conexión con el servidor.';
         mensajeEl.classList.add('error');
         console.error(err);
       }
