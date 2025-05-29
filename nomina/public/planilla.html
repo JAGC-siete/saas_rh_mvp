@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generar Planilla</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+  <div class="container">
+    <div class="form-container">
+      <h1>Generar Planilla</h1>
+      <div class="input-group">
+        <label for="periodo">Periodo</label>
+        <input id="periodo" placeholder="YYYY-MM" required pattern="\d{4}-\d{2}" />
+      </div>
+      <div class="input-group">
+        <label for="quincena">Quincena</label>
+        <select id="quincena">
+          <option value="1">Primera Quincena</option>
+          <option value="2">Segunda Quincena</option>
+        </select>
+      </div>
+      <button onclick="generarPlanilla()" class="btn-primary">Generar PDF</button>
+      <p id="status" class="message"></p>
+    </div>
+  </div>
+
+  <script>
+    // Check if user is authenticated
+    if (!localStorage.getItem('token')) {
+      window.location.href = '/index.html';
+    }
+
+    async function generarPlanilla() {
+      const periodo = document.getElementById('periodo').value;
+      const quincena = document.getElementById('quincena').value;
+      const status = document.getElementById('status');
+
+      if (!/^\d{4}-\d{2}$/.test(periodo)) {
+        status.className = 'message error';
+        status.innerText = '❌ Formato de periodo inválido. Use YYYY-MM';
+        return;
+      }
+
+      try {
+        const res = await fetch('/planilla', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + localStorage.getItem('token'),
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ periodo, quincena })
+        });
+
+        if (res.ok) {
+          const blob = await res.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `planilla_${periodo}_q${quincena}.pdf`;
+          a.click();
+          status.className = 'message success';
+          status.innerText = '✅ Planilla generada con éxito';
+        } else {
+          const error = await res.json();
+          status.className = 'message error';
+          status.innerText = '❌ ' + (error.error || 'Error al generar planilla');
+          if (error.error === 'Token inválido o expirado') {
+            localStorage.removeItem('token');
+            setTimeout(() => window.location.href = '/index.html', 2000);
+          }
+        }
+      } catch (err) {
+        status.className = 'message error';
+        status.innerText = '❌ Error de conexión al servidor';
+      }
+    }
+
+    // Add input validation
+    document.getElementById('periodo').addEventListener('input', function(e) {
+      const val = e.target.value;
+      if (val.length === 4) e.target.value = val + '-';
+      if (val.length > 7) e.target.value = val.slice(0, 7);
+    });
+  </script>
+</body>
+</html>
