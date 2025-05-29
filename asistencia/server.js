@@ -1,10 +1,19 @@
 // asistencia/server.js
 
-const express = require('express');
-const { Pool } = require('pg');
-const path = require('path');
-const { DateTime } = require('luxon');
-require('dotenv').config();
+import express from 'express';
+import pg from 'pg';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import { DateTime } from 'luxon';
+import dotenv from 'dotenv';
+
+const { Pool } = pg;
+dotenv.config();
+
+// ES modules fix for __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const app = express();
 app.use(express.json());

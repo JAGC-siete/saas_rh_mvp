@@ -1,13 +1,27 @@
 // asistencia/server.js
 
-const express = require('express');
-const { Pool } = require('pg');
-const path = require('path');
-require('dotenv').config();
+import express from 'express';
+import pg from 'pg';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import dotenv from 'dotenv';
+
+const { Pool } = pg;
+dotenv.config();
+
+// ES modules fix for __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'healthy' });
+});
 
 const pool = new Pool({
   user: process.env.DB_USER || 'admin',
@@ -119,5 +133,5 @@ app.get('/attendance', (req, res) => {
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-  console.log(`✅ Asistencia corriendo en puerto ${PORT}`);
+  console.log(`✅ Bases de datos corriendo en puerto ${PORT}`);
 });
