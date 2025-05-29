@@ -1,0 +1,6 @@
+node_modules
+node_modules
+**/.terraform
+# Exclude large Terraform provider files
+terraform/modules/eks/.terraform/providers/registry.terraform.io/hashicorp/aws/5.98.0/darwin_amd64/terraform-provider-aws_v5.98.0_x5
+terraform/modules/eks/.terraform/providers/registry.terraform.io/hashicorp/kubernetes/2.37.1/darwin_amd64/terraform-provider-kubernetes_v2.37.1_x5
