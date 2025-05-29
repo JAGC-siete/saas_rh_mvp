@@ -2,28 +2,33 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Registro de Asistencia</title>
-  <style>
-    body { font-family: sans-serif; padding: 2rem; max-width: 500px; margin: auto; }
-    input, button, textarea { width: 100%; padding: 0.5rem; margin-top: 1rem; font-size: 1rem; }
-    #mensaje { margin-top: 2rem; font-weight: bold; }
-    #justificacion-container { display: none; }
-  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/main.css">
 </head>
 <body>
-  <h1>Verificación de Asistencia</h1>
+  <div class="container">
+    <div class="form-container">
+      <h1>Verificación de Asistencia</h1>
+      
+      <div class="input-group">
+        <label for="last5">Últimos 5 dígitos del DNI:</label>
+        <input id="last5" type="text" maxlength="5" placeholder="Ej: 00731" />
+      </div>
 
-  <label for="last5">Últimos 5 dígitos del DNI:</label>
-  <input id="last5" type="text" maxlength="5" placeholder="Ej: 00731" />
+      <div id="justificacion-container" style="display: none;">
+        <div class="input-group">
+          <label for="justificacion">Justificación:</label>
+          <textarea id="justificacion" placeholder="¿Por qué llegaste tarde?"></textarea>
+        </div>
+        <button onclick="enviarJustificacion()" class="btn-primary">Enviar Justificación</button>
+      </div>
 
-  <div id="justificacion-container">
-    <label for="justificacion">Justificación:</label>
-    <textarea id="justificacion" placeholder="¿Por qué llegaste tarde?"></textarea>
-    <button onclick="enviarJustificacion()">Enviar Justificación</button>
+      <button onclick="registrarAsistencia()" id="btn-registrar" class="btn-primary">Registrar asistencia</button>
+      <div id="mensaje" class="message"></div>
+    </div>
   </div>
-
-  <button onclick="registrarAsistencia()" id="btn-registrar">Registrar asistencia</button>
-  <div id="mensaje"></div>
 
   <script>
     let last5Actual = "";
@@ -50,13 +55,16 @@
         const data = await res.json();
 
         if (res.status === 200) {
+          mensajeEl.className = 'message success';
           mensajeEl.textContent = data.message;
           limpiarTodo();
         } else if (res.status === 422 && data.requireJustification) {
+          mensajeEl.className = 'message warning';
           mensajeEl.textContent = data.message;
           document.getElementById("justificacion-container").style.display = "block";
           document.getElementById("btn-registrar").style.display = "none";
         } else {
+          mensajeEl.className = 'message error';
           mensajeEl.textContent = data.message || "⚠️ Error al registrar asistencia.";
         }
       } catch (err) {
