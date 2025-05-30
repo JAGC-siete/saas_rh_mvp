@@ -1,9 +1,20 @@
 node_modules
-node_modules
 **/.terraform
+**/.terraform.lock.hcl
+**/.terragrunt-cache
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+*.tfvars.backup
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
 # Exclude large Terraform provider files
-terraform/modules/eks/.terraform/providers/registry.terraform.io/hashicorp/aws/5.98.0/darwin_amd64/terraform-provider-aws_v5.98.0_x5
-terraform/modules/eks/.terraform/providers/registry.terraform.io/hashicorp/kubernetes/2.37.1/darwin_amd64/terraform-provider-kubernetes_v2.37.1_x5
+**/.terraform/providers/
 
 # Environment variables
 .env
@@ -11,6 +22,7 @@ terraform/modules/eks/.terraform/providers/registry.terraform.io/hashicorp/kuber
 .env.development.local
 .env.test.local
 .env.production.local
+*.env
 
 # Build artifacts
 frontend/dist/
@@ -33,3 +45,26 @@ yarn-error.log*
 *.sln
 *.sw?
 .DS_Store
+
+# Testing
+coverage/
+.nyc_output/
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~.nib
+*.orig
+.project
+.classpath
+.settings/
+
+# OS generated files
+.DS_Store*
+._*
+.Spotlight-V100
+.Trashes
+Icon?
+ehthumbs.db
+Thumbs.db
