@@ -7,8 +7,12 @@ on:
       - 'frontend/**'
   workflow_dispatch:
 
+env:
+  NODE_VERSION: '18'
+  WORKING_DIRECTORY: 'frontend'
+
 jobs:
-  build-and-deploy:
+  validate-and-build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -17,22 +21,63 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: ${{ env.WORKING_DIRECTORY }}/package-lock.json
+
+      - name: Cache node modules
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.WORKING_DIRECTORY }}/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
 
       - name: Install dependencies
-        run: |
-          cd frontend
-          npm ci
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: npm ci
+
+      - name: Type check
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: npm run type-check
+
+      - name: Lint
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: npm run lint
+
+      - name: Test
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+        run: npm run test
 
       - name: Build frontend
+        working-directory: ${{ env.WORKING_DIRECTORY }}
         run: |
-          cd frontend
           npm run build
+          if [ ! -d "dist" ]; then
+            echo "Build failed - dist directory not created"
+            exit 1
+          fi
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: dist
+          path: ${{ env.WORKING_DIRECTORY }}/dist
+          retention-days: 1
+
+  deploy:
+    needs: validate-and-build
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: dist
+          path: dist
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -40,17 +85,25 @@ jobs:
 
       - name: Deploy to S3
         run: |
-          # Deploy to S3 bucket
-          aws s3 sync frontend/dist/ s3://www.humanosisu.com --delete
-          echo "Deployed to S3 bucket: www.humanosisu.com"
+          # Deploy to S3 bucket with error handling
+          if ! aws s3 sync dist/ s3://www.humanosisu.com --delete; then
+            echo "Failed to deploy to S3"
+            exit 1
+          fi
+          echo "Successfully deployed to S3 bucket: www.humanosisu.com"
 
-      - name: Invalidate CloudFront (if using CloudFront)
-        if: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID != '' }}
+      - name: Invalidate CloudFront
+        if: success() && hashFiles('dist/**/*') != ''
+        env:
+          DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
         run: |
-          # Only run if CloudFront is configured
-          if [[ -n "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}" ]]; then
-            aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"
-            echo "Invalidated CloudFront distribution: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}"
+          if [ -n "$DISTRIBUTION_ID" ]; then
+            # Create CloudFront invalidation with error handling
+            if ! aws cloudfront create-invalidation --distribution-id $DISTRIBUTION_ID --paths "/*"; then
+              echo "Failed to create CloudFront invalidation"
+              exit 1
+            fi
+            echo "Successfully invalidated CloudFront distribution: $DISTRIBUTION_ID"
           else
             echo "No CloudFront distribution configured. Skipping invalidation."
           fi

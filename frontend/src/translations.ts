@@ -1,4 +1,24 @@
 const translations: Record<string, { es: string; en: string }> = {
+  '+1,200 people used it to get a job': {
+    es: '+1,200 personas ya lo usaron para conseguir empleo',
+    en: '+1,200 people used it to get a job'
+  },
+  'Turn your CV into a recruiter magnet': {
+    es: 'Convierte tu CV en un imán para reclutadores',
+    en: 'Turn your CV into a recruiter magnet'
+  },
+  'From unemployed to hired in 90 days with daily feedback and $HND certification': {
+    es: 'De desempleado a contratado en 90 días con feedback diario y certificación $HND',
+    en: 'From unemployed to hired in 90 days with daily feedback and $HND certification'
+  },
+  'Start free': {
+    es: 'Empieza gratis',
+    en: 'Start free'
+  },
+  'See how it works': {
+    es: 'Ver cómo funciona',
+    en: 'See how it works'
+  },
   'Welcome to': {
     es: 'Bienvenido a',
     en: 'Welcome to'

@@ -21,23 +21,25 @@ const LandingPage: React.FC = () => {
           variants={staggerContainer}
           className="pt-20 pb-16 text-center lg:pt-32"
         >
+          <motion.div
+            variants={fadeInUp}
+            className="mb-8 text-blue-600 font-semibold text-lg"
+          >
+            {t('+1,200 people used it to get a job')}
+          </motion.div>
+
           <motion.h1 
             variants={fadeInUp}
             className="text-4xl tracking-tight font-extrabold text-gray-900 dark:text-white sm:text-5xl md:text-6xl"
           >
-            <motion.span variants={fadeInUp} className="block">
-              {t('Welcome to')}
-            </motion.span>
-            <motion.span variants={fadeInUp} className="block text-blue-600">
-              Humano SISU
-            </motion.span>
+            {t('Turn your CV into a recruiter magnet')}
           </motion.h1>
           
           <motion.p 
             variants={fadeInUp}
-            className="mt-6 max-w-lg mx-auto text-xl text-gray-500 dark:text-gray-300"
+            className="mt-6 max-w-2xl mx-auto text-xl text-gray-500 dark:text-gray-300"
           >
-            {t('Your HR management solution')}
+            {t('From unemployed to hired in 90 days with daily feedback and $HND certification')}
           </motion.p>
 
           <motion.div
@@ -48,13 +50,13 @@ const LandingPage: React.FC = () => {
               to="/comienza-gratis"
               className="px-8 py-3 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors"
             >
-              {t('Start Free')}
+              {t('Start free')}
             </Link>
             <Link
               to="/como-funciona"
               className="px-8 py-3 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
             >
-              {t('Learn More')}
+              {t('See how it works')}
             </Link>
           </motion.div>
         </motion.div>
