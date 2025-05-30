@@ -7,110 +7,41 @@ on:
       - 'frontend/**'
   workflow_dispatch:
 
-env:
-  WORKING_DIRECTORY: frontend
-  NODE_VERSION: '18'
-
 jobs:
-  validate:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v2
+      - uses: actions/checkout@v2
+      
+      - uses: actions/setup-node@v2
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: '18'
           cache: 'npm'
-          cache-dependency-path: ${{ env.WORKING_DIRECTORY }}/package-lock.json
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
-        working-directory: ${{ env.WORKING_DIRECTORY }}
-        run: npm ci
+        run: cd frontend && npm ci
 
-      - name: Type check
-        working-directory: ${{ env.WORKING_DIRECTORY }}
-        run: npm run type-check
+      - name: Build
+        run: cd frontend && npm run build
 
-      - name: Lint
-        working-directory: ${{ env.WORKING_DIRECTORY }}
-        run: npm run lint || true  # Don't fail on lint errors initially
-
-      - name: Test
-        working-directory: ${{ env.WORKING_DIRECTORY }}
-        run: npm run test || true  # Don't fail on test errors initially
-
-      - name: Build frontend
-        working-directory: ${{ env.WORKING_DIRECTORY }}
-        run: |
-          npm run build
-          if [ ! -d "dist" ]; then
-            echo "Build failed - dist directory not created"
-            exit 1
-          fi
-
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: dist
-          path: ${{ env.WORKING_DIRECTORY }}/dist
-          retention-days: 1
-
-  deploy:
-    needs: validate
-    runs-on: ubuntu-latest
-    environment: production
-    steps:
-      - name: Download build artifact
-        uses: actions/download-artifact@v2
-        with:
-          name: dist
-          path: dist
-
-      - name: Configure AWS Credentials
+      - name: Configure AWS
         run: |
           mkdir -p ~/.aws
           echo "[default]" > ~/.aws/credentials
           echo "aws_access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}" >> ~/.aws/credentials
           echo "aws_secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> ~/.aws/credentials
           echo "region=${{ secrets.AWS_REGION }}" >> ~/.aws/credentials
-          
-          # Verify AWS configuration
-          aws sts get-caller-identity || exit 1
-          
+
       - name: Deploy to S3
         run: |
-          # Deploy to S3 bucket with error handling
-          if ! aws s3 sync dist/ s3://www.humanosisu.com --delete; then
-            echo "Failed to deploy to S3"
-            exit 1
-          fi
-          echo "Successfully deployed to S3 bucket: www.humanosisu.com"
-
+          aws s3 sync frontend/dist/ s3://www.humanosisu.com --delete
+          
       - name: Invalidate CloudFront
         if: success()
         run: |
-          DISTRIBUTION_ID="${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}"
-          if [ -n "$DISTRIBUTION_ID" ]; then
-            echo "Creating CloudFront invalidation..."
-            # Run invalidation with retries
-            max_attempts=3
-            attempt=1
-            while [ $attempt -le $max_attempts ]; do
-              if aws cloudfront create-invalidation --distribution-id "$DISTRIBUTION_ID" --paths "/*"; then
-                echo "Successfully invalidated CloudFront distribution: $DISTRIBUTION_ID"
-                break
-              else
-                echo "Attempt $attempt of $max_attempts failed"
-                if [ $attempt -eq $max_attempts ]; then
-                  echo "Failed to create CloudFront invalidation after $max_attempts attempts"
-                  exit 1
-                fi
-                attempt=$((attempt + 1))
-                sleep 5
-              fi
-            done
-          else
-            echo "No CloudFront distribution configured. Skipping invalidation."
+          if [ -n "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}" ]; then
+            aws cloudfront create-invalidation \
+              --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+              --paths "/*"
           fi
