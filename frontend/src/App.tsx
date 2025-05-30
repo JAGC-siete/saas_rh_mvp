@@ -2,7 +2,8 @@ import { Routes, Route } from 'react-router-dom'
 import Navbar from '@components/Navbar'
 import Footer from '@components/Footer'
 import LandingPage from '@pages/LandingPage'
-import { DeploymentTest } from '@components/DeploymentTest'
+
+import UserTypeTest from '@components/UserTypeTest'
 import HowItWorksPage from '@pages/HowItWorksPage'
 import ComienzaGratisPage from '@pages/ComienzaGratisPage'
 import PersonalizedAdvicePage from '@pages/PersonalizedAdvicePage'
@@ -19,7 +20,7 @@ function App() {
         <UserTypeProvider>
           <div className="app min-h-screen flex flex-col">
             <Navbar />
-            <DeploymentTest />
+            <UserTypeTest />
             <main className="flex-grow">
               <Routes>
                 <Route path="/" element={<LandingPage />} />

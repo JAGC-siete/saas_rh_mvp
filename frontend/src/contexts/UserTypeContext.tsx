@@ -9,10 +9,10 @@ type UserTypeContextType = {
 const UserTypeContext = createContext<UserTypeContextType | undefined>(undefined);
 
 export const UserTypeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Initialize from localStorage or default to guest
+  // Initialize from localStorage or default to employee (candidate)
   const [userType, setUserTypeState] = useState<UserType>(() => {
     const saved = localStorage.getItem('userType') as UserType;
-    return (saved === 'employer' || saved === 'employee' || saved === 'guest') ? saved : 'guest';
+    return (saved === 'employer' || saved === 'employee' || saved === 'guest') ? saved : 'employee';
   });
 
   const setUserType = (type: UserType) => {
