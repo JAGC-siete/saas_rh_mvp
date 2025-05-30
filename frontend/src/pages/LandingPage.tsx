@@ -3,10 +3,12 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { useTranslation } from '@contexts/TranslationContext';
+import { useUserType } from '@contexts/UserTypeContext';
 import { fadeInUp, staggerContainer, scaleIn } from '@utils/animations';
 
 const LandingPage: React.FC = () => {
   const { t } = useTranslation();
+  const { userType } = useUserType();
   const [heroRef, heroInView] = useInView({ triggerOnce: true });
   const [featuresRef, featuresInView] = useInView({ triggerOnce: true, threshold: 0.1 });
 
@@ -25,21 +27,27 @@ const LandingPage: React.FC = () => {
             variants={fadeInUp}
             className="mb-8 text-blue-600 font-semibold text-lg"
           >
-            {t('+1,200 people used it to get a job')}
+            {userType === 'employer' 
+              ? t('+50 companies already found their ideal talent')
+              : t('+1,200 people used it to get a job')}
           </motion.div>
 
           <motion.h1 
             variants={fadeInUp}
             className="text-4xl tracking-tight font-extrabold text-gray-900 dark:text-white sm:text-5xl md:text-6xl"
           >
-            {t('Turn your CV into a recruiter magnet')}
+            {userType === 'employer'
+              ? t('Turn your company into a talent magnet')
+              : t('Turn your CV into a recruiter magnet')}
           </motion.h1>
           
           <motion.p 
             variants={fadeInUp}
             className="mt-6 max-w-2xl mx-auto text-xl text-gray-500 dark:text-gray-300"
           >
-            {t('From unemployed to hired in 90 days with daily feedback and $HND certification')}
+            {userType === 'employer'
+              ? t('From search to hire in record time with AI and 24/7 support')
+              : t('From unemployed to hired in 90 days with daily feedback and $HND certification')}
           </motion.p>
 
           <motion.div
@@ -50,7 +58,7 @@ const LandingPage: React.FC = () => {
               to="/comienza-gratis"
               className="px-8 py-3 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors"
             >
-              {t('Start free')}
+              {userType === 'employer' ? t('Try for free') : t('Start free')}
             </Link>
             <Link
               to="/como-funciona"
