@@ -1,89 +1,84 @@
-/**
- * Translation keys for HumanoSisu application
- * Used for internationalization support
- */
-
-export type TranslationKey = {
-  [key: string]: string | TranslationKey;
-};
-
-const translations = {
-  es: {
-    common: {
-      submit: 'Enviar',
-      cancel: 'Cancelar',
-      loading: 'Cargando...',
-      error: 'Error',
-      success: 'Éxito',
-      back: 'Volver',
-      next: 'Siguiente',
-      save: 'Guardar',
-      delete: 'Eliminar',
-      edit: 'Editar',
-      view: 'Ver',
-    },
-    navigation: {
-      home: 'Inicio',
-      attendance: 'Asistencia',
-      payroll: 'Nómina',
-      employees: 'Empleados',
-      reports: 'Reportes',
-      settings: 'Configuración',
-      logout: 'Cerrar sesión',
-      login: 'Iniciar sesión',
-    },
-    auth: {
-      login: 'Iniciar sesión',
-      logout: 'Cerrar sesión',
-      username: 'Usuario',
-      password: 'Contraseña',
-      forgotPassword: 'Olvidé mi contraseña',
-      loginError: 'Usuario o contraseña incorrectos',
-    },
-    attendance: {
-      title: 'Registro de Asistencia',
-      employeeId: 'Últimos 5 dígitos del DNI',
-      register: 'Registrar asistencia',
-      justification: 'Justificación',
-      justificationPlaceholder: '¿Por qué llegaste tarde?',
-      submitJustification: 'Enviar Justificación',
-      success: 'Asistencia registrada con éxito',
-    },
-    payroll: {
-      title: 'Generar Planilla',
-      period: 'Periodo (YYYY-MM)',
-      fortnight: 'Quincena',
-      firstFortnight: 'Quincena 1',
-      secondFortnight: 'Quincena 2',
-      generate: 'Generar PDF',
-      generateSuccess: 'Planilla generada con éxito',
-    },
-    landing: {
-      hero: {
-        title: 'HumanoSisu',
-        subtitle: 'Sistema de Recursos Humanos',
-        description: 'Optimiza tu gestión de recursos humanos con nuestra plataforma integral',
-        cta: 'Comienza Gratis',
-      },
-      features: {
-        attendance: {
-          title: 'Control de Asistencia',
-          description: 'Gestiona fácilmente la asistencia de tus empleados',
-        },
-        payroll: {
-          title: 'Generación de Nómina',
-          description: 'Automatiza el cálculo y generación de planillas de pago',
-        },
-        employees: {
-          title: 'Gestión de Empleados',
-          description: 'Administra la información y documentos de tu personal',
-        },
-      },
-    },
+const translations: Record<string, { es: string; en: string }> = {
+  'Welcome to': {
+    es: 'Bienvenido a',
+    en: 'Welcome to'
   },
-  en: {
-    // English translations can be added in the future
+  'Your HR management solution': {
+    es: 'Tu solución de gestión de RR.HH.',
+    en: 'Your HR management solution'
   },
+  'How It Works': {
+    es: 'Cómo Funciona',
+    en: 'How It Works'
+  },
+  'Learn More': {
+    es: 'Saber Más',
+    en: 'Learn More'
+  },
+  'Our Solutions': {
+    es: 'Nuestras Soluciones',
+    en: 'Our Solutions'
+  },
+  'Password': {
+    es: 'Contraseña',
+    en: 'Password'
+  },
+  'Password must be at least 8 characters': {
+    es: 'La contraseña debe tener al menos 8 caracteres',
+    en: 'Password must be at least 8 characters'
+  },
+  'Email is required': {
+    es: 'El correo electrónico es requerido',
+    en: 'Email is required'
+  },
+  'Invalid email address': {
+    es: 'Correo electrónico inválido',
+    en: 'Invalid email address'
+  },
+  'Company Name': {
+    es: 'Nombre de la Empresa',
+    en: 'Company Name'
+  },
+  'Industry': {
+    es: 'Industria',
+    en: 'Industry'
+  },
+  'Full Name': {
+    es: 'Nombre Completo',
+    en: 'Full Name'
+  },
+  'Job Title': {
+    es: 'Puesto',
+    en: 'Job Title'
+  },
+  'Phone Number': {
+    es: 'Teléfono',
+    en: 'Phone Number'
+  },
+  'Personalized Advice': {
+    es: 'Asesoría Laboral',
+    en: 'Personalized Advice'
+  },
+  'Automated Recruitment': {
+    es: 'Reclutamiento Automatizado',
+    en: 'Automated Recruitment'
+  },
+  'HR Microservices': {
+    es: 'Robots RR.HH.',
+    en: 'HR Microservices'
+  },
+  'Get expert HR advice tailored to your business needs': {
+    es: 'Recibe asesoría experta en RR.HH. adaptada a las necesidades de tu empresa',
+    en: 'Get expert HR advice tailored to your business needs'
+  },
+  'Streamline your recruitment process with AI-powered tools': {
+    es: 'Optimiza tu proceso de reclutamiento con herramientas potenciadas por IA',
+    en: 'Streamline your recruitment process with AI-powered tools'
+  },
+  'Automate your HR processes with our specialized microservices': {
+    es: 'Automatiza tus procesos de RR.HH. con nuestros microservicios especializados',
+    en: 'Automate your HR processes with our specialized microservices'
+  }
 };
 
 export default translations;

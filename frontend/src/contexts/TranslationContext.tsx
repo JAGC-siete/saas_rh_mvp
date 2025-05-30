@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { translations } from '../translations';
+import translations from '../translations';
 
 type Language = 'es' | 'en';
 type TranslationContextType = {
@@ -30,15 +30,7 @@ export const TranslationProvider: React.FC<{ children: React.ReactNode }> = ({ c
   }, []);
 
   const t = (key: string): string => {
-    if (!translations[key]) {
-      console.warn(`Translation missing for key: ${key} in ${language}`);
-      return key;
-    }
-    if (!translations[key][language]) {
-      console.warn(`Translation missing for language ${language} and key: ${key}`);
-      return translations[key].en || translations[key].es || key;
-    }
-    return translations[key][language];
+    return translations[key]?.[language] || key;
   };
 
   return (
