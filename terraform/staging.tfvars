@@ -45,3 +45,4 @@ enable_cloudfront   = true
 use_custom_domain   = true
 website_subdomain   = "www"
 domain_name         = "humanosisu.com"
+# Note: CloudFront distribution ID is stored in GitHub secrets as CLOUDFRONT_DISTRIBUTION_ID
