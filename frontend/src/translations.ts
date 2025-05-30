@@ -111,29 +111,41 @@ const translations: Record<string, { es: string; en: string }> = {
     es: 'Teléfono',
     en: 'Phone Number'
   },
-  'Personalized Advice': {
-    es: 'Asesoría Laboral',
-    en: 'Personalized Advice'
+  'Placement Service': {
+    es: 'Servicio de Colocación',
+    en: 'Placement Service'
   },
-  'Automated Recruitment': {
-    es: 'Reclutamiento Automatizado',
-    en: 'Automated Recruitment'
+  'RecluBot': {
+    es: 'RecluBot',
+    en: 'RecluBot'
   },
-  'HR Microservices': {
-    es: 'Robots RR.HH.',
-    en: 'HR Microservices'
+  'Robots': {
+    es: 'Robots',
+    en: 'Robots'
   },
   'Get expert HR advice tailored to your business needs': {
     es: 'Recibe asesoría experta en RR.HH. adaptada a las necesidades de tu empresa',
     en: 'Get expert HR advice tailored to your business needs'
   },
+  'Find your dream job with our placement services': {
+    es: 'Encuentra tu trabajo ideal con nuestros servicios de colocación',
+    en: 'Find your dream job with our placement services'
+  },
   'Streamline your recruitment process with AI-powered tools': {
     es: 'Optimiza tu proceso de reclutamiento con herramientas potenciadas por IA',
     en: 'Streamline your recruitment process with AI-powered tools'
   },
+  'Boost your career with AI-powered job matching': {
+    es: 'Impulsa tu carrera con búsqueda de empleo potenciada por IA',
+    en: 'Boost your career with AI-powered job matching'
+  },
   'Automate your HR processes with our specialized microservices': {
     es: 'Automatiza tus procesos de RR.HH. con nuestros microservicios especializados',
     en: 'Automate your HR processes with our specialized microservices'
+  },
+  'Get daily tasks to improve your employability': {
+    es: 'Recibe tareas diarias para mejorar tu empleabilidad',
+    en: 'Get daily tasks to improve your employability'
   }
 };
 

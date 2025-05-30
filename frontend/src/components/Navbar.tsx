@@ -40,19 +40,19 @@ const Navbar: React.FC = () => {
                 to="/asesoria-laboral"
                 className="text-gray-900 dark:text-white hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
               >
-                {t('Personalized Advice')}
+                {t('Placement Service')}
               </Link>
               <Link
                 to="/reclutamiento"
                 className="text-gray-900 dark:text-white hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
               >
-                {t('Automated Recruitment')}
+                {t('RecluBot')}
               </Link>
               <Link
                 to="/robots"
                 className="text-gray-900 dark:text-white hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
               >
-                {t('HR Microservices')}
+                {t('Robots')}
               </Link>
             </div>
 
@@ -163,19 +163,19 @@ const Navbar: React.FC = () => {
                 to="/asesoria-laboral"
                 className="block text-gray-900 dark:text-white hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
               >
-                {t('Personalized Advice')}
+                {t('Placement Service')}
               </Link>
               <Link
                 to="/reclutamiento"
                 className="block text-gray-900 dark:text-white hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
               >
-                {t('Automated Recruitment')}
+                {t('RecluBot')}
               </Link>
               <Link
                 to="/robots"
                 className="block text-gray-900 dark:text-white hover:text-blue-600 px-3 py-2 rounded-md text-base font-medium"
               >
-                {t('HR Microservices')}
+                {t('Robots')}
               </Link>
             </div>
 

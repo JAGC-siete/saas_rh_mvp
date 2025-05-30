@@ -27,17 +27,17 @@ const Footer: React.FC = () => {
             <ul className="mt-4 space-y-4">
               <li>
                 <Link to="/asesoria-laboral" className="text-base text-gray-500 dark:text-gray-400 hover:text-blue-600">
-                  {t('Personalized Advice')}
+                  {t('Placement Service')}
                 </Link>
               </li>
               <li>
                 <Link to="/reclutamiento" className="text-base text-gray-500 dark:text-gray-400 hover:text-blue-600">
-                  {t('Automated Recruitment')}
+                  {t('RecluBot')}
                 </Link>
               </li>
               <li>
                 <Link to="/robots" className="text-base text-gray-500 dark:text-gray-400 hover:text-blue-600">
-                  {t('HR Microservices')}
+                  {t('Robots')}
                 </Link>
               </li>
             </ul>

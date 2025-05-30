@@ -85,59 +85,121 @@ const LandingPage: React.FC = () => {
           </motion.h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <motion.div
-              variants={scaleIn}
-              className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow"
-            >
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                {t('Personalized Advice')}
-              </h3>
-              <p className="text-gray-600 dark:text-gray-300 mb-4">
-                {t('Get expert HR advice tailored to your business needs')}
-              </p>
-              <Link
-                to="/asesoria-laboral"
-                className="text-blue-600 hover:text-blue-700 font-medium"
-              >
-                {t('Learn More')} →
-              </Link>
-            </motion.div>
+            {userType === 'employer' ? (
+              /* Services for employers */
+              <>
+                <motion.div
+                  variants={scaleIn}
+                  className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow"
+                >
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                    {t('Placement Service')}
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-300 mb-4">
+                    {t('Get expert HR advice tailored to your business needs')}
+                  </p>
+                  <Link
+                    to="/asesoria-laboral"
+                    className="text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    {t('Learn More')} →
+                  </Link>
+                </motion.div>
 
-            <motion.div
-              variants={scaleIn}
-              className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow"
-            >
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                {t('Automated Recruitment')}
-              </h3>
-              <p className="text-gray-600 dark:text-gray-300 mb-4">
-                {t('Streamline your recruitment process with AI-powered tools')}
-              </p>
-              <Link
-                to="/reclutamiento"
-                className="text-blue-600 hover:text-blue-700 font-medium"
-              >
-                {t('Learn More')} →
-              </Link>
-            </motion.div>
+                <motion.div
+                  variants={scaleIn}
+                  className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow"
+                >
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                    {t('RecluBot')}
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-300 mb-4">
+                    {t('Streamline your recruitment process with AI-powered tools')}
+                  </p>
+                  <Link
+                    to="/reclutamiento"
+                    className="text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    {t('Learn More')} →
+                  </Link>
+                </motion.div>
 
-            <motion.div
-              variants={scaleIn}
-              className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow"
-            >
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                {t('HR Microservices')}
-              </h3>
-              <p className="text-gray-600 dark:text-gray-300 mb-4">
-                {t('Automate your HR processes with our specialized microservices')}
-              </p>
-              <Link
-                to="/robots"
-                className="text-blue-600 hover:text-blue-700 font-medium"
-              >
-                {t('Learn More')} →
-              </Link>
-            </motion.div>
+                <motion.div
+                  variants={scaleIn}
+                  className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow"
+                >
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                    {t('Robots')}
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-300 mb-4">
+                    {t('Automate your HR processes with our specialized microservices')}
+                  </p>
+                  <Link
+                    to="/robots"
+                    className="text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    {t('Learn More')} →
+                  </Link>
+                </motion.div>
+              </>
+            ) : (
+              /* Services for candidates */
+              <>
+                <motion.div
+                  variants={scaleIn}
+                  className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow"
+                >
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                    {t('Placement Service')}
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-300 mb-4">
+                    {t('Find your dream job with our placement services')}
+                  </p>
+                  <Link
+                    to="/asesoria-laboral"
+                    className="text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    {t('Learn More')} →
+                  </Link>
+                </motion.div>
+
+                <motion.div
+                  variants={scaleIn}
+                  className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow"
+                >
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                    {t('RecluBot')}
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-300 mb-4">
+                    {t('Boost your career with AI-powered job matching')}
+                  </p>
+                  <Link
+                    to="/reclutamiento"
+                    className="text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    {t('Learn More')} →
+                  </Link>
+                </motion.div>
+
+                <motion.div
+                  variants={scaleIn}
+                  className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow"
+                >
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                    {t('Robots')}
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-300 mb-4">
+                    {t('Get daily tasks to improve your employability')}
+                  </p>
+                  <Link
+                    to="/robots"
+                    className="text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    {t('Learn More')} →
+                  </Link>
+                </motion.div>
+              </>
+            )}
           </div>
         </motion.div>
       </main>
