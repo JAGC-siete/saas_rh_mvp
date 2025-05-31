@@ -60,14 +60,19 @@ class AnalyticsService {
   /**
    * Track form submission
    * @param userType Type of user (employee or employer)
-   * @param status Submission status (success or error)
+   * @param status Submission status (success, error, partial_success)
    * @param data Additional data
    */
-  trackFormSubmission(userType: 'employee' | 'employer', status: 'success' | 'error', data: Record<string, any> = {}): void {
+  trackFormSubmission(
+    userType: 'employee' | 'employer', 
+    status: 'success' | 'error' | 'partial_success', 
+    data: Record<string, any> = {}
+  ): void {
     this.trackEvent('form_submit', {
       userType,
       status,
       formName: 'start_free',
+      timestamp: new Date().toISOString(),
       ...data
     });
   }

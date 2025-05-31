@@ -1,0 +1,167 @@
+name: Reusable Deployment Workflow
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+        description: 'Environment to deploy to (staging, production)'
+      service_name:
+        required: true
+        type: string
+        description: 'Name of the service to deploy (frontend, asistencia, nomina)'
+      build_path:
+        required: true
+        type: string
+        description: 'Path to the directory containing the code to build'
+      s3_bucket:
+        required: false
+        type: string
+        description: 'S3 bucket for static deployments'
+      cloudfront_distribution_id:
+        required: false
+        type: string
+        description: 'CloudFront distribution ID for cache invalidation'
+      dockerfile_path:
+        required: false
+        type: string
+        default: './Dockerfile'
+        description: 'Path to the Dockerfile'
+      create_tag:
+        required: false
+        type: boolean
+        default: true
+        description: 'Whether to create a git tag for this deployment'
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+      AWS_REGION:
+        required: true
+      MANATAL_API_TOKEN:
+        required: false
+      GA_MEASUREMENT_ID:
+        required: false
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  deploy:
+    name: Deploy ${{ inputs.service_name }} to ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Fetch all history for tags
+
+      - name: Set up Node.js
+        if: contains(inputs.service_name, 'frontend') || endsWith(inputs.build_path, '.js') || endsWith(inputs.build_path, '.ts')
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ inputs.build_path }}/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd ${{ inputs.build_path }}
+          if [ -f "package.json" ]; then
+            npm ci
+          fi
+
+      - name: Build application
+        working-directory: ${{ inputs.build_path }}
+        run: |
+          if [ -f "package.json" ]; then
+            # Check if there's a build script
+            if grep -q '"build"' package.json; then
+              npm run build
+            fi
+          fi
+        env:
+          VITE_MANATAL_API_TOKEN: ${{ secrets.MANATAL_API_TOKEN }}
+          VITE_GA_MEASUREMENT_ID: ${{ secrets.GA_MEASUREMENT_ID }}
+          VITE_ENV: ${{ inputs.environment }}
+
+      # Static website deployment (S3 + CloudFront)
+      - name: Configure AWS credentials
+        if: inputs.s3_bucket != ''
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Deploy to S3
+        if: inputs.s3_bucket != ''
+        run: |
+          echo "Deploying to S3 bucket: ${{ inputs.s3_bucket }}"
+          aws s3 sync ${{ inputs.build_path }}/dist/ s3://${{ inputs.s3_bucket }} --delete
+          
+      - name: Invalidate CloudFront cache
+        if: inputs.cloudfront_distribution_id != ''
+        run: |
+          echo "Invalidating CloudFront distribution: ${{ inputs.cloudfront_distribution_id }}"
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ inputs.cloudfront_distribution_id }} \
+            --paths "/*"
+
+      # Docker build and push (for containerized services)
+      - name: Set up Docker Buildx
+        if: inputs.s3_bucket == '' && inputs.dockerfile_path != ''
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to Amazon ECR
+        if: inputs.s3_bucket == '' && inputs.dockerfile_path != ''
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build and push Docker image
+        if: inputs.s3_bucket == '' && inputs.dockerfile_path != ''
+        uses: docker/build-push-action@v4
+        with:
+          context: ${{ inputs.build_path }}
+          file: ${{ inputs.dockerfile_path }}
+          push: true
+          tags: |
+            ${{ secrets.ECR_REPOSITORY }}/${{ inputs.service_name }}:${{ inputs.environment }}-${{ github.sha }}
+            ${{ secrets.ECR_REPOSITORY }}/${{ inputs.service_name }}:${{ inputs.environment }}-latest
+
+      # Create deployment tag
+      - name: Create deployment tag
+        if: inputs.create_tag
+        run: |
+          TIMESTAMP=$(date +'%Y%m%d%H%M%S')
+          TAG_NAME="deploy-${{ inputs.service_name }}-${{ inputs.environment }}-${TIMESTAMP}"
+          git tag $TAG_NAME
+          git push origin $TAG_NAME
+
+      # Write deployment info to file
+      - name: Record deployment
+        run: |
+          DEPLOY_TIME=$(date +'%Y-%m-%d %H:%M:%S')
+          DEPLOY_FILE="docs/deployments/${{ inputs.service_name }}-${{ inputs.environment }}.md"
+          mkdir -p docs/deployments
+          
+          echo "# ${{ inputs.service_name }} Deployment to ${{ inputs.environment }}" > $DEPLOY_FILE
+          echo "" >> $DEPLOY_FILE
+          echo "- **Date:** $DEPLOY_TIME" >> $DEPLOY_FILE
+          echo "- **Version:** ${{ github.sha }}" >> $DEPLOY_FILE
+          echo "- **Environment:** ${{ inputs.environment }}" >> $DEPLOY_FILE
+          echo "- **Deployed by:** ${{ github.actor }}" >> $DEPLOY_FILE
+          echo "" >> $DEPLOY_FILE
+          echo "## Changes" >> $DEPLOY_FILE
+          echo "" >> $DEPLOY_FILE
+          git log -n 10 --pretty=format:"- %h %s (%an, %ar)" -- ${{ inputs.build_path }} >> $DEPLOY_FILE
+          
+          # Commit the deployment file
+          git config --local user.email "github-actions@github.com"
+          git config --local user.name "GitHub Actions"
+          git add $DEPLOY_FILE
+          git commit -m "docs: update deployment record for ${{ inputs.service_name }} to ${{ inputs.environment }}"
+          git push

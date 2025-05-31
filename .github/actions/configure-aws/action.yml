@@ -1,0 +1,33 @@
+name: 'Configure AWS'
+description: 'Configure AWS credentials using GitHub secrets'
+inputs:
+  aws-access-key-id:
+    description: 'AWS Access Key ID'
+    required: true
+  aws-secret-access-key:
+    description: 'AWS Secret Access Key'
+    required: true
+  aws-region:
+    description: 'AWS Region'
+    required: true
+    default: 'us-east-1'
+runs:
+  using: "composite"
+  steps:
+    - name: Configure AWS Credentials
+      shell: bash
+      run: |
+        # Install AWS CLI if not present
+        if ! command -v aws &> /dev/null; then
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          sudo ./aws/install
+        fi
+        
+        # Configure AWS credentials
+        aws configure set aws_access_key_id "${{ inputs.aws-access-key-id }}"
+        aws configure set aws_secret_access_key "${{ inputs.aws-secret-access-key }}"
+        aws configure set default.region "${{ inputs.aws-region }}"
+        
+        # Verify configuration
+        aws sts get-caller-identity

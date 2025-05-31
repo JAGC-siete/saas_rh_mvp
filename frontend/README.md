@@ -10,6 +10,14 @@ Frontend application for the Humano SISU recruitment platform.
 - Integration with Manatal API for recruitment management
 - Analytics tracking for form submissions and user interactions
 
+## Documentation
+
+- [Manatal API Integration](./MANATAL_API_INTEGRATION.md) - Details on the recruitment API integration
+- [Analytics](./ANALYTICS.md) - Information about analytics implementation
+- [API Security](./API_SECURITY.md) - Security best practices for API usage
+- [Deployment](./DEPLOYMENT.md) - Deployment instructions
+- [Future Enhancements](./FUTURE_ENHANCEMENTS.md) - Planned improvements
+
 ## Getting Started
 
 ### Prerequisites

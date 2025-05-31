@@ -21,10 +21,6 @@ on:
           - staging
           - production
 
-env:
-  NODE_VERSION: '18'
-  CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID || 'E3JC3C46Y6RAHD' }}
-
 jobs:
   validate:
     name: Lint and Test
@@ -36,7 +32,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: '18'
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
@@ -49,7 +45,7 @@ jobs:
       - name: Run tests
         run: cd frontend && npm test || echo "Tests failed but continuing"
 
-  build-and-deploy:
+  deploy:
     name: Build and Deploy
     needs: validate
     runs-on: ubuntu-latest
@@ -60,11 +56,13 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Fetch all history for tags
       
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: '18'
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
@@ -91,10 +89,12 @@ jobs:
           aws s3 sync frontend/dist/ s3://www.humanosisu.com --delete
           
       - name: Invalidate CloudFront cache
+        env:
+          CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID || 'E3JC3C46Y6RAHD' }}
         run: |
-          echo "Invalidating CloudFront distribution: ${{ env.CLOUDFRONT_DISTRIBUTION_ID }}"
+          echo "Invalidating CloudFront distribution: $CLOUDFRONT_DISTRIBUTION_ID"
           aws cloudfront create-invalidation \
-            --distribution-id ${{ env.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --distribution-id $CLOUDFRONT_DISTRIBUTION_ID \
             --paths "/*"
 
       - name: Create deployment tag
@@ -104,20 +104,46 @@ jobs:
           git tag $TAG_NAME
           git push origin $TAG_NAME
 
+      # Record deployment details
+      - name: Record deployment
+        run: |
+          DEPLOY_TIME=$(date +'%Y-%m-%d %H:%M:%S')
+          mkdir -p docs/deployments
+          DEPLOY_FILE="docs/deployments/frontend-${{ github.event.inputs.environment || 'staging' }}.md"
+          
+          echo "# Frontend Deployment to ${{ github.event.inputs.environment || 'staging' }}" > $DEPLOY_FILE
+          echo "" >> $DEPLOY_FILE
+          echo "- **Date:** $DEPLOY_TIME" >> $DEPLOY_FILE
+          echo "- **Version:** ${{ github.sha }}" >> $DEPLOY_FILE
+          echo "- **Environment:** ${{ github.event.inputs.environment || 'staging' }}" >> $DEPLOY_FILE
+          echo "- **Deployed by:** ${{ github.actor }}" >> $DEPLOY_FILE
+          echo "- **CloudFront Distribution:** E3JC3C46Y6RAHD" >> $DEPLOY_FILE
+          echo "" >> $DEPLOY_FILE
+          echo "## Changes" >> $DEPLOY_FILE
+          echo "" >> $DEPLOY_FILE
+          git log -n 10 --pretty=format:"- %h %s (%an, %ar)" -- frontend/ >> $DEPLOY_FILE
+          
+          # Try to commit the deployment record
+          git config --local user.email "github-actions@github.com"
+          git config --local user.name "GitHub Actions"
+          git add $DEPLOY_FILE
+          git commit -m "docs: update frontend deployment record for ${{ github.event.inputs.environment || 'staging' }}" || echo "No changes to commit"
+          git push || echo "Failed to push deployment record"
+
   notify:
     name: Notify Deployment Status
-    needs: build-and-deploy
+    needs: deploy
     runs-on: ubuntu-latest
     if: always()
     steps:
       - name: Notify success
-        if: needs.build-and-deploy.result == 'success'
+        if: needs.deploy.result == 'success'
         run: |
           echo "Frontend deployment to ${{ github.event.inputs.environment || 'staging' }} completed successfully."
           # Add notification to Slack, Teams, etc. here
 
       - name: Notify failure
-        if: needs.build-and-deploy.result == 'failure'
+        if: needs.deploy.result == 'failure'
         run: |
           echo "Frontend deployment to ${{ github.event.inputs.environment || 'staging' }} failed."
           # Add notification to Slack, Teams, etc. here

@@ -1,10 +1,26 @@
 # API Security Notes
 
-## Securing API Tokens
+## Current Implementation
 
-The current implementation has the Manatal API token hardcoded in the frontend code with a fallback to an environment variable. This is not ideal for production environments.
+The Manatal API integration currently:
+- Uses an API token stored in Vite environment variables with a hardcoded fallback
+- Makes API requests directly from the frontend code
+- Validates form data on the client side
+- Handles API responses and errors in the frontend
 
-### Best Practices for Production
+## Security Concerns
+
+This implementation has several security considerations:
+
+1. **Client-side token exposure**: The API token is visible in the compiled JavaScript, making it accessible to users through browser developer tools.
+
+2. **Token rotation challenges**: When the token needs to be rotated, it requires a full redeployment of the frontend application.
+
+3. **No request validation**: There's no server-side validation of requests before they're sent to the Manatal API.
+
+4. **Limited rate limiting**: Without a server-side proxy, we cannot effectively implement rate limiting to prevent abuse.
+
+## Best Practices for Production
 
 1. **Server-side Token Handling**:
    - Create a server-side API proxy that handles authentication with Manatal
@@ -19,21 +35,19 @@ The current implementation has the Manatal API token hardcoded in the frontend c
 3. **Implementation Steps**:
    ```bash
    # Create a .env.local file in the project root (don't commit this file)
-   NEXT_PUBLIC_MANATAL_API_TOKEN=your_api_token
+   VITE_MANATAL_API_TOKEN=your_api_token
    ```
 
 4. **Server-side Proxy Example**:
    Create a server route that handles the API requests:
    ```javascript
-   // Example with Next.js API route
-   // pages/api/manatal/candidates.js
-   import axios from 'axios';
+   // Example with Express API route
+   // server/routes/manatal.js
+   const express = require('express');
+   const axios = require('axios');
+   const router = express.Router();
 
-   export default async function handler(req, res) {
-     if (req.method !== 'POST') {
-       return res.status(405).json({ error: 'Method not allowed' });
-     }
-
+   router.post('/candidates', async (req, res) => {
      try {
        const response = await axios.post(
          'https://api.manatal.com/open/v3/candidates/',
@@ -52,8 +66,28 @@ The current implementation has the Manatal API token hardcoded in the frontend c
          error: error.response?.data || 'Internal server error'
        });
      }
-   }
+   });
+
+   module.exports = router;
    ```
+
+## Implementation Plan
+
+### Short-term (1-2 weeks)
+- Add additional client-side validation to prevent obviously malicious requests
+- Implement more comprehensive error handling for API responses
+- Add enhanced logging for security monitoring
+
+### Medium-term (1-2 months)
+- Develop a simple backend proxy API for the Manatal integration
+- Move the API token to server-side environment variables
+- Update frontend code to use the proxy API instead of direct Manatal API calls
+
+### Long-term (3+ months)
+- Implement a comprehensive API management solution
+- Add authentication and authorization for all API requests
+- Implement automatic token rotation and security monitoring
+- Develop a robust logging and alerting system for security events
 
 ## Additional Security Considerations
 
@@ -75,3 +109,8 @@ The current implementation has the Manatal API token hardcoded in the frontend c
 5. **Monitoring**:
    - Set up monitoring for API usage and errors
    - Alert on unusual patterns or error rates
+
+6. **Secure Token Storage**:
+   - Store sensitive tokens in secure storage services (AWS Secrets Manager, HashiCorp Vault)
+   - Implement automatic token rotation
+   - Use different tokens for development/staging/production environments

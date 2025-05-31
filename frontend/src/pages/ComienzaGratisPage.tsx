@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from '@contexts/TranslationContext';
 import { useUserType } from '@contexts/UserTypeContext';
+import { MANATAL_API, apiHeaders, processApiResponse } from '@config/apiConfig';
+import analyticsService from '@services/analyticsService';
 
 const ComienzaGratisPage: React.FC = () => {
   const { t } = useTranslation();
@@ -23,6 +25,13 @@ const ComienzaGratisPage: React.FC = () => {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Initialize analytics service and track page view
+  useEffect(() => {
+    analyticsService.initialize();
+    // Track page view
+    analyticsService.trackEvent('page_view', { page: 'start_free' });
+  }, []);
+
   // Update formState.userType when userType context changes
   useEffect(() => {
     setFormState(prev => ({ ...prev, userType }));
@@ -31,37 +40,66 @@ const ComienzaGratisPage: React.FC = () => {
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
     
+    // Email validation
     if (!formState.email) {
       newErrors.email = t('Email is required');
     } else if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(formState.email)) {
       newErrors.email = t('Invalid email address');
     }
     
+    // Full name validation
     if (!formState.fullName) {
       newErrors.fullName = t('Full name is required');
+    } else if (formState.fullName.length < 3) {
+      newErrors.fullName = t('Full name must be at least 3 characters');
     }
 
+    // Phone validation
     if (!formState.phoneNumber) {
       newErrors.phoneNumber = t('Phone number is required');
+    } else if (!/^[0-9+\-\s()]{6,20}$/.test(formState.phoneNumber)) {
+      newErrors.phoneNumber = t('Please enter a valid phone number');
     }
 
     if (userType === 'employer') {
+      // Company name validation
       if (!formState.companyName) {
         newErrors.companyName = t('Company name is required');
+      } else if (formState.companyName.length < 2) {
+        newErrors.companyName = t('Company name must be at least 2 characters');
       }
+      
+      // Industry validation
       if (!formState.industry) {
         newErrors.industry = t('Industry is required');
       }
+      
+      // Job description validation
       if (!formState.jobDescription) {
         newErrors.jobDescription = t('Job description is required');
+      } else if (formState.jobDescription.length < 10) {
+        newErrors.jobDescription = t('Job description must be at least 10 characters');
       }
+      
+      // Contact person validation
       if (!formState.contactPerson) {
         newErrors.contactPerson = t('Contact person is required');
       }
     } else {
-      // For candidates
+      // For candidates - CV validation
       if (fileInputRef.current && !fileInputRef.current.files?.length) {
         newErrors.cv = t('CV is required');
+      } else if (fileInputRef.current?.files?.length) {
+        const file = fileInputRef.current.files[0];
+        // Check file type
+        const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+        if (!allowedTypes.includes(file.type)) {
+          newErrors.cv = t('Please upload a PDF or Word document');
+        }
+        // Check file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          newErrors.cv = t('File size must be less than 5MB');
+        }
       }
     }
 
@@ -77,7 +115,6 @@ const ComienzaGratisPage: React.FC = () => {
       try {
         if (userType === 'employer') {
           // Company submission
-          const url = 'https://api.manatal.com/open/v3/organizations/';
           const organizationData = {
             name: formState.companyName,
             industry: formState.industry,
@@ -88,85 +125,192 @@ const ComienzaGratisPage: React.FC = () => {
             },
             job_openings: [
               {
-                title: formState.jobTitle,
+                title: formState.jobTitle || 'Open Position',
                 description: formState.jobDescription,
-                requirements: formState.skillsRequired,
-                benefits: formState.benefits
+                requirements: formState.skillsRequired || 'Not specified',
+                benefits: formState.benefits || 'Not specified',
+                status: 'active' // Ensure job posting is active
               }
             ],
-            notes: "From Humano SISU website"
+            notes: "From Humano SISU website",
+            tags: ["website_lead", "start_free"]
           };
           
-          const response = await fetch(url, {
+          // Track form submission attempt with details
+          analyticsService.trackEvent('form_submit', {
+            userType: 'employer',
+            status: 'attempt',
+            formName: 'start_free',
+            industry: formState.industry,
+            hasJobTitle: formState.jobTitle ? 'yes' : 'no',
+            hasSkills: formState.skillsRequired ? 'yes' : 'no',
+            hasBenefits: formState.benefits ? 'yes' : 'no'
+          });
+          
+          const response = await fetch(`${MANATAL_API.BASE_URL}${MANATAL_API.ENDPOINTS.ORGANIZATIONS}`, {
             method: 'POST',
-            headers: {
-              accept: 'application/json',
-              'content-type': 'application/json',
-              Authorization: 'Token 5ae4382cab6e503119634f2f594bee928f3921c8'
-            },
+            headers: apiHeaders(),
             body: JSON.stringify(organizationData)
           });
           
-          const data = await response.json();
-          console.log('Company submission response:', data);
+          const result = await processApiResponse(response);
+          
+          if (result.success) {
+            console.log('Company submission successful:', result.data);
+            // Track successful submission
+            analyticsService.trackFormSubmission('employer', 'success', {
+              industry: formState.industry
+            });
+            setSubmitSuccess(true);
+          } else {
+            console.error('Error submitting company:', result.error);
+            // Track submission error
+            analyticsService.trackFormError('employer', result.error?.code || 'UNKNOWN', 
+              result.error?.message || 'Unknown error');
+            
+            alert(t(`Error: ${result.error?.message || 'There was an error submitting your information. Please try again.'}`));
+          }
           
         } else {
           // Candidate submission
-          const url = 'https://api.manatal.com/open/v3/candidates/';
           const candidateData = {
             first_name: formState.fullName.split(' ')[0],
-            last_name: formState.fullName.split(' ').slice(1).join(' '),
+            last_name: formState.fullName.split(' ').slice(1).join(' ') || '-', // Ensure last name isn't empty
+            full_name: formState.fullName, // Add full_name field required by Manatal API
             email: formState.email,
             phone: formState.phoneNumber,
-            position: formState.jobTitle,
+            position: formState.jobTitle || 'Not specified',
             stage: "Initial Contact",
-            source: "Humano SISU Website"
+            source: "Humano SISU Website",
+            // Add additional default fields that might be required by the API
+            note: "Submitted through the Humano SISU start free form",
+            tags: ["website", "start_free"]
           };
           
-          const response = await fetch(url, {
+          // Track form submission attempt with details
+          analyticsService.trackEvent('form_submit', {
+            userType: 'employee',
+            status: 'attempt',
+            formName: 'start_free',
+            hasCV: fileInputRef.current?.files?.length ? 'yes' : 'no',
+            hasJobTitle: formState.jobTitle ? 'yes' : 'no'
+          });
+          
+          const response = await fetch(`${MANATAL_API.BASE_URL}${MANATAL_API.ENDPOINTS.CANDIDATES}`, {
             method: 'POST',
-            headers: {
-              accept: 'application/json',
-              'content-type': 'application/json',
-              Authorization: 'Token 5ae4382cab6e503119634f2f594bee928f3921c8'
-            },
+            headers: apiHeaders(),
             body: JSON.stringify(candidateData)
           });
           
-          const data = await response.json();
-          console.log('Candidate submission response:', data);
+          const result = await processApiResponse(response);
           
-          // Upload CV if available
-          if (fileInputRef.current?.files?.length) {
-            const candidateId = data.id;
-            const cvUploadUrl = `https://api.manatal.com/open/v3/candidates/${candidateId}/resume/`;
+          if (result.success && result.data) {
+            console.log('Candidate submission successful:', result.data);
             
-            const formData = new FormData();
-            formData.append('file', fileInputRef.current.files[0]);
+            // Upload CV if available
+            if (fileInputRef.current?.files?.length) {
+              const file = fileInputRef.current.files[0];
+              // Safely access the candidate ID
+              const candidateId = result.data && typeof result.data === 'object' && 'id' in result.data 
+                ? String(result.data.id) 
+                : '';
+              
+              if (!candidateId) {
+                console.error('Missing candidate ID in API response');
+                analyticsService.trackFormError('employee', 'MISSING_ID', 'Candidate ID missing in API response');
+                
+                // Still mark submission as successful even without resume upload
+                analyticsService.trackFormSubmission('employee', 'partial_success', {
+                  detail: 'Candidate created but CV not uploaded due to missing ID'
+                });
+                setSubmitSuccess(true);
+              } else {
+                analyticsService.trackEvent('cv_upload', {
+                  userType: 'employee',
+                  status: 'attempt',
+                  fileSize: file.size,
+                  fileType: file.type
+                });
+                
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                try {
+                  const uploadResponse = await fetch(
+                    `${MANATAL_API.BASE_URL}${MANATAL_API.ENDPOINTS.CANDIDATE_RESUME(candidateId)}`, 
+                    {
+                      method: 'POST',
+                      headers: {
+                        accept: 'application/json',
+                        Authorization: `Token ${MANATAL_API.TOKEN}`
+                      },
+                      body: formData
+                    }
+                  );
+                  
+                  const uploadResult = await processApiResponse(uploadResponse);
+                  
+                  if (uploadResult.success) {
+                    console.log('CV upload successful:', uploadResult.data);
+                    // Track successful CV upload
+                    analyticsService.trackCVUpload(file.size, file.type, 'success');
+                  } else {
+                    console.error('Error uploading CV:', uploadResult.error);
+                    // Track CV upload error
+                    analyticsService.trackCVUpload(file.size, file.type, 'error');
+                    // Show a warning about CV upload failure but still consider the submission successful
+                    alert(t('Your profile was created successfully, but there was an issue uploading your CV. You can add it later.'));
+                  }
+                  
+                  // Track successful submission (even if CV upload failed)
+                  analyticsService.trackFormSubmission('employee', 'success');
+                  setSubmitSuccess(true);
+                } catch (uploadError) {
+                  console.error('Unexpected error uploading CV:', uploadError);
+                  analyticsService.trackCVUpload(file.size, file.type, 'error');
+                  analyticsService.trackFormSubmission('employee', 'partial_success', {
+                    detail: 'Candidate created but CV upload failed'
+                  });
+                  
+                  // Show a warning about CV upload failure but still consider the submission successful
+                  alert(t('Your profile was created successfully, but there was an issue uploading your CV. You can add it later.'));
+                  setSubmitSuccess(true);
+                }
+            }
             
-            const uploadResponse = await fetch(cvUploadUrl, {
-              method: 'POST',
-              headers: {
-                accept: 'application/json',
-                Authorization: 'Token 5ae4382cab6e503119634f2f594bee928f3921c8'
-              },
-              body: formData
-            });
+            // Track successful submission
+            analyticsService.trackFormSubmission('employee', 'success');
+            setSubmitSuccess(true);
+          } else {
+            console.error('Error submitting candidate:', result.error);
+            // Track submission error
+            analyticsService.trackFormError('employee', result.error?.code || 'UNKNOWN', 
+              result.error?.message || 'Unknown error');
             
-            const uploadData = await uploadResponse.json();
-            console.log('CV upload response:', uploadData);
+            alert(t(`Error: ${result.error?.message || 'There was an error submitting your information. Please try again.'}`));
           }
         }
         
-        // Show success message
-        setSubmitSuccess(true);
-        
       } catch (error) {
-        console.error('Error submitting form:', error);
-        alert(t('There was an error submitting your information. Please try again.'));
+        console.error('Unexpected error submitting form:', error);
+        // Track unexpected error
+        analyticsService.trackFormError(userType as 'employee' | 'employer', 'UNEXPECTED', 
+          error instanceof Error ? error.message : 'Unknown error');
+          
+        alert(t('There was an unexpected error submitting your information. Please try again.'));
       } finally {
         setFormState(prev => ({ ...prev, isSubmitting: false }));
       }
+    }
+    
+    // Track validation errors if any
+    const errorFields = Object.keys(errors);
+    if (errorFields.length > 0) {
+      analyticsService.trackFormError(
+        userType as 'employee' | 'employer', 
+        'VALIDATION', 
+        `Invalid fields: ${errorFields.join(', ')}`
+      );
     }
   };
 

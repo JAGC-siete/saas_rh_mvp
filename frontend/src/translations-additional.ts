@@ -50,5 +50,73 @@ export const additionalTranslations: Record<string, { es: string; en: string }> 
   'Password is required': {
     es: 'La contraseña es requerida',
     en: 'Password is required'
+  },
+  'Phone number is required': {
+    es: 'El número de teléfono es requerido',
+    en: 'Phone number is required'
+  },
+  'Contact Person': {
+    es: 'Persona de Contacto',
+    en: 'Contact Person'
+  },
+  'Contact person is required': {
+    es: 'La persona de contacto es requerida',
+    en: 'Contact person is required'
+  },
+  'Finance': {
+    es: 'Finanzas',
+    en: 'Finance'
+  },
+  'Education': {
+    es: 'Educación',
+    en: 'Education'
+  },
+  'Hospitality': {
+    es: 'Hostelería',
+    en: 'Hospitality'
+  },
+  'Other': {
+    es: 'Otro',
+    en: 'Other'
+  },
+  'Upload CV': {
+    es: 'Cargar CV',
+    en: 'Upload CV'
+  },
+  'CV is required': {
+    es: 'El CV es requerido',
+    en: 'CV is required'
+  },
+  'Accepted formats: PDF, DOC, DOCX': {
+    es: 'Formatos aceptados: PDF, DOC, DOCX',
+    en: 'Accepted formats: PDF, DOC, DOCX'
+  },
+  'Thank you!': {
+    es: '¡Gracias!',
+    en: 'Thank you!'
+  },
+  'Your job posting has been submitted. Our team will contact you shortly.': {
+    es: 'Tu oferta de trabajo ha sido enviada. Nuestro equipo se pondrá en contacto contigo en breve.',
+    en: 'Your job posting has been submitted. Our team will contact you shortly.'
+  },
+  'Your profile has been submitted. We will match you with suitable opportunities soon.': {
+    es: 'Tu perfil ha sido enviado. Te conectaremos con oportunidades adecuadas pronto.',
+    en: 'Your profile has been submitted. We will match you with suitable opportunities soon.'
+  },
+  'Submitting...': {
+    es: 'Enviando...',
+    en: 'Submitting...'
+  },
+  'Benefits': {
+    es: 'Beneficios',
+    en: 'Benefits'
+  },
+  'List the benefits offered for this position': {
+    es: 'Lista los beneficios ofrecidos para este puesto',
+    en: 'List the benefits offered for this position'
+  },
+  'There was an error submitting your information. Please try again.': {
+    es: 'Hubo un error al enviar tu información. Por favor, intenta de nuevo.',
+    en: 'There was an error submitting your information. Please try again.'
   }
 };

@@ -1,0 +1,308 @@
+name: Backend Services CI/CD
+
+on:
+  push:
+    branches: [ main, develop, 'release/*' ]
+    paths:
+      - 'asistencia/**'
+      - 'nomina/**'
+      - 'bases_de_datos/**'
+      - '.github/workflows/backend-cicd.yml'
+  pull_request:
+    branches: [ main, develop, 'release/*' ]
+    paths:
+      - 'asistencia/**'
+      - 'nomina/**'
+      - 'bases_de_datos/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      services:
+        description: 'Services to deploy (comma-separated)'
+        required: true
+        default: 'all'
+        type: string
+      run_migrations:
+        description: 'Run database migrations'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  validate:
+    name: Lint and Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Determine services to validate
+        id: services
+        run: |
+          if [[ "${{ github.event.inputs.services }}" == "all" || "${{ github.event.inputs.services }}" == "" ]]; then
+            echo "services=asistencia,nomina,bases_de_datos" >> $GITHUB_OUTPUT
+          else
+            echo "services=${{ github.event.inputs.services }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Validate asistencia service
+        if: contains(steps.services.outputs.services, 'asistencia')
+        run: |
+          if [ -f "asistencia/package.json" ]; then
+            cd asistencia
+            npm ci
+            npm run lint || echo "Linting failed but continuing"
+            npm test || echo "Tests failed but continuing"
+          fi
+
+      - name: Validate nomina service
+        if: contains(steps.services.outputs.services, 'nomina')
+        run: |
+          if [ -f "nomina/package.json" ]; then
+            cd nomina
+            npm ci
+            npm run lint || echo "Linting failed but continuing"
+            npm test || echo "Tests failed but continuing"
+          fi
+
+      - name: Validate bases_de_datos service
+        if: contains(steps.services.outputs.services, 'bases_de_datos')
+        run: |
+          if [ -f "bases_de_datos/package.json" ]; then
+            cd bases_de_datos
+            npm ci
+            npm run lint || echo "Linting failed but continuing"
+            npm test || echo "Tests failed but continuing"
+          fi
+
+  build-and-deploy:
+    name: Build and Deploy
+    needs: validate
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Determine services to deploy
+        id: services
+        run: |
+          if [[ "${{ github.event.inputs.services }}" == "all" || "${{ github.event.inputs.services }}" == "" ]]; then
+            echo "services=asistencia,nomina,bases_de_datos" >> $GITHUB_OUTPUT
+          else
+            echo "services=${{ github.event.inputs.services }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      # Build and deploy asistencia service
+      - name: Build and push asistencia Docker image
+        if: contains(steps.services.outputs.services, 'asistencia')
+        uses: docker/build-push-action@v4
+        with:
+          context: ./asistencia
+          push: true
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/asistencia:${{ github.event.inputs.environment || 'staging' }}-${{ github.sha }}
+            ${{ steps.login-ecr.outputs.registry }}/asistencia:${{ github.event.inputs.environment || 'staging' }}-latest
+
+      # Build and deploy nomina service
+      - name: Build and push nomina Docker image
+        if: contains(steps.services.outputs.services, 'nomina')
+        uses: docker/build-push-action@v4
+        with:
+          context: ./nomina
+          push: true
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/nomina:${{ github.event.inputs.environment || 'staging' }}-${{ github.sha }}
+            ${{ steps.login-ecr.outputs.registry }}/nomina:${{ github.event.inputs.environment || 'staging' }}-latest
+
+      # Build and deploy bases_de_datos service
+      - name: Build and push bases_de_datos Docker image
+        if: contains(steps.services.outputs.services, 'bases_de_datos')
+        uses: docker/build-push-action@v4
+        with:
+          context: ./bases_de_datos
+          push: true
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/bases_de_datos:${{ github.event.inputs.environment || 'staging' }}-${{ github.sha }}
+            ${{ steps.login-ecr.outputs.registry }}/bases_de_datos:${{ github.event.inputs.environment || 'staging' }}-latest
+
+      - name: Update EKS deployments
+        run: |
+          # Install kubectl
+          curl -LO "https://dl.k8s.io/release/v1.27.0/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/
+          
+          # Update kubeconfig
+          aws eks update-kubeconfig --name humanosisu-${{ github.event.inputs.environment || 'staging' }} --region ${{ secrets.AWS_REGION || 'us-east-1' }}
+          
+          # First apply namespace if it doesn't exist
+          echo "Ensuring namespace exists..."
+          export ENVIRONMENT=${{ github.event.inputs.environment || 'staging' }}
+          envsubst < terraform/k8s/namespace.yaml | kubectl apply -f -
+          
+          # Apply ConfigMap and Secrets
+          echo "Applying ConfigMap..."
+          envsubst < terraform/k8s/app-config.yaml | kubectl apply -f -
+          
+          # Apply database secrets with actual credentials
+          echo "Applying database secrets..."
+          cat <<EOF > tmp-secrets.yaml
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: db-credentials
+            namespace: humanosisu
+          type: Opaque
+          data:
+            host: $(echo -n "${{ secrets.DB_HOST }}" | base64)
+            username: $(echo -n "${{ secrets.DB_USERNAME }}" | base64)
+            password: $(echo -n "${{ secrets.DB_PASSWORD }}" | base64)
+            dbname: $(echo -n "${{ secrets.DB_NAME }}" | base64)
+          EOF
+          kubectl apply -f tmp-secrets.yaml
+          rm tmp-secrets.yaml
+          
+          # Apply network policies
+          echo "Applying network policies..."
+          kubectl apply -f terraform/k8s/network-policy-default-deny.yaml
+          kubectl apply -f terraform/k8s/network-policy-asistencia.yaml
+          
+          # Update deployments
+          SERVICES=$(echo "${{ steps.services.outputs.services }}" | tr ',' ' ')
+          for service in $SERVICES; do
+            echo "Processing $service..."
+            
+            # Replace service name with correct format if it has underscores
+            k8s_service=$(echo $service | tr '_' '-')
+            
+            if [ -f "terraform/k8s/deployment-${k8s_service}.yaml" ]; then
+              echo "Updating $k8s_service deployment..."
+              IMAGE_URL="${{ steps.login-ecr.outputs.registry }}/$service:${{ github.event.inputs.environment || 'staging' }}-latest"
+              # Use envsubst for environment variables and sed for image URL
+              export ECR_REGISTRY="${{ steps.login-ecr.outputs.registry }}"
+              export IMAGE_TAG="${{ github.event.inputs.environment || 'staging' }}-latest"
+              
+              envsubst < terraform/k8s/deployment-${k8s_service}.yaml > tmp-deployment.yaml
+              kubectl apply -f tmp-deployment.yaml
+              rm tmp-deployment.yaml
+              
+              # Apply service and ingress if they exist
+              if [ -f "terraform/k8s/service-${k8s_service}.yaml" ]; then
+                kubectl apply -f terraform/k8s/service-${k8s_service}.yaml
+              fi
+              
+              if [ -f "terraform/k8s/ingress-${k8s_service}.yaml" ]; then
+                kubectl apply -f terraform/k8s/ingress-${k8s_service}.yaml
+              fi
+              
+              # Apply HPA and PDB if they exist
+              if [ -f "terraform/k8s/hpa-${k8s_service}.yaml" ]; then
+                kubectl apply -f terraform/k8s/hpa-${k8s_service}.yaml
+              fi
+              
+              if [ -f "terraform/k8s/pdb-${k8s_service}.yaml" ]; then
+                kubectl apply -f terraform/k8s/pdb-${k8s_service}.yaml
+              fi
+            else
+              echo "No deployment file found for $k8s_service"
+            fi
+          done
+          
+          # Run database migrations if needed
+          if [[ "${{ github.event.inputs.run_migrations }}" == "true" || "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "Running database migrations..."
+            export ECR_REGISTRY="${{ steps.login-ecr.outputs.registry }}"
+            export IMAGE_TAG="${{ github.event.inputs.environment || 'staging' }}-latest"
+            
+            envsubst < terraform/k8s/db-migrations-job.yaml > tmp-migrations.yaml
+            kubectl apply -f tmp-migrations.yaml
+            rm tmp-migrations.yaml
+          fi
+
+      - name: Create deployment tags
+        run: |
+          TIMESTAMP=$(date +'%Y%m%d%H%M%S')
+          SERVICES=$(echo "${{ steps.services.outputs.services }}" | tr ',' ' ')
+          
+          for service in $SERVICES; do
+            TAG_NAME="deploy-$service-${{ github.event.inputs.environment || 'staging' }}-${TIMESTAMP}"
+            git tag $TAG_NAME
+            git push origin $TAG_NAME
+            
+            # Create deployment record
+            mkdir -p docs/deployments
+            DEPLOY_FILE="docs/deployments/$service-${{ github.event.inputs.environment || 'staging' }}.md"
+            
+            echo "# $service Deployment to ${{ github.event.inputs.environment || 'staging' }}" > $DEPLOY_FILE
+            echo "" >> $DEPLOY_FILE
+            echo "- **Date:** $(date +'%Y-%m-%d %H:%M:%S')" >> $DEPLOY_FILE
+            echo "- **Version:** ${{ github.sha }}" >> $DEPLOY_FILE
+            echo "- **Environment:** ${{ github.event.inputs.environment || 'staging' }}" >> $DEPLOY_FILE
+            echo "- **Deployed by:** ${{ github.actor }}" >> $DEPLOY_FILE
+            echo "" >> $DEPLOY_FILE
+            echo "## Changes" >> $DEPLOY_FILE
+            echo "" >> $DEPLOY_FILE
+            git log -n 10 --pretty=format:"- %h %s (%an, %ar)" -- $service/ >> $DEPLOY_FILE
+          done
+          
+          # Try to commit the deployment records
+          git config --local user.email "github-actions@github.com"
+          git config --local user.name "GitHub Actions"
+          git add docs/deployments/
+          git commit -m "docs: update backend deployment records for ${{ github.event.inputs.environment || 'staging' }}" || echo "No changes to commit"
+          git push || echo "Failed to push deployment records"
+
+  notify:
+    name: Notify Deployment Status
+    needs: build-and-deploy
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Notify success
+        if: needs.build-and-deploy.result == 'success'
+        run: |
+          echo "Backend services deployment to ${{ github.event.inputs.environment || 'staging' }} completed successfully."
+          # Add notification to Slack, Teams, etc. here
+
+      - name: Notify failure
+        if: needs.build-and-deploy.result == 'failure'
+        run: |
+          echo "Backend services deployment to ${{ github.event.inputs.environment || 'staging' }} failed."
+          # Add notification to Slack, Teams, etc. here

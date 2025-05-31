@@ -1,9 +1,9 @@
 // Manatal API configuration
 export const MANATAL_API = {
   BASE_URL: 'https://api.manatal.com/open/v3',
-  // Token is retrieved from environment variable or fallback to hardcoded value
+  // Token is retrieved from environment variable only
   // In a production environment, this should be handled server-side
-  TOKEN: import.meta.env.VITE_MANATAL_API_TOKEN || '5ae4382cab6e503119634f2f594bee928f3921c8',
+  TOKEN: import.meta.env.VITE_MANATAL_API_TOKEN || 'placeholder_token_needs_env_variable',
   ENDPOINTS: {
     CANDIDATES: '/candidates/',
     ORGANIZATIONS: '/organizations/',
@@ -61,16 +61,52 @@ export async function processApiResponse<T>(response: Response): Promise<ApiResp
       // Handle API error responses
       const error: ApiError = {
         code: 'API_ERROR',
-        message: data.detail || 'An unknown error occurred',
+        message: 'An unknown error occurred',
         details: data
       };
+      
+      // Format error message based on Manatal API response format
+      if (typeof data === 'object') {
+        // Manatal API might return errors in different formats
+        if (data.detail) {
+          error.message = data.detail;
+        } else if (data.message) {
+          error.message = data.message;
+        } else if (data.non_field_errors && Array.isArray(data.non_field_errors)) {
+          // Handle non-field errors array
+          error.message = data.non_field_errors.join('; ');
+        } else {
+          // Handle field validation errors (e.g. {"full_name": ["This field is required."]})
+          const errorMessages: string[] = [];
+          
+          Object.entries(data).forEach(([field, messages]) => {
+            if (Array.isArray(messages)) {
+              errorMessages.push(`${field}: ${messages.join(', ')}`);
+            } else if (typeof messages === 'string') {
+              errorMessages.push(`${field}: ${messages}`);
+            } else if (typeof messages === 'object' && messages !== null) {
+              // Handle nested error objects
+              const nestedErrors = Object.entries(messages)
+                .map(([key, value]) => `${key}: ${value}`)
+                .join(', ');
+              errorMessages.push(`${field}: ${nestedErrors}`);
+            }
+          });
+          
+          if (errorMessages.length > 0) {
+            error.message = errorMessages.join('; ');
+          }
+        }
+      }
       
       if (status === 401) {
         error.code = 'UNAUTHORIZED';
         error.message = 'API authentication failed';
       } else if (status === 400) {
         error.code = 'VALIDATION_ERROR';
-        error.message = 'Invalid request data';
+        if (error.message === 'An unknown error occurred') {
+          error.message = 'Invalid request data';
+        }
       } else if (status === 404) {
         error.code = 'NOT_FOUND';
         error.message = 'Resource not found';

@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: humanosisu
+  labels:
+    name: humanosisu
+    environment: ${ENVIRONMENT}
+    project: saas-hr

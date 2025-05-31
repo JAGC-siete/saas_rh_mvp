@@ -1,0 +1,10 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: bases-de-datos-pdb
+  namespace: humanosisu
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: bases-de-datos

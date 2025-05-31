@@ -37,7 +37,7 @@ log_retention_in_days      = 30
 environment_tag = "staging"
 team_tag        = "devops"
 cost_center_tag = "saas-rh-staging"
-project_name = "saas-hr"
+project_name    = "saas-hr"
 
 # Website configuration
 website_bucket_name = "www.humanosisu.com"
@@ -45,4 +45,4 @@ enable_cloudfront   = true
 use_custom_domain   = true
 website_subdomain   = "www"
 domain_name         = "humanosisu.com"
-# Note: CloudFront distribution ID is stored in GitHub secrets as CLOUDFRONT_DISTRIBUTION_ID
+# CloudFront distribution ID: E3JC3C46Y6RAHD (as of May 30, 2025)
