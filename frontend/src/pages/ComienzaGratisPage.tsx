@@ -278,6 +278,10 @@ const ComienzaGratisPage: React.FC = () => {
                 }
               }
             }
+            
+            // Track successful submission
+            analyticsService.trackFormSubmission('employee', 'success');
+            setSubmitSuccess(true);
           } else {
             console.error('Error submitting candidate:', result.error);
             // Track submission error
