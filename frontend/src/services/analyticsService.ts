@@ -6,7 +6,7 @@ type EventType = 'form_submit' | 'form_view' | 'form_error' | 'cv_upload' | 'pag
 interface EventData {
   userType?: 'employee' | 'employer';
   formName?: string;
-  status?: 'success' | 'error' | 'attempt';
+  status?: 'success' | 'error' | 'attempt' | 'partial_success';
   errorType?: string;
   errorMessage?: string;
   [key: string]: any; // Allow additional properties

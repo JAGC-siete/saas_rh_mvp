@@ -276,6 +276,7 @@ const ComienzaGratisPage: React.FC = () => {
                   alert(t('Your profile was created successfully, but there was an issue uploading your CV. You can add it later.'));
                   setSubmitSuccess(true);
                 }
+              }
             }
             
             // Track successful submission
@@ -290,7 +291,6 @@ const ComienzaGratisPage: React.FC = () => {
             alert(t(`Error: ${result.error?.message || 'There was an error submitting your information. Please try again.'}`));
           }
         }
-        
       } catch (error) {
         console.error('Unexpected error submitting form:', error);
         // Track unexpected error
