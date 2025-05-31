@@ -33,6 +33,11 @@ spec:
         env:
         - name: BASE_PATH
           value: "/asistencia"
+        - name: API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: API_KEY
         - name: DB_HOST
           valueFrom:
             configMapKeyRef:

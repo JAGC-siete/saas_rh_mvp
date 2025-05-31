@@ -33,6 +33,11 @@ spec:
         env:
         - name: BASE_PATH
           value: "/nomina"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: JWT_SECRET
         - name: DB_HOST
           valueFrom:
             configMapKeyRef:
@@ -58,21 +63,11 @@ spec:
             secretKeyRef:
               name: postgres-credentials
               key: password
-        - name: REDIS_HOST
-          valueFrom:
-            configMapKeyRef:
-              name: redis-config
-              key: host
-        - name: REDIS_PORT
-          valueFrom:
-            configMapKeyRef:
-              name: redis-config
-              key: port
         - name: REDIS_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: redis-credentials
-              key: password
+              name: app-secrets
+              key: REDIS_PASSWORD
         volumeMounts:
         - name: nomina-storage
           mountPath: /app/pdfs
