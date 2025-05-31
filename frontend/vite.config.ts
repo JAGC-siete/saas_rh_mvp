@@ -8,6 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  base: './',  // Changed from '/' to './' for better static file handling
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -22,12 +23,15 @@ export default defineConfig({
   },
   server: {
     port: 3000,
-    open: true,
-    host: true, // Listen on all local IPs
-    cors: true,
-    hmr: {
-      overlay: true
-    }
+    strictPort: true,
+    host: true,
+    cors: true
+  },
+  preview: {
+    port: 4174,  // Updated to match your new port
+    strictPort: true,
+    host: true,
+    cors: true
   },
   build: {
     outDir: 'dist',
@@ -40,7 +44,9 @@ export default defineConfig({
       }
     },
     target: 'esnext',
-    minify: 'terser'
+    minify: 'terser',
+    assetsDir: 'assets',  // Explicitly set assets directory
+    emptyOutDir: true,    // Clean the output directory before build
   },
   optimizeDeps: {
     include: ['react', 'react-dom', 'react-router-dom']
