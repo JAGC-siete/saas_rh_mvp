@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: bases-de-datos
-  namespace: default
+  namespace: saas-rh
   labels:
     app: bases-de-datos
 spec:
@@ -15,9 +15,19 @@ spec:
       labels:
         app: bases-de-datos
     spec:
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 1001
       containers:
         - name: bases-de-datos
           image: 826726045450.dkr.ecr.us-east-1.amazonaws.com/bases-de-datos:latest
+          securityContext:
+            runAsUser: 1001
+            runAsGroup: 1001
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
           imagePullPolicy: Always
           ports:
             - containerPort: 3000

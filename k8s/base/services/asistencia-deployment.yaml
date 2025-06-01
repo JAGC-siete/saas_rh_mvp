@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: asistencia
-  namespace: default
+  namespace: saas-rh
   labels:
     app: asistencia
 spec:
@@ -15,9 +15,20 @@ spec:
       labels:
         app: asistencia
     spec:
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 1001
       containers:
         - name: asistencia
           image: 826726045450.dkr.ecr.us-east-1.amazonaws.com/asistencia:latest
+          securityContext:
+            runAsUser: 1001
+            runAsGroup: 1001
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+          imagePullPolicy: Always
           ports:
             - containerPort: 3000
           env:
@@ -47,6 +58,18 @@ spec:
               value: "3000"
             - name: CORS_ORIGIN
               value: "https://app.humanosisu.com,https://api.humanosisu.com"
+            - name: AWS_REGION
+              value: "us-east-1"
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aws-secret
+                  key: access_key_id
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: aws-secret
+                  key: secret_access_key
           startupProbe:
             httpGet:
               path: /health
