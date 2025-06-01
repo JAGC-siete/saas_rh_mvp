@@ -1,0 +1,14 @@
+# filepath: .pre-commit-config.yaml
+repos:
+- repo: local
+  hooks:
+    - id: terraform-fmt
+      name: Format Terraform files
+      entry: terraform fmt
+      files: \.tf$
+      language: system
+    - id: secret-check
+      name: Check for secrets in code
+      entry: bash -c 'grep -i -E "password|secret|key" "$@" | grep -v "secretKeyRef\|configMapKeyRef"'
+      language: system
+      files: \.(yaml|yml|json|js|ts)$
