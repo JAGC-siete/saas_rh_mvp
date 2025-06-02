@@ -9,3 +9,4 @@ node_modules
 k8s/base/shared/aws-secret.yaml
 *.secret.yaml
 *.secrets.yaml
+k8s/base/shared/aws-secret.yaml
