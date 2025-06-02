@@ -10,3 +10,7 @@ k8s/base/shared/aws-secret.yaml
 *.secret.yaml
 *.secrets.yaml
 k8s/base/shared/aws-secret.yaml
+backup.git/
+bfg.jar
+clean_history.py
+patterns.txt
