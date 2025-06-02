@@ -2,11 +2,8 @@ import { createClient } from 'redis';
 
 async function testRedisConnection() {
     const client = createClient({
-        socket: {
-            host: process.env.REDIS_HOST || 'localhost',
-            port: parseInt(process.env.REDIS_PORT, 10) || 6379
-        },
-        password: process.env.REDIS_PASSWORD || 'redis_secret'
+        url: process.env.REDIS_URL || 'redis://redis:6379',
+        password: process.env.REDIS_PASSWORD
     });
 
     client.on('error', err => console.error('Redis Client Error:', err));

@@ -76,7 +76,7 @@ resource "aws_security_group" "workers" {
 
   ingress {
     from_port       = 0
-    to_port = 0
+    to_port         = 0
     protocol        = "-1"
     security_groups = [aws_security_group.default.id]
     description     = "Allow all traffic from default security group"

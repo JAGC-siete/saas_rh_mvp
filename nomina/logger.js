@@ -75,4 +75,5 @@ logger.errorLogger = (err, req, res, next) => {
   next(err);
 };
 
+// Export the logger
 export { logger };

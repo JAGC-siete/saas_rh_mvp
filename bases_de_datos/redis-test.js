@@ -18,10 +18,7 @@ async function testRedisConnection() {
   console.log('');
 
   const redisClient = createClient({
-    socket: {
-      host: redisHost,
-      port: parseInt(redisPort, 10)
-    },
+    url: process.env.REDIS_URL || 'redis://redis:6379',
     password: process.env.REDIS_PASSWORD
   });
 

@@ -17,13 +17,13 @@ spec:
     spec:
       securityContext:
         runAsNonRoot: true
-        fsGroup: 1001
+        fsGroup: 1000
       containers:
         - name: asistencia
           image: 826726045450.dkr.ecr.us-east-1.amazonaws.com/asistencia:latest
           securityContext:
-            runAsUser: 1001
-            runAsGroup: 1001
+            runAsUser: 1000
+            runAsGroup: 1000
             allowPrivilegeEscalation: false
             capabilities:
               drop:
@@ -34,6 +34,11 @@ spec:
           env:
             - name: NODE_ENV
               value: production
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-credentials
+                  key: password
             - name: DB_HOST
               valueFrom:
                 secretKeyRef:

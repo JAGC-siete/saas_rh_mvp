@@ -41,14 +41,14 @@ module "eks" {
   aws_region      = var.aws_region
 
   # VPC Configuration
-  vpc_id           = module.vpc.vpc_id
-  private_subnets  = module.vpc.private_subnets
+  vpc_id          = module.vpc.vpc_id
+  private_subnets = module.vpc.private_subnets
 
   # Node configuration
   instance_types = var.instance_types
-  min_size      = var.min_size
-  max_size      = var.max_size
-  desired_size  = var.desired_size
+  min_size       = var.min_size
+  max_size       = var.max_size
+  desired_size   = var.desired_size
 
   # Security configuration
   kms_key_arn                = module.kms.key_arn

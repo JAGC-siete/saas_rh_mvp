@@ -17,18 +17,14 @@ const healthCheck = {
     }
   },
 
-  // Redis connection check
-  async checkRedis(redisUrl, redisPassword) {
-    const redisClient = createClient({
-      url: redisUrl,
-      password: redisPassword
-    });
-    
+  // Redis connection check - simplified implementation
+  async checkRedis(redisClient) {
     try {
-      await redisClient.connect();
-      await redisClient.ping();
-      await redisClient.quit();
-      return true;
+      if (redisClient && redisClient.isReady) {
+        await redisClient.ping();
+        return true;
+      }
+      return false;
     } catch (error) {
       console.error('Redis health check failed:', error);
       return false;
@@ -36,11 +32,11 @@ const healthCheck = {
   },
 
   // Combined health check
-  createHealthCheckMiddleware(pool, redisUrl, redisPassword) {
+  createHealthCheckMiddleware(pool, redisClient) {
     return async (req, res) => {
       try {
         const dbHealth = await this.checkDatabase(pool);
-        const redisHealth = await this.checkRedis(redisUrl, redisPassword);
+        const redisHealth = await this.checkRedis(redisClient);
         
         const health = {
           status: dbHealth && redisHealth ? 'healthy' : 'unhealthy',

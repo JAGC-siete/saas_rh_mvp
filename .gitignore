@@ -5,3 +5,7 @@ node_modules
 *.tfstate
 *.tfstate.*
 .terraform.lock.hcl
+# Kubernetes Secrets
+k8s/base/shared/aws-secret.yaml
+*.secret.yaml
+*.secrets.yaml

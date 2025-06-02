@@ -1,31 +1,30 @@
 FROM node:18-alpine3.19
 
 # Install dependencies required for node-gyp
-RUN apk add --no-cache python3 make g++
+RUN apk add --no-cache python3 make g++ curl
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Set up directory structure and permissions first
+RUN mkdir -p /app/logs && \
+    chown -R node:node /app && \
+    chmod -R 755 /app/logs
 
-# Install dependencies
-RUN npm ci --only=production
+# Copy package files and install dependencies
+COPY --chown=node:node package*.json ./
+RUN npm install --package-lock-only && npm ci
 
-# Use existing node user from base image
-RUN chown -R node:node /app
-
-# Copy application code with correct ownership
+# Copy application code EXCEPT logs
 COPY --chown=node:node . .
 
-# Set environment variables
-ENV NODE_ENV=production
-ENV AWS_SDK_LOAD_CONFIG=1
-
-# Create logs directory and set permissions
-RUN mkdir -p /app/logs && chown -R node:node /app/logs
-
-# Switch to non-root user - THIS MUST BE AFTER ALL ROOT OPERATIONS
+# Switch to node user
 USER node
+
+# Set environment variables
+ENV NODE_ENV=production \
+    AWS_SDK_LOAD_CONFIG=1 \
+    DOCKER_DEFAULT_PLATFORM=linux/amd64 \
+    AWS_REGION=us-east-1
 
 EXPOSE 3002
 

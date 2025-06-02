@@ -4,32 +4,31 @@ FROM node:18-alpine
 # Install required tools
 RUN apk add --no-cache python3 make g++ curl
 
-# WORK AS ROOT FIRST
 WORKDIR /app
-COPY package*.json ./
-RUN npm install --package-lock-only
-RUN npm ci
 
-# Explicit dependency verification
+# Set up directory structure and permissions first
+RUN mkdir -p /app/logs && \
+    chown -R node:node /app && \
+    chmod -R 755 /app/logs
+
+# Copy package files and install dependencies
+COPY --chown=node:node package*.json ./
+RUN npm install --package-lock-only && npm ci
+
+# Copy application code EXCEPT logs
+COPY --chown=node:node . .
+
+# Verify dependencies
 RUN npm list express-session && npm list connect-redis
 
-# Use existing node user from base image
-RUN chown -R node:node /app
-
-# Copy application code with correct ownership
-COPY --chown=node:node . .
+# Switch to node user
+USER node
 
 # Set environment variables
 ENV NODE_ENV=production \
     AWS_SDK_LOAD_CONFIG=1 \
-    # Add platform specification for M1 Macs
-    DOCKER_DEFAULT_PLATFORM=linux/amd64
-
-# Create logs directory and set permissions
-RUN mkdir -p /app/logs && chown -R node:node /app/logs
-
-# Switch to non-root user - DO THIS LAST
-USER node
+    DOCKER_DEFAULT_PLATFORM=linux/amd64 \
+    AWS_REGION=us-east-1
 
 EXPOSE 3003
 

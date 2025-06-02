@@ -1,9 +1,9 @@
 alert_email                   = "jorge7gomez@gmail.com"
 aws_region                    = "us-east-1"
 environment                   = "staging"
-elasticache_security_group_id = "sg-070cd10a77aefba9c"  # saas-hr-redis-staging20250526181129325000000001
-rds_security_group_id         = "sg-003ff7df68d1a3a75"  # saas-rh-rds-staging
-eks_security_group_id         = "sg-022e7ba4815406067"  # k8s-saasrh-78ac39e155
+elasticache_security_group_id = "sg-070cd10a77aefba9c" # saas-hr-redis-staging20250526181129325000000001
+rds_security_group_id         = "sg-003ff7df68d1a3a75" # saas-rh-rds-staging
+eks_security_group_id         = "sg-022e7ba4815406067" # k8s-saasrh-78ac39e155
 
 
 # VPC Configuration
@@ -38,4 +38,4 @@ log_retention_in_days      = 30
 environment_tag = "staging"
 team_tag        = "devops"
 cost_center_tag = "saas-rh-staging"
-project_name = "saas-hr"
+project_name    = "saas-hr"
