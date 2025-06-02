@@ -15,6 +15,7 @@ spec:
       labels:
         app: bases-de-datos
     spec:
+      serviceAccountName: aws-cloudwatch-sa
       securityContext:
         runAsNonRoot: true
         fsGroup: 1000
@@ -65,16 +66,6 @@ spec:
               value: "https://app.humanosisu.com,https://api.humanosisu.com"
             - name: AWS_REGION
               value: "us-east-1"
-            - name: AWS_ACCESS_KEY_ID
-              valueFrom:
-                secretKeyRef:
-                  name: aws-secret
-                  key: access_key_id
-            - name: AWS_SECRET_ACCESS_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: aws-secret
-                  key: secret_access_key
           startupProbe:
             httpGet:
               path: /health
