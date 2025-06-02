@@ -40,11 +40,6 @@ spec:
             configMapKeyRef:
               name: redis-config
               key: host
-        - name: REDIS_PORT
-          valueFrom:
-            configMapKeyRef:
-              name: redis-config
-              key: port
         - name: REDIS_PASSWORD
           valueFrom:
             secretKeyRef:

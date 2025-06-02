@@ -6,8 +6,8 @@ dotenv.config();
 
 // Create Redis client
 const redisClient = createClient({
-  url: 'redis://redis:6379',
-  password: 'redis_secret'
+  url: `redis://${process.env.REDIS_HOST || 'redis'}:${process.env.REDIS_PORT || '6379'}`,
+  password: process.env.REDIS_PASSWORD
 });
 
 // Redis connection test

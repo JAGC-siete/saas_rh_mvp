@@ -4,4 +4,9 @@ metadata:
   name: redis-config
   namespace: saas-rh
 data:
+  redis.conf: |
+    maxmemory 200mb
+    maxmemory-policy allkeys-lru
+    appendonly yes
+    protected-mode no
   url: "redis://redis:6379"

@@ -2,7 +2,7 @@ const { createClient } = require('redis');
 
 // Create Redis client with direct configuration since we're in Docker
 const redisClient = createClient({
-  url: process.env.REDIS_URL || 'redis://redis:6379',
+  url: `redis://${process.env.REDIS_HOST || 'redis'}:${process.env.REDIS_PORT || '6379'}`,
   password: process.env.REDIS_PASSWORD
 });
 

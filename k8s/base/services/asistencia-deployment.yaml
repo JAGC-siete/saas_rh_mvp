@@ -41,23 +41,23 @@ spec:
                   key: password
             - name: DB_HOST
               valueFrom:
-                secretKeyRef:
-                  name: db-secret
+                configMapKeyRef:
+                  name: db-config
                   key: host
             - name: DB_USER
               valueFrom:
                 secretKeyRef:
-                  name: db-secret
+                  name: db-credentials
                   key: username
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: db-secret
+                  name: db-credentials
                   key: password
             - name: DB_NAME
               valueFrom:
-                secretKeyRef:
-                  name: db-secret
+                configMapKeyRef:
+                  name: db-config
                   key: database
             - name: PORT
               value: "3000"
