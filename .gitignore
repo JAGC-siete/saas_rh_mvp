@@ -1,0 +1,20 @@
+# Node dependencies
+node_modules/
+
+# Environment files
+.env
+*.env
+*/.env
+.env.*
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local data
+postgres-data/
+redis-data/
+
+# macOS
+.DS_Store

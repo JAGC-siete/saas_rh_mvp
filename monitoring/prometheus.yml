@@ -1,0 +1,7 @@
+scrape_configs:
+  - job_name: 'saas'
+    static_configs:
+      - targets:
+          - 'bases_de_datos:3001'
+          - 'asistencia:3003'
+          - 'nomina:3002'

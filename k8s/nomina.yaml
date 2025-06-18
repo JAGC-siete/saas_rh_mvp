@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nomina
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nomina
+  template:
+    metadata:
+      labels:
+        app: nomina
+    spec:
+      containers:
+        - name: nomina
+          image: your-registry/nomina:latest
+          envFrom:
+            - secretRef:
+                name: nomina-secret
+          ports:
+            - containerPort: 3002
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nomina
+spec:
+  selector:
+    app: nomina
+  ports:
+    - port: 3002
+      targetPort: 3002

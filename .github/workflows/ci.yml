@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "work"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [bases_de_datos, asistencia, nomina]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        run: |
+          cd ${{ matrix.service }}
+          npm ci
+      - name: Run tests
+        run: |
+          cd ${{ matrix.service }}
+          npm test
