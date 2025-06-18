@@ -6,6 +6,9 @@ const path = require('path');
 require('dotenv').config();
 
 const app = express();
+app.disable('x-powered-by');
+const metrics = { requestCount: 0 };
+app.use((req, res, next) => { metrics.requestCount++; next(); });
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -15,6 +18,19 @@ const pool = new Pool({
   database: process.env.DB_NAME || 'saas_db',
   password: process.env.DB_PASSWORD || 'secret',
   port: process.env.DB_PORT || 5432,
+});
+
+app.get('/metrics', (req, res) => {
+  res.json({ uptime: process.uptime(), memory: process.memoryUsage().rss, requests: metrics.requestCount });
+});
+
+app.get('/health', async (req, res) => {
+  try {
+    await pool.query('SELECT 1');
+    res.json({ status: 'healthy' });
+  } catch {
+    res.status(503).json({ status: 'unhealthy' });
+  }
 });
 
 app.post('/attendance', async (req, res) => {

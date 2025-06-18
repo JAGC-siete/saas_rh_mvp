@@ -6,6 +6,7 @@ import jwt from 'jsonwebtoken';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import Redis from 'ioredis';
+import { calcularISR, formatoLempiras } from './utils.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,6 +22,13 @@ const redisClient = new Redis({
 });
 
 const app = express();
+app.disable('x-powered-by');
+const metrics = { requestCount: 0 };
+app.use((req, res, next) => { metrics.requestCount++; next(); });
+
+app.get('/metrics', (req, res) => {
+  res.json({ uptime: process.uptime(), memory: process.memoryUsage().rss, requests: metrics.requestCount });
+});
 
 const SALARIO_MINIMO = 11903.13;
 const RAP_PORCENTAJE = 0.015;
@@ -88,14 +96,6 @@ app.get('/health', async (req, res) => {
   }
 });
 
-function calcularISR(salarioBase) {
-  const ingresoAnual = salarioBase * 12;
-  const rentaNeta = ingresoAnual - 40000;
-  if (rentaNeta <= 217493.16) return 0;
-  if (rentaNeta <= 494224.40) return ((rentaNeta - 217493.16) * 0.15) / 12;
-  if (rentaNeta <= 771252.37) return (41610.33 + (rentaNeta - 494224.40) * 0.20) / 12;
-  return (96916.30 + (rentaNeta - 771252.37) * 0.25) / 12;
-}
 
 function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
@@ -109,11 +109,6 @@ function authenticateToken(req, res, next) {
   });
 }
 
-const formatoLempiras = n => new Intl.NumberFormat('es-HN', {
-  style: 'currency',
-  currency: 'HNL',
-  minimumFractionDigits: 2
-}).format(n);
 
 // Simple health check removed in favor of the detailed one above
 
@@ -286,3 +281,4 @@ process.on('uncaughtException', (error) => {
   // Dar tiempo para logging y limpieza
   setTimeout(() => process.exit(1), 1000);
 });
+
