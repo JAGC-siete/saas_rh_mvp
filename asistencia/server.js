@@ -4,9 +4,16 @@ const express = require('express');
 const { Pool } = require('pg');
 const path = require('path');
 const { DateTime } = require('luxon');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const mongoSanitize = require('express-mongo-sanitize');
 require('dotenv').config();
 
 const app = express();
+app.disable('x-powered-by');
+app.use(helmet());
+app.use(rateLimit({ windowMs: 60 * 1000, max: 100 }));
+app.use(mongoSanitize());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -17,6 +24,22 @@ const pool = new Pool({
   database: process.env.DB_NAME || 'saas_db',
   password: process.env.DB_PASSWORD || 'secret',
   port: process.env.DB_PORT || 5432,
+});
+
+const metrics = { requestCount: 0 };
+app.use((req, res, next) => { metrics.requestCount++; next(); });
+
+app.get('/metrics', (req, res) => {
+  res.json({ uptime: process.uptime(), memory: process.memoryUsage().rss, requests: metrics.requestCount });
+});
+
+app.get('/health', async (req, res) => {
+  try {
+    await pool.query('SELECT 1');
+    res.json({ status: 'healthy' });
+  } catch {
+    res.status(503).json({ status: 'unhealthy' });
+  }
 });
 
 // POST /attendance
