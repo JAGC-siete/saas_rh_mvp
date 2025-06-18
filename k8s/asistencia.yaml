@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: asistencia
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: asistencia
+  template:
+    metadata:
+      labels:
+        app: asistencia
+    spec:
+      containers:
+        - name: asistencia
+          image: your-registry/asistencia:latest
+          envFrom:
+            - secretRef:
+                name: asistencia-secret
+          ports:
+            - containerPort: 3003
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: asistencia
+spec:
+  selector:
+    app: asistencia
+  ports:
+    - port: 3003
+      targetPort: 3003
