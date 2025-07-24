@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useSession } from '@supabase/auth-helpers-react'
-import Button from './ui/button'
-import Input from './ui/input'
-import Card from './ui/card'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from './ui/card'
 import { 
   BuildingOfficeIcon, 
   UserGroupIcon, 

@@ -73,7 +73,7 @@ export default function AuthForm() {
 
         if (signInError) throw signInError
 
-        router.push('/dashboard')
+        router.push('/')
       }
     } catch (error: any) {
       setError(error.message)

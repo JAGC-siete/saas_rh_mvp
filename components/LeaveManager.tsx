@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useSession } from '@supabase/auth-helpers-react'
-import Button from './ui/button'
-import Input from './ui/input'
-import Card from './ui/card'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from './ui/card'
 import { PlusIcon, CheckIcon, XMarkIcon, CalendarIcon } from '@heroicons/react/24/outline'
 
 interface LeaveRequest {
@@ -210,11 +210,11 @@ export default function LeaveManager() {
       </div>
 
       {showForm && (
-        <Card className="p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">
-            Nueva Solicitud de Permiso
-          </h3>
-          
+        <Card>
+          <CardHeader>
+            <CardTitle>Nueva Solicitud de Permiso</CardTitle>
+          </CardHeader>
+          <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -319,12 +319,14 @@ export default function LeaveManager() {
               </Button>
             </div>
           </form>
+          </CardContent>
         </Card>
       )}
 
       <div className="space-y-4">
         {leaveRequests.map((request) => (
-          <Card key={request.id} className="p-6">
+          <Card key={request.id}>
+            <CardContent className="p-6">
             <div className="flex justify-between items-start">
               <div className="flex-1">
                 <div className="flex items-center space-x-3 mb-2">
@@ -387,6 +389,7 @@ export default function LeaveManager() {
                 </div>
               )}
             </div>
+            </CardContent>
           </Card>
         ))}
       </div>
