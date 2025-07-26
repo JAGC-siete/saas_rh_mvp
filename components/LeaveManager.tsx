@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
-import { useSession } from '@supabase/auth-helpers-react'
+import { supabase, useSupabaseSession } from '../lib/supabase'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from './ui/card'
@@ -54,7 +53,7 @@ const STATUS_LABELS = {
 }
 
 export default function LeaveManager() {
-  const session = useSession()
+  const { session } = useSupabaseSession()
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([])
   const [employees, setEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(false)
@@ -228,8 +227,9 @@ export default function LeaveManager() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Seleccionar empleado</option>
-                  {employees.map((employee) => (
-                    <option key={employee.id} value={employee.id}>
+                  {/* eslint-disable-next-line react/jsx-key */}
+                  {employees.map((employee, index) => (
+                    <option key={`employee-${index}`} value={employee.id}>
                       {employee.first_name} {employee.last_name}
                     </option>
                   ))}
@@ -247,8 +247,9 @@ export default function LeaveManager() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Seleccionar tipo</option>
-                  {LEAVE_TYPES.map((type) => (
-                    <option key={type.value} value={type.value}>
+                  {/* eslint-disable-next-line react/jsx-key */}
+                  {LEAVE_TYPES.map((type, index) => (
+                    <option key={`type-${index}`} value={type.value}>
                       {type.label}
                     </option>
                   ))}
@@ -324,8 +325,9 @@ export default function LeaveManager() {
       )}
 
       <div className="space-y-4">
-        {leaveRequests.map((request) => (
-          <Card key={request.id}>
+        {/* eslint-disable-next-line react/jsx-key */}
+        {leaveRequests.map((request, index) => (
+          <Card key={`request-${index}`}>
             <CardContent className="p-6">
             <div className="flex justify-between items-start">
               <div className="flex-1">

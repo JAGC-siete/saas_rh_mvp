@@ -1,40 +1,32 @@
-import { createClient } from '@supabase/supabase-js'
+// DEPRECATED: This file is being phased out in favor of lib/supabase/client.ts and lib/supabase/server.ts
+// Keep for backward compatibility during migration
 
-// These will be your environment variables
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY
+import { createClient as createBrowserClient } from './supabase/client'
+import { Session } from '@supabase/supabase-js'
+import { useState, useEffect } from 'react'
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables')
+// Legacy client export - use createClient from ./supabase/client.ts instead
+export const supabase = createBrowserClient()
+
+// Helper function to check if we have real env vars
+export const hasValidSupabaseConfig = () => {
+  return Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL && 
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
+    process.env.NEXT_PUBLIC_SUPABASE_URL !== 'https://placeholder.supabase.co' &&
+    !process.env.NEXT_PUBLIC_SUPABASE_URL.includes('PLACEHOLDER')
+  )
 }
 
-// Client for browser usage
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true
-  },
-  realtime: {
-    channels: {
-      self: true,
-    },
-  },
-})
+// Log warning in development if using placeholder values
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development' && !hasValidSupabaseConfig()) {
+  console.warn('⚠️ Using placeholder Supabase config. Please update your .env.local with real values.')
+}
 
-// Service client for server-side operations (with service role key)
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+// Legacy admin client - use createAdminClient from ./supabase/server.ts instead
+export const supabaseAdmin = null // Deprecated - use server-side clients
 
-export const supabaseAdmin = supabaseServiceKey 
-  ? createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    })
-  : null
-
-// Database types (you'll generate this later with: npx supabase gen types typescript --local)
+// Database types placeholder
 export type Database = {
   public: {
     Tables: {
@@ -42,114 +34,184 @@ export type Database = {
         Row: {
           id: string
           name: string
-          subdomain: string | null
-          plan_type: string | null
-          settings: any | null
-          created_at: string | null
-          updated_at: string | null
-          is_active: boolean | null
+          subdomain: string
+          created_at: string
         }
         Insert: {
           id?: string
           name: string
-          subdomain?: string | null
-          plan_type?: string | null
-          settings?: any | null
-          created_at?: string | null
-          updated_at?: string | null
-          is_active?: boolean | null
+          subdomain: string
+          created_at?: string
         }
         Update: {
           id?: string
           name?: string
-          subdomain?: string | null
-          plan_type?: string | null
-          settings?: any | null
-          created_at?: string | null
-          updated_at?: string | null
-          is_active?: boolean | null
+          subdomain?: string
+          created_at?: string
         }
       }
       employees: {
         Row: {
           id: string
           company_id: string
-          department_id: string | null
-          work_schedule_id: string | null
-          employee_code: string | null
+          full_name: string
+          email: string
+          position: string
+          department: string
+          status: 'active' | 'inactive'
           dni: string
-          name: string
-          email: string | null
-          phone: string | null
-          role: string | null
-          position: string | null
-          base_salary: number
-          hire_date: string | null
-          termination_date: string | null
-          status: string | null
-          bank_name: string | null
-          bank_account: string | null
-          emergency_contact_name: string | null
-          emergency_contact_phone: string | null
-          address: any | null
-          metadata: any | null
-          created_at: string | null
-          updated_at: string | null
+          created_at: string
         }
         Insert: {
           id?: string
           company_id: string
-          department_id?: string | null
-          work_schedule_id?: string | null
-          employee_code?: string | null
+          full_name: string
+          email: string
+          position: string
+          department: string
+          status?: 'active' | 'inactive'
           dni: string
-          name: string
-          email?: string | null
-          phone?: string | null
-          role?: string | null
-          position?: string | null
-          base_salary: number
-          hire_date?: string | null
-          termination_date?: string | null
-          status?: string | null
-          bank_name?: string | null
-          bank_account?: string | null
-          emergency_contact_name?: string | null
-          emergency_contact_phone?: string | null
-          address?: any | null
-          metadata?: any | null
-          created_at?: string | null
-          updated_at?: string | null
+          created_at?: string
         }
         Update: {
           id?: string
           company_id?: string
-          department_id?: string | null
-          work_schedule_id?: string | null
-          employee_code?: string | null
+          full_name?: string
+          email?: string
+          position?: string
+          department?: string
+          status?: 'active' | 'inactive'
           dni?: string
-          name?: string
-          email?: string | null
-          phone?: string | null
-          role?: string | null
-          position?: string | null
-          base_salary?: number
-          hire_date?: string | null
-          termination_date?: string | null
-          status?: string | null
-          bank_name?: string | null
-          bank_account?: string | null
-          emergency_contact_name?: string | null
-          emergency_contact_phone?: string | null
-          address?: any | null
-          metadata?: any | null
-          created_at?: string | null
-          updated_at?: string | null
+          created_at?: string
         }
       }
-      // Add other table types as needed...
+      attendance_records: {
+        Row: {
+          id: string
+          employee_id: string
+          date: string
+          check_in: string | null
+          check_out: string | null
+          status: 'present' | 'absent' | 'late'
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          employee_id: string
+          date: string
+          check_in?: string | null
+          check_out?: string | null
+          status?: 'present' | 'absent' | 'late'
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          employee_id?: string
+          date?: string
+          check_in?: string | null
+          check_out?: string | null
+          status?: 'present' | 'absent' | 'late'
+          created_at?: string
+        }
+      }
+      payroll_records: {
+        Row: {
+          id: string
+          employee_id: string
+          period_start: string
+          period_end: string
+          base_salary: number
+          deductions: number
+          bonuses: number
+          net_salary: number
+          status: 'draft' | 'approved' | 'paid'
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          employee_id: string
+          period_start: string
+          period_end: string
+          base_salary: number
+          deductions?: number
+          bonuses?: number
+          net_salary: number
+          status?: 'draft' | 'approved' | 'paid'
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          employee_id?: string
+          period_start?: string
+          period_end?: string
+          base_salary?: number
+          deductions?: number
+          bonuses?: number
+          net_salary?: number
+          status?: 'draft' | 'approved' | 'paid'
+          created_at?: string
+        }
+      }
+      user_profiles: {
+        Row: {
+          id: string
+          company_id: string
+          role: 'company_admin' | 'hr_manager' | 'employee'
+          full_name: string
+          created_at: string
+        }
+        Insert: {
+          id: string
+          company_id: string
+          role: 'company_admin' | 'hr_manager' | 'employee'
+          full_name: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          company_id?: string
+          role?: 'company_admin' | 'hr_manager' | 'employee'
+          full_name?: string
+          created_at?: string
+        }
+      }
     }
   }
 }
 
-export default supabase
+// DEPRECATED: Custom hook for session management - use Supabase SSR methods instead
+export function useSupabaseSession() {
+  const [session, setSession] = useState<Session | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    console.warn('⚠️ useSupabaseSession is deprecated. Migrate to @supabase/ssr patterns.')
+    
+    const getSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        setSession(session)
+      } catch (error) {
+        console.error('Error getting session:', error)
+        setSession(null)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    getSession()
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(session)
+        setLoading(false)
+      }
+    )
+
+    return () => {
+      authListener?.subscription.unsubscribe()
+    }
+  }, [])
+
+  return { session, loading }
+}

@@ -4,9 +4,16 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "clean": "rm -rf .next tsconfig.tsbuildinfo .tsbuildinfo *.tsbuildinfo out build dist",
+    "prebuild": "npm run clean",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "ci:prod": "npm ci --omit=dev && npm run build",
+    "env:check": "node scripts/check-env.js",
+    "security:check": "bash scripts/pre-commit.sh",
+    "postinstall": "chmod +x scripts/pre-commit.sh",
+    "setup:hooks": "ln -sf ../../scripts/pre-commit.sh .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -14,8 +21,7 @@
     "@heroicons/react": "^2.2.0",
     "@mui/icons-material": "^7.1.1",
     "@mui/material": "^7.1.1",
-    "@supabase/auth-helpers-nextjs": "^0.10.0",
-    "@supabase/auth-helpers-react": "^0.5.0",
+    "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.52.1",
     "@tailwindcss/forms": "^0.5.10",
     "@tailwindcss/typography": "^0.5.16",
@@ -29,8 +35,10 @@
     "postcss": "^8.5.6",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "react-router-dom": "^7.6.2",
     "tailwind-merge": "^3.3.1"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",

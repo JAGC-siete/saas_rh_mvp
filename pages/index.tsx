@@ -1,9 +1,6 @@
-import { GetServerSideProps } from 'next'
-import { createPagesServerClient } from '@supabase/auth-helpers-nextjs'
-import { useSession } from '@supabase/auth-helpers-react'
+import { useSupabaseSession, supabase } from '../lib/supabase'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
-import { supabase } from '../lib/supabase'
 import AuthForm from '../components/AuthForm'
 import DashboardLayout from '../components/DashboardLayout'
 import AttendanceManager from '../components/AttendanceManager'
@@ -16,7 +13,7 @@ interface DashboardStats {
 }
 
 export default function HomePage() {
-  const session = useSession()
+  const { session, loading: sessionLoading } = useSupabaseSession()
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState<DashboardStats>({
@@ -153,17 +150,4 @@ export default function HomePage() {
       </div>
     </DashboardLayout>
   )
-}
-
-export const getServerSideProps: GetServerSideProps = async (ctx) => {
-  const supabase = createPagesServerClient(ctx)
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  return {
-    props: {
-      initialSession: session,
-    },
-  }
 }

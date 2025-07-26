@@ -1,0 +1,8 @@
+[phases.setup]
+nixpkgs = ["nodejs_20", "npm_10"]
+
+[phases.build]
+cmds = ["npm ci --omit=dev", "npm run build"]
+
+[start]
+cmd = "npm start"

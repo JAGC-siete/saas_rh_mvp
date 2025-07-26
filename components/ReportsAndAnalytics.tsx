@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
-import { useSession } from '@supabase/auth-helpers-react'
+import { supabase, useSupabaseSession } from '../lib/supabase'
 import { Button } from './ui/button'
 import { Card } from './ui/card'
 
@@ -58,7 +57,7 @@ interface AttendanceTrend {
 }
 
 export default function ReportsAndAnalytics() {
-  const session = useSession()
+  const { session } = useSupabaseSession()
   const [stats, setStats] = useState<DashboardStats>({
     totalEmployees: 0,
     activeEmployees: 0,
@@ -79,6 +78,7 @@ export default function ReportsAndAnalytics() {
       fetchDashboardStats()
       fetchAttendanceTrends()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, dateRange])
 
   const fetchDashboardStats = async () => {
@@ -253,12 +253,12 @@ export default function ReportsAndAnalytics() {
 
       if (data && data.length > 0) {
         // Convert to CSV
-        const headers = Object.keys(data[0]).filter(key => typeof data[0][key] !== 'object')
+        const headers = Object.keys(data[0] as Record<string, any>).filter(key => typeof (data[0] as Record<string, any>)[key] !== 'object')
         const csvContent = [
           headers.join(','),
           ...data.map(row => 
             headers.map(header => {
-              const value = row[header]
+              const value = (row as Record<string, any>)[header]
               return typeof value === 'string' ? `"${value}"` : value
             }).join(',')
           )
@@ -391,13 +391,14 @@ export default function ReportsAndAnalytics() {
               <div>% Puntualidad</div>
             </div>
             
-            {attendanceTrends.slice(-10).map((trend) => {
+            {/* eslint-disable-next-line react/jsx-key */}            {/* eslint-disable-next-line react/jsx-key */}
+            {attendanceTrends.slice(-10).map((trend, index) => {
               const total = trend.present + trend.absent + trend.late
               const attendanceRate = total > 0 ? ((trend.present + trend.late) / total * 100).toFixed(1) : '0'
               const punctualityRate = total > 0 ? (trend.present / total * 100).toFixed(1) : '0'
               
               return (
-                <div key={trend.date} className="grid grid-cols-7 gap-2 text-sm py-2 border-b border-gray-100">
+                <div key={`trend-${index}`} className="grid grid-cols-7 gap-2 text-sm py-2 border-b border-gray-100">
                   <div>{new Date(trend.date).toLocaleDateString('es-HN')}</div>
                   <div className="text-green-600 font-medium">{trend.present}</div>
                   <div className="text-red-600 font-medium">{trend.absent}</div>

@@ -1,4 +1,4 @@
-import { supabase, supabaseAdmin } from '../../lib/supabase'
+import { createClient, createAdminClient } from '../../lib/supabase/server'
 import { NextApiRequest, NextApiResponse } from 'next'
 
 // Attendance API Handler
@@ -19,6 +19,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
   try {
     const { last5, justification, employee_id } = req.body
+
+    // Create Supabase client with cookie handling
+    const supabase = createClient(req, res)
 
     // Get user session
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -180,6 +183,9 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
 async function getAttendanceRecords(req: NextApiRequest, res: NextApiResponse) {
   try {
     const { employee_id, start_date, end_date, page = 1, limit = 50 } = req.query
+
+    // Create Supabase client with cookie handling
+    const supabase = createClient(req, res)
 
     // Get user session
     const { data: { user }, error: authError } = await supabase.auth.getUser()

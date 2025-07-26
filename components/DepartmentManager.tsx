@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
-import { useSession } from '@supabase/auth-helpers-react'
+import { supabase, useSupabaseSession } from '../lib/supabase'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from './ui/card'
@@ -24,7 +23,7 @@ interface Employee {
 }
 
 export default function DepartmentManager() {
-  const session = useSession()
+  const { session } = useSupabaseSession()
   const [departments, setDepartments] = useState<Department[]>([])
   const [employees, setEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(false)
@@ -212,8 +211,8 @@ export default function DepartmentManager() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Seleccionar manager</option>
-                  {employees.map((employee) => (
-                    <option key={employee.id} value={employee.id}>
+                  {employees.map((employee, index) => (
+                    <option key={`employee-${index}`} value={employee.id}>
                       {employee.first_name} {employee.last_name}
                     </option>
                   ))}
@@ -255,8 +254,8 @@ export default function DepartmentManager() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {departments.map((department) => (
-          <Card key={department.id}>
+        {departments.map((department, index) => (
+          <Card key={`department-${index}`}>
             <CardContent className="p-6">
             <div className="flex justify-between items-start mb-4">
               <div>

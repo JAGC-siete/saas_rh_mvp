@@ -1,18 +1,17 @@
 import { AppProps } from 'next/app'
-import { createPagesBrowserClient } from '@supabase/auth-helpers-nextjs'
-import { SessionContextProvider } from '@supabase/auth-helpers-react'
-import { useState } from 'react'
+import { createClient } from '../lib/supabase/client'
+import { createContext, useState } from 'react'
 import '../styles/globals.css'
 
+// Create a context for Supabase client (using new SSR client)
+export const SupabaseContext = createContext<any>(null)
+
 export default function App({ Component, pageProps }: AppProps) {
-  const [supabaseClient] = useState(() => createPagesBrowserClient())
+  const [supabaseClient] = useState(() => createClient())
 
   return (
-    <SessionContextProvider
-      supabaseClient={supabaseClient}
-      initialSession={pageProps.initialSession}
-    >
+    <SupabaseContext.Provider value={supabaseClient}>
       <Component {...pageProps} />
-    </SessionContextProvider>
+    </SupabaseContext.Provider>
   )
 }

@@ -1,4 +1,4 @@
-import { supabase, supabaseAdmin } from '../../lib/supabase'
+import { createClient, createAdminClient } from '../../lib/supabase/server'
 
 // Payroll API Handler
 export default async function handler(req, res) {
@@ -19,6 +19,9 @@ async function generatePayroll(req, res) {
   try {
     const { employee_id, period_start, period_end, period_type = 'monthly' } = req.body
 
+    // Create Supabase client with cookie handling
+    const supabase = createClient(req, res)
+    
     // Get user session and verify permissions
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {

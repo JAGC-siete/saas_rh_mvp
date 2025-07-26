@@ -1,4 +1,4 @@
-'use client'
+
 
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
@@ -231,7 +231,7 @@ export default function AttendanceManager() {
         {/* Quick Stats */}
         <Card>
           <CardHeader>
-            <CardTitle>Today's Summary</CardTitle>
+            <CardTitle>Today&apos;s Summary</CardTitle>
             <CardDescription>Real-time attendance overview</CardDescription>
           </CardHeader>
           <CardContent>
@@ -268,7 +268,7 @@ export default function AttendanceManager() {
       {/* Today's Attendance Records */}
       <Card>
         <CardHeader>
-          <CardTitle>Today's Attendance Records</CardTitle>
+          <CardTitle>Today&apos;s Attendance Records</CardTitle>
           <CardDescription>
             Live view of all attendance records for {new Date().toLocaleDateString()}
           </CardDescription>
@@ -286,8 +286,8 @@ export default function AttendanceManager() {
                 </tr>
               </thead>
               <tbody>
-                {attendanceRecords.map((record) => (
-                  <tr key={record.id} className="border-b hover:bg-gray-50">
+                {attendanceRecords.map((record, index) => (
+                  <tr key={`attendance-${index}`} className="border-b hover:bg-gray-50">
                     <td className="py-3 px-4">
                       <div>
                         <div className="font-medium">{record.employees?.name}</div>
