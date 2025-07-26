@@ -1,0 +1,37 @@
+{
+  "build": {
+    "builder": "NIXPACKS"
+  },
+  "deploy": {
+    "startCommand": "npm start",
+    "healthcheckPath": "/api/health",
+    "healthcheckTimeout": 100,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 10
+  },
+  "environments": {
+    "production": {
+      "variables": {
+        "NODE_ENV": "production",
+        "NEXT_TELEMETRY_DISABLED": "1",
+        "PORT": "$PORT",
+        "SKIP_ENV_VALIDATION": "false"
+      }
+    },
+    "staging": {
+      "variables": {
+        "NODE_ENV": "production", 
+        "NEXT_TELEMETRY_DISABLED": "1",
+        "PORT": "$PORT",
+        "SKIP_ENV_VALIDATION": "false"
+      }
+    },
+    "development": {
+      "variables": {
+        "NODE_ENV": "development",
+        "NEXT_TELEMETRY_DISABLED": "1",
+        "PORT": "$PORT"
+      }
+    }
+  }
+}
