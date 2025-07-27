@@ -2,7 +2,6 @@
 const { FlatCompat } = require("@eslint/eslintrc");
 const js = require("@eslint/js");
 const path = require("node:path");
-const { fileURLToPath } = require("node:url");
 
 // Get current directory
 const currentDir = path.dirname(__filename);
