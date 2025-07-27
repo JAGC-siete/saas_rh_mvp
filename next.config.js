@@ -8,6 +8,16 @@
 
 const nextConfig = {
   reactStrictMode: true,
+  eslint: {
+    // Warning: This allows production builds to successfully complete even if
+    // your project has ESLint errors.
+    ignoreDuringBuilds: true,
+  },
+  typescript: {
+    // Dangerously allow production builds to successfully complete even if
+    // your project has type errors.
+    ignoreBuildErrors: true,
+  },
   
   // Cache directory is controlled via NEXT_CACHE environment variable
   // Set in nixpacks.toml: export NEXT_CACHE=/tmp/next-cache

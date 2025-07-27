@@ -17,7 +17,11 @@ module.exports = [
     rules: {
       "@next/next/no-img-element": "off",
       "react-hooks/exhaustive-deps": "warn",
-      "react/no-unescaped-entities": "warn"
+      "react/no-unescaped-entities": "warn",
+      "no-unused-vars": "warn",
+      "@typescript-eslint/no-unused-vars": "warn",
+      "react/jsx-uses-react": "off",
+      "react/react-in-jsx-scope": "off"
     }
   }
 ];

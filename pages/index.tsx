@@ -55,48 +55,45 @@ export default function AdminLogin() {
   return (
     <>
       <Head>
-        <title>Acceso Administrativo - Sistema HR</title>
+        <title>Sistema de Recursos Humanos</title>
         <meta name="description" content="Acceso para administradores del sistema de recursos humanos" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 flex items-center justify-center p-4">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiMxZTI5M2IiIGZpbGwtb3BhY2l0eT0iMC4xIj48Y2lyY2xlIGN4PSIzMCIgY3k9IjMwIiByPSI0Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
-        
-        <div className="relative w-full max-w-md space-y-8">
+      <div className="min-h-screen bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center p-4">
+        <div className="w-full max-w-md space-y-8">
           {/* Header */}
           <div className="text-center">
-            <div className="mx-auto h-20 w-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mb-6 shadow-xl">
-              <Shield className="h-10 w-10 text-white" />
+            <div className="mx-auto h-16 w-16 bg-white rounded-full flex items-center justify-center mb-6 shadow-lg">
+              <Shield className="h-8 w-8 text-blue-600" />
             </div>
-            <h1 className="text-4xl font-bold text-white mb-2">
+            <h1 className="text-3xl font-bold text-white mb-2">
               Sistema de Recursos Humanos
             </h1>
-            <p className="text-blue-300 text-lg">
+            <p className="text-blue-100 text-base">
               Acceso para administradores
             </p>
-            <div className="mt-4 text-xl font-mono text-blue-400 font-semibold">
+            <div className="mt-4 text-lg font-mono text-white">
               {currentTime}
             </div>
           </div>
 
           {/* Login Form */}
-          <Card className="bg-gray-800/90 backdrop-blur-sm border border-gray-700 shadow-2xl">
-            <CardHeader className="text-center pb-6">
-              <CardTitle className="flex items-center justify-center gap-2 text-white text-xl">
+          <Card className="bg-white shadow-xl border-0">
+            <CardHeader className="text-center pb-4">
+              <CardTitle className="flex items-center justify-center gap-2 text-gray-800 text-lg">
                 <Lock className="h-5 w-5" />
                 Iniciar Sesión
               </CardTitle>
-              <CardDescription className="text-gray-300">
+              <CardDescription className="text-gray-600">
                 Ingrese sus credenciales para acceder al sistema
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-4">
                 {/* Email Field */}
                 <div className="space-y-2">
-                  <label htmlFor="email" className="text-sm font-medium text-gray-200">
+                  <label htmlFor="email" className="text-sm font-medium text-gray-700">
                     Correo Electrónico
                   </label>
                   <Input
@@ -104,16 +101,16 @@ export default function AdminLogin() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="jorge7gomez@gmail.com"
+                    placeholder="admin@empresa.com"
                     required
                     disabled={loading}
-                    className="h-12 bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500"
+                    className="h-12 bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:ring-blue-500"
                   />
                 </div>
 
                 {/* Password Field */}
                 <div className="space-y-2">
-                  <label htmlFor="password" className="text-sm font-medium text-gray-200">
+                  <label htmlFor="password" className="text-sm font-medium text-gray-700">
                     Contraseña
                   </label>
                   <div className="relative">
@@ -125,12 +122,12 @@ export default function AdminLogin() {
                       placeholder="••••••••"
                       required
                       disabled={loading}
-                      className="h-12 pr-12 bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500"
+                      className="h-12 pr-12 bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:ring-blue-500"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                       disabled={loading}
                     >
                       {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
@@ -140,7 +137,7 @@ export default function AdminLogin() {
 
                 {/* Error Message */}
                 {error && (
-                  <div className="flex items-center gap-2 text-red-400 text-sm bg-red-900/30 p-3 rounded-md border border-red-800">
+                  <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 p-3 rounded-md border border-red-200">
                     <AlertCircle className="h-4 w-4" />
                     {error}
                   </div>
@@ -149,7 +146,7 @@ export default function AdminLogin() {
                 {/* Submit Button */}
                 <Button 
                   type="submit" 
-                  className="w-full h-12 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold" 
+                  className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-semibold" 
                   disabled={loading}
                 >
                   {loading ? (
@@ -167,10 +164,10 @@ export default function AdminLogin() {
 
           {/* Public Access Link */}
           <div className="text-center">
-            <p className="text-blue-300 text-sm mb-3">¿Eres empleado?</p>
+            <p className="text-blue-100 text-sm mb-3">¿Eres empleado?</p>
             <a 
               href="/registrodeasistencia" 
-              className="inline-flex items-center gap-2 text-blue-400 hover:text-white transition-colors text-sm font-medium bg-gray-800/50 px-4 py-2 rounded-lg border border-gray-700 hover:border-blue-500"
+              className="inline-flex items-center gap-2 text-white hover:text-blue-200 transition-colors text-sm font-medium bg-white/10 px-4 py-2 rounded-lg border border-white/20 hover:border-white/40 backdrop-blur-sm"
             >
               <Clock className="h-4 w-4" />
               Registrar Asistencia
