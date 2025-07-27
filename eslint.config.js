@@ -1,20 +1,24 @@
-import { FlatCompat } from "@eslint/eslintrc";
-import js from "@eslint/js";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+// eslint.config.js
+const { FlatCompat } = require("@eslint/eslintrc");
+const js = require("@eslint/js");
+const path = require("node:path");
+const { fileURLToPath } = require("node:url");
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Get current directory
+const currentDir = path.dirname(__filename);
+
 const compat = new FlatCompat({
-    baseDirectory: __dirname,
-    recommendedConfig: js.configs.recommended,
-    allConfig: js.configs.all
+  baseDirectory: currentDir
 });
 
-export default [...compat.extends("next/core-web-vitals"), {
+module.exports = [
+  ...compat.extends("next/core-web-vitals"),
+  js.configs.recommended,
+  {
     rules: {
-        "@next/next/no-img-element": "off",
-        "react-hooks/exhaustive-deps": "warn",
-        "react/no-unescaped-entities": "warn"
+      "@next/next/no-img-element": "off",
+      "react-hooks/exhaustive-deps": "warn",
+      "react/no-unescaped-entities": "warn"
     }
-}];
+  }
+];

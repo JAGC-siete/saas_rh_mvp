@@ -1,8 +1,17 @@
 [phases.setup]
-nixpkgs = ["nodejs_20", "npm_10"]
+nixpkgs = ["nodejs_20"]
 
-[phases.build]
-cmds = ["npm ci --omit=dev", "npm run build"]
+[phases.install]
+cmds = ["npm install"]
+
+[phases.build]  
+cmds = [
+  "export NEXT_CACHE=/tmp/next-cache && npm run build"
+]
 
 [start]
-cmd = "npm start"
+cmd = "npm run start"
+
+# Prevent Railway from auto-mounting .next/cache
+[variables]
+NIXPACKS_NO_CACHE_MOUNT = "true"
