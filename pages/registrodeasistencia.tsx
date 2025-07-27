@@ -166,13 +166,13 @@ export default function RegistroDeAsistencia() {
   return (
     <>
       <Head>
-        <title>Registro de Asistencia - HR System</title>
+        <title>Control de Asistencia - HR System</title>
         <meta name="description" content="Sistema de registro de asistencia por DNI" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-        <div className="w-full max-w-md space-y-6">
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+        <div className="w-full max-w-md space-y-8">
           {/* Header */}
           <div className="text-center">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
@@ -181,150 +181,129 @@ export default function RegistroDeAsistencia() {
             <p className="text-gray-600">
               Registra tu entrada y salida con tu DNI
             </p>
-            <div className="mt-4 text-2xl font-mono text-blue-600">
+            <div className="mt-4 text-2xl font-mono text-blue-600 font-semibold">
               {currentTime}
             </div>
           </div>
 
-          {/* DNI Lookup Form */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          {/* Main Card */}
+          <Card className="bg-white shadow-lg border-0">
+            <CardHeader className="text-center">
+              <CardTitle className="flex items-center justify-center gap-2 text-gray-800">
                 <User className="w-5 h-5" />
                 Identificación
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-gray-600">
                 Ingresa los últimos 5 dígitos de tu DNI
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <form onSubmit={handleLookup} className="space-y-4">
-                <div>
-                  <label htmlFor="last5" className="block text-sm font-medium text-gray-700 mb-2">
-                    Últimos 5 dígitos del DNI
-                  </label>
-                  <Input
-                    id="last5"
-                    type="text"
-                    maxLength={5}
-                    pattern="[0-9]{5}"
-                    value={last5}
-                    onChange={(e) => setLast5(e.target.value.replace(/\D/g, ''))}
-                    placeholder="12345"
-                    className="text-center text-xl font-mono"
+            <CardContent className="space-y-4">
+              {/* DNI Input */}
+              <div>
+                <label htmlFor="last5" className="block text-sm font-medium text-gray-700 mb-2">
+                  Últimos 5 dígitos del DNI
+                </label>
+                <Input
+                  id="last5"
+                  type="text"
+                  maxLength={5}
+                  pattern="[0-9]{5}"
+                  value={last5}
+                  onChange={(e) => setLast5(e.target.value.replace(/\D/g, ''))}
+                  placeholder="00731"
+                  className="text-center text-xl font-mono h-12 bg-gray-50 border-gray-300"
+                  required
+                  disabled={loading}
+                />
+              </div>
+
+              {/* Search Button */}
+              <Button 
+                onClick={handleLookup}
+                className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-medium" 
+                disabled={loading || last5.length !== 5}
+              >
+                {loading ? 'Buscando...' : 'Buscar Empleado'}
+              </Button>
+
+              {/* Employee Info */}
+              {employee && (
+                <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <h3 className="font-semibold text-green-800 mb-2">Empleado Encontrado</h3>
+                  <div className="space-y-1">
+                    <p className="font-medium text-gray-900">{employee.name}</p>
+                    <p className="text-sm text-gray-600">{employee.position}</p>
+                    <p className="text-xs text-gray-500">{employee.company_name}</p>
+                  </div>
+                  
+                  {attendanceStatus && (
+                    <div className="mt-3 pt-3 border-t border-green-200">
+                      <h4 className="text-sm font-medium text-green-800 mb-2">Estado de Hoy:</h4>
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-sm">
+                          <span>Entrada:</span>
+                          <span className={`font-mono ${attendanceStatus.hasCheckedIn ? 'text-green-600' : 'text-gray-400'}`}>
+                            {attendanceStatus.checkInTime || 'Pendiente'}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span>Salida:</span>
+                          <span className={`font-mono ${attendanceStatus.hasCheckedOut ? 'text-green-600' : 'text-gray-400'}`}>
+                            {attendanceStatus.checkOutTime || 'Pendiente'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Justification */}
+              {employee && requireJustification && (
+                <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <h3 className="font-semibold text-yellow-800 mb-2">Justificación Requerida</h3>
+                  <p className="text-sm text-yellow-700 mb-3">Has llegado tarde. Por favor explica el motivo.</p>
+                  <Textarea
+                    value={justification}
+                    onChange={(e) => setJustification(e.target.value)}
+                    placeholder="Explica el motivo de tu retraso..."
+                    className="min-h-[80px] bg-white"
                     required
-                    disabled={loading}
                   />
                 </div>
+              )}
+
+              {/* Action Button */}
+              {employee && (
                 <Button 
-                  type="submit" 
-                  className="w-full" 
-                  disabled={loading || last5.length !== 5}
+                  onClick={handleAttendance}
+                  className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-medium mt-4"
+                  disabled={loading || (requireJustification && !justification.trim()) || 
+                           (attendanceStatus?.hasCheckedIn && attendanceStatus?.hasCheckedOut)}
                 >
-                  {loading ? 'Buscando...' : 'Buscar Empleado'}
+                  {loading ? 'Procesando...' : getNextAction()}
                 </Button>
-              </form>
+              )}
+
+              {/* Message */}
+              {message && (
+                <div className={`mt-4 p-3 rounded-lg flex items-start gap-2 ${
+                  messageType === 'success' ? 'bg-green-50 border border-green-200' :
+                  messageType === 'error' ? 'bg-red-50 border border-red-200' :
+                  messageType === 'warning' ? 'bg-yellow-50 border border-yellow-200' :
+                  'bg-blue-50 border border-blue-200'
+                }`}>
+                  {getMessageIcon()}
+                  <p className={`text-sm font-medium ${
+                    messageType === 'success' ? 'text-green-800' :
+                    messageType === 'error' ? 'text-red-800' :
+                    messageType === 'warning' ? 'text-yellow-800' :
+                    'text-blue-800'
+                  }`}>{message}</p>
+                </div>
+              )}
             </CardContent>
           </Card>
-
-          {/* Employee Info */}
-          {employee && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-green-600">Empleado Encontrado</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div>
-                  <p className="font-semibold text-lg">{employee.name}</p>
-                  <p className="text-gray-600">{employee.position}</p>
-                  <p className="text-sm text-gray-500">{employee.company_name}</p>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-gray-500">Entrada:</p>
-                    <p className="font-mono">{employee.checkin_time}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Salida:</p>
-                    <p className="font-mono">{employee.checkout_time}</p>
-                  </div>
-                </div>
-
-                {attendanceStatus && (
-                  <div className="border-t pt-3 space-y-2">
-                    <h4 className="font-medium">Estado de Hoy:</h4>
-                    <div className="flex items-center gap-2">
-                      <div className={`w-3 h-3 rounded-full ${
-                        attendanceStatus.hasCheckedIn ? 'bg-green-500' : 'bg-gray-300'
-                      }`} />
-                      <span className="text-sm">
-                        Entrada: {attendanceStatus.checkInTime || 'Pendiente'}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className={`w-3 h-3 rounded-full ${
-                        attendanceStatus.hasCheckedOut ? 'bg-green-500' : 'bg-gray-300'
-                      }`} />
-                      <span className="text-sm">
-                        Salida: {attendanceStatus.checkOutTime || 'Pendiente'}
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Justification */}
-          {employee && requireJustification && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-yellow-600">Justificación Requerida</CardTitle>
-                <CardDescription>
-                  Has llegado tarde. Por favor explica el motivo.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Textarea
-                  value={justification}
-                  onChange={(e) => setJustification(e.target.value)}
-                  placeholder="Explica el motivo de tu retraso..."
-                  className="min-h-[100px]"
-                  required
-                />
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Action Button */}
-          {employee && (
-            <Button 
-              onClick={handleAttendance}
-              className="w-full text-lg py-6"
-              disabled={loading || (requireJustification && !justification.trim()) || 
-                       (attendanceStatus?.hasCheckedIn && attendanceStatus?.hasCheckedOut)}
-            >
-              {loading ? 'Procesando...' : getNextAction()}
-            </Button>
-          )}
-
-          {/* Message */}
-          {message && (
-            <Card className={`border-l-4 ${
-              messageType === 'success' ? 'border-green-500 bg-green-50' :
-              messageType === 'error' ? 'border-red-500 bg-red-50' :
-              messageType === 'warning' ? 'border-yellow-500 bg-yellow-50' :
-              'border-blue-500 bg-blue-50'
-            }`}>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  {getMessageIcon()}
-                  <p className="font-medium">{message}</p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
           {/* Footer */}
           <div className="text-center text-sm text-gray-500">
