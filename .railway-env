@@ -1,0 +1,14 @@
+# Railway Build Configuration
+## Force clean builds and proper dependency resolution
+
+# Disable Railway cache for problematic builds
+NIXPACKS_CACHE=false
+
+# Ensure proper TypeScript compilation
+BUILD_COMMAND=npm run build
+
+# Production optimization
+NODE_ENV=production
+
+# Force fresh npm install
+NPM_CONFIG_PRODUCTION=false

@@ -21,9 +21,7 @@ interface Employee {
   status: string
   bank_name: string
   bank_account: string
-  departments?: {
-    name: string
-  }
+  department_id?: string
 }
 
 interface Department {
@@ -85,10 +83,7 @@ export default function EmployeeManager() {
       // Fetch employees
       const { data: employeesData, error: employeesError } = await supabase
         .from('employees')
-        .select(`
-          *,
-          departments:department_id (name)
-        `)
+        .select('*')
         .eq('company_id', profile.company_id)
         .order('name')
 
@@ -456,7 +451,10 @@ export default function EmployeeManager() {
                       <div className="text-sm text-gray-500 capitalize">{employee.role}</div>
                     </td>
                     <td className="py-3 px-4">
-                      {employee.departments?.name || 'No Department'}
+                      {employee.department_id ? 
+                        departments.find(d => d.id === employee.department_id)?.name || 'No Department' 
+                        : 'No Department'
+                      }
                     </td>
                     <td className="py-3 px-4 font-mono">
                       {formatCurrency(employee.base_salary)}

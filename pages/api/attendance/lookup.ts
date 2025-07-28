@@ -1,236 +1,122 @@
-import { NextApiRequest, NextApiResponse } from 'next'
+import type { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient } from '../../../lib/supabase/server'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
-<<<<<<< HEAD
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
   const supabase = createAdminClient()
   const { last5 } = req.body
 
-  if (!last5 || !/^\d{5}$/.test(last5)) {
-    return res.status(400).json({ error: 'Formato de DNI inválido. Proporcione exactamente 5 dígitos.' })
+  // 1. Validar sesión y obtener perfil de usuario
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  if (!user) {
+    console.error('No user in session', userError)
+    return res.status(401).json({ error: 'Unauthorized' })
   }
 
-  try {
-    // Search for employee by last 5 digits of DNI
-    const { data: employees, error: employeeError } = await supabase
-      .from('employees')
-      .select(`
-        *,
-        companies!inner(name),
-        departments(name),
-        work_schedules(
-          monday_start, monday_end,
-          tuesday_start, tuesday_end,
-          wednesday_start, wednesday_end,
-          thursday_start, thursday_end,
-          friday_start, friday_end,
-          saturday_start, saturday_end,
-          sunday_start, sunday_end
-=======
-    res.setHeader('Allow', ['POST'])
-    return res.status(405).json({ error: 'Method not allowed' })
+  // 2. Verificar existencia de tablas requeridas
+  const requiredTables = ['employees', 'work_schedules', 'attendance_records']
+  for (const table of requiredTables) {
+    const { error: tableError } = await supabase.from(table).select('id').limit(1)
+    if (tableError) {
+      console.error(`Tabla faltante o inaccesible: ${table}`, tableError)
+      return res.status(500).json({ error: `Tabla faltante: ${table}` })
+    }
   }
 
-  try {
-    const { last5 } = req.body
-
-    if (!last5 || !/^\d{5}$/.test(last5)) {
-      return res.status(400).json({ error: 'Los últimos 5 dígitos del DNI son requeridos' })
-    }
-
-    // Use admin client for public lookup
-    const supabase = createAdminClient()
-
-    // Find employee by last 5 digits of DNI
-    const { data: employees, error: empError } = await supabase
-      .from('employees')
-      .select(`
-        id,
-        name,
-        dni,
-        position,
-        status,
-        companies!inner (
-          name
-        ),
-        work_schedules (
-          monday_start,
-          monday_end,
-          tuesday_start,
-          tuesday_end,
-          wednesday_start,
-          wednesday_end,
-          thursday_start,
-          thursday_end,
-          friday_start,
-          friday_end,
-          saturday_start,
-          saturday_end,
-          sunday_start,
-          sunday_end
->>>>>>> 5e8f55382ace57d852b356fc491e754b1fd1b556
-        )
-      `)
-      .ilike('dni', `%${last5}`)
-      .eq('status', 'active')
-
-<<<<<<< HEAD
-    if (employeeError) {
-      console.error('Error de búsqueda de empleado:', employeeError)
-      return res.status(500).json({ error: 'Error de base de datos durante la búsqueda de empleado' })
-    }
-
-    if (!employees || employees.length === 0) {
-      return res.status(404).json({ error: 'Empleado no encontrado con esos dígitos de DNI' })
-    }
-
-    if (employees.length > 1) {
-      return res.status(400).json({ error: 'Múltiples empleados encontrados con esos dígitos de DNI. Contacte a RH.' })
-    }
-
-    const employee = employees[0]
-
-    // Get today's attendance record
-    const today = new Date().toISOString().split('T')[0]
-    const { data: attendanceRecord, error: attendanceError } = await supabase
-=======
-    if (empError) {
-      console.error('Database error:', empError)
-      return res.status(500).json({ error: 'Error en la base de datos' })
-    }
-
-    if (!employees || employees.length === 0) {
-      return res.status(404).json({ error: 'Empleado no encontrado con esos dígitos del DNI' })
-    }
-
-    if (employees.length > 1) {
-      return res.status(400).json({ error: 'Múltiples empleados encontrados. Contacte a RH.' })
-    }
-
-    const employee = employees[0]
-    const today = new Date().toISOString().split('T')[0]
-    const dayOfWeek = new Date().getDay() // 0 = Sunday, 1 = Monday, etc.
-    
-    // Get work schedule for today
-    const schedule = employee.work_schedules
-    let checkinTime = '08:00'
-    let checkoutTime = '17:00'
-
-    if (schedule) {
-      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
-      const todayName = dayNames[dayOfWeek]
-      checkinTime = (schedule as any)[`${todayName}_start`] || '08:00'
-      checkoutTime = (schedule as any)[`${todayName}_end`] || '17:00'
-    }
-
-    // Check today's attendance
-    const { data: attendanceRecords, error: attError } = await supabase
->>>>>>> 5e8f55382ace57d852b356fc491e754b1fd1b556
-      .from('attendance_records')
-      .select('*')
-      .eq('employee_id', employee.id)
-      .eq('date', today)
-<<<<<<< HEAD
-      .single()
-
-    if (attendanceError && attendanceError.code !== 'PGRST116') {
-      console.error('Error de búsqueda de asistencia:', attendanceError)
-      return res.status(500).json({ error: 'Error de base de datos durante la búsqueda de asistencia' })
-    }
-
-    // Determine today's schedule
-    const now = new Date()
-    const dayOfWeek = now.getDay() // 0 = Sunday, 1 = Monday, etc.
-    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
-    const todayName = dayNames[dayOfWeek]
-    
-    let checkinTime = '08:00'
-    let checkoutTime = '17:00'
-    
-    if (employee.work_schedules) {
-      checkinTime = (employee.work_schedules as any)[`${todayName}_start`] || '08:00'
-      checkoutTime = (employee.work_schedules as any)[`${todayName}_end`] || '17:00'
-    }
-
-    // Format employee data
-=======
-      .limit(1)
-
-    if (attError) {
-      console.error('Attendance lookup error:', attError)
-      return res.status(500).json({ error: 'Error consultando asistencia' })
-    }
-
-    const todayAttendance = attendanceRecords?.[0]
-
-    const attendanceStatus = {
-      hasCheckedIn: !!todayAttendance?.check_in,
-      hasCheckedOut: !!todayAttendance?.check_out,
-      checkInTime: todayAttendance?.check_in ? 
-        new Date(todayAttendance.check_in).toLocaleTimeString('es-HN', {
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: false
-        }) : null,
-      checkOutTime: todayAttendance?.check_out ? 
-        new Date(todayAttendance.check_out).toLocaleTimeString('es-HN', {
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: false
-        }) : null
-    }
-
->>>>>>> 5e8f55382ace57d852b356fc491e754b1fd1b556
-    const employeeInfo = {
-      id: employee.id,
-      name: employee.name,
-      dni: employee.dni,
-<<<<<<< HEAD
-      position: employee.position || employee.role,
-      checkin_time: checkinTime,
-      checkout_time: checkoutTime,
-      company_name: employee.companies?.name || 'Paragon Honduras'
-    }
-
-    // Format attendance status
-    const attendanceStatus = {
-      hasCheckedIn: !!attendanceRecord?.check_in,
-      hasCheckedOut: !!attendanceRecord?.check_out,
-      checkInTime: attendanceRecord?.check_in ? 
-        new Date(attendanceRecord.check_in).toLocaleTimeString('es-HN', { 
-          hour: '2-digit', 
-          minute: '2-digit',
-          hour12: false 
-        }) : undefined,
-      checkOutTime: attendanceRecord?.check_out ? 
-        new Date(attendanceRecord.check_out).toLocaleTimeString('es-HN', { 
-          hour: '2-digit', 
-          minute: '2-digit',
-          hour12: false 
-        }) : undefined
-=======
-      position: employee.position,
-      checkin_time: checkinTime,
-      checkout_time: checkoutTime,
-      company_name: (employee.companies as any)?.name || 'N/A'
->>>>>>> 5e8f55382ace57d852b356fc491e754b1fd1b556
-    }
-
-    return res.status(200).json({
-      employee: employeeInfo,
-      attendance: attendanceStatus
-    })
-
-  } catch (error) {
-<<<<<<< HEAD
-    console.error('Error inesperado:', error)
-=======
-    console.error('Lookup error:', error)
->>>>>>> 5e8f55382ace57d852b356fc491e754b1fd1b556
-    return res.status(500).json({ error: 'Error interno del servidor' })
+  // 3. Obtener perfil de usuario para company_id
+  const { data: userProfile, error: profileError } = await supabase
+    .from('user_profiles')
+    .select('company_id')
+    .eq('user_id', user.id)
+    .single()
+  if (!userProfile || !userProfile.company_id) {
+    console.error('Perfil de usuario no encontrado o sin company_id', profileError)
+    return res.status(400).json({ error: 'Perfil de usuario inválido' })
   }
+
+  // 4. Buscar empleado por últimos 5 dígitos del DNI y company_id
+  const { data: employee, error: empError } = await supabase
+    .from('employees')
+    .select('id, work_schedule_id, dni, name')
+    .eq('dni', last5)
+    .eq('company_id', userProfile.company_id)
+    .single()
+  if (empError || !employee) {
+    console.error('Empleado no encontrado', empError)
+    return res.status(404).json({ error: 'Empleado no encontrado' })
+  }
+
+  // 5. Validar existencia de work_schedule_id
+  if (!employee.work_schedule_id) {
+    console.error('Empleado sin work_schedule_id', employee)
+    return res.status(400).json({ error: 'Empleado sin horario asignado' })
+  }
+
+  // 6. Obtener horario asignado
+  const { data: schedule, error: schedError } = await supabase
+    .from('work_schedules')
+    .select('*')
+    .eq('id', employee.work_schedule_id)
+    .single()
+  if (schedError || !schedule) {
+    console.error('Horario no encontrado', schedError)
+    return res.status(400).json({ error: 'Horario no encontrado' })
+  }
+
+  // 7. Comparar hora actual con horario esperado
+  const now = new Date()
+  const dayOfWeek = now.toLocaleString('en-US', { weekday: 'long' }).toLowerCase() // e.g. 'monday'
+  const startKey = `${dayOfWeek}_start`
+  const endKey = `${dayOfWeek}_end`
+  const startTime = schedule[startKey]
+  const endTime = schedule[endKey]
+
+  if (!startTime || !endTime) {
+    console.error('Horario no definido para el día', { dayOfWeek, schedule })
+    return res.status(400).json({ error: 'Horario no definido para hoy' })
+  }
+
+  // Parsear horas (formato HH:mm)
+  const [startHour, startMin] = startTime.split(':').map(Number)
+  const expectedStart = new Date(now)
+  expectedStart.setHours(startHour, startMin, 0, 0)
+
+  let status: 'Temprano' | 'A tiempo' | 'Tarde'
+  const diffMinutes = Math.floor((now.getTime() - expectedStart.getTime()) / 60000)
+  if (diffMinutes < -5) status = 'Temprano'
+  else if (diffMinutes <= 5) status = 'A tiempo'
+  else status = 'Tarde'
+
+  // 8. Feedback gamificado: contar llegadas tarde/ejemplares
+  const { data: recentRecords, error: recError } = await supabase
+    .from('attendance_records')
+    .select('id, status, created_at')
+    .eq('employee_id', employee.id)
+    .order('created_at', { ascending: false })
+    .limit(10)
+  if (recError) {
+    console.error('Error consultando registros recientes', recError)
+    return res.status(500).json({ error: 'Error consultando historial de asistencia' })
+  }
+
+  const lateCount = recentRecords?.filter(r => r.status === 'Tarde').length || 0
+  const onTimeCount = recentRecords?.filter(r => r.status === 'A tiempo').length || 0
+
+  let gamification: string | null = null
+  if (lateCount >= 3) gamification = 'Atención: Varias llegadas tarde detectadas.'
+  else if (onTimeCount >= 5) gamification = '¡Excelente! Has sido puntual varias veces seguidas.'
+
+  // 9. Retornar feedback
+  return res.status(200).json({
+    message: "Attendance lookup successful",
+    data: {
+      employee: { id: employee.id, name: employee.name, dni: employee.dni },
+      schedule: { start: startTime, end: endTime },
+      status,
+      gamification
+    }
+  })
 }

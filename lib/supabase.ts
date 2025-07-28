@@ -4,24 +4,42 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables')
-}
+// Create a dummy client for build time if variables are missing
+const createDummyClient = () => ({
+  auth: {
+    getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+    onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+    signOut: () => Promise.resolve({ error: null }),
+    signInWithPassword: () => Promise.resolve({ data: { user: null, session: null }, error: { message: 'Supabase not configured' } }),
+    signUp: () => Promise.resolve({ data: { user: null, session: null }, error: { message: 'Supabase not configured' } }),
+    resetPasswordForEmail: () => Promise.resolve({ error: null }),
+    updateUser: () => Promise.resolve({ data: { user: null }, error: null }),
+    getUser: () => Promise.resolve({ data: { user: null }, error: null })
+  },
+  from: () => ({
+    select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: null, error: null }) }) }),
+    insert: () => Promise.resolve({ data: null, error: null }),
+    update: () => ({ eq: () => Promise.resolve({ data: null, error: null }) }),
+    delete: () => ({ eq: () => Promise.resolve({ data: null, error: null }) })
+  })
+})
 
 // Client for browser usage
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true
-  }
-})
+export const supabase = supabaseUrl && supabaseAnonKey 
+  ? createClient(supabaseUrl!, supabaseAnonKey!, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true
+      }
+    })
+  : createDummyClient()
 
 // Service client for server-side operations (with service role key)
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 export const supabaseAdmin = supabaseServiceKey 
-  ? createClient(supabaseUrl, supabaseServiceKey, {
+  ? createClient(supabaseUrl!, supabaseServiceKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false
@@ -147,4 +165,5 @@ export type Database = {
   }
 }
 
+export { useSupabaseSession } from './hooks/useSession'
 export default supabase

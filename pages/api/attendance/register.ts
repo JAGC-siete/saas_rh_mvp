@@ -8,71 +8,146 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { last5, justification } = req.body
-
-    if (!last5 || !/^\d{5}$/.test(last5)) {
-      return res.status(400).json({ error: 'Los últimos 5 dígitos del DNI son requeridos' })
+    const { last5, dni, company_id, justification } = req.body
+    
+    // Validación de parámetros de entrada
+    if (!last5 && !dni) {
+      console.error('Parámetros faltantes: dni o last5')
+      return res.status(400).json({ error: 'Debe enviar dni o last5' })
+    }
+    if (!company_id) {
+      console.error('company_id faltante en request')
+      return res.status(400).json({ error: 'Falta company_id (multi-tenant)' })
     }
 
-    // Use admin client for public registration
     const supabase = createAdminClient()
 
-    // Find employee by last 5 digits of DNI
-    const { data: employees, error: empError } = await supabase
+    // PASO 1: Verificar existencia de tablas requeridas
+    console.log('🔍 Verificando existencia de tablas requeridas...')
+    const requiredTables = ['employees', 'work_schedules', 'attendance_records']
+    for (const table of requiredTables) {
+      const { error: tableError } = await supabase.from(table).select('id').limit(1)
+      if (tableError) {
+        console.error(`❌ Tabla faltante o inaccesible: ${table}`, tableError)
+        return res.status(500).json({ 
+          error: `Error de base de datos: Tabla ${table} no disponible`,
+          details: tableError.message 
+        })
+      }
+    }
+    console.log('✅ Todas las tablas requeridas están disponibles')
+
+    // PASO 2: Validar existencia del empleado
+    console.log('🔍 Buscando empleado...', { dni, last5, company_id })
+    let employeeQuery = supabase
       .from('employees')
-      .select(`
-        id,
-        name,
-        dni,
-        position,
-        status,
-        work_schedules (
-          monday_start,
-          monday_end,
-          tuesday_start,
-          tuesday_end,
-          wednesday_start,
-          wednesday_end,
-          thursday_start,
-          thursday_end,
-          friday_start,
-          friday_end,
-          saturday_start,
-          saturday_end,
-          sunday_start,
-          sunday_end
-        )
-      `)
-      .ilike('dni', `%${last5}`)
+      .select('id, work_schedule_id, dni, name, status, position')
+      .eq('company_id', company_id)
       .eq('status', 'active')
 
-    if (empError || !employees || employees.length === 0) {
-      return res.status(404).json({ error: 'Empleado no encontrado' })
+    if (dni) {
+      employeeQuery = employeeQuery.eq('dni', dni)
+    } else {
+      // Buscar por last5 (últimos 5 dígitos del DNI)
+      employeeQuery = employeeQuery.ilike('dni', `%${last5}`)
+    }
+
+    const { data: employees, error: empError } = await employeeQuery
+
+    if (empError) {
+      console.error('❌ Error consultando empleados:', empError)
+      return res.status(500).json({ 
+        error: 'Error consultando empleados',
+        details: empError.message 
+      })
+    }
+
+    if (!employees || employees.length === 0) {
+      console.error('❌ Empleado no encontrado:', { dni, last5, company_id })
+      return res.status(404).json({ 
+        error: 'Empleado no registrado',
+        message: 'El empleado no existe en el sistema o no está activo'
+      })
     }
 
     if (employees.length > 1) {
-      return res.status(400).json({ error: 'Múltiples empleados encontrados. Contacte a RH.' })
+      console.error('❌ Múltiples empleados encontrados:', { dni, last5, company_id, count: employees.length })
+      return res.status(400).json({ 
+        error: 'Múltiples empleados encontrados',
+        message: 'Contacte a Recursos Humanos para resolver la duplicación'
+      })
     }
 
     const employee = employees[0]
-    const today = new Date().toISOString().split('T')[0]
-    const now = new Date()
-    const currentTime = now.toTimeString().slice(0, 5)
-    const dayOfWeek = now.getDay() // 0 = Sunday, 1 = Monday, etc.
+    console.log('✅ Empleado encontrado:', { id: employee.id, name: employee.name, position: employee.position })
 
-    // Get work schedule for today
-    const schedule = employee.work_schedules
-    let expectedCheckIn = '08:00'
-    let expectedCheckOut = '17:00'
-
-    if (schedule) {
-      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
-      const todayName = dayNames[dayOfWeek]
-      expectedCheckIn = (schedule as any)[`${todayName}_start`] || '08:00'
-      expectedCheckOut = (schedule as any)[`${todayName}_end`] || '17:00'
+    // PASO 3: Validar work_schedule_id
+    if (!employee.work_schedule_id) {
+      console.error('❌ Empleado sin work_schedule_id:', employee)
+      return res.status(400).json({ 
+        error: 'Empleado sin horario asignado',
+        message: 'El empleado no tiene un horario de trabajo configurado'
+      })
     }
 
-    // Check existing attendance record for today
+    // PASO 4: Obtener horario asignado
+    console.log('🔍 Obteniendo horario asignado...', { work_schedule_id: employee.work_schedule_id })
+    const { data: schedule, error: schedError } = await supabase
+      .from('work_schedules')
+      .select('*')
+      .eq('id', employee.work_schedule_id)
+      .single()
+
+    if (schedError || !schedule) {
+      console.error('❌ Horario no encontrado:', schedError)
+      return res.status(400).json({ 
+        error: 'Horario no encontrado',
+        message: 'El horario de trabajo no está configurado correctamente'
+      })
+    }
+    console.log('✅ Horario obtenido:', schedule)
+
+    // PASO 5: Comparar hora actual con horario esperado
+    const now = new Date()
+    const dayOfWeek = now.toLocaleString('en-US', { weekday: 'long' }).toLowerCase()
+    const startKey = `${dayOfWeek}_start`
+    const endKey = `${dayOfWeek}_end`
+    const startTime = schedule[startKey]
+    const endTime = schedule[endKey]
+
+    if (!startTime || !endTime) {
+      console.error('❌ Horario no definido para el día:', { dayOfWeek, schedule })
+      return res.status(400).json({ 
+        error: 'Horario no definido para hoy',
+        message: 'No hay horario configurado para este día de la semana'
+      })
+    }
+
+    // Parsear horas y calcular diferencia
+    const [startHour, startMin] = startTime.split(':').map(Number)
+    const expectedStart = new Date(now)
+    expectedStart.setHours(startHour, startMin, 0, 0)
+    
+    const diffMinutes = Math.floor((now.getTime() - expectedStart.getTime()) / 60000)
+    
+    let status: 'Temprano' | 'A tiempo' | 'Tarde'
+    if (diffMinutes < -5) {
+      status = 'Temprano'
+    } else if (diffMinutes <= 5) {
+      status = 'A tiempo'
+    } else {
+      status = 'Tarde'
+    }
+
+    console.log('⏰ Comparación de horarios:', {
+      horaActual: now.toLocaleTimeString(),
+      horaEsperada: startTime,
+      diferenciaMinutos: diffMinutes,
+      status
+    })
+
+    // PASO 6: Registrar asistencia
+    const today = now.toISOString().split('T')[0]
     const { data: existingRecord, error: attError } = await supabase
       .from('attendance_records')
       .select('*')
@@ -80,107 +155,145 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq('date', today)
       .single()
 
-    if (attError && attError.code !== 'PGRST116') { // PGRST116 = no rows returned
-      console.error('Attendance query error:', attError)
-      return res.status(500).json({ error: 'Error consultando asistencia' })
+    if (attError && attError.code !== 'PGRST116') {
+      console.error('❌ Error consultando asistencia:', attError)
+      return res.status(500).json({ 
+        error: 'Error consultando asistencia',
+        details: attError.message 
+      })
     }
 
     if (!existingRecord) {
-      // CHECK-IN: First time today
+      // CHECK-IN: Primera vez hoy
+      console.log('📝 Registrando entrada...')
+      const lateMinutes = Math.max(0, diffMinutes)
       
-      // Calculate if late
-      const [expectedHour, expectedMin] = expectedCheckIn.split(':').map(Number)
-      const [currentHour, currentMin] = currentTime.split(':').map(Number)
-      const expectedMinutes = expectedHour * 60 + expectedMin
-      const currentMinutes = currentHour * 60 + currentMin
-      const lateMinutes = Math.max(0, currentMinutes - expectedMinutes)
-
-      // Require justification if more than 5 minutes late
       if (lateMinutes > 5 && !justification) {
+        console.log('⚠️ Llegada tarde sin justificación')
         return res.status(422).json({
           requireJustification: true,
           message: '⏰ Has llegado tarde. Por favor justifica tu demora.',
-          lateMinutes
+          lateMinutes,
+          expectedTime: startTime,
+          actualTime: now.toLocaleTimeString()
         })
       }
 
-      // Insert check-in record
       const { error: insertError } = await supabase
         .from('attendance_records')
         .insert({
           employee_id: employee.id,
           date: today,
           check_in: now.toISOString(),
-          expected_check_in: expectedCheckIn,
+          expected_check_in: startTime,
           late_minutes: lateMinutes,
           justification: justification || null,
           status: lateMinutes > 5 ? 'late' : 'present'
         })
 
       if (insertError) {
-        console.error('Check-in insert error:', insertError)
-        return res.status(500).json({ error: 'Error registrando entrada' })
+        console.error('❌ Error registrando entrada:', insertError)
+        return res.status(500).json({ 
+          error: 'Error registrando entrada',
+          details: insertError.message 
+        })
       }
-
-      const message = lateMinutes <= 5 
-        ? '✅ Entrada registrada correctamente'
-        : lateMinutes <= 0
-        ? '🎉 ¡Felicidades! Llegaste temprano'
-        : '📝 Entrada tardía registrada con justificación'
-
-      return res.status(200).json({ 
-        message, 
-        type: 'check-in',
-        lateMinutes 
-      })
+      console.log('✅ Entrada registrada exitosamente')
 
     } else if (!existingRecord.check_out) {
-      // CHECK-OUT: Has checked in but not out
-      
-      // Calculate early departure
-      const [expectedHour, expectedMin] = expectedCheckOut.split(':').map(Number)
-      const [currentHour, currentMin] = currentTime.split(':').map(Number)
-      const expectedMinutes = expectedHour * 60 + expectedMin
-      const currentMinutes = currentHour * 60 + currentMin
-      const earlyDepartureMinutes = Math.max(0, expectedMinutes - currentMinutes)
+      // CHECK-OUT: Tiene entrada pero no salida
+      console.log('📝 Registrando salida...')
+      const [endHour, endMin] = endTime.split(':').map(Number)
+      const expectedEnd = new Date(now)
+      expectedEnd.setHours(endHour, endMin, 0, 0)
+      const earlyDepartureMinutes = Math.max(0, Math.floor((expectedEnd.getTime() - now.getTime()) / 60000))
 
-      // Update record with check-out
       const { error: updateError } = await supabase
         .from('attendance_records')
         .update({
           check_out: now.toISOString(),
-          expected_check_out: expectedCheckOut,
+          expected_check_out: endTime,
           early_departure_minutes: earlyDepartureMinutes,
           updated_at: now.toISOString()
         })
         .eq('id', existingRecord.id)
 
       if (updateError) {
-        console.error('Check-out update error:', updateError)
-        return res.status(500).json({ error: 'Error registrando salida' })
+        console.error('❌ Error registrando salida:', updateError)
+        return res.status(500).json({ 
+          error: 'Error registrando salida',
+          details: updateError.message 
+        })
       }
-
-      const message = earlyDepartureMinutes > 5
-        ? '🔄 Salida anticipada registrada'
-        : earlyDepartureMinutes <= 0
-        ? '⏰ Salida tardía registrada'
-        : '✅ Salida registrada correctamente'
-
-      return res.status(200).json({ 
-        message, 
-        type: 'check-out',
-        earlyDepartureMinutes 
-      })
+      console.log('✅ Salida registrada exitosamente')
 
     } else {
-      // Already completed attendance for today
+      // Ya completó asistencia hoy
+      console.log('⚠️ Asistencia ya completada para hoy')
       return res.status(400).json({ 
-        error: '📌 Ya has registrado entrada y salida para hoy'
+        error: '📌 Ya has registrado entrada y salida para hoy',
+        message: 'Tu asistencia del día ya está completa'
       })
     }
 
+    // PASO 7: Feedback gamificado
+    console.log('🎮 Generando feedback gamificado...')
+    const { data: recentRecords, error: recError } = await supabase
+      .from('attendance_records')
+      .select('id, status, created_at')
+      .eq('employee_id', employee.id)
+      .order('created_at', { ascending: false })
+      .limit(10)
+
+    if (recError) {
+      console.error('❌ Error consultando historial de asistencia:', recError)
+    }
+
+    let gamification = ''
+    if (recentRecords && recentRecords.length > 0) {
+      const lateCount = recentRecords.filter(r => r.status === 'late').length
+      const presentCount = recentRecords.filter(r => r.status === 'present').length
+      
+      if (lateCount >= 3) {
+        gamification = '⚠️ Has llegado tarde varias veces. ¡Intenta mejorar!'
+      } else if (presentCount >= 5) {
+        gamification = '🏅 ¡Excelente asistencia! Sigue así.'
+      } else if (presentCount >= 3) {
+        gamification = '👍 Buena puntualidad. ¡Mantén el ritmo!'
+      }
+    }
+
+    // PASO 8: Mensaje final
+    let message = ''
+    if (status === 'Temprano') {
+      message = '🎉 ¡Felicidades! Llegaste temprano'
+    } else if (status === 'A tiempo') {
+      message = '✅ Entrada registrada a tiempo'
+    } else {
+      message = '📝 Entrada tardía registrada'
+    }
+
+    if (gamification) {
+      message += `\n${gamification}`
+    }
+
+    console.log('✅ Registro de asistencia completado:', { message, status, gamification })
+
+    return res.status(200).json({ 
+      message, 
+      status, 
+      gamification,
+      employee: {
+        name: employee.name,
+        position: employee.position
+      }
+    })
+
   } catch (error) {
-    console.error('Attendance registration error:', error)
-    return res.status(500).json({ error: 'Error interno del servidor' })
+    console.error('❌ Error general en registro de asistencia:', error)
+    return res.status(500).json({ 
+      error: 'Error interno del servidor',
+      message: 'Ha ocurrido un error inesperado. Inténtalo de nuevo.'
+    })
   }
 }

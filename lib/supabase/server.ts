@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-import { createClient as createSupabaseClient } from '@supabase/supabase-js'
-=======
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
->>>>>>> 5e8f55382ace57d852b356fc491e754b1fd1b556
 import { NextApiRequest, NextApiResponse } from 'next'
 
 export function createClient(req: NextApiRequest, res: NextApiResponse) {
@@ -13,13 +9,6 @@ export function createClient(req: NextApiRequest, res: NextApiResponse) {
     throw new Error('Missing Supabase environment variables')
   }
 
-<<<<<<< HEAD
-  return createSupabaseClient(url, key, {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: false
-    }
-=======
   return createServerClient(url, key, {
     cookies: {
       get(name: string) {
@@ -36,7 +25,6 @@ export function createClient(req: NextApiRequest, res: NextApiResponse) {
         ])
       },
     },
->>>>>>> 5e8f55382ace57d852b356fc491e754b1fd1b556
   })
 }
 
@@ -49,20 +37,11 @@ export function createAdminClient() {
     throw new Error('Missing Supabase admin environment variables')
   }
 
-<<<<<<< HEAD
-  // Use the basic createClient for admin operations
-  return createSupabaseClient(url, serviceKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-=======
   return createServerClient(url, serviceKey, {
     cookies: {
       get() { return undefined },
       set() {},
       remove() {},
     },
->>>>>>> 5e8f55382ace57d852b356fc491e754b1fd1b556
   })
 }

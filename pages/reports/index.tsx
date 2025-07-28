@@ -1,26 +1,20 @@
-import { useEffect } from 'react'
-import { useRouter } from 'next/router'
-import { useSupabaseSession } from '../../lib/supabase'
+import ProtectedRoute from '../../components/ProtectedRoute'
 import DashboardLayout from '../../components/DashboardLayout'
 import ReportsAndAnalytics from '../../components/ReportsAndAnalytics'
 
 export default function ReportsPage() {
-  const { session, loading: sessionLoading } = useSupabaseSession()
-  const router = useRouter()
-
-  useEffect(() => {
-    if (!sessionLoading && !session) {
-      router.push('/')
-    }
-  }, [session, sessionLoading, router])
-
-  if (sessionLoading || !session) {
-    return <div>Loading...</div>
-  }
-
   return (
-    <DashboardLayout>
-      <ReportsAndAnalytics />
-    </DashboardLayout>
+    <ProtectedRoute>
+      <DashboardLayout>
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Reportes y Análisis</h1>
+            <p className="text-gray-600">Genera reportes y análisis de datos</p>
+          </div>
+          
+          <ReportsAndAnalytics />
+        </div>
+      </DashboardLayout>
+    </ProtectedRoute>
   )
 }

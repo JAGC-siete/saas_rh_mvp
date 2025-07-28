@@ -32,18 +32,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         expected_check_in,
         late_minutes,
         status,
-        employees!inner (
-          id,
-          work_schedules (
-            monday_start,
-            tuesday_start,
-            wednesday_start,
-            thursday_start,
-            friday_start,
-            saturday_start,
-            sunday_start
-          )
-        )
+        employee_id
       `)
       .eq('employee_id', employeeId)
       .gte('date', startDate)
@@ -53,6 +42,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (error) {
       console.error('Database error:', error)
       return res.status(500).json({ error: 'Error fetching attendance records' })
+    }
+
+    // Get employee work schedule separately to avoid relationship conflicts
+    const { data: employee, error: empError } = await supabase
+      .from('employees')
+      .select('work_schedule_id')
+      .eq('id', employeeId)
+      .single()
+
+    if (empError || !employee?.work_schedule_id) {
+      console.error('Employee or work schedule not found', empError)
+      return res.status(500).json({ error: 'Employee work schedule not found' })
+    }
+
+    const { data: workSchedule, error: schedError } = await supabase
+      .from('work_schedules')
+      .select('*')
+      .eq('id', employee.work_schedule_id)
+      .single()
+
+    if (schedError || !workSchedule) {
+      console.error('Work schedule not found', schedError)
+      return res.status(500).json({ error: 'Work schedule not found' })
     }
 
     // Analyze punctuality patterns

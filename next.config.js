@@ -1,34 +1,33 @@
 /** @type {import('next').NextConfig} */
 
-// Temporarily disable env validation during build phase
-// TODO: Re-enable after Railway environment variables are configured
-// if (process.env.NODE_ENV === 'production' && process.env.RAILWAY_ENVIRONMENT && process.env.SKIP_ENV_VALIDATION !== 'true') {
-//   require('./lib/env-validation').validateEnvironment();
-// }
-
 const nextConfig = {
   reactStrictMode: true,
   eslint: {
-    // Warning: This allows production builds to successfully complete even if
-    // your project has ESLint errors.
     ignoreDuringBuilds: true,
   },
   typescript: {
-    // Dangerously allow production builds to successfully complete even if
-    // your project has type errors.
     ignoreBuildErrors: true,
   },
   
-  // Cache directory is controlled via NEXT_CACHE environment variable
-  // Set in nixpacks.toml: export NEXT_CACHE=/tmp/next-cache
+  // Configuración mínima para Railway
+  output: 'standalone',
   
+  // Configuración de imágenes
   images: {
-    domains: ['localhost'],
+    unoptimized: true,
   },
-  // Environment variables are handled by Railway/Vercel/etc, not hardcoded here
-  env: {},
   
-  // Security headers for production
+  // Configuración para API routes
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: '/api/:path*',
+      },
+    ]
+  },
+  
+  // Headers básicos de seguridad
   async headers() {
     return [
       {
@@ -48,7 +47,24 @@ const nextConfig = {
           },
         ],
       },
-    ];
+      {
+        source: '/api/(.*)',
+        headers: [
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: '*',
+          },
+          {
+            key: 'Access-Control-Allow-Methods',
+            value: 'GET, POST, PUT, DELETE, OPTIONS',
+          },
+          {
+            key: 'Access-Control-Allow-Headers',
+            value: 'Content-Type, Authorization',
+          },
+        ],
+      },
+    ]
   },
 }
 

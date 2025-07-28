@@ -2,6 +2,23 @@
 nixpkgs = ["nodejs_20"]
 
 [phases.install]
+cmds = [
+  "npm ci --production=false",
+  "npm install jsonwebtoken @types/jsonwebtoken"
+]
+
+[phases.build]  
+cmds = [
+  "export NEXT_CACHE=/tmp/next-cache",
+  "export NODE_ENV=production", 
+  "npm run build"
+]
+
+[start]
+cmd = "npm start"]
+nixpkgs = ["nodejs_20"]
+
+[phases.install]
 cmds = ["npm install"]
 
 [phases.build]  

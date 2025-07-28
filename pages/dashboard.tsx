@@ -1,25 +1,3 @@
-<<<<<<< HEAD
-import { useEffect } from 'react'
-import { useRouter } from 'next/router'
-
-export default function DashboardPage() {
-  const router = useRouter()
-  
-  useEffect(() => {
-    // Redirect to main dashboard at root
-    router.replace('/')
-  }, [router])
-
-  return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-        <p className="mt-2 text-gray-600">Redirecting to dashboard...</p>
-      </div>
-    </div>
-  )
-}
-=======
 import { GetServerSideProps } from 'next'
 import Head from 'next/head'
 import Link from 'next/link'
@@ -27,7 +5,7 @@ import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Clock, Users, Settings, Shield, LogOut, DollarSign, BarChart3, Building2, FileText, User, Calendar, Clipboard } from 'lucide-react'
-import { ProtectedRoute } from '../components/ProtectedRoute'
+import ProtectedRoute from '../components/ProtectedRoute'
 import { useAuth } from '../lib/auth'
 
 export default function Dashboard() {
@@ -222,7 +200,7 @@ export default function Dashboard() {
               {/* Today's Summary */}
               <Card className="bg-white border border-gray-200">
                 <CardHeader>
-                  <CardTitle className="text-lg font-semibold text-gray-900">Today's Summary</CardTitle>
+                  <CardTitle className="text-lg font-semibold text-gray-900">Today&apos;s Summary</CardTitle>
                   <CardDescription className="text-gray-600">Real-time attendance overview</CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -250,7 +228,7 @@ export default function Dashboard() {
               {/* Today's Attendance Records */}
               <Card className="bg-white border border-gray-200">
                 <CardHeader>
-                  <CardTitle className="text-lg font-semibold text-gray-900">Today's Attendance Records</CardTitle>
+                  <CardTitle className="text-lg font-semibold text-gray-900">Today&apos;s Attendance Records</CardTitle>
                   <CardDescription className="text-gray-600">
                     Live view of all attendance records for {new Date().toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })}
                   </CardDescription>
@@ -289,4 +267,3 @@ export default function Dashboard() {
 export const getServerSideProps: GetServerSideProps = async () => {
   return { props: {} }
 }
->>>>>>> 5e8f55382ace57d852b356fc491e754b1fd1b556

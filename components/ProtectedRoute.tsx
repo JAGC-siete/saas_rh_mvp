@@ -1,41 +1,37 @@
-import React, { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
-import { useAuth } from '../lib/auth'
+import { useSupabaseSession } from '../lib/supabase'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
-  allowedRoles?: ('admin' | 'hr' | 'manager')[]
 }
 
-export function ProtectedRoute({ children, allowedRoles = ['admin', 'hr', 'manager'] }: ProtectedRouteProps) {
-  const { user, loading } = useAuth()
+export default function ProtectedRoute({ children }: ProtectedRouteProps) {
+  const { session, loading: sessionLoading } = useSupabaseSession()
   const router = useRouter()
+  const [isClient, setIsClient] = useState(false)
 
   useEffect(() => {
-    if (!loading) {
-      if (!user) {
-        router.push('/')
-        return
-      }
+    setIsClient(true)
+  }, [])
 
-      if (allowedRoles && !allowedRoles.includes(user.role)) {
-        router.push('/unauthorized')
-        return
-      }
+  useEffect(() => {
+    if (isClient && !sessionLoading && !session) {
+      router.push('/')
     }
-  }, [user, loading, router, allowedRoles])
+  }, [session, sessionLoading, router, isClient])
 
-  // Show loading spinner while checking auth
-  if (loading) {
+  // Durante SSR/build, renderizar loading
+  if (!isClient || sessionLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     )
   }
 
-  // Don't render children if not authenticated or authorized
-  if (!user || (allowedRoles && !allowedRoles.includes(user.role))) {
+  // Si no hay sesión, no renderizar nada (el useEffect redirigirá)
+  if (!session) {
     return null
   }
 

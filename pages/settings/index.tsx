@@ -1,26 +1,20 @@
-import { useEffect } from 'react'
-import { useRouter } from 'next/router'
-import { useSupabaseSession } from '../../lib/supabase'
+import ProtectedRoute from '../../components/ProtectedRoute'
 import DashboardLayout from '../../components/DashboardLayout'
 import CompanySettings from '../../components/CompanySettings'
 
 export default function SettingsPage() {
-  const { session, loading: sessionLoading } = useSupabaseSession()
-  const router = useRouter()
-
-  useEffect(() => {
-    if (!sessionLoading && !session) {
-      router.push('/')
-    }
-  }, [session, sessionLoading, router])
-
-  if (sessionLoading || !session) {
-    return <div>Loading...</div>
-  }
-
   return (
-    <DashboardLayout>
-      <CompanySettings />
-    </DashboardLayout>
+    <ProtectedRoute>
+      <DashboardLayout>
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Configuración</h1>
+            <p className="text-gray-600">Administra la configuración de la empresa</p>
+          </div>
+          
+          <CompanySettings />
+        </div>
+      </DashboardLayout>
+    </ProtectedRoute>
   )
 }
