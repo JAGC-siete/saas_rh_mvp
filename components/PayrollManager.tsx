@@ -1,4 +1,4 @@
-'use client'
+
 
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
@@ -324,8 +324,9 @@ export default function PayrollManager() {
                   required
                 >
                   <option value="">Select Employee</option>
-                  {employees.map(emp => (
-                    <option key={emp.id} value={emp.id}>
+                  {/* eslint-disable-next-line react/jsx-key */}
+                  {employees.map((emp, index) => (
+                    <option key={`emp-${index}`} value={emp.id}>
                       {emp.name} ({emp.employee_code}) - {formatCurrency(emp.base_salary)}
                     </option>
                   ))}
@@ -413,8 +414,9 @@ export default function PayrollManager() {
                 </tr>
               </thead>
               <tbody>
-                {filteredRecords.map((record) => (
-                  <tr key={record.id} className="border-b hover:bg-gray-50">
+                {/* eslint-disable-next-line react/jsx-key */}
+                {filteredRecords.map((record, index) => (
+                  <tr key={`record-${index}`} className="border-b hover:bg-gray-50">
                     <td className="py-3 px-4">
                       <div>
                         <div className="font-medium">{record.employees?.name}</div>

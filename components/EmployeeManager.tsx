@@ -1,4 +1,4 @@
-'use client'
+
 
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
@@ -326,8 +326,9 @@ export default function EmployeeManager() {
                   className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Select Department</option>
-                  {departments.map(dept => (
-                    <option key={dept.id} value={dept.id}>{dept.name}</option>
+                  {/* eslint-disable-next-line react/jsx-key */}
+                  {departments.map((dept, index) => (
+                    <option key={`dept-${index}`} value={dept.id}>{dept.name}</option>
                   ))}
                 </select>
               </div>
@@ -342,8 +343,9 @@ export default function EmployeeManager() {
                   className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Select Schedule</option>
-                  {workSchedules.map(schedule => (
-                    <option key={schedule.id} value={schedule.id}>{schedule.name}</option>
+                  {/* eslint-disable-next-line react/jsx-key */}
+                  {workSchedules.map((schedule, index) => (
+                    <option key={`schedule-${index}`} value={schedule.id}>{schedule.name}</option>
                   ))}
                 </select>
               </div>
@@ -435,8 +437,9 @@ export default function EmployeeManager() {
                 </tr>
               </thead>
               <tbody>
-                {filteredEmployees.map((employee) => (
-                  <tr key={employee.id} className="border-b hover:bg-gray-50">
+                {/* eslint-disable-next-line react/jsx-key */}
+                {filteredEmployees.map((employee, index) => (
+                  <tr key={`employee-${index}`} className="border-b hover:bg-gray-50">
                     <td className="py-3 px-4">
                       <div>
                         <div className="font-medium">{employee.name}</div>

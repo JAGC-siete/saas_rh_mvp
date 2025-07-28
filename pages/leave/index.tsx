@@ -1,14 +1,21 @@
-import { GetServerSideProps } from 'next'
-import { createServerSupabaseClient } from '@supabase/auth-helpers-nextjs'
-import { useSession } from '@supabase/auth-helpers-react'
+import { useEffect } from 'react'
+import { useRouter } from 'next/router'
+import { useSupabaseSession } from '../../lib/supabase'
 import DashboardLayout from '../../components/DashboardLayout'
 import LeaveManager from '../../components/LeaveManager'
 
 export default function LeavePage() {
-  const session = useSession()
+  const { session, loading: sessionLoading } = useSupabaseSession()
+  const router = useRouter()
 
-  if (!session) {
-    return <div>Redirecting...</div>
+  useEffect(() => {
+    if (!sessionLoading && !session) {
+      router.push('/')
+    }
+  }, [session, sessionLoading, router])
+
+  if (sessionLoading || !session) {
+    return <div>Loading...</div>
   }
 
   return (
@@ -23,26 +30,4 @@ export default function LeavePage() {
       </div>
     </DashboardLayout>
   )
-}
-
-export const getServerSideProps: GetServerSideProps = async (ctx) => {
-  const supabase = createServerSupabaseClient(ctx)
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session) {
-    return {
-      redirect: {
-        destination: '/',
-        permanent: false,
-      },
-    }
-  }
-
-  return {
-    props: {
-      initialSession: session,
-    },
-  }
 }

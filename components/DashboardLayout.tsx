@@ -1,4 +1,4 @@
-'use client'
+
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
@@ -119,11 +119,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
           {/* Navigation */}
           <nav className="flex-1 px-2 py-4 space-y-1">
-            {navigation.map((item) => {
+            {/* eslint-disable-next-line react/jsx-key */}
+            {navigation.map((item, index) => {
               const isActive = router.pathname === item.href
               return (
                 <Link
-                  key={item.name}
+                  key={`nav-${index}`}
                   href={item.href}
                   className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors ${
                     isActive

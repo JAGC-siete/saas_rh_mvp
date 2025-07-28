@@ -1,4 +1,4 @@
-'use client'
+
 
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
@@ -286,8 +286,8 @@ export default function AttendanceManager() {
                 </tr>
               </thead>
               <tbody>
-                {attendanceRecords.map((record) => (
-                  <tr key={record.id} className="border-b hover:bg-gray-50">
+                {attendanceRecords.map((record, index) => (
+                  <tr key={`attendance-${index}`} className="border-b hover:bg-gray-50">
                     <td className="py-3 px-4">
                       <div>
                         <div className="font-medium">{record.employees?.name}</div>

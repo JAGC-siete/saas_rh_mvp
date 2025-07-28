@@ -1,11 +1,19 @@
+<<<<<<< HEAD
 import React, { useState, useEffect } from 'react'
+=======
+import { useState, useEffect } from 'react'
+>>>>>>> 5e8f55382ace57d852b356fc491e754b1fd1b556
 import { useRouter } from 'next/router'
 import Head from 'next/head'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Textarea } from '../components/ui/textarea'
+<<<<<<< HEAD
 import { AlertCircle, Clock, CheckCircle, User, Building2, Calendar, Timer } from 'lucide-react'
+=======
+import { AlertCircle, Clock, CheckCircle, User } from 'lucide-react'
+>>>>>>> 5e8f55382ace57d852b356fc491e754b1fd1b556
 
 interface EmployeeInfo {
   id: string
@@ -71,7 +79,10 @@ export default function RegistroDeAsistencia() {
         return false
       }
     } catch (error) {
+<<<<<<< HEAD
       console.error('Lookup error:', error)
+=======
+>>>>>>> 5e8f55382ace57d852b356fc491e754b1fd1b556
       setMessage('Error de conexión')
       setMessageType('error')
       return false
@@ -117,12 +128,18 @@ export default function RegistroDeAsistencia() {
       const data = await response.json()
 
       if (response.status === 422 && data.requireJustification) {
+<<<<<<< HEAD
         // Late arrival - requires justification
+=======
+>>>>>>> 5e8f55382ace57d852b356fc491e754b1fd1b556
         setRequireJustification(true)
         setMessage(data.message)
         setMessageType('warning')
       } else if (response.ok) {
+<<<<<<< HEAD
         // Success
+=======
+>>>>>>> 5e8f55382ace57d852b356fc491e754b1fd1b556
         setMessage(data.message)
         setMessageType('success')
         setRequireJustification(false)
@@ -139,6 +156,7 @@ export default function RegistroDeAsistencia() {
           setMessage('')
         }, 4000)
       } else {
+<<<<<<< HEAD
         // Error
         console.error('Registration error:', response.status, data)
         setMessage(data.error || data.message || 'Error al registrar asistencia')
@@ -147,6 +165,13 @@ export default function RegistroDeAsistencia() {
     } catch (error) {
       console.error('Network error:', error)
       setMessage('Error de conexión con el servidor')
+=======
+        setMessage(data.error || data.message || 'Error al registrar')
+        setMessageType('error')
+      }
+    } catch (error) {
+      setMessage('Error de conexión')
+>>>>>>> 5e8f55382ace57d852b356fc491e754b1fd1b556
       setMessageType('error')
     }
 

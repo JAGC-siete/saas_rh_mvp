@@ -1,7 +1,8 @@
-import { supabase, supabaseAdmin } from '../../lib/supabase'
+import { createClient, createAdminClient } from '../../lib/supabase/server'
+import { NextApiRequest, NextApiResponse } from 'next'
 
 // Payroll API Handler
-export default async function handler(req, res) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { method } = req
 
   switch (method) {
@@ -15,10 +16,13 @@ export default async function handler(req, res) {
   }
 }
 
-async function generatePayroll(req, res) {
+async function generatePayroll(req: NextApiRequest, res: NextApiResponse) {
   try {
     const { employee_id, period_start, period_end, period_type = 'monthly' } = req.body
 
+    // Create Supabase client with cookie handling
+    const supabase = createClient(req, res)
+    
     // Get user session and verify permissions
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
@@ -56,11 +60,12 @@ async function generatePayroll(req, res) {
       .gte('date', period_start)
       .lte('date', period_end)
 
-    // Calculate attendance metrics
-    const totalDays = attendanceRecords.length
-    const daysWorked = attendanceRecords.filter(r => r.status === 'present' || r.status === 'late').length
-    const daysAbsent = attendanceRecords.filter(r => r.status === 'absent').length
-    const lateDays = attendanceRecords.filter(r => r.status === 'late').length
+    // Calculate attendance metrics (handle null case)
+    const records = attendanceRecords || []
+    const totalDays = records.length
+    const daysWorked = records.filter(r => r.status === 'present' || r.status === 'late').length
+    const daysAbsent = records.filter(r => r.status === 'absent').length
+    const lateDays = records.filter(r => r.status === 'late').length
 
     // Calculate earnings
     const baseSalary = parseFloat(employee.base_salary)
@@ -136,10 +141,13 @@ async function generatePayroll(req, res) {
   }
 }
 
-async function getPayrollRecords(req, res) {
+async function getPayrollRecords(req: NextApiRequest, res: NextApiResponse) {
   try {
     const { employee_id, period_start, period_end, status, page = 1, limit = 20 } = req.query
 
+    // Create Supabase client with cookie handling
+    const supabase = createClient(req, res)
+    
     // Get user session
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
@@ -203,7 +211,7 @@ async function getPayrollRecords(req, res) {
 }
 
 // Honduras ISR calculation function
-function calculateISR(annualSalary) {
+function calculateISR(annualSalary: number): number {
   const taxBrackets = [
     { min: 0, max: 217493.16, rate: 0 },
     { min: 217493.16, max: 494224.40, rate: 0.15 },

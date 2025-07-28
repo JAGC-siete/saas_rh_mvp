@@ -1,11 +1,10 @@
 import { GetServerSideProps } from 'next'
-import { createServerSupabaseClient } from '@supabase/auth-helpers-nextjs'
-import { useSession } from '@supabase/auth-helpers-react'
+import { useSupabaseSession } from '../../lib/supabase'
 import DashboardLayout from '../../components/DashboardLayout'
 import AttendanceManager from '../../components/AttendanceManager'
 
 export default function AttendancePage() {
-  const session = useSession()
+  const { session, loading: sessionLoading } = useSupabaseSession()
 
   if (!session) {
     return <div>Redirecting...</div>
@@ -26,23 +25,8 @@ export default function AttendancePage() {
 }
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
-  const supabase = createServerSupabaseClient(ctx)
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  if (!session) {
-    return {
-      redirect: {
-        destination: '/',
-        permanent: false,
-      },
-    }
-  }
-
+  // For now, we'll handle authentication on the client side
   return {
-    props: {
-      initialSession: session,
-    },
+    props: {},
   }
 }
