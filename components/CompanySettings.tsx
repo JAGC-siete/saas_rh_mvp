@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useSession } from '@supabase/auth-helpers-react'
 import { Button } from './ui/button'
@@ -80,14 +80,7 @@ export default function CompanySettings() {
   const [showScheduleForm, setShowScheduleForm] = useState(false)
   const [editingSchedule, setEditingSchedule] = useState<WorkSchedule | null>(null)
 
-  useEffect(() => {
-    if (session?.user) {
-      fetchCompany()
-      fetchWorkSchedules()
-    }
-  }, [session])
-
-  const fetchCompany = async () => {
+  const fetchCompany = useCallback(async () => {
     try {
       setLoading(true)
       const { data, error } = await supabase
@@ -120,9 +113,9 @@ export default function CompanySettings() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [session?.user?.id])
 
-  const fetchWorkSchedules = async () => {
+  const fetchWorkSchedules = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('work_schedules')
@@ -134,7 +127,14 @@ export default function CompanySettings() {
     } catch (error) {
       console.error('Error fetching work schedules:', error)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    if (session?.user) {
+      fetchCompany()
+      fetchWorkSchedules()
+    }
+  }, [session, fetchCompany, fetchWorkSchedules])
 
   const handleCompanySubmit = async (e: React.FormEvent) => {
     e.preventDefault()

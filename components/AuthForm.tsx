@@ -11,7 +11,7 @@ export default function AuthForm() {
   const [loading, setLoading] = useState(false)
   const [isSignUp, setIsSignUp] = useState(false)
   const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [password, setPassword] = useState('') // Form input state, not a credential
   const [fullName, setFullName] = useState('')
   const [companyName, setCompanyName] = useState('')
   const [error, setError] = useState('')
