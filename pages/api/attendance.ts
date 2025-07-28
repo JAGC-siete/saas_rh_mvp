@@ -1,4 +1,114 @@
-import { supabase, supabaseAdmin } from '../../lib/supabase'
+import { createAdminClient } from '../../lib/supabase/server'
+
+// Gamification helper functions
+async function calculateAttendancePoints(employeeId: number, lateMinutes: number, isEarly: boolean): Promise<number> {
+  let points = 5 // Base points for attendance
+  
+  if (isEarly) points += 3 // Early arrival bonus
+  if (lateMinutes <= 5) points += 2 // Punctuality bonus
+  if (lateMinutes === 0) points += 5 // Perfect attendance bonus
+  if (lateMinutes > 5) points -= Math.min(10, Math.floor(lateMinutes / 5)) // Late penalty
+  
+  return Math.max(0, points)
+}
+
+async function updateEmployeeScore(employeeId: number, companyId: number, points: number, reason: string, actionType: string) {
+  const supabase = createAdminClient()
+  
+  // Update or insert employee score
+  const { data: existingScore } = await supabase
+    .from('employee_scores')
+    .select('*')
+    .eq('employee_id', employeeId)
+    .single()
+  
+  if (existingScore) {
+    await supabase
+      .from('employee_scores')
+      .update({
+        total_points: existingScore.total_points + points,
+        weekly_points: existingScore.weekly_points + points,
+        monthly_points: existingScore.monthly_points + points,
+        updated_at: new Date().toISOString()
+      })
+      .eq('employee_id', employeeId)
+  } else {
+    await supabase
+      .from('employee_scores')
+      .insert({
+        employee_id: employeeId,
+        company_id: companyId,
+        total_points: points,
+        weekly_points: points,
+        monthly_points: points
+      })
+  }
+  
+  // Record in point history
+  await supabase
+    .from('point_history')
+    .insert({
+      employee_id: employeeId,
+      company_id: companyId,
+      points_earned: points,
+      reason,
+      action_type: actionType
+    })
+}
+
+async function checkForAchievements(employeeId: number, companyId: number): Promise<any[]> {
+  const supabase = createAdminClient()
+  
+  // This is a simplified version - would need more complex logic for real achievements
+  const achievements: any[] = []
+  
+  // Check for "Perfect Week" achievement (5 days punctual this week)
+  const startOfWeek = new Date()
+  startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay())
+  startOfWeek.setHours(0, 0, 0, 0)
+  
+  const { data: weeklyRecords } = await supabase
+    .from('attendance_records')
+    .select('late_minutes')
+    .eq('employee_id', employeeId)
+    .gte('date', startOfWeek.toISOString().split('T')[0])
+    .lte('date', new Date().toISOString().split('T')[0])
+  
+  if (weeklyRecords && weeklyRecords.length >= 5) {
+    const punctualDays = weeklyRecords.filter(r => (r.late_minutes || 0) <= 5).length
+    if (punctualDays >= 5) {
+      // Check if achievement already exists
+      const { data: existingAchievement } = await supabase
+        .from('employee_achievements')
+        .select('id')
+        .eq('employee_id', employeeId)
+        .eq('achievement_type_id', 1) // Perfect Week achievement
+        .gte('earned_at', startOfWeek.toISOString())
+        .single()
+      
+      if (!existingAchievement) {
+        const { data: newAchievement } = await supabase
+          .from('employee_achievements')
+          .insert({
+            employee_id: employeeId,
+            achievement_type_id: 1,
+            company_id: companyId,
+            points_earned: 50
+          })
+          .select('*, achievement_types(*)')
+          .single()
+        
+        if (newAchievement) {
+          achievements.push(newAchievement)
+          // Award bonus points
+          await updateEmployeeScore(employeeId, companyId, 50, 'Perfect Week Achievement', 'achievement')
+        }
+      }
+    }
+  }
+  
+  return achievements
+}
 import { NextApiRequest, NextApiResponse } from 'next'
 
 // Attendance API Handler
@@ -20,11 +130,9 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
   try {
     const { last5, justification, employee_id } = req.body
 
-    // Get user session
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return res.status(401).json({ error: 'Unauthorized' })
-    }
+    // For public attendance registration, we don't require authentication
+    // Use admin client to access the database
+    const supabase = createAdminClient()
 
     // Find employee by last 5 digits of DNI or employee_id
     let employee
@@ -110,14 +218,101 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
         return res.status(500).json({ error: error.message })
       }
 
+      // Generate personalized feedback based on punctuality
+      let feedbackMessage = ''
+      let punctualityStatus = 'on-time'
+      
+      if (lateMinutes > 5) {
+        feedbackMessage = '⏰ Por favor sé puntual. Explícanos qué pasó.'
+        punctualityStatus = 'late'
+      } else if (currentMinutes <= expectedMinutes - 5) {
+        feedbackMessage = '🎉 ¡Eres un empleado ejemplar! Llegaste temprano.'
+        punctualityStatus = 'early'
+      } else {
+        feedbackMessage = '✅ ¡Perfecto! Llegaste puntualmente.'
+        punctualityStatus = 'on-time'
+      }
+
+      // Get weekly pattern for behavioral analysis
+      const startOfWeek = new Date()
+      startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay())
+      startOfWeek.setHours(0, 0, 0, 0)
+      const endOfWeek = new Date(startOfWeek)
+      endOfWeek.setDate(endOfWeek.getDate() + 6)
+      
+      const { data: weeklyRecords } = await supabase
+        .from('attendance_records')
+        .select('late_minutes, status, check_in, expected_check_in')
+        .eq('employee_id', employee.id)
+        .gte('date', startOfWeek.toISOString().split('T')[0])
+        .lte('date', endOfWeek.toISOString().split('T')[0])
+      
+      // Analyze behavioral pattern and enhance feedback
+      let behavioralFeedback = ''
+      if (weeklyRecords && weeklyRecords.length >= 3) {
+        const lateDaysThisWeek = weeklyRecords.filter(r => (r.late_minutes || 0) > 5).length
+        const earlyDaysThisWeek = weeklyRecords.filter(r => {
+          if (!r.check_in || !r.expected_check_in) return false
+          const checkTime = new Date(r.check_in).toTimeString().slice(0, 5)
+          const expectedTime = r.expected_check_in
+          const [checkHour, checkMin] = checkTime.split(':').map(Number)
+          const [expHour, expMin] = expectedTime.split(':').map(Number)
+          return (checkHour * 60 + checkMin) <= (expHour * 60 + expMin - 5)
+        }).length
+        
+        if (lateDaysThisWeek >= 3) {
+          behavioralFeedback = ' 📊 Hemos notado tardanzas recurrentes esta semana. Por favor mejora tu puntualidad.'
+        } else if (earlyDaysThisWeek >= 3 && lateDaysThisWeek === 0) {
+          behavioralFeedback = ' 🏆 ¡Excelente consistencia esta semana! Mantén esa disciplina.'
+        }
+      }
+      
+      // Combine messages
+      const finalFeedback = feedbackMessage + behavioralFeedback
+
+      // Calculate and award points for gamification
+      const isEarly = currentMinutes <= expectedMinutes - 5
+      const pointsEarned = await calculateAttendancePoints(employee.id, lateMinutes, isEarly)
+      
+      if (pointsEarned > 0) {
+        await updateEmployeeScore(
+          employee.id, 
+          employee.company_id, 
+          pointsEarned,
+          `Check-in: ${punctualityStatus}`,
+          'check_in'
+        )
+      }
+
+      // Check for new achievements
+      const newAchievements = await checkForAchievements(employee.id, employee.company_id)
+
       const message = lateMinutes <= 5 
         ? '✅ Check-in recorded successfully'
         : '📝 Late check-in recorded with justification'
 
       return res.status(200).json({ 
         message, 
+        feedbackMessage: finalFeedback,
+        punctualityStatus,
         data, 
-        lateMinutes 
+        lateMinutes,
+        gamification: {
+          pointsEarned,
+          newAchievements: newAchievements.length > 0 ? newAchievements : undefined
+        },
+        weeklyPattern: {
+          totalDays: weeklyRecords?.length || 0,
+          lateDays: weeklyRecords ? weeklyRecords.filter(r => (r.late_minutes || 0) > 5).length : 0,
+          earlyDays: weeklyRecords ? weeklyRecords.filter(r => {
+            if (!r.check_in || !r.expected_check_in) return false
+            const checkTime = new Date(r.check_in).toTimeString().slice(0, 5)
+            const expectedTime = r.expected_check_in
+            const [checkHour, checkMin] = checkTime.split(':').map(Number)
+            const [expHour, expMin] = expectedTime.split(':').map(Number)
+            return (checkHour * 60 + checkMin) <= (expHour * 60 + expMin - 5)
+          }).length : 0
+        }
       })
 
     } else if (!existingRecord.check_out) {
@@ -181,11 +376,8 @@ async function getAttendanceRecords(req: NextApiRequest, res: NextApiResponse) {
   try {
     const { employee_id, start_date, end_date, page = 1, limit = 50 } = req.query
 
-    // Get user session
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return res.status(401).json({ error: 'Unauthorized' })
-    }
+    // Use admin client for database access
+    const supabase = createAdminClient()
 
     let query = supabase
       .from('attendance_records')

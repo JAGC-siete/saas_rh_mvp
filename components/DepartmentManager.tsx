@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useSession } from '@supabase/auth-helpers-react'
-import Button from './ui/button'
-import Input from './ui/input'
-import Card from './ui/card'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from './ui/card'
 import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
 
 interface Department {
@@ -180,11 +180,13 @@ export default function DepartmentManager() {
       </div>
 
       {showForm && (
-        <Card className="p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">
-            {editingDepartment ? 'Editar Departamento' : 'Nuevo Departamento'}
-          </h3>
-          
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              {editingDepartment ? 'Editar Departamento' : 'Nuevo Departamento'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -248,12 +250,14 @@ export default function DepartmentManager() {
               </Button>
             </div>
           </form>
+          </CardContent>
         </Card>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {departments.map((department) => (
-          <Card key={department.id} className="p-6">
+          <Card key={department.id}>
+            <CardContent className="p-6">
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h3 className="text-lg font-medium text-gray-900">{department.name}</h3>
@@ -292,6 +296,7 @@ export default function DepartmentManager() {
                 </span>
               </div>
             </div>
+            </CardContent>
           </Card>
         ))}
       </div>

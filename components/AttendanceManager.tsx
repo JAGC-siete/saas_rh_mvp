@@ -231,7 +231,7 @@ export default function AttendanceManager() {
         {/* Quick Stats */}
         <Card>
           <CardHeader>
-            <CardTitle>Today's Summary</CardTitle>
+            <CardTitle>Today&apos;s Summary</CardTitle>
             <CardDescription>Real-time attendance overview</CardDescription>
           </CardHeader>
           <CardContent>
@@ -268,7 +268,7 @@ export default function AttendanceManager() {
       {/* Today's Attendance Records */}
       <Card>
         <CardHeader>
-          <CardTitle>Today's Attendance Records</CardTitle>
+          <CardTitle>Today&apos;s Attendance Records</CardTitle>
           <CardDescription>
             Live view of all attendance records for {new Date().toLocaleDateString()}
           </CardDescription>

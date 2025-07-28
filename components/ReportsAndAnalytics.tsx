@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useSession } from '@supabase/auth-helpers-react'
 import { Button } from './ui/button'
@@ -74,14 +74,7 @@ export default function ReportsAndAnalytics() {
     endDate: new Date().toISOString().split('T')[0]
   })
 
-  useEffect(() => {
-    if (session?.user) {
-      fetchDashboardStats()
-      fetchAttendanceTrends()
-    }
-  }, [session, dateRange])
-
-  const fetchDashboardStats = async () => {
+  const fetchDashboardStats = useCallback(async () => {
     try {
       setLoading(true)
       
@@ -146,9 +139,9 @@ export default function ReportsAndAnalytics() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  const fetchAttendanceTrends = async () => {
+  const fetchAttendanceTrends = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('attendance_records')
@@ -187,7 +180,14 @@ export default function ReportsAndAnalytics() {
     } catch (error) {
       console.error('Error fetching attendance trends:', error)
     }
-  }
+  }, [dateRange.startDate, dateRange.endDate])
+
+  useEffect(() => {
+    if (session?.user) {
+      fetchDashboardStats()
+      fetchAttendanceTrends()
+    }
+  }, [session, dateRange, fetchDashboardStats, fetchAttendanceTrends])
 
   const exportReport = async (type: 'attendance' | 'payroll' | 'employees') => {
     try {

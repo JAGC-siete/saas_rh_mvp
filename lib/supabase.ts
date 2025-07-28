@@ -14,12 +14,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true
-  },
-  realtime: {
-    channels: {
-      self: true,
-    },
-  },
+  }
 })
 
 // Service client for server-side operations (with service role key)

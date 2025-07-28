@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useSession } from '@supabase/auth-helpers-react'
-import Button from './ui/button'
-import Input from './ui/input'
-import Card from './ui/card'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from './ui/card'
 import { 
   BuildingOfficeIcon, 
   UserGroupIcon, 
@@ -101,13 +101,19 @@ export default function CompanySettings() {
 
       if (error) throw error
       
-      const companyData = data.companies as Company
-      setCompany(companyData)
+      // Safely extract company data with proper typing
+      const companyData = data?.companies
+      if (!companyData || Array.isArray(companyData)) {
+        throw new Error('Invalid company data structure')
+      }
+      
+      const company = companyData as Company
+      setCompany(company)
       setCompanyForm({
-        name: companyData.name,
-        subdomain: companyData.subdomain || '',
-        plan_type: companyData.plan_type,
-        settings: companyData.settings || {}
+        name: company.name,
+        subdomain: company.subdomain || '',
+        plan_type: company.plan_type,
+        settings: company.settings || {}
       })
     } catch (error) {
       console.error('Error fetching company:', error)
@@ -208,7 +214,25 @@ export default function CompanySettings() {
 
   const handleEditSchedule = (schedule: WorkSchedule) => {
     setEditingSchedule(schedule)
-    setScheduleForm({ ...schedule })
+    setScheduleForm({
+      name: schedule.name,
+      monday_start: schedule.monday_start || '08:00',
+      monday_end: schedule.monday_end || '17:00',
+      tuesday_start: schedule.tuesday_start || '08:00',
+      tuesday_end: schedule.tuesday_end || '17:00',
+      wednesday_start: schedule.wednesday_start || '08:00',
+      wednesday_end: schedule.wednesday_end || '17:00',
+      thursday_start: schedule.thursday_start || '08:00',
+      thursday_end: schedule.thursday_end || '17:00',
+      friday_start: schedule.friday_start || '08:00',
+      friday_end: schedule.friday_end || '17:00',
+      saturday_start: schedule.saturday_start || '',
+      saturday_end: schedule.saturday_end || '',
+      sunday_start: schedule.sunday_start || '',
+      sunday_end: schedule.sunday_end || '',
+      break_duration: schedule.break_duration,
+      timezone: schedule.timezone
+    })
     setShowScheduleForm(true)
   }
 

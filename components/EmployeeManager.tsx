@@ -241,7 +241,7 @@ export default function EmployeeManager() {
         <Card>
           <CardHeader>
             <CardTitle>Add New Employee</CardTitle>
-            <CardDescription>Enter the employee's information</CardDescription>
+            <CardDescription>Enter the employee&apos;s information</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
