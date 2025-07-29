@@ -99,6 +99,7 @@ export default function RegistroDeAsistencia() {
   const handleAttendance = async () => {
     if (!employee) return
 
+    console.log('🚀 Iniciando handleAttendance, loading actual:', loading)
     setLoading(true)
     setMessage('Procesando registro...')
     setMessageType('info')
@@ -149,6 +150,7 @@ export default function RegistroDeAsistencia() {
     }
     console.log('🏁 Finalizando handleAttendance')
     setLoading(false)
+    console.log('🔄 Loading establecido en false')
   }
 
   const getMessageIcon = () => {;
