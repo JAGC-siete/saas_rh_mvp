@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/router'
-import { supabase } from '../lib/supabase'
+import { useAuth } from '../lib/auth'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card'
@@ -16,6 +16,7 @@ export default function AuthForm() {
   const [companyName, setCompanyName] = useState('')
   const [error, setError] = useState('')
   const router = useRouter()
+  const { login } = useAuth()
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -24,56 +25,16 @@ export default function AuthForm() {
 
     try {
       if (isSignUp) {
-        // Sign up new user
-        const { data: authData, error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              full_name: fullName,
-              company_name: companyName,
-            }
-          }
-        })
-
-        if (signUpError) throw signUpError
-
-        if (authData.user) {
-          // Create company if it's a new signup
-          const { data: company, error: companyError } = await supabase
-            .from('companies')
-            .insert({
-              name: companyName,
-              subdomain: companyName.toLowerCase().replace(/\s+/g, '-'),
-            })
-            .select()
-            .single()
-
-          if (companyError) throw companyError
-
-          // Create user profile
-          const { error: profileError } = await supabase
-            .from('user_profiles')
-            .insert({
-              id: authData.user.id,
-              company_id: company.id,
-              role: 'company_admin',
-            })
-
-          if (profileError) throw profileError
-
-          alert('Check your email for verification link!')
-        }
+        setError('Sign up is not available in this version. Please contact your administrator.')
+        setLoading(false)
+        return
       } else {
         // Sign in existing user
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        })
-
-        if (signInError) throw signInError
-
-        router.push('/')
+        const success = await login(email, password)
+        
+        if (!success) {
+          setError('Invalid email or password')
+        }
       }
     } catch (error: any) {
       setError(error.message)

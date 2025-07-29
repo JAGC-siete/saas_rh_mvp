@@ -67,12 +67,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(true)
       console.log('Attempting login with:', email)
 
-      // Check if we're using the dummy client
-      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-        console.error('Supabase not configured - using dummy client')
-        return false
-      }
-
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
