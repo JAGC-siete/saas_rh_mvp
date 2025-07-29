@@ -48,11 +48,10 @@ export default function PayrollManager() {
 
   // Form state
   const [generateForm, setGenerateForm] = useState({
-    employee_id: '',
-    period_start: '',
-    period_end: '',
-    period_type: 'monthly'
-  })
+    periodo: '',
+    quincena: 1,
+    incluirDeducciones: false
+  });
 
   useEffect(() => {
     fetchData()
@@ -114,11 +113,9 @@ export default function PayrollManager() {
     setLoading(true)
 
     try {
-      const response = await fetch('/api/payroll', {
+      const response = await fetch('/api/payroll/calculate', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(generateForm),
       })
 
@@ -131,10 +128,9 @@ export default function PayrollManager() {
       alert('Payroll generated successfully!')
       setShowGenerateForm(false)
       setGenerateForm({
-        employee_id: '',
-        period_start: '',
-        period_end: '',
-        period_type: 'monthly'
+        periodo: '',
+        quincena: 1,
+        incluirDeducciones: false
       })
       fetchData()
 
@@ -312,76 +308,54 @@ export default function PayrollManager() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={generatePayroll} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form onSubmit={generatePayroll} className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Employee
-                </label>
-                <select
-                  value={generateForm.employee_id}
-                  onChange={(e) => setGenerateForm({...generateForm, employee_id: e.target.value})}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                  required
-                >
-                  <option value="">Select Employee</option>
-                  {/* eslint-disable-next-line react/jsx-key */}
-                  {employees.map((emp, index) => (
-                    <option key={`emp-${index}`} value={emp.id}>
-                      {emp.name} ({emp.employee_code}) - {formatCurrency(emp.base_salary)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Period Type
-                </label>
-                <select
-                  value={generateForm.period_type}
-                  onChange={(e) => setGenerateForm({...generateForm, period_type: e.target.value})}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="monthly">Monthly</option>
-                  <option value="biweekly">Biweekly</option>
-                  <option value="weekly">Weekly</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Period Start
+                  Mes
                 </label>
                 <Input
-                  type="date"
-                  value={generateForm.period_start}
-                  onChange={(e) => setGenerateForm({...generateForm, period_start: e.target.value})}
+                  type="month"
+                  value={generateForm.periodo}
+                  onChange={e => setGenerateForm({ ...generateForm, periodo: e.target.value })}
                   required
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Period End
+                  Quincena
                 </label>
-                <Input
-                  type="date"
-                  value={generateForm.period_end}
-                  onChange={(e) => setGenerateForm({...generateForm, period_end: e.target.value})}
+                <select
+                  value={generateForm.quincena}
+                  onChange={e => setGenerateForm({ ...generateForm, quincena: Number(e.target.value) })}
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
                   required
-                />
+                >
+                  <option value={1}>Primera (1-15)</option>
+                  <option value={2}>Segunda (16-fin de mes)</option>
+                </select>
               </div>
-
-              <div className="md:col-span-2 flex gap-4">
+              <div className="flex items-center mt-6">
+                <input
+                  type="checkbox"
+                  checked={generateForm.incluirDeducciones}
+                  onChange={e => setGenerateForm({ ...generateForm, incluirDeducciones: e.target.checked })}
+                  className="mr-2"
+                  id="deducciones"
+                />
+                <label htmlFor="deducciones" className="text-sm font-medium text-gray-700">
+                  Incluir deducciones
+                </label>
+              </div>
+              <div className="md:col-span-3 flex gap-4">
                 <Button type="submit" disabled={loading}>
-                  {loading ? 'Generating...' : 'Generate Payroll'}
+                  {loading ? 'Generando...' : 'Generar Nómina'}
                 </Button>
-                <Button 
-                  type="button" 
-                  variant="outline" 
+                <Button
+                  type="button"
+                  variant="outline"
                   onClick={() => setShowGenerateForm(false)}
                 >
-                  Cancel
+                  Cancelar
                 </Button>
               </div>
             </form>
