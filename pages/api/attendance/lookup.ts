@@ -23,7 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { data: employee, error: empError } = await supabase
     .from('employees')
     .select('id, work_schedule_id, dni, name, company_id')
-    .eq('dni', last5)
+    .like('dni', `%${last5}`)
     .eq('status', 'active')
     .single()
   if (empError || !employee) {
