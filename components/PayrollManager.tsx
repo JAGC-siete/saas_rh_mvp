@@ -211,6 +211,17 @@ export default function PayrollManager() {
     return acc
   }, { grossSalary: 0, totalDeductions: 0, netSalary: 0 })
 
+  // Descargar PDF de nómina para el periodo y quincena del registro
+  const downloadPayrollPDF = (record: PayrollRecord) => {
+    // Extraer periodo (YYYY-MM) de period_start
+    const period = record.period_start.slice(0, 7)
+    // Determinar quincena
+    const day = Number(record.period_start.slice(8, 10))
+    const quincena = day === 1 ? 1 : 2
+    const url = `/api/payroll/export?periodo=${period}&quincena=${quincena}`
+    window.open(url, '_blank')
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -304,7 +315,7 @@ export default function PayrollManager() {
           <CardHeader>
             <CardTitle>Generate Payroll</CardTitle>
             <CardDescription>
-              Generate payroll for an employee for a specific period
+              Genera la nómina para todos los empleados activos de la empresa para un periodo y quincena seleccionados
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -454,7 +465,7 @@ export default function PayrollManager() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => {/* TODO: Generate PDF */}}
+                          onClick={() => downloadPayrollPDF(record)}
                         >
                           Download PDF
                         </Button>
