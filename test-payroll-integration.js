@@ -1,9 +1,9 @@
 const { createClient } = require('@supabase/supabase-js')
+const fs = require('fs');
 
 // Configuración de Supabase
 const supabaseUrl = 'https://fwyxmovfrzauebiqxchz.supabase.co'
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ3eXhtb3ZmcnphdWViaXF4Y2h6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MjE4OTkyMSwiZXhwIjoyMDY3NzY1OTIxfQ.7tCj7HGw9MevF1Q9EEoOvD6CXf4M6f0iu37U-vjE76I'
-
 const supabase = createClient(supabaseUrl, supabaseKey)
 
 async function testPayrollIntegration() {
@@ -14,8 +14,8 @@ async function testPayrollIntegration() {
     console.log('📊 1. Probando cálculo de nómina...')
     
     const testData = {
-      periodo: '2025-07',
-      quincena: 1
+      periodo: '2024-07',
+      quincena: 2
     }
     
     const response = await fetch('https://zesty-abundance-production.up.railway.app/api/payroll/calculate', {
@@ -46,7 +46,7 @@ async function testPayrollIntegration() {
     // 2. Probar obtención de registros
     console.log('\n📋 2. Probando obtención de registros...')
     
-    const recordsResponse = await fetch('https://zesty-abundance-production.up.railway.app/api/payroll/records?periodo=2025-07')
+    const recordsResponse = await fetch('https://zesty-abundance-production.up.railway.app/api/payroll/records?periodo=2024-07&quincena=2')
     const recordsResult = await recordsResponse.json()
     
     if (recordsResponse.ok) {
@@ -89,8 +89,8 @@ async function testPayrollIntegration() {
     const { data: attendanceRecords } = await supabase
       .from('attendance_records')
       .select('*')
-      .gte('date', '2025-07-01')
-      .lte('date', '2025-07-15')
+      .gte('date', '2024-07-16')
+      .lte('date', '2024-07-31')
     
     const { data: employees } = await supabase
       .from('employees')
@@ -118,4 +118,4 @@ async function testPayrollIntegration() {
   }
 }
 
-testPayrollIntegration() 
+testPayrollIntegration(); 

@@ -9,7 +9,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const { last5, dni, justification } = req.body
-    
+
     // Validación de parámetros de entrada
     if (!last5 && !dni) {
       console.error('Parámetros faltantes: dni o last5')
