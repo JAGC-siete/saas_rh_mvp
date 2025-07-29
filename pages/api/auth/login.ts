@@ -10,6 +10,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    // Para rutas de login, no validamos autenticación previa
+    // pero sí validamos que sea una petición válida
     const { email, password } = req.body
 
     if (!email || !password) {

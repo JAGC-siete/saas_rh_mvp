@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createAdminClient } from '../../../lib/supabase/server'
+import { createClient } from '../../../lib/supabase/server'
 
 const SALARIO_MINIMO = 11903.13
 const IHSS_FIJO = 595.16
@@ -24,6 +24,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    // Validar autenticación
+    const supabase = createClient(req, res)
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
+      return res.status(401).json({ error: 'Unauthorized' })
+    }
+
+    // Verificar permisos del usuario
+    const { data: userProfile } = await supabase
+      .from('user_profiles')
+      .select('role, company_id')
+      .eq('id', user.id)
+      .single()
+
+    if (!userProfile || !['company_admin', 'hr_manager', 'super_admin'].includes(userProfile.role)) {
+      return res.status(403).json({ error: 'Insufficient permissions' })
+    }
+
     const { periodo, quincena, incluirDeducciones } = req.body
     if (!periodo || !quincena) {
       return res.status(400).json({ error: 'Periodo y quincena son requeridos' })
@@ -34,8 +53,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (![1, 2].includes(quincena)) {
       return res.status(400).json({ error: 'Quincena inválida (1 o 2)' })
     }
-
-    const supabase = createAdminClient()
     const [year, month] = periodo.split('-').map(Number)
     const ultimoDia = new Date(year, month, 0).getDate()
     const fechaInicio = quincena === 1 ? `${periodo}-01` : `${periodo}-16`

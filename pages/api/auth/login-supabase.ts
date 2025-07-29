@@ -2,7 +2,14 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import jwt from 'jsonwebtoken'
 import { createAdminClient } from '../../../lib/supabase/server'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-here'
+const JWT_SECRET = process.env.JWT_SECRET
+
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required')
+}
+
+// TypeScript assertion to ensure JWT_SECRET is string
+const jwtSecret = JWT_SECRET as string
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -10,6 +17,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    // Para rutas de login, no validamos autenticación previa
+    // pero sí validamos que sea una petición válida
     const { email, password } = req.body
 
     if (!email || !password) {
@@ -62,7 +71,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         role: userRole,
         supabaseToken: authData.session?.access_token
       },
-      JWT_SECRET,
+      jwtSecret,
       { expiresIn: '24h' }
     )
 

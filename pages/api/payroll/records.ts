@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createAdminClient } from '../../../lib/supabase/server'
+import { createClient } from '../../../lib/supabase/server'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -7,9 +7,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { periodo, quincena } = req.query
+    // Validar autenticación
+    const supabase = createClient(req, res)
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
     
-    const supabase = createAdminClient()
+    if (authError || !user) {
+      return res.status(401).json({ error: 'Unauthorized' })
+    }
+
+    // Verificar permisos del usuario
+    const { data: userProfile } = await supabase
+      .from('user_profiles')
+      .select('role, company_id')
+      .eq('id', user.id)
+      .single()
+
+    if (!userProfile || !['company_admin', 'hr_manager', 'super_admin'].includes(userProfile.role)) {
+      return res.status(403).json({ error: 'Insufficient permissions' })
+    }
+
+    const { periodo, quincena } = req.query
     
     let query = supabase
       .from('payroll_records')

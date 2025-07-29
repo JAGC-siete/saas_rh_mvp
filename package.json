@@ -10,7 +10,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "audit": "./scripts/run-complete-audit.sh",
+    "audit:system": "node scripts/audit-system.js",
+    "audit:supabase": "node scripts/audit-supabase.js",
+    "audit:quick": "node scripts/audit-system.js && echo 'System audit completed. Run npm run audit:supabase for database audit.'",
+    "audit:fix": "node scripts/fix-audit-issues.js",
+    "audit:analyze": "node scripts/analyze-audit-report.js"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

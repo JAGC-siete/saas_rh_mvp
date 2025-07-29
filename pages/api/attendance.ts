@@ -374,10 +374,27 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
 
 async function getAttendanceRecords(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const { employee_id, start_date, end_date, page = 1, limit = 50 } = req.query
+    // Validar autenticación para obtener registros
+    const { createClient } = await import('../../lib/supabase/server')
+    const supabase = createClient(req, res)
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
+      return res.status(401).json({ error: 'Unauthorized' })
+    }
 
-    // Use admin client for database access
-    const supabase = createAdminClient()
+    // Verificar permisos del usuario
+    const { data: userProfile } = await supabase
+      .from('user_profiles')
+      .select('role, company_id')
+      .eq('id', user.id)
+      .single()
+
+    if (!userProfile || !['company_admin', 'hr_manager', 'super_admin', 'manager'].includes(userProfile.role)) {
+      return res.status(403).json({ error: 'Insufficient permissions' })
+    }
+
+    const { employee_id, start_date, end_date, page = 1, limit = 50 } = req.query
 
     let query = supabase
       .from('attendance_records')

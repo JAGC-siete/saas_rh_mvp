@@ -62,16 +62,32 @@ export default function PayrollManager() {
     try {
       // Get user profile
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      if (!user) {
+        console.error('No user found')
+        return
+      }
 
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('id', user.id)
         .single()
 
-      setUserProfile(profile)
-      if (!profile) return
+      if (profileError) {
+        console.error('Error fetching user profile:', profileError)
+        // Continue without profile for now
+        setUserProfile(null)
+      } else {
+        setUserProfile(profile)
+      }
+
+      // If no profile, we can't fetch company-specific data
+      if (!profile) {
+        console.warn('No user profile found, skipping company data fetch')
+        setPayrollRecords([])
+        setEmployees([])
+        return
+      }
 
       // Fetch payroll records
       const { data: payrollData, error: payrollError } = await supabase
