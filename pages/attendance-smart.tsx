@@ -5,6 +5,7 @@ import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Textarea } from '../components/ui/textarea'
 import { AlertCircle, Clock, CheckCircle, User, TrendingUp, Award, AlertTriangle } from 'lucide-react'
+import ProtectedRoute from '../components/ProtectedRoute'
 
 interface EmployeeInfo {
   id: string
@@ -34,6 +35,14 @@ type PunctualityStatus = 'early' | 'on-time' | 'late'
 type BehavioralPattern = 'consistent-early' | 'consistent-ontime' | 'repeated-tardiness' | 'improving' | 'normal'
 
 export default function AttendancePage() {
+  return (
+    <ProtectedRoute>
+      <AttendancePageContent />
+    </ProtectedRoute>
+  )
+}
+
+function AttendancePageContent() {
   const [last5, setLast5] = useState('')
   const [justification, setJustification] = useState('')
   const [loading, setLoading] = useState(false)

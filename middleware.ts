@@ -20,11 +20,32 @@ export function middleware(request: NextRequest) {
     return response
   }
 
-  // Handle authentication routes
-  if (pathname.startsWith('/login') || pathname.startsWith('/dashboard')) {
-    console.log(`[Middleware] Auth route: ${pathname}`)
+  // Define public routes (no authentication required)
+  const publicRoutes = [
+    '/',
+    '/login',
+    '/registrodeasistencia',
+    '/api/attendance/lookup',
+    '/api/attendance/register',
+    '/api/health'
+  ]
+
+  // Check if current path is public
+  const isPublicRoute = publicRoutes.some(route => 
+    pathname === route || pathname.startsWith(route + '/')
+  )
+
+  // If it's a public route, allow access
+  if (isPublicRoute) {
+    console.log(`[Middleware] Public route: ${pathname}`)
+    return NextResponse.next()
   }
 
+  // For private routes, check for session
+  // Note: In a real implementation, you'd check for a valid session token
+  // For now, we'll allow access but the components will handle auth
+  console.log(`[Middleware] Private route: ${pathname}`)
+  
   return NextResponse.next()
 }
 

@@ -6,6 +6,7 @@ import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Textarea } from '../components/ui/textarea'
 import { AlertCircle, Clock, CheckCircle, User, Building2, Calendar, Timer } from 'lucide-react'
+import ProtectedRoute from '../components/ProtectedRoute'
 
 interface EmployeeInfo {
   id: string
@@ -25,6 +26,14 @@ interface AttendanceStatus {
 }
 
 export default function AsistenciaNueva() {
+  return (
+    <ProtectedRoute>
+      <AsistenciaNuevaContent />
+    </ProtectedRoute>
+  )
+}
+
+function AsistenciaNuevaContent() {
   const router = useRouter()
   const [last5, setLast5] = useState('')
   const [justification, setJustification] = useState('')

@@ -1,6 +1,7 @@
 import { GetServerSideProps } from 'next'
 import Head from 'next/head'
 import Link from 'next/link'
+import { useRouter } from 'next/router'
 import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
@@ -10,6 +11,7 @@ import { useAuth } from '../lib/auth'
 
 export default function Dashboard() {
   const { user, logout } = useAuth()
+  const router = useRouter()
   const [dniInput, setDniInput] = useState('')
 
   return (
@@ -98,6 +100,95 @@ export default function Dashboard() {
               <p className="text-gray-600 mt-1">Bienvenido al sistema de Recursos Humanos</p>
             </div>
           </header>
+          
+          <div className="p-6 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/employees')}>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Empleados Activos</h3>
+                <p className="text-3xl font-bold text-blue-600">5</p>
+                <p className="text-sm text-gray-500">de 5 total</p>
+              </div>
+              
+              <div className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/attendance')}>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Asistencias Hoy</h3>
+                <p className="text-3xl font-bold text-green-600">5</p>
+                <p className="text-sm text-gray-500">Registros de entrada</p>
+              </div>
+              
+              <div className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/payroll')}>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Nóminas Pendientes</h3>
+                <p className="text-3xl font-bold text-orange-600">0</p>
+                <p className="text-sm text-gray-500">Por procesar</p>
+              </div>
+
+              <div className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/reports')}>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Ver Reportes</h3>
+                <p className="text-3xl font-bold text-purple-600">📊</p>
+                <p className="text-sm text-gray-500">Analítica y métricas</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white rounded-lg shadow p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Acciones Rápidas</h3>
+                <div className="space-y-3">
+                  <button
+                    onClick={() => router.push('/employees')}
+                    className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="font-medium text-gray-900">Registrar Nuevo Empleado</div>
+                    <div className="text-sm text-gray-600">Agregar un empleado al sistema</div>
+                  </button>
+                  
+                  <button
+                    onClick={() => router.push('/attendance')}
+                    className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="font-medium text-gray-900">Registrar Asistencia</div>
+                    <div className="text-sm text-gray-600">Marcar entrada o salida de empleados</div>
+                  </button>
+                  
+                  <button
+                    onClick={() => router.push('/payroll')}
+                    className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="font-medium text-gray-900">Procesar Nómina</div>
+                    <div className="text-sm text-gray-600">Generar nómina para empleados</div>
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg shadow p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Enlaces Útiles</h3>
+                <div className="space-y-3">
+                  <a
+                    href="/registrodeasistencia"
+                    target="_blank"
+                    className="block w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="font-medium text-gray-900">Registro de Asistencia Público</div>
+                    <div className="text-sm text-gray-600">Para empleados sin login</div>
+                  </a>
+                  
+                  <button
+                    onClick={() => router.push('/reports')}
+                    className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="font-medium text-gray-900">Ver Reportes</div>
+                    <div className="text-sm text-gray-600">Analítica y métricas del sistema</div>
+                  </button>
+                  
+                  <button
+                    onClick={() => router.push('/settings')}
+                    className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="font-medium text-gray-900">Configuración</div>
+                    <div className="text-sm text-gray-600">Ajustes del sistema</div>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <div className="p-6">
             {/* Stats Cards */}
