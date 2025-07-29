@@ -104,6 +104,7 @@ export default function RegistroDeAsistencia() {
     setMessageType('info')
 
     try {
+      console.log('🔄 Enviando registro de asistencia...')
       const response = await fetch('/api/attendance/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -114,12 +115,15 @@ export default function RegistroDeAsistencia() {
       })
 
       const data = await response.json()
+      console.log('📥 Respuesta del API:', { status: response.status, data })
 
       if (response.status === 422 && data.requireJustification) {
+        console.log('⚠️ Requiere justificación')
         setRequireJustification(true)
         setMessage(data.message)
         setMessageType('warning')
       } else if (response.ok) {
+        console.log('✅ Registro exitoso')
         setMessage(data.message)
         setMessageType('success')
         setRequireJustification(false)
@@ -134,13 +138,16 @@ export default function RegistroDeAsistencia() {
           setMessage('')
         }, 4000)
       } else {
+        console.log('❌ Error en registro:', data)
+        setMessage(data.message || data.error || 'Error registrando asistencia')
         setMessageType('error')
       }
     } catch (error) {
+      console.error('💥 Error de conexión:', error)
       setMessage('Error registrando asistencia')
       setMessageType('error')
-      console.error(error)
     }
+    console.log('🏁 Finalizando handleAttendance')
     setLoading(false)
   }
 
