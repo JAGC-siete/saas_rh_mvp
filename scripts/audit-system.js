@@ -47,6 +47,11 @@ class SystemAuditor {
   }
 
   addResult(type, category, message, details = null) {
+    if (!this.auditResults || !this.auditResults[type] || !Array.isArray(this.auditResults[type])) {
+      console.error('Error: auditResults not properly initialized');
+      return;
+    }
+    
     this.auditResults[type].push({
       category,
       message,
@@ -138,10 +143,16 @@ class SystemAuditor {
         return;
       }
       
-      const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+      const fileContent = fs.readFileSync(packageJsonPath, 'utf8');
+      if (!fileContent || fileContent.trim() === '') {
+        this.addResult('failed', 'Package.json', 'package.json is empty');
+        return;
+      }
       
-      if (!packageJson) {
-        this.addResult('failed', 'Package.json', 'package.json is empty or invalid');
+      const packageJson = JSON.parse(fileContent);
+      
+      if (!packageJson || typeof packageJson !== 'object') {
+        this.addResult('failed', 'Package.json', 'package.json is invalid JSON');
         return;
       }
       
@@ -198,7 +209,9 @@ class SystemAuditor {
       '/api/health',
       '/api/env-check',
       '/api/test-supabase',
-      '/api/test'
+      '/api/test',
+      '/api/auth/login',
+      '/api/auth/login-supabase'
     ];
     
     apiFiles.forEach(file => {
@@ -393,6 +406,7 @@ class SystemAuditor {
       '.next/server',
       '.next/standalone',
       'audit-reports',
+      'test-files',
       '*.pack',
       '*.pack.gz',
       '*.js.map',
@@ -400,7 +414,15 @@ class SystemAuditor {
       '*.html',
       '*.md',
       '*.txt',
-      '*.log'
+      '*.log',
+      '.env.production',
+      '.env.local',
+      '.env.example',
+      '.swp',
+      '.terraform',
+      'terraform',
+      '*.backup',
+      '*.tmp'
     ];
     
     const allFiles = this.getAllFiles(this.projectRoot);
@@ -431,7 +453,20 @@ class SystemAuditor {
             if (matches) {
               const hasRealSecret = matches.some(match => {
                 const value = match.split('=')[1]?.replace(/["']/g, '').trim();
-                return value && value.length > 5 && !value.includes('process.env') && !value.includes('NEXT_PUBLIC_');
+                // More sophisticated validation
+                return value && 
+                       value.length > 5 && 
+                       !value.includes('process.env') && 
+                       !value.includes('NEXT_PUBLIC_') &&
+                       !value.includes('your-') &&
+                       !value.includes('placeholder') &&
+                       !value.includes('example') &&
+                       !value.includes('test') &&
+                       !value.includes('demo') &&
+                       !value.includes('sample') &&
+                       !value.includes('default') &&
+                       !value.includes('localhost') &&
+                       !value.includes('127.0.0.1');
               });
               
               if (hasRealSecret) {
@@ -467,8 +502,8 @@ class SystemAuditor {
         
         const tsConfig = JSON.parse(tsConfigContent);
         
-        if (!tsConfig) {
-          this.addResult('failed', 'TypeScript', 'tsconfig.json is invalid');
+        if (!tsConfig || typeof tsConfig !== 'object') {
+          this.addResult('failed', 'TypeScript', 'tsconfig.json is invalid JSON');
           return;
         }
         

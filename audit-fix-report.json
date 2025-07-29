@@ -1,30 +1,9 @@
 {
-  "timestamp": "2025-07-29T22:15:37.046Z",
+  "timestamp": "2025-07-29T22:18:13.391Z",
   "summary": {
-    "fixesApplied": 5,
+    "fixesApplied": 0,
     "errors": 0
   },
-  "fixes": [
-    {
-      "description": "Added authentication to pages/api/attendance/lookup.ts",
-      "timestamp": "2025-07-29T22:15:37.025Z"
-    },
-    {
-      "description": "Added authentication to pages/api/attendance/weekly-pattern.ts",
-      "timestamp": "2025-07-29T22:15:37.028Z"
-    },
-    {
-      "description": "Added authentication to pages/api/auth/login-supabase.ts",
-      "timestamp": "2025-07-29T22:15:37.030Z"
-    },
-    {
-      "description": "Added authentication to pages/api/auth/login.ts",
-      "timestamp": "2025-07-29T22:15:37.033Z"
-    },
-    {
-      "description": "Added ProtectedRoute to pages/index.tsx",
-      "timestamp": "2025-07-29T22:15:37.042Z"
-    }
-  ],
+  "fixes": [],
   "errors": []
 }
