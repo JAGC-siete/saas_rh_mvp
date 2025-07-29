@@ -94,11 +94,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // 7. Retornar feedback
   return res.status(200).json({
     message: "Attendance lookup successful",
-    data: {
-      employee: { id: employee.id, name: employee.name, dni: employee.dni },
-      schedule: { start: startTime, end: endTime },
-      status,
-      gamification
-    }
+    employee: {
+      id: employee.id,
+      name: employee.name,
+      dni: employee.dni,
+      position: 'Empleado',
+      company_name: 'Mi Empresa'
+    },
+    attendance: {
+      hasCheckedIn: false,
+      hasCheckedOut: false,
+      checkInTime: null,
+      checkOutTime: null
+    },
+    schedule: { start: startTime, end: endTime },
+    status,
+    gamification
   })
 }

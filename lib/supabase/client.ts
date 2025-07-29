@@ -5,7 +5,12 @@ const createDummyClient = () => ({
   auth: {
     getSession: () => Promise.resolve({ data: { session: null }, error: null }),
     onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
-    signOut: () => Promise.resolve({ error: null })
+    signOut: () => Promise.resolve({ error: null }),
+    signInWithPassword: () => Promise.resolve({ data: { user: null, session: null }, error: { message: 'Supabase not configured' } }),
+    signUp: () => Promise.resolve({ data: { user: null, session: null }, error: { message: 'Supabase not configured' } }),
+    resetPasswordForEmail: () => Promise.resolve({ error: null }),
+    updateUser: () => Promise.resolve({ data: { user: null }, error: null }),
+    getUser: () => Promise.resolve({ data: { user: null }, error: null })
   },
   from: () => ({
     select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: null, error: null }) }) }),
@@ -16,13 +21,13 @@ const createDummyClient = () => ({
 })
 
 export function createClient() {
-  // Check for environment variables
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  // Check for environment variables in browser
+  const url = typeof window !== 'undefined' ? window.__NEXT_DATA__?.props?.supabaseUrl : process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = typeof window !== 'undefined' ? window.__NEXT_DATA__?.props?.supabaseKey : process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-  if (!url || !key) {
-    return createDummyClient()
-  }
+  // Fallback to direct env vars
+  const supabaseUrl = url || 'https://fwyxmovfrzauebiqxchz.supabase.co'
+  const supabaseKey = key || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ3eXhtb3ZmcnphdWViaXF4Y2h6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIxODk5MjEsImV4cCI6MjA2Nzc2NTkyMX0.pXArDqHGA4yjprTqJfsNQXwzS-WLz6NCK5QRbLAyYmA'
 
-  return createBrowserClient(url, key)
+  return createBrowserClient(supabaseUrl, supabaseKey)
 }
