@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 
 // These will be your environment variables
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 // Create a dummy client for build time if variables are missing
 const createDummyClient = () => ({
@@ -26,7 +26,7 @@ const createDummyClient = () => ({
 
 // Client for browser usage
 export const supabase = supabaseUrl && supabaseAnonKey 
-  ? createClient(supabaseUrl!, supabaseAnonKey!, {
+  ? createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         autoRefreshToken: true,
         persistSession: true,
