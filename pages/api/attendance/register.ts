@@ -142,7 +142,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
 
     // PASO 6: Registrar asistencia
-    const today = now.toISOString().split('T')[0]
+    // Usar zona horaria de Honduras (UTC-6)
+    const hondurasTime = new Date(now.getTime() - (6 * 60 * 60 * 1000)) // UTC-6
+    const today = hondurasTime.toISOString().split('T')[0]
+    console.log('📅 Fecha Honduras para registro:', today)
+    
     const { data: existingRecord, error: attError } = await supabase
       .from('attendance_records')
       .select('*')
