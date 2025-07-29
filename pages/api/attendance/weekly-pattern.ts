@@ -1,142 +1,74 @@
 
-import { createAdminClient } from '../../../lib/supabase/server'
-
-export default async function handler(req, res) {
-  // Authentication check
-  const supabase = createAdminClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  
-  if (!user) {
-    return res.status(401).json({ error: 'Unauthorized' })
-  }
-
-  // Your existing logic here
-  try {
-    import { NextApiRequest, NextApiResponse } from 'next'
+import { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient } from '../../../lib/supabase/server'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', ['POST'])
+  if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
+  const supabase = createAdminClient()
+  const { employeeId } = req.query
+
+  if (!employeeId) {
+    return res.status(400).json({ error: 'Employee ID is required' })
+  }
+
   try {
-    const { employeeId, startDate } = req.body
+    // Get attendance records for the last 7 days
+    const sevenDaysAgo = new Date()
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
-    if (!employeeId || !startDate) {
-      return res.status(400).json({ error: 'employeeId and startDate are required' })
-    }
-
-    // Use admin client for pattern analysis
-    const supabase = createAdminClient()
-
-    // Calculate end of week (6 days after start)
-    const endDate = new Date(startDate)
-    endDate.setDate(endDate.getDate() + 6)
-    const endDateStr = endDate.toISOString().split('T')[0]
-
-    // Get attendance records for the week
-    const { data: attendanceRecords, error } = await supabase
+    const { data: records, error } = await supabase
       .from('attendance_records')
-      .select(`
-        id,
-        date,
-        check_in,
-        expected_check_in,
-        late_minutes,
-        status,
-        employee_id
-      `)
+      .select('*')
       .eq('employee_id', employeeId)
-      .gte('date', startDate)
-      .lte('date', endDateStr)
-      .order('date', { ascending: true })
+      .gte('created_at', sevenDaysAgo.toISOString())
+      .order('created_at', { ascending: true })
 
     if (error) {
-      console.error('Database error:', error)
-      return res.status(500).json({ error: 'Error fetching attendance records' })
+      console.error('Error fetching attendance records:', error)
+      return res.status(500).json({ error: 'Failed to fetch attendance records' })
     }
 
-    // Get employee work schedule separately to avoid relationship conflicts
-    const { data: employee, error: empError } = await supabase
-      .from('employees')
-      .select('work_schedule_id')
-      .eq('id', employeeId)
-      .single()
+    // Group records by day
+    const dailyPatterns = records?.reduce((acc, record) => {
+      const date = new Date(record.created_at).toDateString()
+      if (!acc[date]) {
+        acc[date] = []
+      }
+      acc[date].push(record)
+      return acc
+    }, {} as Record<string, any[]>) || {}
 
-    if (empError || !employee?.work_schedule_id) {
-      console.error('Employee or work schedule not found', empError)
-      return res.status(500).json({ error: 'Employee work schedule not found' })
-    }
+    // Analyze patterns
+    const patternAnalysis = Object.entries(dailyPatterns).map(([date, dayRecords]) => {
+      const checkIn = dayRecords.find(r => r.type === 'check_in')
+      const checkOut = dayRecords.find(r => r.type === 'check_out')
+      
+      return {
+        date,
+        checkInTime: checkIn?.created_at || null,
+        checkOutTime: checkOut?.created_at || null,
+        status: checkIn?.status || 'No check-in',
+        totalHours: checkIn && checkOut ? 
+          (new Date(checkOut.created_at).getTime() - new Date(checkIn.created_at).getTime()) / (1000 * 60 * 60) : 0
+      }
+    })
 
-    const { data: workSchedule, error: schedError } = await supabase
-      .from('work_schedules')
-      .select('*')
-      .eq('id', employee.work_schedule_id)
-      .single()
-
-    if (schedError || !workSchedule) {
-      console.error('Work schedule not found', schedError)
-      return res.status(500).json({ error: 'Work schedule not found' })
-    }
-
-    // Analyze punctuality patterns
-    let lateDays = 0
-    let earlyDays = 0
-    let onTimeDays = 0
-    const totalDays = attendanceRecords?.length || 0
-
-    if (attendanceRecords && attendanceRecords.length > 0) {
-      attendanceRecords.forEach(record => {
-        if (!record.check_in || !record.expected_check_in) return
-
-        const checkInTime = new Date(record.check_in)
-        const checkInTimeStr = checkInTime.toTimeString().slice(0, 5)
-        const expectedTime = record.expected_check_in
-
-        // Calculate punctuality
-        const [checkHour, checkMin] = checkInTimeStr.split(':').map(Number)
-        const [expectedHour, expectedMin] = expectedTime.split(':').map(Number)
-        
-        const checkMinutes = checkHour * 60 + checkMin
-        const expectedMinutes = expectedHour * 60 + expectedMin
-        const minutesDiff = checkMinutes - expectedMinutes
-
-        if (minutesDiff <= -5) {
-          earlyDays++
-        } else if (minutesDiff <= 5) {
-          onTimeDays++
-        } else {
-          lateDays++
-        }
-      })
-    }
-
-    const weeklyPattern = {
-      lateDays,
-      earlyDays,
-      onTimeDays,
-      totalDays,
-      // Additional metrics for advanced analysis
-      averageLateMinutes: attendanceRecords?.reduce((sum, record) => {
-        return sum + (record.late_minutes || 0)
-      }, 0) / Math.max(totalDays, 1),
-      consistencyScore: totalDays > 0 ? (earlyDays + onTimeDays) / totalDays : 0
-    }
-
-    return res.status(200).json(weeklyPattern)
+    return res.status(200).json({
+      employeeId,
+      weeklyPattern: patternAnalysis,
+      summary: {
+        totalDays: patternAnalysis.length,
+        averageHours: patternAnalysis.reduce((sum, day) => sum + day.totalHours, 0) / patternAnalysis.length || 0,
+        onTimeDays: patternAnalysis.filter(day => day.status === 'A tiempo').length,
+        lateDays: patternAnalysis.filter(day => day.status === 'Tarde').length
+      }
+    })
 
   } catch (error) {
     console.error('Weekly pattern analysis error:', error)
-    return res.status(500).json({ error: 'Internal server error' })
-  }
-}
-
-    
-    return res.status(200).json({ message: 'Success' })
-  } catch (error) {
-    console.error('API Error:', error)
     return res.status(500).json({ error: 'Internal server error' })
   }
 }

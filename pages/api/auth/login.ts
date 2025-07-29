@@ -1,22 +1,15 @@
 
-import { createAdminClient } from '../../../lib/supabase/server'
-
-export default async function handler(req, res) {
-  // Authentication check
-  const supabase = createAdminClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  
-  if (!user) {
-    return res.status(401).json({ error: 'Unauthorized' })
-  }
-
-  // Your existing logic here
-  try {
-    import { NextApiRequest, NextApiResponse } from 'next'
+import { NextApiRequest, NextApiResponse } from 'next'
 import jwt from 'jsonwebtoken'
 import { createAdminClient } from '../../../lib/supabase/server'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-here'
+const JWT_SECRET = process.env.JWT_SECRET
+
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required')
+}
+
+const jwtSecret = JWT_SECRET as string
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -24,40 +17,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Para rutas de login, no validamos autenticación previa
-    // pero sí validamos que sea una petición válida
     const { email, password } = req.body
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email y contraseña son requeridos' })
     }
 
-    // Usar Supabase Auth para autenticación (con anon key para login)
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    
-    if (!supabaseUrl || !supabaseKey) {
-      return res.status(500).json({ error: 'Configuración de Supabase incompleta' })
-    }
-    
-    const { createClient } = await import('@supabase/supabase-js')
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    // Usar Supabase Auth para autenticación
+    const supabase = createAdminClient()
     
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email,
       password
     })
 
-    if (authError) {
-      console.error('Supabase Auth Error:', authError)
-      return res.status(401).json({ 
-        error: 'Credenciales inválidas',
-        debug: process.env.NODE_ENV === 'development' ? authError.message : undefined
-      })
-    }
-
-    if (!authData.user) {
-      console.error('No user data returned from Supabase')
+    if (authError || !authData.user) {
       return res.status(401).json({ error: 'Credenciales inválidas' })
     }
 
@@ -95,7 +69,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         role: userRole,
         supabaseToken: authData.session?.access_token
       },
-      JWT_SECRET,
+      jwtSecret,
       { expiresIn: '24h' }
     )
 
@@ -112,13 +86,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } catch (error) {
     console.error('Login error:', error)
     return res.status(500).json({ error: 'Error interno del servidor' })
-  }
-}
-
-    
-    return res.status(200).json({ message: 'Success' })
-  } catch (error) {
-    console.error('API Error:', error)
-    return res.status(500).json({ error: 'Internal server error' })
   }
 }

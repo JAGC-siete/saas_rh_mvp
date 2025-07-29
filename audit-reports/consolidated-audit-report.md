@@ -9,35 +9,25 @@ This report consolidates the results from both the system architecture audit and
 ## System Architecture Audit Results
 
 ### Summary
-- Total Checks: 103
-- Passed: 54
-- Failed: 39
+- Total Checks: 91
+- Passed: 57
+- Failed: 22
 - Warnings: 0
-- Info: 10
+- Info: 12
 
 ### Failed Checks
-- **Package.json**: Error reading package.json: Cannot read properties of undefined (reading 'push')
-- **Security**: Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/.env.production
-- **Security**: Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/bases_de_datos/.server.js.swp
-- **Security**: Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/check-attendance-records.js
-- **Security**: Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/check_db.js
-- **Security**: Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/check_tables.sh
 - **Security**: Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/components/AttendanceManager.tsx
 - **Security**: Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/components/AuthForm.tsx
 - **Security**: Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/components/CompanySettings.tsx
 - **Security**: Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/components/EmployeeManager.tsx
 - **Security**: Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/components/PayrollManager.tsx
 - **Security**: Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/components/ReportsAndAnalytics.tsx
-- **Security**: Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/extract-all-attendance.js
-- **Security**: Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/extract-sample-attendance.js
-- **Security**: Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/import-attendance-to-supabase.js
 - **Security**: Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/lib/supabase/client.ts
 - **Security**: Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/lib/supabase/client.ts
 - **Security**: Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/lib/supabase.ts
 - **Security**: Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/lib/supabase.ts
 - **Security**: Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/nomina/server.js
 - **Security**: Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/pages/index.tsx
-- **Security**: Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/run_migration.sh
 - **Security**: Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/scripts/audit-supabase.js
 - **Security**: Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/scripts/check-env.js
 - **Security**: Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/scripts/check-env.js
@@ -48,13 +38,6 @@ This report consolidates the results from both the system architecture audit and
 - **Security**: Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/supabase/config.toml
 - **Security**: Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/supabase/config.toml
 - **Security**: Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/supabase/config.toml
-- **Security**: Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/terraform/.terraform/modules/eks.eks.kms/examples/complete/main.tf
-- **Security**: Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/test-payroll-integration.js
-- **Security**: Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/test-supabase-connection.js
-- **Security**: Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/test-user-profiles-queries.js
-- **Security**: Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/verify-payroll-integration.js
-- **Security**: Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/verify-user-profiles-table.js
-- **TypeScript**: Error reading tsconfig.json: Cannot read properties of undefined (reading 'push')
 
 ### Warnings
 
