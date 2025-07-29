@@ -21,13 +21,9 @@ const createDummyClient = () => ({
 })
 
 export function createClient() {
-  // Check for environment variables in browser
-  const url = typeof window !== 'undefined' ? window.__NEXT_DATA__?.props?.supabaseUrl : process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = typeof window !== 'undefined' ? window.__NEXT_DATA__?.props?.supabaseKey : process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-  // Fallback to direct env vars
-  const supabaseUrl = url || 'https://fwyxmovfrzauebiqxchz.supabase.co'
-  const supabaseKey = key || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ3eXhtb3ZmcnphdWViaXF4Y2h6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIxODk5MjEsImV4cCI6MjA2Nzc2NTkyMX0.pXArDqHGA4yjprTqJfsNQXwzS-WLz6NCK5QRbLAyYmA'
+  // Use the correct environment variables for browser
+  const supabaseUrl = 'https://fwyxmovfrzauebiqxchz.supabase.co'
+  const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ3eXhtb3ZmcnphdWViaXF4Y2h6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIxODk5MjEsImV4cCI6MjA2Nzc2NTkyMX0.pXArDqHGA4yjprTqJfsNQXwzS-WLz6NCK5QRbLAyYmA'
 
   return createBrowserClient(supabaseUrl, supabaseKey)
 }

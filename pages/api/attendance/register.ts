@@ -8,16 +8,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { last5, dni, company_id, justification } = req.body
+    const { last5, dni, justification } = req.body
     
     // Validación de parámetros de entrada
     if (!last5 && !dni) {
       console.error('Parámetros faltantes: dni o last5')
       return res.status(400).json({ error: 'Debe enviar dni o last5' })
-    }
-    if (!company_id) {
-      console.error('company_id faltante en request')
-      return res.status(400).json({ error: 'Falta company_id (multi-tenant)' })
     }
 
     const supabase = createAdminClient()
@@ -37,12 +33,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     console.log('✅ Todas las tablas requeridas están disponibles')
 
-    // PASO 2: Validar existencia del empleado
-    console.log('🔍 Buscando empleado...', { dni, last5, company_id })
+    // PASO 2: Validar existencia del empleado (público, sin company_id)
+    console.log('🔍 Buscando empleado...', { dni, last5 })
     let employeeQuery = supabase
       .from('employees')
-      .select('id, work_schedule_id, dni, name, status, position')
-      .eq('company_id', company_id)
+      .select('id, work_schedule_id, dni, name, status, position, company_id')
       .eq('status', 'active')
 
     if (dni) {
@@ -63,7 +58,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (!employees || employees.length === 0) {
-      console.error('❌ Empleado no encontrado:', { dni, last5, company_id })
+      console.error('❌ Empleado no encontrado:', { dni, last5 })
       return res.status(404).json({ 
         error: 'Empleado no registrado',
         message: 'El empleado no existe en el sistema o no está activo'
@@ -71,7 +66,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (employees.length > 1) {
-      console.error('❌ Múltiples empleados encontrados:', { dni, last5, company_id, count: employees.length })
+      console.error('❌ Múltiples empleados encontrados:', { dni, last5, count: employees.length })
       return res.status(400).json({ 
         error: 'Múltiples empleados encontrados',
         message: 'Contacte a Recursos Humanos para resolver la duplicación'
