@@ -1,0 +1,643 @@
+{
+  "timestamp": "2025-07-29T22:15:42.995Z",
+  "summary": {
+    "total": 104,
+    "passed": 54,
+    "failed": 40,
+    "warnings": 0,
+    "info": 10
+  },
+  "results": {
+    "passed": [
+      {
+        "category": "File Structure",
+        "message": "Directory exists: pages",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.403Z"
+      },
+      {
+        "category": "File Structure",
+        "message": "Directory exists: pages/api",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.403Z"
+      },
+      {
+        "category": "File Structure",
+        "message": "Directory exists: components",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.403Z"
+      },
+      {
+        "category": "File Structure",
+        "message": "Directory exists: lib",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.403Z"
+      },
+      {
+        "category": "File Structure",
+        "message": "Directory exists: lib/supabase",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.403Z"
+      },
+      {
+        "category": "File Structure",
+        "message": "Directory exists: supabase",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.403Z"
+      },
+      {
+        "category": "File Structure",
+        "message": "Directory exists: supabase/migrations",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.403Z"
+      },
+      {
+        "category": "File Structure",
+        "message": "Directory exists: styles",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.403Z"
+      },
+      {
+        "category": "File Structure",
+        "message": "File exists: package.json",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.403Z"
+      },
+      {
+        "category": "File Structure",
+        "message": "File exists: next.config.js",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.403Z"
+      },
+      {
+        "category": "File Structure",
+        "message": "File exists: tailwind.config.js",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.403Z"
+      },
+      {
+        "category": "File Structure",
+        "message": "File exists: tsconfig.json",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.403Z"
+      },
+      {
+        "category": "File Structure",
+        "message": "File exists: middleware.ts",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.403Z"
+      },
+      {
+        "category": "File Structure",
+        "message": "File exists: lib/supabase/client.ts",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.403Z"
+      },
+      {
+        "category": "File Structure",
+        "message": "File exists: lib/supabase/server.ts",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.403Z"
+      },
+      {
+        "category": "File Structure",
+        "message": "File exists: components/ProtectedRoute.tsx",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.403Z"
+      },
+      {
+        "category": "Environment",
+        "message": "Environment variable found: NEXT_PUBLIC_SUPABASE_URL",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.404Z"
+      },
+      {
+        "category": "Environment",
+        "message": "Environment variable found: NEXT_PUBLIC_SUPABASE_ANON_KEY",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.404Z"
+      },
+      {
+        "category": "Environment",
+        "message": "Environment variable found: SUPABASE_SERVICE_ROLE_KEY",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.404Z"
+      },
+      {
+        "category": "Dependencies",
+        "message": "Required dependency found: next",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.404Z"
+      },
+      {
+        "category": "Dependencies",
+        "message": "Required dependency found: react",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.404Z"
+      },
+      {
+        "category": "Dependencies",
+        "message": "Required dependency found: @supabase/supabase-js",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.404Z"
+      },
+      {
+        "category": "API Protection",
+        "message": "Authentication check found in: pages/api/attendance/lookup.ts",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.409Z"
+      },
+      {
+        "category": "API Protection",
+        "message": "Authentication check found in: pages/api/attendance/weekly-pattern.ts",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.410Z"
+      },
+      {
+        "category": "API Protection",
+        "message": "Authentication check found in: pages/api/attendance.ts",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.410Z"
+      },
+      {
+        "category": "API Protection",
+        "message": "Authentication check found in: pages/api/auth/login-supabase.ts",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.410Z"
+      },
+      {
+        "category": "API Protection",
+        "message": "Authentication check found in: pages/api/auth/login.ts",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.410Z"
+      },
+      {
+        "category": "API Protection",
+        "message": "Authentication check found in: pages/api/auth/validate.ts",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.410Z"
+      },
+      {
+        "category": "API Protection",
+        "message": "Authentication check found in: pages/api/payroll/calculate.ts",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.410Z"
+      },
+      {
+        "category": "API Protection",
+        "message": "Authentication check found in: pages/api/payroll/export.ts",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.410Z"
+      },
+      {
+        "category": "API Protection",
+        "message": "Authentication check found in: pages/api/payroll/records.ts",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.411Z"
+      },
+      {
+        "category": "API Protection",
+        "message": "Authentication check found in: pages/api/payroll.ts",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.411Z"
+      },
+      {
+        "category": "Route Protection",
+        "message": "ProtectedRoute found in: pages/asistencia-nueva.tsx",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.416Z"
+      },
+      {
+        "category": "Route Protection",
+        "message": "ProtectedRoute found in: pages/attendance/index.tsx",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.416Z"
+      },
+      {
+        "category": "Route Protection",
+        "message": "ProtectedRoute found in: pages/attendance-smart.tsx",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.416Z"
+      },
+      {
+        "category": "Route Protection",
+        "message": "ProtectedRoute found in: pages/dashboard.tsx",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.416Z"
+      },
+      {
+        "category": "Route Protection",
+        "message": "ProtectedRoute found in: pages/departments/index.tsx",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.416Z"
+      },
+      {
+        "category": "Route Protection",
+        "message": "ProtectedRoute found in: pages/departments.tsx",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.416Z"
+      },
+      {
+        "category": "Route Protection",
+        "message": "ProtectedRoute found in: pages/employees/index.tsx",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.416Z"
+      },
+      {
+        "category": "Route Protection",
+        "message": "ProtectedRoute found in: pages/employees.tsx",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.419Z"
+      },
+      {
+        "category": "Route Protection",
+        "message": "ProtectedRoute found in: pages/index.tsx",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.419Z"
+      },
+      {
+        "category": "Route Protection",
+        "message": "ProtectedRoute found in: pages/leave/index.tsx",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.420Z"
+      },
+      {
+        "category": "Route Protection",
+        "message": "ProtectedRoute found in: pages/leaves.tsx",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.420Z"
+      },
+      {
+        "category": "Route Protection",
+        "message": "ProtectedRoute found in: pages/payroll/index.tsx",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.420Z"
+      },
+      {
+        "category": "Route Protection",
+        "message": "ProtectedRoute found in: pages/reports/index.tsx",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.420Z"
+      },
+      {
+        "category": "Route Protection",
+        "message": "ProtectedRoute found in: pages/settings/index.tsx",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.420Z"
+      },
+      {
+        "category": "Supabase Config",
+        "message": "Proper Supabase configuration in: client.ts",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.421Z"
+      },
+      {
+        "category": "Supabase Config",
+        "message": "Proper Supabase configuration in: server.ts",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.422Z"
+      },
+      {
+        "category": "Database Migrations",
+        "message": "Found 4 migration files",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.423Z"
+      },
+      {
+        "category": "Database Migrations",
+        "message": "RLS policies found in: 20250723000001_initial_hr_schema.sql",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.423Z"
+      },
+      {
+        "category": "Database Migrations",
+        "message": "RLS policies found in: 20250723000003_gamification_system.sql",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.424Z"
+      },
+      {
+        "category": "Multi-tenant",
+        "message": "Company ID usage found in components",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.428Z"
+      },
+      {
+        "category": "Multi-tenant",
+        "message": "Company ID filtering found in APIs",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.430Z"
+      },
+      {
+        "category": "TypeScript",
+        "message": "Strict mode enabled",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.994Z"
+      }
+    ],
+    "failed": [
+      {
+        "category": "Package.json",
+        "message": "Error reading package.json: Cannot read properties of undefined (reading 'push')",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.405Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/.env.production",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.834Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/bases_de_datos/.server.js.swp",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.854Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/check-attendance-records.js",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.858Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/check_db.js",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.859Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/check_tables.sh",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.861Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/components/AttendanceManager.tsx",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.862Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/components/AuthForm.tsx",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.862Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/components/CompanySettings.tsx",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.862Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/components/EmployeeManager.tsx",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.863Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/components/PayrollManager.tsx",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.864Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/components/ReportsAndAnalytics.tsx",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.865Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/extract-all-attendance.js",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.874Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/extract-sample-attendance.js",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.875Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/import-attendance-to-supabase.js",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.877Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/lib/supabase/client.ts",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.882Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/lib/supabase/client.ts",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.882Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/lib/supabase.ts",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.883Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/lib/supabase.ts",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.883Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/nomina/server.js",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.910Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/pages/index.tsx",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.917Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/pages/index.tsx.backup",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.918Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/run_migration.sh",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.952Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/scripts/audit-supabase.js",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.953Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/scripts/check-env.js",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.954Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/scripts/check-env.js",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.954Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/scripts/pre-commit.sh",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.958Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/scripts/pre-commit.sh",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.958Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/scripts/setup-railway-env.sh",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.960Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/scripts/setup-railway-env.sh",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.960Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/supabase/config.toml",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.964Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/supabase/config.toml",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.964Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/supabase/config.toml",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.965Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/terraform/.terraform/modules/eks.eks.kms/examples/complete/main.tf",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.972Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/test-payroll-integration.js",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.979Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/test-supabase-connection.js",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.979Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/test-user-profiles-queries.js",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.981Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/verify-payroll-integration.js",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.990Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/verify-user-profiles-table.js",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.993Z"
+      },
+      {
+        "category": "TypeScript",
+        "message": "Error reading tsconfig.json: Cannot read properties of undefined (reading 'push')",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:42.994Z"
+      }
+    ],
+    "warnings": [],
+    "info": [
+      {
+        "category": "API Protection",
+        "message": "Public API detected: pages/api/attendance/debug.ts",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.408Z"
+      },
+      {
+        "category": "API Protection",
+        "message": "Public API detected: pages/api/attendance/health.ts",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.409Z"
+      },
+      {
+        "category": "API Protection",
+        "message": "Public API detected: pages/api/attendance/register.ts",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.409Z"
+      },
+      {
+        "category": "API Protection",
+        "message": "Public API detected: pages/api/env-check.ts",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.410Z"
+      },
+      {
+        "category": "API Protection",
+        "message": "Public API detected: pages/api/health.ts",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.410Z"
+      },
+      {
+        "category": "API Protection",
+        "message": "Public API detected: pages/api/test-supabase.ts",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.411Z"
+      },
+      {
+        "category": "API Protection",
+        "message": "Public API detected: pages/api/test.ts",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.411Z"
+      },
+      {
+        "category": "Route Protection",
+        "message": "Public page detected: pages/login.tsx",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.420Z"
+      },
+      {
+        "category": "Route Protection",
+        "message": "Public page detected: pages/registrodeasistencia.tsx",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.420Z"
+      },
+      {
+        "category": "Route Protection",
+        "message": "Public page detected: pages/unauthorized.tsx",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:40.420Z"
+      }
+    ]
+  }
+}

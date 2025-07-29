@@ -1,0 +1,312 @@
+{
+  "timestamp": "2025-07-29T22:15:33.348Z",
+  "analysis": {
+    "critical": [
+      {
+        "category": "API Protection",
+        "message": "No authentication check in private API: pages/api/attendance/lookup.ts",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:18.562Z"
+      },
+      {
+        "category": "API Protection",
+        "message": "No authentication check in private API: pages/api/attendance/weekly-pattern.ts",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:18.565Z"
+      },
+      {
+        "category": "API Protection",
+        "message": "No authentication check in private API: pages/api/auth/login-supabase.ts",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:18.566Z"
+      },
+      {
+        "category": "API Protection",
+        "message": "No authentication check in private API: pages/api/auth/login.ts",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:18.567Z"
+      },
+      {
+        "category": "Route Protection",
+        "message": "No ProtectedRoute in private page: pages/index.tsx",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:18.582Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/.env.production",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:21.257Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/bases_de_datos/.server.js.swp",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:21.278Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/check-attendance-records.js",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:21.282Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/check_db.js",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:21.283Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/check_tables.sh",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:21.286Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/components/AttendanceManager.tsx",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:21.286Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/components/AuthForm.tsx",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:21.286Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/components/CompanySettings.tsx",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:21.286Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/components/EmployeeManager.tsx",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:21.287Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/components/PayrollManager.tsx",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:21.287Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/components/ReportsAndAnalytics.tsx",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:21.287Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/extract-all-attendance.js",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:21.294Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/extract-sample-attendance.js",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:21.295Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/import-attendance-to-supabase.js",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:21.296Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/lib/supabase/client.ts",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:21.302Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/lib/supabase/client.ts",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:21.302Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/lib/supabase.ts",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:21.303Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/lib/supabase.ts",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:21.303Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/nomina/server.js",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:21.328Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/pages/index.tsx",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:21.333Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/run_migration.sh",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:21.360Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/scripts/audit-supabase.js",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:21.362Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/scripts/check-env.js",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:21.363Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/scripts/check-env.js",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:21.363Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/scripts/pre-commit.sh",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:21.368Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/scripts/pre-commit.sh",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:21.368Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/scripts/setup-railway-env.sh",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:21.370Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/scripts/setup-railway-env.sh",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:21.370Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/supabase/config.toml",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:21.389Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/supabase/config.toml",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:21.393Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/supabase/config.toml",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:21.394Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/terraform/.terraform/modules/eks.eks.kms/examples/complete/main.tf",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:21.436Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/test-payroll-integration.js",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:21.441Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/test-supabase-connection.js",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:21.442Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/test-user-profiles-queries.js",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:21.443Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/verify-payroll-integration.js",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:21.451Z"
+      },
+      {
+        "category": "Security",
+        "message": "Potential hardcoded secret in: /Users/jorgearturo/saas-proyecto/verify-user-profiles-table.js",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:21.453Z"
+      }
+    ],
+    "high": [
+      {
+        "category": "Package.json",
+        "message": "Error reading package.json: Cannot read properties of undefined (reading 'push')",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:18.556Z"
+      },
+      {
+        "category": "TypeScript",
+        "message": "Error reading tsconfig.json: Cannot read properties of undefined (reading 'push')",
+        "details": null,
+        "timestamp": "2025-07-29T22:15:21.454Z"
+      }
+    ],
+    "medium": [],
+    "low": [],
+    "falsePositives": [],
+    "recommendations": [
+      {
+        "priority": "CRITICAL",
+        "title": "Fix Security and Authentication Issues",
+        "description": "These issues must be addressed immediately as they pose security risks.",
+        "actions": [
+          "Run: npm run audit:fix to automatically fix common issues",
+          "Add authentication to unprotected APIs",
+          "Add ProtectedRoute to unprotected pages",
+          "Review and fix any hardcoded secrets",
+          "Test authentication flow thoroughly"
+        ],
+        "count": 42
+      },
+      {
+        "priority": "HIGH",
+        "title": "Fix Configuration Issues",
+        "description": "These issues affect the build and development process.",
+        "actions": [
+          "Fix package.json configuration",
+          "Update TypeScript configuration",
+          "Install missing dependencies",
+          "Verify environment variables"
+        ],
+        "count": 2
+      }
+    ]
+  },
+  "summary": {
+    "total": 44,
+    "critical": 42,
+    "high": 2,
+    "medium": 0,
+    "low": 0,
+    "falsePositives": 0,
+    "realIssues": 44
+  }
+}

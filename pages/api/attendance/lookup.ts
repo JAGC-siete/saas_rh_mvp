@@ -1,4 +1,18 @@
-import type { NextApiRequest, NextApiResponse } from 'next'
+
+import { createAdminClient } from '../../../lib/supabase/server'
+
+export default async function handler(req, res) {
+  // Authentication check
+  const supabase = createAdminClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (!user) {
+    return res.status(401).json({ error: 'Unauthorized' })
+  }
+
+  // Your existing logic here
+  try {
+    import type { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient } from '../../../lib/supabase/server'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -111,4 +125,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     status,
     gamification
   })
+}
+
+    
+    return res.status(200).json({ message: 'Success' })
+  } catch (error) {
+    console.error('API Error:', error)
+    return res.status(500).json({ error: 'Internal server error' })
+  }
 }

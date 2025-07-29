@@ -1,4 +1,13 @@
-import { useState, useEffect } from 'react'
+
+import { ProtectedRoute } from '../components/ProtectedRoute'
+
+export default function index() {
+  return (
+    <ProtectedRoute allowedRoles={['company_admin', 'hr_manager', 'manager', 'employee']}>
+      {/* Your existing content here */}
+      <div>
+        <h1>Page Content</h1>
+        import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
@@ -186,4 +195,9 @@ export const getServerSideProps = async (ctx: any) => {
   return {
     props: {}
   }
+}
+
+      </div>
+    </ProtectedRoute>
+  )
 }
