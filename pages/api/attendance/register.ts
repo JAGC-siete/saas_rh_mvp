@@ -235,41 +235,84 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    // PASO 7: Feedback gamificado
+    // PASO 7: Feedback gamificado - Análisis semanal del mes actual
     console.log('🎮 Generando feedback gamificado...')
-    const { data: recentRecords, error: recError } = await supabase
+    
+    // Obtener el primer día del mes actual
+    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    
+    // Obtener registros del mes actual
+    const { data: monthlyRecords, error: monthlyError } = await supabase
       .from('attendance_records')
-      .select('id, status, created_at')
+      .select('id, status, date, created_at')
       .eq('employee_id', employee.id)
-      .order('created_at', { ascending: false })
-      .limit(10)
+      .gte('date', firstDayOfMonth.toISOString().split('T')[0])
+      .lte('date', lastDayOfMonth.toISOString().split('T')[0])
+      .order('date', { ascending: true })
 
-    if (recError) {
-      console.error('❌ Error consultando historial de asistencia:', recError)
+    if (monthlyError) {
+      console.error('❌ Error consultando historial mensual de asistencia:', monthlyError)
     }
 
     let gamification = ''
-    if (recentRecords && recentRecords.length > 0) {
-      const lateCount = recentRecords.filter(r => r.status === 'late').length
-      const presentCount = recentRecords.filter(r => r.status === 'present').length
+    if (monthlyRecords && monthlyRecords.length > 0) {
+      // Agrupar por semana
+      const weeklyStats = new Map()
       
-      if (lateCount >= 3) {
-        gamification = '⚠️ Has llegado tarde varias veces. ¡Intenta mejorar!'
-      } else if (presentCount >= 5) {
-        gamification = '🏅 ¡Excelente asistencia! Sigue así.'
-      } else if (presentCount >= 3) {
-        gamification = '👍 Buena puntualidad. ¡Mantén el ritmo!'
+      monthlyRecords.forEach(record => {
+        const recordDate = new Date(record.date)
+        const weekNumber = Math.ceil((recordDate.getDate() + new Date(recordDate.getFullYear(), recordDate.getMonth(), 1).getDay()) / 7)
+        const weekKey = `${recordDate.getFullYear()}-${recordDate.getMonth() + 1}-W${weekNumber}`
+        
+        if (!weeklyStats.has(weekKey)) {
+          weeklyStats.set(weekKey, { late: 0, present: 0, total: 0 })
+        }
+        
+        const weekData = weeklyStats.get(weekKey)
+        weekData.total++
+        
+        if (record.status === 'late') {
+          weekData.late++
+        } else {
+          weekData.present++
+        }
+      })
+      
+      // Analizar patrones semanales
+      let weeksWithLateArrivals = 0
+      let weeksWithGoodAttendance = 0
+      
+      weeklyStats.forEach((weekData, weekKey) => {
+        if (weekData.late >= 3) {
+          weeksWithLateArrivals++
+        } else if (weekData.present >= 3) {
+          weeksWithGoodAttendance++
+        }
+      })
+      
+      // Generar feedback basado en patrones semanales
+      if (weeksWithLateArrivals >= 2) {
+        gamification = '⚠️ We noticed repeated tardiness this month. Please improve your punctuality.'
+      } else if (weeksWithLateArrivals === 1) {
+        gamification = '⚠️ You had one week with multiple late arrivals. Please be more punctual.'
+      } else if (weeksWithGoodAttendance >= 3) {
+        gamification = '🏆 Excellent consistency this month! Keep up the great work!'
+      } else if (weeksWithGoodAttendance >= 2) {
+        gamification = '👍 Good attendance pattern this month. Keep it up!'
+      } else if (weeksWithGoodAttendance >= 1) {
+        gamification = '✅ You had a good week. Try to maintain this consistency.'
       }
     }
 
-    // PASO 8: Mensaje final
+    // PASO 8: Mensaje final en inglés
     let message = ''
     if (status === 'Temprano') {
-      message = '🎉 ¡Felicidades! Llegaste temprano'
+      message = '🎉 You\'re an exemplary employee!'
     } else if (status === 'A tiempo') {
-      message = '✅ Entrada registrada a tiempo'
+      message = '✅ Great! You\'re on time.'
     } else {
-      message = '📝 Entrada tardía registrada'
+      message = '📝 Please be punctual. Let us know what happened.'
     }
 
     if (gamification) {
