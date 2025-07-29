@@ -24,7 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { periodo, quincena } = req.body
+    const { periodo, quincena, incluirDeducciones } = req.body
     if (!periodo || !quincena) {
       return res.status(400).json({ error: 'Periodo y quincena son requeridos' })
     }
@@ -40,7 +40,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const ultimoDia = new Date(year, month, 0).getDate()
     const fechaInicio = quincena === 1 ? `${periodo}-01` : `${periodo}-16`
     const fechaFin = quincena === 1 ? `${periodo}-15` : `${periodo}-${ultimoDia}`
-    const aplicarDeducciones = quincena === 2
+    // El admin puede forzar deducciones en cualquier quincena
+    const aplicarDeducciones = !!incluirDeducciones
 
     // Obtener empleados activos
     const { data: employees, error: empError } = await supabase
@@ -61,8 +62,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: 'Error obteniendo registros de asistencia' })
     }
 
-    // Calcular planilla
-    const planilla = employees.map(emp => {
+    // Filtrar empleados con al menos un día de asistencia completa
+    const empleadosConAsistencia = employees.filter(emp =>
+      attendanceRecords.some(record => record.employee_id === emp.id && record.check_in && record.check_out)
+    )
+
+    // Calcular planilla solo para empleados con asistencia
+    const planilla = empleadosConAsistencia.map(emp => {
       const registros = attendanceRecords.filter(record => 
         record.employee_id === emp.id && record.check_in && record.check_out
       )
@@ -111,7 +117,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Guardar en payroll_records (solo campos mínimos)
     const payrollRecords = planilla.map(item => ({
-      employee_id: employees.find(e => e.dni === item.id)?.id,
+      employee_id: empleadosConAsistencia.find(e => e.dni === item.id)?.id,
       period_start: fechaInicio,
       period_end: fechaFin,
       period_type: 'biweekly',
