@@ -178,6 +178,64 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: 'Error guardando nómina' })
     }
 
+    // Verificar si se solicita PDF
+    const acceptHeader = req.headers.accept || ''
+    if (acceptHeader.includes('application/pdf')) {
+      // Generar PDF
+      const PDFDocument = require('pdfkit')
+      const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 20 })
+      let buffers: Buffer[] = []
+
+      doc.on('data', (chunk: Buffer) => buffers.push(chunk))
+      doc.on('end', () => {
+        const pdf = Buffer.concat(buffers)
+        res.setHeader('Content-Type', 'application/pdf')
+        res.setHeader('Content-Disposition', `attachment; filename=planilla_${periodo}_q${quincena}.pdf`)
+        res.send(pdf)
+      })
+
+      doc.fontSize(14).text(`PLANILLA QUINCENAL - ${periodo} Q${quincena}`, { align: 'center' }).moveDown()
+      doc.fontSize(8)
+
+      // Encabezados
+      const headers = [
+        'Nombre', 'DNI', 'Banco', 'Cuenta', 'Salario Mensual', 'Días Trabajados', 'Total Devengado',
+        'IHSS', 'RAP', 'ISR', 'Total Deducciones', 'Neto'
+      ]
+      const colWidths = [100, 60, 60, 70, 70, 40, 70, 50, 50, 50, 70, 70]
+      const startX = 20
+      let y = 80
+      const rowHeight = 14
+
+      headers.forEach((h, i) => {
+        const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0)
+        doc.rect(x, y, colWidths[i], rowHeight).fillAndStroke('#e0e0e0', '#000')
+        doc.fillColor('#000').text(h, x + 2, y + 4, { width: colWidths[i] - 4 })
+      })
+      y += rowHeight
+
+      // Datos de empleados
+      planilla.forEach(row => {
+        const values = [
+          row.name, row.id, row.bank, row.bank_account, 
+          `L. ${row.monthly_salary.toFixed(2)}`, row.days_worked.toString(),
+          `L. ${row.total_earnings.toFixed(2)}`, `L. ${row.IHSS.toFixed(2)}`,
+          `L. ${row.RAP.toFixed(2)}`, `L. ${row.ISR.toFixed(2)}`,
+          `L. ${row.total_deductions.toFixed(2)}`, `L. ${row.total.toFixed(2)}`
+        ]
+        
+        values.forEach((val, i) => {
+          const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0)
+          doc.rect(x, y, colWidths[i], rowHeight).stroke()
+          doc.text(val.toString(), x + 2, y + 3, { width: colWidths[i] - 4 })
+        })
+        y += rowHeight
+      })
+
+      doc.end()
+      return
+    }
+
     return res.status(200).json({
       message: 'Nómina calculada exitosamente',
       periodo,

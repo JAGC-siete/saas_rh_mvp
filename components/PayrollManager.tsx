@@ -247,15 +247,22 @@ export default function PayrollManager() {
       const quincena = day === 1 ? 1 : 2
       
       // Hacer petición autenticada para obtener el PDF
-      const response = await fetch(`/api/payroll/export?periodo=${period}&quincena=${quincena}`, {
-        method: 'GET',
+      const response = await fetch(`/api/payroll/calculate`, {
+        method: 'POST',
         headers: {
-          'Content-Type': 'application/pdf',
+          'Content-Type': 'application/json',
+          'Accept': 'application/pdf'
         },
+        body: JSON.stringify({
+          periodo: period,
+          quincena: quincena,
+          incluirDeducciones: true
+        })
       })
 
       if (!response.ok) {
-        throw new Error(`Error: ${response.status} ${response.statusText}`)
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(`Error: ${response.status} ${response.statusText} - ${errorData.error || ''}`)
       }
 
       // Obtener el blob del PDF
