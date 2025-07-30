@@ -11,19 +11,25 @@ export function middleware(request: NextRequest) {
   if (pathname.startsWith('/api/')) {
     console.log(`[Middleware] API route: ${pathname}`)
     
-    // Add CORS headers for API routes
-    const response = NextResponse.next()
-    response.headers.set('Access-Control-Allow-Origin', '*')
-    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+    // Handle CORS preflight requests
+    if (request.method === 'OPTIONS') {
+      const response = new NextResponse(null, { status: 200 })
+      response.headers.set('Access-Control-Allow-Origin', '*')
+      response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+      response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-nextjs-data')
+      response.headers.set('Access-Control-Allow-Credentials', 'true')
+      return response
+    }
     
-    return response
+    // For API routes, let them handle their own authentication
+    return NextResponse.next()
   }
 
   // Define public routes (no authentication required)
   const publicRoutes = [
     '/',
     '/login',
+    '/auth',
     '/registrodeasistencia',
     '/api/attendance/lookup',
     '/api/attendance/register',
