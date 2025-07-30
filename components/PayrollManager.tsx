@@ -129,9 +129,19 @@ export default function PayrollManager() {
     setLoading(true)
 
     try {
+      // Obtener el token de sesión de Supabase
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session?.access_token) {
+        throw new Error('No authentication token found. Please log in again.')
+      }
+
       const response = await fetch('/api/payroll/calculate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
         body: JSON.stringify(generateForm),
       })
 
