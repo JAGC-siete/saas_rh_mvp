@@ -228,14 +228,43 @@ export default function PayrollManager() {
   }, { grossSalary: 0, totalDeductions: 0, netSalary: 0 })
 
   // Descargar PDF de nómina para el periodo y quincena del registro
-  const downloadPayrollPDF = (record: PayrollRecord) => {
-    // Extraer periodo (YYYY-MM) de period_start
-    const period = record.period_start.slice(0, 7)
-    // Determinar quincena
-    const day = Number(record.period_start.slice(8, 10))
-    const quincena = day === 1 ? 1 : 2
-    const url = `/api/payroll/export?periodo=${period}&quincena=${quincena}`
-    window.open(url, '_blank')
+  const downloadPayrollPDF = async (record: PayrollRecord) => {
+    try {
+      // Extraer periodo (YYYY-MM) de period_start
+      const period = record.period_start.slice(0, 7)
+      // Determinar quincena
+      const day = Number(record.period_start.slice(8, 10))
+      const quincena = day === 1 ? 1 : 2
+      
+      // Hacer petición autenticada para obtener el PDF
+      const response = await fetch(`/api/payroll/export?periodo=${period}&quincena=${quincena}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/pdf',
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status} ${response.statusText}`)
+      }
+
+      // Obtener el blob del PDF
+      const blob = await response.blob()
+      
+      // Crear URL del blob y descargar
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `planilla_${period}_q${quincena}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+      
+    } catch (error: any) {
+      console.error('Error downloading PDF:', error)
+      alert(`Error downloading PDF: ${error.message || 'Unknown error'}`)
+    }
   }
 
   return (
@@ -481,7 +510,7 @@ export default function PayrollManager() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => downloadPayrollPDF(record)}
+                          onClick={async () => await downloadPayrollPDF(record)}
                         >
                           Download PDF
                         </Button>
