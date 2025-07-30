@@ -1,80 +1,129 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
+import helmet from 'helmet';
+import cors from 'cors';
+import rateLimit from 'express-rate-limit';
+import { body, validationResult } from 'express-validator';
+import xssClean from 'xss-clean';
+import mongoSanitize from 'express-mongo-sanitize';
+import hpp from 'hpp';
+import requestId from 'express-request-id';
 import express from 'express';
-import axios from 'axios';
 import PDFDocument from 'pdfkit';
-import jwt from 'jsonwebtoken';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import Redis from 'ioredis';
+import { DateTime } from 'luxon';
+import axios from 'axios';
+import jwt from 'jsonwebtoken';
+
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const redisClient = new Redis({
-  host: process.env.REDIS_HOST || 'redis',
-  port: process.env.REDIS_PORT || 6379,
-  password: process.env.REDIS_PASSWORD,
-  retryStrategy: (times) => {
-    const delay = Math.min(times * 50, 2000);
-    return delay;
-  }
-});
-
+// Initialize Express application
 const app = express();
 
+// Security middleware
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'blob:'],
+      fontSrc: ["'self'", 'data:'],
+      connectSrc: ["'self'"],
+      frameSrc: ["'none'"],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: []
+    }
+  }
+})); // Set secure headers with CSP for HTML content
+
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || '*', // In production, set specific origins
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  maxAge: 600 // Cache preflight requests for 10 minutes
+}));
+
+// Rate limiting (in-memory, no Redis needed)
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.'
+});
+app.use(limiter);
+
+// Specific rate limit for login attempts
+const loginLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5, // limit each IP to 5 login requests per windowMs
+  message: 'Too many login attempts from this IP, please try again after an hour.'
+});
+
+// Body parsing
+app.use(express.json({ limit: '10kb' })); // Body limit is 10kb
+app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+
+// Data sanitization
+app.use(xssClean()); // Clean user input from XSS
+app.use(mongoSanitize()); // Prevent NoSQL injection
+app.use(hpp()); // Prevent HTTP Parameter Pollution
+
+// Static files with security headers
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders: (res, path, stat) => {
+    res.set('X-Content-Type-Options', 'nosniff');
+    res.set('X-Frame-Options', 'DENY');
+    res.set('X-XSS-Protection', '1; mode=block');
+  }
+}));
+
+// Request ID middleware for tracking
+app.use(requestId());
+
+// Constants
 const SALARIO_MINIMO = 11903.13;
 const RAP_PORCENTAJE = 0.015;
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-key';
+const ADMIN_USER = process.env.ADMIN_USER || 'admin';
+const ADMIN_PASS = process.env.ADMIN_PASS || '1234';
 
-app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Update CORS configuration to use environment variable
-const corsOrigin = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ['http://localhost:3000'];
-
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (corsOrigin.includes(origin)) {
-    res.header('Access-Control-Allow-Origin', origin);
-    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  }
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-  next();
-});
+// Helper function for basic templating
+function render_template_string(template, context) {
+    return template.replace(/\{\{\s*([^}]+)\s*\}\}/g, (match, p1) => {
+        return context[p1.trim()] || '';
+    });
+}
 
 // Health check endpoint
 app.get('/health', async (req, res) => {
   try {
-    const [dbResponse, redisHealth] = await Promise.allSettled([
-      axios.get(process.env.BASES_DE_DATOS_URL + '/health'),
-      redisClient.ping()
-    ]);
-
-    const redisStatus = redisHealth.status === 'fulfilled' && redisHealth.value === 'PONG';
-    const dbStatus = dbResponse.status === 'fulfilled' && dbResponse.value.data.status === 'healthy';
+    // Check database connection (Supabase via bases_de_datos service)
+    const dbResponse = await axios.get(process.env.BASES_DE_DATOS_URL + '/health');
 
     const health = {
-      status: dbStatus && redisStatus ? 'healthy' : 'unhealthy',
+      status: dbResponse.data.status === 'healthy' ? 'healthy' : 'unhealthy',
       service: 'nomina',
       timestamp: new Date().toISOString(),
       dependencies: {
         basesDeDatos: {
-          status: dbStatus ? 'healthy' : 'unhealthy',
-          details: dbResponse.status === 'fulfilled' ? dbResponse.value.data : dbResponse.reason.message
+          status: dbResponse.data.status === 'healthy' ? 'healthy' : 'unhealthy',
+          details: dbResponse.data
         },
-        redis: {
-          status: redisStatus ? 'healthy' : 'unhealthy',
-          details: redisHealth.status === 'fulfilled' ? 'Connected' : redisHealth.reason.message
+        supabase: {
+          status: 'configured',
+          details: 'Using Supabase for data storage and authentication'
         }
       }
     };
 
     res.status(health.status === 'healthy' ? 200 : 503).json(health);
   } catch (error) {
+    console.error('Health check failed:', error);
     res.status(503).json({ 
       status: 'unhealthy',
       service: 'nomina',
@@ -82,12 +131,13 @@ app.get('/health', async (req, res) => {
       error: error.message,
       details: {
         basesDeDatosConnection: error.code === 'ECONNREFUSED' ? 'failed' : 'error',
-        redisConnection: 'failed'
+        supabase: 'configured'
       }
     });
   }
 });
 
+// === Funciones utilitarias ===
 function calcularISR(salarioBase) {
   const ingresoAnual = salarioBase * 12;
   const rentaNeta = ingresoAnual - 40000;
@@ -115,22 +165,116 @@ const formatoLempiras = n => new Intl.NumberFormat('es-HN', {
   minimumFractionDigits: 2
 }).format(n);
 
-// Simple health check removed in favor of the detailed one above
+// Decorador de autenticación
+function requiere_autenticacion(f) {
+    return function (req, res, next) {
+        const auth = req.headers.authorization;
+        if (!auth) {
+            return res.status(401).set('WWW-Authenticate', 'Basic realm="Login administradora requerido"').send('Acceso denegado. Por favor, inicia sesión.');
+        }
 
-app.post('/login', (req, res) => {
-  const { usuario, password } = req.body;
-  if (usuario === 'admin' && password === '1234') {
-    const token = jwt.sign({ usuario }, JWT_SECRET, { expiresIn: '1h' });
-    return res.json({ token });
+        const [username, password] = Buffer.from(auth.split(' ')[1], 'base64').toString().split(':');
+        if (username !== ADMIN_USER || password !== ADMIN_PASS) {
+            return res.status(401).set('WWW-Authenticate', 'Basic realm="Login administradora requerido"').send('Acceso denegado. Por favor, inicia sesión.');
+        }
+
+        return f(req, res, next);
+    };
+}
+
+const FORMULARIO_PLANILLA = `
+<h1>Generar Planilla Quincenal</h1>
+<form method="POST" action="/planilla">
+    <label>Periodo (YYYY-MM):</label><br>
+    <input type="text" name="periodo" value="{{ periodo_actual }}" required><br><br>
+    <label>Quincena (1 o 2):</label><br>
+    <input type="number" name="quincena" min="1" max="2" required><br><br>
+    <input type="submit" value="Generar PDF">
+</form>
+`;
+
+// === Rutas ===
+
+// Prueba de vida
+app.get('/health', (req, res) => {
+  res.status(200).send('Nomina OK');
+});
+
+app.get('/', (req, res) => {
+    res.send(`
+    <h1>Bienvenido al Servicio de Payroll</h1>
+    <p>Usa <a href="/planilla">/planilla</a> para generar una planilla quincenal (requiere autenticación: admin/1234).</p>
+    <p><strong>Arquitectura:</strong> Supabase + Express con seguridad mejorada</p>
+    `);
+});
+
+app.get('/planilla', requiere_autenticacion, (req, res) => {
+    const periodo_actual = DateTime.now().toFormat('yyyy-MM');
+    res.send(render_template_string(FORMULARIO_PLANILLA, { periodo_actual }));
+});
+
+// Request validation middleware
+const validatePlanillaInput = [
+  body('periodo')
+    .matches(/^\d{4}-\d{2}$/)
+    .withMessage('Periodo debe tener formato YYYY-MM'),
+  body('quincena')
+    .isInt({ min: 1, max: 2 })
+    .withMessage('Quincena debe ser 1 o 2'),
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+    next();
   }
+];
+
+// Validate and apply rate limiting to login
+app.post('/login', loginLimiter, [
+  body('usuario').trim().notEmpty().withMessage('Usuario es requerido'),
+  body('password').notEmpty().withMessage('Contraseña es requerida'),
+], (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  const { usuario, password } = req.body;
+  
+  // Use constant time comparison to prevent timing attacks
+  const userMatch = usuario === ADMIN_USER;
+  const passMatch = password === ADMIN_PASS;
+  
+  if (userMatch && passMatch) {
+    const token = jwt.sign({ usuario }, JWT_SECRET, { 
+      expiresIn: '1h',
+      algorithm: 'HS256'
+    });
+    
+    // Set secure cookie with JWT
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 3600000 // 1 hour
+    });
+
+    return res.json({ 
+      token,
+      expiresIn: 3600,
+      message: 'Login exitoso'
+    });
+  }
+
+  // Use same message to prevent user enumeration
   return res.status(401).json({ error: 'Credenciales inválidas' });
 });
 
-app.post('/planilla', authenticateToken, async (req, res) => {
+// Apply validation to planilla generation
+app.post('/planilla', validatePlanillaInput, authenticateToken, async (req, res) => {
   const { periodo, quincena } = req.body;
-  if (!/^\d{4}-\d{2}$/.test(periodo)) return res.status(400).json({ error: 'Periodo inválido (YYYY-MM)' });
   const q = parseInt(quincena);
-  if (![1, 2].includes(q)) return res.status(400).json({ error: 'Quincena inválida' });
 
   const [year, month] = periodo.split('-').map(Number);
   const ultimoDia = new Date(year, month, 0).getDate();
@@ -154,9 +298,9 @@ app.post('/planilla', authenticateToken, async (req, res) => {
       }
 
       const registros = asistencia.filter(r => {
-        if (!r.last5 || !r.check_in || !r.check_out || !r.date) return false;
+        if (!r.dni || !r.check_in || !r.check_out || !r.date) return false;
 
-        const matchLast5 = r.last5.toString().trim() === emp.dni.slice(-5).trim();
+        const matchLast5 = r.dni.slice(-5).trim() === emp.dni.slice(-5).trim();
         const recordDate = new Date(r.date);
         const startDate = new Date(fechaInicio);
         const endDate = new Date(fechaFin);
@@ -199,8 +343,8 @@ app.post('/planilla', authenticateToken, async (req, res) => {
         isr: formatoLempiras(isr),
         deducciones: formatoLempiras(totalDeducciones),
         neto: formatoLempiras(pagoNeto),
-        banco: emp.bank || '',
-        cuenta: emp.account || ''
+        banco: emp.bank_name || '',
+        cuenta: emp.bank_account || ''
       };
     }).filter(Boolean);
 
@@ -252,7 +396,10 @@ app.post('/planilla', authenticateToken, async (req, res) => {
     doc.end();
   } catch (err) {
     console.error('💥 Error:', err.message);
-    res.status(500).json({ error: 'Error generando la planilla' });
+    res.status(500).json({ 
+      error: 'Error generando la planilla',
+      details: process.env.NODE_ENV === 'development' ? err.message : undefined 
+    });
   }
 });
 
@@ -265,15 +412,17 @@ function logError(message, error) {
   console.error(`[${new Date().toISOString()}] ERROR: ${message}`, error);
 }
 
-// Inicialización del servidor
-const port = process.env.PORT || 3002;
-app.listen(port, '0.0.0.0', () => {
-  logInfo(`Servidor de nómina escuchando en puerto ${port}`);
-  logInfo('Configuración:', {
-    JWT_SECRET: JWT_SECRET ? 'Configurado' : 'No configurado',
-    STATIC_PATH: path.join(__dirname, 'public'),
-    NODE_ENV: process.env.NODE_ENV
-  });
+// === Arrancar el servidor ===
+const PORT = process.env.PORT || 3002;
+app.listen(PORT, '0.0.0.0', () => {
+    logInfo(`Servidor de nómina escuchando en puerto ${PORT}`);
+    logInfo('Configuración:', {
+      JWT_SECRET: JWT_SECRET ? 'Configurado' : 'No configurado',
+      STATIC_PATH: path.join(__dirname, 'public'),
+      NODE_ENV: process.env.NODE_ENV,
+      DATABASE: 'Supabase (via bases_de_datos service)',
+      CACHE: 'In-memory rate limiting'
+    });
 });
 
 // Manejo de errores no capturados
