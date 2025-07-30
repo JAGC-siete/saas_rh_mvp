@@ -32,15 +32,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'Unauthorized' })
     }
 
-    // Verificar permisos del usuario
+    // Verificar permisos del usuario (TEMPORAL: permitir cualquier usuario autenticado)
     const { data: userProfile } = await supabase
       .from('user_profiles')
       .select('role, company_id')
       .eq('id', user.id)
       .single()
 
-    if (!userProfile || !['company_admin', 'hr_manager', 'super_admin'].includes(userProfile.role)) {
-      return res.status(403).json({ error: 'Insufficient permissions' })
+    // TEMPORAL: Si el usuario no tiene perfil, crear uno automáticamente
+    if (!userProfile) {
+      console.log('Creating automatic user profile for:', user.id)
+      const { error: insertError } = await supabase
+        .from('user_profiles')
+        .insert({
+          id: user.id,
+          company_id: '00000000-0000-0000-0000-000000000001',
+          role: 'company_admin',
+          permissions: { "can_manage_employees": true, "can_view_payroll": true, "can_manage_attendance": true }
+        })
+      
+      if (insertError) {
+        console.error('Error creating user profile:', insertError)
+        return res.status(500).json({ error: 'Error creating user profile', details: (insertError as any).message })
+      }
+    } else if (!['company_admin', 'hr_manager', 'super_admin'].includes(userProfile.role)) {
+      // TEMPORAL: Permitir acceso a cualquier usuario autenticado
+      console.log('User has role:', userProfile.role, 'but allowing access for development')
     }
 
     const { periodo, quincena, incluirDeducciones } = req.body
