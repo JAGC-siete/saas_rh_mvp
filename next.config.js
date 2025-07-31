@@ -57,7 +57,7 @@ const nextConfig = {
         headers: [
           {
             key: 'Access-Control-Allow-Origin',
-            value: '*',
+            value: process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net',
           },
           {
             key: 'Access-Control-Allow-Methods',

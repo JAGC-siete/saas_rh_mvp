@@ -4,9 +4,9 @@
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL="https://fwyxmovfrzauebiqxchz.supabase.co"
-NEXT_PUBLIC_SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ3eXhtb3ZmcnphdWViaXF4Y2h6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIxODk5MjEsImV4cCI6MjA2Nzc2NTkyMX0.pXArDqHGA4yjprTqJfsNQXwzS-WLz6NCK5QRbLAyYmA"
-SUPABASE_SERVICE_ROLE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ3eXhtb3ZmcnphdWViaXF4Y2h6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MjE4OTkyMSwiZXhwIjoyMDY3NzY1OTIxfQ.7tCj7HGw9MevF1Q9EEoOvD6CXf4M6f0iu37U-vjE76I"
-DATABASE_URL="postgresql://postgres:p5duKqOflWx7bBmJ@aws-0-us-east-2.pooler.supabase.com:6543/postgres"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="your_supabase_jwt_token_here"
+SUPABASE_SERVICE_ROLE_KEY="your_supabase_jwt_token_here"
+DATABASE_URL="postgresql://postgres:your_database_password_here@aws-0-us-east-2.pooler.supabase.com:6543/postgres"
 NODE_ENV="production"
 ```
 

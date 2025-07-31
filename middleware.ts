@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Log all requests for debugging
@@ -14,7 +15,7 @@ export function middleware(request: NextRequest) {
     // Handle CORS preflight requests
     if (request.method === 'OPTIONS') {
       const response = new NextResponse(null, { status: 200 })
-      response.headers.set('Access-Control-Allow-Origin', '*')
+      response.headers.set('Access-Control-Allow-Origin', process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net')
       response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
       response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-nextjs-data')
       response.headers.set('Access-Control-Allow-Credentials', 'true')
@@ -47,12 +48,51 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // For private routes, check for session
-  // Note: In a real implementation, you'd check for a valid session token
-  // For now, we'll allow access but the components will handle auth
-  console.log(`[Middleware] Private route: ${pathname}`)
-  
-  return NextResponse.next()
+  // For private routes, check for Supabase session
+  try {
+    // Create Supabase client for middleware
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('[Middleware] Missing Supabase environment variables')
+      return NextResponse.redirect(new URL('/login', request.url))
+    }
+    
+    const supabase = createServerClient(supabaseUrl, supabaseKey, {
+      cookies: {
+        get(name: string) {
+          return request.cookies.get(name)?.value
+        },
+        set(name: string, value: string, options: any) {
+          // This will be handled by the response
+        },
+        remove(name: string, options: any) {
+          // This will be handled by the response
+        },
+      },
+    })
+    
+    // Get session from Supabase
+    const { data: { session }, error } = await supabase.auth.getSession()
+    
+    if (error) {
+      console.error('[Middleware] Error getting session:', error.message)
+      return NextResponse.redirect(new URL('/login', request.url))
+    }
+    
+    if (!session) {
+      console.log(`[Middleware] No session found for private route: ${pathname}`)
+      return NextResponse.redirect(new URL('/login', request.url))
+    }
+    
+    console.log(`[Middleware] Valid session found for: ${pathname}`)
+    return NextResponse.next()
+    
+  } catch (error) {
+    console.error(`[Middleware] Auth error: ${error.message}`)
+    return NextResponse.redirect(new URL('/login', request.url))
+  }
 }
 
 export const config = {
@@ -65,4 +105,4 @@ export const config = {
      */
     '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
-} 
+}

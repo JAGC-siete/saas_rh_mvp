@@ -22,8 +22,8 @@ npm run setup:hooks
 #### Required Variables:
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.your_real_anon_key
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.your_real_service_role_key
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_jwt_token_here
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_jwt_token_here
 JWT_SECRET=your_32_character_minimum_jwt_secret
 NEXTAUTH_SECRET=your_32_character_minimum_nextauth_secret
 NEXTAUTH_URL=https://your-app.railway.app
