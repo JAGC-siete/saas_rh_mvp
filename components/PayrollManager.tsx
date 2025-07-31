@@ -240,6 +240,13 @@ export default function PayrollManager() {
   // Descargar PDF de nómina para el periodo y quincena del registro
   const downloadPayrollPDF = async (record: PayrollRecord) => {
     try {
+      // 🔑 VERIFICAR AUTENTICACIÓN PRIMERO
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) {
+        alert('❌ Debes estar logueado para descargar el PDF. Por favor, inicia sesión.')
+        return
+      }
+
       // Extraer periodo (YYYY-MM) de period_start
       const period = record.period_start.slice(0, 7)
       // Determinar quincena
@@ -253,6 +260,7 @@ export default function PayrollManager() {
           'Content-Type': 'application/json',
           'Accept': 'application/pdf'
         },
+        credentials: 'include', // 🔑 CRÍTICO: Enviar cookies de autenticación
         body: JSON.stringify({
           periodo: period,
           quincena: quincena,
