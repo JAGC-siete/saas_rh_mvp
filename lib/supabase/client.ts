@@ -25,10 +25,27 @@ export function createClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
+  // Debug logging
+  console.log('🔍 Supabase Client Debug:', {
+    hasUrl: !!supabaseUrl,
+    hasKey: !!supabaseKey,
+    url: supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : 'missing',
+    key: supabaseKey ? `${supabaseKey.substring(0, 20)}...` : 'missing'
+  })
+
   if (!supabaseUrl || !supabaseKey) {
-    console.error('Missing Supabase environment variables for client')
+    console.error('❌ Missing Supabase environment variables for client')
+    console.error('   NEXT_PUBLIC_SUPABASE_URL:', !!supabaseUrl)
+    console.error('   NEXT_PUBLIC_SUPABASE_ANON_KEY:', !!supabaseKey)
+    
+    // In development, throw an error to make it obvious
+    if (process.env.NODE_ENV === 'development') {
+      throw new Error('Supabase environment variables not configured. Check .env.local file.')
+    }
+    
     return createDummyClient()
   }
 
+  console.log('✅ Creating Supabase client with valid configuration')
   return createBrowserClient(supabaseUrl, supabaseKey)
 }
