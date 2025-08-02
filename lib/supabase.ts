@@ -36,6 +36,8 @@ export const supabase = supabaseUrl && supabaseAnonKey
   : createDummyClient() as any
 
 // Service client for server-side operations (with service role key)
+// ⚠️ WARNING: This should only be used in server-side code (API routes)
+// Use createAdminClient() from lib/supabase/server.ts instead
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
 export const supabaseAdmin = supabaseUrl && supabaseServiceKey

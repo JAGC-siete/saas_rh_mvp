@@ -21,14 +21,13 @@ const createDummyClient = () => ({
 })
 
 export function createClient() {
-  // Use environment variables for Supabase configuration
+  // Use the correct environment variables for browser
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-  // Validate environment variables
   if (!supabaseUrl || !supabaseKey) {
-    console.warn('Missing Supabase environment variables, using dummy client')
-    return createDummyClient() as any
+    console.error('Missing Supabase environment variables for client')
+    return createDummyClient()
   }
 
   return createBrowserClient(supabaseUrl, supabaseKey)
