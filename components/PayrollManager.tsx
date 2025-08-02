@@ -28,6 +28,7 @@ interface PayrollRecord {
     name: string
     employee_code: string
     position: string
+    department: string
   }
 }
 
@@ -36,6 +37,17 @@ interface Employee {
   name: string
   employee_code: string
   base_salary: number
+  department: string
+}
+
+interface PayrollStats {
+  totalEmployees: number
+  totalGrossSalary: number
+  totalDeductions: number
+  totalNetSalary: number
+  averageSalary: number
+  departmentBreakdown: { [key: string]: number }
+  attendanceRate: number
 }
 
 export default function PayrollManager() {
@@ -45,12 +57,23 @@ export default function PayrollManager() {
   const [showGenerateForm, setShowGenerateForm] = useState(false)
   const [selectedPeriod, setSelectedPeriod] = useState('')
   const [userProfile, setUserProfile] = useState<any>(null)
+  const [payrollStats, setPayrollStats] = useState<PayrollStats>({
+    totalEmployees: 0,
+    totalGrossSalary: 0,
+    totalDeductions: 0,
+    totalNetSalary: 0,
+    averageSalary: 0,
+    departmentBreakdown: {},
+    attendanceRate: 0
+  })
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'records' | 'generate'>('dashboard')
 
   // Form state
   const [generateForm, setGenerateForm] = useState({
     periodo: '',
     quincena: 1,
-    incluirDeducciones: false
+    incluirDeducciones: false,
+    soloEmpleadosConAsistencia: true
   });
 
   useEffect(() => {
@@ -75,13 +98,11 @@ export default function PayrollManager() {
 
       if (profileError) {
         console.error('Error fetching user profile:', profileError)
-        // Continue without profile for now
         setUserProfile(null)
       } else {
         setUserProfile(profile)
       }
 
-      // If no profile, we can't fetch company-specific data
       if (!profile) {
         console.warn('No user profile found, skipping company data fetch')
         setPayrollRecords([])
@@ -97,7 +118,8 @@ export default function PayrollManager() {
           employees:employee_id (
             name,
             employee_code,
-            position
+            position,
+            department
           )
         `)
         .eq('employees.company_id', profile.company_id)
@@ -109,13 +131,16 @@ export default function PayrollManager() {
       // Fetch employees for generation form
       const { data: employeesData, error: empError } = await supabase
         .from('employees')
-        .select('id, name, employee_code, base_salary')
+        .select('id, name, employee_code, base_salary, department')
         .eq('company_id', profile.company_id)
         .eq('status', 'active')
         .order('name')
 
       if (empError) throw empError
       setEmployees(employeesData || [])
+
+      // Calculate statistics
+      calculatePayrollStats(payrollData || [], employeesData || [])
 
     } catch (error) {
       console.error('Error fetching data:', error)
@@ -124,12 +149,49 @@ export default function PayrollManager() {
     }
   }
 
+  const calculatePayrollStats = (records: PayrollRecord[], emps: Employee[]) => {
+    const stats: PayrollStats = {
+      totalEmployees: emps.length,
+      totalGrossSalary: 0,
+      totalDeductions: 0,
+      totalNetSalary: 0,
+      averageSalary: 0,
+      departmentBreakdown: {},
+      attendanceRate: 0
+    }
+
+    // Calculate totals from current period records
+    const currentPeriodRecords = records.filter(r => 
+      r.period_start.startsWith(selectedPeriod || new Date().toISOString().slice(0, 7))
+    )
+
+    currentPeriodRecords.forEach(record => {
+      stats.totalGrossSalary += record.gross_salary
+      stats.totalDeductions += record.total_deductions
+      stats.totalNetSalary += record.net_salary
+      
+      const dept = record.employees?.department || 'Sin Departamento'
+      stats.departmentBreakdown[dept] = (stats.departmentBreakdown[dept] || 0) + 1
+    })
+
+    // Calculate averages
+    if (currentPeriodRecords.length > 0) {
+      stats.averageSalary = stats.totalNetSalary / currentPeriodRecords.length
+    }
+
+    // Calculate attendance rate
+    const totalDays = currentPeriodRecords.reduce((sum, r) => sum + r.days_worked, 0)
+    const expectedDays = currentPeriodRecords.length * 15 // Assuming 15 days per period
+    stats.attendanceRate = expectedDays > 0 ? (totalDays / expectedDays) * 100 : 0
+
+    setPayrollStats(stats)
+  }
+
   const generatePayroll = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
     try {
-      // Obtener el token de sesión de Supabase
       const { data: { session } } = await supabase.auth.getSession()
       
       if (!session?.access_token) {
@@ -151,17 +213,18 @@ export default function PayrollManager() {
         throw new Error(data.error || 'Failed to generate payroll')
       }
 
-      alert('Payroll generated successfully!')
+      alert('✅ Nómina generada exitosamente!')
       setShowGenerateForm(false)
       setGenerateForm({
         periodo: '',
         quincena: 1,
-        incluirDeducciones: false
+        incluirDeducciones: false,
+        soloEmpleadosConAsistencia: true
       })
       fetchData()
 
     } catch (error: any) {
-      alert(`Error: ${error.message}`)
+      alert(`❌ Error: ${error.message}`)
     } finally {
       setLoading(false)
     }
@@ -179,9 +242,10 @@ export default function PayrollManager() {
         .eq('id', payrollId)
 
       if (error) throw error
+      alert('✅ Nómina aprobada exitosamente!')
       fetchData()
     } catch (error: any) {
-      alert(`Error: ${error.message}`)
+      alert(`❌ Error: ${error.message}`)
     }
   }
 
@@ -196,9 +260,10 @@ export default function PayrollManager() {
         .eq('id', payrollId)
 
       if (error) throw error
+      alert('✅ Nómina marcada como pagada!')
       fetchData()
     } catch (error: any) {
-      alert(`Error: ${error.message}`)
+      alert(`❌ Error: ${error.message}`)
     }
   }
 
@@ -213,11 +278,11 @@ export default function PayrollManager() {
     const baseClasses = 'px-2 py-1 rounded-full text-xs font-medium'
     switch (status) {
       case 'draft':
-        return <span className={`${baseClasses} bg-gray-100 text-gray-800`}>Draft</span>
+        return <span className={`${baseClasses} bg-gray-100 text-gray-800`}>Borrador</span>
       case 'approved':
-        return <span className={`${baseClasses} bg-blue-100 text-blue-800`}>Approved</span>
+        return <span className={`${baseClasses} bg-blue-100 text-blue-800`}>Aprobada</span>
       case 'paid':
-        return <span className={`${baseClasses} bg-green-100 text-green-800`}>Paid</span>
+        return <span className={`${baseClasses} bg-green-100 text-green-800`}>Pagada</span>
       default:
         return <span className={`${baseClasses} bg-gray-100 text-gray-800`}>{status}</span>
     }
@@ -237,30 +302,25 @@ export default function PayrollManager() {
     return acc
   }, { grossSalary: 0, totalDeductions: 0, netSalary: 0 })
 
-  // Descargar PDF de nómina para el periodo y quincena del registro
   const downloadPayrollPDF = async (record: PayrollRecord) => {
     try {
-      // 🔑 VERIFICAR AUTENTICACIÓN PRIMERO
       const { data: { user }, error: authError } = await supabase.auth.getUser()
       if (authError || !user) {
         alert('❌ Debes estar logueado para descargar el PDF. Por favor, inicia sesión.')
         return
       }
 
-      // Extraer periodo (YYYY-MM) de period_start
       const period = record.period_start.slice(0, 7)
-      // Determinar quincena
       const day = Number(record.period_start.slice(8, 10))
       const quincena = day === 1 ? 1 : 2
       
-      // Hacer petición autenticada para obtener el PDF
       const response = await fetch(`/api/payroll/calculate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/pdf'
         },
-        credentials: 'include', // 🔑 CRÍTICO: Enviar cookies de autenticación
+        credentials: 'include',
         body: JSON.stringify({
           periodo: period,
           quincena: quincena,
@@ -273,14 +333,11 @@ export default function PayrollManager() {
         throw new Error(`Error: ${response.status} ${response.statusText} - ${errorData.error || ''}`)
       }
 
-      // Obtener el blob del PDF
       const blob = await response.blob()
-      
-      // Crear URL del blob y descargar
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `planilla_${period}_q${quincena}.pdf`
+      a.download = `planilla_paragon_${period}_q${quincena}.pdf`
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(url)
@@ -288,7 +345,47 @@ export default function PayrollManager() {
       
     } catch (error: any) {
       console.error('Error downloading PDF:', error)
-      alert(`Error downloading PDF: ${error.message || 'Unknown error'}`)
+      alert(`❌ Error descargando PDF: ${error.message || 'Unknown error'}`)
+    }
+  }
+
+  const exportToExcel = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session?.access_token) {
+        throw new Error('No authentication token found.')
+      }
+
+      const response = await fetch('/api/payroll/export', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          periodo: selectedPeriod || new Date().toISOString().slice(0, 7),
+          formato: 'excel'
+        }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to export')
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `nomina_paragon_${selectedPeriod || 'actual'}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+
+    } catch (error: any) {
+      alert(`❌ Error exportando: ${error.message}`)
     }
   }
 
@@ -297,263 +394,435 @@ export default function PayrollManager() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Payroll Management</h1>
-          <p className="text-gray-600">Manage employee payroll and salary calculations</p>
+          <h1 className="text-2xl font-bold text-gray-900">🏢 Gestión de Nómina - Paragon Honduras</h1>
+          <p className="text-gray-600">Sistema integral de procesamiento y administración de nóminas</p>
         </div>
-        <Button onClick={() => setShowGenerateForm(true)}>
-          Generate Payroll
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setActiveTab('generate')}>
+            📊 Generar Nómina
+          </Button>
+          <Button variant="outline" onClick={exportToExcel}>
+            📥 Exportar Excel
+          </Button>
+        </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">
-                {formatCurrency(totals.grossSalary)}
-              </div>
-              <div className="text-sm text-gray-600">Total Gross Salary</div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-red-600">
-                {formatCurrency(totals.totalDeductions)}
-              </div>
-              <div className="text-sm text-gray-600">Total Deductions</div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">
-                {formatCurrency(totals.netSalary)}
-              </div>
-              <div className="text-sm text-gray-600">Total Net Salary</div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-gray-600">
-                {filteredRecords.length}
-              </div>
-              <div className="text-sm text-gray-600">Payroll Records</div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Tabs */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8">
+          <button
+            onClick={() => setActiveTab('dashboard')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'dashboard'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            📈 Dashboard Ejecutivo
+          </button>
+          <button
+            onClick={() => setActiveTab('records')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'records'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            📋 Registros de Nómina
+          </button>
+          <button
+            onClick={() => setActiveTab('generate')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'generate'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            ⚙️ Generar Nómina
+          </button>
+        </nav>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Filter by Period
-              </label>
-              <Input
-                type="month"
-                value={selectedPeriod}
-                onChange={(e) => setSelectedPeriod(e.target.value)}
-                className="w-48"
-              />
-            </div>
-            <div className="flex items-end">
-              <Button 
-                variant="outline" 
-                onClick={() => setSelectedPeriod('')}
-              >
-                Clear Filter
-              </Button>
-            </div>
+      {/* Dashboard Tab */}
+      {activeTab === 'dashboard' && (
+        <div className="space-y-6">
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">
+                    {payrollStats.totalEmployees}
+                  </div>
+                  <div className="text-sm text-gray-600">Empleados Activos</div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {formatCurrency(payrollStats.totalGrossSalary)}
+                  </div>
+                  <div className="text-sm text-gray-600">Total Salario Bruto</div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-red-600">
+                    {formatCurrency(payrollStats.totalDeductions)}
+                  </div>
+                  <div className="text-sm text-gray-600">Total Deducciones</div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-purple-600">
+                    {formatCurrency(payrollStats.totalNetSalary)}
+                  </div>
+                  <div className="text-sm text-gray-600">Total Salario Neto</div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Generate Payroll Form */}
-      {showGenerateForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Generate Payroll</CardTitle>
-            <CardDescription>
-              Genera la nómina para todos los empleados activos de la empresa para un periodo y quincena seleccionados
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={generatePayroll} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Mes
-                </label>
-                <Input
-                  type="month"
-                  value={generateForm.periodo}
-                  onChange={e => setGenerateForm({ ...generateForm, periodo: e.target.value })}
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Quincena
-                </label>
-                <select
-                  value={generateForm.quincena}
-                  onChange={e => setGenerateForm({ ...generateForm, quincena: Number(e.target.value) })}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                  required
-                >
-                  <option value={1}>Primera (1-15)</option>
-                  <option value={2}>Segunda (16-fin de mes)</option>
-                </select>
-              </div>
-              <div className="flex items-center mt-6">
-                <input
-                  type="checkbox"
-                  checked={generateForm.incluirDeducciones}
-                  onChange={e => setGenerateForm({ ...generateForm, incluirDeducciones: e.target.checked })}
-                  className="mr-2"
-                  id="deducciones"
-                />
-                <label htmlFor="deducciones" className="text-sm font-medium text-gray-700">
-                  Incluir deducciones
-                </label>
-              </div>
-              <div className="md:col-span-3 flex gap-4">
-                <Button type="submit" disabled={loading}>
-                  {loading ? 'Generando...' : 'Generar Nómina'}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowGenerateForm(false)}
-                >
-                  Cancelar
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+          {/* Additional Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>📊 Estadísticas de Asistencia</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex justify-between">
+                    <span>Tasa de Asistencia:</span>
+                    <span className="font-semibold">{payrollStats.attendanceRate.toFixed(1)}%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Salario Promedio:</span>
+                    <span className="font-semibold">{formatCurrency(payrollStats.averageSalary)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Registros de Nómina:</span>
+                    <span className="font-semibold">{filteredRecords.length}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>🏢 Distribución por Departamento</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {Object.entries(payrollStats.departmentBreakdown).map(([dept, count]) => (
+                    <div key={dept} className="flex justify-between">
+                      <span className="text-sm">{dept}:</span>
+                      <span className="font-semibold">{count}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>⚡ Acciones Rápidas</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <Button 
+                    size="sm" 
+                    className="w-full"
+                    onClick={() => setActiveTab('generate')}
+                  >
+                    Generar Nómina Actual
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    className="w-full"
+                    onClick={exportToExcel}
+                  >
+                    Exportar Reporte
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => setActiveTab('records')}
+                  >
+                    Ver Registros
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       )}
 
-      {/* Payroll Records */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Payroll Records</CardTitle>
-          <CardDescription>
-            {filteredRecords.length} records
-            {selectedPeriod && ` for ${new Date(selectedPeriod + '-01').toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}`}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full table-auto">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-4">Employee</th>
-                  <th className="text-left py-3 px-4">Period</th>
-                  <th className="text-left py-3 px-4">Gross Salary</th>
-                  <th className="text-left py-3 px-4">Deductions</th>
-                  <th className="text-left py-3 px-4">Net Salary</th>
-                  <th className="text-left py-3 px-4">Attendance</th>
-                  <th className="text-left py-3 px-4">Status</th>
-                  <th className="text-left py-3 px-4">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {/* eslint-disable-next-line react/jsx-key */}
-                {filteredRecords.map((record, index) => (
-                  <tr key={`record-${index}`} className="border-b hover:bg-gray-50">
-                    <td className="py-3 px-4">
-                      <div>
-                        <div className="font-medium">{record.employees?.name}</div>
-                        <div className="text-sm text-gray-500">
-                          {record.employees?.employee_code} • {record.employees?.position}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="text-sm">
-                        <div>{new Date(record.period_start).toLocaleDateString()}</div>
-                        <div className="text-gray-500">to {new Date(record.period_end).toLocaleDateString()}</div>
-                        <div className="text-xs text-gray-400 capitalize">{record.period_type}</div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 font-mono">
-                      {formatCurrency(record.gross_salary)}
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="text-sm font-mono">
-                        <div>ISR: {formatCurrency(record.income_tax)}</div>
-                        <div>RAP: {formatCurrency(record.professional_tax)}</div>
-                        <div>IHSS: {formatCurrency(record.social_security)}</div>
-                        <div className="font-semibold border-t pt-1">
-                          Total: {formatCurrency(record.total_deductions)}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 font-mono font-semibold text-green-600">
-                      {formatCurrency(record.net_salary)}
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="text-sm">
-                        <div>Worked: {record.days_worked} days</div>
-                        <div className="text-red-600">Absent: {record.days_absent} days</div>
-                        <div className="text-yellow-600">Late: {record.late_days} days</div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      {getStatusBadge(record.status)}
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex flex-col gap-1">
-                        {record.status === 'draft' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => approvePayroll(record.id)}
-                          >
-                            Approve
-                          </Button>
-                        )}
-                        {record.status === 'approved' && (
-                          <Button
-                            size="sm"
-                            onClick={() => markAsPaid(record.id)}
-                          >
-                            Mark Paid
-                          </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={async () => await downloadPayrollPDF(record)}
-                        >
-                          Download PDF
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {filteredRecords.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                No payroll records found.
+      {/* Records Tab */}
+      {activeTab === 'records' && (
+        <div className="space-y-6">
+          {/* Filters */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Filtrar por Período
+                  </label>
+                  <Input
+                    type="month"
+                    value={selectedPeriod}
+                    onChange={(e) => setSelectedPeriod(e.target.value)}
+                    className="w-48"
+                  />
+                </div>
+                <div className="flex items-end">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setSelectedPeriod('')}
+                  >
+                    Limpiar Filtro
+                  </Button>
+                </div>
               </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+
+          {/* Payroll Records */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Registros de Nómina</CardTitle>
+              <CardDescription>
+                {filteredRecords.length} registros
+                {selectedPeriod && ` para ${new Date(selectedPeriod + '-01').toLocaleDateString('es-HN', { year: 'numeric', month: 'long' })}`}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full table-auto">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-3 px-4">Empleado</th>
+                      <th className="text-left py-3 px-4">Período</th>
+                      <th className="text-left py-3 px-4">Salario Bruto</th>
+                      <th className="text-left py-3 px-4">Deducciones</th>
+                      <th className="text-left py-3 px-4">Salario Neto</th>
+                      <th className="text-left py-3 px-4">Asistencia</th>
+                      <th className="text-left py-3 px-4">Estado</th>
+                      <th className="text-left py-3 px-4">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredRecords.map((record, index) => (
+                      <tr key={`record-${index}`} className="border-b hover:bg-gray-50">
+                        <td className="py-3 px-4">
+                          <div>
+                            <div className="font-medium">{record.employees?.name}</div>
+                            <div className="text-sm text-gray-500">
+                              {record.employees?.employee_code} • {record.employees?.position}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="text-sm">
+                            <div>{new Date(record.period_start).toLocaleDateString('es-HN')}</div>
+                            <div className="text-gray-500">hasta {new Date(record.period_end).toLocaleDateString('es-HN')}</div>
+                            <div className="text-xs text-gray-400 capitalize">{record.period_type}</div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 font-mono">
+                          {formatCurrency(record.gross_salary)}
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="text-sm font-mono">
+                            <div>ISR: {formatCurrency(record.income_tax)}</div>
+                            <div>RAP: {formatCurrency(record.professional_tax)}</div>
+                            <div>IHSS: {formatCurrency(record.social_security)}</div>
+                            <div className="font-semibold border-t pt-1">
+                              Total: {formatCurrency(record.total_deductions)}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 font-mono font-semibold text-green-600">
+                          {formatCurrency(record.net_salary)}
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="text-sm">
+                            <div>Trabajó: {record.days_worked} días</div>
+                            <div className="text-red-600">Ausente: {record.days_absent} días</div>
+                            <div className="text-yellow-600">Tardanza: {record.late_days} días</div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          {getStatusBadge(record.status)}
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex flex-col gap-1">
+                            {record.status === 'draft' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => approvePayroll(record.id)}
+                              >
+                                Aprobar
+                              </Button>
+                            )}
+                            {record.status === 'approved' && (
+                              <Button
+                                size="sm"
+                                onClick={() => markAsPaid(record.id)}
+                              >
+                                Marcar Pagado
+                              </Button>
+                            )}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={async () => await downloadPayrollPDF(record)}
+                            >
+                              📄 Descargar PDF
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {filteredRecords.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    No se encontraron registros de nómina.
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Generate Tab */}
+      {activeTab === 'generate' && (
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>📊 Generar Nómina</CardTitle>
+              <CardDescription>
+                Genera la nómina para todos los empleados activos de Paragon Honduras para un período y quincena seleccionados
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={generatePayroll} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Mes
+                  </label>
+                  <Input
+                    type="month"
+                    value={generateForm.periodo}
+                    onChange={e => setGenerateForm({ ...generateForm, periodo: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Quincena
+                  </label>
+                  <select
+                    value={generateForm.quincena}
+                    onChange={e => setGenerateForm({ ...generateForm, quincena: Number(e.target.value) })}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                    required
+                  >
+                    <option value={1}>Primera (1-15)</option>
+                    <option value={2}>Segunda (16-fin de mes)</option>
+                  </select>
+                </div>
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={generateForm.incluirDeducciones}
+                    onChange={e => setGenerateForm({ ...generateForm, incluirDeducciones: e.target.checked })}
+                    className="mr-2"
+                    id="deducciones"
+                  />
+                  <label htmlFor="deducciones" className="text-sm font-medium text-gray-700">
+                    Incluir deducciones (ISR, IHSS, RAP)
+                  </label>
+                </div>
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={generateForm.soloEmpleadosConAsistencia}
+                    onChange={e => setGenerateForm({ ...generateForm, soloEmpleadosConAsistencia: e.target.checked })}
+                    className="mr-2"
+                    id="asistencia"
+                  />
+                  <label htmlFor="asistencia" className="text-sm font-medium text-gray-700">
+                    Solo empleados con asistencia completa
+                  </label>
+                </div>
+                <div className="md:col-span-2 flex gap-4">
+                  <Button type="submit" disabled={loading}>
+                    {loading ? '🔄 Generando...' : '🚀 Generar Nómina'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setActiveTab('dashboard')}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+
+          {/* Employee Preview */}
+          {employees.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>👥 Empleados Activos ({employees.length})</CardTitle>
+                <CardDescription>
+                  Lista de empleados que serán incluidos en la nómina
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {employees.slice(0, 9).map((emp) => (
+                    <div key={emp.id} className="p-3 border rounded-lg">
+                      <div className="font-medium">{emp.name}</div>
+                      <div className="text-sm text-gray-500">
+                        {emp.employee_code} • {emp.department || 'Sin departamento'}
+                      </div>
+                      <div className="text-sm font-mono text-green-600">
+                        {formatCurrency(emp.base_salary)}
+                      </div>
+                    </div>
+                  ))}
+                  {employees.length > 9 && (
+                    <div className="p-3 border rounded-lg bg-gray-50 text-center">
+                      <div className="text-sm text-gray-500">
+                        +{employees.length - 9} empleados más
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
     </div>
   )
 }
