@@ -25,10 +25,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isClient, setIsClient] = useState(false) // ✅ Factor VI: Stateless durante build
   const router = useRouter()
   const supabase = createClient()
 
+  // ✅ Factor VI: Detectar si estamos en el cliente
   useEffect(() => {
+    setIsClient(true)
+  }, [])
+
+  useEffect(() => {
+    // ✅ Solo ejecutar auth checks en el cliente (Factor VI)
+    if (!isClient) return
+
     // Get initial session
     const getInitialSession = async () => {
       try {
@@ -52,16 +61,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null)
         setLoading(false)
 
-        if (event === 'SIGNED_IN') {
-          router.push('/dashboard')
-        } else if (event === 'SIGNED_OUT') {
-          router.push('/')
+        // ✅ Solo redirigir si estamos en el cliente y tenemos window
+        if (isClient && typeof window !== 'undefined') {
+          if (event === 'SIGNED_IN' && window.location.pathname === '/login') {
+            window.location.href = '/dashboard' // ✅ Compatible con Edge Runtime
+          } else if (event === 'SIGNED_OUT' && window.location.pathname !== '/login' && window.location.pathname !== '/') {
+            window.location.href = '/login' // ✅ Compatible con Edge Runtime
+          }
         }
       }
     )
 
     return () => subscription.unsubscribe()
-  }, [router])
+  }, [isClient]) // ✅ Dependencia en isClient
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
@@ -101,6 +113,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('Logout failed:', error)
     }
+  }
+
+  // ✅ Durante prerendering (Factor VI - stateless), devolver estado inicial
+  if (!isClient) {
+    return (
+      <AuthContext.Provider value={{ 
+        user: null, 
+        session: null, 
+        login: async () => false, 
+        logout: () => {}, 
+        loading: true 
+      }}>
+        {children}
+      </AuthContext.Provider>
+    )
   }
 
   return (

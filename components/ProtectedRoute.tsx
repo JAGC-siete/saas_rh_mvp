@@ -9,19 +9,21 @@ interface ProtectedRouteProps {
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { session, loading: sessionLoading } = useSupabaseSession()
   const router = useRouter()
-  const [isClient, setIsClient] = useState(false)
+  const [isClient, setIsClient] = useState(false) // ✅ Factor VI: Stateless durante build
 
+  // ✅ Factor VI: Detectar si estamos en el cliente
   useEffect(() => {
     setIsClient(true)
   }, [])
 
   useEffect(() => {
+    // ✅ Solo ejecutar redirección en el cliente
     if (isClient && !sessionLoading && !session) {
       router.push('/')
     }
   }, [session, sessionLoading, router, isClient])
 
-  // Durante SSR/build, renderizar loading
+  // ✅ Durante SSR/build, renderizar loading
   if (!isClient || sessionLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
