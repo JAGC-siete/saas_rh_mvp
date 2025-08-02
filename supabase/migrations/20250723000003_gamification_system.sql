@@ -3,8 +3,8 @@
 -- Employee scores table
 CREATE TABLE employee_scores (
     id SERIAL PRIMARY KEY,
-    employee_id INTEGER NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
-    company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
     total_points INTEGER DEFAULT 0,
     weekly_points INTEGER DEFAULT 0,
     monthly_points INTEGER DEFAULT 0,
@@ -31,9 +31,9 @@ CREATE TABLE achievement_types (
 -- Employee achievements
 CREATE TABLE employee_achievements (
     id SERIAL PRIMARY KEY,
-    employee_id INTEGER NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
     achievement_type_id INTEGER NOT NULL REFERENCES achievement_types(id) ON DELETE CASCADE,
-    company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
     earned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     points_earned INTEGER DEFAULT 0,
     UNIQUE(employee_id, achievement_type_id)
@@ -42,8 +42,8 @@ CREATE TABLE employee_achievements (
 -- Point history for tracking
 CREATE TABLE point_history (
     id SERIAL PRIMARY KEY,
-    employee_id INTEGER NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
-    company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
     points_earned INTEGER NOT NULL,
     reason VARCHAR(255) NOT NULL,
     action_type VARCHAR(50) NOT NULL, -- 'check_in', 'achievement', 'bonus', etc.
@@ -134,7 +134,7 @@ INSERT INTO achievement_types (name, description, icon, points_reward, badge_col
 
 -- Function to calculate points for attendance
 CREATE OR REPLACE FUNCTION calculate_attendance_points(
-    p_employee_id INTEGER,
+    p_employee_id UUID,
     p_late_minutes INTEGER,
     p_is_early BOOLEAN DEFAULT FALSE
 ) RETURNS INTEGER AS $$
@@ -171,8 +171,8 @@ $$ LANGUAGE plpgsql;
 
 -- Function to update employee scores
 CREATE OR REPLACE FUNCTION update_employee_score(
-    p_employee_id INTEGER,
-    p_company_id INTEGER,
+    p_employee_id UUID,
+    p_company_id UUID,
     p_points_to_add INTEGER,
     p_reason VARCHAR(255),
     p_action_type VARCHAR(50)
