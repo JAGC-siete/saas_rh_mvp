@@ -1,41 +1,40 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { createClient } from './supabase/client'
-import { useSafeRouter } from './hooks/useSafeRouter'
 import { User, Session } from '@supabase/supabase-js'
 
 interface AuthContextType {
   user: User | null
   session: Session | null
   login: (email: string, password: string) => Promise<boolean>
-  logout: () => void
+  logout: () => Promise<void>
   loading: boolean
 }
 
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  session: null,
-  login: async () => false,
-  logout: () => {},
-  loading: true
-})
+const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-export const useAuth = () => useContext(AuthContext)
+export function useAuth() {
+  const context = useContext(AuthContext)
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider')
+  }
+  return context
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
-  const [mounted, setMounted] = useState(false)
-  const router = useSafeRouter()
+  const [isClient, setIsClient] = useState(false)
   const supabase = createClient()
 
-  // Ensure we're on the client side
+  // Factor VI: Detectar si estamos en el cliente (stateless durante build)
   useEffect(() => {
-    setMounted(true)
+    setIsClient(true)
   }, [])
 
   useEffect(() => {
-    if (!mounted) return
+    // Solo ejecutar auth checks en el cliente (Factor VI)
+    if (!isClient) return
 
     // Get initial session
     const getInitialSession = async () => {
@@ -60,16 +59,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null)
         setLoading(false)
 
-        if (event === 'SIGNED_IN') {
-          router.push('/dashboard')
-        } else if (event === 'SIGNED_OUT') {
-          router.push('/')
+        // Solo redirigir si estamos en el cliente y tenemos window
+        if (isClient && typeof window !== 'undefined') {
+          if (event === 'SIGNED_IN' && window.location.pathname === '/login') {
+            window.location.href = '/dashboard'
+          } else if (event === 'SIGNED_OUT' && window.location.pathname !== '/login' && window.location.pathname !== '/') {
+            window.location.href = '/login'
+          }
         }
       }
     )
 
     return () => subscription.unsubscribe()
-  }, [router, mounted])
+  }, [isClient])
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
@@ -109,6 +111,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('Logout failed:', error)
     }
+  }
+
+  // Durante prerendering (Factor VI - stateless), devolver estado inicial
+  if (!isClient) {
+    return (
+      <AuthContext.Provider value={{ 
+        user: null, 
+        session: null, 
+        login: async () => false, 
+        logout: async () => {}, 
+        loading: true 
+      }}>
+        {children}
+      </AuthContext.Provider>
+    )
   }
 
   return (
