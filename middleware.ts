@@ -5,8 +5,10 @@ import { createServerClient } from '@supabase/ssr'
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Log all requests for debugging
-  console.log(`[Middleware] ${request.method} ${pathname}`)
+  // Log only important requests for debugging
+  if (pathname.startsWith('/api/') || pathname === '/login' || pathname === '/dashboard') {
+    console.log(`[Middleware] ${request.method} ${pathname}`)
+  }
 
   // Handle API routes
   if (pathname.startsWith('/api/')) {
@@ -44,7 +46,10 @@ export async function middleware(request: NextRequest) {
 
   // If it's a public route, allow access
   if (isPublicRoute) {
-    console.log(`[Middleware] Public route: ${pathname}`)
+    // Only log important public routes
+    if (pathname === '/login' || pathname === '/') {
+      console.log(`[Middleware] Public route: ${pathname}`)
+    }
     return NextResponse.next()
   }
 
@@ -86,7 +91,10 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/login', request.url))
     }
     
-    console.log(`[Middleware] Valid session found for: ${pathname}`)
+    // Only log session validation for important routes
+    if (pathname === '/dashboard' || pathname === '/login') {
+      console.log(`[Middleware] Valid session found for: ${pathname}`)
+    }
     return NextResponse.next()
     
   } catch (error) {

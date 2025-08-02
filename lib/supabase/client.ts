@@ -19,8 +19,6 @@ export function createClient() {
   console.log('🔍 Supabase Client Debug:', {
     hasUrl: !!supabaseUrl,
     hasKey: !!supabaseKey,
-    url: supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : 'missing',
-    key: supabaseKey ? `${supabaseKey.substring(0, 20)}...` : 'missing',
     source: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'env' : 'fallback'
   })
 
