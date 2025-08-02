@@ -1,9 +1,7 @@
-
-
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
-import { supabase } from '../lib/supabase'
+import { useAuth } from '../lib/auth'
 import { Button } from './ui/button'
 import { 
   UserIcon, 
@@ -16,63 +14,22 @@ import {
   UsersIcon
 } from '@heroicons/react/24/outline'
 
-interface User {
-  id: string
-  email: string
-  user_metadata: {
-    full_name?: string
-  }
-}
-
-interface UserProfile {
-  company_id: string
-  role: string
-  employee_id?: string
-}
-
 interface DashboardLayoutProps {
   children: React.ReactNode
 }
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  const [user, setUser] = useState<User | null>(null)
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
-  const [loading, setLoading] = useState(true)
+  const { user, logout } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const router = useRouter()
 
-  useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        setUser(user as User)
-        
-        // Get user profile
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single()
-        
-        if (profile) {
-          setUserProfile(profile)
-        }
-      } else {
-        router.push('/auth')
-      }
-      setLoading(false)
-    }
-
-    getUser()
-  }, [router])
-
   const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    router.push('/auth')
+    await logout()
+    router.push('/login')
   }
 
   const navigation = [
-    { name: 'Dashboard', href: '/', icon: ChartBarIcon },
+    { name: 'Dashboard', href: '/dashboard', icon: ChartBarIcon },
     { name: 'Empleados', href: '/employees', icon: UsersIcon },
     { name: 'Departamentos', href: '/departments', icon: BuildingOfficeIcon },
     { name: 'Asistencia', href: '/attendance', icon: ClockIcon },
@@ -81,14 +38,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Reportes', href: '/reports', icon: ChartBarIcon },
     { name: 'Configuración', href: '/settings', icon: Cog6ToothIcon },
   ]
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-      </div>
-    )
-  }
 
   return (
     <div className="h-screen flex overflow-hidden bg-gray-100">
@@ -119,7 +68,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
           {/* Navigation */}
           <nav className="flex-1 px-2 py-4 space-y-1">
-            {/* eslint-disable-next-line react/jsx-key */}
             {navigation.map((item, index) => {
               const isActive = router.pathname === item.href
               return (
@@ -157,7 +105,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                     {user?.user_metadata?.full_name || user?.email}
                   </p>
                   <p className="text-xs text-gray-500 truncate capitalize">
-                    {userProfile?.role || 'Employee'}
+                    Employee
                   </p>
                 </div>
               )}
@@ -185,4 +133,4 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       </div>
     </div>
   )
-}
+} 
