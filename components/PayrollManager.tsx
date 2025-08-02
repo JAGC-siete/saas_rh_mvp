@@ -40,7 +40,7 @@ interface Employee {
   name: string
   employee_code: string
   base_salary: number
-  department: string
+  department_id: string
 }
 
 interface PayrollStats {
@@ -202,7 +202,7 @@ export default function PayrollManager() {
       // Fetch employees for generation form (sin restricción de empresa)
       let employeesQuery = supabase
         .from('employees')
-        .select('id, name, employee_code, base_salary, department')
+        .select('id, name, employee_code, base_salary, department_id')
         .eq('status', 'active')
         .order('name')
 
@@ -953,7 +953,7 @@ export default function PayrollManager() {
                     <div key={emp.id} className="p-3 border rounded-lg">
                       <div className="font-medium">{emp.name}</div>
                       <div className="text-sm text-gray-500">
-                        {emp.employee_code} • {emp.department || 'Sin departamento'}
+                        {emp.employee_code} • {emp.department_id || 'Sin departamento'}
                       </div>
                       <div className="text-sm font-mono text-green-600">
                         {formatCurrency(emp.base_salary)}

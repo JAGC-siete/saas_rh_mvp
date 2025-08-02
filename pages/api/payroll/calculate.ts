@@ -125,7 +125,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Obtener empleados activos (sin restricción de empresa)
     let employeesQuery = supabase
       .from('employees')
-      .select('id, name, dni, base_salary, bank_name, bank_account, status, department')
+      .select('id, name, dni, base_salary, bank_name, bank_account, status, department_id')
       .eq('status', 'active')
       .order('name')
 
