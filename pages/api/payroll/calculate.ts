@@ -148,17 +148,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    // Obtener registros de asistencia del período (sin restricción de empresa)
-    let attendanceQuery = supabase
+    // Obtener registros de asistencia del período
+    // Nota: attendance_records no tiene company_id, se filtra por employee_id
+    const { data: attendanceRecords, error: attError } = await supabase
       .from('attendance_records')
       .select('employee_id, date, check_in, check_out, status')
       .gte('date', fechaInicio)
       .lte('date', fechaFin)
-
-    // Si el usuario tiene company_id, filtrar por empresa
-    if (userProfile.company_id) {
-      attendanceQuery = attendanceQuery.eq('company_id', userProfile.company_id)
-    }
 
     const { data: attendanceRecords, error: attError } = await attendanceQuery
 
@@ -242,7 +238,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         id: emp.dni,
         bank: emp.bank_name || '',
         bank_account: emp.bank_account || '',
-        department: emp.department || 'Sin Departamento',
+        department: emp.department_id || 'Sin Departamento',
         monthly_salary: base_salary,
         days_worked,
         days_absent,
