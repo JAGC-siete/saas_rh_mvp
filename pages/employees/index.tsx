@@ -1,6 +1,7 @@
 import ProtectedRoute from '../../components/ProtectedRoute'
 import DashboardLayout from '../../components/DashboardLayout'
 import EmployeeManager from '../../components/EmployeeManager'
+import { GetServerSideProps } from 'next'
 
 export default function EmployeesPage() {
   return (
@@ -17,4 +18,10 @@ export default function EmployeesPage() {
       </DashboardLayout>
     </ProtectedRoute>
   )
+}
+
+export const getServerSideProps: GetServerSideProps = async () => {
+  return {
+    props: {}
+  }
 }

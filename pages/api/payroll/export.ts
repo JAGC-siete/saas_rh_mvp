@@ -95,7 +95,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Generar PDF
     const doc = new PDFDocument({ size: 'A4', margin: 20, layout: 'landscape' })
-    let buffers = []
+    let buffers: Buffer[] = []
     doc.on('data', buffers.push.bind(buffers))
     doc.on('end', () => {
       const pdf = Buffer.concat(buffers)
@@ -160,6 +160,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     doc.end()
   } catch (error) {
-    return res.status(500).json({ error: 'Error generando PDF', message: error.message })
+    return res.status(500).json({ 
+      error: 'Error generando PDF', 
+      message: error instanceof Error ? error.message : 'Unknown error' 
+    })
   }
 } 

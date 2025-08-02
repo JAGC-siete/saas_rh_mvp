@@ -6,6 +6,7 @@ import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { clientLogger } from '../lib/logger-client'
+import { useSupabaseSession } from '../lib/hooks/useSession'
 
 interface PayrollRecord {
   id: string
@@ -54,6 +55,9 @@ export default function PayrollManager() {
     incluirDeducciones: false
   });
 
+  const { user } = useSupabaseSession()
+  const userId = user?.id
+
   useEffect(() => {
     fetchData()
   }, [])
@@ -65,16 +69,10 @@ export default function PayrollManager() {
     
     try {
       // Get user profile
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        clientLogger.error('No user found in payroll manager')
-        return
-      }
-
       const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
         .select('*')
-        .eq('id', user.id)
+        .eq('id', userId)
         .single()
 
       if (profileError) {

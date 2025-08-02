@@ -1,3 +1,4 @@
+import { GetServerSideProps } from 'next'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
@@ -180,4 +181,10 @@ export default function AdminLogin() {
       </div>
     </>
   )
+}
+
+export const getServerSideProps: GetServerSideProps = async () => {
+  return {
+    props: {}
+  }
 }

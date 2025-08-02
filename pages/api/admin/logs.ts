@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import logger, { logAuth } from '../../../lib/logger'
+import { logger } from '../../../lib/logger'
 import { createAdminClient } from '../../../lib/supabase/server'
 
 interface LogsResponse {
@@ -13,19 +13,23 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<LogsResponse>
 ) {
+  let user: any = null
+  
   // Verificar autenticación y autorización
   try {
     const supabase = createAdminClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
     
-    if (authError || !user) {
-      logAuth('logs_api_unauthorized', undefined, { error: authError?.message })
+    if (authError || !authUser) {
+      logger.error('logs_api_unauthorized', { error: authError?.message })
       return res.status(401).json({
         success: false,
         message: 'Unauthorized',
         error: 'Authentication required'
       })
     }
+
+    user = authUser
 
     // Verificar si el usuario es admin
     const { data: profile, error: profileError } = await supabase
@@ -35,7 +39,7 @@ export default async function handler(
       .single()
 
     if (profileError || !profile || profile.role !== 'admin') {
-      logAuth('logs_api_forbidden', user.id, { role: profile?.role })
+      logger.error('logs_api_forbidden', { userId: user.id, role: profile?.role })
       return res.status(403).json({
         success: false,
         message: 'Forbidden',
@@ -43,7 +47,7 @@ export default async function handler(
       })
     }
 
-    logAuth('logs_api_access', user.id, { method: req.method })
+    logger.info('logs_api_access', { userId: user.id, method: req.method })
 
   } catch (error) {
     logger.error('Logs API authentication error', { error })
@@ -118,7 +122,7 @@ export default async function handler(
     }, {}) || {}
 
     logger.info('Logs accessed', { 
-      user: user.id, 
+      userId: user?.id, 
       filters: { level, limit, startDate, endDate },
       resultsCount: logs?.length || 0 
     })

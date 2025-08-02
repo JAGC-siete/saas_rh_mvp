@@ -256,6 +256,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       planilla
     })
   } catch (error) {
-    return res.status(500).json({ error: 'Error interno del servidor', message: error.message })
+    return res.status(500).json({ 
+      error: 'Error interno del servidor', 
+      message: error instanceof Error ? error.message : 'Unknown error' 
+    })
   }
 } 

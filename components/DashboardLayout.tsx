@@ -15,6 +15,7 @@ import {
   BuildingOfficeIcon,
   UsersIcon
 } from '@heroicons/react/24/outline'
+import { useSupabaseSession } from '../lib/hooks/useSession'
 
 interface User {
   id: string
@@ -35,7 +36,8 @@ interface DashboardLayoutProps {
 }
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  const [user, setUser] = useState<User | null>(null)
+  const { user } = useSupabaseSession()
+  const userId = user?.id
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -43,28 +45,26 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   useEffect(() => {
     const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        setUser(user as User)
-        
-        // Get user profile
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single()
-        
-        if (profile) {
-          setUserProfile(profile)
-        }
-      } else {
+      if (!userId) {
         router.push('/auth')
+        return
+      }
+
+      // Get user profile
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', userId)
+        .single()
+      
+      if (profile) {
+        setUserProfile(profile)
       }
       setLoading(false)
     }
 
     getUser()
-  }, [router])
+  }, [router, userId])
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()

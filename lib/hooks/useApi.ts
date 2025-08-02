@@ -18,7 +18,7 @@ export function useApi<T = any>(endpoint: string, options: UseApiOptions = {}) {
     
     try {
       const result = await apiService.request(endpoint, params)
-      setData(result)
+      setData(result as any)
       options.onSuccess?.(result)
       return result
     } catch (err) {

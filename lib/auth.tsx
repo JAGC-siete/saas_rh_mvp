@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { useRouter } from 'next/router'
 import { createClient } from './supabase/client'
+import { useSafeRouter } from './hooks/useSafeRouter'
 import { User, Session } from '@supabase/supabase-js'
 
 interface AuthContextType {
@@ -25,10 +25,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
-  const router = useRouter()
+  const [mounted, setMounted] = useState(false)
+  const router = useSafeRouter()
   const supabase = createClient()
 
+  // Ensure we're on the client side
   useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!mounted) return
+
     // Get initial session
     const getInitialSession = async () => {
       try {
@@ -61,7 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     )
 
     return () => subscription.unsubscribe()
-  }, [router])
+  }, [router, mounted])
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
