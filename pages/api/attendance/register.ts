@@ -1,10 +1,58 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createAdminClient } from '../../../lib/supabase/server'
+import { createAdminClient, createClient } from '../../../lib/supabase/server'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST'])
     return res.status(405).json({ error: 'Method not allowed' })
+  }
+
+  // 🔒 AUTENTICACIÓN REQUERIDA
+  try {
+    const supabase = createClient(req, res)
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    if (!session) {
+      return res.status(401).json({ 
+        error: 'No autorizado',
+        message: 'Debe iniciar sesión para registrar asistencia'
+      })
+    }
+
+    // Verificar que el usuario tiene permisos para registrar asistencia
+    const { data: userProfile } = await supabase
+      .from('user_profiles')
+      .select('role, permissions, company_id')
+      .eq('id', session.user.id)
+      .single()
+
+    if (!userProfile) {
+      return res.status(403).json({ 
+        error: 'Perfil no encontrado',
+        message: 'Su perfil de usuario no está configurado correctamente'
+      })
+    }
+
+    // Verificar permisos (admin, manager, o employee pueden registrar asistencia)
+    const allowedRoles = ['admin', 'manager', 'employee']
+    if (!allowedRoles.includes(userProfile.role)) {
+      return res.status(403).json({ 
+        error: 'Permisos insuficientes',
+        message: 'No tiene permisos para registrar asistencia'
+      })
+    }
+
+    console.log('🔐 Usuario autenticado:', { 
+      userId: session.user.id, 
+      role: userProfile.role,
+      companyId: userProfile.company_id 
+    })
+  } catch (authError) {
+    console.error('❌ Error de autenticación:', authError)
+    return res.status(500).json({ 
+      error: 'Error de autenticación',
+      message: 'No se pudo verificar la autenticación'
+    })
   }
 
   try {

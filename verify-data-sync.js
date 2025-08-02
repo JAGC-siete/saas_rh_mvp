@@ -9,8 +9,15 @@
 const { createClient } = require('@supabase/supabase-js')
 
 // Configuración
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://fwyxmovfrzauebiqxchz.supabase.co'
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ3eXhtb3ZmcnphdWViaXF4Y2h6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczNjI4MjgzOCwiZXhwIjoyMDUxODU4ODM4fQ.cNsUZ1f_GVPOQDlAVh68WJrnRJH0NsQ1_BeCGGq0H6A'
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+// Validar variables de entorno requeridas
+if (!supabaseUrl || !supabaseKey) {
+  console.error('❌ ERROR: Variables de entorno de Supabase no configuradas')
+  console.error('   NEXT_PUBLIC_SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY son requeridas')
+  process.exit(1)
+}
 
 const supabase = createClient(supabaseUrl, supabaseKey)
 

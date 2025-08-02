@@ -24,41 +24,53 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Validar autenticación
+    // 🔒 AUTENTICACIÓN REQUERIDA
     const supabase = createClient(req, res)
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const { data: { session } } = await supabase.auth.getSession()
     
-    if (authError || !user) {
-      return res.status(401).json({ error: 'Unauthorized' })
+    if (!session) {
+      return res.status(401).json({ 
+        error: 'No autorizado',
+        message: 'Debe iniciar sesión para calcular nómina'
+      })
     }
 
-    // Verificar permisos del usuario (TEMPORAL: permitir cualquier usuario autenticado)
+    // Verificar permisos del usuario
     const { data: userProfile } = await supabase
       .from('user_profiles')
-      .select('role, company_id')
-      .eq('id', user.id)
+      .select('role, permissions, company_id')
+      .eq('id', session.user.id)
       .single()
 
-    // TEMPORAL: Si el usuario no tiene perfil, crear uno automáticamente
     if (!userProfile) {
-      console.log('Creating automatic user profile for:', user.id)
-      const { error: insertError } = await supabase
-        .from('user_profiles')
-        .insert({
-          id: user.id,
-          company_id: '00000000-0000-0000-0000-000000000001',
-          role: 'company_admin',
-          permissions: { "can_manage_employees": true, "can_view_payroll": true, "can_manage_attendance": true }
-        })
-      
-      if (insertError) {
-        console.error('Error creating user profile:', insertError)
-        return res.status(500).json({ error: 'Error creating user profile', details: (insertError as any).message })
-      }
-    } else if (!['company_admin', 'hr_manager', 'super_admin'].includes(userProfile.role)) {
-      // TEMPORAL: Permitir acceso a cualquier usuario autenticado
-      console.log('User has role:', userProfile.role, 'but allowing access for development')
+      return res.status(403).json({ 
+        error: 'Perfil no encontrado',
+        message: 'Su perfil de usuario no está configurado correctamente'
+      })
     }
+
+    // Verificar permisos específicos para nómina
+    const allowedRoles = ['company_admin', 'hr_manager', 'super_admin']
+    if (!allowedRoles.includes(userProfile.role)) {
+      return res.status(403).json({ 
+        error: 'Permisos insuficientes',
+        message: 'No tiene permisos para calcular nómina'
+      })
+    }
+
+    // Verificar permisos específicos si están definidos
+    if (userProfile.permissions && !userProfile.permissions.can_view_payroll) {
+      return res.status(403).json({ 
+        error: 'Permisos insuficientes',
+        message: 'No tiene permisos para ver nómina'
+      })
+    }
+
+    console.log('🔐 Usuario autenticado para nómina:', { 
+      userId: session.user.id, 
+      role: userProfile.role,
+      companyId: userProfile.company_id 
+    })
 
     const { periodo, quincena, incluirDeducciones } = req.body
     if (!periodo || !quincena) {
