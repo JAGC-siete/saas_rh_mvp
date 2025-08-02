@@ -104,7 +104,7 @@ CREATE POLICY "Users can view point history from their company" ON point_history
 
 CREATE POLICY "Users can insert point history for their company" ON point_history
     FOR INSERT WITH CHECK (company_id IN (
-        SELECT company_id FROM user_profiles WHERE user_id = auth.uid()
+        SELECT company_id FROM user_profiles WHERE id = auth.uid()
     ));
 
 -- Function to update timestamps
