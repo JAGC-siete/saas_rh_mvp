@@ -103,7 +103,7 @@ export default function PayrollManager() {
 
       console.log('✅ User authenticated:', user.email)
 
-      const { data: profile, error: profileError } = await supabase
+      let { data: profile, error: profileError } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('id', user.id)
@@ -111,8 +111,48 @@ export default function PayrollManager() {
 
       if (profileError) {
         console.error('Error fetching user profile:', profileError)
-        // Continue without profile for now
-        setUserProfile(null)
+        
+        // Si el perfil no existe, intentar crearlo
+        if (profileError.code === 'PGRST116') {
+          console.log('🔧 Perfil no encontrado, intentando crear...')
+          const { data: newProfile, error: createError } = await supabase
+            .from('user_profiles')
+            .insert({
+              id: user.id,
+              role: 'super_admin',
+              is_active: true,
+              permissions: {
+                can_manage_employees: true,
+                can_view_payroll: true,
+                can_manage_attendance: true,
+                can_manage_departments: true,
+                can_view_reports: true,
+                can_manage_companies: true,
+                can_generate_payroll: true,
+                can_export_payroll: true,
+                can_view_own_attendance: true,
+                can_register_attendance: true
+              },
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .select()
+            .single()
+
+          if (createError) {
+            console.error('Error creando perfil:', createError)
+            alert('❌ Error creando perfil de usuario. Contacte al administrador.')
+            return
+          }
+
+          console.log('✅ Perfil creado exitosamente:', newProfile)
+          setUserProfile(newProfile)
+          profile = newProfile
+        } else {
+          console.error('Error obteniendo perfil:', profileError)
+          alert('❌ Error obteniendo perfil de usuario')
+          return
+        }
       } else {
         console.log('✅ User profile loaded:', profile)
         setUserProfile(profile)
@@ -125,8 +165,13 @@ export default function PayrollManager() {
         return
       }
 
-      // Fetch payroll records
-      const { data: payrollData, error: payrollError } = await supabase
+      if (!profile.is_active) {
+        alert('❌ Su cuenta ha sido desactivada')
+        return
+      }
+
+      // Fetch payroll records (sin restricción de empresa)
+      let payrollQuery = supabase
         .from('payroll_records')
         .select(`
           *,
@@ -137,8 +182,14 @@ export default function PayrollManager() {
             department
           )
         `)
-        .eq('employees.company_id', profile.company_id)
         .order('created_at', { ascending: false })
+
+      // Si el usuario tiene company_id, filtrar por empresa
+      if (profile.company_id) {
+        payrollQuery = payrollQuery.eq('employees.company_id', profile.company_id)
+      }
+
+      const { data: payrollData, error: payrollError } = await payrollQuery
 
       if (payrollError) {
         console.error('Error fetching payroll records:', payrollError)
@@ -148,13 +199,19 @@ export default function PayrollManager() {
       console.log('✅ Payroll records loaded:', payrollData?.length || 0)
       setPayrollRecords(payrollData || [])
 
-      // Fetch employees for generation form
-      const { data: employeesData, error: empError } = await supabase
+      // Fetch employees for generation form (sin restricción de empresa)
+      let employeesQuery = supabase
         .from('employees')
         .select('id, name, employee_code, base_salary, department')
-        .eq('company_id', profile.company_id)
         .eq('status', 'active')
         .order('name')
+
+      // Si el usuario tiene company_id, filtrar por empresa
+      if (profile.company_id) {
+        employeesQuery = employeesQuery.eq('company_id', profile.company_id)
+      }
+
+      const { data: employeesData, error: empError } = await employeesQuery
 
       if (empError) {
         console.error('Error fetching employees:', empError)

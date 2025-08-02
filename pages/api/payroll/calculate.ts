@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../lib/supabase/server'
+import { authenticateUser, getOrCreateProfile, hasPermission } from '../../../lib/auth-helpers'
 
 // Constantes específicas para Honduras
 const SALARIO_MINIMO = 11903.13
@@ -58,50 +59,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // 🔒 AUTENTICACIÓN REQUERIDA
-    const supabase = createClient(req, res)
-    const { data: { session } } = await supabase.auth.getSession()
+    // 🔒 AUTENTICACIÓN REQUERIDA CON NUEVO HELPER
+    const authResult = await authenticateUser(req, res, ['can_generate_payroll'])
     
-    if (!session) {
+    if (!authResult.success) {
       return res.status(401).json({ 
-        error: 'No autorizado',
-        message: 'Debe iniciar sesión para calcular nómina'
+        error: authResult.error,
+        message: authResult.message
       })
     }
 
-    // Verificar permisos del usuario
-    const { data: userProfile } = await supabase
-      .from('user_profiles')
-      .select('role, permissions, company_id, employee_id, name')
-      .eq('id', session.user.id)
-      .single()
-
-    if (!userProfile) {
-      return res.status(403).json({ 
-        error: 'Perfil no encontrado',
-        message: 'Su perfil de usuario no está configurado correctamente'
-      })
-    }
-
-    // Verificar permisos específicos para nómina
-    const allowedRoles = ['company_admin', 'hr_manager', 'super_admin']
-    if (!allowedRoles.includes(userProfile.role)) {
-      return res.status(403).json({ 
-        error: 'Permisos insuficientes',
-        message: 'No tiene permisos para calcular nómina'
-      })
-    }
-
-    // Verificar permisos específicos si están definidos
-    if (userProfile.permissions && !userProfile.permissions.can_view_payroll) {
-      return res.status(403).json({ 
-        error: 'Permisos insuficientes',
-        message: 'No tiene permisos para ver nómina'
-      })
-    }
+    const { user, userProfile } = authResult
+    const supabase = createClient(req, res)
 
     console.log('🔐 Usuario autenticado para nómina:', { 
-      userId: session.user.id, 
+      userId: user.id, 
       role: userProfile.role,
       companyId: userProfile.company_id 
     })
@@ -150,13 +122,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       soloEmpleadosConAsistencia
     })
 
-    // Obtener empleados activos de la empresa específica
-    const { data: employees, error: empError } = await supabase
+    // Obtener empleados activos (sin restricción de empresa)
+    let employeesQuery = supabase
       .from('employees')
       .select('id, name, dni, base_salary, bank_name, bank_account, status, department')
       .eq('status', 'active')
-      .eq('company_id', userProfile.company_id)
       .order('name')
+
+    // Si el usuario tiene company_id, filtrar por empresa
+    if (userProfile.company_id) {
+      employeesQuery = employeesQuery.eq('company_id', userProfile.company_id)
+    }
+
+    const { data: employees, error: empError } = await employeesQuery
 
     if (empError) {
       console.error('Error obteniendo empleados:', empError)
@@ -170,13 +148,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    // Obtener registros de asistencia del período
-    const { data: attendanceRecords, error: attError } = await supabase
+    // Obtener registros de asistencia del período (sin restricción de empresa)
+    let attendanceQuery = supabase
       .from('attendance_records')
       .select('employee_id, date, check_in, check_out, status')
       .gte('date', fechaInicio)
       .lte('date', fechaFin)
-      .eq('company_id', userProfile.company_id)
+
+    // Si el usuario tiene company_id, filtrar por empresa
+    if (userProfile.company_id) {
+      attendanceQuery = attendanceQuery.eq('company_id', userProfile.company_id)
+    }
+
+    const { data: attendanceRecords, error: attError } = await attendanceQuery
 
     if (attError) {
       console.error('Error obteniendo registros de asistencia:', attError)
