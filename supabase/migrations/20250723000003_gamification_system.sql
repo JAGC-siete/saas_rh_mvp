@@ -68,17 +68,17 @@ ALTER TABLE point_history ENABLE ROW LEVEL SECURITY;
 -- RLS policies for employee_scores
 CREATE POLICY "Users can view scores from their company" ON employee_scores
     FOR SELECT USING (company_id IN (
-        SELECT company_id FROM user_profiles WHERE user_id = auth.uid()
+        SELECT company_id FROM user_profiles WHERE id = auth.uid()
     ));
 
 CREATE POLICY "Users can update scores from their company" ON employee_scores
     FOR UPDATE USING (company_id IN (
-        SELECT company_id FROM user_profiles WHERE user_id = auth.uid()
+        SELECT company_id FROM user_profiles WHERE id = auth.uid()
     ));
 
 CREATE POLICY "Users can insert scores for their company" ON employee_scores
     FOR INSERT WITH CHECK (company_id IN (
-        SELECT company_id FROM user_profiles WHERE user_id = auth.uid()
+        SELECT company_id FROM user_profiles WHERE id = auth.uid()
     ));
 
 -- RLS policies for achievement_types (public read)
@@ -88,18 +88,18 @@ CREATE POLICY "Anyone can view achievement types" ON achievement_types
 -- RLS policies for employee_achievements
 CREATE POLICY "Users can view achievements from their company" ON employee_achievements
     FOR SELECT USING (company_id IN (
-        SELECT company_id FROM user_profiles WHERE user_id = auth.uid()
+        SELECT company_id FROM user_profiles WHERE id = auth.uid()
     ));
 
 CREATE POLICY "Users can insert achievements for their company" ON employee_achievements
     FOR INSERT WITH CHECK (company_id IN (
-        SELECT company_id FROM user_profiles WHERE user_id = auth.uid()
+        SELECT company_id FROM user_profiles WHERE id = auth.uid()
     ));
 
 -- RLS policies for point_history
 CREATE POLICY "Users can view point history from their company" ON point_history
     FOR SELECT USING (company_id IN (
-        SELECT company_id FROM user_profiles WHERE user_id = auth.uid()
+        SELECT company_id FROM user_profiles WHERE id = auth.uid()
     ));
 
 CREATE POLICY "Users can insert point history for their company" ON point_history
