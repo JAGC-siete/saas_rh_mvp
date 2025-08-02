@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient } from '../../lib/supabase/server'
+import { logger } from '../../lib/logger'
 
 interface HealthStatus {
   status: 'healthy' | 'degraded' | 'unhealthy'
@@ -20,7 +21,10 @@ interface HealthStatus {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse<HealthStatus>) {
+  const startTime = Date.now()
+  
   if (req.method !== 'GET') {
+    logger.warn('Invalid method on health check', { method: req.method })
     res.setHeader('Allow', ['GET'])
     return res.status(405).json({
       status: 'unhealthy',
@@ -64,7 +68,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
   // Check database connectivity
   try {
-    const startTime = Date.now()
+    const dbStartTime = Date.now()
     const supabase = createAdminClient()
     
     // Simple query to test connectivity
@@ -73,9 +77,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       .select('id')
       .limit(1)
     
-    const latency = Date.now() - startTime
+    const latency = Date.now() - dbStartTime
     
     if (error) {
+      logger.error('Database health check failed', error, { latency })
       healthStatus.status = 'degraded'
       healthStatus.checks.database = {
         status: 'down',
@@ -83,12 +88,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         latency
       }
     } else {
+      logger.debug('Database health check passed', { latency })
       healthStatus.checks.database = {
         status: 'up',
         latency
       }
     }
   } catch (error) {
+    logger.error('Database health check error', error)
     healthStatus.status = 'unhealthy'
     healthStatus.checks.database = {
       status: 'down',
@@ -99,6 +106,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
   // Set appropriate HTTP status code
   const statusCode = healthStatus.status === 'healthy' ? 200 : 
                     healthStatus.status === 'degraded' ? 200 : 503
+
+  // Log health check result
+  const duration = Date.now() - startTime
+  logger.info('Health check completed', {
+    status: healthStatus.status,
+    statusCode,
+    duration,
+    checks: {
+      database: healthStatus.checks.database.status,
+      envVars: healthStatus.checks.environment_variables.status
+    }
+  })
 
   res.status(statusCode).json(healthStatus)
 }

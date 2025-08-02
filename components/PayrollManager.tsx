@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
+import { clientLogger } from '../lib/logger-client'
 
 interface PayrollRecord {
   id: string
@@ -58,12 +59,15 @@ export default function PayrollManager() {
   }, [])
 
   const fetchData = async () => {
+    const startTime = Date.now()
     setLoading(true)
+    clientLogger.debug('Fetching payroll data')
+    
     try {
       // Get user profile
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        console.error('No user found')
+        clientLogger.error('No user found in payroll manager')
         return
       }
 
@@ -74,16 +78,17 @@ export default function PayrollManager() {
         .single()
 
       if (profileError) {
-        console.error('Error fetching user profile:', profileError)
+        clientLogger.error('Error fetching user profile', profileError)
         // Continue without profile for now
         setUserProfile(null)
       } else {
         setUserProfile(profile)
+        clientLogger.debug('User profile loaded', { userId: profile.id, role: profile.role })
       }
 
       // If no profile, we can't fetch company-specific data
       if (!profile) {
-        console.warn('No user profile found, skipping company data fetch')
+        clientLogger.warn('No user profile found, skipping company data fetch')
         setPayrollRecords([])
         setEmployees([])
         return

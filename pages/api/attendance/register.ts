@@ -1,7 +1,10 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient } from '../../../lib/supabase/server'
+import { logger } from '../../../lib/logger'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const startTime = Date.now()
+  
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST'])
     return res.status(405).json({ error: 'Method not allowed' })
@@ -10,28 +13,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const { last5, dni, justification } = req.body
 
+    logger.info('Attendance registration attempt', {
+      hasLast5: !!last5,
+      hasDni: !!dni,
+      hasJustification: !!justification
+    })
+
     // Validación de parámetros de entrada
     if (!last5 && !dni) {
-      console.error('Parámetros faltantes: dni o last5')
+      logger.warn('Missing parameters for attendance registration')
       return res.status(400).json({ error: 'Debe enviar dni o last5' })
     }
 
     const supabase = createAdminClient()
 
     // PASO 1: Verificar existencia de tablas requeridas
-    console.log('🔍 Verificando existencia de tablas requeridas...')
+    logger.debug('Verifying required tables')
     const requiredTables = ['employees', 'work_schedules', 'attendance_records']
     for (const table of requiredTables) {
       const { error: tableError } = await supabase.from(table).select('id').limit(1)
       if (tableError) {
-        console.error(`❌ Tabla faltante o inaccesible: ${table}`, tableError)
+        logger.error('Required table missing or inaccessible', tableError, { table })
         return res.status(500).json({ 
           error: `Error de base de datos: Tabla ${table} no disponible`,
           details: tableError.message 
         })
       }
     }
-    console.log('✅ Todas las tablas requeridas están disponibles')
+    logger.debug('All required tables are available')
 
     // PASO 2: Validar existencia del empleado (público, sin company_id)
     console.log('🔍 Buscando empleado...', { dni, last5 })
