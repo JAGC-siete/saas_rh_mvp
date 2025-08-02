@@ -72,7 +72,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Verificar permisos del usuario
     const { data: userProfile } = await supabase
       .from('user_profiles')
-      .select('role, permissions, company_id, employee_id')
+      .select('role, permissions, company_id, employee_id, name')
       .eq('id', session.user.id)
       .single()
 
@@ -314,9 +314,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Verificar si se solicita PDF
     const acceptHeader = req.headers.accept || ''
     if (acceptHeader.includes('application/pdf')) {
-      // Generar PDF mejorado
+      // Generar PDF profesional para Paragon Honduras
       const PDFDocument = require('pdfkit')
-      const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 20 })
+      const doc = new PDFDocument({ 
+        size: 'A4', 
+        layout: 'portrait', 
+        margin: 30,
+        info: {
+          Title: `Planilla Quincenal - Paragon Honduras - ${periodo} Q${quincena}`,
+          Author: 'Sistema de Recursos Humanos',
+          Subject: 'Nómina Quincenal',
+          Keywords: 'nómina, planilla, Paragon, Honduras',
+          Creator: 'HR SaaS System'
+        }
+      })
+      
       let buffers: Buffer[] = []
 
       doc.on('data', (chunk: Buffer) => buffers.push(chunk))
@@ -327,57 +339,201 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         res.send(pdf)
       })
 
-      // Encabezado mejorado
-      doc.fontSize(16).text(`PARAGON HONDURAS - PLANILLA QUINCENAL`, { align: 'center' }).moveDown()
-      doc.fontSize(12).text(`Período: ${periodo} - Quincena ${quincena}`, { align: 'center' }).moveDown()
-      doc.fontSize(10).text(`Generada: ${new Date().toLocaleDateString('es-HN')}`, { align: 'center' }).moveDown()
-      doc.fontSize(8)
-
+      // ===== PÁGINA 1: HEADER Y RESUMEN EJECUTIVO =====
+      
+      // Header con logo y branding
+      doc.rect(0, 0, 595, 100).fill('#1e40af')
+      doc.fillColor('white')
+      doc.fontSize(24).text('PARAGON HONDURAS', 30, 20, { align: 'center', width: 535 })
+      doc.fontSize(16).text('Sistema de Recursos Humanos', 30, 50, { align: 'center', width: 535 })
+      doc.fontSize(14).text(`PLANILLA QUINCENAL - ${periodo} Q${quincena}`, 30, 75, { align: 'center', width: 535 })
+      
+      // Reset colors
+      doc.fillColor('black')
+      
+      // Información de la empresa
+      doc.fontSize(10).text('INFORMACIÓN DE LA EMPRESA:', 30, 120)
+      doc.fontSize(9).text('Paragon Honduras', 30, 135)
+      doc.fontSize(9).text('Dirección: Tegucigalpa, Honduras', 30, 150)
+      doc.fontSize(9).text('Teléfono: +504 XXXX-XXXX', 30, 165)
+      doc.fontSize(9).text('Email: info@paragonhonduras.com', 30, 180)
+      
+      // Información del período
+      doc.fontSize(10).text('INFORMACIÓN DEL PERÍODO:', 300, 120)
+      doc.fontSize(9).text(`Período: ${periodo}`, 300, 135)
+      doc.fontSize(9).text(`Quincena: ${quincena === 1 ? 'Primera (1-15)' : 'Segunda (16-fin de mes)'}`, 300, 150)
+      doc.fontSize(9).text(`Fecha de generación: ${new Date().toLocaleDateString('es-HN')}`, 300, 165)
+      doc.fontSize(9).text(`Generado por: ${userProfile?.name || 'Sistema'}`, 300, 180)
+      
+      // Resumen ejecutivo
+      const totalGross = planilla.reduce((sum, row) => sum + row.total_earnings, 0)
+      const totalDeductions = planilla.reduce((sum, row) => sum + row.total_deductions, 0)
+      const totalNet = planilla.reduce((sum, row) => sum + row.total, 0)
+      const totalEmployees = planilla.length
+      
+      doc.rect(30, 200, 535, 80).stroke()
+      doc.fontSize(12).text('RESUMEN EJECUTIVO', 35, 210)
+      
+      doc.fontSize(10).text('Total Empleados:', 40, 230)
+      doc.fontSize(10).text(totalEmployees.toString(), 200, 230)
+      
+      doc.fontSize(10).text('Total Salario Bruto:', 40, 245)
+      doc.fontSize(10).text(`L. ${totalGross.toFixed(2)}`, 200, 245)
+      
+      doc.fontSize(10).text('Total Deducciones:', 40, 260)
+      doc.fontSize(10).text(`L. ${totalDeductions.toFixed(2)}`, 200, 260)
+      
+      doc.fontSize(10).text('Total Salario Neto:', 40, 275)
+      doc.fontSize(10).text(`L. ${totalNet.toFixed(2)}`, 200, 275)
+      
+      // Totales por departamento
+      const deptTotals: { [key: string]: { count: number, gross: number, net: number } } = {}
+      planilla.forEach(row => {
+        const dept = row.department
+        if (!deptTotals[dept]) {
+          deptTotals[dept] = { count: 0, gross: 0, net: 0 }
+        }
+        deptTotals[dept].count++
+        deptTotals[dept].gross += row.total_earnings
+        deptTotals[dept].net += row.total
+      })
+      
+      doc.fontSize(10).text('TOTALES POR DEPARTAMENTO:', 300, 230)
+      let deptY = 245
+      Object.entries(deptTotals).forEach(([dept, totals]) => {
+        if (deptY < 275) {
+          doc.fontSize(9).text(`${dept}: ${totals.count} emp. - L. ${totals.net.toFixed(2)}`, 300, deptY)
+          deptY += 12
+        }
+      })
+      
+      // ===== PÁGINA 2: TABLA DE NÓMINA =====
+      doc.addPage()
+      
+      // Header de la tabla
+      doc.fontSize(14).text('DETALLE DE NÓMINA POR EMPLEADO', 30, 30, { align: 'center', width: 535 })
+      
       // Encabezados de tabla
       const headers = [
-        'Nombre', 'DNI', 'Departamento', 'Banco', 'Cuenta', 'Salario Mensual', 
-        'Días Trabajados', 'Total Devengado', 'IHSS', 'RAP', 'ISR', 'Total Deducciones', 'Neto'
+        'Código', 'Nombre', 'Departamento', 'Días Trab.', 'Salario Base', 
+        'Devengado', 'IHSS', 'RAP', 'ISR', 'Deducciones', 'Neto'
       ]
-      const colWidths = [80, 50, 60, 50, 60, 60, 40, 60, 40, 40, 40, 60, 60]
-      const startX = 20
-      let y = 120
-      const rowHeight = 14
-
+      const colWidths = [40, 80, 60, 35, 50, 50, 35, 35, 35, 50, 50]
+      const startX = 30
+      let y = 70
+      const rowHeight = 15
+      
+      // Header de tabla
       headers.forEach((h, i) => {
         const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0)
-        doc.rect(x, y, colWidths[i], rowHeight).fillAndStroke('#e0e0e0', '#000')
-        doc.fillColor('#000').text(h, x + 2, y + 4, { width: colWidths[i] - 4 })
+        doc.rect(x, y, colWidths[i], rowHeight).fillAndStroke('#1e40af', '#000')
+        doc.fillColor('white')
+        doc.fontSize(8).text(h, x + 2, y + 4, { width: colWidths[i] - 4, align: 'center' })
+        doc.fillColor('black')
       })
       y += rowHeight
-
+      
       // Datos de empleados
-      planilla.forEach(row => {
+      let pageCount = 1
+      planilla.forEach((row, index) => {
+        // Verificar si necesitamos nueva página
+        if (y > 750) {
+          doc.addPage()
+          y = 30
+          pageCount++
+          
+          // Header de página
+          doc.fontSize(10).text(`Página ${pageCount} - Continuación`, 30, 15)
+        }
+        
         const values = [
-          row.name, row.id, row.department, row.bank, row.bank_account, 
-          `L. ${row.monthly_salary.toFixed(2)}`, row.days_worked.toString(),
-          `L. ${row.total_earnings.toFixed(2)}`, `L. ${row.IHSS.toFixed(2)}`,
-          `L. ${row.RAP.toFixed(2)}`, `L. ${row.ISR.toFixed(2)}`,
-          `L. ${row.total_deductions.toFixed(2)}`, `L. ${row.total.toFixed(2)}`
+          row.id || '',
+          row.name,
+          row.department,
+          row.days_worked.toString(),
+          `L. ${row.monthly_salary.toFixed(2)}`,
+          `L. ${row.total_earnings.toFixed(2)}`,
+          `L. ${row.IHSS.toFixed(2)}`,
+          `L. ${row.RAP.toFixed(2)}`,
+          `L. ${row.ISR.toFixed(2)}`,
+          `L. ${row.total_deductions.toFixed(2)}`,
+          `L. ${row.total.toFixed(2)}`
         ]
         
         values.forEach((val, i) => {
           const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0)
           doc.rect(x, y, colWidths[i], rowHeight).stroke()
-          doc.text(val.toString(), x + 2, y + 3, { width: colWidths[i] - 4 })
+          doc.fontSize(7).text(val.toString(), x + 2, y + 4, { width: colWidths[i] - 4, align: 'center' })
         })
         y += rowHeight
       })
-
-      // Totales
-      const totalGross = planilla.reduce((sum, row) => sum + row.total_earnings, 0)
-      const totalDeductions = planilla.reduce((sum, row) => sum + row.total_deductions, 0)
-      const totalNet = planilla.reduce((sum, row) => sum + row.total, 0)
-
-      y += 10
-      doc.fontSize(10).text(`TOTALES:`, startX, y)
-      doc.text(`Bruto: L. ${totalGross.toFixed(2)}`, startX + 400, y)
-      doc.text(`Deducciones: L. ${totalDeductions.toFixed(2)}`, startX + 500, y)
-      doc.text(`Neto: L. ${totalNet.toFixed(2)}`, startX + 600, y)
+      
+      // Totales al final de la tabla
+      y += 5
+      doc.rect(startX, y, 535, rowHeight).fillAndStroke('#f3f4f6', '#000')
+      doc.fontSize(9).text('TOTALES:', startX + 5, y + 4)
+      doc.fontSize(9).text(`L. ${totalGross.toFixed(2)}`, startX + 200, y + 4)
+      doc.fontSize(9).text(`L. ${totalDeductions.toFixed(2)}`, startX + 350, y + 4)
+      doc.fontSize(9).text(`L. ${totalNet.toFixed(2)}`, startX + 450, y + 4)
+      
+      // ===== PÁGINA 3: DETALLE BANCARIO Y NOTAS =====
+      doc.addPage()
+      
+      doc.fontSize(14).text('INFORMACIÓN BANCARIA Y NOTAS', 30, 30, { align: 'center', width: 535 })
+      
+      // Tabla de información bancaria
+      doc.fontSize(10).text('DETALLE BANCARIO PARA TRANSFERENCIAS:', 30, 60)
+      
+      const bankHeaders = ['Código', 'Nombre', 'Banco', 'Cuenta', 'Monto Neto']
+      const bankColWidths = [40, 120, 80, 100, 80]
+      const bankStartX = 30
+      let bankY = 80
+      const bankRowHeight = 15
+      
+      // Header tabla bancaria
+      bankHeaders.forEach((h, i) => {
+        const x = bankStartX + bankColWidths.slice(0, i).reduce((a, b) => a + b, 0)
+        doc.rect(x, bankY, bankColWidths[i], bankRowHeight).fillAndStroke('#1e40af', '#000')
+        doc.fillColor('white')
+        doc.fontSize(8).text(h, x + 2, bankY + 4, { width: bankColWidths[i] - 4, align: 'center' })
+        doc.fillColor('black')
+      })
+      bankY += bankRowHeight
+      
+      // Datos bancarios
+      planilla.forEach((row, index) => {
+        if (bankY > 750) {
+          doc.addPage()
+          bankY = 30
+        }
+        
+        const bankValues = [
+          row.id || '',
+          row.name,
+          row.bank || 'No especificado',
+          row.bank_account || 'No especificado',
+          `L. ${row.total.toFixed(2)}`
+        ]
+        
+        bankValues.forEach((val, i) => {
+          const x = bankStartX + bankColWidths.slice(0, i).reduce((a, b) => a + b, 0)
+          doc.rect(x, bankY, bankColWidths[i], bankRowHeight).stroke()
+          doc.fontSize(8).text(val.toString(), x + 2, bankY + 4, { width: bankColWidths[i] - 4, align: 'center' })
+        })
+        bankY += bankRowHeight
+      })
+      
+      // Notas importantes
+      doc.fontSize(10).text('NOTAS IMPORTANTES:', 30, bankY + 20)
+      doc.fontSize(9).text('• Esta planilla ha sido generada automáticamente por el sistema de recursos humanos.', 30, bankY + 35)
+      doc.fontSize(9).text('• Los montos están calculados según la legislación laboral de Honduras.', 30, bankY + 50)
+      doc.fontSize(9).text('• Las deducciones incluyen: IHSS (2.5%), RAP (1.5%), ISR (según tabla progresiva).', 30, bankY + 65)
+      doc.fontSize(9).text('• Verificar que la información bancaria sea correcta antes de procesar pagos.', 30, bankY + 80)
+      doc.fontSize(9).text('• Para consultas, contactar al departamento de recursos humanos.', 30, bankY + 95)
+      
+      // Pie de página legal
+      doc.fontSize(8).text('Documento generado automáticamente - Paragon Honduras - Sistema de Recursos Humanos', 30, 800, { align: 'center', width: 535 })
+      doc.fontSize(8).text(`Fecha de generación: ${new Date().toLocaleString('es-HN')}`, 30, 815, { align: 'center', width: 535 })
 
       doc.end()
       return

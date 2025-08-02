@@ -349,6 +349,52 @@ export default function PayrollManager() {
     }
   }
 
+  const downloadIndividualReceipt = async (record: PayrollRecord) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session?.access_token) {
+        throw new Error('No authentication token found.')
+      }
+
+      const period = record.period_start.slice(0, 7)
+      const day = Number(record.period_start.slice(8, 10))
+      const quincena = day === 1 ? 1 : 2
+
+      const response = await fetch('/api/payroll/export', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'Accept': 'application/pdf'
+        },
+        body: JSON.stringify({
+          periodo: period,
+          formato: 'recibo-individual',
+          employeeId: record.employee_id
+        }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to generate receipt')
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `recibo_${record.employees?.employee_code}_${period}_q${quincena}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+
+    } catch (error: any) {
+      alert(`❌ Error descargando recibo: ${error.message}`)
+    }
+  }
+
   const exportToExcel = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession()
@@ -692,6 +738,13 @@ export default function PayrollManager() {
                               onClick={async () => await downloadPayrollPDF(record)}
                             >
                               📄 Descargar PDF
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={async () => await downloadIndividualReceipt(record)}
+                            >
+                              📄 Descargar Recibo
                             </Button>
                           </div>
                         </td>
