@@ -1,10 +1,13 @@
 
 
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import { createClient } from '../lib/supabase/client'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
+
+// Crear cliente de Supabase
+const supabase = createClient()
 
 interface PayrollRecord {
   id: string
@@ -83,12 +86,22 @@ export default function PayrollManager() {
   const fetchData = async () => {
     setLoading(true)
     try {
-      // Get user profile
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        console.error('No user found')
+      // Get user profile with better error handling
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      
+      if (userError) {
+        console.error('Error getting user:', userError)
+        alert('❌ Error de autenticación. Por favor, inicia sesión nuevamente.')
         return
       }
+      
+      if (!user) {
+        console.error('No user found - user is null')
+        alert('❌ No se encontró usuario autenticado. Por favor, inicia sesión.')
+        return
+      }
+
+      console.log('✅ User authenticated:', user.email)
 
       const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
@@ -98,8 +111,10 @@ export default function PayrollManager() {
 
       if (profileError) {
         console.error('Error fetching user profile:', profileError)
+        // Continue without profile for now
         setUserProfile(null)
       } else {
+        console.log('✅ User profile loaded:', profile)
         setUserProfile(profile)
       }
 
@@ -125,7 +140,12 @@ export default function PayrollManager() {
         .eq('employees.company_id', profile.company_id)
         .order('created_at', { ascending: false })
 
-      if (payrollError) throw payrollError
+      if (payrollError) {
+        console.error('Error fetching payroll records:', payrollError)
+        throw payrollError
+      }
+      
+      console.log('✅ Payroll records loaded:', payrollData?.length || 0)
       setPayrollRecords(payrollData || [])
 
       // Fetch employees for generation form
@@ -136,7 +156,12 @@ export default function PayrollManager() {
         .eq('status', 'active')
         .order('name')
 
-      if (empError) throw empError
+      if (empError) {
+        console.error('Error fetching employees:', empError)
+        throw empError
+      }
+      
+      console.log('✅ Employees loaded:', employeesData?.length || 0)
       setEmployees(employeesData || [])
 
       // Calculate statistics
@@ -144,6 +169,8 @@ export default function PayrollManager() {
 
     } catch (error) {
       console.error('Error fetching data:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
+      alert(`❌ Error cargando datos: ${errorMessage}`)
     } finally {
       setLoading(false)
     }
@@ -192,11 +219,22 @@ export default function PayrollManager() {
     setLoading(true)
 
     try {
+      // Verificar autenticación primero
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      
+      if (userError || !user) {
+        alert('❌ Error de autenticación. Por favor, inicia sesión nuevamente.')
+        return
+      }
+
       const { data: { session } } = await supabase.auth.getSession()
       
       if (!session?.access_token) {
-        throw new Error('No authentication token found. Please log in again.')
+        alert('❌ No se encontró token de sesión. Por favor, inicia sesión nuevamente.')
+        return
       }
+
+      console.log('✅ Generating payroll with authenticated user:', user.email)
 
       const response = await fetch('/api/payroll/calculate', {
         method: 'POST',
@@ -224,7 +262,9 @@ export default function PayrollManager() {
       fetchData()
 
     } catch (error: any) {
-      alert(`❌ Error: ${error.message}`)
+      console.error('Error generating payroll:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
+      alert(`❌ Error: ${errorMessage}`)
     } finally {
       setLoading(false)
     }
@@ -346,6 +386,52 @@ export default function PayrollManager() {
     } catch (error: any) {
       console.error('Error downloading PDF:', error)
       alert(`❌ Error descargando PDF: ${error.message || 'Unknown error'}`)
+    }
+  }
+
+  const downloadIndividualReceipt = async (record: PayrollRecord) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session?.access_token) {
+        throw new Error('No authentication token found.')
+      }
+
+      const period = record.period_start.slice(0, 7)
+      const day = Number(record.period_start.slice(8, 10))
+      const quincena = day === 1 ? 1 : 2
+
+      const response = await fetch('/api/payroll/export', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'Accept': 'application/pdf'
+        },
+        body: JSON.stringify({
+          periodo: period,
+          formato: 'recibo-individual',
+          employeeId: record.employee_id
+        }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to generate receipt')
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `recibo_${record.employees?.employee_code}_${period}_q${quincena}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+
+    } catch (error: any) {
+      alert(`❌ Error descargando recibo: ${error.message}`)
     }
   }
 
@@ -692,6 +778,13 @@ export default function PayrollManager() {
                               onClick={async () => await downloadPayrollPDF(record)}
                             >
                               📄 Descargar PDF
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={async () => await downloadIndividualReceipt(record)}
+                            >
+                              📄 Descargar Recibo
                             </Button>
                           </div>
                         </td>
