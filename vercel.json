@@ -12,24 +12,12 @@
   },
   "crons": [
     {
-      "path": "/api/cron/cleanup-old-logs",
-      "schedule": "0 2 * * *"
+      "path": "/api/cron/cleanup-expired-sessions",
+      "schedule": "0 1 * * *"
     },
     {
       "path": "/api/cron/backup-critical-data",
       "schedule": "0 3 * * 0"
-    },
-    {
-      "path": "/api/cron/verify-data-integrity",
-      "schedule": "0 4 * * *"
-    },
-    {
-      "path": "/api/cron/generate-automatic-reports",
-      "schedule": "0 6 * * 1"
-    },
-    {
-      "path": "/api/cron/cleanup-expired-sessions",
-      "schedule": "0 1 * * *"
     }
   ],
   "headers": [
