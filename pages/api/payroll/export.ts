@@ -8,24 +8,53 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Validar autenticación
+    // 🔒 AUTENTICACIÓN REQUERIDA
     const supabase = createClient(req, res)
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const { data: { session } } = await supabase.auth.getSession()
     
-    if (authError || !user) {
-      return res.status(401).json({ error: 'Unauthorized' })
+    if (!session) {
+      return res.status(401).json({ 
+        error: 'No autorizado',
+        message: 'Debe iniciar sesión para exportar nómina'
+      })
     }
 
     // Verificar permisos del usuario
     const { data: userProfile } = await supabase
       .from('user_profiles')
-      .select('role, company_id')
-      .eq('id', user.id)
+      .select('role, permissions, company_id')
+      .eq('id', session.user.id)
       .single()
 
-    if (!userProfile || !['company_admin', 'hr_manager', 'super_admin'].includes(userProfile.role)) {
-      return res.status(403).json({ error: 'Insufficient permissions' })
+    if (!userProfile) {
+      return res.status(403).json({ 
+        error: 'Perfil no encontrado',
+        message: 'Su perfil de usuario no está configurado correctamente'
+      })
     }
+
+    // Verificar permisos específicos para exportar nómina
+    const allowedRoles = ['company_admin', 'hr_manager', 'super_admin']
+    if (!allowedRoles.includes(userProfile.role)) {
+      return res.status(403).json({ 
+        error: 'Permisos insuficientes',
+        message: 'No tiene permisos para exportar nómina'
+      })
+    }
+
+    // Verificar permisos específicos si están definidos
+    if (userProfile.permissions && !userProfile.permissions.can_view_payroll) {
+      return res.status(403).json({ 
+        error: 'Permisos insuficientes',
+        message: 'No tiene permisos para ver nómina'
+      })
+    }
+
+    console.log('🔐 Usuario autenticado para exportar nómina:', { 
+      userId: session.user.id, 
+      role: userProfile.role,
+      companyId: userProfile.company_id 
+    })
 
     const { periodo, quincena } = req.query
     if (!periodo || !quincena) {

@@ -1,4 +1,5 @@
 import { createBrowserClient } from '@supabase/ssr'
+import { logger } from '../logger'
 
 // Create a dummy client for build time
 const createDummyClient = () => ({
@@ -26,8 +27,18 @@ export function createClient() {
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   if (!supabaseUrl || !supabaseKey) {
-    console.error('Missing Supabase environment variables for browser client')
-    throw new Error('Supabase configuration not found')
+    logger.error('Missing Supabase environment variables for browser client', undefined, {
+      hasUrl: !!supabaseUrl,
+      hasKey: !!supabaseKey
+    })
+    
+    // In development: throw error to catch configuration issues early
+    if (process.env.NODE_ENV === 'development') {
+      throw new Error('Supabase configuration not found')
+    }
+    
+    // In production: return dummy client to prevent app crash
+    return createDummyClient()
   }
 
   return createBrowserClient(supabaseUrl, supabaseKey)
