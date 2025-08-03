@@ -86,7 +86,7 @@ export default function ReportsAndAnalytics() {
       if (employeesError) throw employeesError
 
       const totalEmployees = employees?.length || 0
-      const activeEmployees = employees?.filter(emp => emp.status === 'active').length || 0
+      const activeEmployees = employees?.filter((emp: any) => emp.status === 'active').length || 0
 
       // Today's attendance
       const today = new Date().toISOString().split('T')[0]
@@ -155,7 +155,7 @@ export default function ReportsAndAnalytics() {
       // Group by date and count statuses
       const trendMap = new Map<string, { present: number; absent: number; late: number }>()
       
-      data?.forEach(record => {
+      data?.forEach((record: any) => {
         const date = record.date
         if (!trendMap.has(date)) {
           trendMap.set(date, { present: 0, absent: 0, late: 0 })
@@ -256,7 +256,7 @@ export default function ReportsAndAnalytics() {
         const headers = Object.keys(data[0]).filter(key => typeof data[0][key] !== 'object')
         const csvContent = [
           headers.join(','),
-          ...data.map(row => 
+          ...data.map((row: any) => 
             headers.map(header => {
               const value = row[header]
               return typeof value === 'string' ? `"${value}"` : value

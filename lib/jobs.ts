@@ -1,5 +1,5 @@
 import { createAdminClient } from './supabase/server'
-import logger, { logEvent } from './logger'
+import { logger } from './logger'
 import axios from 'axios'
 
 // Tipos para los jobs

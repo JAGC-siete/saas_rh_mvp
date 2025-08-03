@@ -1,18 +1,23 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
+import { logger } from './lib/logger'
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+  const startTime = Date.now()
 
-  // Log only important requests for debugging
-  if (pathname.startsWith('/api/') || pathname === '/login' || pathname === '/dashboard') {
-    console.log(`[Middleware] ${request.method} ${pathname}`)
-  }
+  // Log all requests with structured logging
+  logger.debug('Middleware request', {
+    method: request.method,
+    path: pathname,
+    userAgent: request.headers.get('user-agent'),
+    referer: request.headers.get('referer')
+  })
 
   // Handle API routes
   if (pathname.startsWith('/api/')) {
-    console.log(`[Middleware] API route: ${pathname}`)
+    logger.debug('API route accessed', { path: pathname })
     
     // Handle CORS preflight requests
     if (request.method === 'OPTIONS') {
@@ -46,11 +51,14 @@ export async function middleware(request: NextRequest) {
 
   // If it's a public route, allow access
   if (isPublicRoute) {
-    // Only log important public routes
-    if (pathname === '/login' || pathname === '/') {
-      console.log(`[Middleware] Public route: ${pathname}`)
-    }
-    return NextResponse.next()
+    logger.debug('Public route accessed', { path: pathname })
+    const response = NextResponse.next()
+    
+    // Log response time
+    const duration = Date.now() - startTime
+    logger.api(request.method, pathname, 200, duration, { type: 'public' })
+    
+    return response
   }
 
   // For private routes, check for Supabase session
@@ -60,7 +68,10 @@ export async function middleware(request: NextRequest) {
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
     
     if (!supabaseUrl || !supabaseKey) {
-      console.error('[Middleware] Missing Supabase environment variables')
+      logger.error('Missing Supabase environment variables', undefined, {
+        hasUrl: !!supabaseUrl,
+        hasKey: !!supabaseKey
+      })
       return NextResponse.redirect(new URL('/login', request.url))
     }
     
@@ -82,23 +93,42 @@ export async function middleware(request: NextRequest) {
     const { data: { session }, error } = await supabase.auth.getSession()
     
     if (error) {
-      console.error('[Middleware] Error getting session:', error.message)
+      logger.error('Error getting session', error)
       return NextResponse.redirect(new URL('/login', request.url))
     }
     
     if (!session) {
-      console.log(`[Middleware] No session found for private route: ${pathname}`)
+      logger.info('No session found for private route', { path: pathname })
       return NextResponse.redirect(new URL('/login', request.url))
     }
     
+<<<<<<< HEAD
     // Only log session validation for important routes
     if (pathname === '/dashboard' || pathname === '/login') {
       console.log(`[Middleware] Valid session found for: ${pathname}`)
     }
     return NextResponse.next()
+=======
+    logger.debug('Valid session found', { 
+      path: pathname, 
+      userId: session.user?.id,
+      email: session.user?.email 
+    })
+    
+    const response = NextResponse.next()
+    
+    // Log successful auth
+    const duration = Date.now() - startTime
+    logger.api(request.method, pathname, 200, duration, { 
+      type: 'authenticated',
+      userId: session.user?.id 
+    })
+    
+    return response
+>>>>>>> 12factors
     
   } catch (error) {
-    console.error(`[Middleware] Auth error: ${error.message}`)
+    logger.error('Authentication error in middleware', error)
     return NextResponse.redirect(new URL('/login', request.url))
   }
 }

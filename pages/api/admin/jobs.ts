@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { executeScheduledJob, executeAllScheduledJobs, jobManager } from '../../../lib/jobs'
-import logger, { logAuth } from '../../../lib/logger'
+import { logger } from '../../../lib/logger'
 import { createAdminClient } from '../../../lib/supabase/server'
 
 interface JobsResponse {
@@ -20,7 +20,7 @@ export default async function handler(
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
     if (authError || !user) {
-      logAuth('jobs_api_unauthorized', undefined, { error: authError?.message })
+      logger.error('jobs_api_unauthorized', { error: authError?.message })
       return res.status(401).json({
         success: false,
         message: 'Unauthorized',
@@ -36,7 +36,7 @@ export default async function handler(
       .single()
 
     if (profileError || !profile || profile.role !== 'admin') {
-      logAuth('jobs_api_forbidden', user.id, { role: profile?.role })
+      logger.error('jobs_api_forbidden', { userId: user.id, role: profile?.role })
       return res.status(403).json({
         success: false,
         message: 'Forbidden',
@@ -44,7 +44,7 @@ export default async function handler(
       })
     }
 
-    logAuth('jobs_api_access', user.id, { method: req.method })
+    logger.info('jobs_api_access', { userId: user.id, method: req.method })
 
   } catch (error) {
     logger.error('Jobs API authentication error', { error })

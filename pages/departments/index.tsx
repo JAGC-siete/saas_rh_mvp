@@ -1,6 +1,7 @@
 import ProtectedRoute from '../../components/ProtectedRoute'
 import DashboardLayout from '../../components/DashboardLayout'
 import DepartmentManager from '../../components/DepartmentManager'
+import { GetServerSideProps } from 'next'
 
 export default function DepartmentsPage() {
   return (
@@ -17,4 +18,10 @@ export default function DepartmentsPage() {
       </DashboardLayout>
     </ProtectedRoute>
   )
+}
+
+export const getServerSideProps: GetServerSideProps = async () => {
+  return {
+    props: {}
+  }
 }

@@ -23,17 +23,20 @@ async function generatePayroll(req: NextApiRequest, res: NextApiResponse) {
     // Create Supabase client with cookie handling
     const supabase = createClient(req, res)
     
-    // Get user session and verify permissions
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
+    // Get user session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    
+    if (sessionError || !session?.user) {
       return res.status(401).json({ error: 'Unauthorized' })
     }
+
+    const userId = session.user.id
 
     // Check if user has HR or admin permissions
     const { data: userProfile } = await supabase
       .from('user_profiles')
       .select('role, company_id')
-      .eq('id', user.id)
+      .eq('id', userId)
       .single()
 
     if (!userProfile || !['company_admin', 'hr_manager'].includes(userProfile.role)) {
@@ -149,10 +152,13 @@ async function getPayrollRecords(req: NextApiRequest, res: NextApiResponse) {
     const supabase = createClient(req, res)
     
     // Get user session
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    
+    if (sessionError || !session?.user) {
       return res.status(401).json({ error: 'Unauthorized' })
     }
+
+    const userId = session.user.id
 
     let query = supabase
       .from('payroll_records')

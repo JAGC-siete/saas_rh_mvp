@@ -42,9 +42,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }, {} as Record<string, any[]>) || {}
 
     // Analyze patterns
-    const patternAnalysis = Object.entries(dailyPatterns).map(([date, dayRecords]) => {
-      const checkIn = dayRecords.find(r => r.type === 'check_in')
-      const checkOut = dayRecords.find(r => r.type === 'check_out')
+    const patternAnalysis = Object.entries(dailyPatterns).map(([date, dayRecords]: [string, any]) => {
+      const checkIn = dayRecords.find((r: any) => r.type === 'check_in')
+      const checkOut = dayRecords.find((r: any) => r.type === 'check_out')
       
       return {
         date,

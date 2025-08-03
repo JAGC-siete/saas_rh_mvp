@@ -2,6 +2,7 @@ import { useRouter } from 'next/router'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import DashboardLayout from '../../components/DashboardLayout'
 import PayrollManager from '../../components/PayrollManager'
+import { GetServerSideProps } from 'next'
 
 export default function PayrollPage() {
   return (
@@ -18,4 +19,10 @@ export default function PayrollPage() {
       </DashboardLayout>
     </ProtectedRoute>
   )
+}
+
+export const getServerSideProps: GetServerSideProps = async () => {
+  return {
+    props: {}
+  }
 }

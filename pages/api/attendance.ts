@@ -377,17 +377,21 @@ async function getAttendanceRecords(req: NextApiRequest, res: NextApiResponse) {
     // Validar autenticación para obtener registros
     const { createClient } = await import('../../lib/supabase/server')
     const supabase = createClient(req, res)
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
     
-    if (authError || !user) {
+    // Get user session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    
+    if (sessionError || !session?.user) {
       return res.status(401).json({ error: 'Unauthorized' })
     }
+
+    const userId = session.user.id
 
     // Verificar permisos del usuario
     const { data: userProfile } = await supabase
       .from('user_profiles')
       .select('role, company_id')
-      .eq('id', user.id)
+      .eq('id', userId)
       .single()
 
     if (!userProfile || !['company_admin', 'hr_manager', 'super_admin', 'manager'].includes(userProfile.role)) {

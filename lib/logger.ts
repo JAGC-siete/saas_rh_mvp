@@ -228,4 +228,4 @@ export const logAttendance = (action: string, employeeId?: string, details?: any
 };
 
 // Export for testing or custom instances
-export default SimpleLogger; 
+export default SimpleLogger;

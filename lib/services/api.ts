@@ -17,7 +17,8 @@ class ApiService {
       : {}
   }
   
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  // Make request public
+  async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`
     const headers = await this.getAuthHeaders()
     
