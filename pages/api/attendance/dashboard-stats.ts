@@ -97,7 +97,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const employeesWithApprovedLeave = 0
 
     // 8. Agrupar por departamento
-    const departmentStats = {}
+    const departmentStats: Record<string, { present: number; total: number }> = {}
     todayAttendance?.forEach((record: any) => {
       const deptId = record.employees?.department_id || 'Sin Departamento'
       if (!departmentStats[deptId]) {
