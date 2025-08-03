@@ -102,13 +102,6 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/login', request.url))
     }
     
-<<<<<<< HEAD
-    // Only log session validation for important routes
-    if (pathname === '/dashboard' || pathname === '/login') {
-      console.log(`[Middleware] Valid session found for: ${pathname}`)
-    }
-    return NextResponse.next()
-=======
     logger.debug('Valid session found', { 
       path: pathname, 
       userId: session.user?.id,
@@ -125,7 +118,6 @@ export async function middleware(request: NextRequest) {
     })
     
     return response
->>>>>>> 12factors
     
   } catch (error) {
     logger.error('Authentication error in middleware', error)
