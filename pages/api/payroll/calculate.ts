@@ -74,8 +74,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log('🔐 Usuario autenticado para nómina:', { 
       userId: user.id, 
-      role: userProfile.role,
-      companyId: userProfile.company_id 
+      role: userProfile?.role,
+      companyId: userProfile?.company_id 
     })
 
     const { periodo, quincena, incluirDeducciones, soloEmpleadosConAsistencia = true } = req.body
