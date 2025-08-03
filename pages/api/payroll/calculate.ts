@@ -291,7 +291,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Verificar si se solicita PDF
     const acceptHeader = req.headers.accept || ''
+    console.log('🔍 Headers recibidos:', req.headers)
+    console.log('🔍 Accept header:', acceptHeader)
+    
     if (acceptHeader.includes('application/pdf')) {
+      console.log('📄 Generando PDF...')
       // Generar PDF profesional para Paragon Honduras
       const PDFDocument = require('pdfkit')
       const doc = new PDFDocument({ 
