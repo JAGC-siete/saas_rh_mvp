@@ -1,6 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  
+  // Configuración necesaria para Railway
+  output: 'standalone',
+  
   // Add headers for security
   async headers() {
     return [
