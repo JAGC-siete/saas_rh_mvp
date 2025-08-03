@@ -291,8 +291,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Verificar si se solicita PDF
     const acceptHeader = req.headers.accept || ''
-    console.log('🔍 Headers recibidos:', req.headers)
-    console.log('🔍 Accept header:', acceptHeader)
+    const contentTypeHeader = req.headers['content-type'] || ''
+    console.log('🔍 Headers recibidos:', {
+      accept: acceptHeader,
+      'content-type': contentTypeHeader,
+      userAgent: req.headers['user-agent']
+    })
     
     if (acceptHeader.includes('application/pdf')) {
       console.log('📄 Generando PDF...')
