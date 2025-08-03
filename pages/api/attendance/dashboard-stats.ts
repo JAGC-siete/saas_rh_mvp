@@ -64,7 +64,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // 4. Calcular estadísticas del día
     const presentToday = todayAttendance?.length || 0
     const absentToday = totalEmployees - presentToday
-    const lateToday = todayAttendance?.filter(r => r.late_minutes > 0).length || 0
+    const lateToday = todayAttendance?.filter((r: any) => r.late_minutes > 0).length || 0
     const onTimeToday = presentToday - lateToday
 
     // 5. Calcular costo del día
