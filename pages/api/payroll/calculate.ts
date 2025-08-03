@@ -271,7 +271,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       status: 'draft',
       notes_on_ingress: item.notes_on_ingress,
       notes_on_deductions: item.notes_on_deductions,
-      generated_by: userProfile.employee_id,
+      generated_by: userProfile?.id || 'system',
       generated_at: new Date().toISOString()
     }))
 
