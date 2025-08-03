@@ -32,9 +32,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Dashboard', href: '/dashboard', icon: ChartBarIcon },
     { name: 'Empleados', href: '/employees', icon: UsersIcon },
     { name: 'Departamentos', href: '/departments', icon: BuildingOfficeIcon },
-    { name: 'Asistencia', href: '/attendance', icon: ClockIcon },
+    { name: 'Asistencia', href: '/attendance/dashboard', icon: ClockIcon },
     { name: 'Permisos', href: '/leave', icon: UserIcon },
-    { name: 'Nómina', href: '/payroll', icon: CurrencyDollarIcon },
+    { name: 'Nómina', href: '/payroll/dashboard', icon: CurrencyDollarIcon },
     { name: 'Reportes', href: '/reports', icon: ChartBarIcon },
     { name: 'Configuración', href: '/settings', icon: Cog6ToothIcon },
   ]

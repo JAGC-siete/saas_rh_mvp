@@ -402,7 +402,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       doc.fontSize(10).text('TOTALES POR DEPARTAMENTO:', 300, 230)
       let deptY = 245
-      Object.entries(deptTotals).forEach(([dept, totals]: any) => {
+      Object.entries(deptTotals).forEach(([dept, totals]: [string, any]) => {
         if (deptY < 275) {
           doc.fontSize(9).text(`${dept}: ${totals.count} emp. - L. ${totals.net.toFixed(2)}`, 300, deptY)
           deptY += 12
@@ -426,8 +426,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const rowHeight = 15
       
       // Header de tabla
-      headers.forEach((h: any, i: any) => {
-        const x = startX + colWidths.slice(0, i).reduce((a: number, b) => a + b, 0)
+      headers.forEach((h: string, i: number) => {
+        const x = startX + colWidths.slice(0, i).reduce((a: number, b: number) => a + b, 0)
         doc.rect(x, y, colWidths[i], rowHeight).fillAndStroke('#1e40af', '#000')
         doc.fillColor('white')
         doc.fontSize(8).text(h, x + 2, y + 4, { width: colWidths[i] - 4, align: 'center' })
@@ -555,7 +555,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.error('Error en cálculo de nómina:', error)
     return res.status(500).json({ 
       error: 'Error interno del servidor', 
-      message: error instanceof Error ? error instanceof Error ? error.message : 'Error desconocido' : 'Error desconocido'
+      message: error instanceof Error ? error instanceof Error ? error instanceof Error ? error.message : 'Error desconocido' : 'Error desconocido' : 'Error desconocido'
     })
   }
 } 

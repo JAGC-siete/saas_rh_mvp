@@ -88,7 +88,7 @@ class SimpleLogger {
     if (error instanceof Error) {
       errorContext.error = {
         name: error?.name,
-        message: error instanceof Error ? error.message : 'Error desconocido',
+        message: error instanceof Error ? error instanceof Error ? error.message : 'Error desconocido' : 'Error desconocido',
         stack: error.stack
       };
     } else if (error) {
