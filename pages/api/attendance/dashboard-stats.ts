@@ -68,7 +68,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const onTimeToday = presentToday - lateToday
 
     // 5. Calcular costo del día
-    const dailyCost = todayAttendance?.reduce((total, record) => {
+    const dailyCost = todayAttendance?.reduce((total: number, record: any) => {
       const employee = record.employees
       if (employee?.base_salary) {
         // Calcular salario diario (asumiendo 22 días laborales por mes)
