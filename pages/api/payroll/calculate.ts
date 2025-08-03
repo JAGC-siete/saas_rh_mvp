@@ -156,8 +156,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .gte('date', fechaInicio)
       .lte('date', fechaFin)
 
-    const { data: attendanceRecords, error: attError } = await attendanceQuery
-
     if (attError) {
       console.error('Error obteniendo registros de asistencia:', attError)
       return res.status(500).json({ error: 'Error obteniendo registros de asistencia' })
