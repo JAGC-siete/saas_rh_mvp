@@ -111,7 +111,7 @@ function generateCSV(res: NextApiResponse, attendanceRecords: any[], employees: 
 
   const csvContent = [
     headers.join(','),
-    ...attendanceRecords.map(record => [
+    ...attendanceRecords.map((record: any) => [
       record.date,
       record.employees?.employee_code || '',
       record.employees?.name || '',
@@ -151,7 +151,7 @@ function generatePDF(res: NextApiResponse, attendanceRecords: any[], employees: 
   const totalEmployees = employees.length
   const presentCount = attendanceRecords.length
   const absentCount = totalEmployees - presentCount
-  const lateCount = attendanceRecords.filter(r => r.late_minutes > 0).length
+  const lateCount = attendanceRecords.filter((r: any) => r.late_minutes > 0).length
 
   doc.fontSize(14).text('Resumen Ejecutivo')
   doc.fontSize(10).text(`Total Empleados: ${totalEmployees}`)
@@ -173,14 +173,14 @@ function generatePDF(res: NextApiResponse, attendanceRecords: any[], employees: 
 
   // Headers
   let x = tableLeft
-  headers.forEach((header, i) => {
+  headers.forEach((header: any, i: any) => {
     doc.fontSize(8).text(header, x, tableTop, { width: colWidths[i] })
     x += colWidths[i]
   })
 
   // Data
   let y = tableTop + 20
-  attendanceRecords.forEach(record => {
+  attendanceRecords.forEach((record: any) => {
     if (y > 700) {
       doc.addPage()
       y = 50
@@ -198,7 +198,7 @@ function generatePDF(res: NextApiResponse, attendanceRecords: any[], employees: 
       record.justification || ''
     ]
 
-    rowData.forEach((cell, i) => {
+    rowData.forEach((cell: any, i: any) => {
       doc.fontSize(8).text(cell, x, y, { width: colWidths[i] })
       x += colWidths[i]
     })

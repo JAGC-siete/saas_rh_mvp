@@ -19,6 +19,32 @@ interface DashboardStats {
   recentPayrolls: any[]
 }
 
+interface Employee {
+  id: string
+  name: string
+  status: string
+  department: string
+  base_salary: number
+}
+
+interface AttendanceRecord {
+  employee_id: string
+  check_in: string
+  check_out: string
+  status: string
+}
+
+interface PayrollRecord {
+  period_start: string
+  period_end: string
+  net_salary: number
+  status: string
+  employees?: {
+    name: string
+    department: string
+  }
+}
+
 export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats>({
     totalEmployees: 0,
@@ -79,10 +105,10 @@ export default function Dashboard() {
         .limit(5)
 
       // Calcular estadísticas
-      const activeEmployees = employees?.filter(emp => emp.status === 'active') || []
-      const presentToday = todayAttendance?.filter(att => att.check_in && att.check_out) || []
-      const absentToday = todayAttendance?.filter(att => att.status === 'absent') || []
-      const lateToday = todayAttendance?.filter(att => {
+      const activeEmployees = employees?.filter((emp: Employee) => emp.status === 'active') || []
+      const presentToday = todayAttendance?.filter((att: AttendanceRecord) => att.check_in && att.check_out) || []
+      const absentToday = todayAttendance?.filter((att: AttendanceRecord) => att.status === 'absent') || []
+      const lateToday = todayAttendance?.filter((att: AttendanceRecord) => {
         if (!att.check_in) return false
         const checkInTime = new Date(att.check_in)
         const hour = checkInTime.getHours()
@@ -92,13 +118,13 @@ export default function Dashboard() {
 
       // Estadísticas por departamento
       const deptStats: { [key: string]: number } = {}
-      activeEmployees.forEach(emp => {
+      activeEmployees.forEach((emp: Employee) => {
         const dept = emp.department || 'Sin Departamento'
         deptStats[dept] = (deptStats[dept] || 0) + 1
       })
 
       // Total de nómina
-      const totalPayroll = activeEmployees.reduce((sum, emp) => sum + (emp.base_salary || 0), 0)
+      const totalPayroll = activeEmployees.reduce((sum: number, emp: Employee) => sum + (emp.base_salary || 0), 0)
       const averageSalary = activeEmployees.length > 0 ? totalPayroll / activeEmployees.length : 0
 
       // Tasa de asistencia (últimos 7 días)
@@ -111,7 +137,7 @@ export default function Dashboard() {
         .eq('company_id', profile.company_id)
 
       const totalExpectedDays = activeEmployees.length * 7
-      const totalWorkedDays = weeklyAttendance?.filter(att => att.check_in && att.check_out).length || 0
+      const totalWorkedDays = weeklyAttendance?.filter((att: AttendanceRecord) => att.check_in && att.check_out).length || 0
       const attendanceRate = totalExpectedDays > 0 ? (totalWorkedDays / totalExpectedDays) * 100 : 0
 
       setStats({
@@ -242,7 +268,7 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {Object.entries(stats.departmentStats).map(([dept, count]) => (
+                  {Object.entries(stats.departmentStats).map(([dept, count]: [string, number]) => (
                     <div key={dept} className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
@@ -308,7 +334,7 @@ export default function Dashboard() {
             <CardContent>
               {stats.recentPayrolls.length > 0 ? (
                 <div className="space-y-4">
-                  {stats.recentPayrolls.map((payroll, index) => (
+                  {stats.recentPayrolls.map((payroll: PayrollRecord, index: number) => (
                     <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
                       <div>
                         <div className="font-medium">
