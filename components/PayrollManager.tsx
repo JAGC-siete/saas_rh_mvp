@@ -30,7 +30,7 @@ interface PayrollRecord {
   employees: {
     name: string
     employee_code: string
-    position: string
+    team: string
     department: string
   }
 }
@@ -178,7 +178,7 @@ export default function PayrollManager() {
           employees:employee_id (
             name,
             employee_code,
-            position,
+            team,
             department
           )
         `)
@@ -773,7 +773,7 @@ export default function PayrollManager() {
                           <div>
                             <div className="font-medium">{record.employees?.name}</div>
                             <div className="text-sm text-gray-500">
-                              {record.employees?.employee_code} • {record.employees?.position}
+                              {record.employees?.employee_code} • {record.employees?.team}
                             </div>
                           </div>
                         </td>
