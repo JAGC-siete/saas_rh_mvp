@@ -349,7 +349,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       doc.fontSize(9).text(`Período: ${periodo}`, 300, 135)
       doc.fontSize(9).text(`Quincena: ${quincena === 1 ? 'Primera (1-15)' : 'Segunda (16-fin de mes)'}`, 300, 150)
       doc.fontSize(9).text(`Fecha de generación: ${new Date().toLocaleDateString('es-HN')}`, 300, 165)
-      doc.fontSize(9).text(`Generado por: ${userProfile?.email || 'Sistema'}`, 300, 180)
+      doc.fontSize(9).text(`Generado por: ${user?.email || 'Sistema'}`, 300, 180)
       
       // Resumen ejecutivo
       const totalGross = planilla.reduce((sum, row) => sum + row.total_earnings, 0)
