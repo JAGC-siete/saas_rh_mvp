@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { executeScheduledJob } from '../../../lib/jobs'
-import logger from '../../../lib/logger'
+import { logger } from '../../../lib/logger'
 
 export default async function handler(
   req: NextApiRequest,
@@ -9,7 +9,7 @@ export default async function handler(
   // Verificar que es una llamada de Vercel Cron
   const authHeader = req.headers.authorization
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    logger.warn('Unauthorized cron job attempt', { 
+    logger.info('Unauthorized cron job attempt', { 
       ip: req.headers['x-forwarded-for'],
       userAgent: req.headers['user-agent']
     })

@@ -79,10 +79,10 @@ export default function Dashboard() {
         .limit(5)
 
       // Calcular estadísticas
-      const activeEmployees = employees?.filter(emp => emp.status === 'active') || []
-      const presentToday = todayAttendance?.filter(att => att.check_in && att.check_out) || []
-      const absentToday = todayAttendance?.filter(att => att.status === 'absent') || []
-      const lateToday = todayAttendance?.filter(att => {
+      const activeEmployees = employees?.filter((emp: any) => emp.status === 'active') || []
+      const presentToday = todayAttendance?.filter((att: any) => att.check_in && att.check_out) || []
+      const absentToday = todayAttendance?.filter((att: any) => att.status === 'absent') || []
+      const lateToday = todayAttendance?.filter((att: any) => {
         if (!att.check_in) return false
         const checkInTime = new Date(att.check_in)
         const hour = checkInTime.getHours()
@@ -92,27 +92,18 @@ export default function Dashboard() {
 
       // Estadísticas por departamento
       const deptStats: { [key: string]: number } = {}
-      activeEmployees.forEach(emp => {
+      activeEmployees.forEach((emp: any) => {
         const dept = emp.department || 'Sin Departamento'
         deptStats[dept] = (deptStats[dept] || 0) + 1
       })
 
-      // Total de nómina
-      const totalPayroll = activeEmployees.reduce((sum, emp) => sum + (emp.base_salary || 0), 0)
+      const totalPayroll = activeEmployees.reduce((sum: number, emp: any) => sum + (emp.base_salary || 0), 0)
       const averageSalary = activeEmployees.length > 0 ? totalPayroll / activeEmployees.length : 0
+      const attendanceRate = activeEmployees.length > 0 ? (presentToday.length / activeEmployees.length) * 100 : 0
 
-      // Tasa de asistencia (últimos 7 días)
-      const sevenDaysAgo = new Date()
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-      const { data: weeklyAttendance } = await supabase
-        .from('attendance_records')
-        .select('employee_id, check_in, check_out')
-        .gte('date', sevenDaysAgo.toISOString().split('T')[0])
-        .eq('company_id', profile.company_id)
-
-      const totalExpectedDays = activeEmployees.length * 7
-      const totalWorkedDays = weeklyAttendance?.filter(att => att.check_in && att.check_out).length || 0
-      const attendanceRate = totalExpectedDays > 0 ? (totalWorkedDays / totalExpectedDays) * 100 : 0
+      // Estadísticas de nómina
+      const pendingPayrolls = recentPayrolls?.filter((r: any) => r.status === 'pending').length || 0
+      const completedPayrolls = recentPayrolls?.filter((r: any) => r.status === 'completed').length || 0
 
       setStats({
         totalEmployees: employees?.length || 0,

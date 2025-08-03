@@ -1,12 +1,30 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../lib/supabase/server'
-import { authenticateUser, getOrCreateProfile, hasPermission } from '../../../lib/auth-helpers'
+import { authenticateUser } from '../../../lib/auth-helpers'
 
-// Constantes específicas para Honduras
-const SALARIO_MINIMO = 11903.13
-const IHSS_FIJO = 595.16
-const RAP_PORCENTAJE = 0.015
-const TOLERANCIA_TARDANZA = 5 // minutos
+// Constantes para cálculos de nómina
+const SALARIO_MINIMO = 11903.13 // Salario mínimo en Honduras
+const TOLERANCIA_TARDANZA = 15 // Minutos de tolerancia para tardanza
+
+interface PlanillaItem {
+  id: string
+  name: string
+  bank: string
+  bank_account: string
+  department: string
+  monthly_salary: number
+  days_worked: number
+  days_absent: number
+  late_days: number
+  total_earnings: number
+  IHSS: number
+  RAP: number
+  ISR: number
+  total_deductions: number
+  total: number
+  notes_on_ingress: string
+  notes_on_deductions: string
+}
 
 // Cálculo de ISR según tabla progresiva de Honduras
 function calcularISR(salarioBase: number): number {
@@ -24,12 +42,12 @@ function calcularISR(salarioBase: number): number {
 
 function calcularIHSS(salarioBase: number): number {
   // IHSS: 2.5% del empleado + 2.5% del empleador (solo mostramos la parte del empleado)
-  return Math.min(salarioBase * 0.025, IHSS_FIJO)
+  return Math.min(salarioBase * 0.025, 595.16) // IHSS_FIJO es 595.16
 }
 
 function calcularRAP(salarioBase: number): number {
   // RAP: 1.5% sobre el excedente del salario mínimo
-  return Math.max(0, salarioBase - SALARIO_MINIMO) * RAP_PORCENTAJE
+  return Math.max(0, salarioBase - SALARIO_MINIMO) * 0.015
 }
 
 // Función para calcular tardanzas basada en horario de Paragon
@@ -37,7 +55,7 @@ function calcularTardanzas(registros: any[]): number {
   let tardanzas = 0
   const horaEntrada = 8 // 8:00 AM
   
-  registros.forEach(registro => {
+  registros.forEach((registro: any) => {
     if (registro.check_in) {
       const horaCheckIn = new Date(registro.check_in).getHours()
       const minutosCheckIn = new Date(registro.check_in).getMinutes()
@@ -74,8 +92,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log('🔐 Usuario autenticado para nómina:', { 
       userId: user.id, 
-      role: userProfile.role,
-      companyId: userProfile.company_id 
+      role: userProfile?.role,
+      companyId: userProfile?.company_id 
     })
 
     const { periodo, quincena, incluirDeducciones, soloEmpleadosConAsistencia = true } = req.body
@@ -94,7 +112,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Validar que no sea un período futuro
-    const [year, month] = periodo.split('-').map(Number)
+    const [year, month] = periodo.split('-').map((n: any) => Number(n))
     const currentDate = new Date()
     const periodDate = new Date(year, month - 1, 1)
     
@@ -130,8 +148,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .order('name')
 
     // Si el usuario tiene company_id, filtrar por empresa
-    if (userProfile.company_id) {
-      employeesQuery = employeesQuery.eq('company_id', userProfile.company_id)
+    if (userProfile?.company_id) {
+      employeesQuery = employeesQuery.eq('company_id', userProfile?.company_id)
     }
 
     const { data: employees, error: empError } = await employeesQuery
@@ -165,13 +183,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let empleadosParaNomina = employees
     
     if (soloEmpleadosConAsistencia) {
-      empleadosParaNomina = employees.filter(emp =>
-        attendanceRecords.some(record => 
+      empleadosParaNomina = employees.filter((emp: any) =>
+        attendanceRecords.some((record: any) => 
           record.employee_id === emp.id && 
           record.check_in && 
           record.check_out &&
-          record.status !== 'absent'
-        )
+          record.status !== 'absent')
       )
     }
 
@@ -185,12 +202,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log(`👥 Procesando nómina para ${empleadosParaNomina.length} empleados`)
 
     // Calcular planilla
-    const planilla = empleadosParaNomina.map(emp => {
-      const registros = attendanceRecords.filter(record => 
+         const planilla: PlanillaItem[] = empleadosParaNomina.map((emp: any) => {
+      const registros = attendanceRecords.filter((record: any) => 
         record.employee_id === emp.id && 
         record.check_in && 
-        record.check_out
-      )
+        record.check_out)
       
       const days_worked = registros.length
       const days_absent = (quincena === 1 ? 15 : ultimoDia - 15) - days_worked
@@ -232,8 +248,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       return {
-        name: emp.name,
         id: emp.dni,
+        name: emp?.name,
         bank: emp.bank_name || '',
         bank_account: emp.bank_account || '',
         department: emp.department_id || 'Sin Departamento',
@@ -253,8 +269,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
 
     // Guardar en payroll_records
-    const payrollRecords = planilla.map(item => ({
-      employee_id: empleadosParaNomina.find(e => e.dni === item.id)?.id,
+    const payrollRecords = planilla.map((item: PlanillaItem) => ({
+      employee_id: empleadosParaNomina.find((e: any) => e.dni === item.id)?.id,
       period_start: fechaInicio,
       period_end: fechaFin,
       period_type: 'biweekly',
@@ -349,12 +365,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       doc.fontSize(9).text(`Período: ${periodo}`, 300, 135)
       doc.fontSize(9).text(`Quincena: ${quincena === 1 ? 'Primera (1-15)' : 'Segunda (16-fin de mes)'}`, 300, 150)
       doc.fontSize(9).text(`Fecha de generación: ${new Date().toLocaleDateString('es-HN')}`, 300, 165)
-      doc.fontSize(9).text(`Generado por: ${userProfile?.name || 'Sistema'}`, 300, 180)
+      doc.fontSize(9).text(`Generado por: ${user?.email || 'Sistema'}`, 300, 180)
       
       // Resumen ejecutivo
-      const totalGross = planilla.reduce((sum, row) => sum + row.total_earnings, 0)
-      const totalDeductions = planilla.reduce((sum, row) => sum + row.total_deductions, 0)
-      const totalNet = planilla.reduce((sum, row) => sum + row.total, 0)
+      const totalGross = planilla.reduce((sum: number, row: PlanillaItem) => sum + row.total_earnings, 0)
+      const totalDeductions = planilla.reduce((sum: number, row: PlanillaItem) => sum + row.total_deductions, 0)
+      const totalNet = planilla.reduce((sum: number, row: PlanillaItem) => sum + row.total, 0)
       const totalEmployees = planilla.length
       
       doc.rect(30, 200, 535, 80).stroke()
@@ -374,7 +390,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       // Totales por departamento
       const deptTotals: { [key: string]: { count: number, gross: number, net: number } } = {}
-      planilla.forEach(row => {
+      planilla.forEach((row: PlanillaItem) => {
         const dept = row.department
         if (!deptTotals[dept]) {
           deptTotals[dept] = { count: 0, gross: 0, net: 0 }
@@ -386,7 +402,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       doc.fontSize(10).text('TOTALES POR DEPARTAMENTO:', 300, 230)
       let deptY = 245
-      Object.entries(deptTotals).forEach(([dept, totals]) => {
+      Object.entries(deptTotals).forEach(([dept, totals]: [string, any]) => {
         if (deptY < 275) {
           doc.fontSize(9).text(`${dept}: ${totals.count} emp. - L. ${totals.net.toFixed(2)}`, 300, deptY)
           deptY += 12
@@ -410,8 +426,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const rowHeight = 15
       
       // Header de tabla
-      headers.forEach((h, i) => {
-        const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0)
+      headers.forEach((h: string, i: number) => {
+        const x = startX + colWidths.slice(0, i).reduce((a: number, b: number) => a + b, 0)
         doc.rect(x, y, colWidths[i], rowHeight).fillAndStroke('#1e40af', '#000')
         doc.fillColor('white')
         doc.fontSize(8).text(h, x + 2, y + 4, { width: colWidths[i] - 4, align: 'center' })
@@ -421,7 +437,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       // Datos de empleados
       let pageCount = 1
-      planilla.forEach((row, index) => {
+      planilla.forEach((row: PlanillaItem, index: number) => {
         // Verificar si necesitamos nueva página
         if (y > 750) {
           doc.addPage()
@@ -434,7 +450,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         
         const values = [
           row.id || '',
-          row.name,
+          row?.name,
           row.department,
           row.days_worked.toString(),
           `L. ${row.monthly_salary.toFixed(2)}`,
@@ -446,8 +462,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           `L. ${row.total.toFixed(2)}`
         ]
         
-        values.forEach((val, i) => {
-          const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0)
+        values.forEach((val: any, i: number) => {
+          const x = startX + colWidths.slice(0, i).reduce((a: number, b: number) => a + b, 0)
           doc.rect(x, y, colWidths[i], rowHeight).stroke()
           doc.fontSize(7).text(val.toString(), x + 2, y + 4, { width: colWidths[i] - 4, align: 'center' })
         })
@@ -477,8 +493,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const bankRowHeight = 15
       
       // Header tabla bancaria
-      bankHeaders.forEach((h, i) => {
-        const x = bankStartX + bankColWidths.slice(0, i).reduce((a, b) => a + b, 0)
+      bankHeaders.forEach((h: string, i: number) => {
+        const x = bankStartX + bankColWidths.slice(0, i).reduce((a: number, b: number) => a + b, 0)
         doc.rect(x, bankY, bankColWidths[i], bankRowHeight).fillAndStroke('#1e40af', '#000')
         doc.fillColor('white')
         doc.fontSize(8).text(h, x + 2, bankY + 4, { width: bankColWidths[i] - 4, align: 'center' })
@@ -487,7 +503,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       bankY += bankRowHeight
       
       // Datos bancarios
-      planilla.forEach((row, index) => {
+      planilla.forEach((row: PlanillaItem, index: number) => {
         if (bankY > 750) {
           doc.addPage()
           bankY = 30
@@ -495,14 +511,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         
         const bankValues = [
           row.id || '',
-          row.name,
+          row?.name,
           row.bank || 'No especificado',
           row.bank_account || 'No especificado',
           `L. ${row.total.toFixed(2)}`
         ]
         
-        bankValues.forEach((val, i) => {
-          const x = bankStartX + bankColWidths.slice(0, i).reduce((a, b) => a + b, 0)
+        bankValues.forEach((val: any, i: number) => {
+          const x = bankStartX + bankColWidths.slice(0, i).reduce((a: number, b: number) => a + b, 0)
           doc.rect(x, bankY, bankColWidths[i], bankRowHeight).stroke()
           doc.fontSize(8).text(val.toString(), x + 2, bankY + 4, { width: bankColWidths[i] - 4, align: 'center' })
         })
@@ -530,16 +546,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       periodo,
       quincena,
       empleados: planilla.length,
-      totalBruto: planilla.reduce((sum, row) => sum + row.total_earnings, 0),
-      totalDeducciones: planilla.reduce((sum, row) => sum + row.total_deductions, 0),
-      totalNeto: planilla.reduce((sum, row) => sum + row.total, 0),
+      totalBruto: planilla.reduce((sum: number, row: PlanillaItem) => sum + row.total_earnings, 0),
+      totalDeducciones: planilla.reduce((sum: number, row: PlanillaItem) => sum + row.total_deductions, 0),
+      totalNeto: planilla.reduce((sum: number, row: PlanillaItem) => sum + row.total, 0),
       planilla
     })
   } catch (error) {
     console.error('Error en cálculo de nómina:', error)
     return res.status(500).json({ 
       error: 'Error interno del servidor', 
-      message: error.message 
+      message: error instanceof Error ? error instanceof Error ? error instanceof Error ? error.message : 'Error desconocido' : 'Error desconocido' : 'Error desconocido'
     })
   }
 } 

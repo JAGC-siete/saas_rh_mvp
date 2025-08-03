@@ -87,8 +87,8 @@ class SimpleLogger {
     
     if (error instanceof Error) {
       errorContext.error = {
-        name: error.name,
-        message: error.message,
+        name: error?.name,
+        message: error instanceof Error ? error instanceof Error ? error.message : 'Error desconocido' : 'Error desconocido',
         stack: error.stack
       };
     } else if (error) {
@@ -228,4 +228,4 @@ export const logAttendance = (action: string, employeeId?: string, details?: any
 };
 
 // Export for testing or custom instances
-export default SimpleLogger; 
+export default SimpleLogger;

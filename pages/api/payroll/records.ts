@@ -9,17 +9,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     // Validar autenticación
     const supabase = createClient(req, res)
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Get user session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
     
-    if (authError || !user) {
+    if (sessionError || !session?.user) {
       return res.status(401).json({ error: 'Unauthorized' })
     }
+
+    const userId = session.user.id
 
     // Verificar permisos del usuario
     const { data: userProfile } = await supabase
       .from('user_profiles')
       .select('role, company_id')
-      .eq('id', user.id)
+      .eq('id', userId)
       .single()
 
     if (!userProfile || !['company_admin', 'hr_manager', 'super_admin'].includes(userProfile.role)) {

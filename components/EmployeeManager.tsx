@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
+import { useSupabaseSession } from '../lib/hooks/useSession'
 
 interface Employee {
   id: string
@@ -43,6 +44,9 @@ export default function EmployeeManager() {
   const [searchTerm, setSearchTerm] = useState('')
   const [userProfile, setUserProfile] = useState<any>(null)
 
+  const { user } = useSupabaseSession()
+  const userId = user?.id
+
   // Form state
   const [formData, setFormData] = useState({
     employee_code: '',
@@ -67,13 +71,12 @@ export default function EmployeeManager() {
   const fetchData = async () => {
     try {
       // Get user profile
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      if (!userId) return
 
       const { data: profile } = await supabase
         .from('user_profiles')
         .select('*')
-        .eq('id', user.id)
+        .eq('id', userId)
         .single()
 
       setUserProfile(profile)
@@ -122,6 +125,8 @@ export default function EmployeeManager() {
     setLoading(true)
 
     try {
+      if (!userId) throw new Error('User not authenticated')
+
       const { error } = await supabase
         .from('employees')
         .insert({
@@ -161,6 +166,8 @@ export default function EmployeeManager() {
 
   const updateEmployeeStatus = async (employeeId: string, status: string) => {
     try {
+      if (!userId) throw new Error('User not authenticated')
+
       const { error } = await supabase
         .from('employees')
         .update({ status })

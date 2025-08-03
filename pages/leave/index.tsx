@@ -1,6 +1,7 @@
 import ProtectedRoute from '../../components/ProtectedRoute'
 import DashboardLayout from '../../components/DashboardLayout'
 import LeaveManager from '../../components/LeaveManager'
+import { GetServerSideProps } from 'next'
 
 export default function LeavePage() {
   return (
@@ -17,4 +18,10 @@ export default function LeavePage() {
       </DashboardLayout>
     </ProtectedRoute>
   )
+}
+
+export const getServerSideProps: GetServerSideProps = async () => {
+  return {
+    props: {}
+  }
 }

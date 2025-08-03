@@ -64,7 +64,7 @@ export default function AttendanceManager() {
       .channel('attendance_changes')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'attendance_records' },
-        (payload) => {
+        (payload: any) => {
           fetchTodayAttendance() // Refresh data on any change
         }
       )
