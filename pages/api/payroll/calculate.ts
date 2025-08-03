@@ -539,7 +539,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.error('Error en cálculo de nómina:', error)
     return res.status(500).json({ 
       error: 'Error interno del servidor', 
-      message: error.message 
+      message: error instanceof Error ? error.message : 'Error desconocido'
     })
   }
 } 
