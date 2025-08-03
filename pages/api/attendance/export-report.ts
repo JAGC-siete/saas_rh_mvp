@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
+import { supabase } from '../../../lib/supabase'
 import PDFDocument from 'pdfkit'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -9,8 +8,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const supabase = createRouteHandlerClient({ cookies })
-    
     // Verificar autenticación
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
