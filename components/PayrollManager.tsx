@@ -31,7 +31,7 @@ interface PayrollRecord {
     name: string
     employee_code: string
     team: string
-    department: string
+    department_id: string
   }
 }
 
@@ -179,7 +179,7 @@ export default function PayrollManager() {
             name,
             employee_code,
             team,
-            department
+            department_id
           )
         `)
         .order('created_at', { ascending: false })
@@ -254,7 +254,7 @@ export default function PayrollManager() {
       stats.totalDeductions += record.total_deductions
       stats.totalNetSalary += record.net_salary
       
-      const dept = record.employees?.department || 'Sin Departamento'
+      const dept = record.employees?.department_id || 'Sin Departamento'
       stats.departmentBreakdown[dept] = (stats.departmentBreakdown[dept] || 0) + 1
     })
 
@@ -297,18 +297,34 @@ export default function PayrollManager() {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
+          'Accept': 'application/pdf',
           'Authorization': `Bearer ${session.access_token}`
         },
+        credentials: 'include',
         body: JSON.stringify(generateForm),
       })
 
-      const data = await response.json()
-
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to generate payroll')
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to generate payroll')
       }
 
-      alert('✅ Nómina generada exitosamente!')
+      // Si es PDF, descargar directamente
+      if (response.headers.get('content-type')?.includes('application/pdf')) {
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `planilla_paragon_${generateForm.periodo}_q${generateForm.quincena}.pdf`
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+        alert('✅ Nómina generada y PDF descargado exitosamente!')
+      } else {
+        const data = await response.json()
+        alert('✅ Nómina generada exitosamente!')
+      }
       setShowGenerateForm(false)
       setGenerateForm({
         periodo: '',
