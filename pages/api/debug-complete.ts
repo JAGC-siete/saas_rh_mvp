@@ -95,9 +95,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // 6. Test de políticas RLS
     console.log('🔍 Test 6: Verificando políticas RLS...')
-    const { data: rlsPolicies, error: rlsError } = await supabase
-      .rpc('get_rls_policies', { table_name: 'user_profiles' })
-      .catch(() => ({ data: null, error: { message: 'Función RPC no disponible' } }))
+    let rlsPolicies = null
+    let rlsError = null
+    try {
+      const result = await supabase.rpc('get_rls_policies', { table_name: 'user_profiles' })
+      rlsPolicies = result.data
+      rlsError = result.error
+    } catch (error) {
+      rlsError = { message: 'Función RPC no disponible' }
+    }
 
     debugInfo.tests.rlsPolicies = {
       hasPolicies: !!rlsPolicies,
