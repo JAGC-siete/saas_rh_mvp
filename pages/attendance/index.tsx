@@ -26,8 +26,8 @@ export default function AttendancePage() {
           .single()
 
         if (profile?.role === 'super_admin') {
-          // Superadmin va al dashboard de administración
-          router.push('/attendance/dashboard')
+          // Superadmin va al nuevo dashboard de administración
+          router.push('/attendance/dashboard-2')
         } else {
           // Empleados van al registro de asistencia
           router.push('/attendance/register')
