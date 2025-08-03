@@ -82,7 +82,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const dailyStats = []
     for (let i = 6; i >= 0; i--) {
       const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-      const dayAttendance = weeklyAttendance?.filter(r => r.date === date) || []
+      const dayAttendance = weeklyAttendance?.filter((r: any) => r.date === date) || []
       const attendanceRate = totalEmployees > 0 ? (dayAttendance.length / totalEmployees) * 100 : 0
       
       dailyStats.push({
@@ -98,7 +98,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // 8. Agrupar por departamento
     const departmentStats = {}
-    todayAttendance?.forEach(record => {
+    todayAttendance?.forEach((record: any) => {
       const deptId = record.employees?.department_id || 'Sin Departamento'
       if (!departmentStats[deptId]) {
         departmentStats[deptId] = { present: 0, total: 0 }
@@ -107,7 +107,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
 
     // Agregar totales por departamento
-    employees?.forEach(emp => {
+    employees?.forEach((emp: any) => {
       const deptId = emp.department_id || 'Sin Departamento'
       if (!departmentStats[deptId]) {
         departmentStats[deptId] = { present: 0, total: 0 }
@@ -132,7 +132,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       departmentStats,
       
       // Datos detallados para la tabla
-      todayAttendance: todayAttendance?.map(record => ({
+      todayAttendance: todayAttendance?.map((record: any) => ({
         id: record.id,
         employee_id: record.employee_id,
         employee_name: record.employees?.name,
