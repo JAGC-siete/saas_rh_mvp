@@ -130,7 +130,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .order('name')
 
     // Si el usuario tiene company_id, filtrar por empresa
-    if (userProfile.company_id) {
+    if (userProfile?.company_id) {
       employeesQuery = employeesQuery.eq('company_id', userProfile.company_id)
     }
 
