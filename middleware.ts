@@ -40,6 +40,7 @@ export async function middleware(request: NextRequest) {
     '/auth',
     '/registrodeasistencia',
     '/attendance/public',
+    '/attendance/register',
     '/api/attendance/lookup',
     '/api/attendance/register',
     '/api/attendance/first-time-check',
