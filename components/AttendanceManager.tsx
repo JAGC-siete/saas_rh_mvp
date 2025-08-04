@@ -5,30 +5,12 @@ import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 
-interface AttendanceRecord {
-  id: string
-  employee_id: string
-  date: string
-  check_in: string | null
-  check_out: string | null
-  late_minutes: number
-  early_departure_minutes: number
-  justification: string | null
-  status: string
-  employees: {
-    name: string
-    employee_code: string
-    dni: string
-  }
-}
-
 export default function AttendanceManager() {
   const [last5, setLast5] = useState('')
   const [justification, setJustification] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [requireJustification, setRequireJustification] = useState(false)
-  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([])
   const [isClient, setIsClient] = useState(false)
   const [currentTime, setCurrentTime] = useState('')
 
@@ -57,47 +39,6 @@ export default function AttendanceManager() {
     const interval = setInterval(updateTime, 1000) // Update every second
 
     return () => clearInterval(interval)
-  }, [isClient])
-
-  // Fetch today's attendance records
-  const fetchTodayAttendance = async () => {
-    if (!isClient) return
-    
-    try {
-      const response = await fetch('/api/attendance/dashboard-stats')
-      if (response.ok) {
-        const data = await response.json()
-        // Transform the data to match our interface
-        const records = (data.todayAttendance || []).map((att: any) => ({
-          id: att.id,
-          employee_id: att.employee_id,
-          date: new Date().toISOString().split('T')[0],
-          check_in: att.check_in,
-          check_out: att.check_out,
-          late_minutes: att.late_minutes || 0,
-          early_departure_minutes: 0,
-          justification: att.justification,
-          status: att.status,
-          employees: {
-            name: att.employee_name,
-            employee_code: att.employee_code,
-            dni: '00000' // We don't have DNI in the API response
-          }
-        }))
-        setAttendanceRecords(records)
-      }
-    } catch (error) {
-      console.error('Error fetching attendance:', error)
-    }
-  }
-
-  useEffect(() => {
-    if (isClient) {
-      fetchTodayAttendance()
-      // Auto-refresh every 30 seconds
-      const interval = setInterval(fetchTodayAttendance, 30000)
-      return () => clearInterval(interval)
-    }
   }, [isClient])
 
   const handleAttendance = async (e: React.FormEvent) => {
@@ -130,7 +71,6 @@ export default function AttendanceManager() {
         setLast5('')
         setJustification('')
         setRequireJustification(false)
-        fetchTodayAttendance() // Refresh data
       } else {
         setMessage(data.error || 'Error al registrar asistencia')
       }
@@ -149,30 +89,6 @@ export default function AttendanceManager() {
     }
     
     await handleAttendance(new Event('submit') as any)
-  }
-
-  const formatTime = (timestamp: string | null) => {
-    if (!timestamp) return '-'
-    return new Date(timestamp).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    })
-  }
-
-  const getStatusBadge = (status: string, lateMinutes: number) => {
-    const baseClasses = 'px-2 py-1 rounded-full text-xs font-medium'
-    
-    switch (status) {
-      case 'present':
-        return <span className={`${baseClasses} bg-green-100 text-green-800`}>Present</span>
-      case 'late':
-        return <span className={`${baseClasses} bg-yellow-100 text-yellow-800`}>Late ({lateMinutes}m)</span>
-      case 'absent':
-        return <span className={`${baseClasses} bg-red-100 text-red-800`}>Absent</span>
-      default:
-        return <span className={`${baseClasses} bg-gray-100 text-gray-800`}>{status}</span>
-    }
   }
 
   return (
@@ -258,131 +174,6 @@ export default function AttendanceManager() {
               </div>
             )}
           </form>
-        </CardContent>
-      </Card>
-
-      {/* Today's Attendance Records */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Today&apos;s Attendance Records</CardTitle>
-          <CardDescription>
-            Live view of all attendance records for {new Date().toLocaleDateString()} • Auto-refresh every 30 seconds
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full table-auto">
-              <thead>
-                <tr className="border-b bg-gray-50">
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Employee</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Check-in</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Check-out</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Late (min)</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Justification</th>
-                </tr>
-              </thead>
-              <tbody>
-                {attendanceRecords.slice(0, 3).map((record, index) => (
-                  <tr key={`attendance-first-${index}`} className="border-b hover:bg-gray-50 transition-colors">
-                    <td className="py-3 px-4">
-                      <div>
-                        <div className="font-medium text-gray-900">{record.employees?.name || 'Unknown'}</div>
-                        <div className="text-sm text-gray-500">
-                          {record.employees?.employee_code || 'N/A'} • DNI: ****{record.employees?.dni?.slice(-5) || '00000'}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      {getStatusBadge(record.status, record.late_minutes)}
-                    </td>
-                    <td className="py-3 px-4 font-mono text-sm">
-                      {formatTime(record.check_in)}
-                    </td>
-                    <td className="py-3 px-4 font-mono text-sm">
-                      {formatTime(record.check_out)}
-                    </td>
-                    <td className="py-3 px-4 text-sm">
-                      {record.late_minutes > 0 ? (
-                        <span className="text-red-600 font-medium">{record.late_minutes}m</span>
-                      ) : (
-                        <span className="text-green-600">0m</span>
-                      )}
-                    </td>
-                    <td className="py-3 px-4">
-                      {record.justification ? (
-                        <span className="text-sm text-gray-600 italic bg-yellow-50 px-2 py-1 rounded">
-                          {record.justification}
-                        </span>
-                      ) : (
-                        <span className="text-gray-400">-</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-                
-                {attendanceRecords.length > 6 && (
-                  <tr className="border-b bg-gray-100">
-                    <td colSpan={6} className="py-2 px-4 text-center text-sm text-gray-500 font-medium">
-                      ... {attendanceRecords.length - 6} more records ...
-                    </td>
-                  </tr>
-                )}
-                
-                {attendanceRecords.slice(-3).map((record, index) => (
-                  <tr key={`attendance-last-${index}`} className="border-b hover:bg-gray-50 transition-colors">
-                    <td className="py-3 px-4">
-                      <div>
-                        <div className="font-medium text-gray-900">{record.employees?.name || 'Unknown'}</div>
-                        <div className="text-sm text-gray-500">
-                          {record.employees?.employee_code || 'N/A'} • DNI: ****{record.employees?.dni?.slice(-5) || '00000'}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      {getStatusBadge(record.status, record.late_minutes)}
-                    </td>
-                    <td className="py-3 px-4 font-mono text-sm">
-                      {formatTime(record.check_in)}
-                    </td>
-                    <td className="py-3 px-4 font-mono text-sm">
-                      {formatTime(record.check_out)}
-                    </td>
-                    <td className="py-3 px-4 text-sm">
-                      {record.late_minutes > 0 ? (
-                        <span className="text-red-600 font-medium">{record.late_minutes}m</span>
-                      ) : (
-                        <span className="text-green-600">0m</span>
-                      )}
-                    </td>
-                    <td className="py-3 px-4">
-                      {record.justification ? (
-                        <span className="text-sm text-gray-600 italic bg-yellow-50 px-2 py-1 rounded">
-                          {record.justification}
-                        </span>
-                      ) : (
-                        <span className="text-gray-400">-</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {attendanceRecords.length === 0 && (
-              <div className="text-center py-12 text-gray-500">
-                <div className="text-lg font-medium mb-2">No attendance records for today yet</div>
-                <div className="text-sm">Employees will appear here once they check in</div>
-              </div>
-            )}
-
-            {attendanceRecords.length > 0 && (
-              <div className="mt-4 text-sm text-gray-500 text-center">
-                Showing {attendanceRecords.length <= 6 ? 'all' : 'first 3 and last 3'} of {attendanceRecords.length} record{attendanceRecords.length !== 1 ? 's' : ''} • 
-                Last updated: {new Date().toLocaleTimeString()}
-              </div>
-            )}
-          </div>
         </CardContent>
       </Card>
     </div>
