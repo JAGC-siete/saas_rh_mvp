@@ -31,6 +31,7 @@ export default function AttendanceManager() {
   const [requireJustification, setRequireJustification] = useState(false)
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([])
   const [currentEmployee, setCurrentEmployee] = useState<any>(null)
+  const [gamificationData, setGamificationData] = useState<any>(null)
 
   // Fetch today's attendance records
   const fetchTodayAttendance = async () => {
@@ -56,8 +57,60 @@ export default function AttendanceManager() {
     }
   }
 
+  // Fetch gamification data for current user
+  const fetchGamificationData = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      // Get user profile to find employee_id
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('employee_id, company_id')
+        .eq('id', user.id)
+        .single()
+
+      if (!profile?.employee_id) return
+
+      // Get employee scores
+      const { data: scores } = await supabase
+        .from('employee_scores')
+        .select('*')
+        .eq('employee_id', profile.employee_id)
+        .single()
+
+      // Get recent achievements
+      const { data: achievements } = await supabase
+        .from('employee_achievements')
+        .select(`
+          *,
+          achievement_types(name, description, icon, badge_color)
+        `)
+        .eq('employee_id', profile.employee_id)
+        .order('earned_at', { ascending: false })
+        .limit(3)
+
+      // Get recent point history
+      const { data: pointHistory } = await supabase
+        .from('point_history')
+        .select('*')
+        .eq('employee_id', profile.employee_id)
+        .order('created_at', { ascending: false })
+        .limit(5)
+
+      setGamificationData({
+        scores: scores || { total_points: 0, weekly_points: 0, monthly_points: 0 },
+        achievements: achievements || [],
+        pointHistory: pointHistory || []
+      })
+    } catch (error) {
+      console.error('Error fetching gamification data:', error)
+    }
+  }
+
   useEffect(() => {
     fetchTodayAttendance()
+    fetchGamificationData()
 
     // Set up real-time subscription
     const subscription = supabase
@@ -244,6 +297,92 @@ export default function AttendanceManager() {
               </div>
               <div className="text-center p-4 bg-yellow-50 rounded-lg">
                 <div className="text-2xl font-bold text-yellow-600">
+                  {attendanceRecords.filter(r => r.late_minutes > 0).length}
+                </div>
+                <div className="text-sm text-yellow-700">Late</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Gamification Card */}
+        {gamificationData && (
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle>🏆 Tu Progreso</CardTitle>
+              <CardDescription>Puntos y logros de asistencia</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Points Summary */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-gray-900">Puntuación</h3>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Total:</span>
+                      <span className="font-mono font-bold text-blue-600">
+                        {gamificationData.scores.total_points} pts
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Esta semana:</span>
+                      <span className="font-mono font-bold text-green-600">
+                        {gamificationData.scores.weekly_points} pts
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Este mes:</span>
+                      <span className="font-mono font-bold text-purple-600">
+                        {gamificationData.scores.monthly_points} pts
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Recent Achievements */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-gray-900">Logros Recientes</h3>
+                  {gamificationData.achievements.length > 0 ? (
+                    <div className="space-y-2">
+                      {gamificationData.achievements.map((achievement: any, index: number) => (
+                        <div key={index} className="flex items-center space-x-2 p-2 bg-gray-50 rounded">
+                          <span className="text-lg">{achievement.achievement_types.icon}</span>
+                          <div className="flex-1">
+                            <div className="text-sm font-medium">{achievement.achievement_types.name}</div>
+                            <div className="text-xs text-gray-500">+{achievement.points_earned} pts</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-500 italic">
+                      Aún no tienes logros. ¡Mantén la puntualidad!
+                    </div>
+                  )}
+                </div>
+
+                {/* Recent Activity */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-gray-900">Actividad Reciente</h3>
+                  {gamificationData.pointHistory.length > 0 ? (
+                    <div className="space-y-2">
+                      {gamificationData.pointHistory.slice(0, 3).map((record: any, index: number) => (
+                        <div key={index} className="text-sm">
+                          <div className="font-medium text-gray-900">+{record.points_earned} pts</div>
+                          <div className="text-xs text-gray-500">{record.reason}</div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-500 italic">
+                      No hay actividad reciente
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
                   {attendanceRecords.filter(r => r.status === 'late').length}
                 </div>
                 <div className="text-sm text-yellow-700">Late</div>
