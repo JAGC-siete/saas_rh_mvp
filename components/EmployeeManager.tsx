@@ -30,6 +30,12 @@ interface Employee {
     start_time: string
     end_time: string
   }
+  gamification?: {
+    total_points: number
+    weekly_points: number
+    monthly_points: number
+    achievements_count: number
+  }
 }
 
 interface Department {
@@ -117,10 +123,22 @@ export default function EmployeeManager() {
         console.error('Error fetching attendance:', attendanceError)
       }
 
-      // Combine employee data with attendance status
+      // Get gamification data for all employees
+      const { data: gamificationData } = await supabase
+        .from('employee_scores')
+        .select('employee_id, total_points, weekly_points, monthly_points')
+
+      const { data: achievementsData } = await supabase
+        .from('employee_achievements')
+        .select('employee_id, count')
+        .group('employee_id')
+
+      // Combine employee data with attendance status and gamification
       const employeesWithAttendance = (employeesData || []).map((emp: any) => {
         const attendance = attendanceData?.find((att: any) => att.employee_id === emp.id)
         const workSchedule = emp.work_schedules?.[0]
+        const gamification = gamificationData?.find((g: any) => g.employee_id === emp.id)
+        const achievements = achievementsData?.find((a: any) => a.employee_id === emp.id)
         
         let attendance_status: 'present' | 'absent' | 'late' | 'not_registered' = 'not_registered'
         let check_in_time = undefined
@@ -148,7 +166,18 @@ export default function EmployeeManager() {
           attendance_status,
           check_in_time,
           check_out_time,
-          work_schedule: workSchedule
+          work_schedule: workSchedule,
+          gamification: gamification ? {
+            total_points: gamification.total_points || 0,
+            weekly_points: gamification.weekly_points || 0,
+            monthly_points: gamification.monthly_points || 0,
+            achievements_count: achievements?.count || 0
+          } : {
+            total_points: 0,
+            weekly_points: 0,
+            monthly_points: 0,
+            achievements_count: 0
+          }
         }
       })
 
@@ -693,6 +722,7 @@ export default function EmployeeManager() {
                   <th className="text-left py-3 px-4">Status</th>
                   <th className="text-left py-3 px-4">Asistencia</th>
                   <th className="text-left py-3 px-4">Horario</th>
+                  <th className="text-left py-3 px-4">🏆 Puntos</th>
                   <th className="text-left py-3 px-4">Actions</th>
                 </tr>
               </thead>
@@ -740,6 +770,28 @@ export default function EmployeeManager() {
                         ) : (
                           <span className="text-gray-400">Sin horario</span>
                         )}
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="text-sm space-y-1">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Total:</span>
+                          <span className="font-mono font-bold text-blue-600">
+                            {employee.gamification?.total_points || 0}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Semana:</span>
+                          <span className="font-mono font-bold text-green-600">
+                            {employee.gamification?.weekly_points || 0}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Logros:</span>
+                          <span className="font-mono font-bold text-purple-600">
+                            {employee.gamification?.achievements_count || 0}
+                          </span>
+                        </div>
                       </div>
                     </td>
                     <td className="py-3 px-4">
