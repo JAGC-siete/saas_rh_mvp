@@ -23,6 +23,13 @@ interface Employee {
   bank_name: string
   bank_account: string
   department_id?: string
+  attendance_status?: 'present' | 'absent' | 'late' | 'not_registered'
+  check_in_time?: string
+  check_out_time?: string
+  work_schedule?: {
+    start_time: string
+    end_time: string
+  }
 }
 
 interface Department {
@@ -86,15 +93,66 @@ export default function EmployeeManager() {
 
       if (!profile) return
 
-      // Fetch employees
+      // Fetch employees with work schedules
       const { data: employeesData, error: employeesError } = await supabase
         .from('employees')
-        .select('*')
+        .select(`
+          *,
+          work_schedules!inner(start_time, end_time)
+        `)
         .eq('company_id', profile.company_id)
+        .eq('status', 'active')
         .order('name')
 
       if (employeesError) throw employeesError
-      setEmployees(employeesData || [])
+
+      // Get today's attendance records
+      const today = new Date().toISOString().split('T')[0]
+      const { data: attendanceData, error: attendanceError } = await supabase
+        .from('attendance_records')
+        .select('employee_id, check_in, check_out, status')
+        .eq('date', today)
+
+      if (attendanceError) {
+        console.error('Error fetching attendance:', attendanceError)
+      }
+
+      // Combine employee data with attendance status
+      const employeesWithAttendance = (employeesData || []).map((emp: any) => {
+        const attendance = attendanceData?.find((att: any) => att.employee_id === emp.id)
+        const workSchedule = emp.work_schedules?.[0]
+        
+        let attendance_status: 'present' | 'absent' | 'late' | 'not_registered' = 'not_registered'
+        let check_in_time = undefined
+        let check_out_time = undefined
+
+        if (attendance) {
+          if (attendance.check_in) {
+            check_in_time = attendance.check_in
+            const checkInHour = new Date(attendance.check_in).getHours()
+            const checkInMinutes = new Date(attendance.check_in).getMinutes()
+            
+            // Check if late (after 8:15 AM)
+            if (checkInHour > 8 || (checkInHour === 8 && checkInMinutes > 15)) {
+              attendance_status = 'late'
+            } else {
+              attendance_status = 'present'
+            }
+          } else if (attendance.status === 'absent') {
+            attendance_status = 'absent'
+          }
+        }
+
+        return {
+          ...emp,
+          attendance_status,
+          check_in_time,
+          check_out_time,
+          work_schedule: workSchedule
+        }
+      })
+
+      setEmployees(employeesWithAttendance)
 
       // Fetch departments
       const { data: departmentsData, error: deptError } = await supabase
@@ -208,6 +266,40 @@ export default function EmployeeManager() {
         return <span className={`${baseClasses} bg-red-100 text-red-800`}>Terminated</span>
       default:
         return <span className={`${baseClasses} bg-gray-100 text-gray-800`}>{status}</span>
+    }
+  }
+
+  const getAttendanceBadge = (attendance_status: string, check_in_time?: string) => {
+    const baseClasses = 'px-2 py-1 rounded-full text-xs font-medium'
+    switch (attendance_status) {
+      case 'present':
+        return (
+          <div className="flex flex-col">
+            <span className={`${baseClasses} bg-green-100 text-green-800`}>Presente</span>
+            {check_in_time && (
+              <span className="text-xs text-gray-500 mt-1">
+                {new Date(check_in_time).toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            )}
+          </div>
+        )
+      case 'late':
+        return (
+          <div className="flex flex-col">
+            <span className={`${baseClasses} bg-orange-100 text-orange-800`}>Tardanza</span>
+            {check_in_time && (
+              <span className="text-xs text-gray-500 mt-1">
+                {new Date(check_in_time).toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            )}
+          </div>
+        )
+      case 'absent':
+        return <span className={`${baseClasses} bg-red-100 text-red-800`}>Ausente</span>
+      case 'not_registered':
+        return <span className={`${baseClasses} bg-gray-100 text-gray-800`}>Sin registro</span>
+      default:
+        return <span className={`${baseClasses} bg-gray-100 text-gray-800`}>Desconocido</span>
     }
   }
 
@@ -572,10 +664,22 @@ export default function EmployeeManager() {
       {/* Employee List */}
       <Card>
         <CardHeader>
-          <CardTitle>Employee Directory</CardTitle>
-          <CardDescription>
-            {filteredEmployees.length} of {employees.length} employees
-          </CardDescription>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle>Employee Directory</CardTitle>
+              <CardDescription>
+                {filteredEmployees.length} of {employees.length} employees activos
+              </CardDescription>
+            </div>
+            <Button
+              onClick={fetchData}
+              size="sm"
+              variant="outline"
+              className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+            >
+              🔄 Actualizar Asistencia
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -587,6 +691,8 @@ export default function EmployeeManager() {
                   <th className="text-left py-3 px-4">Department</th>
                   <th className="text-left py-3 px-4">Salary</th>
                   <th className="text-left py-3 px-4">Status</th>
+                  <th className="text-left py-3 px-4">Asistencia</th>
+                  <th className="text-left py-3 px-4">Horario</th>
                   <th className="text-left py-3 px-4">Actions</th>
                 </tr>
               </thead>
@@ -620,6 +726,21 @@ export default function EmployeeManager() {
                     </td>
                     <td className="py-3 px-4">
                       {getStatusBadge(employee.status)}
+                    </td>
+                    <td className="py-3 px-4">
+                      {getAttendanceBadge(employee.attendance_status || 'not_registered', employee.check_in_time)}
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="text-sm">
+                        {employee.work_schedule ? (
+                          <>
+                            <div className="font-medium">Entrada: {employee.work_schedule.start_time}</div>
+                            <div className="text-gray-500">Salida: {employee.work_schedule.end_time}</div>
+                          </>
+                        ) : (
+                          <span className="text-gray-400">Sin horario</span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex gap-2">

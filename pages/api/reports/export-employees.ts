@@ -75,7 +75,7 @@ async function generateEmployeeReportData(supabase: any, userProfile: any) {
       bank_account,
       department_id,
       created_at,
-      departments(name),
+      departments!employees_department_id_fkey(name),
       companies(name)
     `)
     .order('name')
