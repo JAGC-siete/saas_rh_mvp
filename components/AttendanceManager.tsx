@@ -48,36 +48,48 @@ export default function AttendanceManager() {
   const [gamificationData, setGamificationData] = useState<any>(null)
   const [earlyBirds, setEarlyBirds] = useState<AttendanceRecord[]>([])
   const [lateArrivals, setLateArrivals] = useState<AttendanceRecord[]>([])
+  const [isClient, setIsClient] = useState(false)
   
   // Onboarding state
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [onboardingData, setOnboardingData] = useState<OnboardingData | null>(null)
   const [pendingAttendance, setPendingAttendance] = useState<{ last5: string; justification?: string } | null>(null)
 
+  // Ensure we're on the client side
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
+
   // Fetch today's attendance records
   const fetchTodayAttendance = useCallback(async () => {
-    const today = new Date().toISOString().split('T')[0]
+    if (!isClient) return
     
-    const { data, error } = await supabase
-      .from('attendance_records')
-      .select(`
-        *,
-        employees:employee_id (
-          name,
-          employee_code,
-          dni
-        )
-      `)
-      .eq('date', today)
-      .order('check_in', { ascending: false })
+    try {
+      const today = new Date().toISOString().split('T')[0]
+      
+      const { data, error } = await supabase
+        .from('attendance_records')
+        .select(`
+          *,
+          employees:employee_id (
+            name,
+            employee_code,
+            dni
+          )
+        `)
+        .eq('date', today)
+        .order('check_in', { ascending: false })
 
-    if (error) {
-      console.error('Error fetching attendance:', error)
-    } else {
-      setAttendanceRecords(data || [])
-      calculateLeaderboard(data || [])
+      if (error) {
+        console.error('Error fetching attendance:', error)
+      } else {
+        setAttendanceRecords(data || [])
+        calculateLeaderboard(data || [])
+      }
+    } catch (error) {
+      console.error('Error in fetchTodayAttendance:', error)
     }
-  }, [])
+  }, [isClient])
 
   // Calculate early birds and late arrivals
   const calculateLeaderboard = (records: AttendanceRecord[]) => {
@@ -152,6 +164,8 @@ export default function AttendanceManager() {
   }
 
   useEffect(() => {
+    if (!isClient) return
+    
     fetchTodayAttendance()
     fetchGamificationData()
 
@@ -169,7 +183,7 @@ export default function AttendanceManager() {
     return () => {
       subscription.unsubscribe()
     }
-  }, [fetchTodayAttendance])
+  }, [fetchTodayAttendance, isClient])
 
   const handleAttendance = async (e: React.FormEvent) => {
     e.preventDefault()
