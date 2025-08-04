@@ -84,32 +84,32 @@ export async function middleware(request: NextRequest) {
         get(name: string) {
           return request.cookies.get(name)?.value
         },
-        set(name: string, value: string, options: any) {
+        set(_name: string, _value: string, _options: any) {
           // This will be handled by the response
         },
-        remove(name: string, options: any) {
+        remove(_name: string, _options: any) {
           // This will be handled by the response
         },
       },
     })
     
-    // Get session from Supabase
-    const { data: { session }, error } = await supabase.auth.getSession()
+    // Get user from Supabase (more secure than getSession)
+    const { data: { user }, error } = await supabase.auth.getUser()
     
     if (error) {
-      logger.error('Error getting session', error)
+      logger.error('Error getting user', error)
       return NextResponse.redirect(new URL('/login', request.url))
     }
     
-    if (!session) {
-      logger.info('No session found for private route', { path: pathname })
+    if (!user) {
+      logger.info('No user found for private route', { path: pathname })
       return NextResponse.redirect(new URL('/login', request.url))
     }
     
-    logger.debug('Valid session found', { 
+    logger.debug('Valid user found', { 
       path: pathname, 
-      userId: session.user?.id,
-      email: session.user?.email 
+      userId: user?.id,
+      email: user?.email 
     })
     
     const response = NextResponse.next()
@@ -118,7 +118,7 @@ export async function middleware(request: NextRequest) {
     const duration = Date.now() - startTime
     logger.api(request.method, pathname, 200, duration, { 
       type: 'authenticated',
-      userId: session.user?.id 
+      userId: user?.id 
     })
     
     return response
