@@ -170,7 +170,7 @@ export default function AdminLogin() {
           <div className="text-center">
             <p className="text-blue-200 text-sm mb-3">¿Eres empleado?</p>
             <a 
-              href="/registrodeasistencia" 
+              href="/attendance/register" 
               className="inline-flex items-center gap-2 text-blue-300 hover:text-white transition-colors text-sm font-medium"
             >
               <Clock className="h-4 w-4" />

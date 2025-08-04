@@ -1,7 +1,6 @@
 
 
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
@@ -30,50 +29,33 @@ export default function AttendanceManager() {
   const [message, setMessage] = useState('')
   const [requireJustification, setRequireJustification] = useState(false)
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([])
-  const [currentEmployee, setCurrentEmployee] = useState<any>(null)
+  const [isClient, setIsClient] = useState(false)
+
+  // Ensure we're on the client side
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   // Fetch today's attendance records
   const fetchTodayAttendance = async () => {
-    const today = new Date().toISOString().split('T')[0]
+    if (!isClient) return
     
-    const { data, error } = await supabase
-      .from('attendance_records')
-      .select(`
-        *,
-        employees:employee_id (
-          name,
-          employee_code,
-          dni
-        )
-      `)
-      .eq('date', today)
-      .order('check_in', { ascending: false })
-
-    if (error) {
+    try {
+      const response = await fetch('/api/attendance/dashboard-stats')
+      if (response.ok) {
+        const data = await response.json()
+        setAttendanceRecords(data.attendanceRecords || [])
+      }
+    } catch (error) {
       console.error('Error fetching attendance:', error)
-    } else {
-      setAttendanceRecords(data || [])
     }
   }
 
   useEffect(() => {
-    fetchTodayAttendance()
-
-    // Set up real-time subscription
-    const subscription = supabase
-      .channel('attendance_changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'attendance_records' },
-        (payload: any) => {
-          fetchTodayAttendance() // Refresh data on any change
-        }
-      )
-      .subscribe()
-
-    return () => {
-      subscription.unsubscribe()
+    if (isClient) {
+      fetchTodayAttendance()
     }
-  }, [])
+  }, [isClient])
 
   const handleAttendance = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -100,21 +82,21 @@ export default function AttendanceManager() {
         return
       }
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to record attendance')
+      if (response.ok) {
+        setMessage(data.message || 'Asistencia registrada exitosamente')
+        setLast5('')
+        setJustification('')
+        setRequireJustification(false)
+        fetchTodayAttendance() // Refresh data
+      } else {
+        setMessage(data.error || 'Error al registrar asistencia')
       }
-
-      setMessage(data.message)
-      setLast5('')
-      setJustification('')
-      setRequireJustification(false)
-      fetchTodayAttendance() // Refresh the list
-
-    } catch (error: any) {
-      setMessage(`Error: ${error.message}`)
+    } catch (error) {
+      console.error('Error:', error)
+      setMessage('Error de conexión')
+    } finally {
+      setLoading(false)
     }
-
-    setLoading(false)
   }
 
   const handleJustificationSubmit = async () => {
