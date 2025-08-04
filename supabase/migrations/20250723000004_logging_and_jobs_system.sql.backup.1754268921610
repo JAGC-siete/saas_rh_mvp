@@ -99,7 +99,7 @@ CREATE POLICY "System logs are viewable by admins only" ON system_logs
     FOR SELECT USING (
         EXISTS (
             SELECT 1 FROM user_profiles 
-            WHERE user_profiles.id = auth.uid() 
+            WHERE user_profiles.user_id = auth.uid() 
             AND user_profiles.role = 'admin'
         )
     );
@@ -114,7 +114,7 @@ CREATE POLICY "Audit logs are viewable by admins only" ON audit_logs
     FOR SELECT USING (
         EXISTS (
             SELECT 1 FROM user_profiles 
-            WHERE user_profiles.id = auth.uid() 
+            WHERE user_profiles.user_id = auth.uid() 
             AND user_profiles.role = 'admin'
         )
     );
@@ -129,7 +129,7 @@ CREATE POLICY "Data backups are viewable by admins only" ON data_backups
     FOR SELECT USING (
         EXISTS (
             SELECT 1 FROM user_profiles 
-            WHERE user_profiles.id = auth.uid() 
+            WHERE user_profiles.user_id = auth.uid() 
             AND user_profiles.role = 'admin'
         )
     );
@@ -144,7 +144,7 @@ CREATE POLICY "Generated reports are viewable by admins only" ON generated_repor
     FOR SELECT USING (
         EXISTS (
             SELECT 1 FROM user_profiles 
-            WHERE user_profiles.id = auth.uid() 
+            WHERE user_profiles.user_id = auth.uid() 
             AND user_profiles.role = 'admin'
         )
     );
@@ -174,7 +174,7 @@ CREATE POLICY "Job executions are viewable by admins only" ON job_executions
     FOR SELECT USING (
         EXISTS (
             SELECT 1 FROM user_profiles 
-            WHERE user_profiles.id = auth.uid() 
+            WHERE user_profiles.user_id = auth.uid() 
             AND user_profiles.role = 'admin'
         )
     );

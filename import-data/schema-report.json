@@ -1,0 +1,12 @@
+{
+  "timestamp": "2025-08-04T01:13:10.849Z",
+  "stats": {
+    "tablesChecked": 1,
+    "columnsFound": 0,
+    "issuesFound": 0
+  },
+  "nextSteps": [
+    "1. cd import-data",
+    "2. node import-adjusted.js"
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "timestamp": "2025-08-04T01:17:05.416Z",
+  "stats": {
+    "processed": 34,
+    "adjusted": 34,
+    "errors": 0
+  },
+  "structure": {
+    "id": "UUID (requerido)",
+    "company_id": "UUID (requerido)",
+    "department_id": "UUID (requerido)",
+    "work_schedule_id": "UUID (requerido)",
+    "employee_code": "string (requerido)",
+    "dni": "string (requerido)",
+    "name": "string (requerido)",
+    "email": "string (requerido)",
+    "role": "string (requerido)",
+    "team": "string (requerido)",
+    "base_salary": "number (requerido, not-null)",
+    "hire_date": "string (requerido)",
+    "status": "string (requerido)",
+    "bank_name": "string",
+    "bank_account": "string"
+  },
+  "nextSteps": [
+    "1. cd import-data",
+    "2. node import-final.js"
+  ]
+}

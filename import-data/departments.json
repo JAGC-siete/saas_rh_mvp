@@ -1,0 +1,50 @@
+[
+  {
+    "id": "b84c5c8c-7f52-4162-8983-fe1b6694fa92",
+    "company_id": "bcacee41-4891-4d55-b1ed-78924c8889c1",
+    "name": "Procesamiento",
+    "description": "Departamento de Procesamiento",
+    "created_at": "2025-08-04T01:02:55.228Z",
+    "updated_at": "2025-08-04T01:02:55.228Z"
+  },
+  {
+    "id": "f5355b37-0884-4670-bf45-46e2ab627b91",
+    "company_id": "bcacee41-4891-4d55-b1ed-78924c8889c1",
+    "name": "General",
+    "description": "Departamento de General",
+    "created_at": "2025-08-04T01:02:55.228Z",
+    "updated_at": "2025-08-04T01:02:55.228Z"
+  },
+  {
+    "id": "0f9d0ab6-078a-42be-996c-6eb3d247ffc0",
+    "company_id": "bcacee41-4891-4d55-b1ed-78924c8889c1",
+    "name": "Entrada de Datos",
+    "description": "Departamento de Entrada de Datos",
+    "created_at": "2025-08-04T01:02:55.228Z",
+    "updated_at": "2025-08-04T01:02:55.228Z"
+  },
+  {
+    "id": "da18df42-a749-4ee7-88f2-0e99cb8297d5",
+    "company_id": "bcacee41-4891-4d55-b1ed-78924c8889c1",
+    "name": "Negociación",
+    "description": "Departamento de Negociación",
+    "created_at": "2025-08-04T01:02:55.228Z",
+    "updated_at": "2025-08-04T01:02:55.228Z"
+  },
+  {
+    "id": "a3d3c73c-1ef7-4c78-8a17-1037bf82687c",
+    "company_id": "bcacee41-4891-4d55-b1ed-78924c8889c1",
+    "name": "Servicio al Cliente",
+    "description": "Departamento de Servicio al Cliente",
+    "created_at": "2025-08-04T01:02:55.228Z",
+    "updated_at": "2025-08-04T01:02:55.228Z"
+  },
+  {
+    "id": "b967b120-73fd-40c4-aaea-e28f5545bb0b",
+    "company_id": "bcacee41-4891-4d55-b1ed-78924c8889c1",
+    "name": "Cumplimiento",
+    "description": "Departamento de Cumplimiento",
+    "created_at": "2025-08-04T01:02:55.228Z",
+    "updated_at": "2025-08-04T01:02:55.228Z"
+  }
+]

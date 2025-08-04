@@ -1,0 +1,17 @@
+{
+  "timestamp": "2025-08-04T01:00:51.797Z",
+  "stats": {
+    "processed": 10,
+    "errors": 0,
+    "warnings": 0,
+    "cleaned": 0
+  },
+  "outputDir": "/Users/jorgearturo/saas-proyecto/import-data",
+  "files": [
+    "companies.json",
+    "departments.json",
+    "employees.json",
+    "import.js"
+  ],
+  "description": "Datos de ejemplo generados para importación a Supabase"
+}

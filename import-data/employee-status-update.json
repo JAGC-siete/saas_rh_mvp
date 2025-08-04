@@ -1,0 +1,15 @@
+{
+  "timestamp": "2025-08-04T01:24:16.472Z",
+  "stats": {
+    "totalEmployees": 91,
+    "activeEmployees": 72,
+    "inactiveEmployees": 19,
+    "updatedEmployees": 0,
+    "errors": 4
+  },
+  "summary": {
+    "action": "Actualización de estado de empleados",
+    "description": "Mantener solo los últimos 34 empleados como activos",
+    "result": "Parcial"
+  }
+}

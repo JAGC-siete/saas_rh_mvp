@@ -1,0 +1,12 @@
+{
+  "timestamp": "2025-08-04T01:19:11.430Z",
+  "stats": {
+    "schedulesCreated": 0,
+    "employeesFixed": 34,
+    "errors": 0
+  },
+  "nextSteps": [
+    "1. cd import-data",
+    "2. node import-fixed.js"
+  ]
+}

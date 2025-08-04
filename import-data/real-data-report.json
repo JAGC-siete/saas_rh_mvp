@@ -1,0 +1,15 @@
+{
+  "timestamp": "2025-08-04T01:02:55.236Z",
+  "stats": {
+    "processed": 34,
+    "errors": 0,
+    "warnings": 8
+  },
+  "description": "Datos reales de empleados procesados para importación",
+  "files": [
+    "companies.json",
+    "departments.json",
+    "employees.json",
+    "import-real-data.js"
+  ]
+}
