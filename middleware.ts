@@ -39,8 +39,11 @@ export async function middleware(request: NextRequest) {
     '/login',
     '/auth',
     '/registrodeasistencia',
+    '/attendance/public',
     '/api/attendance/lookup',
     '/api/attendance/register',
+    '/api/attendance/first-time-check',
+    '/api/attendance/update-schedule',
     '/api/health'
   ]
 
