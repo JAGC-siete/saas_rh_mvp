@@ -47,9 +47,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .single()
       
       if (error || !data) {
-        return res.status(404).json({ error: 'Employee not found' })
+        // Si no existe el empleado, crear uno temporal para el onboarding
+        const tempEmployee = {
+          id: `temp_${Date.now()}`,
+          name: `Empleado ${last5}`,
+          employee_code: `TEMP${last5}`,
+          departments: { name: 'General' },
+          department_id: null
+        }
+        employee = tempEmployee
+      } else {
+        employee = data
       }
-      employee = data
     } else {
       const { data, error } = await supabase
         .from('employees')
@@ -66,24 +75,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       employee = data
     }
 
-    // Check if this is the first time registering attendance
-    const { data: previousRecords, error: recordsError } = await supabase
+    // Para mañana (5 de agosto), TODOS pasan por onboarding
+    const today = new Date().toISOString().split('T')[0]
+    const isFirstDayOfSaaS = today === '2025-08-05' // Mañana es el primer día
+    
+    // Check if already registered today
+    const { data: todayRecord } = await supabase
       .from('attendance_records')
       .select('id')
       .eq('employee_id', employee.id)
-      .lt('date', new Date().toISOString().split('T')[0])
+      .eq('date', today)
+      .single()
 
-    if (recordsError) {
-      console.error('Error checking previous records:', recordsError)
-      return res.status(500).json({ error: 'Error checking attendance history' })
-    }
+    const isFirstTimeToday = !todayRecord
 
-    const isFirstTime = previousRecords.length === 0
+    // Si es el primer día del SaaS o es la primera vez hoy, mostrar onboarding
+    const shouldShowOnboarding = isFirstDayOfSaaS || isFirstTimeToday
 
-    if (!isFirstTime) {
+    if (!shouldShowOnboarding) {
       return res.status(200).json({ 
         isFirstTime: false,
-        message: 'Not first time registration'
+        message: 'Already registered today'
       })
     }
 
@@ -100,7 +112,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Get department name
-    const departmentName = employee.departments?.name?.toLowerCase() || 'unknown'
+    const departmentName = employee.departments?.name?.toLowerCase() || 'general'
     
     // Get default schedule for department
     const defaultSchedule = DEFAULT_SCHEDULES[departmentName as keyof typeof DEFAULT_SCHEDULES] || 
@@ -110,6 +122,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const needsScheduleVerification = !currentSchedule || 
                                     currentSchedule.monday_start !== defaultSchedule.start ||
                                     currentSchedule.monday_end !== defaultSchedule.end
+
+    const welcomeMessage = isFirstDayOfSaaS 
+      ? `¡Bienvenido ${employee.name}! Este es el primer día de nuestro nuevo sistema de asistencia.`
+      : `¡Bienvenido de vuelta ${employee.name}!`
 
     return res.status(200).json({
       isFirstTime: true,
@@ -126,7 +142,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       } : null,
       defaultSchedule,
       needsScheduleVerification,
-      welcomeMessage: `¡Bienvenido ${employee.name}! Este es tu primer registro en el sistema de asistencia.`
+      welcomeMessage,
+      isFirstDayOfSaaS
     })
 
   } catch (error) {
