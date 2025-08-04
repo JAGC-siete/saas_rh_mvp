@@ -30,14 +30,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // 2. Obtener empleados con sus departamentos y salarios
     const { data: employees, error: empError } = await supabase
       .from('employees')
-      .select(`
-        id, 
-        name, 
-        department_id, 
-        base_salary, 
-        status,
-        departments!inner(name)
-      `)
+      .select('id, name, department_id, base_salary, status')
       .eq('status', 'active')
 
     if (empError) {
