@@ -1,4 +1,5 @@
 import Head from 'next/head'
+import Link from 'next/link'
 import AttendanceManager from '../../components/AttendanceManager'
 
 export default function AttendanceRegisterPage() {
@@ -23,12 +24,12 @@ export default function AttendanceRegisterPage() {
                   Sistema de Recursos Humanos
                 </h1>
               </div>
-              <a 
+              <Link 
                 href="/" 
                 className="text-blue-600 hover:text-blue-800 text-sm font-medium"
               >
                 ← Volver al inicio
-              </a>
+              </Link>
             </div>
           </div>
         </div>
