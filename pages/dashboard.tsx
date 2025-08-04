@@ -181,27 +181,31 @@ export default function Dashboard() {
             </Card>
           </div>
 
-          {/* Department Stats and Quick Actions */}
+          {/* Quick Actions */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Department Breakdown */}
+            {/* Department Management */}
             <Card className="lg:col-span-2">
               <CardHeader>
-                <CardTitle>🏢 Distribución por Departamento</CardTitle>
+                <CardTitle>🏢 Gestión de Departamentos</CardTitle>
                 <CardDescription>
-                  Empleados activos por departamento
+                  Administra y analiza los departamentos de la empresa
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {Object.entries(stats.departmentStats).map(([dept, count]) => (
-                    <div key={dept} className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                        <span className="font-medium">{dept}</span>
-                      </div>
-                      <span className="text-sm text-gray-600">{count} empleados</span>
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                      <span className="font-medium">Departamentos Activos</span>
                     </div>
-                  ))}
+                    <span className="text-sm text-gray-600">{Object.keys(stats.departmentStats).length} departamentos</span>
+                  </div>
+                  <Button 
+                    className="w-full" 
+                    onClick={() => router.push('/departments')}
+                  >
+                    🏢 Ver Gestión de Departamentos
+                  </Button>
                 </div>
               </CardContent>
             </Card>
