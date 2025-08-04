@@ -2,6 +2,7 @@ import { GetServerSideProps } from 'next'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
+import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
@@ -169,13 +170,13 @@ export default function AdminLogin() {
           {/* Public Access Link */}
           <div className="text-center">
             <p className="text-blue-200 text-sm mb-3">¿Eres empleado?</p>
-            <a 
+            <Link 
               href="/attendance/register" 
               className="inline-flex items-center gap-2 text-blue-300 hover:text-white transition-colors text-sm font-medium"
             >
               <Clock className="h-4 w-4" />
               Registrar Asistencia
-            </a>
+            </Link>
           </div>
         </div>
       </div>
