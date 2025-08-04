@@ -27,17 +27,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       companyId: userProfile?.company_id 
     })
 
-    const { format, reportType } = req.body
+    const { format = 'pdf' } = req.body
     
     // Validaciones
     if (!format || !['pdf', 'csv'].includes(format)) {
       return res.status(400).json({ error: 'Formato inválido (debe ser pdf o csv)' })
     }
 
-    console.log('📊 Generando reporte de empleados:', {
-      format,
-      reportType,
-      user: user.email
+    console.log('📊 Generando reporte de empleados:', { 
+      format, 
+      user: user.email 
     })
 
     // Obtener datos del reporte
@@ -59,10 +58,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 async function generateEmployeeReportData(supabase: any, userProfile: any) {
-  // Obtener empleados activos
+  // Obtener empleados activos con información completa
   let employeesQuery = supabase
     .from('employees')
-    .select('id, name, dni, employee_code, email, phone, role, base_salary, hire_date, status, bank_name, bank_account, department_id, created_at')
+    .select(`
+      id,
+      name,
+      email,
+      employee_code,
+      dni,
+      role,
+      hire_date,
+      base_salary,
+      status,
+      bank_name,
+      bank_account,
+      department_id,
+      created_at,
+      departments(name),
+      companies(name)
+    `)
     .order('name')
 
   // Si el usuario tiene company_id, filtrar por empresa (mismo patrón que payroll)
@@ -161,19 +176,19 @@ function generateEmployeePDFReport(res: NextApiResponse, reportData: any) {
     doc.fillColor('white')
     doc.fontSize(20).text('SISTEMA DE RECURSOS HUMANOS', 30, 20, { align: 'center', width: 535 })
     doc.fontSize(16).text('Reporte de Empleados', 30, 45, { align: 'center', width: 535 })
-    doc.fontSize(12).text(`Fecha de generación: ${new Date().toLocaleDateString('es-HN')}`, 30, 65, { align: 'center', width: 535 })
+    doc.fontSize(12).text(`Generado el ${new Date().toLocaleDateString('es-HN')}`, 30, 65, { align: 'center', width: 535 })
     
     // Reset colors
     doc.fillColor('black')
     
     // Información del reporte
     doc.fontSize(10).text('INFORMACIÓN DEL REPORTE:', 30, 100)
-    doc.fontSize(9).text(`Tipo: Reporte de Empleados`, 30, 115)
-    doc.fontSize(9).text(`Fecha de generación: ${new Date().toLocaleDateString('es-HN')}`, 30, 130)
-    doc.fontSize(9).text(`Total de empleados: ${reportData.stats.totalEmployees}`, 30, 145)
+    doc.fontSize(9).text(`Fecha de generación: ${new Date().toLocaleDateString('es-HN')}`, 30, 115)
+    doc.fontSize(9).text(`Tipo: Reporte Completo de Empleados`, 30, 130)
+    doc.fontSize(9).text(`Total de registros: ${reportData.employees.length}`, 30, 145)
     
     // Resumen ejecutivo
-    doc.rect(30, 170, 535, 100).stroke()
+    doc.rect(30, 170, 535, 120).stroke()
     doc.fontSize(14).text('RESUMEN EJECUTIVO', 35, 180)
     
     doc.fontSize(10).text('Total Empleados:', 40, 200)
@@ -188,102 +203,111 @@ function generateEmployeePDFReport(res: NextApiResponse, reportData: any) {
     doc.fontSize(10).text('Empleados Terminados:', 40, 245)
     doc.fontSize(10).text(reportData.stats.terminatedEmployees.toString(), 200, 245)
     
-    doc.fontSize(10).text('Nómina Total:', 40, 260)
-    doc.fontSize(10).text(`L. ${reportData.stats.totalSalary.toFixed(2)}`, 200, 260)
+    doc.fontSize(10).text('Salario Total:', 40, 260)
+    doc.fontSize(10).text(`L. ${reportData.stats.totalSalary.toLocaleString('es-HN')}`, 200, 260)
     
     doc.fontSize(10).text('Salario Promedio:', 40, 275)
-    doc.fontSize(10).text(`L. ${reportData.stats.averageSalary.toFixed(2)}`, 200, 275)
+    doc.fontSize(10).text(`L. ${reportData.stats.averageSalary.toLocaleString('es-HN')}`, 200, 275)
     
-    // ===== PÁGINA 2: ESTADÍSTICAS POR DEPARTAMENTO =====
-    doc.addPage()
+    // Mensaje si no hay datos
+    if (reportData.employees.length === 0) {
+      doc.fontSize(12).text('⚠️ NO HAY EMPLEADOS REGISTRADOS', 40, 300, { align: 'center', width: 455 })
+      doc.fontSize(10).text('No se encontraron empleados en el sistema.', 40, 320, { align: 'center', width: 455 })
+      doc.fontSize(10).text('Agrega empleados desde la sección de Gestión de Empleados.', 40, 335, { align: 'center', width: 455 })
+    }
     
-    doc.fontSize(14).text('ESTADÍSTICAS POR DEPARTAMENTO', 30, 30, { align: 'center', width: 535 })
-    
-    // Tabla de departamentos
-    const headers = ['Departamento', 'Total Empleados', 'Activos', 'Nómina Total']
-    const colWidths = [150, 100, 80, 100]
-    const startX = 30
-    let y = 70
-    const rowHeight = 15
-    
-    // Header de tabla
-    headers.forEach((h: string, i: number) => {
-      const x = startX + colWidths.slice(0, i).reduce((a: number, b: number) => a + b, 0)
-      doc.rect(x, y, colWidths[i], rowHeight).fillAndStroke('#1e40af', '#000')
-      doc.fillColor('white')
-      doc.fontSize(8).text(h, x + 2, y + 4, { width: colWidths[i] - 4, align: 'center' })
-      doc.fillColor('black')
-    })
-    y += rowHeight
-    
-    // Datos de departamentos
-    reportData.departmentStats.forEach((stat: any) => {
-      if (y > 750) {
-        doc.addPage()
-        y = 30
-      }
+    // ===== PÁGINA 2: LISTA DE EMPLEADOS =====
+    if (reportData.employees.length > 0) {
+      doc.addPage()
       
-      const values = [
-        stat.department.name,
-        stat.employeeCount.toString(),
-        stat.activeCount.toString(),
-        `L. ${stat.totalSalary.toFixed(2)}`
-      ]
+      doc.fontSize(14).text('LISTA COMPLETA DE EMPLEADOS', 30, 30, { align: 'center', width: 535 })
       
-      values.forEach((val: any, i: number) => {
+      // Tabla de empleados
+      const headers = ['Código', 'Nombre', 'Cargo', 'Departamento', 'Salario', 'Estado']
+      const colWidths = [60, 120, 80, 100, 80, 60]
+      const startX = 30
+      let y = 70
+      const rowHeight = 15
+      
+      // Header de tabla
+      headers.forEach((h: string, i: number) => {
         const x = startX + colWidths.slice(0, i).reduce((a: number, b: number) => a + b, 0)
-        doc.rect(x, y, colWidths[i], rowHeight).stroke()
-        doc.fontSize(7).text(val.toString(), x + 2, y + 4, { width: colWidths[i] - 4, align: 'center' })
+        doc.rect(x, y, colWidths[i], rowHeight).fillAndStroke('#1e40af', '#000')
+        doc.fillColor('white')
+        doc.fontSize(8).text(h, x + 2, y + 4, { width: colWidths[i] - 4, align: 'center' })
+        doc.fillColor('black')
       })
       y += rowHeight
-    })
-    
-    // ===== PÁGINA 3: LISTA DE EMPLEADOS =====
-    doc.addPage()
-    
-    doc.fontSize(14).text('LISTA DE EMPLEADOS', 30, 30, { align: 'center', width: 535 })
-    
-    // Tabla de empleados
-    const empHeaders = ['Código', 'Nombre', 'Departamento', 'Posición', 'Salario', 'Estado']
-    const empColWidths = [60, 120, 80, 80, 80, 60]
-    const empStartX = 30
-    let empY = 70
-    
-    // Header tabla empleados
-    empHeaders.forEach((h: string, i: number) => {
-      const x = empStartX + empColWidths.slice(0, i).reduce((a: number, b: number) => a + b, 0)
-      doc.rect(x, empY, empColWidths[i], rowHeight).fillAndStroke('#1e40af', '#000')
-      doc.fillColor('white')
-      doc.fontSize(8).text(h, x + 2, empY + 4, { width: empColWidths[i] - 4, align: 'center' })
-      doc.fillColor('black')
-    })
-    empY += rowHeight
-    
-    // Datos de empleados
-    reportData.employees.forEach((emp: any) => {
-      if (empY > 750) {
-        doc.addPage()
-        empY = 30
-      }
       
-      const department = reportData.departments.find((d: any) => d.id === emp.department_id)
-      
-      const values = [
-        emp.employee_code || emp.dni,
-        emp.name,
-        department?.name || 'Sin Departamento',
-        emp.position,
-        `L. ${(emp.base_salary || 0).toFixed(2)}`,
-        emp.status
-      ]
-      
-      values.forEach((val: any, i: number) => {
-        const x = empStartX + empColWidths.slice(0, i).reduce((a: number, b: number) => a + b, 0)
-        doc.rect(x, empY, empColWidths[i], rowHeight).stroke()
-        doc.fontSize(7).text(val.toString(), x + 2, empY + 4, { width: empColWidths[i] - 4, align: 'center' })
+      // Datos de empleados
+      reportData.employees.forEach((emp: any, index: number) => {
+        if (y > 750) {
+          doc.addPage()
+          y = 30
+        }
+        
+        const values = [
+          emp.employee_code || 'N/A',
+          emp.name || 'N/A',
+          emp.role || 'N/A',
+          emp.departments?.name || 'N/A',
+          emp.base_salary ? `L. ${emp.base_salary.toLocaleString('es-HN')}` : 'N/A',
+          emp.status === 'active' ? 'Activo' : emp.status === 'inactive' ? 'Inactivo' : 'Terminado'
+        ]
+        
+        values.forEach((val: any, i: number) => {
+          const x = startX + colWidths.slice(0, i).reduce((a: number, b: number) => a + b, 0)
+          doc.rect(x, y, colWidths[i], rowHeight).stroke()
+          doc.fontSize(7).text(val.toString(), x + 2, y + 4, { width: colWidths[i] - 4, align: 'center' })
+        })
+        y += rowHeight
       })
-      empY += rowHeight
-    })
+      
+      // ===== PÁGINA 3: ESTADÍSTICAS POR DEPARTAMENTO =====
+      if (reportData.departmentStats.length > 0) {
+        doc.addPage()
+        
+        doc.fontSize(14).text('ESTADÍSTICAS POR DEPARTAMENTO', 30, 30, { align: 'center', width: 535 })
+        
+        // Tabla de departamentos
+        const deptHeaders = ['Departamento', 'Empleados', 'Activos', 'Salario Total']
+        const deptColWidths = [150, 80, 80, 120]
+        const deptStartX = 30
+        let deptY = 70
+        
+        // Header tabla departamentos
+        deptHeaders.forEach((h: string, i: number) => {
+          const x = deptStartX + deptColWidths.slice(0, i).reduce((a: number, b: number) => a + b, 0)
+          doc.rect(x, deptY, deptColWidths[i], rowHeight).fillAndStroke('#1e40af', '#000')
+          doc.fillColor('white')
+          doc.fontSize(8).text(h, x + 2, deptY + 4, { width: deptColWidths[i] - 4, align: 'center' })
+          doc.fillColor('black')
+        })
+        deptY += rowHeight
+        
+        // Datos de departamentos
+        reportData.departmentStats.forEach((stat: any) => {
+          if (deptY > 750) {
+            doc.addPage()
+            deptY = 30
+          }
+          
+          const values = [
+            stat.department.name,
+            stat.employeeCount.toString(),
+            stat.activeCount.toString(),
+            `L. ${stat.totalSalary.toLocaleString('es-HN')}`
+          ]
+          
+          values.forEach((val: any, i: number) => {
+            const x = deptStartX + deptColWidths.slice(0, i).reduce((a: number, b: number) => a + b, 0)
+            doc.rect(x, deptY, deptColWidths[i], rowHeight).stroke()
+            doc.fontSize(7).text(val.toString(), x + 2, deptY + 4, { width: deptColWidths[i] - 4, align: 'center' })
+          })
+          deptY += rowHeight
+        })
+      }
+    }
     
     // Pie de página
     doc.fontSize(8).text('Documento generado automáticamente - Sistema de Recursos Humanos', 30, 800, { align: 'center', width: 535 })
@@ -302,39 +326,49 @@ function generateEmployeeCSVReport(res: NextApiResponse, reportData: any) {
     
     // Header del reporte
     csvContent += 'REPORTE DE EMPLEADOS\n'
-    csvContent += `Fecha de generación: ${new Date().toLocaleDateString('es-HN')}\n\n`
+    csvContent += `Fecha de generación: ${new Date().toLocaleDateString('es-HN')}\n`
+    csvContent += `Total de empleados: ${reportData.employees.length}\n\n`
     
     // Resumen ejecutivo
     csvContent += 'RESUMEN EJECUTIVO\n'
-    csvContent += 'Métrica,Valor\n'
     csvContent += `Total Empleados,${reportData.stats.totalEmployees}\n`
     csvContent += `Empleados Activos,${reportData.stats.activeEmployees}\n`
     csvContent += `Empleados Inactivos,${reportData.stats.inactiveEmployees}\n`
     csvContent += `Empleados Terminados,${reportData.stats.terminatedEmployees}\n`
-    csvContent += `Nómina Total,L. ${reportData.stats.totalSalary.toFixed(2)}\n`
-    csvContent += `Salario Promedio,L. ${reportData.stats.averageSalary.toFixed(2)}\n\n`
-    
-    // Estadísticas por departamento
-    csvContent += 'ESTADÍSTICAS POR DEPARTAMENTO\n'
-    csvContent += 'Departamento,Total Empleados,Activos,Nómina Total\n'
-    reportData.departmentStats.forEach((stat: any) => {
-      csvContent += `"${stat.department.name}",${stat.employeeCount},${stat.activeCount},L. ${stat.totalSalary.toFixed(2)}\n`
-    })
-    csvContent += '\n'
+    csvContent += `Salario Total,L. ${reportData.stats.totalSalary.toLocaleString('es-HN')}\n`
+    csvContent += `Salario Promedio,L. ${reportData.stats.averageSalary.toLocaleString('es-HN')}\n\n`
     
     // Lista de empleados
     csvContent += 'LISTA DE EMPLEADOS\n'
-    csvContent += 'Código,Nombre,Departamento,Posición,Email,Teléfono,Salario,Estado,Fecha Contratación\n'
+    csvContent += 'Código,Nombre,Email,Cargo,Departamento,Salario,Estado,Fecha Contratación\n'
+    
     reportData.employees.forEach((emp: any) => {
-      const department = reportData.departments.find((d: any) => d.id === emp.department_id)
-      csvContent += `"${emp.employee_code || emp.dni}","${emp.name}","${department?.name || 'Sin Departamento'}","${emp.position}","${emp.email}","${emp.phone}",L. ${(emp.base_salary || 0).toFixed(2)},${emp.status},"${emp.hire_date}"\n`
+      csvContent += `${emp.employee_code || 'N/A'},`
+      csvContent += `${emp.name || 'N/A'},`
+      csvContent += `${emp.email || 'N/A'},`
+      csvContent += `${emp.role || 'N/A'},`
+      csvContent += `${emp.departments?.name || 'N/A'},`
+      csvContent += `${emp.base_salary ? `L. ${emp.base_salary.toLocaleString('es-HN')}` : 'N/A'},`
+      csvContent += `${emp.status === 'active' ? 'Activo' : emp.status === 'inactive' ? 'Inactivo' : 'Terminado'},`
+      csvContent += `${emp.hire_date ? new Date(emp.hire_date).toLocaleDateString('es-HN') : 'N/A'}\n`
     })
     
-    // Configurar respuesta CSV
+    // Estadísticas por departamento
+    if (reportData.departmentStats.length > 0) {
+      csvContent += '\nESTADÍSTICAS POR DEPARTAMENTO\n'
+      csvContent += 'Departamento,Empleados,Activos,Salario Total\n'
+      
+      reportData.departmentStats.forEach((stat: any) => {
+        csvContent += `${stat.department.name},`
+        csvContent += `${stat.employeeCount},`
+        csvContent += `${stat.activeCount},`
+        csvContent += `L. ${stat.totalSalary.toLocaleString('es-HN')}\n`
+      })
+    }
+    
     res.setHeader('Content-Type', 'text/csv; charset=utf-8')
     res.setHeader('Content-Disposition', `attachment; filename=reporte_empleados_${new Date().toISOString().split('T')[0]}.csv`)
     res.send(csvContent)
-    
   } catch (error) {
     console.error('Error generando CSV de empleados:', error)
     throw error
