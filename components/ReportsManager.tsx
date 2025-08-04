@@ -30,7 +30,12 @@ export default function ReportsManager() {
     absentEmployees: 0
   })
   const [loading, setLoading] = useState(true)
-  const [exporting, setExporting] = useState(false)
+  const [exporting, setExporting] = useState({
+    general: false,
+    employees: false,
+    payroll: false,
+    attendance: false
+  })
   const [selectedFilter, setSelectedFilter] = useState<DateFilter>({
     type: 'today',
     startDate: new Date().toISOString().split('T')[0],
@@ -177,7 +182,7 @@ export default function ReportsManager() {
 
   const exportReport = async (format: 'pdf' | 'csv') => {
     try {
-      setExporting(true)
+      setExporting(prev => ({ ...prev, general: true }))
       
       const response = await fetch(`/api/reports/export`, {
         method: 'POST',
@@ -221,13 +226,13 @@ export default function ReportsManager() {
       console.error('Error exporting report:', error)
       alert('Error al exportar el reporte')
     } finally {
-      setExporting(false)
+      setExporting(prev => ({ ...prev, general: false }))
     }
   }
 
   const exportEmployeesReport = async (format: 'pdf' | 'csv') => {
     try {
-      setExporting(true)
+      setExporting(prev => ({ ...prev, employees: true }))
       
       const response = await fetch(`/api/reports/export-employees`, {
         method: 'POST',
@@ -257,13 +262,13 @@ export default function ReportsManager() {
       console.error('Error exporting employees report:', error)
       alert('Error al exportar el reporte de empleados')
     } finally {
-      setExporting(false)
+      setExporting(prev => ({ ...prev, employees: false }))
     }
   }
 
   const exportPayrollReport = async (format: 'pdf' | 'csv') => {
     try {
-      setExporting(true)
+      setExporting(prev => ({ ...prev, payroll: true }))
       
       const response = await fetch(`/api/reports/export-payroll`, {
         method: 'POST',
@@ -295,13 +300,13 @@ export default function ReportsManager() {
       console.error('Error exporting payroll report:', error)
       alert('Error al exportar el reporte de nómina')
     } finally {
-      setExporting(false)
+      setExporting(prev => ({ ...prev, payroll: false }))
     }
   }
 
   const exportAttendanceReport = async (format: 'pdf' | 'csv') => {
     try {
-      setExporting(true)
+      setExporting(prev => ({ ...prev, attendance: true }))
       
       const response = await fetch(`/api/attendance/export-report`, {
         method: 'POST',
@@ -332,7 +337,7 @@ export default function ReportsManager() {
       console.error('Error exporting attendance report:', error)
       alert('Error al exportar el reporte de asistencia')
     } finally {
-      setExporting(false)
+      setExporting(prev => ({ ...prev, attendance: false }))
     }
   }
 
@@ -465,19 +470,19 @@ export default function ReportsManager() {
             <div className="flex flex-wrap gap-2">
               <Button 
                 onClick={() => exportReport('pdf')} 
-                disabled={exporting}
+                disabled={exporting.general || exporting.employees || exporting.payroll || exporting.attendance}
                 size="sm"
                 className="bg-blue-600 hover:bg-blue-700"
               >
-                {exporting ? 'Generando...' : '📄 PDF'}
+                {exporting.general ? 'Generando...' : '📄 PDF'}
               </Button>
               <Button 
                 variant="outline" 
                 onClick={() => exportReport('csv')} 
-                disabled={exporting}
+                disabled={exporting.general || exporting.employees || exporting.payroll || exporting.attendance}
                 size="sm"
               >
-                {exporting ? 'Generando...' : '📊 CSV'}
+                {exporting.general ? 'Generando...' : '📊 CSV'}
               </Button>
             </div>
             <div className="mt-2 text-xs text-gray-600">
@@ -496,19 +501,19 @@ export default function ReportsManager() {
             <div className="flex flex-wrap gap-2">
               <Button 
                 onClick={() => exportEmployeesReport('pdf')} 
-                disabled={exporting}
+                disabled={exporting.general || exporting.employees || exporting.payroll || exporting.attendance}
                 size="sm"
                 className="bg-green-600 hover:bg-green-700"
               >
-                {exporting ? 'Generando...' : '📄 PDF'}
+                {exporting.employees ? 'Generando...' : '📄 PDF'}
               </Button>
               <Button 
                 variant="outline" 
                 onClick={() => exportEmployeesReport('csv')} 
-                disabled={exporting}
+                disabled={exporting.general || exporting.employees || exporting.payroll || exporting.attendance}
                 size="sm"
               >
-                {exporting ? 'Generando...' : '📊 CSV'}
+                {exporting.employees ? 'Generando...' : '📊 CSV'}
               </Button>
             </div>
             <div className="mt-2 text-xs text-gray-600">
@@ -527,19 +532,19 @@ export default function ReportsManager() {
             <div className="flex flex-wrap gap-2">
               <Button 
                 onClick={() => exportPayrollReport('pdf')} 
-                disabled={exporting}
+                disabled={exporting.general || exporting.employees || exporting.payroll || exporting.attendance}
                 size="sm"
                 className="bg-purple-600 hover:bg-purple-700"
               >
-                {exporting ? 'Generando...' : '📄 PDF'}
+                {exporting.payroll ? 'Generando...' : '📄 PDF'}
               </Button>
               <Button 
                 variant="outline" 
                 onClick={() => exportPayrollReport('csv')} 
-                disabled={exporting}
+                disabled={exporting.general || exporting.employees || exporting.payroll || exporting.attendance}
                 size="sm"
               >
-                {exporting ? 'Generando...' : '📊 CSV'}
+                {exporting.payroll ? 'Generando...' : '📊 CSV'}
               </Button>
             </div>
             <div className="mt-2 text-xs text-gray-600">
@@ -558,19 +563,19 @@ export default function ReportsManager() {
             <div className="flex flex-wrap gap-2">
               <Button 
                 onClick={() => exportAttendanceReport('pdf')} 
-                disabled={exporting}
+                disabled={exporting.general || exporting.employees || exporting.payroll || exporting.attendance}
                 size="sm"
                 className="bg-orange-600 hover:bg-orange-700"
               >
-                {exporting ? 'Generando...' : '📄 PDF'}
+                {exporting.attendance ? 'Generando...' : '📄 PDF'}
               </Button>
               <Button 
                 variant="outline" 
                 onClick={() => exportAttendanceReport('csv')} 
-                disabled={exporting}
+                disabled={exporting.general || exporting.employees || exporting.payroll || exporting.attendance}
                 size="sm"
               >
-                {exporting ? 'Generando...' : '📊 CSV'}
+                {exporting.attendance ? 'Generando...' : '📊 CSV'}
               </Button>
             </div>
             <div className="mt-2 text-xs text-gray-600">

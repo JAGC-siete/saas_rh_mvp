@@ -62,7 +62,7 @@ async function generateEmployeeReportData(supabase: any, userProfile: any) {
   // Obtener empleados activos
   let employeesQuery = supabase
     .from('employees')
-    .select('id, name, dni, employee_code, email, phone, role, position, base_salary, hire_date, status, bank_name, bank_account, department_id, created_at')
+    .select('id, name, dni, employee_code, email, phone, role, base_salary, hire_date, status, bank_name, bank_account, department_id, created_at')
     .order('name')
 
   // Si el usuario tiene company_id, filtrar por empresa (mismo patrón que payroll)
