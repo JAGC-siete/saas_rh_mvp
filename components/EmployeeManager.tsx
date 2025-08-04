@@ -208,6 +208,53 @@ export default function EmployeeManager() {
     }
   }
 
+  const exportEmployeeReport = async () => {
+    try {
+      const format = (document.getElementById('reportFormat') as HTMLSelectElement)?.value || 'pdf'
+      
+      const response = await fetch('/api/reports/export-employees', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': format === 'pdf' ? 'application/pdf' : 'text/csv'
+        },
+        body: JSON.stringify({
+          format,
+          reportType: 'employees'
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Error exportando reporte')
+      }
+
+      if (format === 'pdf') {
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `reporte_empleados_${new Date().toISOString().split('T')[0]}.pdf`
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+      } else {
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `reporte_empleados_${new Date().toISOString().split('T')[0]}.csv`
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+      }
+    } catch (error) {
+      console.error('Error exporting employee report:', error)
+      alert('Error al exportar el reporte')
+    }
+  }
+
   if (loading && employees.length === 0) {
     return <div className="flex justify-center py-8">Loading employees...</div>
   }
@@ -416,6 +463,43 @@ export default function EmployeeManager() {
           </CardContent>
         </Card>
       )}
+
+      {/* Export Reports */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Exportar Reportes de Empleados</CardTitle>
+          <CardDescription>
+            Genera reportes detallados de empleados en PDF o CSV
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-4 items-end">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Formato
+              </label>
+              <select 
+                className="w-24 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                defaultValue="pdf"
+                id="reportFormat"
+              >
+                <option value="pdf">PDF</option>
+                <option value="csv">CSV</option>
+              </select>
+            </div>
+
+            <Button 
+              onClick={exportEmployeeReport}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              Exportar Reporte
+            </Button>
+          </div>
+          <div className="mt-4 text-sm text-gray-600">
+            <strong>Reporte incluye:</strong> Lista completa de empleados, departamentos, salarios y estadísticas
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Employee List */}
       <Card>
