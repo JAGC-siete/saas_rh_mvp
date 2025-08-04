@@ -103,3 +103,15 @@ check-*.js
 verify-*.js
 fix-*.sql
 fix-*.js
+
+# Diagnostic scripts (contain credentials)
+diagnose-dashboard-issue.js
+check-late-minutes.js
+fix-late-minutes.js
+test-dashboard-api.js
+restore-correct-attendance.js
+generate-today-attendance.js
+restore-real-employees.js
+check-employee-ids.js
+check-companies.js
+verify-restoration.js
