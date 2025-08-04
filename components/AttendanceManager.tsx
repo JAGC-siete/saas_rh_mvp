@@ -1,6 +1,6 @@
 
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -30,11 +30,12 @@ export default function AttendanceManager() {
   const [message, setMessage] = useState('')
   const [requireJustification, setRequireJustification] = useState(false)
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([])
-  const [currentEmployee, setCurrentEmployee] = useState<any>(null)
   const [gamificationData, setGamificationData] = useState<any>(null)
+  const [earlyBirds, setEarlyBirds] = useState<AttendanceRecord[]>([])
+  const [lateArrivals, setLateArrivals] = useState<AttendanceRecord[]>([])
 
   // Fetch today's attendance records
-  const fetchTodayAttendance = async () => {
+  const fetchTodayAttendance = useCallback(async () => {
     const today = new Date().toISOString().split('T')[0]
     
     const { data, error } = await supabase
@@ -54,7 +55,29 @@ export default function AttendanceManager() {
       console.error('Error fetching attendance:', error)
     } else {
       setAttendanceRecords(data || [])
+      calculateLeaderboard(data || [])
     }
+  }, [])
+
+  // Calculate early birds and late arrivals
+  const calculateLeaderboard = (records: AttendanceRecord[]) => {
+    const todayRecords = records.filter(r => r.check_in && r.date === new Date().toISOString().split('T')[0])
+    
+    // Sort by check-in time (earliest first)
+    const sortedByTime = todayRecords.sort((a, b) => {
+      const timeA = new Date(a.check_in!).getTime()
+      const timeB = new Date(b.check_in!).getTime()
+      return timeA - timeB
+    })
+    
+    // Get first 3 (early birds)
+    const early = sortedByTime.slice(0, 3)
+    
+    // Get last 3 (late arrivals)
+    const late = sortedByTime.slice(-3).reverse()
+    
+    setEarlyBirds(early)
+    setLateArrivals(late)
   }
 
   // Fetch gamification data for current user
@@ -117,7 +140,7 @@ export default function AttendanceManager() {
       .channel('attendance_changes')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'attendance_records' },
-        (payload: any) => {
+        () => {
           fetchTodayAttendance() // Refresh data on any change
         }
       )
@@ -126,7 +149,7 @@ export default function AttendanceManager() {
     return () => {
       subscription.unsubscribe()
     }
-  }, [])
+  }, [fetchTodayAttendance])
 
   const handleAttendance = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -301,92 +324,6 @@ export default function AttendanceManager() {
                 </div>
                 <div className="text-sm text-yellow-700">Late</div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Gamification Card */}
-        {gamificationData && (
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>🏆 Tu Progreso</CardTitle>
-              <CardDescription>Puntos y logros de asistencia</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Points Summary */}
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-gray-900">Puntuación</h3>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Total:</span>
-                      <span className="font-mono font-bold text-blue-600">
-                        {gamificationData.scores.total_points} pts
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Esta semana:</span>
-                      <span className="font-mono font-bold text-green-600">
-                        {gamificationData.scores.weekly_points} pts
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-600">Este mes:</span>
-                      <span className="font-mono font-bold text-purple-600">
-                        {gamificationData.scores.monthly_points} pts
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Recent Achievements */}
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-gray-900">Logros Recientes</h3>
-                  {gamificationData.achievements.length > 0 ? (
-                    <div className="space-y-2">
-                      {gamificationData.achievements.map((achievement: any, index: number) => (
-                        <div key={index} className="flex items-center space-x-2 p-2 bg-gray-50 rounded">
-                          <span className="text-lg">{achievement.achievement_types.icon}</span>
-                          <div className="flex-1">
-                            <div className="text-sm font-medium">{achievement.achievement_types.name}</div>
-                            <div className="text-xs text-gray-500">+{achievement.points_earned} pts</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-sm text-gray-500 italic">
-                      Aún no tienes logros. ¡Mantén la puntualidad!
-                    </div>
-                  )}
-                </div>
-
-                {/* Recent Activity */}
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-gray-900">Actividad Reciente</h3>
-                  {gamificationData.pointHistory.length > 0 ? (
-                    <div className="space-y-2">
-                      {gamificationData.pointHistory.slice(0, 3).map((record: any, index: number) => (
-                        <div key={index} className="text-sm">
-                          <div className="font-medium text-gray-900">+{record.points_earned} pts</div>
-                          <div className="text-xs text-gray-500">{record.reason}</div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-sm text-gray-500 italic">
-                      No hay actividad reciente
-                    </div>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-                  {attendanceRecords.filter(r => r.status === 'late').length}
-                </div>
-                <div className="text-sm text-yellow-700">Late</div>
-              </div>
               <div className="text-center p-4 bg-blue-50 rounded-lg">
                 <div className="text-2xl font-bold text-blue-600">
                   {attendanceRecords.filter(r => r.check_in && r.check_out).length}
@@ -400,6 +337,180 @@ export default function AttendanceManager() {
                 <div className="text-sm text-gray-700">Total</div>
               </div>
             </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Gamification Card */}
+      {gamificationData && (
+        <Card>
+          <CardHeader>
+            <CardTitle>🏆 Tu Progreso</CardTitle>
+            <CardDescription>Puntos y logros de asistencia</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Points Summary */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-gray-900">Puntuación</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Total:</span>
+                    <span className="font-mono font-bold text-blue-600">
+                      {gamificationData.scores.total_points} pts
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Esta semana:</span>
+                    <span className="font-mono font-bold text-green-600">
+                      {gamificationData.scores.weekly_points} pts
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Este mes:</span>
+                    <span className="font-mono font-bold text-purple-600">
+                      {gamificationData.scores.monthly_points} pts
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Recent Achievements */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-gray-900">Logros Recientes</h3>
+                {gamificationData.achievements.length > 0 ? (
+                  <div className="space-y-2">
+                    {gamificationData.achievements.map((achievement: any, index: number) => (
+                      <div key={index} className="flex items-center space-x-2 p-2 bg-gray-50 rounded">
+                        <span className="text-lg">{achievement.achievement_types.icon}</span>
+                        <div className="flex-1">
+                          <div className="text-sm font-medium">{achievement.achievement_types.name}</div>
+                          <div className="text-xs text-gray-500">+{achievement.points_earned} pts</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-500 italic">
+                    Aún no tienes logros. ¡Mantén la puntualidad!
+                  </div>
+                )}
+              </div>
+
+              {/* Recent Activity */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-gray-900">Actividad Reciente</h3>
+                {gamificationData.pointHistory.length > 0 ? (
+                  <div className="space-y-2">
+                    {gamificationData.pointHistory.slice(0, 3).map((record: any, index: number) => (
+                      <div key={index} className="text-sm">
+                        <div className="font-medium text-gray-900">+{record.points_earned} pts</div>
+                        <div className="text-xs text-gray-500">{record.reason}</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-500 italic">
+                    No hay actividad reciente
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Attendance Leaderboard */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Early Birds */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <span className="text-2xl">🌅</span>
+              Early Birds
+            </CardTitle>
+            <CardDescription>Los primeros 3 en registrarse hoy</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {earlyBirds.length > 0 ? (
+              <div className="space-y-3">
+                {earlyBirds.map((record, index) => (
+                  <div key={record.id} className="flex items-center justify-between p-3 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                        index === 0 ? 'bg-yellow-400 text-yellow-900' :
+                        index === 1 ? 'bg-gray-300 text-gray-700' :
+                        'bg-orange-300 text-orange-900'
+                      }`}>
+                        {index + 1}
+                      </div>
+                      <div>
+                        <div className="font-medium text-gray-900">{record.employees?.name}</div>
+                        <div className="text-sm text-gray-500">{record.employees?.employee_code}</div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-mono font-bold text-green-600">
+                        {formatTime(record.check_in)}
+                      </div>
+                      <div className="text-xs text-gray-500">Check-in</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <div className="text-4xl mb-2">🌅</div>
+                <div className="text-sm">Aún no hay early birds registrados</div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Late Arrivals */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <span className="text-2xl">🌙</span>
+              Late Arrivals
+            </CardTitle>
+            <CardDescription>Los últimos 3 en registrarse hoy</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {lateArrivals.length > 0 ? (
+              <div className="space-y-3">
+                {lateArrivals.map((record, index) => (
+                  <div key={record.id} className="flex items-center justify-between p-3 bg-gradient-to-r from-red-50 to-pink-50 rounded-lg border border-red-200">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                        index === 0 ? 'bg-red-400 text-red-900' :
+                        index === 1 ? 'bg-orange-300 text-orange-900' :
+                        'bg-yellow-300 text-yellow-900'
+                      }`}>
+                        {lateArrivals.length - index}
+                      </div>
+                      <div>
+                        <div className="font-medium text-gray-900">{record.employees?.name}</div>
+                        <div className="text-sm text-gray-500">{record.employees?.employee_code}</div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-mono font-bold text-red-600">
+                        {formatTime(record.check_in)}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {record.late_minutes > 0 ? `+${record.late_minutes}m tarde` : 'Check-in'}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <div className="text-4xl mb-2">🌙</div>
+                <div className="text-sm">Aún no hay late arrivals registrados</div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
