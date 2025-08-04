@@ -183,35 +183,8 @@ export default function Dashboard() {
 
           {/* Quick Actions */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Department Management */}
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle>🏢 Gestión de Departamentos</CardTitle>
-                <CardDescription>
-                  Administra y analiza los departamentos de la empresa
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                      <span className="font-medium">Departamentos Activos</span>
-                    </div>
-                    <span className="text-sm text-gray-600">{Object.keys(stats.departmentStats).length} departamentos</span>
-                  </div>
-                  <Button 
-                    className="w-full" 
-                    onClick={() => router.push('/departments')}
-                  >
-                    🏢 Ver Gestión de Departamentos
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Quick Actions */}
-            <Card>
+            <Card className="lg:col-span-3">
               <CardHeader>
                 <CardTitle>⚡ Acciones Rápidas</CardTitle>
                 <CardDescription>
@@ -232,6 +205,13 @@ export default function Dashboard() {
                     onClick={() => router.push('/employees')}
                   >
                     👥 Gestionar Empleados
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => router.push('/departments')}
+                  >
+                    🏢 Gestión de Departamentos
                   </Button>
                   <Button 
                     variant="outline" 
