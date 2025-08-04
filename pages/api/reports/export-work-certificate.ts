@@ -163,70 +163,147 @@ function generateWorkCertificatePDF(res: NextApiResponse, certificateData: WorkC
     const doc = new PDFDocument({
       size: 'A4',
       margins: {
-        top: 50,
-        bottom: 50,
-        left: 50,
-        right: 50
+        top: 40,
+        bottom: 40,
+        left: 40,
+        right: 40
       }
     })
 
     // Configurar headers de respuesta
     res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', `attachment; filename=constancia_trabajo_${certificateData.employee.employee_code}_${new Date().toISOString().split('T')[0]}.pdf`)
+    res.setHeader('Content-Disposition', `attachment; filename=constancia_laboral_${certificateData.employee.employee_code}_${new Date().toISOString().split('T')[0]}.pdf`)
 
     // Pipe el documento a la respuesta
     doc.pipe(res)
 
-    // Contenido del PDF
-    doc.fontSize(18)
+    // Logo y encabezado (simulado)
+    doc.fontSize(16)
        .font('Helvetica-Bold')
-       .text('CONSTANCIA DE TRABAJO', { align: 'center' })
-       .moveDown(2)
-
-    doc.fontSize(12)
+       .text(certificateData.employee.company_name, { align: 'right' })
+       .moveDown(0.5)
+       .fontSize(10)
        .font('Helvetica')
-       .text(`La empresa ${certificateData.employee.company_name}`, { align: 'center' })
-       .moveDown(1)
-       .text('HACE CONSTAR QUE:', { align: 'center' })
+       .text('S. de R.L.', { align: 'right' })
        .moveDown(2)
 
-    doc.fontSize(11)
-       .text(`El/La Sr(a). ${certificateData.employee.name}`, { align: 'center' })
-       .moveDown(1)
-       .text(`con DNI: ${certificateData.employee.dni}`, { align: 'center' })
-       .moveDown(1)
-       .text(`Código de empleado: ${certificateData.employee.employee_code}`, { align: 'center' })
-       .moveDown(2)
-
-    doc.text(`Labora en esta empresa desde el ${new Date(certificateData.employee.hire_date).toLocaleDateString('es-ES')}`, { align: 'center' })
-       .moveDown(1)
-       .text(`en el cargo de: ${certificateData.employee.position}`, { align: 'center' })
-       .moveDown(1)
-       .text(`en el departamento de: ${certificateData.employee.department_name}`, { align: 'center' })
-       .moveDown(2)
-
-    doc.text(`Su salario base es de: L. ${certificateData.employee.base_salary.toLocaleString('es-HN')}`, { align: 'center' })
-       .moveDown(1)
-       .text(`Estado actual: ${certificateData.employee.status === 'active' ? 'ACTIVO' : 'INACTIVO'}`, { align: 'center' })
-       .moveDown(2)
-
-    if (certificateData.certificateInfo.additionalInfo) {
-      doc.text(`Información adicional: ${certificateData.certificateInfo.additionalInfo}`, { align: 'center' })
-         .moveDown(2)
-    }
-
-    doc.text(`Esta constancia se expide a solicitud del interesado para los fines que estime convenientes.`, { align: 'center' })
-       .moveDown(2)
-
-    doc.text(`Fecha de emisión: ${new Date().toLocaleDateString('es-ES')}`, { align: 'center' })
+    // Título principal
+    doc.fontSize(20)
+       .font('Helvetica-Bold')
+       .text('CONSTANCIA LABORAL', { align: 'center' })
        .moveDown(3)
 
-    // Espacio para firma
-    doc.text('_________________________', { align: 'center' })
+    // Cuerpo principal
+    doc.fontSize(12)
+       .font('Helvetica')
+       .text(`Por medio de la presente, ${certificateData.employee.company_name} S. de R.L. certifica que:`, { align: 'justify' })
+       .moveDown(1)
+
+    // Nombre del empleado
+    doc.text(`• ${certificateData.employee.name}`, { align: 'justify' })
        .moveDown(0.5)
-       .text('Firma y Sello', { align: 'center' })
+
+    // DNI
+    doc.text(`• Documento Nacional de Identificación No. ${certificateData.employee.dni}`, { align: 'justify' })
        .moveDown(0.5)
-       .text('Autoridad Competente', { align: 'center' })
+
+    // Estado laboral
+    const statusText = certificateData.employee.status === 'active' ? 'contrato permanente' : 'contrato temporal'
+    doc.text(`• se desempeña en esta empresa con modalidad de ${statusText}`, { align: 'justify' })
+       .moveDown(0.5)
+
+    // Cargo
+    doc.text(`• en el cargo de ${certificateData.employee.position}`, { align: 'justify' })
+       .moveDown(0.5)
+
+    // Período de empleo
+    const hireDate = new Date(certificateData.employee.hire_date)
+    const hireDateFormatted = hireDate.toLocaleDateString('es-ES', { 
+      day: 'numeric', 
+      month: 'long', 
+      year: 'numeric' 
+    })
+    doc.text(`• desde el ${hireDateFormatted} hasta la fecha`, { align: 'justify' })
+       .moveDown(0.5)
+
+    // Salario
+    const salaryInWords = numberToWords(certificateData.employee.base_salary)
+    doc.text(`• con un salario mensual de L. ${certificateData.employee.base_salary.toLocaleString('es-HN')} (${salaryInWords} lempiras exactos)`, { align: 'justify' })
+       .moveDown(2)
+
+    // Tabla de desglose salarial
+    doc.fontSize(11)
+       .font('Helvetica-Bold')
+       .text('Desglose Salarial:', { align: 'left' })
+       .moveDown(0.5)
+
+    // Calcular valores
+    const biweeklySalary = certificateData.employee.base_salary / 2
+    const deductions = Math.round(biweeklySalary * 0.0843) // 8.43% RAP + IHSS
+    const netSalary = biweeklySalary - deductions
+
+    // Tabla simple
+    const tableData = [
+      ['Salario base', `L. ${certificateData.employee.base_salary.toLocaleString('es-HN')}`],
+      ['Salario quincenal', `L. ${biweeklySalary.toLocaleString('es-HN')}`],
+      ['Deducciones (RAP / IHSS)', `L. ${deductions.toLocaleString('es-HN')}`],
+      ['Total', `L. ${netSalary.toLocaleString('es-HN')}`]
+    ]
+
+    const tableTop = doc.y
+    const colWidth = 200
+    const rowHeight = 20
+
+    tableData.forEach((row, index) => {
+      const y = tableTop + (index * rowHeight)
+      
+      // Fondo alternado
+      if (index % 2 === 0) {
+        doc.rect(40, y, 515, rowHeight).fill('#f8f9fa')
+      }
+      
+      // Texto
+      doc.fontSize(10)
+         .font('Helvetica')
+         .text(row[0], 50, y + 5, { width: colWidth })
+         .font('Helvetica-Bold')
+         .text(row[1], 250, y + 5, { width: colWidth })
+    })
+
+    doc.moveDown(3)
+
+    // Información de emisión
+    const currentDate = new Date()
+    const dayInWords = numberToWords(currentDate.getDate())
+    const monthInWords = currentDate.toLocaleDateString('es-ES', { month: 'long' }).toUpperCase()
+    const yearInWords = numberToWords(currentDate.getFullYear())
+
+    doc.fontSize(11)
+       .font('Helvetica')
+       .text(`Esta constancia se emite a solicitud del interesado para los fines que estime convenientes. Extendida en Tegucigalpa, M.D.C., al ${dayInWords} día del mes de ${monthInWords} del año ${yearInWords}.`, { align: 'justify' })
+       .moveDown(3)
+
+    // Línea separadora
+    doc.moveTo(40, doc.y)
+       .lineTo(555, doc.y)
+       .stroke()
+       .moveDown(1)
+
+    // Información de contacto
+    doc.fontSize(10)
+       .font('Helvetica-Bold')
+       .text('Jorge Arturo Gómez Coello', { align: 'left' })
+       .fontSize(9)
+       .font('Helvetica')
+       .text('Jefe de Personal', { align: 'left' })
+       .text('Móvil: +(504) 3214-8010', { align: 'left' })
+       .text('Mail: rrhh@paragonfinancialcorp.com', { align: 'left' })
+       .moveDown(0.5)
+       .font('Helvetica-Bold')
+       .text(certificateData.employee.company_name, { align: 'left' })
+       .fontSize(8)
+       .font('Helvetica')
+       .text('Centro Morazán, Torre #2, Nivel 8, Local 20817', { align: 'left' })
 
     // Finalizar documento
     doc.end()
@@ -237,24 +314,67 @@ function generateWorkCertificatePDF(res: NextApiResponse, certificateData: WorkC
   }
 }
 
+// Función auxiliar para convertir números a palabras
+function numberToWords(num: number): string {
+  const units = ['', 'uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve']
+  const teens = ['diez', 'once', 'doce', 'trece', 'catorce', 'quince', 'dieciséis', 'diecisiete', 'dieciocho', 'diecinueve']
+  const tens = ['', '', 'veinte', 'treinta', 'cuarenta', 'cincuenta', 'sesenta', 'setenta', 'ochenta', 'noventa']
+  const hundreds = ['', 'ciento', 'doscientos', 'trescientos', 'cuatrocientos', 'quinientos', 'seiscientos', 'setecientos', 'ochocientos', 'novecientos']
+
+  if (num === 0) return 'cero'
+  if (num < 10) return units[num]
+  if (num < 20) return teens[num - 10]
+  if (num < 100) {
+    if (num % 10 === 0) return tens[Math.floor(num / 10)]
+    return tens[Math.floor(num / 10)] + ' y ' + units[num % 10]
+  }
+  if (num < 1000) {
+    if (num === 100) return 'cien'
+    if (num % 100 === 0) return hundreds[Math.floor(num / 100)]
+    return hundreds[Math.floor(num / 100)] + ' ' + numberToWords(num % 100)
+  }
+  if (num < 1000000) {
+    if (num === 1000) return 'mil'
+    if (num < 2000) return 'mil ' + numberToWords(num % 1000)
+    if (num % 1000 === 0) return numberToWords(Math.floor(num / 1000)) + ' mil'
+    return numberToWords(Math.floor(num / 1000)) + ' mil ' + numberToWords(num % 1000)
+  }
+  
+  return num.toString() // Fallback para números muy grandes
+}
+
 function generateWorkCertificateCSV(res: NextApiResponse, certificateData: WorkCertificateData) {
   try {
-    let csvContent = 'CONSTANCIA DE TRABAJO\n\n'
+    let csvContent = 'CONSTANCIA LABORAL\n\n'
     
-    csvContent += `Empresa,${certificateData.employee.company_name}\n`
+    // Información de la empresa
+    csvContent += `Empresa,${certificateData.employee.company_name} S. de R.L.\n`
     csvContent += `Fecha de emisión,${new Date().toLocaleDateString('es-ES')}\n\n`
     
+    // Datos del empleado
     csvContent += 'DATOS DEL EMPLEADO\n'
     csvContent += `Nombre,${certificateData.employee.name}\n`
-    csvContent += `DNI,${certificateData.employee.dni}\n`
+    csvContent += `Documento Nacional de Identificación,${certificateData.employee.dni}\n`
     csvContent += `Código de empleado,${certificateData.employee.employee_code}\n`
     csvContent += `Email,${certificateData.employee.email}\n`
     csvContent += `Cargo,${certificateData.employee.position}\n`
     csvContent += `Departamento,${certificateData.employee.department_name}\n`
+    csvContent += `Modalidad de contrato,${certificateData.employee.status === 'active' ? 'contrato permanente' : 'contrato temporal'}\n`
     csvContent += `Fecha de contratación,${new Date(certificateData.employee.hire_date).toLocaleDateString('es-ES')}\n`
-    csvContent += `Salario base,L. ${certificateData.employee.base_salary.toLocaleString('es-HN')}\n`
-    csvContent += `Estado,${certificateData.employee.status === 'active' ? 'ACTIVO' : 'INACTIVO'}\n\n`
+    csvContent += `Salario mensual,L. ${certificateData.employee.base_salary.toLocaleString('es-HN')}\n\n`
     
+    // Desglose salarial
+    const biweeklySalary = certificateData.employee.base_salary / 2
+    const deductions = Math.round(biweeklySalary * 0.0843) // 8.43% RAP + IHSS
+    const netSalary = biweeklySalary - deductions
+    
+    csvContent += 'DESGLOSE SALARIAL\n'
+    csvContent += `Salario base,L. ${certificateData.employee.base_salary.toLocaleString('es-HN')}\n`
+    csvContent += `Salario quincenal,L. ${biweeklySalary.toLocaleString('es-HN')}\n`
+    csvContent += `Deducciones (RAP / IHSS),L. ${deductions.toLocaleString('es-HN')}\n`
+    csvContent += `Total,L. ${netSalary.toLocaleString('es-HN')}\n\n`
+    
+    // Información de la constancia
     csvContent += 'INFORMACIÓN DE LA CONSTANCIA\n'
     csvContent += `Tipo de constancia,${certificateData.certificateInfo.certificateType}\n`
     csvContent += `Propósito,${certificateData.certificateInfo.purpose}\n`
@@ -262,10 +382,18 @@ function generateWorkCertificateCSV(res: NextApiResponse, certificateData: WorkC
     if (certificateData.certificateInfo.additionalInfo) {
       csvContent += `Información adicional,${certificateData.certificateInfo.additionalInfo}\n`
     }
+    
+    csvContent += '\nINFORMACIÓN DE CONTACTO\n'
+    csvContent += `Nombre,Jorge Arturo Gómez Coello\n`
+    csvContent += `Cargo,Jefe de Personal\n`
+    csvContent += `Móvil,+(504) 3214-8010\n`
+    csvContent += `Email,rrhh@paragonfinancialcorp.com\n`
+    csvContent += `Empresa,${certificateData.employee.company_name}\n`
+    csvContent += `Dirección,Centro Morazán, Torre #2, Nivel 8, Local 20817\n`
 
     // Configurar headers de respuesta
     res.setHeader('Content-Type', 'text/csv; charset=utf-8')
-    res.setHeader('Content-Disposition', `attachment; filename=constancia_trabajo_${certificateData.employee.employee_code}_${new Date().toISOString().split('T')[0]}.csv`)
+    res.setHeader('Content-Disposition', `attachment; filename=constancia_laboral_${certificateData.employee.employee_code}_${new Date().toISOString().split('T')[0]}.csv`)
     
     res.send(csvContent)
 
