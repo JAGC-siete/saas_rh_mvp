@@ -30,11 +30,34 @@ export default function AttendanceManager() {
   const [requireJustification, setRequireJustification] = useState(false)
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([])
   const [isClient, setIsClient] = useState(false)
+  const [currentTime, setCurrentTime] = useState('')
 
   // Ensure we're on the client side
   useEffect(() => {
     setIsClient(true)
   }, [])
+
+  // Live clock update
+  useEffect(() => {
+    if (!isClient) return
+
+    const updateTime = () => {
+      const now = new Date()
+      const tegucigalpaTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Tegucigalpa"}))
+      setCurrentTime(tegucigalpaTime.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true,
+        timeZone: 'America/Tegucigalpa'
+      }))
+    }
+
+    updateTime() // Initial call
+    const interval = setInterval(updateTime, 1000) // Update every second
+
+    return () => clearInterval(interval)
+  }, [isClient])
 
   // Fetch today's attendance records
   const fetchTodayAttendance = async () => {
@@ -142,6 +165,15 @@ export default function AttendanceManager() {
             <CardDescription>
               Enter the last 5 digits of your DNI to record attendance
             </CardDescription>
+            {/* Live Clock Display */}
+            <div className="text-center py-4 bg-blue-50 rounded-lg">
+              <div className="text-3xl font-bold text-blue-600 font-mono">
+                {currentTime || '--:--:--'}
+              </div>
+              <div className="text-sm text-blue-700 mt-1">
+                Tegucigalpa Time
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleAttendance} className="space-y-4">

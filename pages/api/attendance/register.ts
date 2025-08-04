@@ -159,9 +159,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     console.log('✅ Horario obtenido:', schedule)
 
-    // PASO 5: Comparar hora actual con horario esperado
+    // PASO 5: Comparar hora actual con horario esperado (usando zona horaria de Tegucigalpa)
     const now = new Date()
-    const dayOfWeek = now.toLocaleString('en-US', { weekday: 'long' }).toLowerCase()
+    const tegucigalpaTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Tegucigalpa"}))
+    const dayOfWeek = tegucigalpaTime.toLocaleString('en-US', { weekday: 'long' }).toLowerCase()
     const startKey = `${dayOfWeek}_start`
     const endKey = `${dayOfWeek}_end`
     const startTime = schedule[startKey]
@@ -175,12 +176,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    // Parsear horas y calcular diferencia
+    // Parsear horas y calcular diferencia usando hora de Tegucigalpa
     const [startHour, startMin] = startTime.split(':').map(Number)
-    const expectedStart = new Date(now)
+    const expectedStart = new Date(tegucigalpaTime)
     expectedStart.setHours(startHour, startMin, 0, 0)
     
-    const diffMinutes = Math.floor((now.getTime() - expectedStart.getTime()) / 60000)
+    const diffMinutes = Math.floor((tegucigalpaTime.getTime() - expectedStart.getTime()) / 60000)
     
     let status: 'Temprano' | 'A tiempo' | 'Tarde'
     if (diffMinutes < -5) {
@@ -192,7 +193,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     console.log('⏰ Comparación de horarios:', {
-      horaActual: now.toLocaleTimeString(),
+      horaActual: tegucigalpaTime.toLocaleTimeString(),
       horaEsperada: startTime,
       diferenciaMinutos: diffMinutes,
       status
@@ -231,7 +232,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           message: '⏰ Has llegado tarde. Por favor justifica tu demora.',
           lateMinutes,
           expectedTime: startTime,
-          actualTime: now.toLocaleTimeString()
+          actualTime: tegucigalpaTime.toLocaleTimeString()
         })
       }
 
