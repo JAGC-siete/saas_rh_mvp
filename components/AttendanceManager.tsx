@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
+import OnboardingModal from './OnboardingModal'
 
 interface AttendanceRecord {
   id: string
@@ -23,6 +24,20 @@ interface AttendanceRecord {
   }
 }
 
+interface OnboardingData {
+  employee: {
+    id: string
+    name: string
+    employee_code: string
+    department: string
+    department_id: string
+  }
+  currentSchedule: { start: string; end: string } | null
+  defaultSchedule: { start: string; end: string }
+  needsScheduleVerification: boolean
+  welcomeMessage: string
+}
+
 export default function AttendanceManager() {
   const [last5, setLast5] = useState('')
   const [justification, setJustification] = useState('')
@@ -33,6 +48,11 @@ export default function AttendanceManager() {
   const [gamificationData, setGamificationData] = useState<any>(null)
   const [earlyBirds, setEarlyBirds] = useState<AttendanceRecord[]>([])
   const [lateArrivals, setLateArrivals] = useState<AttendanceRecord[]>([])
+  
+  // Onboarding state
+  const [showOnboarding, setShowOnboarding] = useState(false)
+  const [onboardingData, setOnboardingData] = useState<OnboardingData | null>(null)
+  const [pendingAttendance, setPendingAttendance] = useState<{ last5: string; justification?: string } | null>(null)
 
   // Fetch today's attendance records
   const fetchTodayAttendance = useCallback(async () => {
@@ -157,7 +177,8 @@ export default function AttendanceManager() {
     setMessage('')
 
     try {
-      const response = await fetch('/api/attendance', {
+      // First, check if this is the first time registration
+      const firstTimeResponse = await fetch('/api/attendance/first-time-check', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -165,6 +186,42 @@ export default function AttendanceManager() {
         body: JSON.stringify({
           last5,
           justification: requireJustification ? justification : undefined,
+        }),
+      })
+
+      const firstTimeData = await firstTimeResponse.json()
+
+      if (firstTimeData.isFirstTime) {
+        // Show onboarding modal
+        setOnboardingData(firstTimeData)
+        setPendingAttendance({ 
+          last5, 
+          justification: requireJustification ? justification : undefined 
+        })
+        setShowOnboarding(true)
+        setLoading(false)
+        return
+      }
+
+      // Not first time, proceed with normal attendance
+      await processAttendance(last5, requireJustification ? justification : undefined)
+
+    } catch (error: any) {
+      setMessage(`Error: ${error.message}`)
+      setLoading(false)
+    }
+  }
+
+  const processAttendance = async (last5Digits: string, justificationText?: string) => {
+    try {
+      const response = await fetch('/api/attendance', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          last5: last5Digits,
+          justification: justificationText,
         }),
       })
 
@@ -200,6 +257,61 @@ export default function AttendanceManager() {
     }
     
     await handleAttendance(new Event('submit') as any)
+  }
+
+  const handleOnboardingConfirm = async (schedule: { start: string; end: string }) => {
+    if (!onboardingData || !pendingAttendance) return
+
+    try {
+      // Update employee schedule if needed
+      if (onboardingData.needsScheduleVerification) {
+        const scheduleResponse = await fetch('/api/attendance/update-schedule', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            employee_id: onboardingData.employee.id,
+            start_time: schedule.start,
+            end_time: schedule.end,
+          }),
+        })
+
+        if (!scheduleResponse.ok) {
+          throw new Error('Error updating schedule')
+        }
+      }
+
+      // Process attendance after onboarding
+      await processAttendance(pendingAttendance.last5, pendingAttendance.justification)
+      
+      // Close onboarding
+      setShowOnboarding(false)
+      setOnboardingData(null)
+      setPendingAttendance(null)
+
+    } catch (error: any) {
+      console.error('Error in onboarding:', error)
+      setMessage(`Error: ${error.message}`)
+    }
+  }
+
+  const handleOnboardingSkip = async () => {
+    if (!pendingAttendance) return
+
+    try {
+      // Process attendance without updating schedule
+      await processAttendance(pendingAttendance.last5, pendingAttendance.justification)
+      
+      // Close onboarding
+      setShowOnboarding(false)
+      setOnboardingData(null)
+      setPendingAttendance(null)
+
+    } catch (error: any) {
+      console.error('Error processing attendance:', error)
+      setMessage(`Error: ${error.message}`)
+    }
   }
 
   const formatTime = (timestamp: string | null) => {
@@ -577,6 +689,17 @@ export default function AttendanceManager() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Onboarding Modal */}
+      {showOnboarding && onboardingData && (
+        <OnboardingModal
+          isOpen={showOnboarding}
+          onClose={() => setShowOnboarding(false)}
+          data={onboardingData}
+          onConfirm={handleOnboardingConfirm}
+          onSkip={handleOnboardingSkip}
+        />
+      )}
     </div>
   )
 }
