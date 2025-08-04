@@ -225,6 +225,117 @@ export default function ReportsManager() {
     }
   }
 
+  const exportEmployeesReport = async (format: 'pdf' | 'csv') => {
+    try {
+      setExporting(true)
+      
+      const response = await fetch(`/api/reports/export-employees`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': format === 'pdf' ? 'application/pdf' : 'text/csv'
+        },
+        body: JSON.stringify({
+          format
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Error exportando reporte de empleados')
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `reporte_empleados_${new Date().toISOString().split('T')[0]}.${format}`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (error) {
+      console.error('Error exporting employees report:', error)
+      alert('Error al exportar el reporte de empleados')
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const exportPayrollReport = async (format: 'pdf' | 'csv') => {
+    try {
+      setExporting(true)
+      
+      const response = await fetch(`/api/reports/export-payroll`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': format === 'pdf' ? 'application/pdf' : 'text/csv'
+        },
+        body: JSON.stringify({
+          reportType: 'general',
+          format,
+          periodo: new Date().toISOString().slice(0, 7)
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Error exportando reporte de nómina')
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `reporte_nomina_${new Date().toISOString().split('T')[0]}.${format}`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (error) {
+      console.error('Error exporting payroll report:', error)
+      alert('Error al exportar el reporte de nómina')
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const exportAttendanceReport = async (format: 'pdf' | 'csv') => {
+    try {
+      setExporting(true)
+      
+      const response = await fetch(`/api/attendance/export-report`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': format === 'pdf' ? 'application/pdf' : 'text/csv'
+        },
+        body: JSON.stringify({
+          format,
+          range: selectedFilter.type
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Error exportando reporte de asistencia')
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `reporte_asistencia_${selectedFilter.type}_${new Date().toISOString().split('T')[0]}.${format}`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (error) {
+      console.error('Error exporting attendance report:', error)
+      alert('Error al exportar el reporte de asistencia')
+    } finally {
+      setExporting(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -337,32 +448,167 @@ export default function ReportsManager() {
         </Card>
       </div>
 
-      {/* Acciones de exportación */}
-      <Card>
+      {/* Reportes Disponibles */}
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">📋 Reportes Disponibles</h2>
+        <p className="text-gray-600 mb-6">Selecciona el tipo de reporte que necesitas generar</p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Reporte General */}
+        <Card>
+          <CardHeader>
+            <CardTitle>📊 Reporte General</CardTitle>
+            <CardDescription>Reporte completo con todas las estadísticas del período</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              <Button 
+                onClick={() => exportReport('pdf')} 
+                disabled={exporting}
+                size="sm"
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {exporting ? 'Generando...' : '📄 PDF'}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => exportReport('csv')} 
+                disabled={exporting}
+                size="sm"
+              >
+                {exporting ? 'Generando...' : '📊 CSV'}
+              </Button>
+            </div>
+            <div className="mt-2 text-xs text-gray-600">
+              Estadísticas completas: empleados, asistencia, nómina, tardanzas y ausencias
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Reporte de Empleados */}
+        <Card>
+          <CardHeader>
+            <CardTitle>👥 Reporte de Empleados</CardTitle>
+            <CardDescription>Lista detallada de empleados y departamentos</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              <Button 
+                onClick={() => exportEmployeesReport('pdf')} 
+                disabled={exporting}
+                size="sm"
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {exporting ? 'Generando...' : '📄 PDF'}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => exportEmployeesReport('csv')} 
+                disabled={exporting}
+                size="sm"
+              >
+                {exporting ? 'Generando...' : '📊 CSV'}
+              </Button>
+            </div>
+            <div className="mt-2 text-xs text-gray-600">
+              Información completa: datos personales, cargos, salarios, departamentos
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Reporte de Nómina */}
+        <Card>
+          <CardHeader>
+            <CardTitle>💰 Reporte de Nómina</CardTitle>
+            <CardDescription>Reporte detallado de salarios y deducciones</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              <Button 
+                onClick={() => exportPayrollReport('pdf')} 
+                disabled={exporting}
+                size="sm"
+                className="bg-purple-600 hover:bg-purple-700"
+              >
+                {exporting ? 'Generando...' : '📄 PDF'}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => exportPayrollReport('csv')} 
+                disabled={exporting}
+                size="sm"
+              >
+                {exporting ? 'Generando...' : '📊 CSV'}
+              </Button>
+            </div>
+            <div className="mt-2 text-xs text-gray-600">
+              Salarios, deducciones ISR/IHSS/RAP, cálculos por departamento
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Reporte de Asistencia */}
+        <Card>
+          <CardHeader>
+            <CardTitle>⏰ Reporte de Asistencia</CardTitle>
+            <CardDescription>Registros de asistencia del período seleccionado</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              <Button 
+                onClick={() => exportAttendanceReport('pdf')} 
+                disabled={exporting}
+                size="sm"
+                className="bg-orange-600 hover:bg-orange-700"
+              >
+                {exporting ? 'Generando...' : '📄 PDF'}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => exportAttendanceReport('csv')} 
+                disabled={exporting}
+                size="sm"
+              >
+                {exporting ? 'Generando...' : '📊 CSV'}
+              </Button>
+            </div>
+            <div className="mt-2 text-xs text-gray-600">
+              Registros de entrada/salida, horas trabajadas, tardanzas
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Constancias de Trabajo */}
+      <Card className="mt-6">
         <CardHeader>
-          <CardTitle>Exportar Reportes</CardTitle>
-          <CardDescription>Genera reportes en PDF o CSV con los datos del período seleccionado</CardDescription>
+          <CardTitle>📄 Constancias de Trabajo</CardTitle>
+          <CardDescription>Genera constancias laborales profesionales</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap gap-4">
-            <Button 
-              onClick={() => exportReport('pdf')} 
-              disabled={exporting}
-              className="min-w-[150px]"
-            >
-              {exporting ? 'Generando...' : 'Exportar PDF'}
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={() => exportReport('csv')} 
-              disabled={exporting}
-              className="min-w-[150px]"
-            >
-              {exporting ? 'Generando...' : 'Exportar CSV'}
-            </Button>
+          <div className="text-sm text-gray-600">
+            <strong>Para generar constancias:</strong> Ve a la sección de <strong>Empleados</strong> y usa el botón "📄 Constancia" en cada empleado.
           </div>
-          <div className="mt-4 text-sm text-gray-600">
-            <strong>Reporte incluye:</strong> Estadísticas de empleados, asistencia, nómina, tardanzas y ausencias
+          <div className="mt-2 text-xs text-gray-500">
+            • Formato profesional según estándares empresariales<br/>
+            • Incluye información completa del empleado<br/>
+            • Desglose salarial y deducciones<br/>
+            • Disponible en PDF y CSV
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Información adicional */}
+      <Card className="mt-6 bg-blue-50 border-blue-200">
+        <CardHeader>
+          <CardTitle className="text-blue-800">ℹ️ Información Importante</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-sm text-blue-700">
+            <strong>Filtros aplicados:</strong> Todos los reportes respetan el período seleccionado arriba.<br/>
+            <strong>Seguridad:</strong> Los reportes solo incluyen datos de tu empresa.<br/>
+            <strong>Formatos:</strong> PDF para impresión profesional, CSV para análisis en Excel.
           </div>
         </CardContent>
       </Card>
