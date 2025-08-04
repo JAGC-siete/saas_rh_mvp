@@ -27,25 +27,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       companyId: userProfile?.company_id 
     })
 
-    const { range, format } = req.body
+    const { range, format, startDate, endDate } = req.body
     
     // Validaciones
     if (!format || !['pdf', 'csv'].includes(format)) {
       return res.status(400).json({ error: 'Formato inválido (debe ser pdf o csv)' })
     }
     
-    if (!range || !['daily', 'weekly', 'biweekly', 'monthly'].includes(range)) {
+    if (!range || !['today', 'week', 'biweek', 'month'].includes(range)) {
       return res.status(400).json({ error: 'Rango inválido' })
     }
 
     console.log('📊 Generando reporte de asistencia:', {
       range,
       format,
+      startDate,
+      endDate,
       user: user.email
     })
 
-    // Calcular fechas según el rango
-    const dateFilter = calculateDateRange(range)
+    // Usar fechas específicas si se proporcionan, sino calcular según rango
+    const dateFilter = startDate && endDate ? { startDate, endDate } : calculateDateRange(range)
     
     // Obtener datos del reporte
     const reportData = await generateAttendanceReportData(supabase, dateFilter, userProfile)
@@ -71,21 +73,26 @@ function calculateDateRange(range: string) {
   let endDate = today
 
   switch (range) {
-    case 'daily':
+    case 'today':
       startDate = today
       break
-    case 'weekly':
+    case 'week':
       const dayOfWeek = today.getDay()
       const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1)
       startDate = new Date(today.setDate(diff))
+      endDate = new Date(startDate)
+      endDate.setDate(startDate.getDate() + 6)
       break
-    case 'biweekly':
+    case 'biweek':
       const day = today.getDate()
       const startDay = day <= 15 ? 1 : 16
       startDate = new Date(today.getFullYear(), today.getMonth(), startDay)
+      const endDay = day <= 15 ? 15 : new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
+      endDate = new Date(today.getFullYear(), today.getMonth(), endDay)
       break
-    case 'monthly':
+    case 'month':
       startDate = new Date(today.getFullYear(), today.getMonth(), 1)
+      endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0)
       break
     default:
       startDate = today
@@ -247,8 +254,17 @@ function generateAttendancePDFReport(res: NextApiResponse, reportData: any, date
     doc.fontSize(10).text(reportData.totalAttendance.toString(), 200, 215)
     
     doc.fontSize(10).text('Promedio Asistencia:', 40, 230)
-    const avgAttendance = reportData.employeeStats.reduce((sum: number, stat: any) => sum + stat.attendanceRate, 0) / reportData.employeeStats.length
+    const avgAttendance = reportData.employeeStats.length > 0 
+      ? reportData.employeeStats.reduce((sum: number, stat: any) => sum + stat.attendanceRate, 0) / reportData.employeeStats.length 
+      : 0
     doc.fontSize(10).text(`${avgAttendance.toFixed(1)}%`, 200, 230)
+    
+    // Mensaje si no hay datos
+    if (reportData.totalAttendance === 0) {
+      doc.fontSize(12).text('⚠️ NO HAY DATOS DE ASISTENCIA EN EL PERÍODO SELECCIONADO', 40, 250, { align: 'center', width: 455 })
+      doc.fontSize(10).text('El período seleccionado no contiene registros de asistencia.', 40, 270, { align: 'center', width: 455 })
+      doc.fontSize(10).text('Verifica las fechas o contacta al administrador del sistema.', 40, 285, { align: 'center', width: 455 })
+    }
     
     // ===== PÁGINA 2: ESTADÍSTICAS POR EMPLEADO =====
     doc.addPage()
@@ -273,27 +289,31 @@ function generateAttendancePDFReport(res: NextApiResponse, reportData: any, date
     y += rowHeight
     
     // Datos de empleados
-    reportData.employeeStats.forEach((stat: any) => {
-      if (y > 750) {
-        doc.addPage()
-        y = 30
-      }
-      
-      const values = [
-        stat.employee.name,
-        stat.presentDays.toString(),
-        stat.absentDays.toString(),
-        stat.lateDays.toString(),
-        `${stat.attendanceRate.toFixed(1)}%`
-      ]
-      
-      values.forEach((val: any, i: number) => {
-        const x = startX + colWidths.slice(0, i).reduce((a: number, b: number) => a + b, 0)
-        doc.rect(x, y, colWidths[i], rowHeight).stroke()
-        doc.fontSize(7).text(val.toString(), x + 2, y + 4, { width: colWidths[i] - 4, align: 'center' })
+    if (reportData.employeeStats.length === 0) {
+      doc.fontSize(12).text('No hay empleados con registros de asistencia en el período seleccionado', 30, y + 20, { align: 'center', width: 535 })
+    } else {
+      reportData.employeeStats.forEach((stat: any) => {
+        if (y > 750) {
+          doc.addPage()
+          y = 30
+        }
+        
+        const values = [
+          stat.employee.name,
+          stat.presentDays.toString(),
+          stat.absentDays.toString(),
+          stat.lateDays.toString(),
+          `${stat.attendanceRate.toFixed(1)}%`
+        ]
+        
+        values.forEach((val: any, i: number) => {
+          const x = startX + colWidths.slice(0, i).reduce((a: number, b: number) => a + b, 0)
+          doc.rect(x, y, colWidths[i], rowHeight).stroke()
+          doc.fontSize(7).text(val.toString(), x + 2, y + 4, { width: colWidths[i] - 4, align: 'center' })
+        })
+        y += rowHeight
       })
-      y += rowHeight
-    })
+    }
     
     // ===== PÁGINA 3: ESTADÍSTICAS DIARIAS =====
     doc.addPage()
