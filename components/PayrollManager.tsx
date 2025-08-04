@@ -69,7 +69,7 @@ export default function PayrollManager() {
     departmentBreakdown: {},
     attendanceRate: 0
   })
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'records' | 'generate'>('dashboard')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'records' | 'generate' | 'reports'>('dashboard')
 
   // Form state
   const [generateForm, setGenerateForm] = useState({
@@ -548,6 +548,48 @@ export default function PayrollManager() {
     }
   }
 
+  const exportPayrollReport = async (reportType: string, format: 'pdf' | 'csv') => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session?.access_token) {
+        throw new Error('No authentication token found.')
+      }
+
+      const response = await fetch('/api/reports/export-payroll', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': format === 'pdf' ? 'application/pdf' : 'text/csv',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          reportType,
+          format,
+          periodo: selectedPeriod || new Date().toISOString().slice(0, 7)
+        }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to export')
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `reporte_nomina_${reportType}_${selectedPeriod || 'actual'}.${format}`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+
+    } catch (error: any) {
+      alert(`❌ Error exportando reporte: ${error.message}`)
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -562,6 +604,9 @@ export default function PayrollManager() {
           </Button>
           <Button variant="outline" onClick={exportToExcel}>
             📥 Exportar Excel
+          </Button>
+          <Button variant="outline" onClick={() => setActiveTab('reports')}>
+            📋 Reportes
           </Button>
         </div>
       </div>
@@ -598,6 +643,16 @@ export default function PayrollManager() {
             }`}
           >
             ⚙️ Generar Nómina
+          </button>
+          <button
+            onClick={() => setActiveTab('reports')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'reports'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            📋 Reportes
           </button>
         </nav>
       </div>
@@ -987,6 +1042,111 @@ export default function PayrollManager() {
               </CardContent>
             </Card>
           )}
+        </div>
+      )}
+
+      {/* Reports Tab */}
+      {activeTab === 'reports' && (
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>📊 Reportes de Nómina</CardTitle>
+              <CardDescription>
+                Genera reportes detallados de nómina en diferentes formatos
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* Reporte General */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">📋 Reporte General</CardTitle>
+                    <CardDescription>Estadísticas completas de nómina</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <Button 
+                        onClick={() => exportPayrollReport('general', 'pdf')}
+                        className="w-full"
+                      >
+                        📄 Exportar PDF
+                      </Button>
+                      <Button 
+                        variant="outline"
+                        onClick={() => exportPayrollReport('general', 'csv')}
+                        className="w-full"
+                      >
+                        📊 Exportar CSV
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Reporte por Período */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">📅 Reporte por Período</CardTitle>
+                    <CardDescription>Nómina de un período específico</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Período
+                        </label>
+                        <Input
+                          type="month"
+                          value={selectedPeriod}
+                          onChange={(e) => setSelectedPeriod(e.target.value)}
+                          className="w-full"
+                        />
+                      </div>
+                      <Button 
+                        onClick={() => exportPayrollReport('period', 'pdf')}
+                        className="w-full"
+                        disabled={!selectedPeriod}
+                      >
+                        📄 Exportar PDF
+                      </Button>
+                      <Button 
+                        variant="outline"
+                        onClick={() => exportPayrollReport('period', 'csv')}
+                        className="w-full"
+                        disabled={!selectedPeriod}
+                      >
+                        📊 Exportar CSV
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Reporte de Deducciones */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">💰 Reporte de Deducciones</CardTitle>
+                    <CardDescription>Análisis detallado de deducciones</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <Button 
+                        onClick={() => exportPayrollReport('deductions', 'pdf')}
+                        className="w-full"
+                      >
+                        📄 Exportar PDF
+                      </Button>
+                      <Button 
+                        variant="outline"
+                        onClick={() => exportPayrollReport('deductions', 'csv')}
+                        className="w-full"
+                      >
+                        📊 Exportar CSV
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>

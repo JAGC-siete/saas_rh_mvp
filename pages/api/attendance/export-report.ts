@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { supabase } from '../../../lib/supabase'
-import PDFDocument from 'pdfkit'
+import { createClient } from '../../../lib/supabase/server'
+import { authenticateUser } from '../../../lib/auth-helpers'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -8,203 +8,387 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Verificar autenticación
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    if (authError || !user) {
-      return res.status(401).json({ error: 'Unauthorized' })
+    // 🔒 AUTENTICACIÓN REQUERIDA CON MISMOS PERMISOS QUE PAYROLL
+    const authResult = await authenticateUser(req, res, ['can_view_reports', 'can_manage_attendance'])
+    
+    if (!authResult.success) {
+      return res.status(401).json({ 
+        error: authResult.error,
+        message: authResult.message
+      })
     }
+
+    const { user, userProfile } = authResult
+    const supabase = createClient(req, res)
+
+    console.log('🔐 Usuario autenticado para reporte de asistencia:', { 
+      userId: user.id, 
+      role: userProfile?.role,
+      companyId: userProfile?.company_id 
+    })
 
     const { range, format } = req.body
-
-    if (!range || !format) {
-      return res.status(400).json({ error: 'Range and format are required' })
+    
+    // Validaciones
+    if (!format || !['pdf', 'csv'].includes(format)) {
+      return res.status(400).json({ error: 'Formato inválido (debe ser pdf o csv)' })
     }
+    
+    if (!range || !['daily', 'weekly', 'biweekly', 'monthly'].includes(range)) {
+      return res.status(400).json({ error: 'Rango inválido' })
+    }
+
+    console.log('📊 Generando reporte de asistencia:', {
+      range,
+      format,
+      user: user.email
+    })
 
     // Calcular fechas según el rango
-    let startDate, endDate
-    const today = new Date()
+    const dateFilter = calculateDateRange(range)
     
-    switch (range) {
-      case 'daily':
-        startDate = today.toISOString().split('T')[0]
-        endDate = startDate
-        break
-      case 'weekly':
-        const weekStart = new Date(today)
-        weekStart.setDate(today.getDate() - today.getDay())
-        startDate = weekStart.toISOString().split('T')[0]
-        endDate = today.toISOString().split('T')[0]
-        break
-      case 'biweekly':
-        const twoWeeksAgo = new Date(today)
-        twoWeeksAgo.setDate(today.getDate() - 14)
-        startDate = twoWeeksAgo.toISOString().split('T')[0]
-        endDate = today.toISOString().split('T')[0]
-        break
-      case 'monthly':
-        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
-        startDate = monthStart.toISOString().split('T')[0]
-        endDate = today.toISOString().split('T')[0]
-        break
-      default:
-        return res.status(400).json({ error: 'Invalid range' })
-    }
+    // Obtener datos del reporte
+    const reportData = await generateAttendanceReportData(supabase, dateFilter, userProfile)
 
-    // Obtener datos de asistencia
-    const { data: attendanceRecords, error: attError } = await supabase
-      .from('attendance_records')
-      .select(`
-        *,
-        employees:employee_id (
-          id,
-          name,
-          employee_code,
-          base_salary,
-          department_id
-        )
-      `)
-      .gte('date', startDate)
-      .lte('date', endDate)
-      .order('date', { ascending: false })
-
-    if (attError) {
-      console.error('Error fetching attendance:', attError)
-      return res.status(500).json({ error: 'Error fetching attendance data' })
-    }
-
-    // Obtener empleados para calcular ausencias
-    const { data: employees, error: empError } = await supabase
-      .from('employees')
-      .select('id, name, employee_code, base_salary, department_id')
-      .eq('status', 'active')
-
-    if (empError) {
-      console.error('Error fetching employees:', empError)
-      return res.status(500).json({ error: 'Error fetching employees' })
-    }
-
-    if (format === 'csv') {
-      return generateCSV(res, attendanceRecords, employees, startDate, endDate, range)
-    } else if (format === 'pdf') {
-      return generatePDF(res, attendanceRecords, employees, startDate, endDate, range)
+    if (format === 'pdf') {
+      return generateAttendancePDFReport(res, reportData, dateFilter, range)
     } else {
-      return res.status(400).json({ error: 'Invalid format' })
+      return generateAttendanceCSVReport(res, reportData, dateFilter, range)
     }
 
   } catch (error) {
-    console.error('Error in export report:', error)
-    res.status(500).json({ error: 'Internal server error' })
+    console.error('Error generando reporte de asistencia:', error)
+    return res.status(500).json({ 
+      error: 'Error interno del servidor', 
+      message: error instanceof Error ? error.message : 'Error desconocido'
+    })
   }
 }
 
-function generateCSV(res: NextApiResponse, attendanceRecords: any[], employees: any[], startDate: string, endDate: string, range: string) {
-  const headers = [
-    'Fecha',
-    'Código Empleado',
-    'Nombre Empleado',
-    'Entrada',
-    'Salida',
-    'Minutos Tardanza',
-    'Estado',
-    'Justificación'
-  ]
+function calculateDateRange(range: string) {
+  const today = new Date()
+  let startDate: Date
+  let endDate = today
 
-  const csvContent = [
-    headers.join(','),
-    ...attendanceRecords.map((record: any) => [
-      record.date,
-      record.employees?.employee_code || '',
-      record.employees?.name || '',
-      record.check_in ? new Date(record.check_in).toLocaleTimeString('es-HN') : '',
-      record.check_out ? new Date(record.check_out).toLocaleTimeString('es-HN') : '',
-      record.late_minutes || 0,
-      record.status || '',
-      record.justification || ''
-    ].join(','))
-  ].join('\n')
+  switch (range) {
+    case 'daily':
+      startDate = today
+      break
+    case 'weekly':
+      const dayOfWeek = today.getDay()
+      const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1)
+      startDate = new Date(today.setDate(diff))
+      break
+    case 'biweekly':
+      const day = today.getDate()
+      const startDay = day <= 15 ? 1 : 16
+      startDate = new Date(today.getFullYear(), today.getMonth(), startDay)
+      break
+    case 'monthly':
+      startDate = new Date(today.getFullYear(), today.getMonth(), 1)
+      break
+    default:
+      startDate = today
+  }
 
-  const filename = `reporte_asistencia_${range}_${startDate}_${endDate}.csv`
-  
-  res.setHeader('Content-Type', 'text/csv')
-  res.setHeader('Content-Disposition', `attachment; filename=${filename}`)
-  res.status(200).send(csvContent)
+  return {
+    startDate: startDate.toISOString().split('T')[0],
+    endDate: endDate.toISOString().split('T')[0]
+  }
 }
 
-function generatePDF(res: NextApiResponse, attendanceRecords: any[], employees: any[], startDate: string, endDate: string, range: string) {
-  const doc = new PDFDocument()
-  const filename = `reporte_asistencia_${range}_${startDate}_${endDate}.pdf`
+async function generateAttendanceReportData(supabase: any, dateFilter: any, userProfile: any) {
+  // Obtener empleados activos
+  let employeesQuery = supabase
+    .from('employees')
+    .select('id, name, dni, department_id, status')
+    .eq('status', 'active')
+    .order('name')
+
+  // Si el usuario tiene company_id, filtrar por empresa (mismo patrón que payroll)
+  if (userProfile?.company_id) {
+    employeesQuery = employeesQuery.eq('company_id', userProfile.company_id)
+  }
+
+  const { data: employees, error: empError } = await employeesQuery
+
+  if (empError) {
+    console.error('Error obteniendo empleados:', empError)
+    throw new Error('Error obteniendo empleados')
+  }
+
+  // Obtener registros de asistencia del período
+  const { data: attendanceRecords, error: attError } = await supabase
+    .from('attendance_records')
+    .select('employee_id, date, check_in, check_out, status')
+    .gte('date', dateFilter.startDate)
+    .lte('date', dateFilter.endDate)
+
+  if (attError) {
+    console.error('Error obteniendo registros de asistencia:', attError)
+    throw new Error('Error obteniendo registros de asistencia')
+  }
+
+  // Calcular estadísticas
+  const totalEmployees = employees?.length || 0
+  const totalAttendance = attendanceRecords?.length || 0
   
-  res.setHeader('Content-Type', 'application/pdf')
-  res.setHeader('Content-Disposition', `attachment; filename=${filename}`)
+  // Calcular estadísticas por día
+  const dailyStats = calculateDailyStats(attendanceRecords, dateFilter)
   
-  doc.pipe(res)
-
-  // Header
-  doc.fontSize(20).text('PARAGON HONDURAS', { align: 'center' })
-  doc.fontSize(16).text('Reporte de Asistencia', { align: 'center' })
-  doc.fontSize(12).text(`Período: ${startDate} - ${endDate}`, { align: 'center' })
-  doc.fontSize(10).text(`Generado: ${new Date().toLocaleDateString('es-HN')}`, { align: 'center' })
-  
-  doc.moveDown()
-
-  // Estadísticas resumidas
-  const totalEmployees = employees.length
-  const presentCount = attendanceRecords.length
-  const absentCount = totalEmployees - presentCount
-  const lateCount = attendanceRecords.filter((r: any) => r.late_minutes > 0).length
-
-  doc.fontSize(14).text('Resumen Ejecutivo')
-  doc.fontSize(10).text(`Total Empleados: ${totalEmployees}`)
-  doc.fontSize(10).text(`Presentes: ${presentCount}`)
-  doc.fontSize(10).text(`Ausentes: ${absentCount}`)
-  doc.fontSize(10).text(`Tardanzas: ${lateCount}`)
-  doc.fontSize(10).text(`Tasa de Asistencia: ${totalEmployees > 0 ? ((presentCount / totalEmployees) * 100).toFixed(1) : 0}%`)
-  
-  doc.moveDown()
-
-  // Tabla de registros
-  doc.fontSize(14).text('Detalle de Registros')
-  doc.moveDown()
-
-  const tableTop = doc.y
-  const tableLeft = 50
-  const colWidths = [60, 80, 100, 60, 60, 60, 60, 100]
-  const headers = ['Fecha', 'Código', 'Nombre', 'Entrada', 'Salida', 'Tardanza', 'Estado', 'Justificación']
-
-  // Headers
-  let x = tableLeft
-  headers.forEach((header: any, i: any) => {
-    doc.fontSize(8).text(header, x, tableTop, { width: colWidths[i] })
-    x += colWidths[i]
-  })
-
-  // Data
-  let y = tableTop + 20
-  attendanceRecords.forEach((record: any) => {
-    if (y > 700) {
-      doc.addPage()
-      y = 50
+  // Calcular estadísticas por empleado
+  const employeeStats = employees?.map((emp: any) => {
+    const empAttendance = attendanceRecords?.filter((att: any) => att.employee_id === emp.id) || []
+    const presentDays = empAttendance.filter((att: any) => att.status === 'present').length
+    const absentDays = empAttendance.filter((att: any) => att.status === 'absent').length
+    const lateDays = empAttendance.filter((att: any) => {
+      if (!att.check_in) return false
+      const checkInTime = new Date(att.check_in)
+      const hour = checkInTime.getHours()
+      const minutes = checkInTime.getMinutes()
+      return hour > 8 || (hour === 8 && minutes > 15)
+    }).length
+    
+    return {
+      employee: emp,
+      presentDays,
+      absentDays,
+      lateDays,
+      totalDays: presentDays + absentDays,
+      attendanceRate: empAttendance.length > 0 ? (presentDays / empAttendance.length) * 100 : 0
     }
+  }) || []
 
-    x = tableLeft
-    const rowData = [
-      record.date,
-      record.employees?.employee_code || '',
-      record.employees?.name || '',
-      record.check_in ? new Date(record.check_in).toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' }) : '',
-      record.check_out ? new Date(record.check_out).toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' }) : '',
-      record.late_minutes || 0,
-      record.status || '',
-      record.justification || ''
-    ]
+  return {
+    employees: employees || [],
+    attendance: attendanceRecords || [],
+    dailyStats,
+    employeeStats,
+    totalEmployees,
+    totalAttendance,
+    dateFilter
+  }
+}
 
-    rowData.forEach((cell: any, i: any) => {
-      doc.fontSize(8).text(cell, x, y, { width: colWidths[i] })
-      x += colWidths[i]
+function calculateDailyStats(attendanceRecords: any[], dateFilter: any) {
+  const stats: any[] = []
+  const startDate = new Date(dateFilter.startDate)
+  const endDate = new Date(dateFilter.endDate)
+  
+  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+    const dateStr = d.toISOString().split('T')[0]
+    const dayRecords = attendanceRecords.filter((att: any) => att.date === dateStr)
+    const presentCount = dayRecords.filter((att: any) => att.status === 'present').length
+    const totalCount = dayRecords.length
+    
+    stats.push({
+      date: dateStr,
+      attendanceCount: presentCount,
+      totalCount,
+      attendanceRate: totalCount > 0 ? (presentCount / totalCount) * 100 : 0
+    })
+  }
+  
+  return stats
+}
+
+function generateAttendancePDFReport(res: NextApiResponse, reportData: any, dateFilter: any, range: string) {
+  try {
+    const PDFDocument = require('pdfkit')
+    const doc = new PDFDocument({ 
+      size: 'A4', 
+      layout: 'portrait', 
+      margin: 30,
+      info: {
+        Title: `Reporte de Asistencia - ${range}`,
+        Author: 'Sistema de Recursos Humanos',
+        Subject: 'Reporte de Asistencia',
+        Keywords: 'asistencia, reporte, recursos humanos',
+        Creator: 'HR SaaS System'
+      }
+    })
+    
+    let buffers: Buffer[] = []
+
+    doc.on('data', (chunk: Buffer) => buffers.push(chunk))
+    doc.on('end', () => {
+      const pdf = Buffer.concat(buffers)
+      res.setHeader('Content-Type', 'application/pdf')
+      res.setHeader('Content-Disposition', `attachment; filename=reporte_asistencia_${range}_${dateFilter.startDate}_${dateFilter.endDate}.pdf`)
+      res.send(pdf)
     })
 
-    y += 15
-  })
+    // ===== PÁGINA 1: HEADER Y RESUMEN EJECUTIVO =====
+    
+    // Header con branding
+    doc.rect(0, 0, 595, 80).fill('#1e40af')
+    doc.fillColor('white')
+    doc.fontSize(20).text('SISTEMA DE RECURSOS HUMANOS', 30, 20, { align: 'center', width: 535 })
+    doc.fontSize(16).text('Reporte de Asistencia', 30, 45, { align: 'center', width: 535 })
+    doc.fontSize(12).text(`${dateFilter.startDate} - ${dateFilter.endDate}`, 30, 65, { align: 'center', width: 535 })
+    
+    // Reset colors
+    doc.fillColor('black')
+    
+    // Información del reporte
+    doc.fontSize(10).text('INFORMACIÓN DEL REPORTE:', 30, 100)
+    doc.fontSize(9).text(`Período: ${dateFilter.startDate} - ${dateFilter.endDate}`, 30, 115)
+    doc.fontSize(9).text(`Tipo: Reporte de Asistencia - ${range}`, 30, 130)
+    doc.fontSize(9).text(`Fecha de generación: ${new Date().toLocaleDateString('es-HN')}`, 30, 145)
+    
+    // Resumen ejecutivo
+    doc.rect(30, 170, 535, 80).stroke()
+    doc.fontSize(14).text('RESUMEN EJECUTIVO', 35, 180)
+    
+    doc.fontSize(10).text('Total Empleados:', 40, 200)
+    doc.fontSize(10).text(reportData.totalEmployees.toString(), 200, 200)
+    
+    doc.fontSize(10).text('Total Registros:', 40, 215)
+    doc.fontSize(10).text(reportData.totalAttendance.toString(), 200, 215)
+    
+    doc.fontSize(10).text('Promedio Asistencia:', 40, 230)
+    const avgAttendance = reportData.employeeStats.reduce((sum: number, stat: any) => sum + stat.attendanceRate, 0) / reportData.employeeStats.length
+    doc.fontSize(10).text(`${avgAttendance.toFixed(1)}%`, 200, 230)
+    
+    // ===== PÁGINA 2: ESTADÍSTICAS POR EMPLEADO =====
+    doc.addPage()
+    
+    doc.fontSize(14).text('ESTADÍSTICAS DE ASISTENCIA POR EMPLEADO', 30, 30, { align: 'center', width: 535 })
+    
+    // Tabla de estadísticas por empleado
+    const headers = ['Empleado', 'Días Presente', 'Días Ausente', 'Días Tardío', 'Tasa %']
+    const colWidths = [120, 80, 80, 80, 60]
+    const startX = 30
+    let y = 70
+    const rowHeight = 15
+    
+    // Header de tabla
+    headers.forEach((h: string, i: number) => {
+      const x = startX + colWidths.slice(0, i).reduce((a: number, b: number) => a + b, 0)
+      doc.rect(x, y, colWidths[i], rowHeight).fillAndStroke('#1e40af', '#000')
+      doc.fillColor('white')
+      doc.fontSize(8).text(h, x + 2, y + 4, { width: colWidths[i] - 4, align: 'center' })
+      doc.fillColor('black')
+    })
+    y += rowHeight
+    
+    // Datos de empleados
+    reportData.employeeStats.forEach((stat: any) => {
+      if (y > 750) {
+        doc.addPage()
+        y = 30
+      }
+      
+      const values = [
+        stat.employee.name,
+        stat.presentDays.toString(),
+        stat.absentDays.toString(),
+        stat.lateDays.toString(),
+        `${stat.attendanceRate.toFixed(1)}%`
+      ]
+      
+      values.forEach((val: any, i: number) => {
+        const x = startX + colWidths.slice(0, i).reduce((a: number, b: number) => a + b, 0)
+        doc.rect(x, y, colWidths[i], rowHeight).stroke()
+        doc.fontSize(7).text(val.toString(), x + 2, y + 4, { width: colWidths[i] - 4, align: 'center' })
+      })
+      y += rowHeight
+    })
+    
+    // ===== PÁGINA 3: ESTADÍSTICAS DIARIAS =====
+    doc.addPage()
+    
+    doc.fontSize(14).text('ESTADÍSTICAS DIARIAS', 30, 30, { align: 'center', width: 535 })
+    
+    // Tabla de estadísticas diarias
+    const dailyHeaders = ['Fecha', 'Presentes', 'Total', 'Tasa %']
+    const dailyColWidths = [80, 80, 80, 60]
+    const dailyStartX = 30
+    let dailyY = 70
+    
+    // Header tabla diaria
+    dailyHeaders.forEach((h: string, i: number) => {
+      const x = dailyStartX + dailyColWidths.slice(0, i).reduce((a: number, b: number) => a + b, 0)
+      doc.rect(x, dailyY, dailyColWidths[i], rowHeight).fillAndStroke('#1e40af', '#000')
+      doc.fillColor('white')
+      doc.fontSize(8).text(h, x + 2, dailyY + 4, { width: dailyColWidths[i] - 4, align: 'center' })
+      doc.fillColor('black')
+    })
+    dailyY += rowHeight
+    
+    // Datos diarios
+    reportData.dailyStats.forEach((stat: any) => {
+      if (dailyY > 750) {
+        doc.addPage()
+        dailyY = 30
+      }
+      
+      const values = [
+        new Date(stat.date).toLocaleDateString('es-HN'),
+        stat.attendanceCount.toString(),
+        stat.totalCount.toString(),
+        `${stat.attendanceRate.toFixed(1)}%`
+      ]
+      
+      values.forEach((val: any, i: number) => {
+        const x = dailyStartX + dailyColWidths.slice(0, i).reduce((a: number, b: number) => a + b, 0)
+        doc.rect(x, dailyY, dailyColWidths[i], rowHeight).stroke()
+        doc.fontSize(7).text(val.toString(), x + 2, dailyY + 4, { width: dailyColWidths[i] - 4, align: 'center' })
+      })
+      dailyY += rowHeight
+    })
+    
+    // Pie de página
+    doc.fontSize(8).text('Documento generado automáticamente - Sistema de Recursos Humanos', 30, 800, { align: 'center', width: 535 })
+    doc.fontSize(8).text(`Fecha de generación: ${new Date().toLocaleString('es-HN')}`, 30, 815, { align: 'center', width: 535 })
 
-  doc.end()
+    doc.end()
+  } catch (error) {
+    console.error('Error generando PDF de asistencia:', error)
+    throw error
+  }
+}
+
+function generateAttendanceCSVReport(res: NextApiResponse, reportData: any, dateFilter: any, range: string) {
+  try {
+    let csvContent = ''
+    
+    // Header del reporte
+    csvContent += 'REPORTE DE ASISTENCIA\n'
+    csvContent += `Período: ${dateFilter.startDate} - ${dateFilter.endDate}\n`
+    csvContent += `Tipo: ${range}\n`
+    csvContent += `Fecha de generación: ${new Date().toLocaleDateString('es-HN')}\n\n`
+    
+    // Resumen ejecutivo
+    csvContent += 'RESUMEN EJECUTIVO\n'
+    csvContent += 'Métrica,Valor\n'
+    csvContent += `Total Empleados,${reportData.totalEmployees}\n`
+    csvContent += `Total Registros,${reportData.totalAttendance}\n`
+    const avgAttendance = reportData.employeeStats.reduce((sum: number, stat: any) => sum + stat.attendanceRate, 0) / reportData.employeeStats.length
+    csvContent += `Promedio Asistencia,${avgAttendance.toFixed(1)}%\n\n`
+    
+    // Estadísticas por empleado
+    csvContent += 'ESTADÍSTICAS POR EMPLEADO\n'
+    csvContent += 'Empleado,Días Presente,Días Ausente,Días Tardío,Tasa %\n'
+    reportData.employeeStats.forEach((stat: any) => {
+      csvContent += `"${stat.employee.name}",${stat.presentDays},${stat.absentDays},${stat.lateDays},${stat.attendanceRate.toFixed(1)}%\n`
+    })
+    csvContent += '\n'
+    
+    // Estadísticas diarias
+    csvContent += 'ESTADÍSTICAS DIARIAS\n'
+    csvContent += 'Fecha,Presentes,Total,Tasa %\n'
+    reportData.dailyStats.forEach((stat: any) => {
+      csvContent += `${new Date(stat.date).toLocaleDateString('es-HN')},${stat.attendanceCount},${stat.totalCount},${stat.attendanceRate.toFixed(1)}%\n`
+    })
+    
+    // Configurar respuesta CSV
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8')
+    res.setHeader('Content-Disposition', `attachment; filename=reporte_asistencia_${range}_${dateFilter.startDate}_${dateFilter.endDate}.csv`)
+    res.send(csvContent)
+    
+  } catch (error) {
+    console.error('Error generando CSV de asistencia:', error)
+    throw error
+  }
 } 
