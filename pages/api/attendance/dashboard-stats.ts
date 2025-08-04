@@ -30,7 +30,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     console.log('✅ Empleados obtenidos:', employees?.length || 0)
-    console.log('📋 Ejemplos de empleados:', employees?.slice(0, 3).map(emp => ({ name: emp.name, code: emp.employee_code })))
+    console.log('📋 Ejemplos de empleados:', employees?.slice(0, 3).map((emp: any) => ({ name: emp.name, code: emp.employee_code })))
     const totalEmployees = employees?.length || 0
 
     // 2. Obtener registros de asistencia de hoy
@@ -46,7 +46,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     console.log('✅ Asistencia de hoy:', todayAttendance?.length || 0)
-    console.log('📋 Ejemplos de registros:', todayAttendance?.slice(0, 3).map(att => ({ 
+    console.log('📋 Ejemplos de registros:', todayAttendance?.slice(0, 3).map((att: any) => ({ 
       employee_id: att.employee_id, 
       check_in: att.check_in, 
       status: att.status, 
@@ -144,7 +144,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }) || []
 
     console.log('📋 Detalles de asistencia generados:', todayAttendanceDetails.length, 'registros')
-    console.log('📋 Ejemplos de detalles:', todayAttendanceDetails.slice(0, 3).map(detail => ({
+    console.log('📋 Ejemplos de detalles:', todayAttendanceDetails.slice(0, 3).map((detail: any) => ({
       name: detail.employee_name,
       code: detail.employee_code,
       status: detail.status,
