@@ -67,7 +67,24 @@ export default function AttendanceManager() {
       const response = await fetch('/api/attendance/dashboard-stats')
       if (response.ok) {
         const data = await response.json()
-        setAttendanceRecords(data.attendanceRecords || [])
+        // Transform the data to match our interface
+        const records = (data.todayAttendance || []).map((att: any) => ({
+          id: att.id,
+          employee_id: att.employee_id,
+          date: new Date().toISOString().split('T')[0],
+          check_in: att.check_in,
+          check_out: att.check_out,
+          late_minutes: att.late_minutes || 0,
+          early_departure_minutes: 0,
+          justification: att.justification,
+          status: att.status,
+          employees: {
+            name: att.employee_name,
+            employee_code: att.employee_code,
+            dni: '00000' // We don't have DNI in the API response
+          }
+        }))
+        setAttendanceRecords(records)
       }
     } catch (error) {
       console.error('Error fetching attendance:', error)
@@ -266,8 +283,54 @@ export default function AttendanceManager() {
                 </tr>
               </thead>
               <tbody>
-                {attendanceRecords.map((record, index) => (
-                  <tr key={`attendance-${index}`} className="border-b hover:bg-gray-50 transition-colors">
+                {attendanceRecords.slice(0, 3).map((record, index) => (
+                  <tr key={`attendance-first-${index}`} className="border-b hover:bg-gray-50 transition-colors">
+                    <td className="py-3 px-4">
+                      <div>
+                        <div className="font-medium text-gray-900">{record.employees?.name || 'Unknown'}</div>
+                        <div className="text-sm text-gray-500">
+                          {record.employees?.employee_code || 'N/A'} • DNI: ****{record.employees?.dni?.slice(-5) || '00000'}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      {getStatusBadge(record.status, record.late_minutes)}
+                    </td>
+                    <td className="py-3 px-4 font-mono text-sm">
+                      {formatTime(record.check_in)}
+                    </td>
+                    <td className="py-3 px-4 font-mono text-sm">
+                      {formatTime(record.check_out)}
+                    </td>
+                    <td className="py-3 px-4 text-sm">
+                      {record.late_minutes > 0 ? (
+                        <span className="text-red-600 font-medium">{record.late_minutes}m</span>
+                      ) : (
+                        <span className="text-green-600">0m</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4">
+                      {record.justification ? (
+                        <span className="text-sm text-gray-600 italic bg-yellow-50 px-2 py-1 rounded">
+                          {record.justification}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                
+                {attendanceRecords.length > 6 && (
+                  <tr className="border-b bg-gray-100">
+                    <td colSpan={6} className="py-2 px-4 text-center text-sm text-gray-500 font-medium">
+                      ... {attendanceRecords.length - 6} more records ...
+                    </td>
+                  </tr>
+                )}
+                
+                {attendanceRecords.slice(-3).map((record, index) => (
+                  <tr key={`attendance-last-${index}`} className="border-b hover:bg-gray-50 transition-colors">
                     <td className="py-3 px-4">
                       <div>
                         <div className="font-medium text-gray-900">{record.employees?.name || 'Unknown'}</div>
@@ -315,7 +378,7 @@ export default function AttendanceManager() {
 
             {attendanceRecords.length > 0 && (
               <div className="mt-4 text-sm text-gray-500 text-center">
-                Showing {attendanceRecords.length} record{attendanceRecords.length !== 1 ? 's' : ''} • 
+                Showing {attendanceRecords.length <= 6 ? 'all' : 'first 3 and last 3'} of {attendanceRecords.length} record{attendanceRecords.length !== 1 ? 's' : ''} • 
                 Last updated: {new Date().toLocaleTimeString()}
               </div>
             )}

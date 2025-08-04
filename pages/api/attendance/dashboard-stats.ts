@@ -9,7 +9,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     console.log('🔍 Dashboard stats: Iniciando...')
     
-    const today = new Date().toISOString().split('T')[0]
+    // Use Tegucigalpa timezone for today's date
+    const tegucigalpaTime = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Tegucigalpa"}))
+    const today = tegucigalpaTime.toISOString().split('T')[0]
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 
     console.log('📅 Fechas:', { today, sevenDaysAgo })
