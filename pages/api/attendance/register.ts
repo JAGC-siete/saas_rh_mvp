@@ -199,8 +199,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
 
     // PASO 6: Registrar asistencia
-    // Usar zona horaria de Honduras (UTC-6)
-    const hondurasTime = new Date(now.getTime() - (6 * 60 * 60 * 1000)) // UTC-6
+    // Usar zona horaria de Honduras correctamente
+    const hondurasTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Tegucigalpa"}))
     const today = hondurasTime.toISOString().split('T')[0]
     console.log('📅 Fecha Honduras para registro:', today)
     
