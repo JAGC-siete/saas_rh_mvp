@@ -86,3 +86,20 @@ temp/
 archived_versions/
 nuevo-clon/
 terraform/
+
+# SQL Scripts and Reports (Local only - DO NOT COMMIT)
+create-*-user.sql
+create-*-*.sql
+update-*-password*.sql
+*-report.json
+*-report.md
+audit-*.json
+audit-*.md
+test-*.sql
+test-*.js
+test-*.md
+debug-*.js
+check-*.js
+verify-*.js
+fix-*.sql
+fix-*.js
