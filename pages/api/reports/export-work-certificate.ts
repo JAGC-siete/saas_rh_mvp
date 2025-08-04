@@ -37,7 +37,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const { userProfile } = authResult
-    const supabase = createClient()
+    const supabase = createClient(req, res)
 
     const { 
       employeeId, 
