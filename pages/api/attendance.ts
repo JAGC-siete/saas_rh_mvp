@@ -1,7 +1,7 @@
 import { createAdminClient } from '../../lib/supabase/server'
 
 // Gamification helper functions
-async function calculateAttendancePoints(employeeId: number, lateMinutes: number, isEarly: boolean): Promise<number> {
+async function calculateAttendancePoints(employeeId: string, lateMinutes: number, isEarly: boolean): Promise<number> {
   let points = 5 // Base points for attendance
   
   if (isEarly) points += 3 // Early arrival bonus
@@ -12,7 +12,7 @@ async function calculateAttendancePoints(employeeId: number, lateMinutes: number
   return Math.max(0, points)
 }
 
-async function updateEmployeeScore(employeeId: number, companyId: number, points: number, reason: string, actionType: string) {
+async function updateEmployeeScore(employeeId: string, companyId: string, points: number, reason: string, actionType: string) {
   const supabase = createAdminClient()
   
   // Update or insert employee score
@@ -56,7 +56,7 @@ async function updateEmployeeScore(employeeId: number, companyId: number, points
     })
 }
 
-async function checkForAchievements(employeeId: number, companyId: number): Promise<any[]> {
+async function checkForAchievements(employeeId: string, companyId: string): Promise<any[]> {
   const supabase = createAdminClient()
   
   // This is a simplified version - would need more complex logic for real achievements
