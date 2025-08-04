@@ -8,15 +8,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     console.log('🔍 Dashboard stats: Iniciando...')
+    console.log('📅 Timestamp:', new Date().toISOString())
     
     // Use Tegucigalpa timezone for today's date
     const tegucigalpaTime = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Tegucigalpa"}))
     const today = tegucigalpaTime.toISOString().split('T')[0]
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 
-    console.log('📅 Fechas:', { today, sevenDaysAgo })
+    console.log('📅 Fechas calculadas:', { today, sevenDaysAgo })
 
     // 1. Obtener total de empleados activos
+    console.log('👥 PASO 1: Obteniendo empleados activos...')
     const { data: employees, error: empError } = await supabase
       .from('employees')
       .select('id, name, employee_code, base_salary, department_id')
@@ -28,9 +30,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     console.log('✅ Empleados obtenidos:', employees?.length || 0)
+    console.log('📋 Ejemplos de empleados:', employees?.slice(0, 3).map(emp => ({ name: emp.name, code: emp.employee_code })))
     const totalEmployees = employees?.length || 0
 
     // 2. Obtener registros de asistencia de hoy
+    console.log('📊 PASO 2: Obteniendo registros de asistencia de hoy...')
     const { data: todayAttendance, error: attError } = await supabase
       .from('attendance_records')
       .select('*')
@@ -42,8 +46,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     console.log('✅ Asistencia de hoy:', todayAttendance?.length || 0)
+    console.log('📋 Ejemplos de registros:', todayAttendance?.slice(0, 3).map(att => ({ 
+      employee_id: att.employee_id, 
+      check_in: att.check_in, 
+      status: att.status, 
+      late_minutes: att.late_minutes 
+    })))
 
     // 3. Obtener registros de los últimos 7 días para estadísticas
+    console.log('📈 PASO 3: Obteniendo estadísticas semanales...')
     const { data: weeklyAttendance, error: weekError } = await supabase
       .from('attendance_records')
       .select('date, employee_id')
@@ -58,15 +69,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('✅ Asistencia semanal:', weeklyAttendance?.length || 0)
 
     // 4. Calcular estadísticas del día
+    console.log('🧮 PASO 4: Calculando estadísticas del día...')
     const presentToday = todayAttendance?.length || 0
     const absentToday = totalEmployees - presentToday
     const lateToday = todayAttendance?.filter((r: any) => r.late_minutes > 0).length || 0
     const onTimeToday = presentToday - lateToday
 
+    console.log('📊 Estadísticas calculadas:', {
+      totalEmployees,
+      presentToday,
+      absentToday,
+      lateToday,
+      onTimeToday
+    })
+
     // 5. Calcular costo del día (simplificado)
     const dailyCost = presentToday * 500 // Valor estimado por empleado
+    console.log('💰 Costo diario calculado:', dailyCost)
 
     // 6. Calcular estadísticas de los últimos 7 días
+    console.log('📅 PASO 5: Calculando estadísticas de los últimos 7 días...')
     const dailyStats = []
     for (let i = 6; i >= 0; i--) {
       const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
@@ -80,10 +102,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
+    console.log('📈 Estadísticas diarias generadas:', dailyStats.length, 'días')
+
     // 7. Empleados con permisos aprobados (simplificado)
     const employeesWithApprovedLeave = 0
 
     // 8. Agrupar por departamento (simplificado)
+    console.log('🏢 PASO 6: Agrupando por departamento...')
     const departmentStats: Record<string, { present: number; total: number }> = {}
     employees?.forEach((emp: any) => {
       const dept = emp.department_id || 'Sin Departamento'
@@ -99,7 +124,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     })
 
+    console.log('🏢 Estadísticas por departamento:', Object.keys(departmentStats).length, 'departamentos')
+
     // 9. Asistencia de hoy con detalles
+    console.log('📋 PASO 7: Generando detalles de asistencia de hoy...')
     const todayAttendanceDetails = todayAttendance?.map((att: any) => {
       const employee = employees?.find((emp: any) => emp.id === att.employee_id)
       return {
@@ -115,6 +143,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }) || []
 
+    console.log('📋 Detalles de asistencia generados:', todayAttendanceDetails.length, 'registros')
+    console.log('📋 Ejemplos de detalles:', todayAttendanceDetails.slice(0, 3).map(detail => ({
+      name: detail.employee_name,
+      code: detail.employee_code,
+      status: detail.status,
+      late_minutes: detail.late_minutes
+    })))
+
     const result = {
       totalEmployees,
       presentToday,
@@ -128,15 +164,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       todayAttendance: todayAttendanceDetails
     }
 
-    console.log('✅ Estadísticas calculadas:', {
+    console.log('✅ RESPUESTA FINAL GENERADA:')
+    console.log('📊 Resumen:', {
       totalEmployees,
       presentToday,
       absentToday,
       lateToday,
-      dailyCost
+      onTimeToday,
+      dailyCost,
+      todayAttendanceCount: todayAttendanceDetails.length
     })
 
+    console.log('🚀 Enviando respuesta al frontend...')
     res.status(200).json(result)
+    console.log('✅ Respuesta enviada exitosamente')
 
   } catch (error) {
     console.error('❌ Error general en dashboard stats:', error)
