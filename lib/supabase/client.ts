@@ -17,5 +17,16 @@ export function createClient() {
     throw new Error('Supabase environment variables are not configured')
   }
 
-  return createBrowserClient(supabaseUrl, supabaseAnonKey)
+  return createBrowserClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true
+    },
+    global: {
+      headers: {
+        'X-Client-Info': 'hr-saas-frontend'
+      }
+    }
+  })
 }
