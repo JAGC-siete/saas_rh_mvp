@@ -17,15 +17,15 @@ export default function AdminLogin() {
   const [error, setError] = useState('')
   const [currentTime, setCurrentTime] = useState('')
   
-  const { user, login } = useAuth()
+  const { user, loading: authLoading, login } = useAuth()
   const router = useRouter()
 
-  // Redirect if already logged in
+  // Redirect if already logged in - ONLY when auth is not loading
   useEffect(() => {
-    if (user) {
+    if (!authLoading && user) {
       router.push('/dashboard')
     }
-  }, [user, router])
+  }, [user, authLoading, router])
 
   // Update time
   useEffect(() => {
@@ -52,6 +52,23 @@ export default function AdminLogin() {
     }
     
     setLoading(false)
+  }
+
+  // Show loading state while auth is being checked
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center">
+        <div className="text-white text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p>Verificando sesión...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Don't show login form if user is already logged in
+  if (user) {
+    return null
   }
 
   return (
