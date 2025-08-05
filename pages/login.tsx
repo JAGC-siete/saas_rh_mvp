@@ -15,7 +15,7 @@ export default function AdminLogin() {
   const [error, setError] = useState('')
   const [currentTime, setCurrentTime] = useState('')
   
-  const { user, loading: authLoading, login } = useAuth()
+  const { user, loading: authLoading, login, error: authError } = useAuth()
   const router = useRouter()
 
   // Redirect if already logged in - ONLY when auth is not loading
@@ -156,10 +156,10 @@ export default function AdminLogin() {
                 </div>
 
                 {/* Error Message */}
-                {error && (
+                {(error || authError) && (
                   <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 p-3 rounded-md">
                     <AlertCircle className="h-4 w-4" />
-                    {error}
+                    {error || authError}
                   </div>
                 )}
 
