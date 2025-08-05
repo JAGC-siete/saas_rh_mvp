@@ -19,6 +19,14 @@ COPY . .
 # Set build-time environment variables (these will be replaced at runtime)
 ENV NODE_ENV=production
 
+# Build arguments for Next.js public variables (will be passed from Railway)
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+# Set as environment variables for the build process
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
+
 # Build the application
 RUN npm run build
 
