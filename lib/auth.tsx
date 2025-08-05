@@ -1,5 +1,4 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { useRouter } from 'next/router'
 import { createClient } from './supabase/client'
 import { User, Session } from '@supabase/supabase-js'
 
@@ -26,7 +25,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [isClient, setIsClient] = useState(false) // ✅ Factor VI: Stateless durante build
-  const router = useRouter()
   const supabase = createClient()
 
   // ✅ Factor VI: Detectar si estamos en el cliente
@@ -73,7 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     )
 
     return () => subscription.unsubscribe()
-  }, [isClient]) // ✅ Dependencia en isClient
+  }, [isClient, supabase.auth]) // ✅ Dependencia en isClient y supabase.auth
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {

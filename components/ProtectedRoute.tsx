@@ -7,7 +7,7 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { session, loading } = useAuth()
+  const { user, session, loading } = useAuth()
   const router = useRouter()
   const [isClient, setIsClient] = useState(false)
 
@@ -16,10 +16,11 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   }, [])
 
   useEffect(() => {
-    if (isClient && !loading && !session) {
+    if (isClient && !loading && !user && !session) {
+      console.log('🔒 No user found, redirecting to login')
       router.push('/login')
     }
-  }, [session, loading, router, isClient])
+  }, [user, session, loading, router, isClient])
 
   if (!isClient || loading) {
     return (
@@ -29,7 +30,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     )
   }
 
-  if (!session) {
+  if (!user && !session) {
     return null
   }
 

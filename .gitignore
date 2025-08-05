@@ -115,3 +115,11 @@ restore-real-employees.js
 check-employee-ids.js
 check-companies.js
 verify-restoration.js
+diagnose-attendance-dashboard.js
+fix-employee-codes.js
+test-complete-flow.js
+generate-attendance-data.js
+
+# Backup files and directories
+backups/
+*.backup*

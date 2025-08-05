@@ -1,15 +1,12 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextApiRequest, NextApiResponse } from 'next'
+import { validateEnvironmentVariables, env } from '../env-validation'
 
 export function createClient(req: NextApiRequest, res: NextApiResponse) {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  // Validate environment variables
+  validateEnvironmentVariables()
 
-  if (!url || !key) {
-    throw new Error('Missing Supabase environment variables')
-  }
-
-  return createServerClient(url, key, {
+  return createServerClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
     cookies: {
       get(name: string) {
         return req.cookies[name]
@@ -30,14 +27,10 @@ export function createClient(req: NextApiRequest, res: NextApiResponse) {
 
 // Admin client for server-side operations with service role
 export function createAdminClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  // Validate environment variables
+  validateEnvironmentVariables()
 
-  if (!url || !serviceKey) {
-    throw new Error('Missing Supabase admin environment variables')
-  }
-
-  return createServerClient(url, serviceKey, {
+  return createServerClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
     cookies: {
       get() { return undefined },
       set() {},

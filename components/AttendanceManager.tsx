@@ -40,11 +40,14 @@ export default function AttendanceManager() {
       if (response.status === 422 && data.requireJustification) {
         setRequireJustification(true)
         setMessage(data.message)
+        setLoading(false)
         return
       }
 
       if (response.ok) {
-        setMessage(data.message || 'Asistencia registrada exitosamente')
+        // Show feedback message if available, otherwise show success message
+        const displayMessage = data.feedbackMessage || data.message || 'Asistencia registrada exitosamente'
+        setMessage(displayMessage)
         setLast5('')
         setJustification('')
         setRequireJustification(false)

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
-import { supabase } from '../lib/supabase'
 import ProtectedRoute from '../components/ProtectedRoute'
 import DashboardLayout from '../components/DashboardLayout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
@@ -33,7 +32,6 @@ export default function Dashboard() {
     recentPayrolls: []
   })
   const [loading, setLoading] = useState(true)
-  const [userProfile, setUserProfile] = useState<any>(null)
 
   useEffect(() => {
     fetchDashboardData()
@@ -41,87 +39,49 @@ export default function Dashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single()
-
-      if (!profile) return
-      setUserProfile(profile)
-
-      // Obtener empleados
-      const { data: employees } = await supabase
-        .from('employees')
-        .select('id, name, status, department, base_salary')
-        .eq('company_id', profile.company_id)
-
-      // Obtener asistencia de hoy
-      const today = new Date().toISOString().split('T')[0]
-      const { data: todayAttendance } = await supabase
-        .from('attendance_records')
-        .select('employee_id, check_in, check_out, status')
-        .eq('date', today)
-        .eq('company_id', profile.company_id)
-
-      // Obtener nóminas recientes
-      const { data: recentPayrolls } = await supabase
-        .from('payroll_records')
-        .select(`
-          *,
-          employees:employee_id (name, department)
-        `)
-        .eq('employees.company_id', profile.company_id)
-        .order('created_at', { ascending: false })
-        .limit(5)
-
-      // Calcular estadísticas
-      const activeEmployees = employees?.filter((emp: any) => emp.status === 'active') || []
-      const presentToday = todayAttendance?.filter((att: any) => att.check_in && att.check_out) || []
-      const absentToday = todayAttendance?.filter((att: any) => att.status === 'absent') || []
-      const lateToday = todayAttendance?.filter((att: any) => {
-        if (!att.check_in) return false
-        const checkInTime = new Date(att.check_in)
-        const hour = checkInTime.getHours()
-        const minutes = checkInTime.getMinutes()
-        return hour > 8 || (hour === 8 && minutes > 5)
-      }) || []
-
-      // Estadísticas por departamento
-      const deptStats: { [key: string]: number } = {}
-      activeEmployees.forEach((emp: any) => {
-        const dept = emp.department || 'Sin Departamento'
-        deptStats[dept] = (deptStats[dept] || 0) + 1
-      })
-
-      const totalPayroll = activeEmployees.reduce((sum: number, emp: any) => sum + (emp.base_salary || 0), 0)
-      const averageSalary = activeEmployees.length > 0 ? totalPayroll / activeEmployees.length : 0
-      const attendanceRate = activeEmployees.length > 0 ? (presentToday.length / activeEmployees.length) * 100 : 0
-
-      // Estadísticas de nómina
-      const pendingPayrolls = recentPayrolls?.filter((r: any) => r.status === 'pending').length || 0
-      const completedPayrolls = recentPayrolls?.filter((r: any) => r.status === 'completed').length || 0
-
-      setStats({
-        totalEmployees: employees?.length || 0,
-        activeEmployees: activeEmployees.length,
-        presentToday: presentToday.length,
-        absentToday: absentToday.length,
-        lateToday: lateToday.length,
-        totalPayroll,
-        averageSalary,
-        attendanceRate,
-        departmentStats: deptStats,
-        recentPayrolls: recentPayrolls || []
-      })
-
+      console.log('🔄 Executive Dashboard: Iniciando fetch de datos...')
+      
+      // Usar el nuevo API con service role key
+      const response = await fetch('/api/dashboard/executive-stats')
+      console.log('📡 Executive Dashboard: Response status:', response.status)
+      
+      if (response.ok) {
+        const data = await response.json()
+        console.log('✅ Executive Dashboard: Datos recibidos exitosamente')
+        console.log('📊 Executive Dashboard: Resumen de datos:', {
+          totalEmployees: data.totalEmployees,
+          activeEmployees: data.activeEmployees,
+          presentToday: data.presentToday,
+          absentToday: data.absentToday,
+          lateToday: data.lateToday,
+          totalPayroll: data.totalPayroll,
+          attendanceRate: data.attendanceRate
+        })
+        
+        setStats({
+          totalEmployees: data.totalEmployees || 0,
+          activeEmployees: data.activeEmployees || 0,
+          presentToday: data.presentToday || 0,
+          absentToday: data.absentToday || 0,
+          lateToday: data.lateToday || 0,
+          totalPayroll: data.totalPayroll || 0,
+          averageSalary: data.averageSalary || 0,
+          attendanceRate: data.attendanceRate || 0,
+          departmentStats: data.departmentStats || {},
+          recentPayrolls: data.recentPayrolls || []
+        })
+        
+        console.log('✅ Executive Dashboard: Estado actualizado con datos')
+      } else {
+        console.error('❌ Executive Dashboard: Error en response:', response.status, response.statusText)
+        const errorText = await response.text()
+        console.error('❌ Executive Dashboard: Error details:', errorText)
+      }
     } catch (error) {
-      console.error('Error fetching dashboard data:', error)
+      console.error('💥 Executive Dashboard: Error en fetchDashboardData:', error)
     } finally {
       setLoading(false)
+      console.log('✅ Executive Dashboard: Loading completado')
     }
   }
 
@@ -221,33 +181,10 @@ export default function Dashboard() {
             </Card>
           </div>
 
-          {/* Department Stats and Quick Actions */}
+          {/* Quick Actions */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Department Breakdown */}
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle>🏢 Distribución por Departamento</CardTitle>
-                <CardDescription>
-                  Empleados activos por departamento
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {Object.entries(stats.departmentStats).map(([dept, count]) => (
-                    <div key={dept} className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                        <span className="font-medium">{dept}</span>
-                      </div>
-                      <span className="text-sm text-gray-600">{count} empleados</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Quick Actions */}
-            <Card>
+            <Card className="lg:col-span-3">
               <CardHeader>
                 <CardTitle>⚡ Acciones Rápidas</CardTitle>
                 <CardDescription>
@@ -268,6 +205,13 @@ export default function Dashboard() {
                     onClick={() => router.push('/employees')}
                   >
                     👥 Gestionar Empleados
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => router.push('/departments')}
+                  >
+                    🏢 Gestión de Departamentos
                   </Button>
                   <Button 
                     variant="outline" 
