@@ -118,10 +118,12 @@ export default function AdminLogin() {
                   </label>
                   <Input
                     id="email"
+                    name="email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="admin@empresa.com"
+                    autoComplete="username"
                     required
                     disabled={loading}
                     className="h-12"
@@ -136,10 +138,12 @@ export default function AdminLogin() {
                   <div className="relative">
                     <Input
                       id="password"
+                      name="password"
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
+                      autoComplete="current-password"
                       required
                       disabled={loading}
                       className="h-12 pr-12"

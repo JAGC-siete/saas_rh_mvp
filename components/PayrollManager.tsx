@@ -6,9 +6,6 @@ import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 
-// Crear cliente de Supabase
-const supabase = createClient()
-
 interface PayrollRecord {
   id: string
   employee_id: string
@@ -79,11 +76,30 @@ export default function PayrollManager() {
     soloEmpleadosConAsistencia: true
   });
 
+  // Create Supabase client inside component to avoid build-time execution
+  const [supabase, setSupabase] = useState<any>(null)
+
   useEffect(() => {
-    fetchData()
+    // Initialize Supabase client only on client side
+    try {
+      const client = createClient()
+      if (client) {
+        setSupabase(client)
+      }
+    } catch (error) {
+      console.error('Failed to create Supabase client:', error)
+    }
   }, [])
 
+  useEffect(() => {
+    if (supabase) {
+      fetchData()
+    }
+  }, [supabase])
+
   const fetchData = async () => {
+    if (!supabase) return
+    
     setLoading(true)
     try {
       // Get user profile with better error handling
