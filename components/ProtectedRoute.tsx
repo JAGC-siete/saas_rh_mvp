@@ -1,28 +1,30 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
-import { useAuth } from '../lib/auth'
+import { useSupabaseSession } from '../lib/supabase'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
 }
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { user, session, loading } = useAuth()
+  const { session, loading: sessionLoading } = useSupabaseSession()
   const router = useRouter()
-  const [isClient, setIsClient] = useState(false)
+  const [isClient, setIsClient] = useState(false) // ✅ Factor VI: Stateless durante build
 
+  // ✅ Factor VI: Detectar si estamos en el cliente
   useEffect(() => {
     setIsClient(true)
   }, [])
 
   useEffect(() => {
-    if (isClient && !loading && !user && !session) {
-      console.log('🔒 No user found, redirecting to login')
-      router.push('/login')
+    // ✅ Solo ejecutar redirección en el cliente
+    if (isClient && !sessionLoading && !session) {
+      router.push('/')
     }
-  }, [user, session, loading, router, isClient])
+  }, [session, sessionLoading, router, isClient])
 
-  if (!isClient || loading) {
+  // ✅ Durante SSR/build, renderizar loading
+  if (!isClient || sessionLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -30,7 +32,8 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     )
   }
 
-  if (!user && !session) {
+  // Si no hay sesión, no renderizar nada (el useEffect redirigirá)
+  if (!session) {
     return null
   }
 
