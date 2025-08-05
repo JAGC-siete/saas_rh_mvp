@@ -1,7 +1,7 @@
+import { useRouter } from 'next/router'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import DashboardLayout from '../../components/DashboardLayout'
 import CompanySettings from '../../components/CompanySettings'
-import { GetServerSideProps } from 'next'
 
 export default function SettingsPage() {
   return (
@@ -10,7 +10,7 @@ export default function SettingsPage() {
         <div className="space-y-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Configuración</h1>
-            <p className="text-gray-600">Administra la configuración de la empresa</p>
+            <p className="text-gray-600">Configura los parámetros del sistema</p>
           </div>
           
           <CompanySettings />
@@ -18,10 +18,4 @@ export default function SettingsPage() {
       </DashboardLayout>
     </ProtectedRoute>
   )
-}
-
-export const getServerSideProps: GetServerSideProps = async () => {
-  return {
-    props: {}
-  }
 }
