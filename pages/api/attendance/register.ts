@@ -1,9 +1,17 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient, createClient } from '../../../lib/supabase/server'
 import { logger } from '../../../lib/logger'
+import { 
+  getHondurasTime, 
+  getHondurasTimeISO, 
+  getTodayInHonduras,
+  getCurrentDayOfWeek,
+  parseExpectedTime,
+  getAttendanceStatus,
+  calculateMinutesDifference
+} from '../../../lib/timezone'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const startTime = Date.now()
   
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST'])
@@ -159,10 +167,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     console.log('✅ Horario obtenido:', schedule)
 
-    // PASO 5: Comparar hora actual con horario esperado (usando zona horaria de Tegucigalpa)
-    const now = new Date()
-    const tegucigalpaTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Tegucigalpa"}))
-    const dayOfWeek = tegucigalpaTime.toLocaleString('en-US', { weekday: 'long' }).toLowerCase()
+    // PASO 5: Comparar hora actual con horario esperado (usando zona horaria de Honduras)
+    const hondurasTime = getHondurasTime()
+    const dayOfWeek = getCurrentDayOfWeek()
     const startKey = `${dayOfWeek}_start`
     const endKey = `${dayOfWeek}_end`
     const startTime = schedule[startKey]
@@ -176,24 +183,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    // Parsear horas y calcular diferencia usando hora de Tegucigalpa
-    const [startHour, startMin] = startTime.split(':').map(Number)
-    const expectedStart = new Date(tegucigalpaTime)
-    expectedStart.setHours(startHour, startMin, 0, 0)
-    
-    const diffMinutes = Math.floor((tegucigalpaTime.getTime() - expectedStart.getTime()) / 60000)
-    
-    let status: 'Temprano' | 'A tiempo' | 'Tarde'
-    if (diffMinutes < -5) {
-      status = 'Temprano'
-    } else if (diffMinutes <= 5) {
-      status = 'A tiempo'
-    } else {
-      status = 'Tarde'
-    }
+    // Parsear horas y calcular diferencia usando hora de Honduras
+    const expectedStart = parseExpectedTime(startTime, hondurasTime)
+    const diffMinutes = calculateMinutesDifference(hondurasTime, expectedStart)
+    const status = getAttendanceStatus(hondurasTime, expectedStart)
 
     console.log('⏰ Comparación de horarios:', {
-      horaActual: tegucigalpaTime.toLocaleTimeString(),
+      horaActual: hondurasTime.toLocaleTimeString(),
       horaEsperada: startTime,
       diferenciaMinutos: diffMinutes,
       status
@@ -201,8 +197,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // PASO 6: Registrar asistencia
     // Usar zona horaria de Honduras correctamente
-    const hondurasTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Tegucigalpa"}))
-    const today = hondurasTime.toISOString().split('T')[0]
+    const today = getTodayInHonduras()
     console.log('📅 Fecha Honduras para registro:', today)
     
     const { data: existingRecord, error: attError } = await supabase
@@ -232,7 +227,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           message: '⏰ Has llegado tarde. Por favor justifica tu demora.',
           lateMinutes,
           expectedTime: startTime,
-          actualTime: tegucigalpaTime.toLocaleTimeString()
+          actualTime: hondurasTime.toLocaleTimeString()
         })
       }
 
@@ -241,7 +236,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .insert({
           employee_id: employee.id,
           date: today,
-          check_in: now.toISOString(),
+          check_in: getHondurasTimeISO(),
           expected_check_in: startTime,
           late_minutes: lateMinutes,
           justification: justification || null,
@@ -260,18 +255,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } else if (!existingRecord.check_out) {
       // CHECK-OUT: Tiene entrada pero no salida
       console.log('📝 Registrando salida...')
-      const [endHour, endMin] = endTime.split(':').map(Number)
-      const expectedEnd = new Date(now)
-      expectedEnd.setHours(endHour, endMin, 0, 0)
-      const earlyDepartureMinutes = Math.max(0, Math.floor((expectedEnd.getTime() - now.getTime()) / 60000))
+      const expectedEnd = parseExpectedTime(endTime, hondurasTime)
+      const earlyDepartureMinutes = Math.max(0, calculateMinutesDifference(expectedEnd, hondurasTime))
 
       const { error: updateError } = await supabase
         .from('attendance_records')
         .update({
-          check_out: now.toISOString(),
+          check_out: getHondurasTimeISO(),
           expected_check_out: endTime,
           early_departure_minutes: earlyDepartureMinutes,
-          updated_at: now.toISOString()
+          updated_at: getHondurasTimeISO()
         })
         .eq('id', existingRecord.id)
 
@@ -296,9 +289,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // PASO 7: Feedback gamificado - Análisis semanal del mes actual
     console.log('🎮 Generando feedback gamificado...')
     
-    // Obtener el primer día del mes actual
-    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-    const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    // Obtener el primer día del mes actual usando fecha de Honduras
+    const firstDayOfMonth = new Date(hondurasTime.getFullYear(), hondurasTime.getMonth(), 1)
+    const lastDayOfMonth = new Date(hondurasTime.getFullYear(), hondurasTime.getMonth() + 1, 0)
     
     // Obtener registros del mes actual
     const { data: monthlyRecords, error: monthlyError } = await supabase
@@ -341,7 +334,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       let weeksWithLateArrivals = 0
       let weeksWithGoodAttendance = 0
       
-      weeklyStats.forEach((weekData, weekKey) => {
+      weeklyStats.forEach((weekData) => {
         if (weekData.late >= 3) {
           weeksWithLateArrivals++
         } else if (weekData.present >= 3) {
