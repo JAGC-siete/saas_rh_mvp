@@ -783,15 +783,6 @@ export default function PayrollManager() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span>Tasa de Asistencia:</span>
-                    <div className="text-right">
-                      <span className="font-semibold">{payrollStats.attendanceRate.toFixed(1)}%</span>
-                      <div className={`text-xs ${payrollStats.attendanceRate >= 90 ? 'text-green-600' : payrollStats.attendanceRate >= 80 ? 'text-yellow-600' : 'text-red-600'}`}>
-                        {payrollStats.attendanceRate >= 90 ? 'Excelente' : payrollStats.attendanceRate >= 80 ? 'Bueno' : 'Requiere atención'}
-                      </div>
-                    </div>
-                  </div>
                   <div className="flex justify-between">
                     <span>Salario Promedio:</span>
                     <span className="font-semibold">{formatCurrency(payrollStats.averageSalary)}</span>
@@ -805,6 +796,10 @@ export default function PayrollManager() {
                   <div className="flex justify-between">
                     <span>Total Empleados:</span>
                     <span className="font-semibold">{payrollStats.totalEmployees}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Registros Procesados:</span>
+                    <span className="font-semibold">{Object.values(payrollStats.departmentBreakdown).reduce((sum, d) => sum + d.count, 0)}</span>
                   </div>
                 </div>
               </CardContent>
@@ -893,7 +888,7 @@ export default function PayrollManager() {
                 </Button>
               </div>
               <div className="mt-4 pt-4 border-t">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-center">
                   <div className="p-3 bg-blue-50 rounded-lg">
                     <div className="text-blue-600 font-bold text-lg">{payrollStats.totalEmployees}</div>
                     <div className="text-blue-600 text-xs">Empleados</div>
@@ -905,10 +900,6 @@ export default function PayrollManager() {
                   <div className="p-3 bg-purple-50 rounded-lg">
                     <div className="text-purple-600 font-bold text-lg">{payrollStats.payrollCoverage.toFixed(0)}%</div>
                     <div className="text-purple-600 text-xs">Cobertura</div>
-                  </div>
-                  <div className="p-3 bg-orange-50 rounded-lg">
-                    <div className="text-orange-600 font-bold text-lg">{payrollStats.attendanceRate.toFixed(0)}%</div>
-                    <div className="text-orange-600 text-xs">Asistencia</div>
                   </div>
                 </div>
               </div>
