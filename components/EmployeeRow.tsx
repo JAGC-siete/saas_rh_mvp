@@ -22,8 +22,22 @@ interface Employee {
   check_in_time?: string
   check_out_time?: string
   work_schedule?: {
-    start_time: string
-    end_time: string
+    id: string
+    name: string
+    monday_start?: string
+    monday_end?: string
+    tuesday_start?: string
+    tuesday_end?: string
+    wednesday_start?: string
+    wednesday_end?: string
+    thursday_start?: string
+    thursday_end?: string
+    friday_start?: string
+    friday_end?: string
+    saturday_start?: string
+    saturday_end?: string
+    sunday_start?: string
+    sunday_end?: string
   }
   gamification?: {
     total_points: number
@@ -83,10 +97,32 @@ export default function EmployeeRow({
           {employee.work_schedule ? (
             <>
               <div className="font-medium">
-                Entrada: {employee.work_schedule.start_time}
+                {employee.work_schedule.name}
               </div>
-              <div className="text-gray-500">
-                Salida: {employee.work_schedule.end_time}
+              <div className="text-gray-500 text-xs">
+                {(() => {
+                  const today = new Date()
+                  const dayOfWeek = today.getDay()
+                  const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+                  const dayName = dayNames[dayOfWeek]
+                  const startTime = employee.work_schedule[`${dayName}_start` as keyof typeof employee.work_schedule]
+                  const endTime = employee.work_schedule[`${dayName}_end` as keyof typeof employee.work_schedule]
+                  
+                  if (startTime && endTime) {
+                    return `Hoy: ${startTime} - ${endTime}`
+                  }
+                  
+                  // Mostrar el primer horario disponible
+                  for (const day of dayNames) {
+                    const start = employee.work_schedule[`${day}_start` as keyof typeof employee.work_schedule]
+                    const end = employee.work_schedule[`${day}_end` as keyof typeof employee.work_schedule]
+                    if (start && end) {
+                      return `Ej: ${start} - ${end}`
+                    }
+                  }
+                  
+                  return 'Horarios configurados'
+                })()}
               </div>
             </>
           ) : (
