@@ -125,7 +125,7 @@ export default function EmployeeManager() {
       setUserProfile(profile)
       if (!profile) return;
 
-      // Build optimized employees query
+      // Build optimized employees query with minimal data first
       let employeesQuery = supabase
         .from('employees')
         .select(`
@@ -144,15 +144,15 @@ export default function EmployeeManager() {
           bank_account,
           department_id,
           work_schedule_id,
-          departments!inner(name),
+          departments(name),
           work_schedules(id, name, monday_start, monday_end, tuesday_start, tuesday_end, wednesday_start, wednesday_end, thursday_start, thursday_end, friday_start, friday_end, saturday_start, saturday_end, sunday_start, sunday_end)
         `)
         .eq('company_id', profile.company_id)
         .order('name')
-        .limit(100); // Add reasonable limit
+        .limit(50); // Reduced limit for faster initial load
 
-      if (searchTerm) {
-        const searchPattern = `%${searchTerm}%`
+      if (searchTerm.trim()) {
+        const searchPattern = `%${searchTerm.trim()}%`
         employeesQuery = employeesQuery.or(
           `name.ilike.${searchPattern},employee_code.ilike.${searchPattern},dni.ilike.${searchPattern},position.ilike.${searchPattern}`
         )
@@ -163,14 +163,32 @@ export default function EmployeeManager() {
 
       if (!employeesData || employeesData.length === 0) {
         setEmployees([])
+        setDepartments([])
+        setWorkSchedules([])
         return
       }
 
-      // Run remaining queries in parallel for better performance
+      // Show basic employee data immediately
+      const basicEmployees = employeesData.map((emp: any) => ({
+        ...emp,
+        department_name: emp.departments?.name || 'N/A',
+        attendance_status: 'not_registered' as const,
+        work_schedule: emp.work_schedules,
+        gamification: {
+          total_points: 0,
+          weekly_points: 0,
+          monthly_points: 0,
+          achievements_count: 0
+        }
+      }))
+      
+      setEmployees(basicEmployees)
+
+      // Load additional data in parallel (non-blocking)
       const employeeIds = employeesData.map((e: any) => e.id)
       const today = new Date().toISOString().split('T')[0]
 
-      const [attendanceResult, gamificationResult, departmentsResult, schedulesResult] = await Promise.allSettled([
+      Promise.allSettled([
         supabase
           .from('attendance_records')
           .select('employee_id, check_in, check_out, status')
@@ -190,67 +208,71 @@ export default function EmployeeManager() {
           .select('id, name')
           .eq('company_id', profile.company_id)
           .order('name')
-      ])
+      ]).then(([attendanceResult, gamificationResult, departmentsResult, schedulesResult]) => {
+        // Extract data with fallbacks
+        const attendanceData = attendanceResult.status === 'fulfilled' ? attendanceResult.value.data : []
+        const gamificationData = gamificationResult.status === 'fulfilled' ? gamificationResult.value.data : []
+        const departmentsData = departmentsResult.status === 'fulfilled' ? departmentsResult.value.data : []
+        const schedulesData = schedulesResult.status === 'fulfilled' ? schedulesResult.value.data : []
 
-      // Extract data with fallbacks
-      const attendanceData = attendanceResult.status === 'fulfilled' ? attendanceResult.value.data : []
-      const gamificationData = gamificationResult.status === 'fulfilled' ? gamificationResult.value.data : []
-      const departmentsData = departmentsResult.status === 'fulfilled' ? departmentsResult.value.data : []
-      const schedulesData = schedulesResult.status === 'fulfilled' ? schedulesResult.value.data : []
+        // Update employees with attendance and gamification data
+        const employeesWithDetails = employeesData.map((emp: any) => {
+          const attendance = attendanceData?.find((att: any) => att.employee_id === emp.id)
+          const gamification = gamificationData?.find((g: any) => g.employee_id === emp.id)
+          
+          let attendance_status: 'present' | 'absent' | 'late' | 'not_registered' = 'not_registered'
+          let check_in_time = undefined
 
-      // Process employees data efficiently
-      const employeesWithDetails = employeesData.map((emp: any) => {
-        const attendance = attendanceData?.find((att: any) => att.employee_id === emp.id)
-        const gamification = gamificationData?.find((g: any) => g.employee_id === emp.id)
-        
-        let attendance_status: 'present' | 'absent' | 'late' | 'not_registered' = 'not_registered'
-        let check_in_time = undefined
-
-        if (attendance) {
-          if (attendance.check_in) {
-            check_in_time = attendance.check_in
-            const checkInTime = new Date(attendance.check_in)
-            
-            // Get day of week (0=Sunday, 1=Monday, etc.)
-            const dayOfWeek = checkInTime.getDay()
-            const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
-            const dayName = dayNames[dayOfWeek]
-            
-            // Get expected start time for the day
-            const expectedStartTime = emp.work_schedules?.[`${dayName}_start`]
-            
-            let isLate = false
-            if (expectedStartTime) {
-              const [expectedHour, expectedMin] = expectedStartTime.split(':').map(Number)
-              const expectedMinutes = expectedHour * 60 + expectedMin
-              const actualMinutes = checkInTime.getHours() * 60 + checkInTime.getMinutes()
-              // 5 minute tolerance
-              isLate = actualMinutes > (expectedMinutes + 5)
+          if (attendance) {
+            if (attendance.check_in) {
+              check_in_time = attendance.check_in
+              const checkInTime = new Date(attendance.check_in)
+              
+              // Get day of week (0=Sunday, 1=Monday, etc.)
+              const dayOfWeek = checkInTime.getDay()
+              const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+              const dayName = dayNames[dayOfWeek]
+              
+              // Get expected start time for the day
+              const expectedStartTime = emp.work_schedules?.[`${dayName}_start`]
+              
+              let isLate = false
+              if (expectedStartTime) {
+                const [expectedHour, expectedMin] = expectedStartTime.split(':').map(Number)
+                const expectedMinutes = expectedHour * 60 + expectedMin
+                const actualMinutes = checkInTime.getHours() * 60 + checkInTime.getMinutes()
+                // 5 minute tolerance
+                isLate = actualMinutes > (expectedMinutes + 5)
+              }
+              attendance_status = isLate ? 'late' : 'present'
+            } else if (attendance.status === 'absent') {
+              attendance_status = 'absent'
             }
-            attendance_status = isLate ? 'late' : 'present'
-          } else if (attendance.status === 'absent') {
-            attendance_status = 'absent'
           }
-        }
 
-        return {
-          ...emp,
-          department_name: emp.departments?.name || 'N/A',
-          attendance_status,
-          check_in_time,
-          work_schedule: emp.work_schedules,
-          gamification: {
-            total_points: gamification?.total_points || 0,
-            weekly_points: gamification?.weekly_points || 0,
-            monthly_points: gamification?.monthly_points || 0,
-            achievements_count: 0 // Simplified for performance
+          return {
+            ...emp,
+            department_name: emp.departments?.name || 'N/A',
+            attendance_status,
+            check_in_time,
+            work_schedule: emp.work_schedules,
+            gamification: {
+              total_points: gamification?.total_points || 0,
+              weekly_points: gamification?.weekly_points || 0,
+              monthly_points: gamification?.monthly_points || 0,
+              achievements_count: 0 // Simplified for performance
+            }
           }
-        }
+        })
+
+        // Update state with detailed data
+        setEmployees(employeesWithDetails)
+        setDepartments(departmentsData || [])
+        setWorkSchedules(schedulesData || [])
+      }).catch(error => {
+        console.error('Error loading additional data:', error)
+        // Keep basic data if additional queries fail
       })
-
-      setEmployees(employeesWithDetails)
-      setDepartments(departmentsData || [])
-      setWorkSchedules(schedulesData || [])
 
     } catch (error) {
       console.error('Error fetching data:', error)
@@ -259,16 +281,25 @@ export default function EmployeeManager() {
     }
   }, [userId]);
 
-  const debouncedFetchData = useCallback(debounce(fetchData, 500), [fetchData]);
+  const debouncedFetchData = useCallback(
+    debounce((term: string) => fetchData(term), 300), 
+    [fetchData]
+  );
 
   useEffect(() => {
     if (userId) {
-      debouncedFetchData(searchTerm);
+      // Load immediately on mount without debounce
+      if (searchTerm === '') {
+        fetchData('');
+      } else {
+        // Only use debounce for search
+        debouncedFetchData(searchTerm);
+      }
     }
     return () => {
       debouncedFetchData.cancel();
     };
-  }, [searchTerm, userId, debouncedFetchData]);
+  }, [searchTerm, userId, fetchData, debouncedFetchData]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
