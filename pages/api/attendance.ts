@@ -181,7 +181,12 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
         .eq('id', employee.work_schedule_id)
         .single()
 
-      const expectedCheckIn = schedule?.monday_start || '08:00' // Default or from schedule
+      // Get today's expected start time based on day of week
+      const dayOfWeek = now.getDay() // 0 = Sunday, 1 = Monday, etc.
+      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+      const todayName = dayNames[dayOfWeek]
+      const expectedCheckIn = schedule?.[`${todayName}_start`] || schedule?.monday_start || '08:00'
+      
       const currentTime = now.toTimeString().slice(0, 5)
       
       // Calculate if late
@@ -323,7 +328,12 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
         .eq('id', employee.work_schedule_id)
         .single()
 
-      const expectedCheckOut = schedule?.monday_end || '17:00' // Default or from schedule
+      // Get today's expected end time based on day of week
+      const dayOfWeek = now.getDay() // 0 = Sunday, 1 = Monday, etc.
+      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+      const todayName = dayNames[dayOfWeek]
+      const expectedCheckOut = schedule?.[`${todayName}_end`] || schedule?.monday_end || '17:00'
+      
       const currentTime = now.toTimeString().slice(0, 5)
       
       // Calculate early departure

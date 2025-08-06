@@ -104,7 +104,16 @@ export default function EmployeeManager() {
         .from('employees')
         .select(`
           *,
-          work_schedules!inner(start_time, end_time)
+          work_schedules!inner(
+            id, name, 
+            monday_start, monday_end,
+            tuesday_start, tuesday_end,
+            wednesday_start, wednesday_end,
+            thursday_start, thursday_end,
+            friday_start, friday_end,
+            saturday_start, saturday_end,
+            sunday_start, sunday_end
+          )
         `)
         .eq('company_id', profile.company_id)
         .eq('status', 'active')
@@ -147,15 +156,29 @@ export default function EmployeeManager() {
         if (attendance) {
           if (attendance.check_in) {
             check_in_time = attendance.check_in
-            const checkInHour = new Date(attendance.check_in).getHours()
-            const checkInMinutes = new Date(attendance.check_in).getMinutes()
             
-            // Check if late (after 8:15 AM)
-            if (checkInHour > 8 || (checkInHour === 8 && checkInMinutes > 15)) {
-              attendance_status = 'late'
-            } else {
-              attendance_status = 'present'
+            // Determine if late based on actual work schedule
+            let isLate = false
+            if (workSchedule) {
+              const checkInTime = new Date(attendance.check_in)
+              const dayOfWeek = checkInTime.getDay() // 0 = Sunday, 1 = Monday, etc.
+              const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+              const todayName = dayNames[dayOfWeek]
+              const expectedStartTime = workSchedule[`${todayName}_start`]
+              
+              if (expectedStartTime) {
+                const [expectedHour, expectedMin] = expectedStartTime.split(':').map(Number)
+                const checkInHour = checkInTime.getHours()
+                const checkInMinutes = checkInTime.getMinutes()
+                const expectedMinutes = expectedHour * 60 + expectedMin
+                const actualMinutes = checkInHour * 60 + checkInMinutes
+                
+                // Consider late if more than 5 minutes after expected start time
+                isLate = actualMinutes > (expectedMinutes + 5)
+              }
             }
+            
+            attendance_status = isLate ? 'late' : 'present'
           } else if (attendance.status === 'absent') {
             attendance_status = 'absent'
           }

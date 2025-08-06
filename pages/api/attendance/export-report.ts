@@ -150,6 +150,12 @@ async function generateAttendanceReportData(supabase: any, dateFilter: any, user
     const absentDays = empAttendance.filter((att: any) => att.status === 'absent').length
     const lateDays = empAttendance.filter((att: any) => {
       if (!att.check_in) return false
+      // TODO: Update to use employee's actual work schedule instead of hard-coded 8:15
+      // For now, using late_minutes field from attendance_records if available
+      if (att.late_minutes !== undefined) {
+        return att.late_minutes > 5
+      }
+      // Fallback to hard-coded logic (should be replaced with dynamic schedule lookup)
       const checkInTime = new Date(att.check_in)
       const hour = checkInTime.getHours()
       const minutes = checkInTime.getMinutes()
