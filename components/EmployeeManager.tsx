@@ -30,8 +30,22 @@ interface Employee {
   check_in_time?: string
   check_out_time?: string
   work_schedule?: {
-    start_time: string
-    end_time: string
+    id: string
+    name: string
+    monday_start?: string
+    monday_end?: string
+    tuesday_start?: string
+    tuesday_end?: string
+    wednesday_start?: string
+    wednesday_end?: string
+    thursday_start?: string
+    thursday_end?: string
+    friday_start?: string
+    friday_end?: string
+    saturday_start?: string
+    saturday_end?: string
+    sunday_start?: string
+    sunday_end?: string
   }
   gamification?: {
     total_points: number
@@ -49,6 +63,20 @@ interface Department {
 interface WorkSchedule {
   id: string
   name: string
+  monday_start?: string
+  monday_end?: string
+  tuesday_start?: string
+  tuesday_end?: string
+  wednesday_start?: string
+  wednesday_end?: string
+  thursday_start?: string
+  thursday_end?: string
+  friday_start?: string
+  friday_end?: string
+  saturday_start?: string
+  saturday_end?: string
+  sunday_start?: string
+  sunday_end?: string
 }
 
 export default function EmployeeManager() {
@@ -102,8 +130,22 @@ export default function EmployeeManager() {
           *,
           departments (name),
           work_schedules (
-            start_time,
-            end_time
+            id,
+            name,
+            monday_start,
+            monday_end,
+            tuesday_start,
+            tuesday_end,
+            wednesday_start,
+            wednesday_end,
+            thursday_start,
+            thursday_end,
+            friday_start,
+            friday_end,
+            saturday_start,
+            saturday_end,
+            sunday_start,
+            sunday_end
           )
         `)
         .eq('company_id', profile.company_id)
@@ -153,13 +195,21 @@ export default function EmployeeManager() {
           if (attendance.check_in) {
             check_in_time = attendance.check_in
             const checkInTime = new Date(attendance.check_in)
-            const expectedStartTime = emp.work_schedules?.start_time
+            
+            // Obtener el día de la semana (0=domingo, 1=lunes, etc.)
+            const dayOfWeek = checkInTime.getDay()
+            const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+            const dayName = dayNames[dayOfWeek]
+            
+            // Obtener la hora de inicio específica para el día
+            const expectedStartTime = emp.work_schedules?.[`${dayName}_start`]
             
             let isLate = false
             if (expectedStartTime) {
               const [expectedHour, expectedMin] = expectedStartTime.split(':').map(Number)
               const expectedMinutes = expectedHour * 60 + expectedMin
               const actualMinutes = checkInTime.getHours() * 60 + checkInTime.getMinutes()
+              // Tolerancia de 5 minutos
               isLate = actualMinutes > (expectedMinutes + 5)
             }
             attendance_status = isLate ? 'late' : 'present'
