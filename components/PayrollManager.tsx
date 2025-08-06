@@ -46,8 +46,9 @@ interface PayrollStats {
   totalDeductions: number
   totalNetSalary: number
   averageSalary: number
-  departmentBreakdown: { [key: string]: number }
+  departmentBreakdown: { [key: string]: { count: number, name: string, avgSalary: number } }
   attendanceRate: number
+  payrollCoverage: number // % of employees with payroll records
 }
 
 export default function PayrollManager() {
@@ -64,8 +65,10 @@ export default function PayrollManager() {
     totalNetSalary: 0,
     averageSalary: 0,
     departmentBreakdown: {},
-    attendanceRate: 0
+    attendanceRate: 0,
+    payrollCoverage: 0
   })
+  const [departments, setDepartments] = useState<{ [key: string]: string }>({})
   const [activeTab, setActiveTab] = useState<'dashboard' | 'records' | 'generate' | 'reports'>('dashboard')
 
   // Form state
@@ -238,6 +241,7 @@ export default function PayrollManager() {
       setEmployees(employeesData || [])
 
       // Calculate statistics
+      await loadDepartments()
       calculatePayrollStats(payrollData || [], employeesData || [])
 
     } catch (error) {
@@ -249,6 +253,31 @@ export default function PayrollManager() {
     }
   }
 
+  const loadDepartments = async () => {
+    if (!supabase) return
+    
+    try {
+      const { data: deptData, error } = await supabase
+        .from('departments')
+        .select('id, name')
+      
+      if (error) {
+        console.error('Error loading departments:', error)
+        return
+      }
+      
+      const deptMap: { [key: string]: string } = {}
+      deptData?.forEach((dept: any) => {
+        deptMap[dept.id] = dept.name
+      })
+      
+      setDepartments(deptMap)
+      console.log('✅ Departments loaded:', Object.keys(deptMap).length)
+    } catch (error) {
+      console.error('Error loading departments:', error)
+    }
+  }
+
   const calculatePayrollStats = (records: PayrollRecord[], emps: Employee[]) => {
     const stats: PayrollStats = {
       totalEmployees: emps.length,
@@ -257,7 +286,8 @@ export default function PayrollManager() {
       totalNetSalary: 0,
       averageSalary: 0,
       departmentBreakdown: {},
-      attendanceRate: 0
+      attendanceRate: 0,
+      payrollCoverage: 0
     }
 
     // Calculate totals from current period records
@@ -265,13 +295,35 @@ export default function PayrollManager() {
       r.period_start.startsWith(selectedPeriod || new Date().toISOString().slice(0, 7))
     )
 
+    // Calculate payroll coverage
+    stats.payrollCoverage = emps.length > 0 ? (currentPeriodRecords.length / emps.length) * 100 : 0
+
     currentPeriodRecords.forEach(record => {
       stats.totalGrossSalary += record.gross_salary
       stats.totalDeductions += record.total_deductions
       stats.totalNetSalary += record.net_salary
       
-      const dept = record.employees?.department_id || 'Sin Departamento'
-      stats.departmentBreakdown[dept] = (stats.departmentBreakdown[dept] || 0) + 1
+      const deptId = record.employees?.department_id || 'sin-departamento'
+      const deptName = departments[deptId] || 'Sin Departamento'
+      
+      if (!stats.departmentBreakdown[deptId]) {
+        stats.departmentBreakdown[deptId] = {
+          count: 0,
+          name: deptName,
+          avgSalary: 0
+        }
+      }
+      
+      stats.departmentBreakdown[deptId].count += 1
+    })
+
+    // Calculate average salary for each department
+    Object.keys(stats.departmentBreakdown).forEach(deptId => {
+      const deptRecords = currentPeriodRecords.filter(r => 
+        (r.employees?.department_id || 'sin-departamento') === deptId
+      )
+      const totalSalary = deptRecords.reduce((sum, r) => sum + r.net_salary, 0)
+      stats.departmentBreakdown[deptId].avgSalary = deptRecords.length > 0 ? totalSalary / deptRecords.length : 0
     })
 
     // Calculate averages
@@ -695,7 +747,7 @@ export default function PayrollManager() {
                   <div className="text-2xl font-bold text-blue-600">
                     {formatCurrency(payrollStats.totalGrossSalary)}
                   </div>
-                  <div className="text-sm text-gray-600">Total Salario Bruto</div>
+                  <div className="text-sm text-gray-600">Salario Bruto Quincenal</div>
                 </div>
               </CardContent>
             </Card>
@@ -703,10 +755,10 @@ export default function PayrollManager() {
             <Card>
               <CardContent className="pt-6">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-red-600">
-                    {formatCurrency(payrollStats.totalDeductions)}
+                  <div className="text-2xl font-bold text-orange-600">
+                    {payrollStats.payrollCoverage.toFixed(1)}%
                   </div>
-                  <div className="text-sm text-gray-600">Total Deducciones</div>
+                  <div className="text-sm text-gray-600">Cobertura Nómina</div>
                 </div>
               </CardContent>
             </Card>
@@ -717,31 +769,37 @@ export default function PayrollManager() {
                   <div className="text-2xl font-bold text-purple-600">
                     {formatCurrency(payrollStats.totalNetSalary)}
                   </div>
-                  <div className="text-sm text-gray-600">Total Salario Neto</div>
+                  <div className="text-sm text-gray-600">Salario Neto Quincenal</div>
                 </div>
               </CardContent>
             </Card>
           </div>
 
           {/* Additional Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>📊 Estadísticas de Asistencia</CardTitle>
+                <CardTitle>📊 Métricas de Gestión</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex justify-between">
-                    <span>Tasa de Asistencia:</span>
-                    <span className="font-semibold">{payrollStats.attendanceRate.toFixed(1)}%</span>
-                  </div>
                   <div className="flex justify-between">
                     <span>Salario Promedio:</span>
                     <span className="font-semibold">{formatCurrency(payrollStats.averageSalary)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Registros de Nómina:</span>
-                    <span className="font-semibold">{filteredRecords.length}</span>
+                    <span>Cobertura de Nómina:</span>
+                    <span className={`font-semibold ${payrollStats.payrollCoverage >= 95 ? 'text-green-600' : 'text-orange-600'}`}>
+                      {payrollStats.payrollCoverage.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Total Empleados:</span>
+                    <span className="font-semibold">{payrollStats.totalEmployees}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Registros Procesados:</span>
+                    <span className="font-semibold">{Object.values(payrollStats.departmentBreakdown).reduce((sum, d) => sum + d.count, 0)}</span>
                   </div>
                 </div>
               </CardContent>
@@ -750,52 +808,103 @@ export default function PayrollManager() {
             <Card>
               <CardHeader>
                 <CardTitle>🏢 Distribución por Departamento</CardTitle>
+                <CardDescription>Cantidad de empleados y salario promedio por área</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
-                  {Object.entries(payrollStats.departmentBreakdown).map(([dept, count]) => (
-                    <div key={dept} className="flex justify-between">
-                      <span className="text-sm">{dept}:</span>
-                      <span className="font-semibold">{count}</span>
+                <div className="space-y-4">
+                  {Object.entries(payrollStats.departmentBreakdown).map(([deptId, data]) => {
+                    const maxCount = Math.max(...Object.values(payrollStats.departmentBreakdown).map(d => d.count), 1)
+                    const percentage = (data.count / maxCount) * 100
+                    const totalEmployees = Object.values(payrollStats.departmentBreakdown).reduce((sum, d) => sum + d.count, 0)
+                    const deptPercentage = totalEmployees > 0 ? (data.count / totalEmployees) * 100 : 0
+                    
+                    return (
+                      <div key={deptId} className="space-y-2">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="font-medium text-sm text-gray-800">{data.name}</div>
+                            <div className="text-xs text-gray-500">{data.count} empleados ({deptPercentage.toFixed(1)}%)</div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm font-semibold text-blue-600">{formatCurrency(data.avgSalary)}</div>
+                            <div className="text-xs text-gray-500">promedio</div>
+                          </div>
+                        </div>
+                        <div className="relative">
+                          <div className="w-full bg-gray-200 rounded-full h-3">
+                            <div 
+                              className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-700 relative"
+                              style={{ width: `${percentage}%` }}
+                            >
+                              <div className="absolute inset-0 bg-white/20 rounded-full animate-pulse"></div>
+                            </div>
+                          </div>
+                          <div className="mt-1 flex justify-between text-xs">
+                            <span className="text-gray-600">{data.count} empleados</span>
+                            <span className="text-blue-600 font-medium">{deptPercentage.toFixed(1)}% del total</span>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                  {Object.keys(payrollStats.departmentBreakdown).length === 0 && (
+                    <div className="text-center text-gray-500 py-8">
+                      <div className="text-4xl mb-2">📊</div>
+                      <div className="text-sm">No hay datos de departamentos para mostrar</div>
+                      <div className="text-xs text-gray-400 mt-1">Los empleados necesitan tener departamentos asignados</div>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>⚡ Acciones Rápidas</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <Button 
-                    size="sm" 
-                    className="w-full"
-                    onClick={() => setActiveTab('generate')}
-                  >
-                    Generar Nómina Actual
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    className="w-full"
-                    onClick={exportToExcel}
-                  >
-                    Exportar Reporte
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => setActiveTab('records')}
-                  >
-                    Ver Registros
-                  </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
           </div>
+
+          {/* Quick Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle>⚡ Acciones Rápidas</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Button 
+                  className="w-full"
+                  onClick={() => setActiveTab('generate')}
+                >
+                  Generar Nómina Actual
+                </Button>
+                <Button 
+                  variant="outline"
+                  className="w-full"
+                  onClick={exportToExcel}
+                >
+                  Exportar Reporte
+                </Button>
+                <Button 
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setActiveTab('records')}
+                >
+                  Ver Registros
+                </Button>
+              </div>
+              <div className="mt-4 pt-4 border-t">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-center">
+                  <div className="p-3 bg-blue-50 rounded-lg">
+                    <div className="text-blue-600 font-bold text-lg">{payrollStats.totalEmployees}</div>
+                    <div className="text-blue-600 text-xs">Empleados</div>
+                  </div>
+                  <div className="p-3 bg-green-50 rounded-lg">
+                    <div className="text-green-600 font-bold text-lg">{Object.keys(payrollStats.departmentBreakdown).length}</div>
+                    <div className="text-green-600 text-xs">Departamentos</div>
+                  </div>
+                  <div className="p-3 bg-purple-50 rounded-lg">
+                    <div className="text-purple-600 font-bold text-lg">{payrollStats.payrollCoverage.toFixed(0)}%</div>
+                    <div className="text-purple-600 text-xs">Cobertura</div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
 

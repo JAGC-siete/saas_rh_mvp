@@ -1,11 +1,13 @@
-
-
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { Button } from './ui/button'
-import { Input } from './ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { useSupabaseSession } from '../lib/hooks/useSession'
+import { debounce } from 'lodash'
+import EmployeeRow from './EmployeeRow'
+import CertificateModal from './CertificateModal'
+import EmployeeSearch from './EmployeeSearch'
+import AddEmployeeForm from './AddEmployeeForm'
 
 interface Employee {
   id: string
@@ -23,6 +25,7 @@ interface Employee {
   bank_name: string
   bank_account: string
   department_id?: string
+  department_name?: string
   attendance_status?: 'present' | 'absent' | 'late' | 'not_registered'
   check_in_time?: string
   check_out_time?: string
@@ -58,7 +61,6 @@ export default function EmployeeManager() {
   const [userProfile, setUserProfile] = useState<any>(null)
   const [showCertificateModal, setShowCertificateModal] = useState(false)
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
-  const [certificateLoading, setCertificateLoading] = useState(false)
 
   const { user } = useSupabaseSession()
   const userId = user?.id
@@ -80,14 +82,10 @@ export default function EmployeeManager() {
     bank_account: '',
   })
 
-  useEffect(() => {
-    fetchData()
-  }, [])
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async (searchTerm = '') => {
+    setLoading(true)
     try {
-      // Get user profile
-      if (!userId) return
+      if (!userId) return;
 
       const { data: profile } = await supabase
         .from('user_profiles')
@@ -96,88 +94,74 @@ export default function EmployeeManager() {
         .single()
 
       setUserProfile(profile)
+      if (!profile) return;
 
-      if (!profile) return
-
-      // Fetch employees with work schedules
-      const { data: employeesData, error: employeesError } = await supabase
+      let employeesQuery = supabase
         .from('employees')
         .select(`
           *,
-          work_schedules!inner(
-            id, name, 
-            monday_start, monday_end,
-            tuesday_start, tuesday_end,
-            wednesday_start, wednesday_end,
-            thursday_start, thursday_end,
-            friday_start, friday_end,
-            saturday_start, saturday_end,
-            sunday_start, sunday_end
+          departments (name),
+          work_schedules (
+            start_time,
+            end_time
           )
         `)
         .eq('company_id', profile.company_id)
-        .eq('status', 'active')
-        .order('name')
+        .order('name');
 
+      if (searchTerm) {
+        const searchPattern = `%${searchTerm}%`
+        employeesQuery = employeesQuery.or(
+          `name.ilike.${searchPattern},employee_code.ilike.${searchPattern},dni.ilike.${searchPattern},position.ilike.${searchPattern}`
+        )
+      }
+      
+      const { data: employeesData, error: employeesError } = await employeesQuery;
       if (employeesError) throw employeesError
 
-      // Get today's attendance records
       const today = new Date().toISOString().split('T')[0]
       const { data: attendanceData, error: attendanceError } = await supabase
         .from('attendance_records')
         .select('employee_id, check_in, check_out, status')
+        .in('employee_id', (employeesData || []).map((e: any) => e.id))
         .eq('date', today)
 
-      if (attendanceError) {
-        console.error('Error fetching attendance:', attendanceError)
-      }
+      if (attendanceError) console.error('Error fetching attendance:', attendanceError)
 
-      // Get gamification data for all employees
       const { data: gamificationData } = await supabase
         .from('employee_scores')
         .select('employee_id, total_points, weekly_points, monthly_points')
+        .in('employee_id', (employeesData || []).map((e: any) => e.id))
 
-      const { data: achievementsData } = await supabase
+      const { data: achievementsData, error: achievementsError } = await supabase
         .from('employee_achievements')
         .select('employee_id, count')
-        .group('employee_id')
+        .in('employee_id', (employeesData || []).map((e: any) => e.id))
+        .group('employee_id');
 
-      // Combine employee data with attendance status and gamification
-      const employeesWithAttendance = (employeesData || []).map((emp: any) => {
+      if (achievementsError) console.error('Error fetching achievements:', achievementsError);
+
+      const employeesWithDetails = (employeesData || []).map((emp: any) => {
         const attendance = attendanceData?.find((att: any) => att.employee_id === emp.id)
-        const workSchedule = emp.work_schedules?.[0]
         const gamification = gamificationData?.find((g: any) => g.employee_id === emp.id)
         const achievements = achievementsData?.find((a: any) => a.employee_id === emp.id)
         
         let attendance_status: 'present' | 'absent' | 'late' | 'not_registered' = 'not_registered'
         let check_in_time = undefined
-        let check_out_time = undefined
 
         if (attendance) {
           if (attendance.check_in) {
             check_in_time = attendance.check_in
+            const checkInTime = new Date(attendance.check_in)
+            const expectedStartTime = emp.work_schedules?.start_time
             
-            // Determine if late based on actual work schedule
             let isLate = false
-            if (workSchedule) {
-              const checkInTime = new Date(attendance.check_in)
-              const dayOfWeek = checkInTime.getDay() // 0 = Sunday, 1 = Monday, etc.
-              const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
-              const todayName = dayNames[dayOfWeek]
-              const expectedStartTime = workSchedule[`${todayName}_start`]
-              
-              if (expectedStartTime) {
-                const [expectedHour, expectedMin] = expectedStartTime.split(':').map(Number)
-                const checkInHour = checkInTime.getHours()
-                const checkInMinutes = checkInTime.getMinutes()
-                const expectedMinutes = expectedHour * 60 + expectedMin
-                const actualMinutes = checkInHour * 60 + checkInMinutes
-                
-                // Consider late if more than 5 minutes after expected start time
-                isLate = actualMinutes > (expectedMinutes + 5)
-              }
+            if (expectedStartTime) {
+              const [expectedHour, expectedMin] = expectedStartTime.split(':').map(Number)
+              const expectedMinutes = expectedHour * 60 + expectedMin
+              const actualMinutes = checkInTime.getHours() * 60 + checkInTime.getMinutes()
+              isLate = actualMinutes > (expectedMinutes + 5)
             }
-            
             attendance_status = isLate ? 'late' : 'present'
           } else if (attendance.status === 'absent') {
             attendance_status = 'absent'
@@ -186,43 +170,34 @@ export default function EmployeeManager() {
 
         return {
           ...emp,
+          department_name: emp.departments?.name || 'N/A',
           attendance_status,
           check_in_time,
-          check_out_time,
-          work_schedule: workSchedule,
-          gamification: gamification ? {
-            total_points: gamification.total_points || 0,
-            weekly_points: gamification.weekly_points || 0,
-            monthly_points: gamification.monthly_points || 0,
+          work_schedule: emp.work_schedules,
+          gamification: {
+            total_points: gamification?.total_points || 0,
+            weekly_points: gamification?.weekly_points || 0,
+            monthly_points: gamification?.monthly_points || 0,
             achievements_count: achievements?.count || 0
-          } : {
-            total_points: 0,
-            weekly_points: 0,
-            monthly_points: 0,
-            achievements_count: 0
           }
         }
       })
 
-      setEmployees(employeesWithAttendance)
+      setEmployees(employeesWithDetails)
 
-      // Fetch departments
       const { data: departmentsData, error: deptError } = await supabase
         .from('departments')
         .select('id, name')
         .eq('company_id', profile.company_id)
         .order('name')
-
       if (deptError) throw deptError
       setDepartments(departmentsData || [])
 
-      // Fetch work schedules
       const { data: schedulesData, error: schedError } = await supabase
         .from('work_schedules')
         .select('id, name')
         .eq('company_id', profile.company_id)
         .order('name')
-
       if (schedError) throw schedError
       setWorkSchedules(schedulesData || [])
 
@@ -231,6 +206,25 @@ export default function EmployeeManager() {
     } finally {
       setLoading(false)
     }
+  }, [userId]);
+
+  const debouncedFetchData = useCallback(debounce(fetchData, 500), [fetchData]);
+
+  useEffect(() => {
+    if (userId) {
+      debouncedFetchData(searchTerm);
+    }
+    return () => {
+      debouncedFetchData.cancel();
+    };
+  }, [searchTerm, userId, debouncedFetchData]);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  };
+
+  const handleFormChange = (field: string, value: any) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -268,7 +262,7 @@ export default function EmployeeManager() {
       })
       
       setShowAddForm(false)
-      fetchData()
+      fetchData(searchTerm)
       
     } catch (error: any) {
       alert(`Error: ${error.message}`)
@@ -287,18 +281,13 @@ export default function EmployeeManager() {
         .eq('id', employeeId)
 
       if (error) throw error
-      fetchData()
+      fetchData(searchTerm)
     } catch (error: any) {
       alert(`Error: ${error.message}`)
     }
   }
 
-  const filteredEmployees = employees.filter(employee =>
-    employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    employee.employee_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    employee.dni.includes(searchTerm) ||
-    employee.position.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredEmployees = employees;
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-HN', {
@@ -311,11 +300,11 @@ export default function EmployeeManager() {
     const baseClasses = 'px-2 py-1 rounded-full text-xs font-medium'
     switch (status) {
       case 'active':
-        return <span className={`${baseClasses} bg-green-100 text-green-800`}>Active</span>
+        return <span className={`${baseClasses} bg-green-100 text-green-800`}>Activo</span>
       case 'inactive':
-        return <span className={`${baseClasses} bg-yellow-100 text-yellow-800`}>Inactive</span>
+        return <span className={`${baseClasses} bg-yellow-100 text-yellow-800`}>Inactivo</span>
       case 'terminated':
-        return <span className={`${baseClasses} bg-red-100 text-red-800`}>Terminated</span>
+        return <span className={`${baseClasses} bg-red-100 text-red-800`}>Terminado</span>
       default:
         return <span className={`${baseClasses} bg-gray-100 text-gray-800`}>{status}</span>
     }
@@ -402,15 +391,14 @@ export default function EmployeeManager() {
     }
   }
 
-  const generateWorkCertificate = async (employee: Employee) => {
+  const generateWorkCertificate = async (
+    employee: Employee,
+    format: string,
+    certificateType: string,
+    purpose: string,
+    additionalInfo: string
+  ) => {
     try {
-      setCertificateLoading(true)
-      
-      const format = (document.getElementById('certificateFormat') as HTMLSelectElement)?.value || 'pdf'
-      const certificateType = (document.getElementById('certificateType') as HTMLSelectElement)?.value || 'general'
-      const purpose = (document.getElementById('certificatePurpose') as HTMLInputElement)?.value || 'Constancia de trabajo'
-      const additionalInfo = (document.getElementById('certificateAdditionalInfo') as HTMLTextAreaElement)?.value || ''
-
       const response = await fetch('/api/reports/export-work-certificate', {
         method: 'POST',
         headers: {
@@ -430,35 +418,21 @@ export default function EmployeeManager() {
         throw new Error('Error generando constancia de trabajo')
       }
 
-      if (format === 'pdf') {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `constancia_trabajo_${employee.employee_code}_${new Date().toISOString().split('T')[0]}.pdf`
-        document.body.appendChild(a)
-        a.click()
-        window.URL.revokeObjectURL(url)
-        document.body.removeChild(a)
-      } else {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `constancia_trabajo_${employee.employee_code}_${new Date().toISOString().split('T')[0]}.csv`
-        document.body.appendChild(a)
-        a.click()
-        window.URL.revokeObjectURL(url)
-        document.body.removeChild(a)
-      }
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `constancia_trabajo_${employee.employee_code}_${new Date().toISOString().split('T')[0]}.${format}`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
 
       setShowCertificateModal(false)
       setSelectedEmployee(null)
     } catch (error) {
       console.error('Error generating work certificate:', error)
       alert('Error al generar la constancia de trabajo')
-    } finally {
-      setCertificateLoading(false)
     }
   }
 
@@ -467,8 +441,13 @@ export default function EmployeeManager() {
     setShowCertificateModal(true)
   }
 
+  const closeCertificateModal = () => {
+    setSelectedEmployee(null)
+    setShowCertificateModal(false)
+  }
+
   if (loading && employees.length === 0) {
-    return <div className="flex justify-center py-8">Loading employees...</div>
+    return <div className="flex justify-center py-8">Cargando empleados...</div>
   }
 
   return (
@@ -476,204 +455,28 @@ export default function EmployeeManager() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Employee Management</h1>
-          <p className="text-gray-600">Manage your team members and their information</p>
+          <h1 className="text-2xl font-bold text-gray-900">Gestión de Empleados</h1>
+          <p className="text-gray-600">Administra los miembros de tu equipo y su información</p>
         </div>
         <Button onClick={() => setShowAddForm(true)}>
-          Add Employee
+          Agregar Empleado
         </Button>
       </div>
 
       {/* Search */}
-      <Card>
-        <CardContent className="pt-6">
-          <Input
-            type="text"
-            placeholder="Search employees by name, code, DNI, or position..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-md"
-          />
-        </CardContent>
-      </Card>
+      <EmployeeSearch searchTerm={searchTerm} onSearchChange={handleSearchChange} />
 
       {/* Add Employee Form */}
       {showAddForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Add New Employee</CardTitle>
-            <CardDescription>Enter the employee&apos;s information</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Employee Code
-                </label>
-                <Input
-                  value={formData.employee_code}
-                  onChange={(e) => setFormData({...formData, employee_code: e.target.value})}
-                  placeholder="EMP001"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  DNI
-                </label>
-                <Input
-                  value={formData.dni}
-                  onChange={(e) => setFormData({...formData, dni: e.target.value})}
-                  placeholder="0801-1990-12345"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Full Name
-                </label>
-                <Input
-                  value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  placeholder="John Doe"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email
-                </label>
-                <Input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({...formData, email: e.target.value})}
-                  placeholder="john@company.com"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Phone
-                </label>
-                <Input
-                  value={formData.phone}
-                  onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                  placeholder="+504 9999-9999"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Position
-                </label>
-                <Input
-                  value={formData.position}
-                  onChange={(e) => setFormData({...formData, position: e.target.value})}
-                  placeholder="Software Developer"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Department
-                </label>
-                <select
-                  value={formData.department_id}
-                  onChange={(e) => setFormData({...formData, department_id: e.target.value})}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Select Department</option>
-                  {/* eslint-disable-next-line react/jsx-key */}
-                  {departments.map((dept, index) => (
-                    <option key={`dept-${index}`} value={dept.id}>{dept.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Work Schedule
-                </label>
-                <select
-                  value={formData.work_schedule_id}
-                  onChange={(e) => setFormData({...formData, work_schedule_id: e.target.value})}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Select Schedule</option>
-                  {/* eslint-disable-next-line react/jsx-key */}
-                  {workSchedules.map((schedule, index) => (
-                    <option key={`schedule-${index}`} value={schedule.id}>{schedule.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Base Salary (HNL)
-                </label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={formData.base_salary}
-                  onChange={(e) => setFormData({...formData, base_salary: e.target.value})}
-                  placeholder="25000.00"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Hire Date
-                </label>
-                <Input
-                  type="date"
-                  value={formData.hire_date}
-                  onChange={(e) => setFormData({...formData, hire_date: e.target.value})}
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Bank Name
-                </label>
-                <Input
-                  value={formData.bank_name}
-                  onChange={(e) => setFormData({...formData, bank_name: e.target.value})}
-                  placeholder="Banco Atlántida"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Bank Account
-                </label>
-                <Input
-                  value={formData.bank_account}
-                  onChange={(e) => setFormData({...formData, bank_account: e.target.value})}
-                  placeholder="12345678901"
-                />
-              </div>
-
-              <div className="md:col-span-2 flex gap-4">
-                <Button type="submit" disabled={loading}>
-                  {loading ? 'Adding...' : 'Add Employee'}
-                </Button>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setShowAddForm(false)}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+        <AddEmployeeForm
+          formData={formData}
+          onFormChange={handleFormChange}
+          onSubmit={handleSubmit}
+          onCancel={() => setShowAddForm(false)}
+          departments={departments}
+          workSchedules={workSchedules}
+          loading={loading}
+        />
       )}
 
       {/* Export Reports */}
@@ -718,18 +521,19 @@ export default function EmployeeManager() {
         <CardHeader>
           <div className="flex justify-between items-center">
             <div>
-              <CardTitle>Employee Directory</CardTitle>
+              <CardTitle>Directorio de Empleados</CardTitle>
               <CardDescription>
-                {filteredEmployees.length} of {employees.length} employees activos
+                {filteredEmployees.length} de {employees.length} empleados encontrados
               </CardDescription>
             </div>
             <Button
-              onClick={fetchData}
+              onClick={() => fetchData(searchTerm)}
               size="sm"
               variant="outline"
+              disabled={loading}
               className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
             >
-              🔄 Actualizar Asistencia
+              {loading ? 'Actualizando...' : '🔄 Actualizar'}
             </Button>
           </div>
         </CardHeader>
@@ -738,123 +542,35 @@ export default function EmployeeManager() {
             <table className="w-full table-auto">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left py-3 px-4">Employee</th>
-                  <th className="text-left py-3 px-4">Position</th>
-                  <th className="text-left py-3 px-4">Department</th>
-                  <th className="text-left py-3 px-4">Salary</th>
-                  <th className="text-left py-3 px-4">Status</th>
+                  <th className="text-left py-3 px-4">Empleado</th>
+                  <th className="text-left py-3 px-4">Posición</th>
+                  <th className="text-left py-3 px-4">Departamento</th>
+                  <th className="text-left py-3 px-4">Salario</th>
+                  <th className="text-left py-3 px-4">Estado</th>
                   <th className="text-left py-3 px-4">Asistencia</th>
                   <th className="text-left py-3 px-4">Horario</th>
                   <th className="text-left py-3 px-4">🏆 Puntos</th>
-                  <th className="text-left py-3 px-4">Actions</th>
+                  <th className="text-left py-3 px-4">Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {/* eslint-disable-next-line react/jsx-key */}
-                {filteredEmployees.map((employee, index) => (
-                  <tr key={`employee-${index}`} className="border-b hover:bg-gray-50">
-                    <td className="py-3 px-4">
-                      <div>
-                        <div className="font-medium">{employee.name}</div>
-                        <div className="text-sm text-gray-500">
-                          {employee.employee_code} • DNI: {employee.dni}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {employee.email} • {employee.phone}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="font-medium">{employee.position}</div>
-                      <div className="text-sm text-gray-500 capitalize">{employee.role}</div>
-                    </td>
-                    <td className="py-3 px-4">
-                      {employee.department_id ? 
-                        departments.find(d => d.id === employee.department_id)?.name || 'No Department' 
-                        : 'No Department'
-                      }
-                    </td>
-                    <td className="py-3 px-4 font-mono">
-                      {formatCurrency(employee.base_salary)}
-                    </td>
-                    <td className="py-3 px-4">
-                      {getStatusBadge(employee.status)}
-                    </td>
-                    <td className="py-3 px-4">
-                      {getAttendanceBadge(employee.attendance_status || 'not_registered', employee.check_in_time)}
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="text-sm">
-                        {employee.work_schedule ? (
-                          <>
-                            <div className="font-medium">Entrada: {employee.work_schedule.start_time}</div>
-                            <div className="text-gray-500">Salida: {employee.work_schedule.end_time}</div>
-                          </>
-                        ) : (
-                          <span className="text-gray-400">Sin horario</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="text-sm space-y-1">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Total:</span>
-                          <span className="font-mono font-bold text-blue-600">
-                            {employee.gamification?.total_points || 0}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Semana:</span>
-                          <span className="font-mono font-bold text-green-600">
-                            {employee.gamification?.weekly_points || 0}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Logros:</span>
-                          <span className="font-mono font-bold text-purple-600">
-                            {employee.gamification?.achievements_count || 0}
-                          </span>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openCertificateModal(employee)}
-                          className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
-                        >
-                          📄 Constancia
-                        </Button>
-                        {employee.status === 'active' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => updateEmployeeStatus(employee.id, 'inactive')}
-                          >
-                            Deactivate
-                          </Button>
-                        )}
-                        {employee.status === 'inactive' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => updateEmployeeStatus(employee.id, 'active')}
-                          >
-                            Activate
-                          </Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
+                {filteredEmployees.map((employee) => (
+                  <EmployeeRow
+                    key={employee.id}
+                    employee={employee}
+                    onUpdateStatus={updateEmployeeStatus}
+                    onOpenCertificateModal={openCertificateModal}
+                    formatCurrency={formatCurrency}
+                    getStatusBadge={getStatusBadge}
+                    getAttendanceBadge={getAttendanceBadge}
+                  />
                 ))}
               </tbody>
             </table>
 
             {filteredEmployees.length === 0 && (
               <div className="text-center py-8 text-gray-500">
-                {searchTerm ? 'No employees found matching your search.' : 'No employees added yet.'}
+                {searchTerm ? 'No se encontraron empleados que coincidan con la búsqueda.' : 'No hay empleados registrados.'}
               </div>
             )}
           </div>
@@ -862,109 +578,12 @@ export default function EmployeeManager() {
       </Card>
 
       {/* Modal de Constancia de Trabajo */}
-      {showCertificateModal && selectedEmployee && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Generar Constancia de Trabajo</h3>
-              <button
-                onClick={() => {
-                  setShowCertificateModal(false)
-                  setSelectedEmployee(null)
-                }}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="mb-4">
-              <p className="text-sm text-gray-600 mb-2">
-                <strong>Empleado:</strong> {selectedEmployee.name}
-              </p>
-              <p className="text-sm text-gray-600 mb-2">
-                <strong>Código:</strong> {selectedEmployee.employee_code}
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Formato
-                </label>
-                <select
-                  id="certificateFormat"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  defaultValue="pdf"
-                >
-                  <option value="pdf">PDF</option>
-                  <option value="csv">CSV</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tipo de Constancia
-                </label>
-                <select
-                  id="certificateType"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  defaultValue="general"
-                >
-                  <option value="general">General</option>
-                  <option value="salario">Salario</option>
-                  <option value="antiguedad">Antigüedad</option>
-                  <option value="buena_conducta">Buena Conducta</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Propósito
-                </label>
-                <input
-                  type="text"
-                  id="certificatePurpose"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Ej: Constancia de trabajo"
-                  defaultValue="Constancia de trabajo"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Información Adicional (opcional)
-                </label>
-                <textarea
-                  id="certificateAdditionalInfo"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  rows={3}
-                  placeholder="Información adicional que desee incluir..."
-                />
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <Button
-                  onClick={() => generateWorkCertificate(selectedEmployee)}
-                  disabled={certificateLoading}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700"
-                >
-                  {certificateLoading ? 'Generando...' : 'Generar Constancia'}
-                </Button>
-                <Button
-                  onClick={() => {
-                    setShowCertificateModal(false)
-                    setSelectedEmployee(null)
-                  }}
-                  variant="outline"
-                  className="flex-1"
-                >
-                  Cancelar
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
+      {showCertificateModal && (
+        <CertificateModal
+          employee={selectedEmployee}
+          onClose={closeCertificateModal}
+          onGenerate={generateWorkCertificate}
+        />
       )}
     </div>
   )
