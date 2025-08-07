@@ -44,7 +44,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         departments!employees_department_id_fkey!left(name),
         work_schedules!left(name, monday_start, monday_end),
         employee_scores!left(total_points, weekly_points, monthly_points),
-        attendance_records!left(check_in, check_out, status)
+        attendance_records!attendance_records_employee_id_fkey!left(check_in, check_out, status)
       `, { count: 'exact' })
       .eq('status', status)
 
