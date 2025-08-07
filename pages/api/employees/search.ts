@@ -16,27 +16,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-      try {
-      console.log('🔍 Employees Search API: Iniciando...')
+  try {
+    console.log('🔍 Employees Search API: Iniciando...')
 
-      // Get query parameters
-      const { 
-        search = '', 
-        page = '1', 
-        limit = '20',
-        status = 'active',
-        department_id,
-        sort_by = 'name',
-        sort_order = 'asc'
-      } = req.query
+    // Get query parameters
+    const { 
+      search = '', 
+      page = '1', 
+      limit = '20',
+      status = 'active',
+      department_id,
+      sort_by = 'name',
+      sort_order = 'asc'
+    } = req.query
 
-      const pageNum = parseInt(page as string)
-      const limitNum = parseInt(limit as string)
-      const offset = (pageNum - 1) * limitNum
+    const pageNum = parseInt(page as string)
+    const limitNum = parseInt(limit as string)
+    const offset = (pageNum - 1) * limitNum
 
-      console.log('📋 Query parameters:', { search, page: pageNum, limit: limitNum, status, department_id, sort_by, sort_order })
+    console.log('📋 Query parameters:', { search, page: pageNum, limit: limitNum, status, department_id, sort_by, sort_order })
 
-      // Build the query
+    // Build the query
     let query = supabase
       .from('employees')
       .select(`
@@ -80,7 +80,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('Employees query successful:', { 
       count: count || 0, 
       employeesCount: employees?.length || 0,
-      companyId: profile.company_id,
       status: status
     })
 
