@@ -11,6 +11,7 @@ const PUBLIC_ROUTES = new Set([
   '/registrodeasistencia',
   '/attendance/public',
   '/attendance/register',
+  '/api/attendance',
   '/api/attendance/lookup',
   '/api/attendance/register',
   '/api/attendance/first-time-check',
@@ -92,10 +93,10 @@ export async function middleware(request: NextRequest) {
         get(name: string) {
           return request.cookies.get(name)?.value
         },
-        set(_name: string, _value: string, _options: any) {
+        set() {
           // This will be handled by the response
         },
-        remove(_name: string, _options: any) {
+        remove() {
           // This will be handled by the response
         },
       },

@@ -1,4 +1,12 @@
 import { createAdminClient } from '../../lib/supabase/server'
+import { 
+  getHondurasTime, 
+  getHondurasTimeISO, 
+  getTodayInHonduras,
+  getCurrentDayOfWeek,
+  parseExpectedTime,
+  calculateMinutesDifference
+} from '../../lib/timezone'
 
 // Gamification helper functions
 async function calculateAttendancePoints(employeeId: string, lateMinutes: number, isEarly: boolean): Promise<number> {
@@ -162,8 +170,8 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
       return res.status(400).json({ error: 'Either last5 or employee_id required' })
     }
 
-    const today = new Date().toISOString().split('T')[0]
-    const now = new Date()
+    const today = getTodayInHonduras()
+    const now = getHondurasTime()
     
     // Check if attendance record exists for today
     const { data: existingRecord } = await supabase
@@ -181,15 +189,18 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
         .eq('id', employee.work_schedule_id)
         .single()
 
-      const expectedCheckIn = schedule?.monday_start || '08:00' // Default or from schedule
-      const currentTime = now.toTimeString().slice(0, 5)
+      if (!schedule) {
+        return res.status(400).json({ error: 'Work schedule not found for employee' })
+      }
+
+      // Get current day of week and corresponding schedule
+      const dayOfWeek = getCurrentDayOfWeek()
+      const startKey = `${dayOfWeek}_start`
+      const expectedCheckIn = schedule[startKey] || '08:00'
       
-      // Calculate if late
-      const [expectedHour, expectedMin] = expectedCheckIn.split(':').map(Number)
-      const [currentHour, currentMin] = currentTime.split(':').map(Number)
-      const expectedMinutes = expectedHour * 60 + expectedMin
-      const currentMinutes = currentHour * 60 + currentMin
-      const lateMinutes = Math.max(0, currentMinutes - expectedMinutes)
+      // Calculate if late using Honduras timezone
+      const expectedStart = parseExpectedTime(expectedCheckIn, now)
+      const lateMinutes = Math.max(0, calculateMinutesDifference(now, expectedStart))
 
       if (lateMinutes > 5 && !justification) {
         return res.status(422).json({
@@ -205,7 +216,7 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
         .insert({
           employee_id: employee.id,
           date: today,
-          check_in: now.toISOString(),
+          check_in: getHondurasTimeISO(),
           expected_check_in: expectedCheckIn,
           late_minutes: lateMinutes,
           justification: justification || null,
@@ -225,7 +236,7 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
       if (lateMinutes > 5) {
         feedbackMessage = '⏰ Por favor sé puntual. Explícanos qué pasó.'
         punctualityStatus = 'late'
-      } else if (currentMinutes <= expectedMinutes - 5) {
+      } else if (lateMinutes === 0 && calculateMinutesDifference(expectedStart, now) > 5) {
         feedbackMessage = '🎉 ¡Eres un empleado ejemplar! Llegaste temprano.'
         punctualityStatus = 'early'
       } else {
@@ -233,9 +244,10 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
         punctualityStatus = 'on-time'
       }
 
-      // Get weekly pattern for behavioral analysis
-      const startOfWeek = new Date()
-      startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay())
+      // Get weekly pattern for behavioral analysis using Honduras timezone
+      const hondurasTime = getHondurasTime()
+      const startOfWeek = new Date(hondurasTime)
+      startOfWeek.setDate(hondurasTime.getDate() - hondurasTime.getDay())
       startOfWeek.setHours(0, 0, 0, 0)
       const endOfWeek = new Date(startOfWeek)
       endOfWeek.setDate(endOfWeek.getDate() + 6)
@@ -271,7 +283,7 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
       const finalFeedback = feedbackMessage + behavioralFeedback
 
       // Calculate and award points for gamification
-      const isEarly = currentMinutes <= expectedMinutes - 5
+      const isEarly = lateMinutes === 0 && calculateMinutesDifference(expectedStart, now) > 5
       const pointsEarned = await calculateAttendancePoints(employee.id, lateMinutes, isEarly)
       
       if (pointsEarned > 0) {
@@ -323,24 +335,27 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
         .eq('id', employee.work_schedule_id)
         .single()
 
-      const expectedCheckOut = schedule?.monday_end || '17:00' // Default or from schedule
-      const currentTime = now.toTimeString().slice(0, 5)
+      if (!schedule) {
+        return res.status(400).json({ error: 'Work schedule not found for employee' })
+      }
+
+      // Get current day of week and corresponding schedule
+      const dayOfWeek = getCurrentDayOfWeek()
+      const endKey = `${dayOfWeek}_end`
+      const expectedCheckOut = schedule[endKey] || '17:00'
       
-      // Calculate early departure
-      const [expectedHour, expectedMin] = expectedCheckOut.split(':').map(Number)
-      const [currentHour, currentMin] = currentTime.split(':').map(Number)
-      const expectedMinutes = expectedHour * 60 + expectedMin
-      const currentMinutes = currentHour * 60 + currentMin
-      const earlyDepartureMinutes = Math.max(0, expectedMinutes - currentMinutes)
+      // Calculate early departure using Honduras timezone
+      const expectedEnd = parseExpectedTime(expectedCheckOut, now)
+      const earlyDepartureMinutes = Math.max(0, calculateMinutesDifference(expectedEnd, now))
 
       // Update record with check-out
       const { data, error } = await supabase
         .from('attendance_records')
         .update({
-          check_out: now.toISOString(),
+          check_out: getHondurasTimeISO(),
           expected_check_out: expectedCheckOut,
           early_departure_minutes: earlyDepartureMinutes,
-          updated_at: now.toISOString()
+          updated_at: getHondurasTimeISO()
         })
         .eq('id', existingRecord.id)
         .select()
