@@ -1,18 +1,49 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { Button } from './ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { useSupabaseSession } from '../lib/hooks/useSession'
 import { Employee } from '../lib/types/employee'
+import AddEmployeeForm from './AddEmployeeForm'
+import { PlusIcon } from '@heroicons/react/24/outline'
+
+interface Department {
+  id: string
+  name: string
+}
+
+interface WorkSchedule {
+  id: string
+  name: string
+}
+
+const INITIAL_FORM_DATA = {
+  employee_code: '',
+  dni: '',
+  name: '',
+  email: '',
+  phone: '',
+  department_id: '',
+  work_schedule_id: '',
+  position: '',
+  salary: '',
+  hire_date: '',
+  status: 'active'
+}
 
 export default function EmployeeManager() {
   const [employees, setEmployees] = useState<Employee[]>([])
+  const [departments, setDepartments] = useState<Department[]>([])
+  const [workSchedules, setWorkSchedules] = useState<WorkSchedule[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showForm, setShowForm] = useState(false)
+  const [formData, setFormData] = useState(INITIAL_FORM_DATA)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const { user } = useSupabaseSession()
 
   // Simple fetch function
-  const fetchEmployees = async () => {
+  const fetchEmployees = useCallback(async () => {
     if (!user?.id) return
     
     setLoading(true)
@@ -46,11 +77,84 @@ export default function EmployeeManager() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [user?.id])
+
+  const fetchDepartments = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('departments')
+        .select('id, name')
+        .order('name')
+
+      if (error) throw error
+      setDepartments(data || [])
+    } catch (error) {
+      console.error('Error fetching departments:', error)
+    }
+  }, [])
+
+  const fetchWorkSchedules = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('work_schedules')
+        .select('id, name')
+        .order('name')
+
+      if (error) throw error
+      setWorkSchedules(data || [])
+    } catch (error) {
+      console.error('Error fetching work schedules:', error)
+    }
+  }, [])
+
+  const handleFormChange = useCallback((field: string, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+  }, [])
+
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    try {
+      setIsSubmitting(true)
+      
+      const response = await fetch('/api/employees', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`Error creating employee: ${response.status} - ${errorText}`)
+      }
+
+      // Reset form and refresh employees
+      setFormData(INITIAL_FORM_DATA)
+      setShowForm(false)
+      fetchEmployees()
+    } catch (error) {
+      console.error('Error creating employee:', error)
+      setError(error instanceof Error ? error.message : 'Error creating employee')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }, [formData, fetchEmployees])
+
+  const handleCancel = useCallback(() => {
+    setFormData(INITIAL_FORM_DATA)
+    setShowForm(false)
+    setError(null)
+  }, [])
 
   useEffect(() => {
-    fetchEmployees()
-  }, [user?.id])
+    if (user?.id) {
+      fetchEmployees()
+      fetchDepartments()
+      fetchWorkSchedules()
+    }
+  }, [user?.id, fetchEmployees, fetchDepartments, fetchWorkSchedules])
 
   if (loading) {
     return (
@@ -70,7 +174,7 @@ export default function EmployeeManager() {
     )
   }
 
-  if (error) {
+  if (error && !showForm) {
     return (
       <div className="p-6">
         <Card>
@@ -94,12 +198,47 @@ export default function EmployeeManager() {
   }
 
   return (
-    <div className="p-6">
+    <div className="space-y-6">
+      {showForm ? (
+        <AddEmployeeForm
+          formData={formData}
+          onFormChange={handleFormChange}
+          onSubmit={handleSubmit}
+          onCancel={handleCancel}
+          departments={departments}
+          workSchedules={workSchedules}
+          loading={isSubmitting}
+        />
+      ) : (
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">Empleados</h2>
+            <p className="text-gray-600">Administra la información de los empleados</p>
+          </div>
+          <Button 
+            onClick={() => setShowForm(true)}
+            className="flex items-center space-x-2"
+          >
+            <PlusIcon className="h-5 w-5" />
+            <span>Nuevo Empleado</span>
+          </Button>
+        </div>
+      )}
+
+      {error && showForm && (
+        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+          <div className="text-red-600">
+            <h3 className="text-sm font-medium">Error al crear empleado</h3>
+            <p className="text-sm mt-1">{error}</p>
+          </div>
+        </div>
+      )}
+
       <Card>
         <CardHeader>
-          <CardTitle>Empleados ({employees.length})</CardTitle>
+          <CardTitle>Lista de Empleados ({employees.length})</CardTitle>
           <CardDescription>
-            Lista simplificada de empleados
+            Empleados registrados en el sistema
           </CardDescription>
         </CardHeader>
         <CardContent>
