@@ -18,34 +18,48 @@ function detectIntendedAction(currentTime: Date, existingRecord: any): 'check_in
   const totalMinutes = hour * 60 + minute
   
   // Time ranges in minutes from midnight
-  const earlyMorningStart = 1 * 60      // 1:00 AM
-  const morningEnd = 11 * 60           // 11:00 AM  
-  const afternoonStart = 16 * 60       // 4:00 PM
-  const lateNightEnd = 23 * 60 + 59    // 11:59 PM
+  const earlyMorning = 5 * 60       // 5:00 AM
+  const morningStart = 6 * 60       // 6:00 AM
+  const morningEnd = 11 * 60        // 11:00 AM  
+  const afternoonStart = 15 * 60    // 3:00 PM
+  const lateNightEnd = 23 * 60 + 59 // 11:59 PM
   
-  // If no existing record, time determines action
-  if (!existingRecord) {
-    if ((totalMinutes >= earlyMorningStart && totalMinutes <= morningEnd)) {
-      return 'check_in'
-    } else if (totalMinutes >= afternoonStart && totalMinutes <= lateNightEnd) {
-      // Late evening could be check-in for night shifts, check-out for day shifts
-      return 'ambiguous'
-    } else {
-      // 11 AM - 4 PM: unusual time, could be late check-in or early check-out
-      return 'ambiguous'
-    }
+  // Si ya tiene entrada y salida para hoy, no permitir más registros
+  if (existingRecord?.check_in && existingRecord?.check_out) {
+    return 'ambiguous'
   }
   
-  // If has check-in but no check-out
-  if (existingRecord && !existingRecord.check_out) {
-    if (totalMinutes >= afternoonStart && totalMinutes <= lateNightEnd) {
+  // Si tiene entrada pero no salida
+  if (existingRecord?.check_in && !existingRecord?.check_out) {
+    // Después de las 3 PM, definitivamente es salida
+    if (totalMinutes >= afternoonStart) {
       return 'check_out'
-    } else if (totalMinutes >= earlyMorningStart && totalMinutes <= morningEnd) {
-      // Morning time with existing check-in - unusual, might be duplicate
-      return 'ambiguous'
-    } else {
-      // Midday: could be early check-out
+    }
+    // Entre 11 AM y 3 PM podría ser salida temprana
+    if (totalMinutes >= morningEnd) {
       return 'check_out'
+    }
+    // Antes de las 11 AM con entrada ya registrada es inusual
+    return 'ambiguous'
+  }
+  
+  // Si no tiene registro para hoy
+  if (!existingRecord) {
+    // En la mañana (6 AM - 11 AM) es entrada normal
+    if (totalMinutes >= morningStart && totalMinutes <= morningEnd) {
+      return 'check_in'
+    }
+    // Muy temprano (5-6 AM) podría ser entrada temprana
+    if (totalMinutes >= earlyMorning && totalMinutes < morningStart) {
+      return 'check_in'
+    }
+    // Después de las 3 PM es probablemente un turno tarde
+    if (totalMinutes >= afternoonStart) {
+      return 'check_in'
+    }
+    // Entre 11 AM y 3 PM es entrada tarde
+    if (totalMinutes > morningEnd && totalMinutes < afternoonStart) {
+      return 'check_in'
     }
   }
   
@@ -59,53 +73,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  // 🔒 AUTENTICACIÓN REQUERIDA
-  try {
-    const supabase = createClient(req, res)
-    const { data: { session } } = await supabase.auth.getSession()
-    
-    if (!session) {
-      return res.status(401).json({ 
-        error: 'No autorizado',
-        message: 'Debe iniciar sesión para registrar asistencia'
-      })
-    }
-
-    // Verificar que el usuario tiene permisos para registrar asistencia
-    const { data: userProfile } = await supabase
-      .from('user_profiles')
-      .select('role, permissions, company_id')
-      .eq('id', session.user.id)
-      .single()
-
-    if (!userProfile) {
-      return res.status(403).json({ 
-        error: 'Perfil no encontrado',
-        message: 'Su perfil de usuario no está configurado correctamente'
-      })
-    }
-
-    // Verificar permisos (admin, manager, o employee pueden registrar asistencia)
-    const allowedRoles = ['admin', 'manager', 'employee']
-    if (!allowedRoles.includes(userProfile.role)) {
-      return res.status(403).json({ 
-        error: 'Permisos insuficientes',
-        message: 'No tiene permisos para registrar asistencia'
-      })
-    }
-
-    console.log('🔐 Usuario autenticado:', { 
-      userId: session.user.id, 
-      role: userProfile.role,
-      companyId: userProfile.company_id 
-    })
-  } catch (authError) {
-    console.error('❌ Error de autenticación:', authError)
-    return res.status(500).json({ 
-      error: 'Error de autenticación',
-      message: 'No se pudo verificar la autenticación'
-    })
-  }
+  // 🔓 REGISTRO PÚBLICO - Sin autenticación requerida
+  console.log('🔓 Registro público de asistencia - sin autenticación requerida')
 
   try {
     const { last5, dni, justification } = req.body
@@ -143,7 +112,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('🔍 Buscando empleado...', { dni, last5 })
     let employeeQuery = supabase
       .from('employees')
-      .select('id, work_schedule_id, dni, name, status, position, company_id')
+      .select('id, work_schedule_id, dni, name, status, company_id')
       .eq('status', 'active')
 
     if (dni) {
@@ -180,7 +149,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const employee = employees[0]
-    console.log('✅ Empleado encontrado:', { id: employee.id, name: employee.name, position: employee.position })
+    console.log('✅ Empleado encontrado:', { id: employee.id, name: employee.name })
 
     // PASO 3: Validar work_schedule_id
     if (!employee.work_schedule_id) {
@@ -265,38 +234,76 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       tieneSalida: !!existingRecord?.check_out
     })
 
-    // Handle ambiguous cases with intelligent defaults
-    let finalAction: 'check_in' | 'check_out' = 'check_in'
-    
-    if (intendedAction === 'ambiguous') {
-      // Use existing business logic for ambiguous cases
-      if (!existingRecord) {
-        finalAction = 'check_in'
-        console.log('🤔 Tiempo ambiguo - defaulting to check-in (no record exists)')
-      } else if (!existingRecord.check_out) {
-        finalAction = 'check_out'
-        console.log('🤔 Tiempo ambiguo - defaulting to check-out (has check-in)')
-      }
-    } else {
-      finalAction = intendedAction
-    }
+    // Determinar acción basada en hora y registros existentes
+    let finalAction = intendedAction
 
-    // Handle conflicts between smart detection and existing records
-    if (finalAction === 'check_in' && existingRecord && !existingRecord.check_out) {
-      console.log('⚠️ Conflicto detectado: Usuario quiere check-in pero ya tiene entrada')
+    // Si ya tiene entrada y salida, no permitir más registros
+    if (existingRecord?.check_in && existingRecord?.check_out) {
+      console.log('⚠️ Ya tiene entrada y salida registradas hoy')
       return res.status(400).json({
-        error: 'Ya tienes entrada registrada hoy',
-        message: 'Parece que quieres marcar entrada, pero ya tienes una entrada registrada hoy. ¿Quizás quieres marcar salida?',
-        suggestion: 'Si quieres marcar salida, inténtalo después de las 4:00 PM'
+        error: 'Ya completaste tu jornada',
+        message: 'Ya tienes registrada tu entrada y salida para hoy.',
+        suggestion: 'Si necesitas hacer una corrección, contacta a RRHH.'
       })
     }
 
-    if (finalAction === 'check_out' && !existingRecord) {
-      console.log('⚠️ Conflicto detectado: Usuario quiere check-out pero no tiene entrada')
+    // Si tiene entrada pero no salida
+    if (existingRecord?.check_in && !existingRecord?.check_out) {
+      // Después de las 3 PM, definitivamente es salida
+      if (hondurasTime.getHours() >= 15) {
+        finalAction = 'check_out'
+        console.log('🕒 Después de las 3 PM con entrada registrada - marcando salida')
+      } else {
+        // Antes de las 3 PM con entrada ya registrada
+        console.log('⚠️ Ya tiene entrada registrada hoy')
+        return res.status(400).json({
+          error: 'Ya tienes entrada registrada',
+          message: 'Ya marcaste tu entrada hoy. Marca tu salida después de las 3:00 PM.',
+          suggestion: 'Tu horario de salida es a las 5:00 PM'
+        })
+      }
+    }
+
+    // Si no tiene registro para hoy
+    if (!existingRecord) {
+      // En la mañana (6 AM - 11 AM) es entrada normal
+      if (hondurasTime.getHours() >= 6 && hondurasTime.getHours() <= 11) {
+        finalAction = 'check_in'
+        console.log('🌅 Entrada normal en horario matutino')
+      }
+      // Muy temprano (5-6 AM) es entrada temprana
+      else if (hondurasTime.getHours() >= 5 && hondurasTime.getHours() < 6) {
+        finalAction = 'check_in'
+        console.log('⭐ Entrada temprana antes de las 6 AM')
+      }
+      // Después de las 3 PM es entrada tarde
+      else if (hondurasTime.getHours() >= 15) {
+        finalAction = 'check_in'
+        console.log('🌆 Entrada tarde después de las 3 PM')
+      }
+      // Entre 11 AM y 3 PM es entrada tarde
+      else if (hondurasTime.getHours() > 11 && hondurasTime.getHours() < 15) {
+        finalAction = 'check_in'
+        console.log('⏰ Entrada tarde entre 11 AM y 3 PM')
+      }
+    }
+
+    // Validar conflictos finales
+    if (finalAction === 'check_in' && existingRecord?.check_in) {
+      console.log('⚠️ Conflicto: Ya tiene entrada registrada')
       return res.status(400).json({
-        error: 'No tienes entrada registrada hoy',
-        message: 'Parece que quieres marcar salida, pero no tienes entrada registrada hoy. Debes marcar entrada primero.',
-        suggestion: 'Marca tu entrada primero entre las 7:00 AM y 11:00 AM'
+        error: 'Ya tienes entrada registrada',
+        message: 'Ya marcaste tu entrada hoy. Marca tu salida después de las 3:00 PM.',
+        suggestion: 'Tu horario de salida es a las 5:00 PM'
+      })
+    }
+
+    if (finalAction === 'check_out' && !existingRecord?.check_in) {
+      console.log('⚠️ Conflicto: Intenta marcar salida sin entrada')
+      return res.status(400).json({
+        error: 'No tienes entrada registrada',
+        message: 'No puedes marcar salida sin haber marcado entrada primero.',
+        suggestion: 'Marca tu entrada entre las 6:00 AM y 11:00 AM'
       })
     }
 
@@ -504,8 +511,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       action: finalAction,
       timeDetection: intendedAction,
       employee: {
-        name: employee.name,
-        position: employee.position
+        name: employee.name
       },
       timestamp: getHondurasTimeISO(),
       workSchedule: {
