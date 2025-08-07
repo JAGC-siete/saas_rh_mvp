@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { useSession } from '@supabase/auth-helpers-react'
 import { Button } from './ui/button'
@@ -47,7 +47,6 @@ interface DashboardStats {
   todayAttendance: number
   pendingPayrolls: number
   thisMonthLeaves: number
-  avgHoursWorked: number
 }
 
 interface AttendanceTrend {
@@ -57,22 +56,45 @@ interface AttendanceTrend {
   late: number
 }
 
+const INITIAL_STATS: DashboardStats = {
+  totalEmployees: 0,
+  activeEmployees: 0,
+  todayAttendance: 0,
+  pendingPayrolls: 0,
+  thisMonthLeaves: 0
+}
+
+const ATTENDANCE_THRESHOLDS = {
+  excellent: 90,
+  good: 75,
+  punctuality: {
+    excellent: 85,
+    good: 70
+  }
+} as const
+
+const getCurrentMonthRange = () => {
+  const now = new Date()
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
+  return { monthStart, monthEnd }
+}
+
+const getTodayDate = () => new Date().toISOString().split('T')[0]
+
 export default function ReportsAndAnalytics() {
   const session = useSession()
-  const [stats, setStats] = useState<DashboardStats>({
-    totalEmployees: 0,
-    activeEmployees: 0,
-    todayAttendance: 0,
-    pendingPayrolls: 0,
-    thisMonthLeaves: 0,
-    avgHoursWorked: 0
-  })
+  const [stats, setStats] = useState<DashboardStats>(INITIAL_STATS)
   const [attendanceTrends, setAttendanceTrends] = useState<AttendanceTrend[]>([])
   const [loading, setLoading] = useState(false)
   const [dateRange, setDateRange] = useState({
     startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0]
   })
+
+  // Memoized values
+  const today = useMemo(() => getTodayDate(), [])
+  const { monthStart, monthEnd } = useMemo(() => getCurrentMonthRange(), [])
 
   const fetchDashboardStats = useCallback(async () => {
     try {
@@ -89,7 +111,6 @@ export default function ReportsAndAnalytics() {
       const activeEmployees = employees?.filter((emp: any) => emp.status === 'active').length || 0
 
       // Today's attendance
-      const today = new Date().toISOString().split('T')[0]
       const { data: attendance, error: attendanceError } = await supabase
         .from('attendance_records')
         .select('id')
@@ -111,9 +132,6 @@ export default function ReportsAndAnalytics() {
       const pendingPayrolls = payrolls?.length || 0
 
       // This month's leave requests
-      const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
-      const monthEnd = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0]
-      
       const { data: leaves, error: leavesError } = await supabase
         .from('leave_requests')
         .select('id')
@@ -130,8 +148,7 @@ export default function ReportsAndAnalytics() {
         activeEmployees,
         todayAttendance,
         pendingPayrolls,
-        thisMonthLeaves,
-        avgHoursWorked: 8.2 // Placeholder calculation
+        thisMonthLeaves
       })
 
     } catch (error) {
@@ -139,7 +156,7 @@ export default function ReportsAndAnalytics() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [today, monthStart, monthEnd])
 
   const fetchAttendanceTrends = useCallback(async () => {
     try {
@@ -187,9 +204,34 @@ export default function ReportsAndAnalytics() {
       fetchDashboardStats()
       fetchAttendanceTrends()
     }
-  }, [session, dateRange, fetchDashboardStats, fetchAttendanceTrends])
+  }, [session, fetchDashboardStats, fetchAttendanceTrends])
 
-  const exportReport = async (type: 'attendance' | 'payroll' | 'employees') => {
+  const downloadCSV = useCallback((data: any[], filename: string) => {
+    if (data && data.length > 0) {
+      // Convert to CSV
+      const headers = Object.keys(data[0]).filter(key => typeof data[0][key] !== 'object')
+      const csvContent = [
+        headers.join(','),
+        ...data.map((row: any) => 
+          headers.map(header => {
+            const value = row[header]
+            return typeof value === 'string' ? `"${value}"` : value
+          }).join(',')
+        )
+      ].join('\n')
+
+      // Download file
+      const blob = new Blob([csvContent], { type: 'text/csv' })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      a.click()
+      window.URL.revokeObjectURL(url)
+    }
+  }, [])
+
+  const exportReport = useCallback(async (type: 'attendance' | 'payroll' | 'employees') => {
     try {
       let data, filename
 
@@ -227,7 +269,7 @@ export default function ReportsAndAnalytics() {
             .order('period_start', { ascending: false })
 
           data = payrollData
-          filename = `payroll_report_${new Date().toISOString().split('T')[0]}.csv`
+          filename = `payroll_report_${today}.csv`
           break
 
         case 'employees':
@@ -247,41 +289,36 @@ export default function ReportsAndAnalytics() {
             .order('first_name')
 
           data = employeeData
-          filename = `employees_report_${new Date().toISOString().split('T')[0]}.csv`
+          filename = `employees_report_${today}.csv`
           break
       }
 
-      if (data && data.length > 0) {
-        // Convert to CSV
-        const headers = Object.keys(data[0]).filter(key => typeof data[0][key] !== 'object')
-        const csvContent = [
-          headers.join(','),
-          ...data.map((row: any) => 
-            headers.map(header => {
-              const value = row[header]
-              return typeof value === 'string' ? `"${value}"` : value
-            }).join(',')
-          )
-        ].join('\n')
-
-        // Download file
-        const blob = new Blob([csvContent], { type: 'text/csv' })
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = filename
-        a.click()
-        window.URL.revokeObjectURL(url)
-      }
+      downloadCSV(data, filename)
     } catch (error) {
       console.error('Error exporting report:', error)
     }
-  }
+  }, [dateRange.startDate, dateRange.endDate, today, downloadCSV])
 
-  const formatPercentage = (value: number, total: number) => {
+  const formatPercentage = useCallback((value: number, total: number) => {
     if (total === 0) return '0%'
     return `${Math.round((value / total) * 100)}%`
-  }
+  }, [])
+
+  const getAttendanceColor = useCallback((rate: number, type: 'attendance' | 'punctuality' = 'attendance') => {
+    const thresholds = type === 'punctuality' ? ATTENDANCE_THRESHOLDS.punctuality : ATTENDANCE_THRESHOLDS
+    if (rate >= thresholds.excellent) return 'text-green-600'
+    if (rate >= thresholds.good) return 'text-orange-600'
+    return 'text-red-600'
+  }, [])
+
+  const handleDateRangeChange = useCallback((field: 'startDate' | 'endDate', value: string) => {
+    setDateRange(prev => ({ ...prev, [field]: value }))
+  }, [])
+
+  const recentTrends = useMemo(() => 
+    attendanceTrends.slice(-10),
+    [attendanceTrends]
+  )
 
   if (loading) {
     return (
@@ -303,13 +340,13 @@ export default function ReportsAndAnalytics() {
           <input
             type="date"
             value={dateRange.startDate}
-            onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
+            onChange={(e) => handleDateRangeChange('startDate', e.target.value)}
             className="px-3 py-2 border border-gray-300 rounded-md text-sm"
           />
           <input
             type="date"
             value={dateRange.endDate}
-            onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
+            onChange={(e) => handleDateRangeChange('endDate', e.target.value)}
             className="px-3 py-2 border border-gray-300 rounded-md text-sm"
           />
         </div>
@@ -379,7 +416,7 @@ export default function ReportsAndAnalytics() {
           <ChartBarIcon className="h-6 w-6 text-gray-400" />
         </div>
         
-        {attendanceTrends.length > 0 ? (
+        {recentTrends.length > 0 ? (
           <div className="space-y-4">
             <div className="grid grid-cols-7 gap-2 text-sm font-medium text-gray-700">
               <div>Fecha</div>
@@ -391,10 +428,10 @@ export default function ReportsAndAnalytics() {
               <div>% Puntualidad</div>
             </div>
             
-            {attendanceTrends.slice(-10).map((trend) => {
+            {recentTrends.map((trend) => {
               const total = trend.present + trend.absent + trend.late
-              const attendanceRate = total > 0 ? ((trend.present + trend.late) / total * 100).toFixed(1) : '0'
-              const punctualityRate = total > 0 ? (trend.present / total * 100).toFixed(1) : '0'
+              const attendanceRate = total > 0 ? ((trend.present + trend.late) / total * 100) : 0
+              const punctualityRate = total > 0 ? (trend.present / total * 100) : 0
               
               return (
                 <div key={trend.date} className="grid grid-cols-7 gap-2 text-sm py-2 border-b border-gray-100">
@@ -403,11 +440,11 @@ export default function ReportsAndAnalytics() {
                   <div className="text-red-600 font-medium">{trend.absent}</div>
                   <div className="text-orange-600 font-medium">{trend.late}</div>
                   <div className="font-medium">{total}</div>
-                  <div className={`font-medium ${parseFloat(attendanceRate) >= 90 ? 'text-green-600' : parseFloat(attendanceRate) >= 75 ? 'text-orange-600' : 'text-red-600'}`}>
-                    {attendanceRate}%
+                  <div className={`font-medium ${getAttendanceColor(attendanceRate)}`}>
+                    {attendanceRate.toFixed(1)}%
                   </div>
-                  <div className={`font-medium ${parseFloat(punctualityRate) >= 85 ? 'text-green-600' : parseFloat(punctualityRate) >= 70 ? 'text-orange-600' : 'text-red-600'}`}>
-                    {punctualityRate}%
+                  <div className={`font-medium ${getAttendanceColor(punctualityRate, 'punctuality')}`}>
+                    {punctualityRate.toFixed(1)}%
                   </div>
                 </div>
               )
