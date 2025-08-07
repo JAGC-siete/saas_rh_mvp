@@ -23,12 +23,21 @@ const INITIAL_FORM_DATA = {
   name: '',
   email: '',
   phone: '',
+  role: '',
+  team: '',
+  position: '',
   department_id: '',
   work_schedule_id: '',
-  position: '',
-  salary: '',
+  base_salary: '',
   hire_date: '',
-  status: 'active'
+  termination_date: '',
+  status: 'active',
+  bank_name: '',
+  bank_account: '',
+  emergency_contact_name: '',
+  emergency_contact_phone: '',
+  address: '',
+  metadata: ''
 }
 
 export default function EmployeeManager() {

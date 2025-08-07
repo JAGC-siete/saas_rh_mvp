@@ -24,17 +24,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       name, 
       email, 
       phone, 
+      role,
+      team,
+      position, 
       department_id, 
       work_schedule_id, 
-      position, 
-      salary, 
+      base_salary, 
       hire_date, 
-      status = 'active' 
+      termination_date,
+      status = 'active',
+      bank_name,
+      bank_account,
+      emergency_contact_name,
+      emergency_contact_phone,
+      address,
+      metadata
     } = req.body
 
-    if (!employee_code || !dni || !name) {
+    if (!employee_code || !dni || !name || !base_salary) {
       return res.status(400).json({ 
-        error: 'Missing required fields: employee_code, dni, and name are required' 
+        error: 'Missing required fields: employee_code, dni, name, and base_salary are required' 
       })
     }
 
@@ -72,12 +81,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       name,
       email: email || null,
       phone: phone || null,
+      role: role || null,
+      team: team || null,
+      position: position || null,
       department_id: department_id || null,
       work_schedule_id: work_schedule_id || null,
-      position: position || null,
-      salary: salary ? parseFloat(salary) : null,
+      base_salary: parseFloat(base_salary),
       hire_date: hire_date || null,
+      termination_date: termination_date || null,
       status,
+      bank_name: bank_name || null,
+      bank_account: bank_account || null,
+      emergency_contact_name: emergency_contact_name || null,
+      emergency_contact_phone: emergency_contact_phone || null,
+      address: address || null,
+      metadata: metadata || null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     }
