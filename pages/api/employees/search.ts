@@ -1,96 +1,42 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '@supabase/supabase-js'
 
+// Use service role key for admin access (same as departments and attendance APIs)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+
+if (!supabaseUrl || !supabaseServiceKey) {
+  throw new Error('Missing required Supabase environment variables')
+}
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  try {
-    // Get Supabase client
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
+      try {
+      console.log('🔍 Employees Search API: Iniciando...')
 
-    // Get user session from cookies - try multiple cookie names
-    const authCookie = req.cookies['sb-access-token'] || req.cookies['sb-refresh-token'] || req.cookies['supabase-auth-token']
-    
-    console.log('🔍 Available cookies:', Object.keys(req.cookies))
-    console.log('🔍 Auth cookie found:', !!authCookie)
-    
-    if (!authCookie) {
-      console.error('❌ No auth cookie found')
-      return res.status(401).json({ error: 'Unauthorized - No auth cookie' })
-    }
+      // Get query parameters
+      const { 
+        search = '', 
+        page = '1', 
+        limit = '20',
+        status = 'active',
+        department_id,
+        sort_by = 'name',
+        sort_order = 'asc'
+      } = req.query
 
-    // Try to get user session
-    let user = null
-    let authError = null
-    
-    try {
-      // First try with getUser
-      const { data: userData, error: userError } = await supabase.auth.getUser(authCookie)
-      if (userError) {
-        console.log('⚠️ getUser failed, trying getSession...')
-        // If getUser fails, try getSession
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
-        if (sessionError) {
-          console.error('❌ Both getUser and getSession failed:', sessionError)
-          authError = sessionError
-        } else {
-          user = sessionData.session?.user || null
-        }
-      } else {
-        user = userData.user
-      }
-    } catch (error) {
-      console.error('❌ Auth error:', error)
-      authError = error
-    }
-    
-    if (authError || !user) {
-      console.error('❌ Final auth check failed:', { authError, user: !!user })
-      return res.status(401).json({ error: 'Unauthorized - Invalid session' })
-    }
-    
-    console.log('✅ User authenticated:', user.id)
+      const pageNum = parseInt(page as string)
+      const limitNum = parseInt(limit as string)
+      const offset = (pageNum - 1) * limitNum
 
-    // Get user profile to determine company
-    const { data: profile, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('company_id')
-      .eq('id', user.id)
-      .single()
+      console.log('📋 Query parameters:', { search, page: pageNum, limit: limitNum, status, department_id, sort_by, sort_order })
 
-    if (profileError) {
-      console.error('Profile error:', profileError)
-      return res.status(500).json({ error: 'Error fetching user profile' })
-    }
-
-    if (!profile?.company_id) {
-      console.error('No company_id found for user:', user.id)
-      return res.status(400).json({ error: 'User not associated with a company' })
-    }
-
-    console.log('User profile found:', { userId: user.id, companyId: profile.company_id })
-
-    // Get query parameters
-    const { 
-      search = '', 
-      page = '1', 
-      limit = '20',
-      status = 'active',
-      department_id,
-      sort_by = 'name',
-      sort_order = 'asc'
-    } = req.query
-
-    const pageNum = parseInt(page as string)
-    const limitNum = parseInt(limit as string)
-    const offset = (pageNum - 1) * limitNum
-
-    // Build the query
+      // Build the query
     let query = supabase
       .from('employees')
       .select(`
@@ -100,7 +46,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         employee_scores!left(total_points, weekly_points, monthly_points),
         attendance_records!left(check_in, check_out, status)
       `, { count: 'exact' })
-      .eq('company_id', profile.company_id)
       .eq('status', status)
 
     // Add search filter if provided
