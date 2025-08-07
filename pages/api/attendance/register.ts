@@ -59,37 +59,52 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  // 🔒 AUTENTICACIÓN OPCIONAL - Permitir registro público por DNI
-  let authenticatedUser = null
-  let userProfile = null
-  
+  // 🔒 AUTENTICACIÓN REQUERIDA
   try {
     const supabase = createClient(req, res)
     const { data: { session } } = await supabase.auth.getSession()
     
-    if (session?.user) {
-      // Si hay sesión, verificar permisos
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('role, permissions, company_id')
-        .eq('id', session.user.id)
-        .single()
-
-      if (profile) {
-        authenticatedUser = session.user
-        userProfile = profile
-        console.log('🔐 Usuario autenticado:', { 
-          userId: session.user.id, 
-          role: profile.role,
-          companyId: profile.company_id 
-        })
-      }
-    } else {
-      console.log('🌐 Registro público - sin autenticación')
+    if (!session) {
+      return res.status(401).json({ 
+        error: 'No autorizado',
+        message: 'Debe iniciar sesión para registrar asistencia'
+      })
     }
+
+    // Verificar que el usuario tiene permisos para registrar asistencia
+    const { data: userProfile } = await supabase
+      .from('user_profiles')
+      .select('role, permissions, company_id')
+      .eq('id', session.user.id)
+      .single()
+
+    if (!userProfile) {
+      return res.status(403).json({ 
+        error: 'Perfil no encontrado',
+        message: 'Su perfil de usuario no está configurado correctamente'
+      })
+    }
+
+    // Verificar permisos (admin, manager, o employee pueden registrar asistencia)
+    const allowedRoles = ['admin', 'manager', 'employee']
+    if (!allowedRoles.includes(userProfile.role)) {
+      return res.status(403).json({ 
+        error: 'Permisos insuficientes',
+        message: 'No tiene permisos para registrar asistencia'
+      })
+    }
+
+    console.log('🔐 Usuario autenticado:', { 
+      userId: session.user.id, 
+      role: userProfile.role,
+      companyId: userProfile.company_id 
+    })
   } catch (authError) {
-    console.log('⚠️ Error de autenticación (continuando como público):', authError)
-    // Continuar sin autenticación para registro público
+    console.error('❌ Error de autenticación:', authError)
+    return res.status(500).json({ 
+      error: 'Error de autenticación',
+      message: 'No se pudo verificar la autenticación'
+    })
   }
 
   try {
@@ -128,7 +143,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('🔍 Buscando empleado...', { dni, last5 })
     let employeeQuery = supabase
       .from('employees')
-      .select('id, work_schedule_id, dni, name, status, role, company_id')
+      .select('id, work_schedule_id, dni, name, status, position, company_id')
       .eq('status', 'active')
 
     if (dni) {
@@ -165,7 +180,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const employee = employees[0]
-    console.log('✅ Empleado encontrado:', { id: employee.id, name: employee.name, role: employee.role })
+    console.log('✅ Empleado encontrado:', { id: employee.id, name: employee.name, position: employee.position })
 
     // PASO 3: Validar work_schedule_id
     if (!employee.work_schedule_id) {
@@ -330,7 +345,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const expectedEnd = parseExpectedTime(endTime, hondurasTime)
       const earlyDepartureMinutes = Math.max(0, calculateMinutesDifference(expectedEnd, hondurasTime))
 
-      const { data: updateData, error: updateError } = await supabase
+      const { error: updateError } = await supabase
         .from('attendance_records')
         .update({
           check_out: getHondurasTimeISO(),
@@ -339,16 +354,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           updated_at: getHondurasTimeISO()
         })
         .eq('id', existingRecord.id)
-        .select()
-        .single()
-
-      if (!updateData) {
-        console.error('❌ No se pudo actualizar el registro:', { existingRecord })
-        return res.status(500).json({ 
-          error: 'Error registrando salida',
-          message: 'No se pudo actualizar el registro de asistencia'
-        })
-      }
 
       if (updateError) {
         console.error('❌ Error registrando salida:', updateError)
@@ -500,7 +505,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       timeDetection: intendedAction,
       employee: {
         name: employee.name,
-        role: employee.role
+        position: employee.position
       },
       timestamp: getHondurasTimeISO(),
       workSchedule: {
