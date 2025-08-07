@@ -103,29 +103,51 @@ export default function EmployeeManager() {
 
   const fetchDepartments = useCallback(async () => {
     try {
+      console.log('🔍 Fetching departments...')
       const { data, error } = await supabase
         .from('departments')
         .select('id, name')
         .order('name')
 
-      if (error) throw error
+      if (error) {
+        console.error('❌ Error fetching departments:', error)
+        throw error
+      }
+      
+      console.log(`✅ Departments loaded: ${data?.length || 0} departments`)
+      if (data && data.length > 0) {
+        console.log('📋 Sample departments:', data.slice(0, 3).map((d: Department) => `${d.name} (${d.id})`))
+      }
+      
       setDepartments(data || [])
     } catch (error) {
-      console.error('Error fetching departments:', error)
+      console.error('💥 Error fetching departments:', error)
+      setError('Error loading departments')
     }
   }, [])
 
   const fetchWorkSchedules = useCallback(async () => {
     try {
+      console.log('🔍 Fetching work schedules...')
       const { data, error } = await supabase
         .from('work_schedules')
         .select('id, name')
         .order('name')
 
-      if (error) throw error
+      if (error) {
+        console.error('❌ Error fetching work schedules:', error)
+        throw error
+      }
+      
+      console.log(`✅ Work schedules loaded: ${data?.length || 0} schedules`)
+      if (data && data.length > 0) {
+        console.log('📋 Sample schedules:', data.slice(0, 3).map((s: WorkSchedule) => `${s.name} (${s.id})`))
+      }
+      
       setWorkSchedules(data || [])
     } catch (error) {
-      console.error('Error fetching work schedules:', error)
+      console.error('💥 Error fetching work schedules:', error)
+      setError('Error loading work schedules')
     }
   }, [])
 

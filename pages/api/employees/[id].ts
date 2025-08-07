@@ -61,20 +61,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(400).json({ error: 'User profile not found or no company assigned' })
       }
 
-      // Check if employee belongs to user's company
+      // Check if employee exists and belongs to user's company
       const { data: existingEmployee, error: checkError } = await supabase
         .from('employees')
-        .select('id, company_id')
+        .select('id, company_id, employee_code, name')
         .eq('id', id)
         .single()
 
       if (checkError || !existingEmployee) {
+        console.error(`Employee not found: ${id}`)
         return res.status(404).json({ error: 'Employee not found' })
       }
 
       if (existingEmployee.company_id !== userProfile.company_id) {
-        return res.status(403).json({ error: 'Access denied' })
+        console.error(`Access denied: Employee ${existingEmployee.name} (${existingEmployee.employee_code}) does not belong to user's company`)
+        return res.status(403).json({ error: 'Access denied: Employee does not belong to your company' })
       }
+
+      console.log(`✅ Permission granted: Updating employee ${existingEmployee.name} (${existingEmployee.employee_code})`)
 
       // Check if employee code already exists (excluding current employee)
       const { data: duplicateEmployee, error: duplicateError } = await supabase
@@ -164,20 +168,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(400).json({ error: 'User profile not found or no company assigned' })
       }
 
-      // Check if employee belongs to user's company
+      // Check if employee exists and belongs to user's company
       const { data: existingEmployee, error: checkError } = await supabase
         .from('employees')
-        .select('id, company_id')
+        .select('id, company_id, employee_code, name')
         .eq('id', id)
         .single()
 
       if (checkError || !existingEmployee) {
+        console.error(`Employee not found: ${id}`)
         return res.status(404).json({ error: 'Employee not found' })
       }
 
       if (existingEmployee.company_id !== userProfile.company_id) {
-        return res.status(403).json({ error: 'Access denied' })
+        console.error(`Access denied: Employee ${existingEmployee.name} (${existingEmployee.employee_code}) does not belong to user's company`)
+        return res.status(403).json({ error: 'Access denied: Employee does not belong to your company' })
       }
+
+      console.log(`✅ Permission granted: Partial update for employee ${existingEmployee.name} (${existingEmployee.employee_code})`)
 
       // Update employee data (partial update)
       const updateData = {

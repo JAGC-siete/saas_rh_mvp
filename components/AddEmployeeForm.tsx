@@ -153,7 +153,7 @@ export default function AddEmployeeForm({
                   onChange={(e) => onFormChange('department_id', e.target.value)}
                   className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
-                  <option value="">Seleccionar Departamento</option>
+                  <option value="">Seleccionar Departamento ({departments.length} disponibles)</option>
                   {departments.map((dept) => (
                     <option key={dept.id} value={dept.id}>{dept.name}</option>
                   ))}
@@ -169,7 +169,7 @@ export default function AddEmployeeForm({
                   onChange={(e) => onFormChange('work_schedule_id', e.target.value)}
                   className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
-                  <option value="">Seleccionar Horario</option>
+                  <option value="">Seleccionar Horario ({workSchedules.length} disponibles)</option>
                   {workSchedules.map((schedule) => (
                     <option key={schedule.id} value={schedule.id}>{schedule.name}</option>
                   ))}
