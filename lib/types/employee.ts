@@ -7,12 +7,18 @@ export interface Employee {
   email: string
   phone: string
   role: string
+  team: string
   position: string
   base_salary: number
   hire_date: string
+  termination_date: string
   status: string
   bank_name: string
   bank_account: string
+  emergency_contact_name: string
+  emergency_contact_phone: string
+  address: string
+  metadata: string
   department_id: string
   work_schedule_id: string
   created_at: string

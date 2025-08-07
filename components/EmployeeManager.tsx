@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { useSupabaseSession } from '../lib/hooks/useSession'
 import { Employee } from '../lib/types/employee'
 import AddEmployeeForm from './AddEmployeeForm'
-import { PlusIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, PencilIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline'
 
 interface Department {
   id: string
@@ -49,9 +49,11 @@ export default function EmployeeManager() {
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState(INITIAL_FORM_DATA)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null)
+  const [showDeactivateModal, setShowDeactivateModal] = useState(false)
+  const [employeeToDeactivate, setEmployeeToDeactivate] = useState<Employee | null>(null)
   const { user } = useSupabaseSession()
 
-  // Simple fetch function
   const getErrorMessage = useCallback((error: unknown) => {
     if (error instanceof Error) {
       if (error.message.includes('401')) return 'Sesión expirada. Por favor, inicia sesión nuevamente.'
@@ -127,6 +129,13 @@ export default function EmployeeManager() {
     }
   }, [])
 
+  const resetForm = useCallback(() => {
+    setFormData(INITIAL_FORM_DATA)
+    setShowForm(false)
+    setEditingEmployee(null)
+    setError(null)
+  }, [])
+
   const handleFormChange = useCallback((field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }, [])
@@ -137,8 +146,14 @@ export default function EmployeeManager() {
     try {
       setIsSubmitting(true)
       
-      const response = await fetch('/api/employees', {
-        method: 'POST',
+      const url = editingEmployee 
+        ? `/api/employees/${editingEmployee.id}`
+        : '/api/employees'
+      
+      const method = editingEmployee ? 'PUT' : 'POST'
+      
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -147,26 +162,85 @@ export default function EmployeeManager() {
 
       if (!response.ok) {
         const errorText = await response.text()
-        throw new Error(`Error creating employee: ${response.status} - ${errorText}`)
+        throw new Error(`Error ${editingEmployee ? 'updating' : 'creating'} employee: ${response.status} - ${errorText}`)
       }
 
       // Reset form and refresh employees
-      setFormData(INITIAL_FORM_DATA)
-      setShowForm(false)
+      resetForm()
       fetchEmployees()
     } catch (error) {
-      console.error('Error creating employee:', error)
-      setError(error instanceof Error ? error.message : 'Error creating employee')
+      console.error(`Error ${editingEmployee ? 'updating' : 'creating'} employee:`, error)
+      setError(error instanceof Error ? error.message : `Error ${editingEmployee ? 'updating' : 'creating'} employee`)
     } finally {
       setIsSubmitting(false)
     }
-  }, [formData, fetchEmployees])
+  }, [formData, editingEmployee, resetForm, fetchEmployees])
 
   const handleCancel = useCallback(() => {
-    setFormData(INITIAL_FORM_DATA)
-    setShowForm(false)
-    setError(null)
+    resetForm()
+  }, [resetForm])
+
+  const handleEdit = useCallback((employee: Employee) => {
+    setEditingEmployee(employee)
+    setFormData({
+      employee_code: employee.employee_code || '',
+      dni: employee.dni || '',
+      name: employee.name || '',
+      email: employee.email || '',
+      phone: employee.phone || '',
+      role: employee.role || '',
+      team: employee.team || '',
+      position: employee.position || '',
+      department_id: employee.department_id || '',
+      work_schedule_id: employee.work_schedule_id || '',
+      base_salary: employee.base_salary?.toString() || '',
+      hire_date: employee.hire_date || '',
+      termination_date: employee.termination_date || '',
+      status: employee.status || 'active',
+      bank_name: employee.bank_name || '',
+      bank_account: employee.bank_account || '',
+      emergency_contact_name: employee.emergency_contact_name || '',
+      emergency_contact_phone: employee.emergency_contact_phone || '',
+      address: employee.address || '',
+      metadata: employee.metadata || ''
+    })
+    setShowForm(true)
   }, [])
+
+  const handleDeactivate = useCallback((employee: Employee) => {
+    setEmployeeToDeactivate(employee)
+    setShowDeactivateModal(true)
+  }, [])
+
+  const confirmDeactivate = useCallback(async () => {
+    if (!employeeToDeactivate) return
+
+    try {
+      setIsSubmitting(true)
+      
+      const response = await fetch(`/api/employees/${employeeToDeactivate.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: 'inactive' }),
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`Error deactivating employee: ${response.status} - ${errorText}`)
+      }
+
+      setShowDeactivateModal(false)
+      setEmployeeToDeactivate(null)
+      fetchEmployees()
+    } catch (error) {
+      console.error('Error deactivating employee:', error)
+      setError(error instanceof Error ? error.message : 'Error deactivating employee')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }, [employeeToDeactivate, fetchEmployees])
 
   const shouldFetch = useMemo(() => !!user?.id, [user?.id])
 
@@ -230,6 +304,7 @@ export default function EmployeeManager() {
           departments={departments}
           workSchedules={workSchedules}
           loading={isSubmitting}
+          isEditing={!!editingEmployee}
         />
       ) : (
         <div className="flex justify-between items-center">
@@ -250,7 +325,7 @@ export default function EmployeeManager() {
       {error && showForm && (
         <div className="bg-red-50 border border-red-200 rounded-md p-4">
           <div className="text-red-600">
-            <h3 className="text-sm font-medium">Error al crear empleado</h3>
+            <h3 className="text-sm font-medium">Error al {editingEmployee ? 'actualizar' : 'crear'} empleado</h3>
             <p className="text-sm mt-1">{error}</p>
           </div>
         </div>
@@ -320,6 +395,30 @@ export default function EmployeeManager() {
                           <p>Semana: {employee.employee_scores.weekly_points || 0}</p>
                         </div>
                       )}
+                      
+                      <div className="flex gap-2 mt-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleEdit(employee)}
+                          className="flex items-center gap-1"
+                        >
+                          <PencilIcon className="h-4 w-4" />
+                          <span className="hidden sm:inline">Editar</span>
+                        </Button>
+                        
+                        {employee.status === 'active' && (
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleDeactivate(employee)}
+                            className="flex items-center gap-1"
+                          >
+                            <TrashIcon className="h-4 w-4" />
+                            <span className="hidden sm:inline">Dar Baja</span>
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -328,6 +427,41 @@ export default function EmployeeManager() {
           )}
         </CardContent>
       </Card>
+
+      {/* Modal de Confirmación de Baja */}
+      {showDeactivateModal && employeeToDeactivate && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Confirmar Baja de Empleado
+            </h3>
+            <p className="text-gray-600 mb-6">
+              ¿Estás seguro de que quieres dar de baja a <strong>{employeeToDeactivate.name}</strong>?
+              Esta acción cambiará su estado a "Inactivo".
+            </p>
+            <div className="flex gap-3">
+              <Button
+                onClick={confirmDeactivate}
+                disabled={isSubmitting}
+                variant="destructive"
+                className="flex-1"
+              >
+                {isSubmitting ? 'Procesando...' : 'Confirmar Baja'}
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowDeactivateModal(false)
+                  setEmployeeToDeactivate(null)
+                }}
+                variant="outline"
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

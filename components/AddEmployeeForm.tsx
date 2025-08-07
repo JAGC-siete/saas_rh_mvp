@@ -21,6 +21,7 @@ interface AddEmployeeFormProps {
   departments: Department[]
   workSchedules: WorkSchedule[]
   loading: boolean
+  isEditing?: boolean
 }
 
 export default function AddEmployeeForm({
@@ -31,12 +32,13 @@ export default function AddEmployeeForm({
   departments,
   workSchedules,
   loading,
+  isEditing = false,
 }: AddEmployeeFormProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Agregar Nuevo Empleado</CardTitle>
-        <CardDescription>Complete toda la información del empleado</CardDescription>
+        <CardTitle>{isEditing ? 'Editar Empleado' : 'Agregar Nuevo Empleado'}</CardTitle>
+        <CardDescription>{isEditing ? 'Modifique la información del empleado' : 'Complete toda la información del empleado'}</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={onSubmit} className="space-y-6">
@@ -325,7 +327,7 @@ export default function AddEmployeeForm({
           {/* Botones */}
           <div className="flex gap-4 pt-4">
             <Button type="submit" disabled={loading} className="flex-1">
-              {loading ? 'Agregando...' : 'Agregar Empleado'}
+              {loading ? (isEditing ? 'Actualizando...' : 'Agregando...') : (isEditing ? 'Actualizar Empleado' : 'Agregar Empleado')}
             </Button>
             <Button type="button" variant="outline" onClick={onCancel} className="flex-1">
               Cancelar
