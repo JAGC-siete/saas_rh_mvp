@@ -1,6 +1,6 @@
 
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '../lib/supabase/client'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -48,42 +48,80 @@ interface PayrollStats {
   averageSalary: number
   departmentBreakdown: { [key: string]: { count: number, name: string, avgSalary: number } }
   attendanceRate: number
-  payrollCoverage: number // % of employees with payroll records
+  payrollCoverage: number
+}
+
+const INITIAL_PAYROLL_STATS: PayrollStats = {
+  totalEmployees: 0,
+  totalGrossSalary: 0,
+  totalDeductions: 0,
+  totalNetSalary: 0,
+  averageSalary: 0,
+  departmentBreakdown: {},
+  attendanceRate: 0,
+  payrollCoverage: 0
+}
+
+const INITIAL_GENERATE_FORM = {
+  periodo: '',
+  quincena: 1,
+  incluirDeducciones: false,
+  soloEmpleadosConAsistencia: true
+}
+
+const STATUS_CONFIG = {
+  draft: { label: 'Borrador', classes: 'bg-gray-100 text-gray-800' },
+  approved: { label: 'Aprobada', classes: 'bg-blue-100 text-blue-800' },
+  paid: { label: 'Pagada', classes: 'bg-green-100 text-green-800' }
+} as const
+
+const DEFAULT_PERMISSIONS = {
+  can_manage_employees: true,
+  can_view_payroll: true,
+  can_manage_attendance: true,
+  can_manage_departments: true,
+  can_view_reports: true,
+  can_manage_companies: true,
+  can_generate_payroll: true,
+  can_export_payroll: true,
+  can_view_own_attendance: true,
+  can_register_attendance: true
 }
 
 export default function PayrollManager() {
   const [payrollRecords, setPayrollRecords] = useState<PayrollRecord[]>([])
   const [employees, setEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(false)
-  const [showGenerateForm, setShowGenerateForm] = useState(false)
   const [selectedPeriod, setSelectedPeriod] = useState('')
   const [userProfile, setUserProfile] = useState<any>(null)
-  const [payrollStats, setPayrollStats] = useState<PayrollStats>({
-    totalEmployees: 0,
-    totalGrossSalary: 0,
-    totalDeductions: 0,
-    totalNetSalary: 0,
-    averageSalary: 0,
-    departmentBreakdown: {},
-    attendanceRate: 0,
-    payrollCoverage: 0
-  })
+  const [payrollStats, setPayrollStats] = useState<PayrollStats>(INITIAL_PAYROLL_STATS)
   const [departments, setDepartments] = useState<{ [key: string]: string }>({})
   const [activeTab, setActiveTab] = useState<'dashboard' | 'records' | 'generate' | 'reports'>('dashboard')
-
-  // Form state
-  const [generateForm, setGenerateForm] = useState({
-    periodo: '',
-    quincena: 1,
-    incluirDeducciones: false,
-    soloEmpleadosConAsistencia: true
-  });
-
-  // Create Supabase client inside component to avoid build-time execution
+  const [generateForm, setGenerateForm] = useState(INITIAL_GENERATE_FORM)
   const [supabase, setSupabase] = useState<any>(null)
 
+  // Memoized values
+  const currentPeriodRecords = useMemo(() => 
+    payrollRecords.filter(record => 
+      record.period_start.startsWith(selectedPeriod || new Date().toISOString().slice(0, 7))
+    ),
+    [payrollRecords, selectedPeriod]
+  )
+
+  const filteredRecords = useMemo(() => 
+    selectedPeriod 
+      ? payrollRecords.filter(record => record.period_start.startsWith(selectedPeriod))
+      : payrollRecords,
+    [payrollRecords, selectedPeriod]
+  )
+
+  const currentPeriod = useMemo(() => 
+    selectedPeriod || new Date().toISOString().slice(0, 7),
+    [selectedPeriod]
+  )
+
+  // Initialize Supabase client
   useEffect(() => {
-    // Initialize Supabase client only on client side
     try {
       const client = createClient()
       if (client) {
@@ -100,23 +138,46 @@ export default function PayrollManager() {
     }
   }, [supabase])
 
-  const fetchData = async () => {
+  const resetGenerateForm = useCallback(() => {
+    setGenerateForm(INITIAL_GENERATE_FORM)
+  }, [])
+
+  const downloadFile = useCallback(async (url: string, filename: string, options: RequestInit = {}) => {
+    try {
+      const response = await fetch(url, {
+        credentials: 'include',
+        ...options
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `HTTP ${response.status}`)
+      }
+
+      const blob = await response.blob()
+      const downloadUrl = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = downloadUrl
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      window.URL.revokeObjectURL(downloadUrl)
+      document.body.removeChild(link)
+    } catch (error: any) {
+      console.error('Error downloading file:', error)
+      alert(`❌ Error descargando archivo: ${error.message}`)
+    }
+  }, [])
+
+  const fetchData = useCallback(async () => {
     if (!supabase) return
     
     setLoading(true)
     try {
-      // Get user profile with better error handling
       const { data: { user }, error: userError } = await supabase.auth.getUser()
       
-      if (userError) {
-        console.error('Error getting user:', userError)
+      if (userError || !user) {
         alert('❌ Error de autenticación. Por favor, inicia sesión nuevamente.')
-        return
-      }
-      
-      if (!user) {
-        console.error('No user found - user is null')
-        alert('❌ No se encontró usuario autenticado. Por favor, inicia sesión.')
         return
       }
 
@@ -131,7 +192,6 @@ export default function PayrollManager() {
       if (profileError) {
         console.error('Error fetching user profile:', profileError)
         
-        // Si el perfil no existe, intentar crearlo
         if (profileError.code === 'PGRST116') {
           console.log('🔧 Perfil no encontrado, intentando crear...')
           const { data: newProfile, error: createError } = await supabase
@@ -140,18 +200,7 @@ export default function PayrollManager() {
               id: user.id,
               role: 'super_admin',
               is_active: true,
-              permissions: {
-                can_manage_employees: true,
-                can_view_payroll: true,
-                can_manage_attendance: true,
-                can_manage_departments: true,
-                can_view_reports: true,
-                can_manage_companies: true,
-                can_generate_payroll: true,
-                can_export_payroll: true,
-                can_view_own_attendance: true,
-                can_register_attendance: true
-              },
+              permissions: DEFAULT_PERMISSIONS,
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString()
             })
@@ -177,19 +226,16 @@ export default function PayrollManager() {
         setUserProfile(profile)
       }
 
-      if (!profile) {
-        console.warn('No user profile found, skipping company data fetch')
+      if (!profile || !profile.is_active) {
+        if (!profile.is_active) {
+          alert('❌ Su cuenta ha sido desactivada')
+        }
         setPayrollRecords([])
         setEmployees([])
         return
       }
 
-      if (!profile.is_active) {
-        alert('❌ Su cuenta ha sido desactivada')
-        return
-      }
-
-      // Fetch payroll records (sin restricción de empresa)
+      // Fetch payroll records
       let payrollQuery = supabase
         .from('payroll_records')
         .select(`
@@ -203,7 +249,6 @@ export default function PayrollManager() {
         `)
         .order('created_at', { ascending: false })
 
-      // Si el usuario tiene company_id, filtrar por empresa
       if (profile.company_id) {
         payrollQuery = payrollQuery.eq('employees.company_id', profile.company_id)
       }
@@ -218,14 +263,13 @@ export default function PayrollManager() {
       console.log('✅ Payroll records loaded:', payrollData?.length || 0)
       setPayrollRecords(payrollData || [])
 
-      // Fetch employees for generation form (sin restricción de empresa)
+      // Fetch employees
       let employeesQuery = supabase
         .from('employees')
         .select('id, name, employee_code, base_salary, department_id')
         .eq('status', 'active')
         .order('name')
 
-      // Si el usuario tiene company_id, filtrar por empresa
       if (profile.company_id) {
         employeesQuery = employeesQuery.eq('company_id', profile.company_id)
       }
@@ -240,7 +284,6 @@ export default function PayrollManager() {
       console.log('✅ Employees loaded:', employeesData?.length || 0)
       setEmployees(employeesData || [])
 
-      // Calculate statistics
       await loadDepartments()
       calculatePayrollStats(payrollData || [], employeesData || [])
 
@@ -251,9 +294,9 @@ export default function PayrollManager() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [supabase])
 
-  const loadDepartments = async () => {
+  const loadDepartments = useCallback(async () => {
     if (!supabase) return
     
     try {
@@ -276,9 +319,9 @@ export default function PayrollManager() {
     } catch (error) {
       console.error('Error loading departments:', error)
     }
-  }
+  }, [supabase])
 
-  const calculatePayrollStats = (records: PayrollRecord[], emps: Employee[]) => {
+  const calculatePayrollStats = useCallback((records: PayrollRecord[], emps: Employee[]) => {
     const stats: PayrollStats = {
       totalEmployees: emps.length,
       totalGrossSalary: 0,
@@ -290,12 +333,6 @@ export default function PayrollManager() {
       payrollCoverage: 0
     }
 
-    // Calculate totals from current period records
-    const currentPeriodRecords = records.filter(r => 
-      r.period_start.startsWith(selectedPeriod || new Date().toISOString().slice(0, 7))
-    )
-
-    // Calculate payroll coverage
     stats.payrollCoverage = emps.length > 0 ? (currentPeriodRecords.length / emps.length) * 100 : 0
 
     currentPeriodRecords.forEach(record => {
@@ -326,25 +363,22 @@ export default function PayrollManager() {
       stats.departmentBreakdown[deptId].avgSalary = deptRecords.length > 0 ? totalSalary / deptRecords.length : 0
     })
 
-    // Calculate averages
     if (currentPeriodRecords.length > 0) {
       stats.averageSalary = stats.totalNetSalary / currentPeriodRecords.length
     }
 
-    // Calculate attendance rate
     const totalDays = currentPeriodRecords.reduce((sum, r) => sum + r.days_worked, 0)
-    const expectedDays = currentPeriodRecords.length * 15 // Assuming 15 days per period
+    const expectedDays = currentPeriodRecords.length * 15
     stats.attendanceRate = expectedDays > 0 ? (totalDays / expectedDays) * 100 : 0
 
     setPayrollStats(stats)
-  }
+  }, [currentPeriodRecords, departments])
 
-  const generatePayroll = async (e: React.FormEvent) => {
+  const generatePayroll = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
     try {
-      // Verificar autenticación primero
       const { data: { user }, error: userError } = await supabase.auth.getUser()
       
       if (userError || !user) {
@@ -377,7 +411,6 @@ export default function PayrollManager() {
         throw new Error(errorData.error || 'Failed to generate payroll')
       }
 
-      // Si es PDF, descargar directamente
       if (response.headers.get('content-type')?.includes('application/pdf')) {
         const blob = await response.blob()
         const url = window.URL.createObjectURL(blob)
@@ -390,16 +423,10 @@ export default function PayrollManager() {
         document.body.removeChild(a)
         alert('✅ Nómina generada y PDF descargado exitosamente!')
       } else {
-        const data = await response.json()
         alert('✅ Nómina generada exitosamente!')
       }
-      setShowGenerateForm(false)
-      setGenerateForm({
-        periodo: '',
-        quincena: 1,
-        incluirDeducciones: false,
-        soloEmpleadosConAsistencia: true
-      })
+      
+      resetGenerateForm()
       fetchData()
 
     } catch (error: any) {
@@ -409,9 +436,9 @@ export default function PayrollManager() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [supabase, generateForm, resetGenerateForm, fetchData])
 
-  const approvePayroll = async (payrollId: string) => {
+  const approvePayroll = useCallback(async (payrollId: string) => {
     try {
       const { error } = await supabase
         .from('payroll_records')
@@ -428,9 +455,9 @@ export default function PayrollManager() {
     } catch (error: any) {
       alert(`❌ Error: ${error.message}`)
     }
-  }
+  }, [supabase, userProfile?.employee_id, fetchData])
 
-  const markAsPaid = async (payrollId: string) => {
+  const markAsPaid = useCallback(async (payrollId: string) => {
     try {
       const { error } = await supabase
         .from('payroll_records')
@@ -446,217 +473,131 @@ export default function PayrollManager() {
     } catch (error: any) {
       alert(`❌ Error: ${error.message}`)
     }
-  }
+  }, [supabase, fetchData])
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = useCallback((amount: number) => {
     return new Intl.NumberFormat('es-HN', {
       style: 'currency',
       currency: 'HNL'
     }).format(amount)
-  }
+  }, [])
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = useCallback((status: string) => {
     const baseClasses = 'px-2 py-1 rounded-full text-xs font-medium'
-    switch (status) {
-      case 'draft':
-        return <span className={`${baseClasses} bg-gray-100 text-gray-800`}>Borrador</span>
-      case 'approved':
-        return <span className={`${baseClasses} bg-blue-100 text-blue-800`}>Aprobada</span>
-      case 'paid':
-        return <span className={`${baseClasses} bg-green-100 text-green-800`}>Pagada</span>
-      default:
-        return <span className={`${baseClasses} bg-gray-100 text-gray-800`}>{status}</span>
+    const config = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG]
+    
+    if (config) {
+      return <span className={`${baseClasses} ${config.classes}`}>{config.label}</span>
     }
-  }
+    
+    return <span className={`${baseClasses} bg-gray-100 text-gray-800`}>{status}</span>
+  }, [])
 
-  const filteredRecords = selectedPeriod 
-    ? payrollRecords.filter(record => 
-        record.period_start.startsWith(selectedPeriod)
-      )
-    : payrollRecords
-
-  // Calculate totals
-  const totals = filteredRecords.reduce((acc, record) => {
-    acc.grossSalary += record.gross_salary
-    acc.totalDeductions += record.total_deductions
-    acc.netSalary += record.net_salary
-    return acc
-  }, { grossSalary: 0, totalDeductions: 0, netSalary: 0 })
-
-  const downloadPayrollPDF = async (record: PayrollRecord) => {
-    try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-      if (authError || !user) {
-        alert('❌ Debes estar logueado para descargar el PDF. Por favor, inicia sesión.')
-        return
-      }
-
-      const period = record.period_start.slice(0, 7)
-      const day = Number(record.period_start.slice(8, 10))
-      const quincena = day === 1 ? 1 : 2
-      
-      const response = await fetch(`/api/payroll/calculate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/pdf'
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          periodo: period,
-          quincena: quincena,
-          incluirDeducciones: true
-        })
+  const downloadPayrollPDF = useCallback(async (record: PayrollRecord) => {
+    const period = record.period_start.slice(0, 7)
+    const day = Number(record.period_start.slice(8, 10))
+    const quincena = day === 1 ? 1 : 2
+    
+    await downloadFile('/api/payroll/calculate', `planilla_paragon_${period}_q${quincena}.pdf`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/pdf'
+      },
+      body: JSON.stringify({
+        periodo: period,
+        quincena: quincena,
+        incluirDeducciones: true
       })
+    })
+  }, [downloadFile])
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(`Error: ${response.status} ${response.statusText} - ${errorData.error || ''}`)
-      }
-
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `planilla_paragon_${period}_q${quincena}.pdf`
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
-      
-    } catch (error: any) {
-      console.error('Error downloading PDF:', error)
-      alert(`❌ Error descargando PDF: ${error.message || 'Unknown error'}`)
+  const downloadIndividualReceipt = useCallback(async (record: PayrollRecord) => {
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    if (!session?.access_token) {
+      alert('❌ No se encontró token de sesión. Por favor, inicia sesión nuevamente.')
+      return
     }
-  }
 
-  const downloadIndividualReceipt = async (record: PayrollRecord) => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      if (!session?.access_token) {
-        throw new Error('No authentication token found.')
-      }
+    const period = record.period_start.slice(0, 7)
+    const day = Number(record.period_start.slice(8, 10))
+    const quincena = day === 1 ? 1 : 2
 
-      const period = record.period_start.slice(0, 7)
-      const day = Number(record.period_start.slice(8, 10))
-      const quincena = day === 1 ? 1 : 2
-
-      const response = await fetch('/api/payroll/export', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-          'Accept': 'application/pdf'
-        },
-        body: JSON.stringify({
-          periodo: period,
-          formato: 'recibo-individual',
-          employeeId: record.employee_id
-        }),
+    await downloadFile('/api/payroll/export', `recibo_${record.employees?.employee_code}_${period}_q${quincena}.pdf`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+        'Accept': 'application/pdf'
+      },
+      body: JSON.stringify({
+        periodo: period,
+        formato: 'recibo-individual',
+        employeeId: record.employee_id
       })
+    })
+  }, [supabase, downloadFile])
 
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || 'Failed to generate receipt')
-      }
-
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `recibo_${record.employees?.employee_code}_${period}_q${quincena}.pdf`
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
-
-    } catch (error: any) {
-      alert(`❌ Error descargando recibo: ${error.message}`)
+  const exportToExcel = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    if (!session?.access_token) {
+      alert('❌ No se encontró token de sesión. Por favor, inicia sesión nuevamente.')
+      return
     }
-  }
 
-  const exportToExcel = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      if (!session?.access_token) {
-        throw new Error('No authentication token found.')
-      }
-
-      const response = await fetch('/api/payroll/export', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({
-          periodo: selectedPeriod || new Date().toISOString().slice(0, 7),
-          formato: 'excel'
-        }),
+    await downloadFile('/api/payroll/export', `nomina_paragon_${currentPeriod}.xlsx`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({
+        periodo: currentPeriod,
+        formato: 'excel'
       })
+    })
+  }, [supabase, downloadFile, currentPeriod])
 
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || 'Failed to export')
-      }
-
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `nomina_paragon_${selectedPeriod || 'actual'}.xlsx`
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
-
-    } catch (error: any) {
-      alert(`❌ Error exportando: ${error.message}`)
+  const exportPayrollReport = useCallback(async (reportType: string, format: 'pdf' | 'csv') => {
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    if (!session?.access_token) {
+      alert('❌ No se encontró token de sesión. Por favor, inicia sesión nuevamente.')
+      return
     }
-  }
 
-  const exportPayrollReport = async (reportType: string, format: 'pdf' | 'csv') => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      if (!session?.access_token) {
-        throw new Error('No authentication token found.')
-      }
-
-      const response = await fetch('/api/reports/export-payroll', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': format === 'pdf' ? 'application/pdf' : 'text/csv',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({
-          reportType,
-          format,
-          periodo: selectedPeriod || new Date().toISOString().slice(0, 7)
-        }),
+    await downloadFile('/api/reports/export-payroll', `reporte_nomina_${reportType}_${currentPeriod}.${format}`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Accept': format === 'pdf' ? 'application/pdf' : 'text/csv',
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({
+        reportType,
+        format,
+        periodo: currentPeriod
       })
+    })
+  }, [supabase, downloadFile, currentPeriod])
 
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || 'Failed to export')
-      }
+  const handleFormChange = useCallback((field: keyof typeof INITIAL_GENERATE_FORM, value: string | number | boolean) => {
+    setGenerateForm(prev => ({ ...prev, [field]: value }))
+  }, [])
 
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `reporte_nomina_${reportType}_${selectedPeriod || 'actual'}.${format}`
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
+  const handlePeriodChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSelectedPeriod(e.target.value)
+  }, [])
 
-    } catch (error: any) {
-      alert(`❌ Error exportando reporte: ${error.message}`)
-    }
-  }
+  const clearPeriodFilter = useCallback(() => {
+    setSelectedPeriod('')
+  }, [])
+
+  const handleTabChange = useCallback((tab: typeof activeTab) => {
+    setActiveTab(tab)
+  }, [])
 
   return (
     <div className="space-y-6">
@@ -667,13 +608,13 @@ export default function PayrollManager() {
           <p className="text-gray-600">Sistema integral de procesamiento y administración de nóminas</p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => setActiveTab('generate')}>
+          <Button onClick={() => handleTabChange('generate')}>
             📊 Generar Nómina
           </Button>
           <Button variant="outline" onClick={exportToExcel}>
             📥 Exportar Excel
           </Button>
-          <Button variant="outline" onClick={() => setActiveTab('reports')}>
+          <Button variant="outline" onClick={() => handleTabChange('reports')}>
             📋 Reportes
           </Button>
         </div>
@@ -683,7 +624,7 @@ export default function PayrollManager() {
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex space-x-8">
           <button
-            onClick={() => setActiveTab('dashboard')}
+            onClick={() => handleTabChange('dashboard')}
             className={`py-2 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'dashboard'
                 ? 'border-blue-500 text-blue-600'
@@ -693,7 +634,7 @@ export default function PayrollManager() {
             📈 Dashboard Ejecutivo
           </button>
           <button
-            onClick={() => setActiveTab('records')}
+            onClick={() => handleTabChange('records')}
             className={`py-2 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'records'
                 ? 'border-blue-500 text-blue-600'
@@ -703,7 +644,7 @@ export default function PayrollManager() {
             📋 Registros de Nómina
           </button>
           <button
-            onClick={() => setActiveTab('generate')}
+            onClick={() => handleTabChange('generate')}
             className={`py-2 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'generate'
                 ? 'border-blue-500 text-blue-600'
@@ -713,7 +654,7 @@ export default function PayrollManager() {
             ⚙️ Generar Nómina
           </button>
           <button
-            onClick={() => setActiveTab('reports')}
+            onClick={() => handleTabChange('reports')}
             className={`py-2 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'reports'
                 ? 'border-blue-500 text-blue-600'
@@ -868,7 +809,7 @@ export default function PayrollManager() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Button 
                   className="w-full"
-                  onClick={() => setActiveTab('generate')}
+                  onClick={() => handleTabChange('generate')}
                 >
                   Generar Nómina Actual
                 </Button>
@@ -882,7 +823,7 @@ export default function PayrollManager() {
                 <Button 
                   variant="outline"
                   className="w-full"
-                  onClick={() => setActiveTab('records')}
+                  onClick={() => handleTabChange('records')}
                 >
                   Ver Registros
                 </Button>
@@ -922,14 +863,14 @@ export default function PayrollManager() {
                   <Input
                     type="month"
                     value={selectedPeriod}
-                    onChange={(e) => setSelectedPeriod(e.target.value)}
+                    onChange={handlePeriodChange}
                     className="w-48"
                   />
                 </div>
                 <div className="flex items-end">
                   <Button 
                     variant="outline" 
-                    onClick={() => setSelectedPeriod('')}
+                    onClick={clearPeriodFilter}
                   >
                     Limpiar Filtro
                   </Button>
@@ -1076,7 +1017,7 @@ export default function PayrollManager() {
                   <Input
                     type="month"
                     value={generateForm.periodo}
-                    onChange={e => setGenerateForm({ ...generateForm, periodo: e.target.value })}
+                    onChange={e => handleFormChange('periodo', e.target.value)}
                     required
                   />
                 </div>
@@ -1086,7 +1027,7 @@ export default function PayrollManager() {
                   </label>
                   <select
                     value={generateForm.quincena}
-                    onChange={e => setGenerateForm({ ...generateForm, quincena: Number(e.target.value) })}
+                    onChange={e => handleFormChange('quincena', Number(e.target.value))}
                     className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
                     required
                   >
@@ -1098,7 +1039,7 @@ export default function PayrollManager() {
                   <input
                     type="checkbox"
                     checked={generateForm.incluirDeducciones}
-                    onChange={e => setGenerateForm({ ...generateForm, incluirDeducciones: e.target.checked })}
+                    onChange={e => handleFormChange('incluirDeducciones', e.target.checked)}
                     className="mr-2"
                     id="deducciones"
                   />
@@ -1110,7 +1051,7 @@ export default function PayrollManager() {
                   <input
                     type="checkbox"
                     checked={generateForm.soloEmpleadosConAsistencia}
-                    onChange={e => setGenerateForm({ ...generateForm, soloEmpleadosConAsistencia: e.target.checked })}
+                    onChange={e => handleFormChange('soloEmpleadosConAsistencia', e.target.checked)}
                     className="mr-2"
                     id="asistencia"
                   />
@@ -1125,7 +1066,7 @@ export default function PayrollManager() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setActiveTab('dashboard')}
+                    onClick={() => handleTabChange('dashboard')}
                   >
                     Cancelar
                   </Button>
@@ -1222,7 +1163,7 @@ export default function PayrollManager() {
                         <Input
                           type="month"
                           value={selectedPeriod}
-                          onChange={(e) => setSelectedPeriod(e.target.value)}
+                          onChange={handlePeriodChange}
                           className="w-full"
                         />
                       </div>
