@@ -196,20 +196,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const today = getTodayInHonduras()
     console.log('📅 Fecha Honduras para registro:', today)
     
-    const { data: existingRecord, error: attError } = await supabase
+    const { data: existingRecords, error: attError } = await supabase
       .from('attendance_records')
       .select('*')
       .eq('employee_id', employee.id)
       .eq('date', today)
-      .single()
 
-    if (attError && attError.code !== 'PGRST116') {
+    if (attError) {
       console.error('❌ Error consultando asistencia:', attError)
       return res.status(500).json({ 
         error: 'Error consultando asistencia',
         details: attError.message 
       })
     }
+
+    const existingRecord = existingRecords && existingRecords.length > 0 ? existingRecords[0] : null
 
     // PASO 6.1: Smart Time Detection - Detect intended action based on time of day
     const intendedAction = detectIntendedAction(hondurasTime, existingRecord)
