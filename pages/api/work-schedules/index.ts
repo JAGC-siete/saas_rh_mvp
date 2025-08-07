@@ -1,10 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://fwyxmovfrzauebiqxchz.supabase.co'
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ3eXhtb3ZmcnphdWViaXF4Y2h6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MjE4OTkyMSwiZXhwIjoyMDY3NzY1OTIxfQ.7tCj7HGw9MevF1Q9EEoOvD6CXf4M6f0iu37U-vjE76I'
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
+import { createPagesServerClient } from '@supabase/auth-helpers-nextjs'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -14,10 +9,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     console.log('⏰ Work Schedules API: Iniciando fetch de datos...')
 
-    // 1. Obtener todos los horarios
+    // Create Supabase client for Pages API
+    const supabase = createPagesServerClient({ req, res })
+
+    // Get user session
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
+      return res.status(401).json({ error: 'Unauthorized' })
+    }
+
+    // Get user's company_id
+    const { data: userProfile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('company_id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (profileError || !userProfile?.company_id) {
+      return res.status(400).json({ error: 'User profile not found or no company assigned' })
+    }
+
+    // 1. Obtener todos los horarios de la compañía del usuario
     const { data: schedules, error: schedError } = await supabase
       .from('work_schedules')
       .select('id, name')
+      .eq('company_id', userProfile.company_id)
       .order('name')
 
     if (schedError) {
