@@ -13,11 +13,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const supabase = createPagesServerClient({ req, res })
 
     // Get user session
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const { data: { session }, error: authError } = await supabase.auth.getSession()
     
-    if (authError || !user) {
+    if (authError || !session?.user) {
+      console.error('❌ Auth error:', authError)
       return res.status(401).json({ error: 'Unauthorized' })
     }
+
+    const user = session.user
 
     // Get user's company_id
     const { data: userProfile, error: profileError } = await supabase

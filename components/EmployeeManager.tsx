@@ -44,8 +44,12 @@ export default function EmployeeManager() {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
   const [workSchedules, setWorkSchedules] = useState<WorkSchedule[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [employeesLoading, setEmployeesLoading] = useState(false)
+  const [departmentsLoading, setDepartmentsLoading] = useState(false)
+  const [schedulesLoading, setSchedulesLoading] = useState(false)
+  const [employeesError, setEmployeesError] = useState<string | null>(null)
+  const [departmentsError, setDepartmentsError] = useState<string | null>(null)
+  const [schedulesError, setSchedulesError] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState(INITIAL_FORM_DATA)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -71,8 +75,8 @@ export default function EmployeeManager() {
   const fetchEmployees = useCallback(async () => {
     if (!user?.id) return
     
-    setLoading(true)
-    setError(null)
+    setEmployeesLoading(true)
+    setEmployeesError(null)
     
     try {
       console.log('🔍 Fetching employees for user:', user.id)
@@ -98,13 +102,16 @@ export default function EmployeeManager() {
       setEmployees(data.employees || [])
     } catch (err) {
       console.error('💥 Fetch error:', err)
-      setError(getErrorMessage(err))
+      setEmployeesError(getErrorMessage(err))
     } finally {
-      setLoading(false)
+      setEmployeesLoading(false)
     }
   }, [user?.id, getErrorMessage])
 
   const fetchDepartments = useCallback(async () => {
+    setDepartmentsLoading(true)
+    setDepartmentsError(null)
+    
     try {
       console.log('🔍 Fetching departments...')
       const response = await fetch('/api/departments')
@@ -114,20 +121,31 @@ export default function EmployeeManager() {
       }
       
       const data = await response.json()
-      console.log(`✅ Departments loaded: ${data.departments?.length || 0} departments`)
+      console.log('📦 Raw departments response:', data)
       
-      if (data.departments && data.departments.length > 0) {
-        console.log('📋 Sample departments:', data.departments.slice(0, 3).map((d: Department) => `${d.name} (${d.id})`))
+      // Extraer departments del objeto de respuesta
+      const departmentsList = data.departments || []
+      console.log(`✅ Departments loaded: ${departmentsList.length} departments`)
+      
+      if (departmentsList.length > 0) {
+        console.log('📋 Sample departments:', departmentsList.slice(0, 3).map((d: Department) => `${d.name} (${d.id})`))
+      } else {
+        console.warn('⚠️ No departments found in response')
       }
       
-      setDepartments(data.departments || [])
+      setDepartments(departmentsList)
     } catch (error) {
       console.error('💥 Error fetching departments:', error)
-      setError('Error loading departments')
+      setDepartmentsError('Error loading departments')
+    } finally {
+      setDepartmentsLoading(false)
     }
   }, [])
 
   const fetchWorkSchedules = useCallback(async () => {
+    setSchedulesLoading(true)
+    setSchedulesError(null)
+    
     try {
       console.log('🔍 Fetching work schedules...')
       const response = await fetch('/api/work-schedules')
@@ -137,16 +155,24 @@ export default function EmployeeManager() {
       }
       
       const data = await response.json()
-      console.log(`✅ Work schedules loaded: ${data.schedules?.length || 0} schedules`)
+      console.log('📦 Raw work schedules response:', data)
       
-      if (data.schedules && data.schedules.length > 0) {
-        console.log('📋 Sample schedules:', data.schedules.slice(0, 3).map((s: WorkSchedule) => `${s.name} (${s.id})`))
+      // Extraer schedules del objeto de respuesta
+      const schedulesList = data.schedules || []
+      console.log(`✅ Work schedules loaded: ${schedulesList.length} schedules`)
+      
+      if (schedulesList.length > 0) {
+        console.log('📋 Sample schedules:', schedulesList.slice(0, 3).map((s: WorkSchedule) => `${s.name} (${s.id})`))
+      } else {
+        console.warn('⚠️ No work schedules found in response')
       }
       
-      setWorkSchedules(data.schedules || [])
+      setWorkSchedules(schedulesList)
     } catch (error) {
       console.error('💥 Error fetching work schedules:', error)
-      setError('Error loading work schedules')
+      setSchedulesError('Error loading work schedules')
+    } finally {
+      setSchedulesLoading(false)
     }
   }, [])
 
@@ -154,7 +180,9 @@ export default function EmployeeManager() {
     setFormData(INITIAL_FORM_DATA)
     setShowForm(false)
     setEditingEmployee(null)
-    setError(null)
+    setEmployeesError(null)
+    setDepartmentsError(null)
+    setSchedulesError(null)
   }, [])
 
   const handleFormChange = useCallback((field: string, value: any) => {
@@ -191,7 +219,7 @@ export default function EmployeeManager() {
       fetchEmployees()
     } catch (error) {
       console.error(`Error ${editingEmployee ? 'updating' : 'creating'} employee:`, error)
-      setError(error instanceof Error ? error.message : `Error ${editingEmployee ? 'updating' : 'creating'} employee`)
+      setEmployeesError(error instanceof Error ? error.message : `Error ${editingEmployee ? 'updating' : 'creating'} employee`)
     } finally {
       setIsSubmitting(false)
     }
@@ -257,7 +285,7 @@ export default function EmployeeManager() {
       fetchEmployees()
     } catch (error) {
       console.error('Error deactivating employee:', error)
-      setError(error instanceof Error ? error.message : 'Error deactivating employee')
+      setEmployeesError(error instanceof Error ? error.message : 'Error deactivating employee')
     } finally {
       setIsSubmitting(false)
     }
@@ -273,7 +301,10 @@ export default function EmployeeManager() {
     }
   }, [shouldFetch, fetchEmployees, fetchDepartments, fetchWorkSchedules])
 
-  if (loading) {
+  const isLoading = employeesLoading || departmentsLoading || schedulesLoading
+  const hasErrors = employeesError || departmentsError || schedulesError
+
+  if (isLoading && !hasErrors) {
     return (
       <div className="p-6">
         <Card>
@@ -283,7 +314,11 @@ export default function EmployeeManager() {
           <CardContent>
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="mt-2 text-gray-600">Cargando empleados...</p>
+              <p className="mt-2 text-gray-600">
+                {employeesLoading && "Cargando empleados..."}
+                {departmentsLoading && "Cargando departamentos..."}
+                {schedulesLoading && "Cargando horarios..."}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -291,7 +326,7 @@ export default function EmployeeManager() {
     )
   }
 
-  if (error && !showForm) {
+  if (hasErrors && !showForm) {
     return (
       <div className="p-6">
         <Card>
@@ -299,14 +334,42 @@ export default function EmployeeManager() {
             <CardTitle>Empleados</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-8">
-              <div className="text-red-600 mb-4">
-                <h3 className="text-lg font-semibold">Error al cargar empleados</h3>
-                <p className="text-sm mt-2">{error}</p>
-              </div>
-              <Button onClick={fetchEmployees} variant="outline">
-                Reintentar
-              </Button>
+            <div className="space-y-4">
+              {employeesError && (
+                <div className="text-center">
+                  <div className="text-red-600 mb-4">
+                    <h3 className="text-lg font-semibold">Error al cargar empleados</h3>
+                    <p className="text-sm mt-2">{employeesError}</p>
+                  </div>
+                  <Button onClick={fetchEmployees} variant="outline" className="mb-4">
+                    Reintentar cargar empleados
+                  </Button>
+                </div>
+              )}
+              
+              {departmentsError && (
+                <div className="text-center">
+                  <div className="text-red-600 mb-4">
+                    <h3 className="text-lg font-semibold">Error al cargar departamentos</h3>
+                    <p className="text-sm mt-2">{departmentsError}</p>
+                  </div>
+                  <Button onClick={fetchDepartments} variant="outline" className="mb-4">
+                    Reintentar cargar departamentos
+                  </Button>
+                </div>
+              )}
+              
+              {schedulesError && (
+                <div className="text-center">
+                  <div className="text-red-600 mb-4">
+                    <h3 className="text-lg font-semibold">Error al cargar horarios</h3>
+                    <p className="text-sm mt-2">{schedulesError}</p>
+                  </div>
+                  <Button onClick={fetchWorkSchedules} variant="outline">
+                    Reintentar cargar horarios
+                  </Button>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -343,13 +406,28 @@ export default function EmployeeManager() {
         </div>
       )}
 
-      {error && showForm && (
-        <div className="bg-red-50 border border-red-200 rounded-md p-4">
-          <div className="text-red-600">
-            <h3 className="text-sm font-medium">Error al {editingEmployee ? 'actualizar' : 'crear'} empleado</h3>
-            <p className="text-sm mt-1">{error}</p>
-          </div>
-        </div>
+      {showForm && (
+        <>
+          {employeesError && (
+            <div className="bg-red-50 border border-red-200 rounded-md p-4">
+              <div className="text-red-600">
+                <h3 className="text-sm font-medium">Error al {editingEmployee ? 'actualizar' : 'crear'} empleado</h3>
+                <p className="text-sm mt-1">{employeesError}</p>
+              </div>
+            </div>
+          )}
+          {(departmentsError || schedulesError) && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+              <div className="text-yellow-800">
+                <h3 className="text-sm font-medium">Advertencia</h3>
+                <div className="text-sm mt-1">
+                  {departmentsError && <p>Error al cargar departamentos. <Button onClick={fetchDepartments} variant="link" className="text-yellow-800 underline p-0 h-auto">Reintentar</Button></p>}
+                  {schedulesError && <p>Error al cargar horarios. <Button onClick={fetchWorkSchedules} variant="link" className="text-yellow-800 underline p-0 h-auto">Reintentar</Button></p>}
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       <Card>
