@@ -98,7 +98,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('🔍 Buscando empleado...', { dni, last5 })
     let employeeQuery = supabase
       .from('employees')
-      .select('id, work_schedule_id, dni, name, status, position, company_id')
+      .select('id, work_schedule_id, dni, name, status, company_id')
       .eq('status', 'active')
 
     if (dni) {
@@ -135,7 +135,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const employee = employees[0]
-    console.log('✅ Empleado encontrado:', { id: employee.id, name: employee.name, position: employee.position })
+    console.log('✅ Empleado encontrado:', { id: employee.id, name: employee.name })
 
     // PASO 3: Validar work_schedule_id
     if (!employee.work_schedule_id) {
@@ -459,8 +459,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       action: finalAction,
       timeDetection: intendedAction,
       employee: {
-        name: employee.name,
-        position: employee.position
+        name: employee.name
       },
       timestamp: getHondurasTimeISO(),
       workSchedule: {
