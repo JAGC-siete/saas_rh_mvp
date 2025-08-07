@@ -1,51 +1,6 @@
 import { useState } from 'react'
 import { Button } from './ui/button'
-
-interface Employee {
-  id: string
-  company_id: string
-  employee_code: string
-  dni: string
-  name: string
-  email: string
-  phone: string
-  role: string
-  position: string
-  base_salary: number
-  hire_date: string
-  status: string
-  bank_name: string
-  bank_account: string
-  department_id?: string
-  department_name?: string
-  attendance_status?: 'present' | 'absent' | 'late' | 'not_registered'
-  check_in_time?: string
-  check_out_time?: string
-  work_schedule?: {
-    id: string
-    name: string
-    monday_start?: string
-    monday_end?: string
-    tuesday_start?: string
-    tuesday_end?: string
-    wednesday_start?: string
-    wednesday_end?: string
-    thursday_start?: string
-    thursday_end?: string
-    friday_start?: string
-    friday_end?: string
-    saturday_start?: string
-    saturday_end?: string
-    sunday_start?: string
-    sunday_end?: string
-  }
-  gamification?: {
-    total_points: number
-    weekly_points: number
-    monthly_points: number
-    achievements_count: number
-  }
-}
+import { Employee } from '../lib/types/employee'
 
 interface CertificateModalProps {
   employee: Employee | null

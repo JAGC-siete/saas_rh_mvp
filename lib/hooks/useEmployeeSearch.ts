@@ -1,21 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-
-interface Employee {
-  id: string
-  name: string
-  employee_code: string
-  dni: string
-  email: string
-  phone: string
-  position: string
-  status: string
-  attendance_status?: 'present' | 'absent' | 'late' | 'not_registered'
-  check_in_time?: string
-  check_out_time?: string
-  departments?: { name: string }
-  work_schedules?: { name: string }
-  employee_scores?: { total_points: number }
-}
+import { Employee } from '../types/employee'
 
 interface Pagination {
   currentPage: number

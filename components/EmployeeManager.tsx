@@ -3,57 +3,13 @@ import { supabase } from '../lib/supabase'
 import { Button } from './ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { useSupabaseSession } from '../lib/hooks/useSession'
-import { debounce } from 'lodash'
+import { useEmployeeSearch } from '../lib/hooks/useEmployeeSearch'
+import { Pagination } from './ui/pagination'
+import { Search, Filter, SortAsc, SortDesc } from 'lucide-react'
 import EmployeeRow from './EmployeeRow'
 import CertificateModal from './CertificateModal'
-import EmployeeSearch from './EmployeeSearch'
 import AddEmployeeForm from './AddEmployeeForm'
-
-interface Employee {
-  id: string
-  company_id: string
-  employee_code: string
-  dni: string
-  name: string
-  email: string
-  phone: string
-  role: string
-  position: string
-  base_salary: number
-  hire_date: string
-  status: string
-  bank_name: string
-  bank_account: string
-  department_id?: string
-  department_name?: string
-  attendance_status?: 'present' | 'absent' | 'late' | 'not_registered'
-  check_in_time?: string
-  check_out_time?: string
-  work_schedule?: {
-    id: string
-    name: string
-    monday_start?: string
-    monday_end?: string
-    tuesday_start?: string
-    tuesday_end?: string
-    wednesday_start?: string
-    wednesday_end?: string
-    thursday_start?: string
-    thursday_end?: string
-    friday_start?: string
-    friday_end?: string
-    saturday_start?: string
-    saturday_end?: string
-    sunday_start?: string
-    sunday_end?: string
-  }
-  gamification?: {
-    total_points: number
-    weekly_points: number
-    monthly_points: number
-    achievements_count: number
-  }
-}
+import { Employee } from '../lib/types/employee'
 
 interface Department {
   id: string
@@ -80,18 +36,26 @@ interface WorkSchedule {
 }
 
 export default function EmployeeManager() {
-  const [employees, setEmployees] = useState<Employee[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
   const [workSchedules, setWorkSchedules] = useState<WorkSchedule[]>([])
   const [showAddForm, setShowAddForm] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState('')
   const [userProfile, setUserProfile] = useState<any>(null)
   const [showCertificateModal, setShowCertificateModal] = useState(false)
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
 
   const { user } = useSupabaseSession()
   const userId = user?.id
+
+  // Use the new employee search hook
+  const {
+    employees,
+    loading,
+    error,
+    pagination,
+    searchParams,
+    setSearchParams,
+    refreshData
+  } = useEmployeeSearch()
 
   // Form state
   const [formData, setFormData] = useState({
@@ -110,11 +74,11 @@ export default function EmployeeManager() {
     bank_account: '',
   })
 
-  const fetchData = useCallback(async (searchTerm = '') => {
-    setLoading(true)
-    try {
-      if (!userId) return;
+  // Fetch departments and work schedules
+  const fetchDepartmentsAndSchedules = useCallback(async () => {
+    if (!userId) return
 
+    try {
       // Get user profile first
       const { data: profile } = await supabase
         .from('user_profiles')
@@ -123,81 +87,10 @@ export default function EmployeeManager() {
         .single()
 
       setUserProfile(profile)
-      if (!profile) return;
+      if (!profile) return
 
-      // Build optimized employees query with minimal data first
-      let employeesQuery = supabase
-        .from('employees')
-        .select(`
-          id,
-          employee_code,
-          dni,
-          name,
-          email,
-          phone,
-          role,
-          position,
-          base_salary,
-          hire_date,
-          status,
-          bank_name,
-          bank_account,
-          department_id,
-          work_schedule_id,
-          departments(name),
-          work_schedules(id, name, monday_start, monday_end, tuesday_start, tuesday_end, wednesday_start, wednesday_end, thursday_start, thursday_end, friday_start, friday_end, saturday_start, saturday_end, sunday_start, sunday_end)
-        `)
-        .eq('company_id', profile.company_id)
-        .order('name')
-        .limit(50); // Reduced limit for faster initial load
-
-      if (searchTerm.trim()) {
-        const searchPattern = `%${searchTerm.trim()}%`
-        employeesQuery = employeesQuery.or(
-          `name.ilike.${searchPattern},employee_code.ilike.${searchPattern},dni.ilike.${searchPattern},position.ilike.${searchPattern}`
-        )
-      }
-      
-      const { data: employeesData, error: employeesError } = await employeesQuery;
-      if (employeesError) throw employeesError
-
-      if (!employeesData || employeesData.length === 0) {
-        setEmployees([])
-        setDepartments([])
-        setWorkSchedules([])
-        return
-      }
-
-      // Show basic employee data immediately
-      const basicEmployees = employeesData.map((emp: any) => ({
-        ...emp,
-        department_name: emp.departments?.name || 'N/A',
-        attendance_status: 'not_registered' as const,
-        work_schedule: emp.work_schedules,
-        gamification: {
-          total_points: 0,
-          weekly_points: 0,
-          monthly_points: 0,
-          achievements_count: 0
-        }
-      }))
-      
-      setEmployees(basicEmployees)
-
-      // Load additional data in parallel (non-blocking)
-      const employeeIds = employeesData.map((e: any) => e.id)
-      const today = new Date().toISOString().split('T')[0]
-
-      Promise.allSettled([
-        supabase
-          .from('attendance_records')
-          .select('employee_id, check_in, check_out, status')
-          .in('employee_id', employeeIds)
-          .eq('date', today),
-        supabase
-          .from('employee_scores')
-          .select('employee_id, total_points, weekly_points, monthly_points')
-          .in('employee_id', employeeIds),
+      // Fetch departments and schedules in parallel
+      const [departmentsResult, schedulesResult] = await Promise.allSettled([
         supabase
           .from('departments')
           .select('id, name')
@@ -208,102 +101,50 @@ export default function EmployeeManager() {
           .select('id, name')
           .eq('company_id', profile.company_id)
           .order('name')
-      ]).then(([attendanceResult, gamificationResult, departmentsResult, schedulesResult]) => {
-        // Extract data with fallbacks
-        const attendanceData = attendanceResult.status === 'fulfilled' ? attendanceResult.value.data : []
-        const gamificationData = gamificationResult.status === 'fulfilled' ? gamificationResult.value.data : []
-        const departmentsData = departmentsResult.status === 'fulfilled' ? departmentsResult.value.data : []
-        const schedulesData = schedulesResult.status === 'fulfilled' ? schedulesResult.value.data : []
+      ])
 
-        // Update employees with attendance and gamification data
-        const employeesWithDetails = employeesData.map((emp: any) => {
-          const attendance = attendanceData?.find((att: any) => att.employee_id === emp.id)
-          const gamification = gamificationData?.find((g: any) => g.employee_id === emp.id)
-          
-          let attendance_status: 'present' | 'absent' | 'late' | 'not_registered' = 'not_registered'
-          let check_in_time = undefined
+      const departmentsData = departmentsResult.status === 'fulfilled' ? departmentsResult.value.data : []
+      const schedulesData = schedulesResult.status === 'fulfilled' ? schedulesResult.value.data : []
 
-          if (attendance) {
-            if (attendance.check_in) {
-              check_in_time = attendance.check_in
-              const checkInTime = new Date(attendance.check_in)
-              
-              // Get day of week (0=Sunday, 1=Monday, etc.)
-              const dayOfWeek = checkInTime.getDay()
-              const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
-              const dayName = dayNames[dayOfWeek]
-              
-              // Get expected start time for the day
-              const expectedStartTime = emp.work_schedules?.[`${dayName}_start`]
-              
-              let isLate = false
-              if (expectedStartTime) {
-                const [expectedHour, expectedMin] = expectedStartTime.split(':').map(Number)
-                const expectedMinutes = expectedHour * 60 + expectedMin
-                const actualMinutes = checkInTime.getHours() * 60 + checkInTime.getMinutes()
-                // 5 minute tolerance
-                isLate = actualMinutes > (expectedMinutes + 5)
-              }
-              attendance_status = isLate ? 'late' : 'present'
-            } else if (attendance.status === 'absent') {
-              attendance_status = 'absent'
-            }
-          }
-
-          return {
-            ...emp,
-            department_name: emp.departments?.name || 'N/A',
-            attendance_status,
-            check_in_time,
-            work_schedule: emp.work_schedules,
-            gamification: {
-              total_points: gamification?.total_points || 0,
-              weekly_points: gamification?.weekly_points || 0,
-              monthly_points: gamification?.monthly_points || 0,
-              achievements_count: 0 // Simplified for performance
-            }
-          }
-        })
-
-        // Update state with detailed data
-        setEmployees(employeesWithDetails)
-        setDepartments(departmentsData || [])
-        setWorkSchedules(schedulesData || [])
-      }).catch(error => {
-        console.error('Error loading additional data:', error)
-        // Keep basic data if additional queries fail
-      })
-
+      setDepartments(departmentsData || [])
+      setWorkSchedules(schedulesData || [])
     } catch (error) {
-      console.error('Error fetching data:', error)
-    } finally {
-      setLoading(false)
+      console.error('Error fetching departments and schedules:', error)
     }
-  }, [userId]);
-
-  const debouncedFetchData = useCallback(
-    debounce((term: string) => fetchData(term), 300), 
-    [fetchData]
-  );
+  }, [userId])
 
   useEffect(() => {
-    if (userId) {
-      // Load immediately on mount without debounce
-      if (searchTerm === '') {
-        fetchData('');
-      } else {
-        // Only use debounce for search
-        debouncedFetchData(searchTerm);
-      }
-    }
-    return () => {
-      debouncedFetchData.cancel();
-    };
-  }, [searchTerm, userId, fetchData, debouncedFetchData]);
+    fetchDepartmentsAndSchedules()
+  }, [fetchDepartmentsAndSchedules])
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
-  };
+    setSearchParams(prev => ({ ...prev, search: e.target.value, page: 1 }))
+  }
+
+  const handlePageChange = (page: number) => {
+    setSearchParams(prev => ({ ...prev, page }))
+  }
+
+  const handleSortChange = (sortBy: string) => {
+    setSearchParams(prev => ({
+      ...prev,
+      sort_by: sortBy,
+      sort_order: prev.sort_by === sortBy && prev.sort_order === 'asc' ? 'desc' : 'asc',
+      page: 1
+    }))
+  }
+
+  const handleStatusFilter = (status: string) => {
+    setSearchParams(prev => ({ ...prev, status, page: 1 }))
+  }
+
+  const handleDepartmentFilter = (departmentId: string) => {
+    setSearchParams(prev => ({ 
+      ...prev, 
+      department_id: departmentId === 'all' ? undefined : departmentId, 
+      page: 1 
+    }))
+  }
 
   const handleFormChange = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -311,10 +152,9 @@ export default function EmployeeManager() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
-
+    
     try {
-      if (!userId) throw new Error('User not authenticated')
+      if (!userId) throw new Error('Usuario no autenticado')
 
       const { error } = await supabase
         .from('employees')
@@ -344,18 +184,16 @@ export default function EmployeeManager() {
       })
       
       setShowAddForm(false)
-      fetchData(searchTerm)
+      refreshData()
       
     } catch (error: any) {
       alert(`Error: ${error.message}`)
-    } finally {
-      setLoading(false)
     }
   }
 
   const updateEmployeeStatus = async (employeeId: string, status: string) => {
     try {
-      if (!userId) throw new Error('User not authenticated')
+      if (!userId) throw new Error('Usuario no autenticado')
 
       const { error } = await supabase
         .from('employees')
@@ -363,13 +201,11 @@ export default function EmployeeManager() {
         .eq('id', employeeId)
 
       if (error) throw error
-      fetchData(searchTerm)
+      refreshData()
     } catch (error: any) {
       alert(`Error: ${error.message}`)
     }
   }
-
-  const filteredEmployees = employees;
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-HN', {
@@ -426,7 +262,7 @@ export default function EmployeeManager() {
     }
   }
 
-    const exportEmployeeReport = async () => {
+  const exportEmployeeReport = async () => {
     try {
       const format = (document.getElementById('reportFormat') as HTMLSelectElement)?.value || 'pdf'
 
@@ -532,6 +368,10 @@ export default function EmployeeManager() {
     return <div className="flex justify-center py-8">Cargando empleados...</div>
   }
 
+  if (error) {
+    return <div className="flex justify-center py-8 text-red-600">Error: {error}</div>
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -545,8 +385,101 @@ export default function EmployeeManager() {
         </Button>
       </div>
 
-      {/* Search */}
-      <EmployeeSearch searchTerm={searchTerm} onSearchChange={handleSearchChange} />
+      {/* Search and Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Search className="h-5 w-5" />
+            Búsqueda y Filtros
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <input
+              type="text"
+              placeholder="Buscar por nombre, código, DNI, posición o email..."
+              value={searchParams.search}
+              onChange={handleSearchChange}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* Filters Row */}
+          <div className="flex flex-wrap gap-4 items-center">
+            {/* Status Filter */}
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-gray-500" />
+              <select
+                value={searchParams.status}
+                onChange={(e) => handleStatusFilter(e.target.value)}
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="active">Activos</option>
+                <option value="inactive">Inactivos</option>
+                <option value="terminated">Terminados</option>
+                <option value="all">Todos</option>
+              </select>
+            </div>
+
+            {/* Department Filter */}
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-gray-500" />
+              <select
+                value={searchParams.department_id || 'all'}
+                onChange={(e) => handleDepartmentFilter(e.target.value)}
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">Todos los departamentos</option>
+                {departments.map((dept) => (
+                  <option key={dept.id} value={dept.id}>
+                    {dept.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Sort Options */}
+            <div className="flex items-center gap-2">
+              <SortAsc className="h-4 w-4 text-gray-500" />
+              <select
+                value={`${searchParams.sort_by}-${searchParams.sort_order}`}
+                onChange={(e) => {
+                  const [sortBy, sortOrder] = e.target.value.split('-')
+                  setSearchParams(prev => ({
+                    ...prev,
+                    sort_by: sortBy,
+                    sort_order: sortOrder as 'asc' | 'desc',
+                    page: 1
+                  }))
+                }}
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="name-asc">Nombre (A-Z)</option>
+                <option value="name-desc">Nombre (Z-A)</option>
+                <option value="employee_code-asc">Código (A-Z)</option>
+                <option value="employee_code-desc">Código (Z-A)</option>
+                <option value="position-asc">Posición (A-Z)</option>
+                <option value="position-desc">Posición (Z-A)</option>
+                <option value="base_salary-asc">Salario (Menor-Mayor)</option>
+                <option value="base_salary-desc">Salario (Mayor-Menor)</option>
+              </select>
+            </div>
+
+            {/* Refresh Button */}
+            <Button
+              onClick={refreshData}
+              size="sm"
+              variant="outline"
+              disabled={loading}
+              className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+            >
+              {loading ? 'Actualizando...' : '🔄 Actualizar'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Add Employee Form */}
       {showAddForm && (
@@ -605,18 +538,9 @@ export default function EmployeeManager() {
             <div>
               <CardTitle>Directorio de Empleados</CardTitle>
               <CardDescription>
-                {filteredEmployees.length} de {employees.length} empleados encontrados
+                {pagination.totalItems} empleados encontrados • Página {pagination.currentPage} de {pagination.totalPages}
               </CardDescription>
             </div>
-            <Button
-              onClick={() => fetchData(searchTerm)}
-              size="sm"
-              variant="outline"
-              disabled={loading}
-              className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
-            >
-              {loading ? 'Actualizando...' : '🔄 Actualizar'}
-            </Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -636,7 +560,7 @@ export default function EmployeeManager() {
                 </tr>
               </thead>
               <tbody>
-                {filteredEmployees.map((employee) => (
+                {employees.map((employee) => (
                   <EmployeeRow
                     key={employee.id}
                     employee={employee}
@@ -650,12 +574,21 @@ export default function EmployeeManager() {
               </tbody>
             </table>
 
-            {filteredEmployees.length === 0 && (
+            {employees.length === 0 && (
               <div className="text-center py-8 text-gray-500">
-                {searchTerm ? 'No se encontraron empleados que coincidan con la búsqueda.' : 'No hay empleados registrados.'}
+                {searchParams.search ? 'No se encontraron empleados que coincidan con la búsqueda.' : 'No hay empleados registrados.'}
               </div>
             )}
           </div>
+
+          {/* Pagination */}
+          <Pagination
+            currentPage={pagination.currentPage}
+            totalPages={pagination.totalPages}
+            totalItems={pagination.totalItems}
+            itemsPerPage={pagination.itemsPerPage}
+            onPageChange={handlePageChange}
+          />
         </CardContent>
       </Card>
 
