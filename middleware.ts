@@ -11,7 +11,6 @@ const PUBLIC_ROUTES = new Set([
   '/registrodeasistencia',
   '/attendance/public',
   '/attendance/register',
-  '/api/attendance',
   '/api/attendance/lookup',
   '/api/attendance/register',
   '/api/attendance/first-time-check',

@@ -240,9 +240,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Handle conflicts between smart detection and existing records
     if (finalAction === 'check_in' && existingRecord && !existingRecord.check_out) {
       console.log('⚠️ Conflicto detectado: Usuario quiere check-in pero ya tiene entrada')
+      const checkInTime = new Date(existingRecord.check_in).toLocaleTimeString('es-HN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      })
       return res.status(400).json({
         error: 'Ya tienes entrada registrada hoy',
-        message: 'Parece que quieres marcar entrada, pero ya tienes una entrada registrada hoy. ¿Quizás quieres marcar salida?',
+        message: `Ya registraste tu entrada hoy a las ${checkInTime}`,
         suggestion: 'Si quieres marcar salida, inténtalo después de las 4:00 PM'
       })
     }
@@ -253,6 +258,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         error: 'No tienes entrada registrada hoy',
         message: 'Parece que quieres marcar salida, pero no tienes entrada registrada hoy. Debes marcar entrada primero.',
         suggestion: 'Marca tu entrada primero entre las 7:00 AM y 11:00 AM'
+      })
+    }
+
+    if (finalAction === 'check_out' && existingRecord && existingRecord.check_out) {
+      console.log('⚠️ Conflicto detectado: Usuario quiere check-out pero ya tiene salida')
+      const checkOutTime = new Date(existingRecord.check_out).toLocaleTimeString('es-HN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      })
+      return res.status(400).json({
+        error: 'Ya tienes salida registrada hoy',
+        message: `Ya registraste tu salida hoy a las ${checkOutTime}`,
+        suggestion: 'Tu asistencia del día ya está completa'
       })
     }
 
@@ -296,10 +315,42 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.log('✅ Entrada registrada exitosamente')
 
     } else if (finalAction === 'check_out') {
-      // CHECK-OUT: Registrar salida (smart detection)
+      // CHECK-OUT: Registrar salida con validaciones inteligentes
       console.log('📝 Registrando salida...')
       const expectedEnd = parseExpectedTime(endTime, hondurasTime)
       const earlyDepartureMinutes = Math.max(0, calculateMinutesDifference(expectedEnd, hondurasTime))
+      
+      // Validar hora de salida para determinar si necesita justificación
+      const currentHour = hondurasTime.getHours()
+      const currentMinute = hondurasTime.getMinutes()
+      const currentTimeString = `${currentHour.toString().padStart(2, '0')}:${currentMinute.toString().padStart(2, '0')}`
+      
+      let needsJustification = false
+      let checkoutMessage = ''
+      
+      if (currentTimeString < '12:00') {
+        // Check-out antes del mediodía
+        needsJustification = true
+        checkoutMessage = 'Estás haciendo tu check-out de hoy antes del mediodía'
+      } else if (currentTimeString < '16:00') {
+        // Check-out entre 12:00 y 16:00
+        needsJustification = true
+        checkoutMessage = 'Estás saliendo temprano'
+      } else {
+        // Check-out después de las 16:00
+        needsJustification = false
+        checkoutMessage = 'Check-out registrado exitosamente'
+      }
+      
+      if (needsJustification && !justification) {
+        return res.status(422).json({
+          requireJustification: true,
+          message: checkoutMessage,
+          lateMinutes: 0,
+          expectedTime: endTime,
+          actualTime: currentTimeString
+        })
+      }
 
       const { error: updateError } = await supabase
         .from('attendance_records')
