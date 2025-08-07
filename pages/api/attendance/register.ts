@@ -345,7 +345,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const expectedEnd = parseExpectedTime(endTime, hondurasTime)
       const earlyDepartureMinutes = Math.max(0, calculateMinutesDifference(expectedEnd, hondurasTime))
 
-      const { error: updateError } = await supabase
+      const { data: updateData, error: updateError } = await supabase
         .from('attendance_records')
         .update({
           check_out: getHondurasTimeISO(),
@@ -354,6 +354,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           updated_at: getHondurasTimeISO()
         })
         .eq('id', existingRecord.id)
+        .select()
+        .single()
+
+      if (!updateData) {
+        console.error('❌ No se pudo actualizar el registro:', { existingRecord })
+        return res.status(500).json({ 
+          error: 'Error registrando salida',
+          message: 'No se pudo actualizar el registro de asistencia'
+        })
+      }
 
       if (updateError) {
         console.error('❌ Error registrando salida:', updateError)
