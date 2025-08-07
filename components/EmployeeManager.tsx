@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { Button } from './ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
@@ -43,6 +43,17 @@ export default function EmployeeManager() {
   const { user } = useSupabaseSession()
 
   // Simple fetch function
+  const getErrorMessage = useCallback((error: unknown) => {
+    if (error instanceof Error) {
+      if (error.message.includes('401')) return 'Sesión expirada. Por favor, inicia sesión nuevamente.'
+      if (error.message.includes('403')) return 'No tienes permisos para acceder a esta información.'
+      if (error.message.includes('404')) return 'No se encontraron empleados.'
+      if (error.message.includes('500')) return 'Error del servidor. Intenta más tarde.'
+      return error.message
+    }
+    return 'Error inesperado al cargar empleados'
+  }, [])
+
   const fetchEmployees = useCallback(async () => {
     if (!user?.id) return
     
@@ -54,7 +65,7 @@ export default function EmployeeManager() {
       
       const response = await fetch('/api/employees/search?limit=50', {
         method: 'GET',
-        credentials: 'include', // Include cookies
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -73,11 +84,11 @@ export default function EmployeeManager() {
       setEmployees(data.employees || [])
     } catch (err) {
       console.error('💥 Fetch error:', err)
-      setError(err instanceof Error ? err.message : 'Error fetching employees')
+      setError(getErrorMessage(err))
     } finally {
       setLoading(false)
     }
-  }, [user?.id])
+  }, [user?.id, getErrorMessage])
 
   const fetchDepartments = useCallback(async () => {
     try {
@@ -148,13 +159,15 @@ export default function EmployeeManager() {
     setError(null)
   }, [])
 
+  const shouldFetch = useMemo(() => !!user?.id, [user?.id])
+
   useEffect(() => {
-    if (user?.id) {
+    if (shouldFetch) {
       fetchEmployees()
       fetchDepartments()
       fetchWorkSchedules()
     }
-  }, [user?.id, fetchEmployees, fetchDepartments, fetchWorkSchedules])
+  }, [shouldFetch, fetchEmployees, fetchDepartments, fetchWorkSchedules])
 
   if (loading) {
     return (
