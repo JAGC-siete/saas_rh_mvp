@@ -56,13 +56,16 @@ export default function EmployeeManager() {
 
   const getErrorMessage = useCallback((error: unknown) => {
     if (error instanceof Error) {
-      if (error.message.includes('401')) return 'Sesión expirada. Por favor, inicia sesión nuevamente.'
-      if (error.message.includes('403')) return 'No tienes permisos para acceder a esta información.'
-      if (error.message.includes('404')) return 'No se encontraron empleados.'
-      if (error.message.includes('500')) return 'Error del servidor. Intenta más tarde.'
+      const message = error.message.toLowerCase()
+      if (message.includes('401')) return 'Sesión expirada. Por favor, inicia sesión nuevamente.'
+      if (message.includes('403')) return 'No tienes permisos para realizar esta operación en empleados de otra compañía.'
+      if (message.includes('404')) return 'No se encontró el empleado solicitado.'
+      if (message.includes('409')) return 'El código de empleado ya existe. Por favor, usa un código diferente.'
+      if (message.includes('missing required fields')) return 'Por favor, completa todos los campos requeridos: código, DNI, nombre y salario base.'
+      if (message.includes('500')) return 'Error del servidor. Por favor, intenta más tarde.'
       return error.message
     }
-    return 'Error inesperado al cargar empleados'
+    return 'Error inesperado. Por favor, verifica tu conexión e intenta nuevamente.'
   }, [])
 
   const fetchEmployees = useCallback(async () => {
