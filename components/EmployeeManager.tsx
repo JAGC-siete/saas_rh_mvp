@@ -262,21 +262,55 @@ export default function EmployeeManager() {
           ) : (
             <div className="space-y-4">
               {employees.map((employee) => (
-                <div key={employee.id} className="border rounded-lg p-4">
+                <div key={employee.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
                   <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-semibold">{employee.name}</h3>
-                      <p className="text-sm text-gray-600">DNI: {employee.dni}</p>
-                      <p className="text-sm text-gray-600">Código: {employee.employee_code}</p>
-                      <p className="text-sm text-gray-600">Email: {employee.email}</p>
-                      <p className="text-sm text-gray-600">Departamento: {employee.departments?.name || 'Sin asignar'}</p>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="font-semibold text-lg">{employee.name}</h3>
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          employee.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        }`}>
+                          {employee.status === 'active' ? 'Activo' : 'Inactivo'}
+                        </span>
+                        {employee.attendance_status && (
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${
+                            employee.attendance_status === 'present' ? 'bg-blue-100 text-blue-800' :
+                            employee.attendance_status === 'late' ? 'bg-yellow-100 text-yellow-800' :
+                            employee.attendance_status === 'absent' ? 'bg-red-100 text-red-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {employee.attendance_status === 'present' ? 'Presente' :
+                             employee.attendance_status === 'late' ? 'Tardanza' :
+                             employee.attendance_status === 'absent' ? 'Ausente' : 'No registrado'}
+                          </span>
+                        )}
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600">
+                        <div>
+                          <p><span className="font-medium">DNI:</span> {employee.dni}</p>
+                          <p><span className="font-medium">Código:</span> {employee.employee_code}</p>
+                          <p><span className="font-medium">Email:</span> {employee.email || 'No especificado'}</p>
+                          <p><span className="font-medium">Teléfono:</span> {employee.phone || 'No especificado'}</p>
+                        </div>
+                        <div>
+                          <p><span className="font-medium">Posición:</span> {employee.position || 'No especificada'}</p>
+                          <p><span className="font-medium">Departamento:</span> {employee.departments?.name || 'Sin asignar'}</p>
+                          <p><span className="font-medium">Horario:</span> {employee.work_schedules?.name || 'Sin asignar'}</p>
+                          {employee.check_in_time && (
+                            <p><span className="font-medium">Entrada:</span> {new Date(employee.check_in_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</p>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <span className={`px-2 py-1 rounded text-xs ${
-                        employee.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {employee.status === 'active' ? 'Activo' : 'Inactivo'}
-                      </span>
+                    
+                    <div className="flex flex-col items-end gap-2 ml-4">
+                      {employee.employee_scores && (
+                        <div className="text-right text-xs text-gray-500">
+                          <p>Puntos: {employee.employee_scores.total_points || 0}</p>
+                          <p>Semana: {employee.employee_scores.weekly_points || 0}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
