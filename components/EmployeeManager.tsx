@@ -21,7 +21,13 @@ export default function EmployeeManager() {
     try {
       console.log('🔍 Fetching employees for user:', user.id)
       
-      const response = await fetch('/api/employees/search?limit=50')
+      const response = await fetch('/api/employees/search?limit=50', {
+        method: 'GET',
+        credentials: 'include', // Include cookies
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
       console.log('📡 API Response status:', response.status)
       
       if (!response.ok) {

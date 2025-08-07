@@ -13,18 +13,48 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     )
 
-    // Get user session from cookies
-    const authCookie = req.cookies['sb-access-token']
+    // Get user session from cookies - try multiple cookie names
+    const authCookie = req.cookies['sb-access-token'] || req.cookies['sb-refresh-token'] || req.cookies['supabase-auth-token']
+    
+    console.log('🔍 Available cookies:', Object.keys(req.cookies))
+    console.log('🔍 Auth cookie found:', !!authCookie)
+    
     if (!authCookie) {
-      return res.status(401).json({ error: 'Unauthorized' })
+      console.error('❌ No auth cookie found')
+      return res.status(401).json({ error: 'Unauthorized - No auth cookie' })
     }
 
-    // Set the session
-    const { data: { user }, error: authError } = await supabase.auth.getUser(authCookie)
-    if (authError || !user) {
-      console.error('Auth error:', authError)
-      return res.status(401).json({ error: 'Unauthorized' })
+    // Try to get user session
+    let user = null
+    let authError = null
+    
+    try {
+      // First try with getUser
+      const { data: userData, error: userError } = await supabase.auth.getUser(authCookie)
+      if (userError) {
+        console.log('⚠️ getUser failed, trying getSession...')
+        // If getUser fails, try getSession
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+        if (sessionError) {
+          console.error('❌ Both getUser and getSession failed:', sessionError)
+          authError = sessionError
+        } else {
+          user = sessionData.session?.user || null
+        }
+      } else {
+        user = userData.user
+      }
+    } catch (error) {
+      console.error('❌ Auth error:', error)
+      authError = error
     }
+    
+    if (authError || !user) {
+      console.error('❌ Final auth check failed:', { authError, user: !!user })
+      return res.status(401).json({ error: 'Unauthorized - Invalid session' })
+    }
+    
+    console.log('✅ User authenticated:', user.id)
 
     // Get user profile to determine company
     const { data: profile, error: profileError } = await supabase
