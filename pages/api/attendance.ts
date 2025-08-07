@@ -335,6 +335,7 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
         .eq('id', employee.work_schedule_id)
         .single()
 
+
       if (!schedule) {
         return res.status(400).json({ error: 'Work schedule not found for employee' })
       }

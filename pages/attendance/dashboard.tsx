@@ -166,7 +166,61 @@ export default function AttendanceDashboard2() {
           </div>
 
           {/* Estadísticas Principales */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+            {/* Tasa de Asistencia - Métrica Principal */}
+            <Card className="lg:col-span-2">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                  📊 Tasa de Asistencia Diaria
+                </CardTitle>
+                <CardDescription>Métrica principal del día</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="text-center">
+                    <div className={`text-4xl font-bold ${
+                      stats.totalEmployees > 0 && (stats.presentToday / stats.totalEmployees) * 100 >= 90 ? 'text-green-600' :
+                      stats.totalEmployees > 0 && (stats.presentToday / stats.totalEmployees) * 100 >= 80 ? 'text-yellow-600' :
+                      'text-red-600'
+                    }`}>
+                      {stats.totalEmployees > 0 ? ((stats.presentToday / stats.totalEmployees) * 100).toFixed(1) : 0}%
+                    </div>
+                    <div className={`text-sm font-medium ${
+                      stats.totalEmployees > 0 && (stats.presentToday / stats.totalEmployees) * 100 >= 90 ? 'text-green-600' :
+                      stats.totalEmployees > 0 && (stats.presentToday / stats.totalEmployees) * 100 >= 80 ? 'text-yellow-600' :
+                      'text-red-600'
+                    }`}>
+                      {stats.totalEmployees > 0 && (stats.presentToday / stats.totalEmployees) * 100 >= 90 ? '🟢 Excelente' :
+                       stats.totalEmployees > 0 && (stats.presentToday / stats.totalEmployees) * 100 >= 80 ? '🟡 Bueno' :
+                       '🔴 Requiere Atención'}
+                    </div>
+                  </div>
+                  <div className="relative">
+                    <div className="w-full bg-gray-200 rounded-full h-4">
+                      <div 
+                        className={`h-4 rounded-full transition-all duration-700 ${
+                          stats.totalEmployees > 0 && (stats.presentToday / stats.totalEmployees) * 100 >= 90 ? 'bg-gradient-to-r from-green-400 to-green-600' :
+                          stats.totalEmployees > 0 && (stats.presentToday / stats.totalEmployees) * 100 >= 80 ? 'bg-gradient-to-r from-yellow-400 to-yellow-600' :
+                          'bg-gradient-to-r from-red-400 to-red-600'
+                        }`}
+                        style={{ width: `${stats.totalEmployees > 0 ? Math.min((stats.presentToday / stats.totalEmployees) * 100, 100) : 0}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="text-center">
+                      <div className="font-bold text-green-600">{stats.presentToday}</div>
+                      <div className="text-gray-600">Presentes</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="font-bold text-red-600">{stats.absentToday}</div>
+                      <div className="text-gray-600">Ausentes</div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Empleados</CardTitle>
@@ -181,36 +235,24 @@ export default function AttendanceDashboard2() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Presentes Hoy</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">{stats.presentToday}</div>
-                <p className="text-xs text-muted-foreground">
-                  {stats.totalEmployees > 0 ? ((stats.presentToday / stats.totalEmployees) * 100).toFixed(1) : 0}% de asistencia
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Tardanzas</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-orange-600">{stats.lateToday}</div>
                 <p className="text-xs text-muted-foreground">
-                  {stats.presentToday > 0 ? ((stats.lateToday / stats.presentToday) * 100).toFixed(1) : 0}% de presentes
+                  {stats.presentToday > 0 ? ((stats.lateToday / stats.presentToday) * 100).toFixed(1) : 0}% de los presentes
                 </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Costo del Día</CardTitle>
+                <CardTitle className="text-sm font-medium">A Tiempo</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-blue-600">{formatCurrency(stats.dailyCost)}</div>
+                <div className="text-2xl font-bold text-blue-600">{stats.onTimeToday}</div>
                 <p className="text-xs text-muted-foreground">
-                  Basado en empleados presentes
+                  Llegadas puntuales del día
                 </p>
               </CardContent>
             </Card>

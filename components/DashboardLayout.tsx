@@ -34,7 +34,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Departamentos', href: '/departments', icon: BuildingOfficeIcon },
     { name: 'Asistencia', href: '/attendance/dashboard', icon: ClockIcon },
     { name: 'Permisos', href: '/leave', icon: UserIcon },
-    { name: 'Nómina', href: '/payroll/dashboard', icon: CurrencyDollarIcon },
+    { name: 'Nómina', href: '/payroll', icon: CurrencyDollarIcon },
     { name: 'Reportes', href: '/reports', icon: ChartBarIcon },
     { name: 'Configuración', href: '/settings', icon: Cog6ToothIcon },
   ]

@@ -1,4 +1,3 @@
-import { useRouter } from 'next/router'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import DashboardLayout from '../../components/DashboardLayout'
 import PayrollManager from '../../components/PayrollManager'
