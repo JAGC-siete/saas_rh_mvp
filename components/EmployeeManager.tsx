@@ -104,22 +104,20 @@ export default function EmployeeManager() {
   const fetchDepartments = useCallback(async () => {
     try {
       console.log('🔍 Fetching departments...')
-      const { data, error } = await supabase
-        .from('departments')
-        .select('id, name')
-        .order('name')
-
-      if (error) {
-        console.error('❌ Error fetching departments:', error)
-        throw error
+      const response = await fetch('/api/departments')
+      
+      if (!response.ok) {
+        throw new Error(`Error fetching departments: ${response.status}`)
       }
       
-      console.log(`✅ Departments loaded: ${data?.length || 0} departments`)
-      if (data && data.length > 0) {
-        console.log('📋 Sample departments:', data.slice(0, 3).map((d: Department) => `${d.name} (${d.id})`))
+      const data = await response.json()
+      console.log(`✅ Departments loaded: ${data.departments?.length || 0} departments`)
+      
+      if (data.departments && data.departments.length > 0) {
+        console.log('📋 Sample departments:', data.departments.slice(0, 3).map((d: Department) => `${d.name} (${d.id})`))
       }
       
-      setDepartments(data || [])
+      setDepartments(data.departments || [])
     } catch (error) {
       console.error('💥 Error fetching departments:', error)
       setError('Error loading departments')
@@ -129,22 +127,20 @@ export default function EmployeeManager() {
   const fetchWorkSchedules = useCallback(async () => {
     try {
       console.log('🔍 Fetching work schedules...')
-      const { data, error } = await supabase
-        .from('work_schedules')
-        .select('id, name')
-        .order('name')
-
-      if (error) {
-        console.error('❌ Error fetching work schedules:', error)
-        throw error
+      const response = await fetch('/api/work-schedules')
+      
+      if (!response.ok) {
+        throw new Error(`Error fetching work schedules: ${response.status}`)
       }
       
-      console.log(`✅ Work schedules loaded: ${data?.length || 0} schedules`)
-      if (data && data.length > 0) {
-        console.log('📋 Sample schedules:', data.slice(0, 3).map((s: WorkSchedule) => `${s.name} (${s.id})`))
+      const data = await response.json()
+      console.log(`✅ Work schedules loaded: ${data.schedules?.length || 0} schedules`)
+      
+      if (data.schedules && data.schedules.length > 0) {
+        console.log('📋 Sample schedules:', data.schedules.slice(0, 3).map((s: WorkSchedule) => `${s.name} (${s.id})`))
       }
       
-      setWorkSchedules(data || [])
+      setWorkSchedules(data.schedules || [])
     } catch (error) {
       console.error('💥 Error fetching work schedules:', error)
       setError('Error loading work schedules')
