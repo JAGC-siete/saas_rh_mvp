@@ -27,15 +27,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Get user profile to determine company
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('user_profiles')
       .select('company_id')
       .eq('id', user.id)
       .single()
 
+    if (profileError) {
+      console.error('Profile error:', profileError)
+      return res.status(500).json({ error: 'Error fetching user profile' })
+    }
+
     if (!profile?.company_id) {
+      console.error('No company_id found for user:', user.id)
       return res.status(400).json({ error: 'User not associated with a company' })
     }
+
+    console.log('User profile found:', { userId: user.id, companyId: profile.company_id })
 
     // Get query parameters
     const { 
@@ -57,8 +65,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .from('employees')
       .select(`
         *,
-        departments!inner(name),
-        work_schedules!inner(name, monday_start, monday_end),
+        departments!left(name),
+        work_schedules!left(name, monday_start, monday_end),
         employee_scores!left(total_points, weekly_points, monthly_points),
         attendance_records!left(check_in, check_out, status)
       `, { count: 'exact' })
@@ -93,6 +101,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.error('Error fetching employees:', error)
       return res.status(500).json({ error: 'Error fetching employees' })
     }
+
+    console.log('Employees query successful:', { 
+      count: count || 0, 
+      employeesCount: employees?.length || 0,
+      companyId: profile.company_id,
+      status: status
+    })
 
     // Process attendance data for today
     const today = new Date().toISOString().split('T')[0]
