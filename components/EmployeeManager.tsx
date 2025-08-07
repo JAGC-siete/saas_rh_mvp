@@ -6,6 +6,9 @@ import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { useSupabaseSession } from '../lib/hooks/useSession'
+import { useEmployeeSearch } from '../lib/hooks/useEmployeeSearch'
+import { Pagination } from './ui/pagination'
+import { Search, Filter, SortAsc, SortDesc } from 'lucide-react'
 
 interface Employee {
   id: string
@@ -49,16 +52,25 @@ interface WorkSchedule {
 }
 
 export default function EmployeeManager() {
-  const [employees, setEmployees] = useState<Employee[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
   const [workSchedules, setWorkSchedules] = useState<WorkSchedule[]>([])
   const [showAddForm, setShowAddForm] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState('')
   const [userProfile, setUserProfile] = useState<any>(null)
   const [showCertificateModal, setShowCertificateModal] = useState(false)
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
   const [certificateLoading, setCertificateLoading] = useState(false)
+  const [showFilters, setShowFilters] = useState(false)
+
+  // Use the new search hook
+  const {
+    employees,
+    loading,
+    error,
+    pagination,
+    searchParams,
+    setSearchParams,
+    refreshData
+  } = useEmployeeSearch()
 
   const { user } = useSupabaseSession()
   const userId = user?.id
@@ -81,10 +93,10 @@ export default function EmployeeManager() {
   })
 
   useEffect(() => {
-    fetchData()
-  }, [])
+    fetchDepartmentsAndSchedules()
+  }, [fetchDepartmentsAndSchedules])
 
-  const fetchData = async () => {
+  const fetchDepartmentsAndSchedules = useCallback(async () => {
     try {
       // Get user profile
       if (!userId) return
@@ -98,90 +110,6 @@ export default function EmployeeManager() {
       setUserProfile(profile)
 
       if (!profile) return
-
-      // Fetch employees with work schedules
-      const { data: employeesData, error: employeesError } = await supabase
-        .from('employees')
-        .select(`
-          *,
-          work_schedules!inner(start_time, end_time)
-        `)
-        .eq('company_id', profile.company_id)
-        .eq('status', 'active')
-        .order('name')
-
-      if (employeesError) throw employeesError
-
-      // Get today's attendance records
-      const today = new Date().toISOString().split('T')[0]
-      const { data: attendanceData, error: attendanceError } = await supabase
-        .from('attendance_records')
-        .select('employee_id, check_in, check_out, status')
-        .eq('date', today)
-
-      if (attendanceError) {
-        console.error('Error fetching attendance:', attendanceError)
-      }
-
-      // Get gamification data for all employees
-      const { data: gamificationData } = await supabase
-        .from('employee_scores')
-        .select('employee_id, total_points, weekly_points, monthly_points')
-
-      const { data: achievementsData } = await supabase
-        .from('employee_achievements')
-        .select('employee_id, count')
-        .group('employee_id')
-
-      // Combine employee data with attendance status and gamification
-      const employeesWithAttendance = (employeesData || []).map((emp: any) => {
-        const attendance = attendanceData?.find((att: any) => att.employee_id === emp.id)
-        const workSchedule = emp.work_schedules?.[0]
-        const gamification = gamificationData?.find((g: any) => g.employee_id === emp.id)
-        const achievements = achievementsData?.find((a: any) => a.employee_id === emp.id)
-        
-        let attendance_status: 'present' | 'absent' | 'late' | 'not_registered' = 'not_registered'
-        let check_in_time = undefined
-        let check_out_time = undefined
-
-        if (attendance) {
-          if (attendance.check_in) {
-            check_in_time = attendance.check_in
-            const checkInHour = new Date(attendance.check_in).getHours()
-            const checkInMinutes = new Date(attendance.check_in).getMinutes()
-            
-            // Check if late (after 8:15 AM)
-            if (checkInHour > 8 || (checkInHour === 8 && checkInMinutes > 15)) {
-              attendance_status = 'late'
-            } else {
-              attendance_status = 'present'
-            }
-          } else if (attendance.status === 'absent') {
-            attendance_status = 'absent'
-          }
-        }
-
-        return {
-          ...emp,
-          attendance_status,
-          check_in_time,
-          check_out_time,
-          work_schedule: workSchedule,
-          gamification: gamification ? {
-            total_points: gamification.total_points || 0,
-            weekly_points: gamification.weekly_points || 0,
-            monthly_points: gamification.monthly_points || 0,
-            achievements_count: achievements?.count || 0
-          } : {
-            total_points: 0,
-            weekly_points: 0,
-            monthly_points: 0,
-            achievements_count: 0
-          }
-        }
-      })
-
-      setEmployees(employeesWithAttendance)
 
       // Fetch departments
       const { data: departmentsData, error: deptError } = await supabase
@@ -204,11 +132,9 @@ export default function EmployeeManager() {
       setWorkSchedules(schedulesData || [])
 
     } catch (error) {
-      console.error('Error fetching data:', error)
-    } finally {
-      setLoading(false)
+      console.error('Error fetching departments and schedules:', error)
     }
-  }
+  }, [userId])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -245,7 +171,7 @@ export default function EmployeeManager() {
       })
       
       setShowAddForm(false)
-      fetchData()
+      refreshData()
       
     } catch (error: any) {
       alert(`Error: ${error.message}`)
@@ -264,18 +190,13 @@ export default function EmployeeManager() {
         .eq('id', employeeId)
 
       if (error) throw error
-      fetchData()
+      refreshData()
     } catch (error: any) {
       alert(`Error: ${error.message}`)
     }
   }
 
-  const filteredEmployees = employees.filter(employee =>
-    employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    employee.employee_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    employee.dni.includes(searchTerm) ||
-    employee.position.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  // Remove the old filteredEmployees since we now use the search hook
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-HN', {
@@ -453,24 +374,113 @@ export default function EmployeeManager() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Employee Management</h1>
-          <p className="text-gray-600">Manage your team members and their information</p>
+          <h1 className="text-2xl font-bold text-gray-900">Gestión de Empleados</h1>
+          <p className="text-gray-600">Administra la información de tu equipo</p>
         </div>
         <Button onClick={() => setShowAddForm(true)}>
-          Add Employee
+          Agregar Empleado
         </Button>
       </div>
 
-      {/* Search */}
+      {/* Search and Filters */}
       <Card>
         <CardContent className="pt-6">
-          <Input
-            type="text"
-            placeholder="Search employees by name, code, DNI, or position..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-md"
-          />
+          <div className="flex flex-col space-y-4">
+            {/* Search Bar */}
+            <div className="flex items-center space-x-2">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  type="text"
+                  placeholder="Buscar empleados por nombre, código, DNI o posición..."
+                  value={searchParams.search}
+                  onChange={(e) => setSearchParams({ search: e.target.value })}
+                  className="pl-10"
+                />
+              </div>
+              
+              <Button
+                variant="outline"
+                onClick={() => setShowFilters(!showFilters)}
+                className="flex items-center space-x-2"
+              >
+                <Filter className="h-4 w-4" />
+                <span>Filtros</span>
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={() => setSearchParams({
+                  sort_order: searchParams.sort_order === 'asc' ? 'desc' : 'asc'
+                })}
+                className="flex items-center space-x-2"
+              >
+                {searchParams.sort_order === 'asc' ? (
+                  <SortAsc className="h-4 w-4" />
+                ) : (
+                  <SortDesc className="h-4 w-4" />
+                )}
+                <span>Ordenar</span>
+              </Button>
+            </div>
+
+            {/* Filters Panel */}
+            {showFilters && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Estado
+                  </label>
+                  <select
+                    value={searchParams.status}
+                    onChange={(e) => setSearchParams({ status: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="active">Activo</option>
+                    <option value="inactive">Inactivo</option>
+                    <option value="all">Todos</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Departamento
+                  </label>
+                  <select
+                    value={searchParams.department_id || ''}
+                    onChange={(e) => setSearchParams({ 
+                      department_id: e.target.value || undefined 
+                    })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Todos los departamentos</option>
+                    {departments.map((dept) => (
+                      <option key={dept.id} value={dept.id}>
+                        {dept.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Ordenar por
+                  </label>
+                  <select
+                    value={searchParams.sort_by}
+                    onChange={(e) => setSearchParams({ sort_by: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="name">Nombre</option>
+                    <option value="employee_code">Código</option>
+                    <option value="position">Posición</option>
+                    <option value="base_salary">Salario</option>
+                    <option value="hire_date">Fecha de contratación</option>
+                  </select>
+                </div>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -478,14 +488,14 @@ export default function EmployeeManager() {
       {showAddForm && (
         <Card>
           <CardHeader>
-            <CardTitle>Add New Employee</CardTitle>
-            <CardDescription>Enter the employee&apos;s information</CardDescription>
+            <CardTitle>Agregar Nuevo Empleado</CardTitle>
+            <CardDescription>Ingresa la información del empleado</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Employee Code
+                  Código de Empleado
                 </label>
                 <Input
                   value={formData.employee_code}
@@ -509,31 +519,31 @@ export default function EmployeeManager() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Full Name
+                  Nombre Completo
                 </label>
                 <Input
                   value={formData.name}
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  placeholder="John Doe"
+                  placeholder="Juan Pérez"
                   required
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email
+                  Correo Electrónico
                 </label>
                 <Input
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({...formData, email: e.target.value})}
-                  placeholder="john@company.com"
+                  placeholder="juan@empresa.com"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Phone
+                  Teléfono
                 </label>
                 <Input
                   value={formData.phone}
@@ -544,7 +554,7 @@ export default function EmployeeManager() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Position
+                  Posición
                 </label>
                 <Input
                   value={formData.position}
@@ -638,14 +648,14 @@ export default function EmployeeManager() {
 
               <div className="md:col-span-2 flex gap-4">
                 <Button type="submit" disabled={loading}>
-                  {loading ? 'Adding...' : 'Add Employee'}
+                  {loading ? 'Agregando...' : 'Agregar Empleado'}
                 </Button>
                 <Button 
                   type="button" 
                   variant="outline" 
                   onClick={() => setShowAddForm(false)}
                 >
-                  Cancel
+                  Cancelar
                 </Button>
               </div>
             </form>
@@ -693,22 +703,23 @@ export default function EmployeeManager() {
       {/* Employee List */}
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle>Employee Directory</CardTitle>
-              <CardDescription>
-                {filteredEmployees.length} of {employees.length} employees activos
-              </CardDescription>
+                      <div className="flex justify-between items-center">
+              <div>
+                <CardTitle>Directorio de Empleados</CardTitle>
+                <CardDescription>
+                  {pagination.total} empleados encontrados
+                  {searchParams.search && ` para "${searchParams.search}"`}
+                </CardDescription>
+              </div>
+              <Button
+                onClick={refreshData}
+                size="sm"
+                variant="outline"
+                className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+              >
+                🔄 Actualizar
+              </Button>
             </div>
-            <Button
-              onClick={fetchData}
-              size="sm"
-              variant="outline"
-              className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
-            >
-              🔄 Actualizar Asistencia
-            </Button>
-          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -727,8 +738,26 @@ export default function EmployeeManager() {
                 </tr>
               </thead>
               <tbody>
-                {/* eslint-disable-next-line react/jsx-key */}
-                {filteredEmployees.map((employee, index) => (
+                {loading ? (
+                  <tr>
+                    <td colSpan={9} className="py-8 text-center text-gray-500">
+                      Cargando empleados...
+                    </td>
+                  </tr>
+                ) : error ? (
+                  <tr>
+                    <td colSpan={9} className="py-8 text-center text-red-500">
+                      Error: {error}
+                    </td>
+                  </tr>
+                ) : employees.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="py-8 text-center text-gray-500">
+                      {searchParams.search ? 'No se encontraron empleados con esa búsqueda.' : 'No hay empleados registrados.'}
+                    </td>
+                  </tr>
+                ) : (
+                  employees.map((employee, index) => (
                   <tr key={`employee-${index}`} className="border-b hover:bg-gray-50">
                     <td className="py-3 px-4">
                       <div>
@@ -825,16 +854,20 @@ export default function EmployeeManager() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  ))
+                )}
               </tbody>
             </table>
-
-            {filteredEmployees.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                {searchTerm ? 'No employees found matching your search.' : 'No employees added yet.'}
-              </div>
-            )}
           </div>
+
+          {/* Pagination */}
+          <Pagination
+            currentPage={pagination.page}
+            totalPages={pagination.totalPages}
+            totalItems={pagination.total}
+            itemsPerPage={pagination.limit}
+            onPageChange={(page) => setSearchParams({ page })}
+          />
         </CardContent>
       </Card>
 
