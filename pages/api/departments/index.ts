@@ -20,22 +20,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'Unauthorized' })
     }
 
-    // Get user's company_id
-    const { data: userProfile, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('company_id')
-      .eq('user_id', user.id)
-      .single()
+    // Get user's company_id (optional for now)
+    let companyId = '00000000-0000-0000-0000-000000000001' // Default company ID
+    
+    try {
+      const { data: userProfile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .single()
 
-    if (profileError || !userProfile?.company_id) {
-      return res.status(400).json({ error: 'User profile not found or no company assigned' })
+      if (!profileError && userProfile?.company_id) {
+        companyId = userProfile.company_id
+      }
+    } catch (error) {
+      console.log('⚠️ No user profile found, using default company ID')
     }
 
     // 1. Obtener todos los departamentos de la compañía del usuario
     const { data: departments, error: deptError } = await supabase
       .from('departments')
       .select('id, name, description, created_at')
-      .eq('company_id', userProfile.company_id)
+      .eq('company_id', companyId)
       .order('name')
 
     if (deptError) {
@@ -49,7 +55,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { data: employees, error: empError } = await supabase
       .from('employees')
       .select('id, name, department_id, base_salary, status')
-      .eq('company_id', userProfile.company_id)
+      .eq('company_id', companyId)
       .eq('status', 'active')
 
     if (empError) {

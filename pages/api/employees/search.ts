@@ -20,15 +20,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'Unauthorized' })
     }
 
-    // Get user's company_id
-    const { data: userProfile, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('company_id')
-      .eq('user_id', user.id)
-      .single()
+    // Get user's company_id (optional for now)
+    let companyId = '00000000-0000-0000-0000-000000000001' // Default company ID
+    
+    try {
+      const { data: userProfile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .single()
 
-    if (profileError || !userProfile?.company_id) {
-      return res.status(400).json({ error: 'User profile not found or no company assigned' })
+      if (!profileError && userProfile?.company_id) {
+        companyId = userProfile.company_id
+      }
+    } catch (error) {
+      console.log('⚠️ No user profile found, using default company ID')
     }
 
     // Get query parameters
@@ -59,7 +65,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         attendance_records!attendance_records_employee_id_fkey!left(check_in, check_out, status)
       `, { count: 'exact' })
       .eq('status', status)
-      .eq('company_id', userProfile.company_id)
+      .eq('company_id', companyId)
 
     // Add search filter if provided
     if (search) {
