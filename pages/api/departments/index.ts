@@ -43,7 +43,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { data: departments, error: deptError } = await supabase
       .from('departments')
       .select('id, name, description, created_at, company_id')
-      .eq('company_id', companyId)
+      // .eq('company_id', companyId) // Temporarily disabled to see all departments
       .order('name')
 
     if (deptError) {
