@@ -357,7 +357,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           check_in: getHondurasTimeISO(),
           expected_check_in: startTime,
           late_minutes: lateMinutes,
-          early_minutes: earlyMinutes,
+          early_departure_minutes: earlyMinutes,
           justification: justification || null,
           status: checkInStatus
         })
@@ -565,18 +565,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     return res.status(200).json({ 
       message, 
-      status, 
-      gamification,
       action: finalAction,
       timeDetection: intendedAction,
       employee: {
         name: employee.name
-      },
-      timestamp: getHondurasTimeISO(),
-      workSchedule: {
-        expectedStart: startTime,
-        expectedEnd: endTime,
-        dayOfWeek: dayOfWeek
       }
     })
 
