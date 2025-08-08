@@ -298,11 +298,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       let requiresJustification = false
       let requiresAuthorization = false
       
-      if (earlyMinutes >= 120) {
-        // ⏳ Entrada temprana (⭐): Desde 2 horas antes hasta 5 minutos antes
+      if (earlyMinutes >= 120 && earlyMinutes <= 300) {
+        // ⏳ Entrada temprana (⭐): Desde 2 horas antes hasta 5 minutos antes (120-300 min)
         checkInStatus = 'early'
         checkInMessage = 'Entrada temprana ⭐'
-      } else if (earlyMinutes >= 5 || lateMinutes <= 5) {
+      } else if ((earlyMinutes >= 4 && earlyMinutes < 120) || (lateMinutes >= 0 && lateMinutes <= 5)) {
         // 🌅 Entrada normal: Desde 4 minutos antes hasta 5 minutos después
         checkInStatus = 'normal'
         checkInMessage = 'Entrada registrada normalmente 🌅'
@@ -382,7 +382,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       let checkOutMessage = ''
       let requiresJustification = false
       
-      if (earlyDepartureMinutes >= 1) {
+      // Verificar si es después de las 3:00 PM para salida temprana
+      const currentHour = hondurasTime.getHours()
+      const isAfter3PM = currentHour >= 15
+      
+      if (earlyDepartureMinutes >= 1 && isAfter3PM) {
         // ⏰ Salida temprana (requiere justificación): Desde 3:00 PM hasta 1 minuto antes
         checkOutStatus = 'early'
         checkOutMessage = 'Salida anticipada ⏰, por favor justifica tu salida'
