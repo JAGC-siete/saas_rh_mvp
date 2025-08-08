@@ -40,6 +40,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // 1. Obtener todos los departamentos de la compañía del usuario
     console.log('🔍 Buscando departamentos con company_id:', companyId)
     
+    // DEBUG: Query ALL departments without any filters to see what's in the table
+    const { data: allDepartments, error: allDeptError } = await supabase
+      .from('departments')
+      .select('*')
+    
+    console.log('🔍 DEBUG: ALL departments in table:', allDepartments)
+    console.log('🔍 DEBUG: ALL departments error:', allDeptError)
+    
     const { data: departments, error: deptError } = await supabase
       .from('departments')
       .select('id, name, description, created_at, company_id')
