@@ -1,0 +1,22 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap');
+
+:root {
+  --landing-primary: #4682b4; /* Steel Blue */
+  --landing-secondary: #4a5568; /* Gray */
+  --landing-bg: #f7f9fb; /* Light background */
+  --landing-accent: #ffd700; /* Yellow */
+}
+
+.dark {
+  --landing-bg: #1a202c; /* Dark background */
+  --landing-primary: #ffd700; /* Accent as primary in dark mode */
+  --landing-secondary: #e2e8f0; /* Light gray text */
+}
+
+body.landing {
+  font-family: 'Montserrat', sans-serif;
+}
+
+.landing-section {
+  padding: 4rem 1rem;
+}
