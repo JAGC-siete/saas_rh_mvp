@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
-import { useSession } from '@supabase/auth-helpers-react'
+import { useAuth } from '../lib/auth'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card'
@@ -18,8 +18,7 @@ interface Department {
 
 interface Employee {
   id: string
-  first_name: string
-  last_name: string
+  name: string
   email: string
 }
 
@@ -34,7 +33,7 @@ const NO_MANAGER_TEXT = 'Sin asignar'
 const NO_DEPARTMENTS_TEXT = 'No hay departamentos registrados'
 
 export default function DepartmentManager() {
-  const session = useSession()
+  const { user } = useAuth()
   const [departments, setDepartments] = useState<Department[]>([])
   const [employees, setEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(false)
@@ -49,7 +48,7 @@ export default function DepartmentManager() {
         .from('departments')
         .select(`
           *,
-          employees:employees(id, first_name, last_name, email)
+          employees:employees(id, name, email)
         `)
         .order('name')
 
@@ -66,9 +65,9 @@ export default function DepartmentManager() {
     try {
       const { data, error } = await supabase
         .from('employees')
-        .select('id, first_name, last_name, email')
+        .select('id, name, email')
         .eq('status', 'active')
-        .order('first_name')
+        .order('name')
 
       if (error) throw error
       setEmployees(data || [])
@@ -156,7 +155,7 @@ export default function DepartmentManager() {
 
   const getManagerName = useCallback((managerId: string) => {
     const manager = employees.find(emp => emp.id === managerId)
-    return manager ? `${manager.first_name} ${manager.last_name}` : NO_MANAGER_TEXT
+    return manager ? manager.name : NO_MANAGER_TEXT
   }, [employees])
 
 
@@ -164,11 +163,11 @@ export default function DepartmentManager() {
   const isLoadingInitial = loading && departments.length === 0
 
   useEffect(() => {
-    if (session?.user) {
+    if (user) {
       fetchDepartments()
       fetchEmployees()
     }
-  }, [session, fetchDepartments, fetchEmployees])
+  }, [user, fetchDepartments, fetchEmployees])
 
   if (isLoadingInitial) {
     return (
@@ -226,7 +225,7 @@ export default function DepartmentManager() {
                   <option value="">Seleccionar manager</option>
                   {employees.map((employee) => (
                     <option key={employee.id} value={employee.id}>
-                      {employee.first_name} {employee.last_name}
+                      {employee.name}
                     </option>
                   ))}
                 </select>
