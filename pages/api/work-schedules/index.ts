@@ -12,15 +12,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Create Supabase client for Pages API
     const supabase = createClient(req, res)
 
-    // Get user session
-    const { data: { session }, error: authError } = await supabase.auth.getSession()
+    // Get user (more secure than getSession)
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
     
-    if (authError || !session?.user) {
+    if (authError || !user) {
       console.error('❌ Auth error:', authError)
       return res.status(401).json({ error: 'Unauthorized' })
     }
-
-    const user = session.user
 
     // Get user's company_id
     const { data: userProfile, error: profileError } = await supabase
