@@ -105,7 +105,7 @@ export default function EmployeeManager() {
           name: data.employees[0].name,
           departments: data.employees[0].departments,
           work_schedules: data.employees[0].work_schedules,
-          position: data.employees[0].position
+          role: data.employees[0].role
         })
       }
       
@@ -488,7 +488,7 @@ export default function EmployeeManager() {
                           <p><span className="font-medium">Teléfono:</span> {employee.phone || 'No especificado'}</p>
                         </div>
                         <div>
-                          <p><span className="font-medium">Posición:</span> {employee.position || 'No especificada'}</p>
+                          <p><span className="font-medium">Posición:</span> {employee.role || 'No especificada'}</p>
                           <p><span className="font-medium">Departamento:</span> {employee.departments?.name || 'Sin asignar'}</p>
                           <p><span className="font-medium">Horario:</span> {employee.work_schedules?.name || 'Sin asignar'}</p>
                           {employee.check_in_time && (

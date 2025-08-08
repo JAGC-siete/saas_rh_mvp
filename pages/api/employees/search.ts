@@ -54,15 +54,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log('📋 Query parameters:', { search, page: pageNum, limit: limitNum, status, department_id, sort_by, sort_order })
 
-    // Build the query
+    // Build the query - REMOVED position since it doesn't exist in employees table
     let query = supabase
       .from('employees')
       .select(`
-        *,
-        departments(name),
+        id,
+        company_id,
+        department_id,
+        work_schedule_id,
+        employee_code,
+        dni,
+        name,
+        email,
+        phone,
+        role,
+        team,
+        base_salary,
+        hire_date,
+        termination_date,
+        status,
+        bank_name,
+        bank_account,
+        emergency_contact_name,
+        emergency_contact_phone,
+        address,
+        metadata,
+        created_at,
+        updated_at,
+        departments!employees_department_id_fkey(name),
         work_schedules(name, monday_start, monday_end),
         employee_scores(total_points, weekly_points, monthly_points),
-        attendance_records(check_in, check_out, status)
+        attendance_records!attendance_records_employee_id_fkey(check_in, check_out, status)
       `, { count: 'exact' })
       .eq('status', status)
       .eq('company_id', companyId)
@@ -73,7 +95,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         name.ilike.%${search}%,
         employee_code.ilike.%${search}%,
         dni.ilike.%${search}%,
-        position.ilike.%${search}%,
+        role.ilike.%${search}%,
+        team.ilike.%${search}%,
         email.ilike.%${search}%
       `)
     }
