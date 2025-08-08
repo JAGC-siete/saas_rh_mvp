@@ -38,9 +38,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // 1. Obtener todos los departamentos de la compañía del usuario
+    console.log('🔍 Buscando departamentos con company_id:', companyId)
+    
     const { data: departments, error: deptError } = await supabase
       .from('departments')
-      .select('id, name, description, created_at')
+      .select('id, name, description, created_at, company_id')
       .eq('company_id', companyId)
       .order('name')
 
@@ -50,6 +52,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     console.log('✅ Departments obtenidos:', departments?.length || 0)
+    console.log('📋 Departments encontrados:', departments?.map(d => ({ id: d.id, name: d.name, company_id: d.company_id })))
 
     // 2. Obtener empleados activos de la compañía del usuario
     const { data: employees, error: empError } = await supabase
