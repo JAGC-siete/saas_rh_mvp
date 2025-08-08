@@ -65,11 +65,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log('✅ Empleados activos obtenidos:', employees?.length || 0)
 
+    // 3. Generar estadísticas por departamento
+    const departmentStats: { [key: string]: any } = {}
+    let totalSalary = 0
+
+    departments?.forEach(dept => {
+      const deptEmployees = employees?.filter(emp => emp.department_id === dept.id) || []
+      const deptSalary = deptEmployees.reduce((sum, emp) => sum + (emp.base_salary || 0), 0)
+      const avgSalary = deptEmployees.length > 0 ? deptSalary / deptEmployees.length : 0
+      
+      departmentStats[dept.name] = {
+        id: dept.id,
+        name: dept.name,
+        description: dept.description || '',
+        employeeCount: deptEmployees.length,
+        totalSalary: deptSalary,
+        averageSalary: avgSalary,
+        employees: deptEmployees
+      }
+      
+      totalSalary += deptSalary
+    })
+
     const response = {
       departments: departments || [],
+      departmentStats,
       summary: {
         totalDepartments: departments?.length || 0,
-        totalEmployees: employees?.length || 0
+        totalEmployees: employees?.length || 0,
+        totalSalary,
+        averageSalary: employees?.length > 0 ? totalSalary / employees.length : 0
       }
     }
 
