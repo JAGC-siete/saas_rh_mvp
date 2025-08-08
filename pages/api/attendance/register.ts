@@ -17,50 +17,25 @@ function detectIntendedAction(currentTime: Date, existingRecord: any): 'check_in
   const minute = currentTime.getMinutes()
   const totalMinutes = hour * 60 + minute
   
-  // Time ranges in minutes from midnight
-  const earlyMorning = 5 * 60       // 5:00 AM
-  const morningStart = 6 * 60       // 6:00 AM
-  const morningEnd = 11 * 60        // 11:00 AM  
-  const afternoonStart = 15 * 60    // 3:00 PM
-  const lateNightEnd = 23 * 60 + 59 // 11:59 PM
-  
   // Si ya tiene entrada y salida para hoy, no permitir más registros
   if (existingRecord?.check_in && existingRecord?.check_out) {
     return 'ambiguous'
   }
   
-  // Si tiene entrada pero no salida
+  // Si tiene entrada pero no salida - puede ser check-out
   if (existingRecord?.check_in && !existingRecord?.check_out) {
     // Después de las 3 PM, definitivamente es salida
-    if (totalMinutes >= afternoonStart) {
+    if (hour >= 15) {
       return 'check_out'
     }
-    // Entre 11 AM y 3 PM podría ser salida temprana
-    if (totalMinutes >= morningEnd) {
-      return 'check_out'
-    }
-    // Antes de las 11 AM con entrada ya registrada es inusual
+    // Antes de las 3 PM con entrada ya registrada es inusual
     return 'ambiguous'
   }
   
-  // Si no tiene registro para hoy
+  // Si no tiene registro para hoy - puede ser check-in
   if (!existingRecord) {
-    // En la mañana (6 AM - 11 AM) es entrada normal
-    if (totalMinutes >= morningStart && totalMinutes <= morningEnd) {
-      return 'check_in'
-    }
-    // Muy temprano (5-6 AM) podría ser entrada temprana
-    if (totalMinutes >= earlyMorning && totalMinutes < morningStart) {
-      return 'check_in'
-    }
-    // Después de las 3 PM es probablemente un turno tarde
-    if (totalMinutes >= afternoonStart) {
-      return 'check_in'
-    }
-    // Entre 11 AM y 3 PM es entrada tarde
-    if (totalMinutes > morningEnd && totalMinutes < afternoonStart) {
-      return 'check_in'
-    }
+    // Cualquier hora puede ser entrada (turnos diferentes)
+    return 'check_in'
   }
   
   return 'ambiguous'
@@ -310,18 +285,67 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('✅ Acción final determinada:', finalAction)
 
     if (finalAction === 'check_in') {
-      // CHECK-IN: Registrar entrada
+      // CHECK-IN: Registrar entrada con nueva lógica de validación
       console.log('📝 Registrando entrada...')
-      const lateMinutes = Math.max(0, diffMinutes)
       
-      if (lateMinutes > 5 && !justification) {
+      // Calcular diferencia en minutos (positivo = tarde, negativo = temprano)
+      const lateMinutes = Math.max(0, diffMinutes)
+      const earlyMinutes = Math.max(0, -diffMinutes)
+      
+      // 🕵️ NUEVA LÓGICA DE VALIDACIÓN PARA CHECK-IN
+      let checkInStatus = 'normal'
+      let checkInMessage = ''
+      let requiresJustification = false
+      let requiresAuthorization = false
+      
+      if (earlyMinutes >= 120) {
+        // ⏳ Entrada temprana (⭐): Desde 2 horas antes hasta 5 minutos antes
+        checkInStatus = 'early'
+        checkInMessage = 'Entrada temprana ⭐'
+      } else if (earlyMinutes >= 5 || lateMinutes <= 5) {
+        // 🌅 Entrada normal: Desde 4 minutos antes hasta 5 minutos después
+        checkInStatus = 'normal'
+        checkInMessage = 'Entrada registrada normalmente 🌅'
+      } else if (lateMinutes >= 6 && lateMinutes <= 20) {
+        // ⏰ Entrada tarde (requiere justificación): 6-20 minutos tarde
+        checkInStatus = 'late'
+        checkInMessage = 'Entrada tardía ⏰, por favor justifica tu demora'
+        requiresJustification = true
+      } else if (lateMinutes >= 21 && lateMinutes <= 240) {
+        // 🚫 Muy tarde (requiere autorización): 21 minutos hasta 4 horas tarde
+        checkInStatus = 'very_late'
+        checkInMessage = 'Estás fuera de tu horario. Tu registro requiere autorización especial. Pasa a gerencia para aclarar el asunto'
+        requiresAuthorization = true
+      } else {
+        // Caso extremo: más de 4 horas tarde
+        checkInStatus = 'extreme_late'
+        checkInMessage = 'Registro fuera del horario laboral. Contacta a RRHH inmediatamente.'
+        requiresAuthorization = true
+      }
+      
+      // Validar justificación si es requerida
+      if (requiresJustification && !justification) {
         console.log('⚠️ Llegada tarde sin justificación')
         return res.status(422).json({
           requireJustification: true,
-          message: '⏰ Has llegado tarde. Por favor justifica tu demora.',
+          message: checkInMessage,
           lateMinutes,
           expectedTime: startTime,
-          actualTime: hondurasTime.toLocaleTimeString()
+          actualTime: hondurasTime.toLocaleTimeString(),
+          status: checkInStatus
+        })
+      }
+      
+      // Validar autorización si es requerida
+      if (requiresAuthorization) {
+        console.log('🚫 Llegada muy tarde - requiere autorización')
+        return res.status(403).json({
+          requireAuthorization: true,
+          message: checkInMessage,
+          lateMinutes,
+          expectedTime: startTime,
+          actualTime: hondurasTime.toLocaleTimeString(),
+          status: checkInStatus
         })
       }
 
@@ -333,8 +357,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           check_in: getHondurasTimeISO(),
           expected_check_in: startTime,
           late_minutes: lateMinutes,
+          early_minutes: earlyMinutes,
           justification: justification || null,
-          status: lateMinutes > 5 ? 'late' : 'present'
+          status: checkInStatus
         })
 
       if (insertError) {
@@ -347,10 +372,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.log('✅ Entrada registrada exitosamente')
 
     } else if (finalAction === 'check_out') {
-      // CHECK-OUT: Registrar salida (smart detection)
+      // CHECK-OUT: Registrar salida con nueva lógica de validación
       console.log('📝 Registrando salida...')
       const expectedEnd = parseExpectedTime(endTime, hondurasTime)
       const earlyDepartureMinutes = Math.max(0, calculateMinutesDifference(expectedEnd, hondurasTime))
+      
+      // 🕵️ NUEVA LÓGICA DE VALIDACIÓN PARA CHECK-OUT
+      let checkOutStatus = 'normal'
+      let checkOutMessage = ''
+      let requiresJustification = false
+      
+      if (earlyDepartureMinutes >= 1) {
+        // ⏰ Salida temprana (requiere justificación): Desde 3:00 PM hasta 1 minuto antes
+        checkOutStatus = 'early'
+        checkOutMessage = 'Salida anticipada ⏰, por favor justifica tu salida'
+        requiresJustification = true
+      } else {
+        // 🙌 Salida normal o puntual: Desde la hora exacta de salida en adelante
+        checkOutStatus = 'normal'
+        checkOutMessage = 'Gracias por tu trabajo hoy, te esperamos mañana temprano'
+      }
+      
+      // Validar justificación si es requerida
+      if (requiresJustification && !justification) {
+        console.log('⚠️ Salida temprana sin justificación')
+        return res.status(422).json({
+          requireJustification: true,
+          message: checkOutMessage,
+          earlyDepartureMinutes,
+          expectedTime: endTime,
+          actualTime: hondurasTime.toLocaleTimeString(),
+          status: checkOutStatus
+        })
+      }
 
       const { error: updateError } = await supabase
         .from('attendance_records')
@@ -358,6 +412,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           check_out: getHondurasTimeISO(),
           expected_check_out: endTime,
           early_departure_minutes: earlyDepartureMinutes,
+          justification: justification || null,
           updated_at: getHondurasTimeISO()
         })
         .eq('id', existingRecord.id)
