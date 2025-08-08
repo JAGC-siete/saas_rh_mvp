@@ -1,22 +1,40 @@
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap');
 
 :root {
-  --landing-primary: #4682b4; /* Steel Blue */
-  --landing-secondary: #4a5568; /* Gray */
-  --landing-bg: #f7f9fb; /* Light background */
-  --landing-accent: #ffd700; /* Yellow */
+  /* Nuevo azul profesional */
+  --primary: #3b82f6;
+  --primary-hover: #2563eb;
+  --primary-gradient: linear-gradient(135deg, #3b82f6, #2563eb);
+  --bg-hero: #f3f4f6;
 }
 
 .dark {
-  --landing-bg: #1a202c; /* Dark background */
-  --landing-primary: #ffd700; /* Accent as primary in dark mode */
-  --landing-secondary: #e2e8f0; /* Light gray text */
+  --bg-hero: #1f2937;
+  --primary: #3b82f6;
+  --primary-hover: #2563eb;
+  --primary-gradient: linear-gradient(135deg, #3b82f6, #2563eb);
 }
 
-body.landing {
+/* Tipografía para la landing */
+.landing {
   font-family: 'Montserrat', sans-serif;
 }
 
 .landing-section {
   padding: 4rem 1rem;
+}
+
+.btn-primary {
+  background: var(--primary-gradient);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: var(--primary-hover);
+}
+
+.btn-secondary {
+  border: 2px solid var(--primary);
+  color: var(--primary);
+  background: transparent;
 }
