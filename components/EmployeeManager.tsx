@@ -100,6 +100,15 @@ export default function EmployeeManager() {
       const data = await response.json()
       console.log('✅ API Data received:', data)
       
+      if (data.employees && data.employees.length > 0) {
+        console.log('📋 Sample employee data:', {
+          name: data.employees[0].name,
+          departments: data.employees[0].departments,
+          work_schedules: data.employees[0].work_schedules,
+          position: data.employees[0].position
+        })
+      }
+      
       setEmployees(data.employees || [])
     } catch (err) {
       console.error('💥 Fetch error:', err)
