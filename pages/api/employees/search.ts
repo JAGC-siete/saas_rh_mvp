@@ -1,15 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '@supabase/supabase-js'
-
-// Use service role key for admin access (same as departments and attendance APIs)
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-
-if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error('Missing required Supabase environment variables')
-}
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
+import { createClient } from '../../../lib/supabase/server'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -18,6 +8,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     console.log('🔍 Employees Search API: Iniciando...')
+
+    // Create Supabase client for Pages API
+    const supabase = createClient(req, res)
+
+    // Get user (more secure than getSession)
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
+      console.error('❌ Auth error:', authError)
+      return res.status(401).json({ error: 'Unauthorized' })
+    }
+
+    // Get user's company_id
+    const { data: userProfile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('company_id')
+      .eq('user_id', user.id)
+      .single()
+
+    if (profileError || !userProfile?.company_id) {
+      return res.status(400).json({ error: 'User profile not found or no company assigned' })
+    }
 
     // Get query parameters
     const { 
@@ -47,6 +59,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         attendance_records!attendance_records_employee_id_fkey!left(check_in, check_out, status)
       `, { count: 'exact' })
       .eq('status', status)
+      .eq('company_id', userProfile.company_id)
 
     // Add search filter if provided
     if (search) {

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { Button } from './ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
-import { useSupabaseSession } from '../lib/hooks/useSession'
+import { useAuth } from '../lib/auth'
 import { Employee } from '../lib/types/employee'
 import AddEmployeeForm from './AddEmployeeForm'
 import { PlusIcon, PencilIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline'
@@ -56,17 +56,18 @@ export default function EmployeeManager() {
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null)
   const [showDeactivateModal, setShowDeactivateModal] = useState(false)
   const [employeeToDeactivate, setEmployeeToDeactivate] = useState<Employee | null>(null)
-  const { user, loading: sessionLoading } = useSupabaseSession()
+  const { user, loading: sessionLoading } = useAuth()
 
   const getErrorMessage = useCallback((error: unknown) => {
     if (error instanceof Error) {
       const message = error.message.toLowerCase()
       if (message.includes('401')) return 'Sesión expirada. Por favor, inicia sesión nuevamente.'
-      if (message.includes('403')) return 'No tienes permisos para realizar esta operación en empleados de otra compañía.'
+      if (message.includes('403')) return 'No tienes permisos para realizar esta operación.'
       if (message.includes('404')) return 'No se encontró el empleado solicitado.'
       if (message.includes('409')) return 'El código de empleado ya existe. Por favor, usa un código diferente.'
       if (message.includes('missing required fields')) return 'Por favor, completa todos los campos requeridos: código, DNI, nombre y salario base.'
       if (message.includes('500')) return 'Error del servidor. Por favor, intenta más tarde.'
+      if (message.includes('unauthorized')) return 'No autorizado. Por favor, inicia sesión nuevamente.'
       return error.message
     }
     return 'Error inesperado. Por favor, verifica tu conexión e intenta nuevamente.'
