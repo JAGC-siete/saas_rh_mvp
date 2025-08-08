@@ -7,6 +7,7 @@ import { logger } from './lib/logger'
 const PUBLIC_ROUTES = new Set([
   '/',
   '/login',
+  '/landing',
   '/auth',
   '/registrodeasistencia',
   '/attendance/public',

@@ -177,6 +177,16 @@ export default function HomePage() {
               <Clock className="h-4 w-4" />
               Registrar Asistencia
             </Link>
+            
+            {/* Landing Page Link */}
+            <div className="mt-4 pt-4 border-t border-blue-400/20">
+              <Link 
+                href="/landing" 
+                className="text-blue-300 hover:text-white transition-colors text-xs"
+              >
+                Conoce más sobre Humano SISU
+              </Link>
+            </div>
           </div>
         </div>
       </div>
