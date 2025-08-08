@@ -1,9 +1,14 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '@supabase/supabase-js'
+import { getTodayInHonduras, getHondurasTime } from '../../../lib/timezone'
 
 // Use service role key for admin access
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://fwyxmovfrzauebiqxchz.supabase.co'
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ3eXhtb3ZmcnphdWViaXF4Y2h6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MjE4OTkyMSwiZXhwIjoyMDY3NzY1OTIxfQ.7tCj7HGw9MevF1Q9EEoOvD6CXf4M6f0iu37U-vjE76I'
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
+
+if (!supabaseUrl || !supabaseServiceKey) {
+  throw new Error('Missing required Supabase environment variables')
+}
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
@@ -16,10 +21,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('🔍 Dashboard stats: Iniciando...')
     console.log('📅 Timestamp:', new Date().toISOString())
     
-    // Use Tegucigalpa timezone for today's date
-    const tegucigalpaTime = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Tegucigalpa"}))
-    const today = tegucigalpaTime.toISOString().split('T')[0]
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    // Use Honduras timezone for today's date
+    const today = getTodayInHonduras()
+    const hondurasTime = getHondurasTime()
+    const sevenDaysAgo = new Date(hondurasTime.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 
     console.log('📅 Fechas calculadas:', { today, sevenDaysAgo })
 

@@ -1,8 +1,7 @@
-import { GetServerSideProps } from 'next'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
-import Head from 'next/head'
 import Link from 'next/link'
+import Head from 'next/head'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
@@ -17,13 +16,12 @@ export default function AdminLogin() {
   const [error, setError] = useState('')
   const [currentTime, setCurrentTime] = useState('')
   
-  const { user, loading: authLoading, login } = useAuth()
+  const { user, loading: authLoading, login, error: authError } = useAuth()
   const router = useRouter()
 
   // Redirect if already logged in - ONLY when auth is not loading
   useEffect(() => {
     if (!authLoading && user) {
-      console.log('User already logged in, redirecting to dashboard')
       router.push('/dashboard')
     }
   }, [user, authLoading, router])
@@ -121,10 +119,12 @@ export default function AdminLogin() {
                   </label>
                   <Input
                     id="email"
+                    name="email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="admin@empresa.com"
+                    autoComplete="username"
                     required
                     disabled={loading}
                     className="h-12"
@@ -139,10 +139,12 @@ export default function AdminLogin() {
                   <div className="relative">
                     <Input
                       id="password"
+                      name="password"
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
+                      autoComplete="current-password"
                       required
                       disabled={loading}
                       className="h-12 pr-12"
@@ -159,10 +161,10 @@ export default function AdminLogin() {
                 </div>
 
                 {/* Error Message */}
-                {error && (
+                {(error || authError) && (
                   <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 p-3 rounded-md">
                     <AlertCircle className="h-4 w-4" />
-                    {error}
+                    {error || authError}
                   </div>
                 )}
 
@@ -200,10 +202,4 @@ export default function AdminLogin() {
       </div>
     </>
   )
-}
-
-export const getServerSideProps: GetServerSideProps = async () => {
-  return {
-    props: {}
-  }
 }

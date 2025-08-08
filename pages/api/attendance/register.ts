@@ -1,62 +1,80 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient, createClient } from '../../../lib/supabase/server'
 import { logger } from '../../../lib/logger'
+import { 
+  getHondurasTime, 
+  getHondurasTimeISO, 
+  getTodayInHonduras,
+  getCurrentDayOfWeek,
+  parseExpectedTime,
+  getAttendanceStatus,
+  calculateMinutesDifference
+} from '../../../lib/timezone'
+
+// Smart time detection function
+function detectIntendedAction(currentTime: Date, existingRecord: any): 'check_in' | 'check_out' | 'ambiguous' {
+  const hour = currentTime.getHours()
+  const minute = currentTime.getMinutes()
+  const totalMinutes = hour * 60 + minute
+  
+  // Time ranges in minutes from midnight
+  const earlyMorning = 5 * 60       // 5:00 AM
+  const morningStart = 6 * 60       // 6:00 AM
+  const morningEnd = 11 * 60        // 11:00 AM  
+  const afternoonStart = 15 * 60    // 3:00 PM
+  const lateNightEnd = 23 * 60 + 59 // 11:59 PM
+  
+  // Si ya tiene entrada y salida para hoy, no permitir más registros
+  if (existingRecord?.check_in && existingRecord?.check_out) {
+    return 'ambiguous'
+  }
+  
+  // Si tiene entrada pero no salida
+  if (existingRecord?.check_in && !existingRecord?.check_out) {
+    // Después de las 3 PM, definitivamente es salida
+    if (totalMinutes >= afternoonStart) {
+      return 'check_out'
+    }
+    // Entre 11 AM y 3 PM podría ser salida temprana
+    if (totalMinutes >= morningEnd) {
+      return 'check_out'
+    }
+    // Antes de las 11 AM con entrada ya registrada es inusual
+    return 'ambiguous'
+  }
+  
+  // Si no tiene registro para hoy
+  if (!existingRecord) {
+    // En la mañana (6 AM - 11 AM) es entrada normal
+    if (totalMinutes >= morningStart && totalMinutes <= morningEnd) {
+      return 'check_in'
+    }
+    // Muy temprano (5-6 AM) podría ser entrada temprana
+    if (totalMinutes >= earlyMorning && totalMinutes < morningStart) {
+      return 'check_in'
+    }
+    // Después de las 3 PM es probablemente un turno tarde
+    if (totalMinutes >= afternoonStart) {
+      return 'check_in'
+    }
+    // Entre 11 AM y 3 PM es entrada tarde
+    if (totalMinutes > morningEnd && totalMinutes < afternoonStart) {
+      return 'check_in'
+    }
+  }
+  
+  return 'ambiguous'
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const startTime = Date.now()
   
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST'])
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  // 🔒 AUTENTICACIÓN REQUERIDA
-  try {
-    const supabase = createClient(req, res)
-    const { data: { session } } = await supabase.auth.getSession()
-    
-    if (!session) {
-      return res.status(401).json({ 
-        error: 'No autorizado',
-        message: 'Debe iniciar sesión para registrar asistencia'
-      })
-    }
-
-    // Verificar que el usuario tiene permisos para registrar asistencia
-    const { data: userProfile } = await supabase
-      .from('user_profiles')
-      .select('role, permissions, company_id')
-      .eq('id', session.user.id)
-      .single()
-
-    if (!userProfile) {
-      return res.status(403).json({ 
-        error: 'Perfil no encontrado',
-        message: 'Su perfil de usuario no está configurado correctamente'
-      })
-    }
-
-    // Verificar permisos (admin, manager, o employee pueden registrar asistencia)
-    const allowedRoles = ['admin', 'manager', 'employee']
-    if (!allowedRoles.includes(userProfile.role)) {
-      return res.status(403).json({ 
-        error: 'Permisos insuficientes',
-        message: 'No tiene permisos para registrar asistencia'
-      })
-    }
-
-    console.log('🔐 Usuario autenticado:', { 
-      userId: session.user.id, 
-      role: userProfile.role,
-      companyId: userProfile.company_id 
-    })
-  } catch (authError) {
-    console.error('❌ Error de autenticación:', authError)
-    return res.status(500).json({ 
-      error: 'Error de autenticación',
-      message: 'No se pudo verificar la autenticación'
-    })
-  }
+  // 🔓 REGISTRO PÚBLICO - Sin autenticación requerida
+  console.log('🔓 Registro público de asistencia - sin autenticación requerida')
 
   try {
     const { last5, dni, justification } = req.body
@@ -94,7 +112,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('🔍 Buscando empleado...', { dni, last5 })
     let employeeQuery = supabase
       .from('employees')
-      .select('id, work_schedule_id, dni, name, status, position, company_id')
+      .select('id, work_schedule_id, dni, name, status, company_id')
       .eq('status', 'active')
 
     if (dni) {
@@ -131,7 +149,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const employee = employees[0]
-    console.log('✅ Empleado encontrado:', { id: employee.id, name: employee.name, position: employee.position })
+    console.log('✅ Empleado encontrado:', { id: employee.id, name: employee.name })
 
     // PASO 3: Validar work_schedule_id
     if (!employee.work_schedule_id) {
@@ -159,10 +177,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     console.log('✅ Horario obtenido:', schedule)
 
-    // PASO 5: Comparar hora actual con horario esperado (usando zona horaria de Tegucigalpa)
-    const now = new Date()
-    const tegucigalpaTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Tegucigalpa"}))
-    const dayOfWeek = tegucigalpaTime.toLocaleString('en-US', { weekday: 'long' }).toLowerCase()
+    // PASO 5: Comparar hora actual con horario esperado (usando zona horaria de Honduras)
+    const hondurasTime = getHondurasTime()
+    const dayOfWeek = getCurrentDayOfWeek()
     const startKey = `${dayOfWeek}_start`
     const endKey = `${dayOfWeek}_end`
     const startTime = schedule[startKey]
@@ -176,24 +193,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    // Parsear horas y calcular diferencia usando hora de Tegucigalpa
-    const [startHour, startMin] = startTime.split(':').map(Number)
-    const expectedStart = new Date(tegucigalpaTime)
-    expectedStart.setHours(startHour, startMin, 0, 0)
-    
-    const diffMinutes = Math.floor((tegucigalpaTime.getTime() - expectedStart.getTime()) / 60000)
-    
-    let status: 'Temprano' | 'A tiempo' | 'Tarde'
-    if (diffMinutes < -5) {
-      status = 'Temprano'
-    } else if (diffMinutes <= 5) {
-      status = 'A tiempo'
-    } else {
-      status = 'Tarde'
-    }
+    // Parsear horas y calcular diferencia usando hora de Honduras
+    const expectedStart = parseExpectedTime(startTime, hondurasTime)
+    const diffMinutes = calculateMinutesDifference(hondurasTime, expectedStart)
+    const status = getAttendanceStatus(hondurasTime, expectedStart)
 
     console.log('⏰ Comparación de horarios:', {
-      horaActual: tegucigalpaTime.toLocaleTimeString(),
+      horaActual: hondurasTime.toLocaleTimeString(),
       horaEsperada: startTime,
       diferenciaMinutos: diffMinutes,
       status
@@ -201,8 +207,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // PASO 6: Registrar asistencia
     // Usar zona horaria de Honduras correctamente
-    const hondurasTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Tegucigalpa"}))
-    const today = hondurasTime.toISOString().split('T')[0]
+    const today = getTodayInHonduras()
     console.log('📅 Fecha Honduras para registro:', today)
     
     const { data: existingRecord, error: attError } = await supabase
@@ -220,8 +225,92 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
+    // PASO 6.1: Smart Time Detection - Detect intended action based on time of day
+    const intendedAction = detectIntendedAction(hondurasTime, existingRecord)
+    console.log('🧠 Smart Detection:', {
+      hora: hondurasTime.toLocaleTimeString(),
+      accionDetectada: intendedAction,
+      tieneRegistroExistente: !!existingRecord,
+      tieneSalida: !!existingRecord?.check_out
+    })
+
+    // Determinar acción basada en hora y registros existentes
+    let finalAction = intendedAction
+
+    // Si ya tiene entrada y salida, no permitir más registros
+    if (existingRecord?.check_in && existingRecord?.check_out) {
+      console.log('⚠️ Ya tiene entrada y salida registradas hoy')
+      return res.status(400).json({
+        error: 'Ya completaste tu jornada',
+        message: 'Ya tienes registrada tu entrada y salida para hoy.',
+        suggestion: 'Si necesitas hacer una corrección, contacta a RRHH.'
+      })
+    }
+
+    // Si tiene entrada pero no salida
+    if (existingRecord?.check_in && !existingRecord?.check_out) {
+      // Después de las 3 PM, definitivamente es salida
+      if (hondurasTime.getHours() >= 15) {
+        finalAction = 'check_out'
+        console.log('🕒 Después de las 3 PM con entrada registrada - marcando salida')
+      } else {
+        // Antes de las 3 PM con entrada ya registrada
+        console.log('⚠️ Ya tiene entrada registrada hoy')
+        return res.status(400).json({
+          error: 'Ya tienes entrada registrada',
+          message: 'Ya marcaste tu entrada hoy. Marca tu salida después de las 3:00 PM.',
+          suggestion: 'Tu horario de salida es a las 5:00 PM'
+        })
+      }
+    }
+
+    // Si no tiene registro para hoy
     if (!existingRecord) {
-      // CHECK-IN: Primera vez hoy
+      // En la mañana (6 AM - 11 AM) es entrada normal
+      if (hondurasTime.getHours() >= 6 && hondurasTime.getHours() <= 11) {
+        finalAction = 'check_in'
+        console.log('🌅 Entrada normal en horario matutino')
+      }
+      // Muy temprano (5-6 AM) es entrada temprana
+      else if (hondurasTime.getHours() >= 5 && hondurasTime.getHours() < 6) {
+        finalAction = 'check_in'
+        console.log('⭐ Entrada temprana antes de las 6 AM')
+      }
+      // Después de las 3 PM es entrada tarde
+      else if (hondurasTime.getHours() >= 15) {
+        finalAction = 'check_in'
+        console.log('🌆 Entrada tarde después de las 3 PM')
+      }
+      // Entre 11 AM y 3 PM es entrada tarde
+      else if (hondurasTime.getHours() > 11 && hondurasTime.getHours() < 15) {
+        finalAction = 'check_in'
+        console.log('⏰ Entrada tarde entre 11 AM y 3 PM')
+      }
+    }
+
+    // Validar conflictos finales
+    if (finalAction === 'check_in' && existingRecord?.check_in) {
+      console.log('⚠️ Conflicto: Ya tiene entrada registrada')
+      return res.status(400).json({
+        error: 'Ya tienes entrada registrada',
+        message: 'Ya marcaste tu entrada hoy. Marca tu salida después de las 3:00 PM.',
+        suggestion: 'Tu horario de salida es a las 5:00 PM'
+      })
+    }
+
+    if (finalAction === 'check_out' && !existingRecord?.check_in) {
+      console.log('⚠️ Conflicto: Intenta marcar salida sin entrada')
+      return res.status(400).json({
+        error: 'No tienes entrada registrada',
+        message: 'No puedes marcar salida sin haber marcado entrada primero.',
+        suggestion: 'Marca tu entrada entre las 6:00 AM y 11:00 AM'
+      })
+    }
+
+    console.log('✅ Acción final determinada:', finalAction)
+
+    if (finalAction === 'check_in') {
+      // CHECK-IN: Registrar entrada
       console.log('📝 Registrando entrada...')
       const lateMinutes = Math.max(0, diffMinutes)
       
@@ -232,7 +321,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           message: '⏰ Has llegado tarde. Por favor justifica tu demora.',
           lateMinutes,
           expectedTime: startTime,
-          actualTime: tegucigalpaTime.toLocaleTimeString()
+          actualTime: hondurasTime.toLocaleTimeString()
         })
       }
 
@@ -241,7 +330,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .insert({
           employee_id: employee.id,
           date: today,
-          check_in: now.toISOString(),
+          check_in: getHondurasTimeISO(),
           expected_check_in: startTime,
           late_minutes: lateMinutes,
           justification: justification || null,
@@ -257,21 +346,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
       console.log('✅ Entrada registrada exitosamente')
 
-    } else if (!existingRecord.check_out) {
-      // CHECK-OUT: Tiene entrada pero no salida
+    } else if (finalAction === 'check_out') {
+      // CHECK-OUT: Registrar salida (smart detection)
       console.log('📝 Registrando salida...')
-      const [endHour, endMin] = endTime.split(':').map(Number)
-      const expectedEnd = new Date(now)
-      expectedEnd.setHours(endHour, endMin, 0, 0)
-      const earlyDepartureMinutes = Math.max(0, Math.floor((expectedEnd.getTime() - now.getTime()) / 60000))
+      const expectedEnd = parseExpectedTime(endTime, hondurasTime)
+      const earlyDepartureMinutes = Math.max(0, calculateMinutesDifference(expectedEnd, hondurasTime))
 
       const { error: updateError } = await supabase
         .from('attendance_records')
         .update({
-          check_out: now.toISOString(),
+          check_out: getHondurasTimeISO(),
           expected_check_out: endTime,
           early_departure_minutes: earlyDepartureMinutes,
-          updated_at: now.toISOString()
+          updated_at: getHondurasTimeISO()
         })
         .eq('id', existingRecord.id)
 
@@ -287,7 +374,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } else {
       // Ya completó asistencia hoy
       console.log('⚠️ Asistencia ya completada para hoy')
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: '📌 Ya has registrado entrada y salida para hoy',
         message: 'Tu asistencia del día ya está completa'
       })
@@ -296,9 +383,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // PASO 7: Feedback gamificado - Análisis semanal del mes actual
     console.log('🎮 Generando feedback gamificado...')
     
-    // Obtener el primer día del mes actual
-    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-    const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    // Obtener el primer día del mes actual usando fecha de Honduras
+    const firstDayOfMonth = new Date(hondurasTime.getFullYear(), hondurasTime.getMonth(), 1)
+    const lastDayOfMonth = new Date(hondurasTime.getFullYear(), hondurasTime.getMonth() + 1, 0)
     
     // Obtener registros del mes actual
     const { data: monthlyRecords, error: monthlyError } = await supabase
@@ -341,7 +428,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       let weeksWithLateArrivals = 0
       let weeksWithGoodAttendance = 0
       
-      weeklyStats.forEach((weekData, weekKey) => {
+      weeklyStats.forEach((weekData) => {
         if (weekData.late >= 3) {
           weeksWithLateArrivals++
         } else if (weekData.present >= 3) {
@@ -349,43 +436,88 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       })
       
-      // Generar feedback basado en patrones semanales
+      // Generar feedback basado en patrones semanales y tipo de acción
       if (weeksWithLateArrivals >= 2) {
-        gamification = '⚠️ We noticed repeated tardiness this month. Please improve your punctuality.'
+        gamification = '⚠️ Hemos notado tardanzas recurrentes este mes. Por favor mejora tu puntualidad.'
       } else if (weeksWithLateArrivals === 1) {
-        gamification = '⚠️ You had one week with multiple late arrivals. Please be more punctual.'
+        gamification = '⚠️ Tuviste una semana con múltiples llegadas tarde. Sé más puntual.'
       } else if (weeksWithGoodAttendance >= 3) {
-        gamification = '🏆 Excellent consistency this month! Keep up the great work!'
+        gamification = '🏆 ¡Excelente consistencia este mes! ¡Sigue así!'
       } else if (weeksWithGoodAttendance >= 2) {
-        gamification = '👍 Good attendance pattern this month. Keep it up!'
+        gamification = '👍 Buen patrón de asistencia este mes. ¡Continúa!'
       } else if (weeksWithGoodAttendance >= 1) {
-        gamification = '✅ You had a good week. Try to maintain this consistency.'
+        gamification = '✅ Tuviste una buena semana. Trata de mantener esta consistencia.'
       }
     }
 
-    // PASO 8: Mensaje final en inglés
+    // PASO 8: Mensaje personalizado basado en acción y estado
     let message = ''
-    if (status === 'Temprano') {
-      message = '🎉 You\'re an exemplary employee!'
-    } else if (status === 'A tiempo') {
-      message = '✅ Great! You\'re on time.'
-    } else {
-      message = '📝 Please be punctual. Let us know what happened.'
+    let actionMessage = ''
+    
+    // Mensajes específicos por tipo de acción
+    if (finalAction === 'check_in') {
+      if (status === 'Temprano') {
+        actionMessage = '� ¡Entrada registrada! Llegaste temprano, eres ejemplar.'
+      } else if (status === 'A tiempo') {
+        actionMessage = '✅ ¡Entrada registrada! Llegaste puntual.'
+      } else {
+        actionMessage = '📝 Entrada registrada, pero llegaste tarde. Justifica tu demora.'
+      }
+    } else if (finalAction === 'check_out') {
+      const hour = hondurasTime.getHours()
+      if (hour >= 17) { // 5 PM or later
+        actionMessage = '🏠 ¡Salida registrada! Que tengas una buena tarde.'
+      } else if (hour >= 12) { // Noon to 5 PM
+        actionMessage = '🕐 Salida registrada a mediodía. Que tengas un buen resto del día.'
+      } else {
+        actionMessage = '🌅 Salida temprana registrada.'
+      }
     }
 
+    // Combinar mensaje de acción con gamificación
+    message = actionMessage
     if (gamification) {
-      message += `\n${gamification}`
+      message += `\n\n${gamification}`
     }
 
-    console.log('✅ Registro de asistencia completado:', { message, status, gamification })
+    // Agregar consejos inteligentes basados en hora y patrón
+    const hour = hondurasTime.getHours()
+    let smartTip = ''
+    
+    if (finalAction === 'check_in' && hour >= 10) {
+      smartTip = '\n💡 Consejo: Intenta llegar antes de las 9:00 AM para mejores resultados.'
+    } else if (finalAction === 'check_in' && hour <= 7) {
+      smartTip = '\n⭐ ¡Excelente! Llegaste muy temprano, eso demuestra dedicación.'
+    } else if (finalAction === 'check_out' && hour <= 16) {
+      smartTip = '\n⏰ Salida temprana detectada. Asegúrate de completar tus horas.'
+    }
+    
+    if (smartTip) {
+      message += smartTip
+    }
+
+    console.log('✅ Registro de asistencia completado:', { 
+      message, 
+      status, 
+      gamification, 
+      finalAction,
+      intendedAction 
+    })
 
     return res.status(200).json({ 
       message, 
       status, 
       gamification,
+      action: finalAction,
+      timeDetection: intendedAction,
       employee: {
-        name: employee.name,
-        position: employee.position
+        name: employee.name
+      },
+      timestamp: getHondurasTimeISO(),
+      workSchedule: {
+        expectedStart: startTime,
+        expectedEnd: endTime,
+        dayOfWeek: dayOfWeek
       }
     })
 

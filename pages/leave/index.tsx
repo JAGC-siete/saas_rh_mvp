@@ -1,7 +1,7 @@
+import { useRouter } from 'next/router'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import DashboardLayout from '../../components/DashboardLayout'
 import LeaveManager from '../../components/LeaveManager'
-import { GetServerSideProps } from 'next'
 
 export default function LeavePage() {
   return (
@@ -10,7 +10,7 @@ export default function LeavePage() {
         <div className="space-y-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Gestión de Permisos</h1>
-            <p className="text-gray-600">Administra las solicitudes de permisos</p>
+            <p className="text-gray-600">Administra los permisos y licencias</p>
           </div>
           
           <LeaveManager />
@@ -18,10 +18,4 @@ export default function LeavePage() {
       </DashboardLayout>
     </ProtectedRoute>
   )
-}
-
-export const getServerSideProps: GetServerSideProps = async () => {
-  return {
-    props: {}
-  }
 }

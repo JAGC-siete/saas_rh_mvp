@@ -1,25 +1,32 @@
 import { createBrowserClient } from '@supabase/ssr'
 
 export function createClient() {
+  // Get environment variables directly without validation
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error(
-      `Missing Supabase environment variables:
-      NEXT_PUBLIC_SUPABASE_URL: ${supabaseUrl ? 'DEFINIDA' : 'NO_DEFINIDA'}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${supabaseKey ? 'DEFINIDA' : 'NO_DEFINIDA'}
-      
-      Please check your .env.local file and ensure the variables are properly set.`
-    )
+  // Check if environment variables are available
+  if (!supabaseUrl || !supabaseAnonKey) {
+    // During build time, return a mock client to prevent build failures
+    if (typeof window === 'undefined') {
+      console.warn('Supabase environment variables not available during build time')
+      return null
+    }
+    
+    console.error('Missing Supabase environment variables')
+    throw new Error('Supabase environment variables are not configured')
   }
 
-  console.log('🔍 Supabase Client Debug:', {
-    hasUrl: !!supabaseUrl,
-    hasKey: !!supabaseKey,
-    source: 'env'
+  return createBrowserClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true
+    },
+    global: {
+      headers: {
+        'X-Client-Info': 'hr-saas-frontend'
+      }
+    }
   })
-
-  console.log('✅ Creating Supabase client with valid configuration')
-  return createBrowserClient(supabaseUrl, supabaseKey)
 }

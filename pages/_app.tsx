@@ -1,6 +1,6 @@
 import { AppProps } from 'next/app'
 import { createClient } from '../lib/supabase/client'
-import { createContext, useState } from 'react'
+import { createContext, useState, useEffect } from 'react'
 import { AuthProvider } from '../lib/auth'
 import '../styles/globals.css'
 
@@ -8,7 +8,22 @@ import '../styles/globals.css'
 export const SupabaseContext = createContext<any>(null)
 
 export default function App({ Component, pageProps }: AppProps) {
-  const [supabaseClient] = useState(() => createClient())
+  const [supabaseClient, setSupabaseClient] = useState<any>(null)
+  const [isClient, setIsClient] = useState(false)
+
+  useEffect(() => {
+    setIsClient(true)
+    
+    // Initialize Supabase client only on client side
+    try {
+      const client = createClient()
+      if (client) {
+        setSupabaseClient(client)
+      }
+    } catch (error) {
+      console.error('Failed to create Supabase client:', error)
+    }
+  }, [])
 
   return (
     <SupabaseContext.Provider value={supabaseClient}>

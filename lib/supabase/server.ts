@@ -2,14 +2,16 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextApiRequest, NextApiResponse } from 'next'
 
 export function createClient(req: NextApiRequest, res: NextApiResponse) {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  // Get environment variables directly
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 
-  if (!url || !key) {
-    throw new Error('Missing Supabase environment variables')
+  // Check if environment variables are available
+  if (!supabaseUrl || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    console.error('Missing Supabase environment variables')
+    throw new Error('Supabase environment variables are not configured')
   }
 
-  return createServerClient(url, key, {
+  return createServerClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
     cookies: {
       get(name: string) {
         return req.cookies[name]
@@ -30,14 +32,16 @@ export function createClient(req: NextApiRequest, res: NextApiResponse) {
 
 // Admin client for server-side operations with service role
 export function createAdminClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  // Get environment variables directly
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 
-  if (!url || !serviceKey) {
-    throw new Error('Missing Supabase admin environment variables')
+  // Check if environment variables are available
+  if (!supabaseUrl || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.error('Missing Supabase environment variables')
+    throw new Error('Supabase environment variables are not configured')
   }
 
-  return createServerClient(url, serviceKey, {
+  return createServerClient(supabaseUrl, process.env.SUPABASE_SERVICE_ROLE_KEY, {
     cookies: {
       get() { return undefined },
       set() {},

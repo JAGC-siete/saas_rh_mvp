@@ -1,7 +1,14 @@
 [build]
-builder = "NIXPACKS"
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
+
+[build.args]
+# These will be replaced by Railway environment variables during build
+NEXT_PUBLIC_SUPABASE_URL = "${NEXT_PUBLIC_SUPABASE_URL}"
+NEXT_PUBLIC_SUPABASE_ANON_KEY = "${NEXT_PUBLIC_SUPABASE_ANON_KEY}"
 
 [deploy]
-numReplicas = 1
-sleepApplication = false
-restartPolicyType = "ON_FAILURE"
+startCommand = "node server.js"
+healthcheckPath = "/"
+healthcheckTimeout = 300
+restartPolicyType = "on_failure"

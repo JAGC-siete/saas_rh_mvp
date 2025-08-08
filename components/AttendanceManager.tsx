@@ -24,7 +24,7 @@ export default function AttendanceManager() {
     setMessage('')
 
     try {
-      const response = await fetch('/api/attendance', {
+      const response = await fetch('/api/attendance/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -40,11 +40,18 @@ export default function AttendanceManager() {
       if (response.status === 422 && data.requireJustification) {
         setRequireJustification(true)
         setMessage(data.message)
+        setLoading(false)
         return
       }
 
       if (response.ok) {
-        setMessage(data.message || 'Asistencia registrada exitosamente')
+        // Show enhanced feedback message with action type
+        const displayMessage = data.message || 'Asistencia registrada exitosamente'
+        const actionType = data.action || 'unknown'
+        const timeDetection = data.timeDetection || 'unknown'
+        
+        console.log('Attendance registered:', { actionType, timeDetection, data })
+        setMessage(displayMessage)
         setLast5('')
         setJustification('')
         setRequireJustification(false)
@@ -135,13 +142,13 @@ export default function AttendanceManager() {
 
       {/* Message Display */}
       {message && (
-        <div className={`flex items-center gap-2 p-3 rounded-md text-sm ${
+        <div className={`flex items-start gap-2 p-3 rounded-md text-sm ${
           message.includes('Error') 
             ? 'text-red-600 bg-red-50 border border-red-200'
             : 'text-green-600 bg-green-50 border border-green-200'
         }`}>
-          <AlertCircle className="h-4 w-4" />
-          {message}
+          <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+          <div className="whitespace-pre-line">{message}</div>
         </div>
       )}
     </form>

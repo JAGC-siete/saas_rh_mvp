@@ -7,7 +7,7 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { session, loading } = useAuth()
+  const { user, session, loading } = useAuth()
   const router = useRouter()
   const [isClient, setIsClient] = useState(false)
 
@@ -17,6 +17,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   useEffect(() => {
     if (isClient && !loading && !session) {
+      console.log('🔒 No session found, redirecting to login')
       router.push('/login')
     }
   }, [session, loading, router, isClient])

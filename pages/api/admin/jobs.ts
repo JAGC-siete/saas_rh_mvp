@@ -32,7 +32,7 @@ export default async function handler(
     const { data: profile, error: profileError } = await supabase
       .from('user_profiles')
       .select('role')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .single()
 
     if (profileError || !profile || profile.role !== 'admin') {

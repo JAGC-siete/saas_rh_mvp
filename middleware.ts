@@ -3,6 +3,34 @@ import type { NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { logger } from './lib/logger'
 
+// Cache public routes for better performance
+const PUBLIC_ROUTES = new Set([
+  '/',
+  '/login',
+  '/auth',
+  '/registrodeasistencia',
+  '/attendance/public',
+  '/attendance/register',
+  '/api/attendance/lookup',
+  '/api/attendance/register',
+  '/api/attendance/first-time-check',
+  '/api/attendance/update-schedule',
+  '/api/health'
+])
+
+// Helper function to check if route is public
+function isPublicRoute(pathname: string): boolean {
+  // Exact match
+  if (PUBLIC_ROUTES.has(pathname)) return true
+  
+  // Check for routes starting with public paths
+  for (const route of Array.from(PUBLIC_ROUTES)) {
+    if (pathname.startsWith(route + '/')) return true
+  }
+  
+  return false
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   const startTime = Date.now()
@@ -33,28 +61,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Define public routes (no authentication required)
-  const publicRoutes = [
-    '/',
-    '/login',
-    '/auth',
-    '/registrodeasistencia',
-    '/attendance/public',
-    '/attendance/register',
-    '/api/attendance/lookup',
-    '/api/attendance/register',
-    '/api/attendance/first-time-check',
-    '/api/attendance/update-schedule',
-    '/api/health'
-  ]
-
   // Check if current path is public
-  const isPublicRoute = publicRoutes.some(route => 
-    pathname === route || pathname.startsWith(route + '/')
-  )
-
-  // If it's a public route, allow access
-  if (isPublicRoute) {
+  if (isPublicRoute(pathname)) {
     logger.debug('Public route accessed', { path: pathname })
     const response = NextResponse.next()
     

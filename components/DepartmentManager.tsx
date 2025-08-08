@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
-import { useSession } from '@supabase/auth-helpers-react'
+import { useAuth } from '../lib/auth'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from './ui/card'
+import { Card, CardHeader, CardTitle, CardContent } from './ui/card'
 import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
 
 interface Department {
@@ -18,39 +18,37 @@ interface Department {
 
 interface Employee {
   id: string
-  first_name: string
-  last_name: string
+  name: string
   email: string
 }
 
+const INITIAL_FORM_DATA = {
+  name: '',
+  description: '',
+  manager_id: ''
+}
+
+const CONFIRMATION_MESSAGE = '¿Estás seguro de que quieres eliminar este departamento?'
+const NO_MANAGER_TEXT = 'Sin asignar'
+const NO_DEPARTMENTS_TEXT = 'No hay departamentos registrados'
+
 export default function DepartmentManager() {
-  const session = useSession()
+  const { user } = useAuth()
   const [departments, setDepartments] = useState<Department[]>([])
   const [employees, setEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [editingDepartment, setEditingDepartment] = useState<Department | null>(null)
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    manager_id: ''
-  })
+  const [formData, setFormData] = useState(INITIAL_FORM_DATA)
 
-  useEffect(() => {
-    if (session?.user) {
-      fetchDepartments()
-      fetchEmployees()
-    }
-  }, [session])
-
-  const fetchDepartments = async () => {
+  const fetchDepartments = useCallback(async () => {
     try {
       setLoading(true)
       const { data, error } = await supabase
         .from('departments')
         .select(`
           *,
-          employees:employees(id, first_name, last_name, email)
+          employees:employees(id, name, email)
         `)
         .order('name')
 
@@ -61,24 +59,34 @@ export default function DepartmentManager() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  const fetchEmployees = async () => {
+  const fetchEmployees = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('employees')
-        .select('id, first_name, last_name, email')
+        .select('id, name, email')
         .eq('status', 'active')
-        .order('first_name')
+        .order('name')
 
       if (error) throw error
       setEmployees(data || [])
     } catch (error) {
       console.error('Error fetching employees:', error)
     }
-  }
+  }, [])
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const resetForm = useCallback(() => {
+    setFormData(INITIAL_FORM_DATA)
+    setShowForm(false)
+    setEditingDepartment(null)
+  }, [])
+
+  const handleFormChange = useCallback((field: keyof typeof INITIAL_FORM_DATA, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+  }, [])
+
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
     
     try {
@@ -105,18 +113,16 @@ export default function DepartmentManager() {
         if (error) throw error
       }
 
-      setFormData({ name: '', description: '', manager_id: '' })
-      setShowForm(false)
-      setEditingDepartment(null)
+      resetForm()
       fetchDepartments()
     } catch (error) {
       console.error('Error saving department:', error)
     } finally {
       setLoading(false)
     }
-  }
+  }, [formData, editingDepartment, resetForm, fetchDepartments])
 
-  const handleEdit = (department: Department) => {
+  const handleEdit = useCallback((department: Department) => {
     setEditingDepartment(department)
     setFormData({
       name: department.name,
@@ -124,10 +130,10 @@ export default function DepartmentManager() {
       manager_id: department.manager_id || ''
     })
     setShowForm(true)
-  }
+  }, [])
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('¿Estás seguro de que quieres eliminar este departamento?')) {
+  const handleDelete = useCallback(async (id: string) => {
+    if (!confirm(CONFIRMATION_MESSAGE)) {
       return
     }
 
@@ -145,20 +151,25 @@ export default function DepartmentManager() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [fetchDepartments])
 
-  const cancelForm = () => {
-    setShowForm(false)
-    setEditingDepartment(null)
-    setFormData({ name: '', description: '', manager_id: '' })
-  }
-
-  const getManagerName = (managerId: string) => {
+  const getManagerName = useCallback((managerId: string) => {
     const manager = employees.find(emp => emp.id === managerId)
-    return manager ? `${manager.first_name} ${manager.last_name}` : 'Sin asignar'
-  }
+    return manager ? manager.name : NO_MANAGER_TEXT
+  }, [employees])
 
-  if (loading && departments.length === 0) {
+
+
+  const isLoadingInitial = loading && departments.length === 0
+
+  useEffect(() => {
+    if (user) {
+      fetchDepartments()
+      fetchEmployees()
+    }
+  }, [user, fetchDepartments, fetchEmployees])
+
+  if (isLoadingInitial) {
     return (
       <div className="flex justify-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -196,7 +207,7 @@ export default function DepartmentManager() {
                 <Input
                   type="text"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) => handleFormChange('name', e.target.value)}
                   required
                   placeholder="Ej: Recursos Humanos"
                 />
@@ -208,13 +219,13 @@ export default function DepartmentManager() {
                 </label>
                 <select
                   value={formData.manager_id}
-                  onChange={(e) => setFormData({ ...formData, manager_id: e.target.value })}
+                  onChange={(e) => handleFormChange('manager_id', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Seleccionar manager</option>
                   {employees.map((employee) => (
                     <option key={employee.id} value={employee.id}>
-                      {employee.first_name} {employee.last_name}
+                      {employee.name}
                     </option>
                   ))}
                 </select>
@@ -227,7 +238,7 @@ export default function DepartmentManager() {
               </label>
               <textarea
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(e) => handleFormChange('description', e.target.value)}
                 rows={3}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Descripción del departamento"
@@ -244,7 +255,7 @@ export default function DepartmentManager() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={cancelForm}
+                onClick={resetForm}
               >
                 Cancelar
               </Button>
@@ -303,7 +314,7 @@ export default function DepartmentManager() {
 
       {departments.length === 0 && !loading && (
         <div className="text-center py-8">
-          <p className="text-gray-500">No hay departamentos registrados</p>
+          <p className="text-gray-500">{NO_DEPARTMENTS_TEXT}</p>
         </div>
       )}
     </div>

@@ -1,42 +1,11 @@
-
-
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { Button } from './ui/button'
-import { Input } from './ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
-import { useSupabaseSession } from '../lib/hooks/useSession'
-
-interface Employee {
-  id: string
-  company_id: string
-  employee_code: string
-  dni: string
-  name: string
-  email: string
-  phone: string
-  role: string
-  position: string
-  base_salary: number
-  hire_date: string
-  status: string
-  bank_name: string
-  bank_account: string
-  department_id?: string
-  attendance_status?: 'present' | 'absent' | 'late' | 'not_registered'
-  check_in_time?: string
-  check_out_time?: string
-  work_schedule?: {
-    start_time: string
-    end_time: string
-  }
-  gamification?: {
-    total_points: number
-    weekly_points: number
-    monthly_points: number
-    achievements_count: number
-  }
-}
+import { useAuth } from '../lib/auth'
+import { Employee } from '../lib/types/employee'
+import AddEmployeeForm from './AddEmployeeForm'
+import { PlusIcon, PencilIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline'
 
 interface Department {
   id: string
@@ -48,897 +17,557 @@ interface WorkSchedule {
   name: string
 }
 
+const INITIAL_FORM_DATA = {
+  employee_code: '',
+  dni: '',
+  name: '',
+  email: '',
+  phone: '',
+  role: '',
+  team: '',
+  position: '',
+  department_id: '',
+  work_schedule_id: '',
+  base_salary: '',
+  hire_date: '',
+  termination_date: '',
+  status: 'active',
+  bank_name: '',
+  bank_account: '',
+  emergency_contact_name: '',
+  emergency_contact_phone: '',
+  address: '',
+  metadata: ''
+}
+
 export default function EmployeeManager() {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
   const [workSchedules, setWorkSchedules] = useState<WorkSchedule[]>([])
-  const [showAddForm, setShowAddForm] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [userProfile, setUserProfile] = useState<any>(null)
-  const [showCertificateModal, setShowCertificateModal] = useState(false)
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
-  const [certificateLoading, setCertificateLoading] = useState(false)
+  const [employeesLoading, setEmployeesLoading] = useState(false)
+  const [departmentsLoading, setDepartmentsLoading] = useState(false)
+  const [schedulesLoading, setSchedulesLoading] = useState(false)
+  const [employeesError, setEmployeesError] = useState<string | null>(null)
+  const [departmentsError, setDepartmentsError] = useState<string | null>(null)
+  const [schedulesError, setSchedulesError] = useState<string | null>(null)
+  const [showForm, setShowForm] = useState(false)
+  const [formData, setFormData] = useState(INITIAL_FORM_DATA)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null)
+  const [showDeactivateModal, setShowDeactivateModal] = useState(false)
+  const [employeeToDeactivate, setEmployeeToDeactivate] = useState<Employee | null>(null)
+  const { user, loading: sessionLoading } = useAuth()
 
-  const { user } = useSupabaseSession()
-  const userId = user?.id
-
-  // Form state
-  const [formData, setFormData] = useState({
-    employee_code: '',
-    dni: '',
-    name: '',
-    email: '',
-    phone: '',
-    role: 'employee',
-    position: '',
-    base_salary: '',
-    hire_date: '',
-    department_id: '',
-    work_schedule_id: '',
-    bank_name: '',
-    bank_account: '',
-  })
-
-  useEffect(() => {
-    fetchData()
+  const getErrorMessage = useCallback((error: unknown) => {
+    if (error instanceof Error) {
+      const message = error.message.toLowerCase()
+      if (message.includes('401')) return 'Sesión expirada. Por favor, inicia sesión nuevamente.'
+      if (message.includes('403')) return 'No tienes permisos para realizar esta operación.'
+      if (message.includes('404')) return 'No se encontró el empleado solicitado.'
+      if (message.includes('409')) return 'El código de empleado ya existe. Por favor, usa un código diferente.'
+      if (message.includes('missing required fields')) return 'Por favor, completa todos los campos requeridos: código, DNI, nombre y salario base.'
+      if (message.includes('500')) return 'Error del servidor. Por favor, intenta más tarde.'
+      if (message.includes('unauthorized')) return 'No autorizado. Por favor, inicia sesión nuevamente.'
+      return error.message
+    }
+    return 'Error inesperado. Por favor, verifica tu conexión e intenta nuevamente.'
   }, [])
 
-  const fetchData = async () => {
+  const fetchEmployees = useCallback(async () => {
+    if (!user?.id) return
+    
+    setEmployeesLoading(true)
+    setEmployeesError(null)
+    
     try {
-      // Get user profile
-      if (!userId) return
-
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', userId)
-        .single()
-
-      setUserProfile(profile)
-
-      if (!profile) return
-
-      // Fetch employees with work schedules
-      const { data: employeesData, error: employeesError } = await supabase
-        .from('employees')
-        .select(`
-          *,
-          work_schedules!inner(start_time, end_time)
-        `)
-        .eq('company_id', profile.company_id)
-        .eq('status', 'active')
-        .order('name')
-
-      if (employeesError) throw employeesError
-
-      // Get today's attendance records
-      const today = new Date().toISOString().split('T')[0]
-      const { data: attendanceData, error: attendanceError } = await supabase
-        .from('attendance_records')
-        .select('employee_id, check_in, check_out, status')
-        .eq('date', today)
-
-      if (attendanceError) {
-        console.error('Error fetching attendance:', attendanceError)
-      }
-
-      // Get gamification data for all employees
-      const { data: gamificationData } = await supabase
-        .from('employee_scores')
-        .select('employee_id, total_points, weekly_points, monthly_points')
-
-      const { data: achievementsData } = await supabase
-        .from('employee_achievements')
-        .select('employee_id, count')
-        .group('employee_id')
-
-      // Combine employee data with attendance status and gamification
-      const employeesWithAttendance = (employeesData || []).map((emp: any) => {
-        const attendance = attendanceData?.find((att: any) => att.employee_id === emp.id)
-        const workSchedule = emp.work_schedules?.[0]
-        const gamification = gamificationData?.find((g: any) => g.employee_id === emp.id)
-        const achievements = achievementsData?.find((a: any) => a.employee_id === emp.id)
-        
-        let attendance_status: 'present' | 'absent' | 'late' | 'not_registered' = 'not_registered'
-        let check_in_time = undefined
-        let check_out_time = undefined
-
-        if (attendance) {
-          if (attendance.check_in) {
-            check_in_time = attendance.check_in
-            const checkInHour = new Date(attendance.check_in).getHours()
-            const checkInMinutes = new Date(attendance.check_in).getMinutes()
-            
-            // Check if late (after 8:15 AM)
-            if (checkInHour > 8 || (checkInHour === 8 && checkInMinutes > 15)) {
-              attendance_status = 'late'
-            } else {
-              attendance_status = 'present'
-            }
-          } else if (attendance.status === 'absent') {
-            attendance_status = 'absent'
-          }
-        }
-
-        return {
-          ...emp,
-          attendance_status,
-          check_in_time,
-          check_out_time,
-          work_schedule: workSchedule,
-          gamification: gamification ? {
-            total_points: gamification.total_points || 0,
-            weekly_points: gamification.weekly_points || 0,
-            monthly_points: gamification.monthly_points || 0,
-            achievements_count: achievements?.count || 0
-          } : {
-            total_points: 0,
-            weekly_points: 0,
-            monthly_points: 0,
-            achievements_count: 0
-          }
-        }
+      console.log('🔍 Fetching employees for user:', user.id)
+      
+      const response = await fetch('/api/employees/search?limit=50', {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       })
-
-      setEmployees(employeesWithAttendance)
-
-      // Fetch departments
-      const { data: departmentsData, error: deptError } = await supabase
-        .from('departments')
-        .select('id, name')
-        .eq('company_id', profile.company_id)
-        .order('name')
-
-      if (deptError) throw deptError
-      setDepartments(departmentsData || [])
-
-      // Fetch work schedules
-      const { data: schedulesData, error: schedError } = await supabase
-        .from('work_schedules')
-        .select('id, name')
-        .eq('company_id', profile.company_id)
-        .order('name')
-
-      if (schedError) throw schedError
-      setWorkSchedules(schedulesData || [])
-
-    } catch (error) {
-      console.error('Error fetching data:', error)
+      console.log('📡 API Response status:', response.status)
+      
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('❌ API Error:', errorText)
+        throw new Error(`API Error: ${response.status} - ${errorText}`)
+      }
+      
+      const data = await response.json()
+      console.log('✅ API Data received:', data)
+      
+      if (data.employees && data.employees.length > 0) {
+        console.log('📋 Sample employee data:', {
+          name: data.employees[0].name,
+          departments: data.employees[0].departments,
+          work_schedules: data.employees[0].work_schedules,
+          role: data.employees[0].role
+        })
+      }
+      
+      setEmployees(data.employees || [])
+    } catch (err) {
+      console.error('💥 Fetch error:', err)
+      setEmployeesError(getErrorMessage(err))
     } finally {
-      setLoading(false)
+      setEmployeesLoading(false)
     }
-  }
+  }, [user?.id, getErrorMessage])
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const fetchDepartments = useCallback(async () => {
+    setDepartmentsLoading(true)
+    setDepartmentsError(null)
+    
+    try {
+      console.log('🔍 Fetching departments...')
+      const response = await fetch('/api/departments')
+      
+      if (!response.ok) {
+        throw new Error(`Error fetching departments: ${response.status}`)
+      }
+      
+      const data = await response.json()
+      console.log('📦 Raw departments response:', data)
+      
+      // Extraer departments del objeto de respuesta
+      const departmentsList = data.departments || []
+      console.log(`✅ Departments loaded: ${departmentsList.length} departments`)
+      
+      if (departmentsList.length > 0) {
+        console.log('📋 Sample departments:', departmentsList.slice(0, 3).map((d: Department) => `${d.name} (${d.id})`))
+      } else {
+        console.warn('⚠️ No departments found in response')
+      }
+      
+      setDepartments(departmentsList)
+    } catch (error) {
+      console.error('💥 Error fetching departments:', error)
+      setDepartmentsError('Error loading departments')
+    } finally {
+      setDepartmentsLoading(false)
+    }
+  }, [])
+
+  const fetchWorkSchedules = useCallback(async () => {
+    setSchedulesLoading(true)
+    setSchedulesError(null)
+    
+    try {
+      console.log('🔍 Fetching work schedules...')
+      const response = await fetch('/api/work-schedules')
+      
+      if (!response.ok) {
+        throw new Error(`Error fetching work schedules: ${response.status}`)
+      }
+      
+      const data = await response.json()
+      console.log('📦 Raw work schedules response:', data)
+      
+      // Extraer schedules del objeto de respuesta
+      const schedulesList = data.schedules || []
+      console.log(`✅ Work schedules loaded: ${schedulesList.length} schedules`)
+      
+      if (schedulesList.length > 0) {
+        console.log('📋 Sample schedules:', schedulesList.slice(0, 3).map((s: WorkSchedule) => `${s.name} (${s.id})`))
+      } else {
+        console.warn('⚠️ No work schedules found in response')
+      }
+      
+      setWorkSchedules(schedulesList)
+    } catch (error) {
+      console.error('💥 Error fetching work schedules:', error)
+      setSchedulesError('Error loading work schedules')
+    } finally {
+      setSchedulesLoading(false)
+    }
+  }, [])
+
+  const resetForm = useCallback(() => {
+    setFormData(INITIAL_FORM_DATA)
+    setShowForm(false)
+    setEditingEmployee(null)
+    setEmployeesError(null)
+    setDepartmentsError(null)
+    setSchedulesError(null)
+  }, [])
+
+  const handleFormChange = useCallback((field: string, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+  }, [])
+
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
-
+    
     try {
-      if (!userId) throw new Error('User not authenticated')
-
-      const { error } = await supabase
-        .from('employees')
-        .insert({
-          ...formData,
-          company_id: userProfile.company_id,
-          base_salary: parseFloat(formData.base_salary),
-        })
-
-      if (error) throw error
-
-      // Reset form
-      setFormData({
-        employee_code: '',
-        dni: '',
-        name: '',
-        email: '',
-        phone: '',
-        role: 'employee',
-        position: '',
-        base_salary: '',
-        hire_date: '',
-        department_id: '',
-        work_schedule_id: '',
-        bank_name: '',
-        bank_account: '',
-      })
+      setIsSubmitting(true)
       
-      setShowAddForm(false)
-      fetchData()
+      const url = editingEmployee 
+        ? `/api/employees/${editingEmployee.id}`
+        : '/api/employees'
       
-    } catch (error: any) {
-      alert(`Error: ${error.message}`)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const updateEmployeeStatus = async (employeeId: string, status: string) => {
-    try {
-      if (!userId) throw new Error('User not authenticated')
-
-      const { error } = await supabase
-        .from('employees')
-        .update({ status })
-        .eq('id', employeeId)
-
-      if (error) throw error
-      fetchData()
-    } catch (error: any) {
-      alert(`Error: ${error.message}`)
-    }
-  }
-
-  const filteredEmployees = employees.filter(employee =>
-    employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    employee.employee_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    employee.dni.includes(searchTerm) ||
-    employee.position.toLowerCase().includes(searchTerm.toLowerCase())
-  )
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('es-HN', {
-      style: 'currency',
-      currency: 'HNL'
-    }).format(amount)
-  }
-
-  const getStatusBadge = (status: string) => {
-    const baseClasses = 'px-2 py-1 rounded-full text-xs font-medium'
-    switch (status) {
-      case 'active':
-        return <span className={`${baseClasses} bg-green-100 text-green-800`}>Active</span>
-      case 'inactive':
-        return <span className={`${baseClasses} bg-yellow-100 text-yellow-800`}>Inactive</span>
-      case 'terminated':
-        return <span className={`${baseClasses} bg-red-100 text-red-800`}>Terminated</span>
-      default:
-        return <span className={`${baseClasses} bg-gray-100 text-gray-800`}>{status}</span>
-    }
-  }
-
-  const getAttendanceBadge = (attendance_status: string, check_in_time?: string) => {
-    const baseClasses = 'px-2 py-1 rounded-full text-xs font-medium'
-    switch (attendance_status) {
-      case 'present':
-        return (
-          <div className="flex flex-col">
-            <span className={`${baseClasses} bg-green-100 text-green-800`}>Presente</span>
-            {check_in_time && (
-              <span className="text-xs text-gray-500 mt-1">
-                {new Date(check_in_time).toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' })}
-              </span>
-            )}
-          </div>
-        )
-      case 'late':
-        return (
-          <div className="flex flex-col">
-            <span className={`${baseClasses} bg-orange-100 text-orange-800`}>Tardanza</span>
-            {check_in_time && (
-              <span className="text-xs text-gray-500 mt-1">
-                {new Date(check_in_time).toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' })}
-              </span>
-            )}
-          </div>
-        )
-      case 'absent':
-        return <span className={`${baseClasses} bg-red-100 text-red-800`}>Ausente</span>
-      case 'not_registered':
-        return <span className={`${baseClasses} bg-gray-100 text-gray-800`}>Sin registro</span>
-      default:
-        return <span className={`${baseClasses} bg-gray-100 text-gray-800`}>Desconocido</span>
-    }
-  }
-
-    const exportEmployeeReport = async () => {
-    try {
-      const format = (document.getElementById('reportFormat') as HTMLSelectElement)?.value || 'pdf'
-
-      const response = await fetch('/api/reports/export-employees', {
-        method: 'POST',
+      const method = editingEmployee ? 'PUT' : 'POST'
+      
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
-          'Accept': format === 'pdf' ? 'application/pdf' : 'text/csv'
         },
-        body: JSON.stringify({
-          format,
-          reportType: 'employees'
-        })
+        body: JSON.stringify(formData),
       })
 
       if (!response.ok) {
-        throw new Error('Error exportando reporte')
+        const errorText = await response.text()
+        throw new Error(`Error ${editingEmployee ? 'updating' : 'creating'} employee: ${response.status} - ${errorText}`)
       }
 
-      if (format === 'pdf') {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `reporte_empleados_${new Date().toISOString().split('T')[0]}.pdf`
-        document.body.appendChild(a)
-        a.click()
-        window.URL.revokeObjectURL(url)
-        document.body.removeChild(a)
-      } else {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `reporte_empleados_${new Date().toISOString().split('T')[0]}.csv`
-        document.body.appendChild(a)
-        a.click()
-        window.URL.revokeObjectURL(url)
-        document.body.removeChild(a)
-      }
+      // Reset form and refresh employees
+      resetForm()
+      fetchEmployees()
     } catch (error) {
-      console.error('Error exporting employee report:', error)
-      alert('Error al exportar el reporte')
+      console.error(`Error ${editingEmployee ? 'updating' : 'creating'} employee:`, error)
+      setEmployeesError(error instanceof Error ? error.message : `Error ${editingEmployee ? 'updating' : 'creating'} employee`)
+    } finally {
+      setIsSubmitting(false)
     }
-  }
+  }, [formData, editingEmployee, resetForm, fetchEmployees])
 
-  const generateWorkCertificate = async (employee: Employee) => {
+  const handleCancel = useCallback(() => {
+    resetForm()
+  }, [resetForm])
+
+  const handleEdit = useCallback((employee: Employee) => {
+    setEditingEmployee(employee)
+    setFormData({
+      employee_code: employee.employee_code || '',
+      dni: employee.dni || '',
+      name: employee.name || '',
+      email: employee.email || '',
+      phone: employee.phone || '',
+      role: employee.role || '',
+      team: employee.team || '',
+      position: employee.position || '',
+      department_id: employee.department_id || '',
+      work_schedule_id: employee.work_schedule_id || '',
+      base_salary: employee.base_salary?.toString() || '',
+      hire_date: employee.hire_date || '',
+      termination_date: employee.termination_date || '',
+      status: employee.status || 'active',
+      bank_name: employee.bank_name || '',
+      bank_account: employee.bank_account || '',
+      emergency_contact_name: employee.emergency_contact_name || '',
+      emergency_contact_phone: employee.emergency_contact_phone || '',
+      address: employee.address || '',
+      metadata: employee.metadata || ''
+    })
+    setShowForm(true)
+  }, [])
+
+  const handleDeactivate = useCallback((employee: Employee) => {
+    setEmployeeToDeactivate(employee)
+    setShowDeactivateModal(true)
+  }, [])
+
+  const confirmDeactivate = useCallback(async () => {
+    if (!employeeToDeactivate) return
+
     try {
-      setCertificateLoading(true)
+      setIsSubmitting(true)
       
-      const format = (document.getElementById('certificateFormat') as HTMLSelectElement)?.value || 'pdf'
-      const certificateType = (document.getElementById('certificateType') as HTMLSelectElement)?.value || 'general'
-      const purpose = (document.getElementById('certificatePurpose') as HTMLInputElement)?.value || 'Constancia de trabajo'
-      const additionalInfo = (document.getElementById('certificateAdditionalInfo') as HTMLTextAreaElement)?.value || ''
-
-      const response = await fetch('/api/reports/export-work-certificate', {
-        method: 'POST',
+      const response = await fetch(`/api/employees/${employeeToDeactivate.id}`, {
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': format === 'pdf' ? 'application/pdf' : 'text/csv'
         },
-        body: JSON.stringify({
-          employeeId: employee.id,
-          format,
-          certificateType,
-          purpose,
-          additionalInfo
-        })
+        body: JSON.stringify({ status: 'inactive' }),
       })
 
       if (!response.ok) {
-        throw new Error('Error generando constancia de trabajo')
+        const errorText = await response.text()
+        throw new Error(`Error deactivating employee: ${response.status} - ${errorText}`)
       }
 
-      if (format === 'pdf') {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `constancia_trabajo_${employee.employee_code}_${new Date().toISOString().split('T')[0]}.pdf`
-        document.body.appendChild(a)
-        a.click()
-        window.URL.revokeObjectURL(url)
-        document.body.removeChild(a)
-      } else {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `constancia_trabajo_${employee.employee_code}_${new Date().toISOString().split('T')[0]}.csv`
-        document.body.appendChild(a)
-        a.click()
-        window.URL.revokeObjectURL(url)
-        document.body.removeChild(a)
-      }
-
-      setShowCertificateModal(false)
-      setSelectedEmployee(null)
+      setShowDeactivateModal(false)
+      setEmployeeToDeactivate(null)
+      fetchEmployees()
     } catch (error) {
-      console.error('Error generating work certificate:', error)
-      alert('Error al generar la constancia de trabajo')
+      console.error('Error deactivating employee:', error)
+      setEmployeesError(error instanceof Error ? error.message : 'Error deactivating employee')
     } finally {
-      setCertificateLoading(false)
+      setIsSubmitting(false)
     }
+  }, [employeeToDeactivate, fetchEmployees])
+
+  const shouldFetch = useMemo(() => !!user?.id && !sessionLoading, [user?.id, sessionLoading])
+
+  useEffect(() => {
+    if (shouldFetch) {
+      fetchEmployees()
+      fetchDepartments()
+      fetchWorkSchedules()
+    }
+  }, [shouldFetch, fetchEmployees, fetchDepartments, fetchWorkSchedules])
+
+  const isLoading = sessionLoading || employeesLoading || departmentsLoading || schedulesLoading
+  const hasErrors = employeesError || departmentsError || schedulesError
+
+  if (isLoading && !hasErrors) {
+    return (
+      <div className="p-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Empleados</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-2 text-gray-600">
+                {sessionLoading && "Verificando sesión..."}
+                {employeesLoading && "Cargando empleados..."}
+                {departmentsLoading && "Cargando departamentos..."}
+                {schedulesLoading && "Cargando horarios..."}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
-  const openCertificateModal = (employee: Employee) => {
-    setSelectedEmployee(employee)
-    setShowCertificateModal(true)
-  }
-
-  if (loading && employees.length === 0) {
-    return <div className="flex justify-center py-8">Loading employees...</div>
+  if (hasErrors && !showForm) {
+    return (
+      <div className="p-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Empleados</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {employeesError && (
+                <div className="text-center">
+                  <div className="text-red-600 mb-4">
+                    <h3 className="text-lg font-semibold">Error al cargar empleados</h3>
+                    <p className="text-sm mt-2">{employeesError}</p>
+                  </div>
+                  <Button onClick={fetchEmployees} variant="outline" className="mb-4">
+                    Reintentar cargar empleados
+                  </Button>
+                </div>
+              )}
+              
+              {departmentsError && (
+                <div className="text-center">
+                  <div className="text-red-600 mb-4">
+                    <h3 className="text-lg font-semibold">Error al cargar departamentos</h3>
+                    <p className="text-sm mt-2">{departmentsError}</p>
+                  </div>
+                  <Button onClick={fetchDepartments} variant="outline" className="mb-4">
+                    Reintentar cargar departamentos
+                  </Button>
+                </div>
+              )}
+              
+              {schedulesError && (
+                <div className="text-center">
+                  <div className="text-red-600 mb-4">
+                    <h3 className="text-lg font-semibold">Error al cargar horarios</h3>
+                    <p className="text-sm mt-2">{schedulesError}</p>
+                  </div>
+                  <Button onClick={fetchWorkSchedules} variant="outline">
+                    Reintentar cargar horarios
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Employee Management</h1>
-          <p className="text-gray-600">Manage your team members and their information</p>
+      {showForm ? (
+        <AddEmployeeForm
+          formData={formData}
+          onFormChange={handleFormChange}
+          onSubmit={handleSubmit}
+          onCancel={handleCancel}
+          departments={departments}
+          workSchedules={workSchedules}
+          loading={isSubmitting}
+          isEditing={!!editingEmployee}
+        />
+      ) : (
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">Empleados</h2>
+            <p className="text-gray-600">Administra la información de los empleados</p>
+          </div>
+          <Button 
+            onClick={() => setShowForm(true)}
+            className="flex items-center space-x-2"
+          >
+            <PlusIcon className="h-5 w-5" />
+            <span>Nuevo Empleado</span>
+          </Button>
         </div>
-        <Button onClick={() => setShowAddForm(true)}>
-          Add Employee
-        </Button>
-      </div>
-
-      {/* Search */}
-      <Card>
-        <CardContent className="pt-6">
-          <Input
-            type="text"
-            placeholder="Search employees by name, code, DNI, or position..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-md"
-          />
-        </CardContent>
-      </Card>
-
-      {/* Add Employee Form */}
-      {showAddForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Add New Employee</CardTitle>
-            <CardDescription>Enter the employee&apos;s information</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Employee Code
-                </label>
-                <Input
-                  value={formData.employee_code}
-                  onChange={(e) => setFormData({...formData, employee_code: e.target.value})}
-                  placeholder="EMP001"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  DNI
-                </label>
-                <Input
-                  value={formData.dni}
-                  onChange={(e) => setFormData({...formData, dni: e.target.value})}
-                  placeholder="0801-1990-12345"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Full Name
-                </label>
-                <Input
-                  value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  placeholder="John Doe"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email
-                </label>
-                <Input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({...formData, email: e.target.value})}
-                  placeholder="john@company.com"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Phone
-                </label>
-                <Input
-                  value={formData.phone}
-                  onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                  placeholder="+504 9999-9999"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Position
-                </label>
-                <Input
-                  value={formData.position}
-                  onChange={(e) => setFormData({...formData, position: e.target.value})}
-                  placeholder="Software Developer"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Department
-                </label>
-                <select
-                  value={formData.department_id}
-                  onChange={(e) => setFormData({...formData, department_id: e.target.value})}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Select Department</option>
-                  {/* eslint-disable-next-line react/jsx-key */}
-                  {departments.map((dept, index) => (
-                    <option key={`dept-${index}`} value={dept.id}>{dept.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Work Schedule
-                </label>
-                <select
-                  value={formData.work_schedule_id}
-                  onChange={(e) => setFormData({...formData, work_schedule_id: e.target.value})}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Select Schedule</option>
-                  {/* eslint-disable-next-line react/jsx-key */}
-                  {workSchedules.map((schedule, index) => (
-                    <option key={`schedule-${index}`} value={schedule.id}>{schedule.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Base Salary (HNL)
-                </label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={formData.base_salary}
-                  onChange={(e) => setFormData({...formData, base_salary: e.target.value})}
-                  placeholder="25000.00"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Hire Date
-                </label>
-                <Input
-                  type="date"
-                  value={formData.hire_date}
-                  onChange={(e) => setFormData({...formData, hire_date: e.target.value})}
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Bank Name
-                </label>
-                <Input
-                  value={formData.bank_name}
-                  onChange={(e) => setFormData({...formData, bank_name: e.target.value})}
-                  placeholder="Banco Atlántida"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Bank Account
-                </label>
-                <Input
-                  value={formData.bank_account}
-                  onChange={(e) => setFormData({...formData, bank_account: e.target.value})}
-                  placeholder="12345678901"
-                />
-              </div>
-
-              <div className="md:col-span-2 flex gap-4">
-                <Button type="submit" disabled={loading}>
-                  {loading ? 'Adding...' : 'Add Employee'}
-                </Button>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setShowAddForm(false)}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
       )}
 
-      {/* Export Reports */}
+      {showForm && (
+        <>
+          {employeesError && (
+            <div className="bg-red-50 border border-red-200 rounded-md p-4">
+              <div className="text-red-600">
+                <h3 className="text-sm font-medium">Error al {editingEmployee ? 'actualizar' : 'crear'} empleado</h3>
+                <p className="text-sm mt-1">{employeesError}</p>
+              </div>
+            </div>
+          )}
+          {(departmentsError || schedulesError) && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+              <div className="text-yellow-800">
+                <h3 className="text-sm font-medium">Advertencia</h3>
+                <div className="text-sm mt-1">
+                  {departmentsError && <p>Error al cargar departamentos. <Button onClick={fetchDepartments} variant="link" className="text-yellow-800 underline p-0 h-auto">Reintentar</Button></p>}
+                  {schedulesError && <p>Error al cargar horarios. <Button onClick={fetchWorkSchedules} variant="link" className="text-yellow-800 underline p-0 h-auto">Reintentar</Button></p>}
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
       <Card>
         <CardHeader>
-          <CardTitle>Exportar Reportes de Empleados</CardTitle>
+          <CardTitle>Lista de Empleados ({employees.length})</CardTitle>
           <CardDescription>
-            Genera reportes detallados de empleados en PDF o CSV
+            Empleados registrados en el sistema
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap gap-4 items-end">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Formato
-              </label>
-              <select 
-                className="w-24 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                defaultValue="pdf"
-                id="reportFormat"
-              >
-                <option value="pdf">PDF</option>
-                <option value="csv">CSV</option>
-              </select>
+          {employees.length === 0 ? (
+            <div className="text-center py-8 text-gray-600">
+              No se encontraron empleados
             </div>
-
-            <Button 
-              onClick={exportEmployeeReport}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              Exportar Reporte
-            </Button>
-          </div>
-          <div className="mt-4 text-sm text-gray-600">
-            <strong>Reporte incluye:</strong> Lista completa de empleados, departamentos, salarios y estadísticas
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Employee List */}
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <CardTitle>Employee Directory</CardTitle>
-              <CardDescription>
-                {filteredEmployees.length} of {employees.length} employees activos
-              </CardDescription>
-            </div>
-            <Button
-              onClick={fetchData}
-              size="sm"
-              variant="outline"
-              className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
-            >
-              🔄 Actualizar Asistencia
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full table-auto">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-4">Employee</th>
-                  <th className="text-left py-3 px-4">Position</th>
-                  <th className="text-left py-3 px-4">Department</th>
-                  <th className="text-left py-3 px-4">Salary</th>
-                  <th className="text-left py-3 px-4">Status</th>
-                  <th className="text-left py-3 px-4">Asistencia</th>
-                  <th className="text-left py-3 px-4">Horario</th>
-                  <th className="text-left py-3 px-4">🏆 Puntos</th>
-                  <th className="text-left py-3 px-4">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {/* eslint-disable-next-line react/jsx-key */}
-                {filteredEmployees.map((employee, index) => (
-                  <tr key={`employee-${index}`} className="border-b hover:bg-gray-50">
-                    <td className="py-3 px-4">
-                      <div>
-                        <div className="font-medium">{employee.name}</div>
-                        <div className="text-sm text-gray-500">
-                          {employee.employee_code} • DNI: {employee.dni}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {employee.email} • {employee.phone}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="font-medium">{employee.position}</div>
-                      <div className="text-sm text-gray-500 capitalize">{employee.role}</div>
-                    </td>
-                    <td className="py-3 px-4">
-                      {employee.department_id ? 
-                        departments.find(d => d.id === employee.department_id)?.name || 'No Department' 
-                        : 'No Department'
-                      }
-                    </td>
-                    <td className="py-3 px-4 font-mono">
-                      {formatCurrency(employee.base_salary)}
-                    </td>
-                    <td className="py-3 px-4">
-                      {getStatusBadge(employee.status)}
-                    </td>
-                    <td className="py-3 px-4">
-                      {getAttendanceBadge(employee.attendance_status || 'not_registered', employee.check_in_time)}
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="text-sm">
-                        {employee.work_schedule ? (
-                          <>
-                            <div className="font-medium">Entrada: {employee.work_schedule.start_time}</div>
-                            <div className="text-gray-500">Salida: {employee.work_schedule.end_time}</div>
-                          </>
-                        ) : (
-                          <span className="text-gray-400">Sin horario</span>
+          ) : (
+            <div className="space-y-4">
+              {employees.map((employee) => (
+                <div key={employee.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="font-semibold text-lg">{employee.name}</h3>
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          employee.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        }`}>
+                          {employee.status === 'active' ? 'Activo' : 'Inactivo'}
+                        </span>
+                        {employee.attendance_status && (
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${
+                            employee.attendance_status === 'present' ? 'bg-blue-100 text-blue-800' :
+                            employee.attendance_status === 'late' ? 'bg-yellow-100 text-yellow-800' :
+                            employee.attendance_status === 'absent' ? 'bg-red-100 text-red-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {employee.attendance_status === 'present' ? 'Presente' :
+                             employee.attendance_status === 'late' ? 'Tardanza' :
+                             employee.attendance_status === 'absent' ? 'Ausente' : 'No registrado'}
+                          </span>
                         )}
                       </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="text-sm space-y-1">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Total:</span>
-                          <span className="font-mono font-bold text-blue-600">
-                            {employee.gamification?.total_points || 0}
-                          </span>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600">
+                        <div>
+                          <p><span className="font-medium">DNI:</span> {employee.dni}</p>
+                          <p><span className="font-medium">Código:</span> {employee.employee_code}</p>
+                          <p><span className="font-medium">Email:</span> {employee.email || 'No especificado'}</p>
+                          <p><span className="font-medium">Teléfono:</span> {employee.phone || 'No especificado'}</p>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Semana:</span>
-                          <span className="font-mono font-bold text-green-600">
-                            {employee.gamification?.weekly_points || 0}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Logros:</span>
-                          <span className="font-mono font-bold text-purple-600">
-                            {employee.gamification?.achievements_count || 0}
-                          </span>
+                        <div>
+                          <p><span className="font-medium">Posición:</span> {employee.role || 'No especificada'}</p>
+                          <p><span className="font-medium">Departamento:</span> {employee.departments?.name || 'Sin asignar'}</p>
+                          <p><span className="font-medium">Horario:</span> {employee.work_schedules?.name || 'Sin asignar'}</p>
+                          {employee.check_in_time && (
+                            <p><span className="font-medium">Entrada:</span> {new Date(employee.check_in_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</p>
+                          )}
                         </div>
                       </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex gap-2">
+                    </div>
+                    
+                    <div className="flex flex-col items-end gap-2 ml-4">
+                      {employee.employee_scores && (
+                        <div className="text-right text-xs text-gray-500">
+                          <p>Puntos: {employee.employee_scores.total_points || 0}</p>
+                          <p>Semana: {employee.employee_scores.weekly_points || 0}</p>
+                        </div>
+                      )}
+                      
+                      <div className="flex gap-2 mt-2">
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => openCertificateModal(employee)}
-                          className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+                          onClick={() => handleEdit(employee)}
+                          className="flex items-center gap-1"
                         >
-                          📄 Constancia
+                          <PencilIcon className="h-4 w-4" />
+                          <span className="hidden sm:inline">Editar</span>
                         </Button>
+                        
                         {employee.status === 'active' && (
                           <Button
                             size="sm"
-                            variant="outline"
-                            onClick={() => updateEmployeeStatus(employee.id, 'inactive')}
+                            variant="destructive"
+                            onClick={() => handleDeactivate(employee)}
+                            className="flex items-center gap-1"
                           >
-                            Deactivate
-                          </Button>
-                        )}
-                        {employee.status === 'inactive' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => updateEmployeeStatus(employee.id, 'active')}
-                          >
-                            Activate
+                            <TrashIcon className="h-4 w-4" />
+                            <span className="hidden sm:inline">Dar Baja</span>
                           </Button>
                         )}
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {filteredEmployees.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                {searchTerm ? 'No employees found matching your search.' : 'No employees added yet.'}
-              </div>
-            )}
-          </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Modal de Constancia de Trabajo */}
-      {showCertificateModal && selectedEmployee && (
+      {/* Modal de Confirmación de Baja */}
+      {showDeactivateModal && employeeToDeactivate && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Generar Constancia de Trabajo</h3>
-              <button
-                onClick={() => {
-                  setShowCertificateModal(false)
-                  setSelectedEmployee(null)
-                }}
-                className="text-gray-500 hover:text-gray-700"
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              Confirmar Baja de Empleado
+            </h3>
+            <p className="text-gray-600 mb-6">
+              ¿Estás seguro de que quieres dar de baja a <strong>{employeeToDeactivate.name}</strong>?
+              Esta acción cambiará su estado a "Inactivo".
+            </p>
+            <div className="flex gap-3">
+              <Button
+                onClick={confirmDeactivate}
+                disabled={isSubmitting}
+                variant="destructive"
+                className="flex-1"
               >
-                ✕
-              </button>
-            </div>
-
-            <div className="mb-4">
-              <p className="text-sm text-gray-600 mb-2">
-                <strong>Empleado:</strong> {selectedEmployee.name}
-              </p>
-              <p className="text-sm text-gray-600 mb-2">
-                <strong>Código:</strong> {selectedEmployee.employee_code}
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Formato
-                </label>
-                <select
-                  id="certificateFormat"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  defaultValue="pdf"
-                >
-                  <option value="pdf">PDF</option>
-                  <option value="csv">CSV</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tipo de Constancia
-                </label>
-                <select
-                  id="certificateType"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  defaultValue="general"
-                >
-                  <option value="general">General</option>
-                  <option value="salario">Salario</option>
-                  <option value="antiguedad">Antigüedad</option>
-                  <option value="buena_conducta">Buena Conducta</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Propósito
-                </label>
-                <input
-                  type="text"
-                  id="certificatePurpose"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Ej: Constancia de trabajo"
-                  defaultValue="Constancia de trabajo"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Información Adicional (opcional)
-                </label>
-                <textarea
-                  id="certificateAdditionalInfo"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  rows={3}
-                  placeholder="Información adicional que desee incluir..."
-                />
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <Button
-                  onClick={() => generateWorkCertificate(selectedEmployee)}
-                  disabled={certificateLoading}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700"
-                >
-                  {certificateLoading ? 'Generando...' : 'Generar Constancia'}
-                </Button>
-                <Button
-                  onClick={() => {
-                    setShowCertificateModal(false)
-                    setSelectedEmployee(null)
-                  }}
-                  variant="outline"
-                  className="flex-1"
-                >
-                  Cancelar
-                </Button>
-              </div>
+                {isSubmitting ? 'Procesando...' : 'Confirmar Baja'}
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowDeactivateModal(false)
+                  setEmployeeToDeactivate(null)
+                }}
+                variant="outline"
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
             </div>
           </div>
         </div>
