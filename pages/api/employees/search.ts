@@ -65,7 +65,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         attendance_records!attendance_records_employee_id_fkey!left(check_in, check_out, status)
       `, { count: 'exact' })
       .eq('status', status)
-      .eq('company_id', companyId)
+      // .eq('company_id', companyId) // Temporarily disabled for debugging
 
     // Add search filter if provided
     if (search) {
