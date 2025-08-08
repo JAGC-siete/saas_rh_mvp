@@ -56,7 +56,7 @@ export default function EmployeeManager() {
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null)
   const [showDeactivateModal, setShowDeactivateModal] = useState(false)
   const [employeeToDeactivate, setEmployeeToDeactivate] = useState<Employee | null>(null)
-  const { user } = useSupabaseSession()
+  const { user, loading: sessionLoading } = useSupabaseSession()
 
   const getErrorMessage = useCallback((error: unknown) => {
     if (error instanceof Error) {
@@ -291,7 +291,7 @@ export default function EmployeeManager() {
     }
   }, [employeeToDeactivate, fetchEmployees])
 
-  const shouldFetch = useMemo(() => !!user?.id, [user?.id])
+  const shouldFetch = useMemo(() => !!user?.id && !sessionLoading, [user?.id, sessionLoading])
 
   useEffect(() => {
     if (shouldFetch) {
@@ -301,7 +301,7 @@ export default function EmployeeManager() {
     }
   }, [shouldFetch, fetchEmployees, fetchDepartments, fetchWorkSchedules])
 
-  const isLoading = employeesLoading || departmentsLoading || schedulesLoading
+  const isLoading = sessionLoading || employeesLoading || departmentsLoading || schedulesLoading
   const hasErrors = employeesError || departmentsError || schedulesError
 
   if (isLoading && !hasErrors) {
@@ -315,6 +315,7 @@ export default function EmployeeManager() {
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
               <p className="mt-2 text-gray-600">
+                {sessionLoading && "Verificando sesión..."}
                 {employeesLoading && "Cargando empleados..."}
                 {departmentsLoading && "Cargando departamentos..."}
                 {schedulesLoading && "Cargando horarios..."}
