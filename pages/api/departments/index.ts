@@ -69,10 +69,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const departmentStats: { [key: string]: any } = {}
     let totalSalary = 0
 
-    // Si no hay departamentos, calcular salario total de todos los empleados
+    // Si no hay departamentos, crear un departamento por defecto para empleados sin asignar
     if (!departments || departments.length === 0) {
-      totalSalary = employees?.reduce((sum, emp) => sum + (emp.base_salary || 0), 0) || 0
+      const unassignedEmployees = employees || []
+      const unassignedSalary = unassignedEmployees.reduce((sum, emp) => sum + (emp.base_salary || 0), 0)
+      const avgSalary = unassignedEmployees.length > 0 ? unassignedSalary / unassignedEmployees.length : 0
+      
+      departmentStats['Sin Asignar'] = {
+        id: 'unassigned',
+        name: 'Sin Asignar',
+        description: 'Empleados sin departamento asignado',
+        employeeCount: unassignedEmployees.length,
+        totalSalary: unassignedSalary,
+        averageSalary: avgSalary,
+        employees: unassignedEmployees
+      }
+      
+      totalSalary = unassignedSalary
     } else {
+      // Procesar departamentos existentes
       departments.forEach(dept => {
         const deptEmployees = employees?.filter(emp => emp.department_id === dept.id) || []
         const deptSalary = deptEmployees.reduce((sum, emp) => sum + (emp.base_salary || 0), 0)
@@ -90,6 +105,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         
         totalSalary += deptSalary
       })
+
+      // Agregar empleados sin departamento asignado
+      const unassignedEmployees = employees?.filter(emp => !emp.department_id) || []
+      if (unassignedEmployees.length > 0) {
+        const unassignedSalary = unassignedEmployees.reduce((sum, emp) => sum + (emp.base_salary || 0), 0)
+        const avgSalary = unassignedEmployees.length > 0 ? unassignedSalary / unassignedEmployees.length : 0
+        
+        departmentStats['Sin Asignar'] = {
+          id: 'unassigned',
+          name: 'Sin Asignar',
+          description: 'Empleados sin departamento asignado',
+          employeeCount: unassignedEmployees.length,
+          totalSalary: unassignedSalary,
+          averageSalary: avgSalary,
+          employees: unassignedEmployees
+        }
+        
+        totalSalary += unassignedSalary
+      }
     }
 
     const response = {
