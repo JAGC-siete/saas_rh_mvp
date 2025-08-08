@@ -302,8 +302,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // ⏳ Entrada temprana (⭐): Desde 2 horas antes hasta 5 minutos antes (120-300 min)
         checkInStatus = 'early'
         checkInMessage = 'Entrada temprana ⭐'
-      } else if ((earlyMinutes >= 4 && earlyMinutes < 120) || (lateMinutes >= 0 && lateMinutes <= 5)) {
-        // 🌅 Entrada normal: Desde 4 minutos antes hasta 5 minutos después
+        } else if ((earlyMinutes >= 5 && earlyMinutes < 120) || (lateMinutes >= 0 && lateMinutes <= 5)) {
+    // 🌅 Entrada normal: Desde 5 minutos antes hasta 5 minutos después
         checkInStatus = 'normal'
         checkInMessage = 'Entrada registrada normalmente 🌅'
       } else if (lateMinutes >= 6 && lateMinutes <= 20) {
