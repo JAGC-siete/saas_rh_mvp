@@ -16,19 +16,41 @@ import {
 
 interface DashboardLayoutProps {
   children: React.ReactNode
+  activeTab?: string
+  onTabChange?: (tab: string) => void
+  isDemoMode?: boolean
 }
 
-export default function DashboardLayout({ children }: DashboardLayoutProps) {
+type NavigationItem = {
+  name: string
+  icon: React.ForwardRefExoticComponent<any>
+} & (
+  | { href: string; id?: never }
+  | { id: string; href?: never }
+)
+
+export default function DashboardLayout({ children, activeTab, onTabChange, isDemoMode = false }: DashboardLayoutProps) {
   const { user, logout } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const router = useRouter()
 
   const handleSignOut = async () => {
+    if (isDemoMode) {
+      // In demo mode, redirect to landing
+      window.location.href = '/'
+      return
+    }
     await logout()
     router.push('/app/login')
   }
 
-  const navigation = [
+  const navigation = isDemoMode ? [
+    { name: 'Dashboard', id: 'dashboard', icon: ChartBarIcon },
+    { name: 'Empleados', id: 'employees', icon: UsersIcon },
+    { name: 'Asistencia', id: 'attendance', icon: ClockIcon },
+    { name: 'Nómina', id: 'payroll', icon: CurrencyDollarIcon },
+    { name: 'Reportes', id: 'reports', icon: ChartBarIcon },
+  ] : [
     { name: 'Dashboard', href: '/app/dashboard', icon: ChartBarIcon },
     { name: 'Empleados', href: '/app/employees', icon: UsersIcon },
     { name: 'Departamentos', href: '/app/departments', icon: BuildingOfficeIcon },
@@ -68,9 +90,33 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
           {/* Navigation */}
           <nav className="flex-1 px-2 py-4 space-y-1">
-            {navigation.map((item, index) => {
-              const isActive = router.pathname === item.href
-              return (
+            {navigation.map((item: any, index) => {
+              const isActive = isDemoMode 
+                ? activeTab === item.id
+                : router.pathname === item.href
+                
+              const handleClick = isDemoMode && item.id
+                ? () => onTabChange?.(item.id)
+                : undefined
+
+              return isDemoMode ? (
+                <button
+                  key={`nav-${index}`}
+                  onClick={handleClick}
+                  className={`group flex items-center w-full px-2 py-2 text-sm font-medium rounded-md transition-colors text-left ${
+                    isActive
+                      ? 'bg-brand-900 text-white'
+                      : 'text-gray-200 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  <item.icon
+                    className={`mr-3 h-5 w-5 ${
+                      isActive ? 'text-brand-400' : 'text-gray-300 group-hover:text-brand-400'
+                    }`}
+                  />
+                  {sidebarOpen && item.name}
+                </button>
+              ) : (
                 <Link
                   key={`nav-${index}`}
                   href={item.href}
@@ -102,10 +148,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               {sidebarOpen && (
                 <div className="ml-3 flex-1 min-w-0">
                   <p className="text-sm font-medium text-white truncate">
-                    {user?.user_metadata?.full_name || user?.email}
+                    {isDemoMode ? 'Usuario Demo' : (user?.user_metadata?.full_name || user?.email)}
                   </p>
                   <p className="text-xs text-gray-300 truncate capitalize">
-                    Employee
+                    {isDemoMode ? 'Modo Demo' : 'Employee'}
                   </p>
                 </div>
               )}
@@ -118,7 +164,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 className="mt-3 w-full justify-start text-gray-200 hover:text-white hover:bg-white/10"
               >
                 <ArrowLeftOnRectangleIcon className="h-4 w-4 mr-2" />
-                Sign out
+                {isDemoMode ? 'Salir del Demo' : 'Sign out'}
               </Button>
             )}
           </div>

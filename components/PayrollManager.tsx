@@ -100,6 +100,12 @@ export default function PayrollManager() {
   const [generateForm, setGenerateForm] = useState(INITIAL_GENERATE_FORM)
   const [supabase, setSupabase] = useState<any>(null)
 
+  // Check if we're in demo mode
+  const isDemoMode = useMemo(() => {
+    if (typeof window === 'undefined') return false
+    return window.location.pathname.startsWith('/app/demo')
+  }, [])
+
   // Memoized values
   const currentPeriodRecords = useMemo(() => 
     payrollRecords.filter(record => 
@@ -140,10 +146,6 @@ export default function PayrollManager() {
     }
   }, [])
 
-  useEffect(() => {
-    if (supabase) fetchData()
-  }, [supabase])
-
   const resetGenerateForm = useCallback(() => {
     setGenerateForm(INITIAL_GENERATE_FORM)
   }, [])
@@ -176,10 +178,86 @@ export default function PayrollManager() {
   }, [])
 
   const fetchData = useCallback(async () => {
-    if (!supabase) return
-    
     setLoading(true)
     try {
+      if (isDemoMode) {
+        // Demo mode: Load data from demo endpoints
+        console.log('🎯 PayrollManager: Loading demo data...')
+        
+        // Load demo payroll data
+        const payrollResponse = await fetch('/api/demo/payroll')
+        if (payrollResponse.ok) {
+          const payrollData = await payrollResponse.json()
+          const mockRecords = payrollData.data.records?.map((record: any) => ({
+            id: `payroll-${record.employee_id}`,
+            employee_id: record.employee_id,
+            period_start: `${payrollData.data.period}-01`,
+            period_end: `${payrollData.data.period}-15`,
+            period_type: 'quincenal',
+            base_salary: record.gross_salary,
+            gross_salary: record.gross_salary,
+            income_tax: record.isr_deduction,
+            professional_tax: record.rap_deduction,
+            social_security: record.ihss_deduction,
+            total_deductions: record.total_deductions,
+            net_salary: record.net_salary,
+            days_worked: 15,
+            days_absent: 0,
+            late_days: 0,
+            status: 'approved',
+            created_at: payrollData.data.generated_at,
+            employees: {
+              name: `Empleado ${record.employee_id.slice(-3)}`,
+              employee_code: record.employee_id,
+              team: 'Demo',
+              department_id: 'd-desarrollo'
+            }
+          })) || []
+          
+          setPayrollRecords(mockRecords)
+          
+          // Calculate demo stats
+          const stats = {
+            totalEmployees: mockRecords.length,
+            totalGrossSalary: payrollData.data.totals?.gross || 0,
+            totalDeductions: payrollData.data.totals?.total_deductions || 0,
+            totalNetSalary: payrollData.data.totals?.net || 0,
+            averageSalary: mockRecords.length > 0 ? (payrollData.data.totals?.net || 0) / mockRecords.length : 0,
+            departmentBreakdown: { 'demo': { count: mockRecords.length, name: 'Demo', avgSalary: 20000 } },
+            attendanceRate: 95,
+            payrollCoverage: 100
+          }
+          setPayrollStats(stats)
+        }
+
+        // Load demo employees
+        const employeesResponse = await fetch('/api/demo/employees')
+        if (employeesResponse.ok) {
+          const employeesData = await employeesResponse.json()
+          const mockEmployees = employeesData.data?.map((emp: any) => ({
+            id: emp.id,
+            name: emp.full_name,
+            employee_code: emp.dni_last5,
+            base_salary: emp.base_salary_monthly,
+            department_id: emp.department_id
+          })) || []
+          setEmployees(mockEmployees)
+        }
+
+        setUserProfile({
+          id: 'demo-user',
+          role: 'demo',
+          is_active: true,
+          permissions: DEFAULT_PERMISSIONS
+        })
+
+        console.log('✅ Demo payroll data loaded')
+        return
+      }
+
+      // Regular mode: Original Supabase logic
+      if (!supabase) return
+      
       const { data: { user }, error: userError } = await supabase.auth.getUser()
       
       if (userError || !user) {
@@ -302,7 +380,18 @@ export default function PayrollManager() {
     } finally {
       if (isMountedRef.current) setLoading(false)
     }
-  }, [supabase])
+  }, [isDemoMode, supabase])
+
+  // Initialize data when component mounts or dependencies change
+  useEffect(() => {
+    if (isDemoMode) {
+      // In demo mode, start loading immediately
+      fetchData()
+    } else if (supabase) {
+      // In regular mode, wait for supabase to be initialized
+      fetchData()
+    }
+  }, [supabase, isDemoMode, fetchData])
 
   const loadDepartments = useCallback(async () => {
     if (!supabase) return
@@ -385,6 +474,37 @@ export default function PayrollManager() {
     setLoading(true)
 
     try {
+      if (isDemoMode) {
+        // Demo mode: Use demo payroll calculation
+        console.log('🎯 PayrollManager: Generating demo payroll...')
+        
+        const response = await fetch('/api/demo/payroll/calculate', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify(generateForm),
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to generate demo payroll')
+        }
+
+        const result = await response.json()
+        alert(`✅ ${result.message}`)
+        
+        resetGenerateForm()
+        fetchData()
+        return
+      }
+
+      // Regular mode: Original authentication and generation logic
+      if (!supabase) {
+        alert('❌ Error: Sistema no inicializado')
+        return
+      }
+
       const { data: { user }, error: userError } = await supabase.auth.getUser()
       
       if (userError || !user) {
@@ -442,7 +562,7 @@ export default function PayrollManager() {
     } finally {
       setLoading(false)
     }
-  }, [supabase, generateForm, resetGenerateForm, fetchData])
+  }, [isDemoMode, supabase, generateForm, resetGenerateForm, fetchData])
 
   const approvePayroll = useCallback(async (payrollId: string) => {
     try {

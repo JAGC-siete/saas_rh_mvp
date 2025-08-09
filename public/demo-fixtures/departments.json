@@ -1,0 +1,30 @@
+[
+  {
+    "id": "d-operaciones",
+    "company_id": "00000000-0000-4000-8000-000000000001",
+    "name": "Operaciones",
+    "created_at": "2025-08-09T00:00:00.000Z",
+    "updated_at": "2025-08-09T00:00:00.000Z"
+  },
+  {
+    "id": "d-ventas",
+    "company_id": "00000000-0000-4000-8000-000000000001",
+    "name": "Ventas",
+    "created_at": "2025-08-09T00:00:00.000Z",
+    "updated_at": "2025-08-09T00:00:00.000Z"
+  },
+  {
+    "id": "d-desarrollo",
+    "company_id": "00000000-0000-4000-8000-000000000001",
+    "name": "Desarrollo",
+    "created_at": "2025-08-09T00:00:00.000Z",
+    "updated_at": "2025-08-09T00:00:00.000Z"
+  },
+  {
+    "id": "d-administracion",
+    "company_id": "00000000-0000-4000-8000-000000000001",
+    "name": "Administración",
+    "created_at": "2025-08-09T00:00:00.000Z",
+    "updated_at": "2025-08-09T00:00:00.000Z"
+  }
+]
