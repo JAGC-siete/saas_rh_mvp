@@ -306,9 +306,9 @@ export default function ReportsAndAnalytics() {
 
   const getAttendanceColor = useCallback((rate: number, type: 'attendance' | 'punctuality' = 'attendance') => {
     const thresholds = type === 'punctuality' ? ATTENDANCE_THRESHOLDS.punctuality : ATTENDANCE_THRESHOLDS
-    if (rate >= thresholds.excellent) return 'text-green-600'
-    if (rate >= thresholds.good) return 'text-orange-600'
-    return 'text-red-600'
+    if (rate >= thresholds.excellent) return 'text-emerald-400'
+    if (rate >= thresholds.good) return 'text-orange-400'
+    return 'text-red-400'
   }, [])
 
   const handleDateRangeChange = useCallback((field: 'startDate' | 'endDate', value: string) => {
@@ -332,8 +332,8 @@ export default function ReportsAndAnalytics() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900">Reportes y Analítica</h2>
-          <p className="text-gray-600">Análisis de datos y métricas de recursos humanos</p>
+          <h2 className="text-xl font-semibold text-white">Reportes y Analítica</h2>
+          <p className="text-gray-300">Análisis de datos y métricas de recursos humanos</p>
         </div>
 
         <div className="flex space-x-3">
@@ -341,84 +341,84 @@ export default function ReportsAndAnalytics() {
             type="date"
             value={dateRange.startDate}
             onChange={(e) => handleDateRangeChange('startDate', e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+            className="px-3 py-2 border border-white/20 bg-white/10 rounded-md text-sm text-white placeholder-gray-400 focus:border-brand-400 focus:ring-1 focus:ring-brand-400"
           />
           <input
             type="date"
             value={dateRange.endDate}
             onChange={(e) => handleDateRangeChange('endDate', e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+            className="px-3 py-2 border border-white/20 bg-white/10 rounded-md text-sm text-white placeholder-gray-400 focus:border-brand-400 focus:ring-1 focus:ring-brand-400"
           />
         </div>
       </div>
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="p-6">
+        <Card variant="glass" className="p-6">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <UsersIcon className="h-8 w-8 text-blue-600" />
+              <UsersIcon className="h-8 w-8 text-brand-400" />
             </div>
             <div className="ml-4">
-              <h3 className="text-lg font-semibold text-gray-900">{stats.activeEmployees}</h3>
-              <p className="text-sm text-gray-600">Empleados Activos</p>
-              <p className="text-xs text-gray-500">de {stats.totalEmployees} total</p>
+              <h3 className="text-lg font-semibold text-white">{stats.activeEmployees}</h3>
+              <p className="text-sm text-gray-300">Empleados Activos</p>
+              <p className="text-xs text-gray-400">de {stats.totalEmployees} total</p>
             </div>
           </div>
         </Card>
 
-        <Card className="p-6">
+        <Card variant="glass" className="p-6">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <ClockIcon className="h-8 w-8 text-green-600" />
+              <ClockIcon className="h-8 w-8 text-emerald-400" />
             </div>
             <div className="ml-4">
-              <h3 className="text-lg font-semibold text-gray-900">{stats.todayAttendance}</h3>
-              <p className="text-sm text-gray-600">Asistencias Hoy</p>
-              <p className="text-xs text-gray-500">
+              <h3 className="text-lg font-semibold text-white">{stats.todayAttendance}</h3>
+              <p className="text-sm text-gray-300">Asistencias Hoy</p>
+              <p className="text-xs text-gray-400">
                 {formatPercentage(stats.todayAttendance, stats.activeEmployees)} del total
               </p>
             </div>
           </div>
         </Card>
 
-        <Card className="p-6">
+        <Card variant="glass" className="p-6">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <CurrencyDollarIcon className="h-8 w-8 text-orange-600" />
+              <CurrencyDollarIcon className="h-8 w-8 text-orange-400" />
             </div>
             <div className="ml-4">
-              <h3 className="text-lg font-semibold text-gray-900">{stats.pendingPayrolls}</h3>
-              <p className="text-sm text-gray-600">Nóminas Pendientes</p>
-              <p className="text-xs text-gray-500">Por procesar</p>
+              <h3 className="text-lg font-semibold text-white">{stats.pendingPayrolls}</h3>
+              <p className="text-sm text-gray-300">Nóminas Pendientes</p>
+              <p className="text-xs text-gray-400">Por procesar</p>
             </div>
           </div>
         </Card>
 
-        <Card className="p-6">
+        <Card variant="glass" className="p-6">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <CalendarDaysIcon className="h-8 w-8 text-purple-600" />
+              <CalendarDaysIcon className="h-8 w-8 text-purple-400" />
             </div>
             <div className="ml-4">
-              <h3 className="text-lg font-semibold text-gray-900">{stats.thisMonthLeaves}</h3>
-              <p className="text-sm text-gray-600">Permisos Este Mes</p>
-              <p className="text-xs text-gray-500">Aprobados</p>
+              <h3 className="text-lg font-semibold text-white">{stats.thisMonthLeaves}</h3>
+              <p className="text-sm text-gray-300">Permisos Este Mes</p>
+              <p className="text-xs text-gray-400">Aprobados</p>
             </div>
           </div>
         </Card>
       </div>
 
       {/* Attendance Trends */}
-      <Card className="p-6">
+      <Card variant="glass" className="p-6">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Tendencias de Asistencia</h3>
+          <h3 className="text-lg font-semibold text-white">Tendencias de Asistencia</h3>
           <ChartBarIcon className="h-6 w-6 text-gray-400" />
         </div>
         
         {recentTrends.length > 0 ? (
           <div className="space-y-4">
-            <div className="grid grid-cols-7 gap-2 text-sm font-medium text-gray-700">
+            <div className="grid grid-cols-7 gap-2 text-sm font-medium text-gray-300">
               <div>Fecha</div>
               <div>Presentes</div>
               <div>Ausentes</div>
@@ -434,12 +434,12 @@ export default function ReportsAndAnalytics() {
               const punctualityRate = total > 0 ? (trend.present / total * 100) : 0
               
               return (
-                <div key={trend.date} className="grid grid-cols-7 gap-2 text-sm py-2 border-b border-gray-100">
-                  <div>{new Date(trend.date).toLocaleDateString('es-HN')}</div>
-                  <div className="text-green-600 font-medium">{trend.present}</div>
-                  <div className="text-red-600 font-medium">{trend.absent}</div>
-                  <div className="text-orange-600 font-medium">{trend.late}</div>
-                  <div className="font-medium">{total}</div>
+                <div key={trend.date} className="grid grid-cols-7 gap-2 text-sm py-2 border-b border-white/10">
+                  <div className="text-gray-300">{new Date(trend.date).toLocaleDateString('es-HN')}</div>
+                  <div className="text-emerald-400 font-medium">{trend.present}</div>
+                  <div className="text-red-400 font-medium">{trend.absent}</div>
+                  <div className="text-orange-400 font-medium">{trend.late}</div>
+                  <div className="font-medium text-white">{total}</div>
                   <div className={`font-medium ${getAttendanceColor(attendanceRate)}`}>
                     {attendanceRate.toFixed(1)}%
                   </div>
@@ -451,18 +451,18 @@ export default function ReportsAndAnalytics() {
             })}
           </div>
         ) : (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-8 text-gray-400">
             No hay datos de asistencia para el período seleccionado
           </div>
         )}
       </Card>
 
       {/* Export Reports */}
-      <Card className="p-6">
+      <Card variant="glass" className="p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">Exportar Reportes</h3>
-            <p className="text-gray-600">Descarga reportes en formato CSV</p>
+            <h3 className="text-lg font-semibold text-white">Exportar Reportes</h3>
+            <p className="text-gray-300">Descarga reportes en formato CSV</p>
           </div>
           <DocumentChartBarIcon className="h-6 w-6 text-gray-400" />
         </div>
@@ -471,7 +471,7 @@ export default function ReportsAndAnalytics() {
           <Button
             onClick={() => exportReport('attendance')}
             variant="outline"
-            className="flex items-center justify-center space-x-2"
+            className="flex items-center justify-center space-x-2 bg-white/5 border-white/20 text-white hover:bg-white/10"
           >
             <ClockIcon className="h-5 w-5" />
             <span>Reporte de Asistencia</span>
@@ -480,7 +480,7 @@ export default function ReportsAndAnalytics() {
           <Button
             onClick={() => exportReport('payroll')}
             variant="outline"
-            className="flex items-center justify-center space-x-2"
+            className="flex items-center justify-center space-x-2 bg-white/5 border-white/20 text-white hover:bg-white/10"
           >
             <CurrencyDollarIcon className="h-5 w-5" />
             <span>Reporte de Nómina</span>
@@ -489,7 +489,7 @@ export default function ReportsAndAnalytics() {
           <Button
             onClick={() => exportReport('employees')}
             variant="outline"
-            className="flex items-center justify-center space-x-2"
+            className="flex items-center justify-center space-x-2 bg-white/5 border-white/20 text-white hover:bg-white/10"
           >
             <UsersIcon className="h-5 w-5" />
             <span>Reporte de Empleados</span>

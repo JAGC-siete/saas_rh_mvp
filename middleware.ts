@@ -5,19 +5,54 @@ import { logger } from './lib/logger'
 
 // Cache public routes for better performance
 const PUBLIC_ROUTES = new Set([
-  '/',
-  '/login',
-  '/landing',
-  '/auth',
+  '/',                 // Landing principal (marketing)
+  '/demo',             // Página de solicitud de demo - PÚBLICO
+  '/activar',          // Formulario de activación - PÚBLICO
+  '/gracias',          // Página de confirmación - PÚBLICO
+  '/pricing',          // Página de precios - PÚBLICO
+  '/features',         // Página de características - PÚBLICO
+  '/about',            // Página acerca de - PÚBLICO
+  '/app/login',        // Login de la aplicación
+  '/app/attendance/register', // Registro de asistencia - PÚBLICO
   '/registrodeasistencia',
   '/attendance/public',
-  '/attendance/register',
+  '/attendance/register', // Legacy route - mantenida por compatibilidad
   '/api/attendance/lookup',
   '/api/attendance/register',
   '/api/attendance/first-time-check',
   '/api/attendance/update-schedule',
+  '/api/activar',      // API para formulario de activación - PÚBLICO
   '/api/health'
 ])
+
+// App routes that require authentication (rutas internas /app/*)
+const PROTECTED_APP_ROUTES = new Set([
+  '/app/dashboard',
+  '/app/employees',
+  '/app/payroll',
+  '/app/reports',
+  '/app/settings',
+  '/app/departments',
+  '/app/leave',
+])
+
+// Helper function to check if route is protected app route
+function isProtectedAppRoute(pathname: string): boolean {
+  // Check exact match first
+  if (PROTECTED_APP_ROUTES.has(pathname)) return true
+  
+  // Check for routes starting with protected app paths
+  for (const route of Array.from(PROTECTED_APP_ROUTES)) {
+    if (pathname.startsWith(route + '/')) return true
+  }
+  
+  // Check for general app routes (except login and attendance/register)
+  if (pathname.startsWith('/app/') && 
+      pathname !== '/app/login' && 
+      pathname !== '/app/attendance/register') return true
+  
+  return false
+}
 
 // Helper function to check if route is public
 function isPublicRoute(pathname: string): boolean {
@@ -74,7 +109,74 @@ export async function middleware(request: NextRequest) {
     return response
   }
 
-  // For private routes, check for Supabase session
+  // Handle protected app routes
+  if (isProtectedAppRoute(pathname)) {
+    logger.debug('Protected app route accessed', { path: pathname })
+    
+    try {
+      // Create Supabase client for middleware
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      
+      if (!supabaseUrl || !supabaseKey) {
+        logger.error('Missing Supabase environment variables', undefined, {
+          hasUrl: !!supabaseUrl,
+          hasKey: !!supabaseKey
+        })
+        return NextResponse.redirect(new URL('/app/login', request.url))
+      }
+      
+      const supabase = createServerClient(supabaseUrl, supabaseKey, {
+        cookies: {
+          get(name: string) {
+            return request.cookies.get(name)?.value
+          },
+          set(_name: string, _value: string, _options: any) {
+            // This will be handled by the response
+          },
+          remove(_name: string, _options: any) {
+            // This will be handled by the response
+          },
+        },
+      })
+      
+      // Get user from Supabase (more secure than getSession)
+      const { data: { user }, error } = await supabase.auth.getUser()
+      
+      if (error) {
+        logger.error('Error getting user', error)
+        return NextResponse.redirect(new URL('/app/login', request.url))
+      }
+      
+      if (!user) {
+        logger.info('No user found for protected app route', { path: pathname })
+        return NextResponse.redirect(new URL('/app/login', request.url))
+      }
+      
+      logger.debug('Valid user found for protected app route', { 
+        path: pathname, 
+        userId: user?.id,
+        email: user?.email 
+      })
+      
+      const response = NextResponse.next()
+      
+      // Log successful auth
+      const duration = Date.now() - startTime
+      logger.api(request.method, pathname, 200, duration, { 
+        type: 'authenticated_app',
+        userId: user?.id 
+      })
+      
+      return response
+      
+    } catch (error) {
+      logger.error('Authentication error in protected app route', error)
+      return NextResponse.redirect(new URL('/app/login', request.url))
+    }
+  }
+
+  // For other private routes (legacy), check for Supabase session
   try {
     // Create Supabase client for middleware
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -85,7 +187,7 @@ export async function middleware(request: NextRequest) {
         hasUrl: !!supabaseUrl,
         hasKey: !!supabaseKey
       })
-      return NextResponse.redirect(new URL('/login', request.url))
+      return NextResponse.redirect(new URL('/app/login', request.url))
     }
     
     const supabase = createServerClient(supabaseUrl, supabaseKey, {
@@ -112,7 +214,7 @@ export async function middleware(request: NextRequest) {
     
     if (!user) {
       logger.info('No user found for private route', { path: pathname })
-      return NextResponse.redirect(new URL('/login', request.url))
+      return NextResponse.redirect(new URL('/app/login', request.url))
     }
     
     logger.debug('Valid user found', { 
@@ -134,7 +236,7 @@ export async function middleware(request: NextRequest) {
     
   } catch (error) {
     logger.error('Authentication error in middleware', error)
-    return NextResponse.redirect(new URL('/login', request.url))
+    return NextResponse.redirect(new URL('/app/login', request.url))
   }
 }
 

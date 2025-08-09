@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card'
 import { Clock, User, ArrowLeft } from 'lucide-react'
-import AttendanceManager from '../../components/AttendanceManager'
+import AttendanceManager from '../../../components/AttendanceManager'
 
 export default function AttendanceRegisterPage() {
   const [currentTime, setCurrentTime] = useState('')
@@ -80,4 +80,4 @@ export default function AttendanceRegisterPage() {
       </div>
     </>
   )
-}
+} 

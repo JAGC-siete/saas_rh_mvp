@@ -83,10 +83,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         // ✅ Solo redirigir si estamos en el cliente y tenemos window
         if (isClient && typeof window !== 'undefined') {
-          if (event === 'SIGNED_IN' && window.location.pathname === '/login') {
+          if (event === 'SIGNED_IN' && window.location.pathname === '/app/login') {
             window.location.href = '/dashboard' // ✅ Compatible con Edge Runtime
-          } else if (event === 'SIGNED_OUT' && window.location.pathname !== '/login' && window.location.pathname !== '/') {
-            window.location.href = '/login' // ✅ Compatible con Edge Runtime
+          } else if (event === 'SIGNED_OUT' && window.location.pathname !== '/app/login' && window.location.pathname !== '/') {
+            window.location.href = '/app/login' // ✅ Compatible con Edge Runtime
           }
         }
       }

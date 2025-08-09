@@ -3,8 +3,8 @@ import ProtectedRoute from '../../../components/ProtectedRoute'
 import DashboardLayout from '../../../components/DashboardLayout'
 
 // Code-splitting para mejor performance
-const ReportsManager = dynamic(
-  () => import('../../../components/ReportsManager'),
+const ReportsAndAnalytics = dynamic(
+  () => import('../../../components/ReportsAndAnalytics'),
   {
     ssr: true,
     loading: () => (
@@ -25,7 +25,7 @@ export default function ReportsPage() {
             <p className="text-gray-300">Genera reportes detallados de asistencia en formato PDF o CSV</p>
           </div>
           
-          <ReportsManager />
+          <ReportsAndAnalytics />
         </div>
       </DashboardLayout>
     </ProtectedRoute>

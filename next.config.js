@@ -5,6 +5,74 @@ const nextConfig = {
   // Configuración necesaria para Railway
   output: 'standalone',
   
+  // Configuración para rutas internas (no subdominios)
+  async rewrites() {
+    return [
+      // No necesitamos rewrites para rutas internas
+      // Las rutas /app/* funcionan directamente
+    ]
+  },
+  
+  // Redirecciones para mantener compatibilidad
+  async redirects() {
+    return [
+      // Redirigir /landing a la página principal
+      {
+        source: '/landing',
+        destination: '/',
+        permanent: false,
+      },
+      // Redirigir rutas legacy del dashboard
+      {
+        source: '/dashboard',
+        destination: '/app/dashboard',
+        permanent: false,
+      },
+      // Redirigir rutas legacy de empleados
+      {
+        source: '/employees',
+        destination: '/app/employees',
+        permanent: false,
+      },
+      // Redirigir rutas legacy de nómina
+      {
+        source: '/payroll',
+        destination: '/app/payroll',
+        permanent: false,
+      },
+      // Redirigir rutas legacy de reportes
+      {
+        source: '/reports',
+        destination: '/app/reports',
+        permanent: false,
+      },
+      // Redirigir rutas legacy de configuración
+      {
+        source: '/settings',
+        destination: '/app/settings',
+        permanent: false,
+      },
+      // Redirigir rutas legacy de departamentos
+      {
+        source: '/departments',
+        destination: '/app/departments',
+        permanent: false,
+      },
+      // Redirigir login legacy
+      {
+        source: '/login',
+        destination: '/app/login',
+        permanent: false,
+      },
+      // Redirigir attendance legacy - COMENTADO: ahora /attendance/register existe directamente
+      // {
+      //   source: '/attendance/register',
+      //   destination: '/app/attendance/register',
+      //   permanent: false,
+      // },
+    ]
+  },
+  
   // Add headers for security
   async headers() {
     return [

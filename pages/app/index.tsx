@@ -1,0 +1,17 @@
+import { useEffect } from 'react'
+import { useRouter } from 'next/router'
+
+export default function AppIndex() {
+  const router = useRouter()
+
+  useEffect(() => {
+    // Redirect to dashboard
+    router.replace('/app/dashboard')
+  }, [router])
+
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+    </div>
+  )
+}

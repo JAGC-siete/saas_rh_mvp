@@ -115,10 +115,10 @@ export default function AttendanceDashboard2() {
   }
 
   const getStatusBadge = (record: any) => {
-    if (!record.check_in) return <Badge variant="destructive">Ausente</Badge>
-    if (record.late_minutes > 0) return <Badge variant="secondary">Tardanza ({record.late_minutes} min)</Badge>
-    if (record.check_out) return <Badge variant="default">Completo</Badge>
-    return <Badge variant="outline">Presente</Badge>
+    if (!record.check_in) return <Badge variant="destructive" className="bg-red-500/20 text-red-400">Ausente</Badge>
+    if (record.late_minutes > 0) return <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-400">Tardanza ({record.late_minutes} min)</Badge>
+    if (record.check_out) return <Badge variant="default" className="bg-brand-500/20 text-brand-400">Completo</Badge>
+    return <Badge variant="outline" className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Presente</Badge>
   }
 
   if (loading) {
@@ -127,8 +127,8 @@ export default function AttendanceDashboard2() {
         <DashboardLayout>
           <div className="flex items-center justify-center min-h-screen">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="mt-4 text-gray-600">Cargando dashboard de asistencia...</p>
+              <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-brand-400 mx-auto"></div>
+              <p className="mt-4 text-gray-300">Cargando dashboard de asistencia...</p>
             </div>
           </div>
         </DashboardLayout>
@@ -141,7 +141,7 @@ export default function AttendanceDashboard2() {
       <ProtectedRoute>
         <DashboardLayout>
           <div className="text-center py-8">
-            <p className="text-red-600">Error cargando estadísticas</p>
+            <p className="text-red-400">Error cargando estadísticas</p>
           </div>
         </DashboardLayout>
       </ProtectedRoute>
@@ -155,11 +155,11 @@ export default function AttendanceDashboard2() {
           {/* Header */}
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Dashboard de Asistencia 2.0</h1>
-              <p className="text-gray-600">Vista en tiempo real de la asistencia del día</p>
+              <h1 className="text-3xl font-bold text-white">Dashboard de Asistencia 2.0</h1>
+              <p className="text-gray-300">Vista en tiempo real de la asistencia del día</p>
             </div>
             <div className="flex gap-2">
-              <Button onClick={() => window.location.href = '/attendance/register'}>
+              <Button onClick={() => window.location.href = '/attendance/register'} className="bg-brand-600 hover:bg-brand-700">
                 Ir a Registro
               </Button>
             </div>
@@ -168,27 +168,27 @@ export default function AttendanceDashboard2() {
           {/* Estadísticas Principales */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
             {/* Tasa de Asistencia - Métrica Principal */}
-            <Card className="lg:col-span-2">
+            <Card variant="glass" className="lg:col-span-2">
               <CardHeader className="pb-3">
-                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                <CardTitle className="text-lg font-semibold flex items-center gap-2 text-white">
                   📊 Tasa de Asistencia Diaria
                 </CardTitle>
-                <CardDescription>Métrica principal del día</CardDescription>
+                <CardDescription className="text-gray-300">Métrica principal del día</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div className="text-center">
                     <div className={`text-4xl font-bold ${
-                      stats.totalEmployees > 0 && (stats.presentToday / stats.totalEmployees) * 100 >= 90 ? 'text-green-600' :
-                      stats.totalEmployees > 0 && (stats.presentToday / stats.totalEmployees) * 100 >= 80 ? 'text-yellow-600' :
-                      'text-red-600'
+                      stats.totalEmployees > 0 && (stats.presentToday / stats.totalEmployees) * 100 >= 90 ? 'text-emerald-400' :
+                      stats.totalEmployees > 0 && (stats.presentToday / stats.totalEmployees) * 100 >= 80 ? 'text-yellow-400' :
+                      'text-red-400'
                     }`}>
                       {stats.totalEmployees > 0 ? ((stats.presentToday / stats.totalEmployees) * 100).toFixed(1) : 0}%
                     </div>
                     <div className={`text-sm font-medium ${
-                      stats.totalEmployees > 0 && (stats.presentToday / stats.totalEmployees) * 100 >= 90 ? 'text-green-600' :
-                      stats.totalEmployees > 0 && (stats.presentToday / stats.totalEmployees) * 100 >= 80 ? 'text-yellow-600' :
-                      'text-red-600'
+                      stats.totalEmployees > 0 && (stats.presentToday / stats.totalEmployees) * 100 >= 90 ? 'text-emerald-400' :
+                      stats.totalEmployees > 0 && (stats.presentToday / stats.totalEmployees) * 100 >= 80 ? 'text-yellow-400' :
+                      'text-red-400'
                     }`}>
                       {stats.totalEmployees > 0 && (stats.presentToday / stats.totalEmployees) * 100 >= 90 ? '🟢 Excelente' :
                        stats.totalEmployees > 0 && (stats.presentToday / stats.totalEmployees) * 100 >= 80 ? '🟡 Bueno' :
@@ -196,10 +196,10 @@ export default function AttendanceDashboard2() {
                     </div>
                   </div>
                   <div className="relative">
-                    <div className="w-full bg-gray-200 rounded-full h-4">
+                    <div className="w-full bg-white/20 rounded-full h-4">
                       <div 
                         className={`h-4 rounded-full transition-all duration-700 ${
-                          stats.totalEmployees > 0 && (stats.presentToday / stats.totalEmployees) * 100 >= 90 ? 'bg-gradient-to-r from-green-400 to-green-600' :
+                          stats.totalEmployees > 0 && (stats.presentToday / stats.totalEmployees) * 100 >= 90 ? 'bg-gradient-to-r from-emerald-400 to-emerald-600' :
                           stats.totalEmployees > 0 && (stats.presentToday / stats.totalEmployees) * 100 >= 80 ? 'bg-gradient-to-r from-yellow-400 to-yellow-600' :
                           'bg-gradient-to-r from-red-400 to-red-600'
                         }`}
@@ -209,49 +209,49 @@ export default function AttendanceDashboard2() {
                   </div>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div className="text-center">
-                      <div className="font-bold text-green-600">{stats.presentToday}</div>
-                      <div className="text-gray-600">Presentes</div>
+                      <div className="font-bold text-emerald-400">{stats.presentToday}</div>
+                      <div className="text-gray-300">Presentes</div>
                     </div>
                     <div className="text-center">
-                      <div className="font-bold text-red-600">{stats.absentToday}</div>
-                      <div className="text-gray-600">Ausentes</div>
+                      <div className="font-bold text-red-400">{stats.absentToday}</div>
+                      <div className="text-gray-300">Ausentes</div>
                     </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card variant="glass">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Empleados</CardTitle>
+                <CardTitle className="text-sm font-medium text-white">Total Empleados</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats.totalEmployees}</div>
-                <p className="text-xs text-muted-foreground">
+                <div className="text-2xl font-bold text-white">{stats.totalEmployees}</div>
+                <p className="text-xs text-gray-300">
                   Empleados activos en el sistema
                 </p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card variant="glass">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Tardanzas</CardTitle>
+                <CardTitle className="text-sm font-medium text-white">Tardanzas</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-orange-600">{stats.lateToday}</div>
-                <p className="text-xs text-muted-foreground">
+                <div className="text-2xl font-bold text-orange-400">{stats.lateToday}</div>
+                <p className="text-xs text-gray-300">
                   {stats.presentToday > 0 ? ((stats.lateToday / stats.presentToday) * 100).toFixed(1) : 0}% de los presentes
                 </p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card variant="glass">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">A Tiempo</CardTitle>
+                <CardTitle className="text-sm font-medium text-white">A Tiempo</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-blue-600">{stats.onTimeToday}</div>
-                <p className="text-xs text-muted-foreground">
+                <div className="text-2xl font-bold text-brand-400">{stats.onTimeToday}</div>
+                <p className="text-xs text-gray-300">
                   Llegadas puntuales del día
                 </p>
               </CardContent>
@@ -260,37 +260,37 @@ export default function AttendanceDashboard2() {
 
           {/* Estadísticas Secundarias */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card>
+            <Card variant="glass">
               <CardHeader>
-                <CardTitle>Ausentes</CardTitle>
+                <CardTitle className="text-white">Ausentes</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-red-600">{stats.absentToday}</div>
-                <p className="text-sm text-muted-foreground">
+                <div className="text-3xl font-bold text-red-400">{stats.absentToday}</div>
+                <p className="text-sm text-gray-300">
                   Sin registro de entrada
                 </p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card variant="glass">
               <CardHeader>
-                <CardTitle>A Tiempo</CardTitle>
+                <CardTitle className="text-white">A Tiempo</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-green-600">{stats.onTimeToday}</div>
-                <p className="text-sm text-muted-foreground">
+                <div className="text-3xl font-bold text-emerald-400">{stats.onTimeToday}</div>
+                <p className="text-sm text-gray-300">
                   Sin tardanzas
                 </p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card variant="glass">
               <CardHeader>
-                <CardTitle>Con Permisos</CardTitle>
+                <CardTitle className="text-white">Con Permisos</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-purple-600">{stats.employeesWithApprovedLeave}</div>
-                <p className="text-sm text-muted-foreground">
+                <div className="text-3xl font-bold text-purple-400">{stats.employeesWithApprovedLeave}</div>
+                <p className="text-sm text-gray-300">
                   Permisos aprobados
                 </p>
               </CardContent>
@@ -298,10 +298,10 @@ export default function AttendanceDashboard2() {
           </div>
 
           {/* Gráfico de Últimos 7 Días */}
-          <Card>
+          <Card variant="glass">
             <CardHeader>
-              <CardTitle>Asistencia Últimos 7 Días</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-white">Asistencia Últimos 7 Días</CardTitle>
+              <CardDescription className="text-gray-300">
                 Tasa de asistencia diaria
               </CardDescription>
             </CardHeader>
@@ -310,16 +310,16 @@ export default function AttendanceDashboard2() {
                 {stats.dailyStats.map((day, index) => (
                   <div key={day.date} className="flex-1 flex flex-col items-center">
                     <div 
-                      className="w-full bg-blue-500 rounded-t"
+                      className="w-full bg-brand-500 rounded-t"
                       style={{ 
                         height: `${(day.attendanceRate / 100) * 100}%`,
                         minHeight: '4px'
                       }}
                     ></div>
-                    <div className="text-xs text-gray-600 mt-1">
+                    <div className="text-xs text-gray-300 mt-1">
                       {new Date(day.date).toLocaleDateString('es-HN', { day: '2-digit', month: '2-digit' })}
                     </div>
-                    <div className="text-xs font-medium">
+                    <div className="text-xs font-medium text-white">
                       {day.attendanceRate}%
                     </div>
                   </div>
@@ -329,21 +329,21 @@ export default function AttendanceDashboard2() {
           </Card>
 
           {/* Exportar Reportes */}
-          <Card>
+          <Card variant="glass">
             <CardHeader>
-              <CardTitle>Exportar Reportes</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-white">Exportar Reportes</CardTitle>
+              <CardDescription className="text-gray-300">
                 Genera reportes en PDF o CSV
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex gap-4 items-end">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-300 mb-1">
                     Rango
                   </label>
                   <Select value={selectedRange} onValueChange={setSelectedRange}>
-                    <SelectTrigger className="w-32">
+                    <SelectTrigger className="w-32 bg-white/10 border-white/20 text-white">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -356,11 +356,11 @@ export default function AttendanceDashboard2() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-300 mb-1">
                     Formato
                   </label>
                   <Select value={selectedFormat} onValueChange={setSelectedFormat}>
-                    <SelectTrigger className="w-24">
+                    <SelectTrigger className="w-24 bg-white/10 border-white/20 text-white">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -373,7 +373,7 @@ export default function AttendanceDashboard2() {
                 <Button 
                   onClick={exportReport} 
                   disabled={exportLoading}
-                  className="bg-green-600 hover:bg-green-700"
+                  className="bg-emerald-600 hover:bg-emerald-700"
                 >
                   {exportLoading ? 'Generando...' : 'Exportar'}
                 </Button>
@@ -382,10 +382,10 @@ export default function AttendanceDashboard2() {
           </Card>
 
           {/* Tabla de Asistencia del Día */}
-          <Card>
+          <Card variant="glass">
             <CardHeader>
-              <CardTitle>Registros de Asistencia - {new Date().toLocaleDateString('es-HN')}</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-white">Registros de Asistencia - {new Date().toLocaleDateString('es-HN')}</CardTitle>
+              <CardDescription className="text-gray-300">
                 {stats.todayAttendance.length} registros encontrados
               </CardDescription>
             </CardHeader>
@@ -393,26 +393,26 @@ export default function AttendanceDashboard2() {
               <div className="overflow-x-auto">
                 <table className="w-full table-auto">
                   <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-3 px-4">Empleado</th>
-                      <th className="text-left py-3 px-4">Código</th>
-                      <th className="text-left py-3 px-4">Entrada</th>
-                      <th className="text-left py-3 px-4">Salida</th>
-                      <th className="text-left py-3 px-4">Estado</th>
-                      <th className="text-left py-3 px-4">Justificación</th>
+                    <tr className="border-b border-white/10">
+                      <th className="text-left py-3 px-4 text-gray-300">Empleado</th>
+                      <th className="text-left py-3 px-4 text-gray-300">Código</th>
+                      <th className="text-left py-3 px-4 text-gray-300">Entrada</th>
+                      <th className="text-left py-3 px-4 text-gray-300">Salida</th>
+                      <th className="text-left py-3 px-4 text-gray-300">Estado</th>
+                      <th className="text-left py-3 px-4 text-gray-300">Justificación</th>
                     </tr>
                   </thead>
                   <tbody>
                     {stats.todayAttendance.map((record) => (
-                      <tr key={record.id} className="border-b hover:bg-gray-50">
-                        <td className="py-3 px-4">{record.employee_name}</td>
-                        <td className="py-3 px-4">{record.employee_code}</td>
-                        <td className="py-3 px-4">{formatTime(record.check_in)}</td>
-                        <td className="py-3 px-4">{formatTime(record.check_out)}</td>
+                      <tr key={record.id} className="border-b border-white/10 hover:bg-white/5">
+                        <td className="py-3 px-4 text-white">{record.employee_name}</td>
+                        <td className="py-3 px-4 text-gray-300">{record.employee_code}</td>
+                        <td className="py-3 px-4 text-gray-300">{formatTime(record.check_in)}</td>
+                        <td className="py-3 px-4 text-gray-300">{formatTime(record.check_out)}</td>
                         <td className="py-3 px-4">{getStatusBadge(record)}</td>
                         <td className="py-3 px-4">
                           {record.justification ? (
-                            <span className="text-sm text-gray-600">{record.justification}</span>
+                            <span className="text-sm text-gray-300">{record.justification}</span>
                           ) : (
                             <span className="text-sm text-gray-400">Sin justificación</span>
                           )}

@@ -1,7 +1,7 @@
 import { useRouter } from 'next/router'
-import ProtectedRoute from '../../components/ProtectedRoute'
-import DashboardLayout from '../../components/DashboardLayout'
-import LeaveManager from '../../components/LeaveManager'
+import ProtectedRoute from '../../../components/ProtectedRoute'
+import DashboardLayout from '../../../components/DashboardLayout'
+import LeaveManager from '../../../components/LeaveManager'
 
 export default function LeavePage() {
   return (

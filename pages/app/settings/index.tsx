@@ -1,7 +1,7 @@
 import { useRouter } from 'next/router'
-import ProtectedRoute from '../../components/ProtectedRoute'
-import DashboardLayout from '../../components/DashboardLayout'
-import CompanySettings from '../../components/CompanySettings'
+import ProtectedRoute from '../../../components/ProtectedRoute'
+import DashboardLayout from '../../../components/DashboardLayout'
+import CompanySettings from '../../../components/CompanySettings'
 
 export default function SettingsPage() {
   return (

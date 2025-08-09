@@ -29,7 +29,9 @@ export default function App({ Component, pageProps }: AppProps) {
   return (
     <SupabaseContext.Provider value={supabaseClient}>
       <AuthProvider>
-        <Component {...pageProps} />
+        <div className="min-h-screen bg-app">
+          <Component {...pageProps} />
+        </div>
       </AuthProvider>
     </SupabaseContext.Provider>
   )

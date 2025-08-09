@@ -317,14 +317,14 @@ export default function EmployeeManager() {
   if (isLoading && !hasErrors) {
     return (
       <div className="p-6">
-        <Card>
+        <Card variant="glass">
           <CardHeader>
-            <CardTitle>Empleados</CardTitle>
+            <CardTitle className="text-white">Empleados</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="mt-2 text-gray-600">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-400 mx-auto"></div>
+              <p className="mt-2 text-gray-300">
                 {sessionLoading && "Verificando sesión..."}
                 {employeesLoading && "Cargando empleados..."}
                 {departmentsLoading && "Cargando departamentos..."}
@@ -340,19 +340,19 @@ export default function EmployeeManager() {
   if (hasErrors && !showForm) {
     return (
       <div className="p-6">
-        <Card>
+        <Card variant="glass">
           <CardHeader>
-            <CardTitle>Empleados</CardTitle>
+            <CardTitle className="text-white">Empleados</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {employeesError && (
                 <div className="text-center">
-                  <div className="text-red-600 mb-4">
+                  <div className="text-red-400 mb-4">
                     <h3 className="text-lg font-semibold">Error al cargar empleados</h3>
-                    <p className="text-sm mt-2">{employeesError}</p>
+                    <p className="text-sm mt-2 text-gray-300">{employeesError}</p>
                   </div>
-                  <Button onClick={fetchEmployees} variant="outline" className="mb-4">
+                  <Button onClick={fetchEmployees} variant="outline" className="mb-4 bg-white/5 border-white/20 text-white hover:bg-white/10">
                     Reintentar cargar empleados
                   </Button>
                 </div>
@@ -360,11 +360,11 @@ export default function EmployeeManager() {
               
               {departmentsError && (
                 <div className="text-center">
-                  <div className="text-red-600 mb-4">
+                  <div className="text-red-400 mb-4">
                     <h3 className="text-lg font-semibold">Error al cargar departamentos</h3>
-                    <p className="text-sm mt-2">{departmentsError}</p>
+                    <p className="text-sm mt-2 text-gray-300">{departmentsError}</p>
                   </div>
-                  <Button onClick={fetchDepartments} variant="outline" className="mb-4">
+                  <Button onClick={fetchDepartments} variant="outline" className="mb-4 bg-white/5 border-white/20 text-white hover:bg-white/10">
                     Reintentar cargar departamentos
                   </Button>
                 </div>
@@ -372,11 +372,11 @@ export default function EmployeeManager() {
               
               {schedulesError && (
                 <div className="text-center">
-                  <div className="text-red-600 mb-4">
+                  <div className="text-red-400 mb-4">
                     <h3 className="text-lg font-semibold">Error al cargar horarios</h3>
-                    <p className="text-sm mt-2">{schedulesError}</p>
+                    <p className="text-sm mt-2 text-gray-300">{schedulesError}</p>
                   </div>
-                  <Button onClick={fetchWorkSchedules} variant="outline">
+                  <Button onClick={fetchWorkSchedules} variant="outline" className="bg-white/5 border-white/20 text-white hover:bg-white/10">
                     Reintentar cargar horarios
                   </Button>
                 </div>
@@ -404,12 +404,12 @@ export default function EmployeeManager() {
       ) : (
         <div className="flex justify-between items-center">
           <div>
-            <h2 className="text-xl font-semibold text-gray-900">Empleados</h2>
-            <p className="text-gray-600">Administra la información de los empleados</p>
+            <h2 className="text-xl font-semibold text-white">Empleados</h2>
+            <p className="text-gray-300">Administra la información de los empleados</p>
           </div>
           <Button 
             onClick={() => setShowForm(true)}
-            className="flex items-center space-x-2"
+            className="flex items-center space-x-2 bg-brand-600 hover:bg-brand-700"
           >
             <PlusIcon className="h-5 w-5" />
             <span>Nuevo Empleado</span>
@@ -420,20 +420,20 @@ export default function EmployeeManager() {
       {showForm && (
         <>
           {employeesError && (
-            <div className="bg-red-50 border border-red-200 rounded-md p-4">
-              <div className="text-red-600">
+            <div className="bg-red-500/20 border border-red-500/30 rounded-md p-4">
+              <div className="text-red-400">
                 <h3 className="text-sm font-medium">Error al {editingEmployee ? 'actualizar' : 'crear'} empleado</h3>
-                <p className="text-sm mt-1">{employeesError}</p>
+                <p className="text-sm mt-1 text-gray-300">{employeesError}</p>
               </div>
             </div>
           )}
           {(departmentsError || schedulesError) && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
-              <div className="text-yellow-800">
+            <div className="bg-yellow-500/20 border border-yellow-500/30 rounded-md p-4">
+              <div className="text-yellow-400">
                 <h3 className="text-sm font-medium">Advertencia</h3>
-                <div className="text-sm mt-1">
-                  {departmentsError && <p>Error al cargar departamentos. <Button onClick={fetchDepartments} variant="link" className="text-yellow-800 underline p-0 h-auto">Reintentar</Button></p>}
-                  {schedulesError && <p>Error al cargar horarios. <Button onClick={fetchWorkSchedules} variant="link" className="text-yellow-800 underline p-0 h-auto">Reintentar</Button></p>}
+                <div className="text-sm mt-1 text-gray-300">
+                  {departmentsError && <p>Error al cargar departamentos. <Button onClick={fetchDepartments} variant="link" className="text-yellow-400 underline p-0 h-auto">Reintentar</Button></p>}
+                  {schedulesError && <p>Error al cargar horarios. <Button onClick={fetchWorkSchedules} variant="link" className="text-yellow-400 underline p-0 h-auto">Reintentar</Button></p>}
                 </div>
               </div>
             </div>
@@ -441,37 +441,37 @@ export default function EmployeeManager() {
         </>
       )}
 
-      <Card>
+      <Card variant="glass">
         <CardHeader>
-          <CardTitle>Lista de Empleados ({employees.length})</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-white">Lista de Empleados ({employees.length})</CardTitle>
+          <CardDescription className="text-gray-300">
             Empleados registrados en el sistema
           </CardDescription>
         </CardHeader>
         <CardContent>
           {employees.length === 0 ? (
-            <div className="text-center py-8 text-gray-600">
+            <div className="text-center py-8 text-gray-400">
               No se encontraron empleados
             </div>
           ) : (
             <div className="space-y-4">
               {employees.map((employee) => (
-                <div key={employee.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                <div key={employee.id} className="border border-white/10 rounded-lg p-4 bg-white/5 hover:bg-white/10 transition-colors">
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
-                        <h3 className="font-semibold text-lg">{employee.name}</h3>
+                        <h3 className="font-semibold text-lg text-white">{employee.name}</h3>
                         <span className={`px-2 py-1 rounded text-xs font-medium ${
-                          employee.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          employee.status === 'active' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
                         }`}>
                           {employee.status === 'active' ? 'Activo' : 'Inactivo'}
                         </span>
                         {employee.attendance_status && (
                           <span className={`px-2 py-1 rounded text-xs font-medium ${
-                            employee.attendance_status === 'present' ? 'bg-blue-100 text-blue-800' :
-                            employee.attendance_status === 'late' ? 'bg-yellow-100 text-yellow-800' :
-                            employee.attendance_status === 'absent' ? 'bg-red-100 text-red-800' :
-                            'bg-gray-100 text-gray-800'
+                            employee.attendance_status === 'present' ? 'bg-brand-500/20 text-brand-400' :
+                            employee.attendance_status === 'late' ? 'bg-yellow-500/20 text-yellow-400' :
+                            employee.attendance_status === 'absent' ? 'bg-red-500/20 text-red-400' :
+                            'bg-gray-500/20 text-gray-400'
                           }`}>
                             {employee.attendance_status === 'present' ? 'Presente' :
                              employee.attendance_status === 'late' ? 'Tardanza' :
@@ -480,19 +480,19 @@ export default function EmployeeManager() {
                         )}
                       </div>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-300">
                         <div>
-                          <p><span className="font-medium">DNI:</span> {employee.dni}</p>
-                          <p><span className="font-medium">Código:</span> {employee.employee_code}</p>
-                          <p><span className="font-medium">Email:</span> {employee.email || 'No especificado'}</p>
-                          <p><span className="font-medium">Teléfono:</span> {employee.phone || 'No especificado'}</p>
+                          <p><span className="font-medium text-gray-200">DNI:</span> {employee.dni}</p>
+                          <p><span className="font-medium text-gray-200">Código:</span> {employee.employee_code}</p>
+                          <p><span className="font-medium text-gray-200">Email:</span> {employee.email || 'No especificado'}</p>
+                          <p><span className="font-medium text-gray-200">Teléfono:</span> {employee.phone || 'No especificado'}</p>
                         </div>
                         <div>
-                          <p><span className="font-medium">Posición:</span> {employee.role || 'No especificada'}</p>
-                          <p><span className="font-medium">Departamento:</span> {employee.departments?.name || 'Sin asignar'}</p>
-                          <p><span className="font-medium">Horario:</span> {employee.work_schedules?.name || 'Sin asignar'}</p>
+                          <p><span className="font-medium text-gray-200">Posición:</span> {employee.role || 'No especificada'}</p>
+                          <p><span className="font-medium text-gray-200">Departamento:</span> {employee.departments?.name || 'Sin asignar'}</p>
+                          <p><span className="font-medium text-gray-200">Horario:</span> {employee.work_schedules?.name || 'Sin asignar'}</p>
                           {employee.check_in_time && (
-                            <p><span className="font-medium">Entrada:</span> {new Date(employee.check_in_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</p>
+                            <p><span className="font-medium text-gray-200">Entrada:</span> {new Date(employee.check_in_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</p>
                           )}
                         </div>
                       </div>
@@ -500,7 +500,7 @@ export default function EmployeeManager() {
                     
                     <div className="flex flex-col items-end gap-2 ml-4">
                       {employee.employee_scores && (
-                        <div className="text-right text-xs text-gray-500">
+                        <div className="text-right text-xs text-gray-400">
                           <p>Puntos: {employee.employee_scores.total_points || 0}</p>
                           <p>Semana: {employee.employee_scores.weekly_points || 0}</p>
                         </div>
@@ -511,7 +511,7 @@ export default function EmployeeManager() {
                           size="sm"
                           variant="outline"
                           onClick={() => handleEdit(employee)}
-                          className="flex items-center gap-1"
+                          className="flex items-center gap-1 bg-white/5 border-white/20 text-white hover:bg-white/10"
                         >
                           <PencilIcon className="h-4 w-4" />
                           <span className="hidden sm:inline">Editar</span>
@@ -522,7 +522,7 @@ export default function EmployeeManager() {
                             size="sm"
                             variant="destructive"
                             onClick={() => handleDeactivate(employee)}
-                            className="flex items-center gap-1"
+                            className="flex items-center gap-1 bg-red-500/20 border-red-500/30 text-red-400 hover:bg-red-500/30"
                           >
                             <TrashIcon className="h-4 w-4" />
                             <span className="hidden sm:inline">Dar Baja</span>
@@ -541,12 +541,12 @@ export default function EmployeeManager() {
       {/* Modal de Confirmación de Baja */}
       {showDeactivateModal && employeeToDeactivate && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          <div className="bg-gray-900 border border-white/20 rounded-lg p-6 max-w-md w-full mx-4 backdrop-blur-sm">
+            <h3 className="text-lg font-semibold text-white mb-4">
               Confirmar Baja de Empleado
             </h3>
-            <p className="text-gray-600 mb-6">
-              ¿Estás seguro de que quieres dar de baja a <strong>{employeeToDeactivate.name}</strong>?
+            <p className="text-gray-300 mb-6">
+              ¿Estás seguro de que quieres dar de baja a <strong className="text-white">{employeeToDeactivate.name}</strong>?
               Esta acción cambiará su estado a "Inactivo".
             </p>
             <div className="flex gap-3">
@@ -554,7 +554,7 @@ export default function EmployeeManager() {
                 onClick={confirmDeactivate}
                 disabled={isSubmitting}
                 variant="destructive"
-                className="flex-1"
+                className="flex-1 bg-red-500/20 border-red-500/30 text-red-400 hover:bg-red-500/30"
               >
                 {isSubmitting ? 'Procesando...' : 'Confirmar Baja'}
               </Button>
@@ -564,7 +564,7 @@ export default function EmployeeManager() {
                   setEmployeeToDeactivate(null)
                 }}
                 variant="outline"
-                className="flex-1"
+                className="flex-1 bg-white/5 border-white/20 text-white hover:bg-white/10"
               >
                 Cancelar
               </Button>

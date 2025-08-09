@@ -1,40 +1,253 @@
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap');
 
+/* Ensure CSS variables are available if not already defined */
 :root {
-  /* Nuevo azul profesional */
-  --primary: #3b82f6;
+  --primary-color: #3b82f6;
   --primary-hover: #2563eb;
-  --primary-gradient: linear-gradient(135deg, #3b82f6, #2563eb);
   --bg-hero: #f3f4f6;
 }
 
 .dark {
   --bg-hero: #1f2937;
-  --primary: #3b82f6;
-  --primary-hover: #2563eb;
-  --primary-gradient: linear-gradient(135deg, #3b82f6, #2563eb);
+  --primary-color: #60a5fa;
+  --primary-hover: #3b82f6;
 }
 
-/* Tipografía para la landing */
+/* Landing page specific styles */
 .landing {
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 }
 
 .landing-section {
   padding: 4rem 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
+/* Button styles */
 .btn-primary {
-  background: var(--primary-gradient);
-  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.3);
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+  transition: all 0.2s ease-in-out;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
 }
 
 .btn-primary:hover {
   background: var(--primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
 }
 
 .btn-secondary {
-  border: 2px solid var(--primary);
-  color: var(--primary);
-  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 0.5rem;
+  border: 2px solid var(--primary-color);
+  color: var(--primary-color);
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  transition: all 0.2s ease-in-out;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  background: var(--primary-color);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.dark .btn-secondary {
+  background: rgba(31, 41, 55, 0.8);
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+.dark .btn-secondary:hover {
+  background: var(--primary-color);
+  color: white;
+}
+
+/* Sign in link style */
+.link-signin {
+  color: #6b7280;
+  font-weight: 500;
+  transition: color 0.2s ease-in-out;
+  text-decoration: none;
+}
+
+.link-signin:hover {
+  color: var(--primary-color);
+}
+
+.dark .link-signin {
+  color: #9ca3af;
+}
+
+.dark .link-signin:hover {
+  color: var(--primary-color);
+}
+
+/* Supabase-style card enhancements */
+.service-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.service-card:hover {
+  transform: translateY(-2px);
+}
+
+.service-icon-wrapper {
+  transition: all 0.2s ease-in-out;
+}
+
+.service-card:hover .service-icon-wrapper {
+  border-color: var(--primary-color);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+/* Enhanced backdrop blur support */
+@supports (backdrop-filter: blur(12px)) {
+  .service-card {
+    backdrop-filter: blur(12px);
+  }
+}
+
+/* Better gradient backgrounds for dark mode */
+.dark .service-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(0, 0, 0, 0.2) 100%);
+}
+
+/* Subtle glow effect on hover */
+.service-card:hover {
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.5), 0 4px 20px -2px rgba(59, 130, 246, 0.1);
+}
+
+/* Service cards enhancements */
+.service-card {
+  transition: all 0.3s ease;
+  border: 1px solid rgba(59, 130, 246, 0.1);
+}
+
+.service-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.service-icon-wrapper {
+  transition: all 0.3s ease;
+}
+
+.service-card:hover .service-icon-wrapper {
+  transform: scale(1.1);
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.2);
+}
+
+.service-description {
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.service-benefits {
+  background: rgba(59, 130, 246, 0.05);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.dark .service-benefits {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.benefit-bullet {
+  background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.service-features .bg-blue-50 {
+  transition: all 0.2s ease;
+}
+
+.service-features .bg-blue-50:hover {
+  background: rgba(59, 130, 246, 0.1);
+  transform: translateY(-1px);
+}
+
+.dark .service-features .bg-blue-50:hover {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+/* Service cards enhancements */
+.service-card {
+  transition: all 0.3s ease-in-out;
+}
+
+.service-card:hover {
+  transform: translateY(-2px);
+}
+
+.service-icon-wrapper {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(37, 99, 235, 0.1));
+  transition: all 0.3s ease-in-out;
+}
+
+.service-card:hover .service-icon-wrapper {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.2));
+}
+
+.feature-bullet {
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+  transition: all 0.2s ease-in-out;
+}
+
+/* Responsive adjustments for service cards */
+@media (max-width: 1024px) {
+  .service-card .lg\:flex-row-reverse {
+    flex-direction: column !important;
+  }
+  
+  .service-card .lg\:flex-row {
+    flex-direction: column !important;
+  }
+  
+  .service-card .lg\:w-1\/3,
+  .service-card .lg\:w-2\/3 {
+    width: 100% !important;
+  }
+}
+
+/* Enhanced typography for service descriptions */
+.service-description {
+  line-height: 1.7;
+  font-size: 1.1rem;
+}
+
+.service-features {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  margin-top: 1rem;
+}
+
+.dark .service-features {
+  background: rgba(31, 41, 55, 0.3);
 }

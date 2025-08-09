@@ -1,84 +1,454 @@
 import Head from 'next/head'
 import Link from 'next/link'
+import { useState, useEffect } from 'react'
 import {
-  IdentificationIcon,
-  CalculatorIcon,
-  ChartBarIcon,
+  UserGroupIcon,
+  ClockIcon,
+  CurrencyDollarIcon,
+  Bars3Icon,
+  XMarkIcon
 } from '@heroicons/react/24/outline'
 
 const services = [
   {
-    title: 'Asistencia Inteligente',
-    description:
-      'Registro por DNI (5 dígitos) + detección de llegadas tarde → 95 % menos errores',
-    icon: IdentificationIcon,
+    title: 'La Universidad del Trabajo.',
+    subtitle: 'Publicamos tu oferta, y certificamos candidatos por vos.',
+    description: 'Publicamos, filtramos, verificamos y administramos tu talent pool listo para contratar. Pagás solo por contratación.',
+    features: ['Publicación', 'Pre-filtrado', 'Evaluación', 'Scoring', 'Entrega de pool'],
+    benefits: [
+      '🎯 Candidatos reales, cero hojas inútiles',
+      '⏱️ 80% menos tiempo reclutando',
+      '💼 Contratación más segura'
+    ],
+    cta: 'Activar Certificación de Candidatos',
+    icon: UserGroupIcon,
   },
   {
-    title: 'Planilla Automática',
-    description:
-      'Cálculo con IHSS, RAP e ISR incluidos → 80 % menos tiempo y PDF listos para firma',
-    icon: CalculatorIcon,
+    title: 'El libro Rojo de Asistencia.',
+    subtitle: 'Un control de asistencia que no perdona ni improvisa.',
+    description: 'Solo 5 dígitos de DNI. Detecta tarde, temprano, ausente. Reportes en tiempo real.',
+    features: ['Registro DNI', 'Detección tardías', 'Horas extras', 'Reportes automáticos'],
+    benefits: [
+      '🔍 Control en tiempo real',
+      '🔒 100% automatizado',
+      '📊 Reportes en un clic'
+    ],
+    cta: 'Activar Control de Asistencia',
+    icon: ClockIcon,
   },
   {
-    title: 'Analytics en Tiempo Real',
-    description:
-      'Dashboard con métricas de puntualidad, costo de nómina y reportes exportables',
-    icon: ChartBarIcon,
+    title: 'El Planillero.',
+    subtitle: 'Tu robot de nómina 100% legal y automático.',
+    description: 'Calcula IHSS, RAP, ISR, genera comprobantes y los envía por correo o WhatsApp. Planilla sin errores.',
+    features: ['IHSS', 'RAP', 'ISR', 'Vacaciones', 'Vouchers PDF', 'Envío automático'],
+    benefits: [
+      '⚡ De 4 horas a 4 minutos',
+      '�️ Cumplimiento legal total',
+      '� Vouchers automáticos por email o WhatsApp'
+    ],
+    cta: 'Activar generación de planilla',
+    icon: CurrencyDollarIcon,
   },
 ]
 
 export default function LandingPage() {
+  const [isScrolled, setIsScrolled] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.scrollY
+      setIsScrolled(scrollTop > 50)
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault()
+    const href = e.currentTarget.getAttribute('href')
+    if (href && href.startsWith('#')) {
+      const element = document.querySelector(href)
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' })
+      }
+    }
+  }
+
   return (
-    <div className="landing min-h-screen bg-[var(--bg-hero)] text-gray-800 dark:text-gray-100">
+    <div className="min-h-screen bg-app"
+    >
       <Head>
-        <title>Humano SISU - Landing</title>
+        <title>Humano SISU - Automatiza tu RH</title>
         <meta
           name="description"
-          content="Convierte tu CV en un imán para reclutadores"
+          content="Asistencia, planilla y reportes listos para firmar. 100% legal y automático."
         />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
       </Head>
 
-      {/* Hero Section */}
-      <section className="landing-section text-center bg-white/30 dark:bg-gray-900/30 backdrop-blur-md">
-        <h1 className="text-4xl font-bold mb-4">
-          Convierte tu CV en un imán para reclutadores
+      {/* Header */}
+      <header className="relative z-50">
+        {/* Sticky Header */}
+        <div className={`sticky-header ${isScrolled ? 'visible' : ''} sticky top-0 z-40 glass border-b border-white/10 transition-all duration-300`}>
+          <nav className="px-6 lg:px-8">
+            <div className="flex items-center justify-between h-16">
+              <div className="flex items-center">
+                <span className="text-2xl font-bold text-white">HUMANO <span className="text-brand-400">SISU</span></span>
+              </div>
+              
+              <div className="hidden md:block">
+                <div className="ml-10 flex items-baseline space-x-4">
+                  <a
+                    href="#certificacion"
+                    className="text-brand-200/90 hover:text-brand-400 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                    onClick={scrollToSection}
+                  >
+                    Certificaciones SISU
+                  </a>
+                  <a
+                    href="#libro-rojo"
+                    className="text-brand-200/90 hover:text-brand-400 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                    onClick={scrollToSection}
+                  >
+                    El Libro Rojo
+                  </a>
+                  <a
+                    href="#planillero"
+                    className="text-brand-200/90 hover:text-brand-400 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                    onClick={scrollToSection}
+                  >
+                    El Planillero
+                  </a>
+                  <a
+                    href="#pricing"
+                    className="text-brand-200/90 hover:text-brand-400 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                    onClick={scrollToSection}
+                  >
+                    Precios
+                  </a>
+                  <Link
+                    href="/demo"
+                    className="text-brand-200/90 hover:text-brand-400 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  >
+                    Solicitar Prueba
+                  </Link>
+                  <Link
+                    href="/login"
+                    className="bg-brand-900 hover:bg-brand-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:focus-ring"
+                  >
+                    Iniciar Sesión
+                  </Link>
+                </div>
+              </div>
+
+              {/* Mobile menu button */}
+              <div className="md:hidden">
+                <button
+                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                  className="glass inline-flex items-center justify-center p-2 rounded-md text-brand-200/90 hover:text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-brand-500"
+                >
+                  <span className="sr-only">Open main menu</span>
+                  {isMobileMenuOpen ? (
+                    <XMarkIcon className="block h-6 w-6" />
+                  ) : (
+                    <Bars3Icon className="block h-6 w-6" />
+                  )}
+                </button>
+              </div>
+            </div>
+          </nav>
+        </div>
+
+        {/* Mobile menu */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {isMobileMenuOpen && (
+            <div className="md:hidden">
+              <div className="glass-strong px-2 pt-2 pb-3 space-y-1 rounded-lg shadow-lg mt-2">
+                <a 
+                  href="#certificacion" 
+                  className="block px-3 py-2 text-base font-medium text-brand-200/90 hover:text-brand-400 hover:bg-white/5 rounded-md transition-colors"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  data-translation-key="nav.certification"
+                >
+                  Certificaciones SISU
+                </a>
+                <a 
+                  href="#libro-rojo" 
+                  className="block px-3 py-2 text-base font-medium text-brand-200/90 hover:text-brand-400 hover:bg-white/5 rounded-md transition-colors"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  data-translation-key="nav.attendance"
+                >
+                  El Libro Rojo
+                </a>
+                <a 
+                  href="#planillero" 
+                  className="block px-3 py-2 text-base font-medium text-brand-200/90 hover:text-brand-400 hover:bg-white/5 rounded-md transition-colors"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  data-translation-key="nav.payroll"
+                >
+                  El Planillero
+                </a>
+                <a 
+                  href="#pricing" 
+                  className="block px-3 py-2 text-base font-medium text-brand-200/90 hover:text-brand-400 hover:bg-white/5 rounded-md transition-colors"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  data-translation-key="nav.pricing"
+                >
+                  Precios
+                </a>
+                <div className="px-3 py-2 space-y-2">
+                  <Link
+                    href="/demo"
+                    className="text-brand-200/90 hover:text-brand-400 block w-full text-center py-2 px-4 font-medium transition-colors"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Solicitar Prueba
+                  </Link>
+                  <Link
+                    href="/login"
+                    className="bg-brand-900 hover:bg-brand-800 text-white w-full text-center block py-2 px-4 rounded-lg transition-colors focus-visible:outline-none focus-visible:focus-ring"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    data-translation-key="nav.automate"
+                  >
+                    Iniciar Sesión
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </header>
+
+      {/* Hero Section with proper padding for fixed header */}
+      <section className="landing-section text-center glass-strong pt-20 border-b border-white/10">
+        <h1 className="text-4xl font-bold mb-4 text-white" data-translation-key="hero.title">
+          Hacer planilla ya no tiene que doler
         </h1>
-        <p className="mb-8 text-lg">
-          Ahorra 35 h/mes y elimina 95 % de errores en RR.HH.
+        <p className="mb-8 text-lg max-w-3xl mx-auto text-brand-200/90" data-translation-key="hero.subtitle">
+          Tu robot de RH hace todo: marca entradas, calcula planilla y envía comprobantes.<br />
+          Vos solo aprobás con un clic.
         </p>
-        <Link
-          href="/login"
-          className="btn-primary px-6 py-3 rounded font-semibold shadow"
-          aria-label="Comenzar"
-        >
-          Comenzar
-        </Link>
+        
+        {/* Hero CTA Buttons */}
+        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          <Link
+            href="/activar"
+            className="bg-brand-900 hover:bg-brand-800 text-white px-8 py-3 rounded-lg font-semibold shadow text-base transition-colors focus-visible:outline-none focus-visible:focus-ring"
+            aria-label="Automatizar mi RH ahora"
+            data-translation-key="hero.cta_primary"
+          >
+            Automatizar mi RH ahora
+          </Link>
+          <Link
+            href="/demo"
+            className="bg-white/10 border border-white/20 text-white px-8 py-3 rounded-lg font-semibold text-base backdrop-blur hover:bg-white/20 transition-colors focus-visible:outline-none focus-visible:focus-ring"
+            aria-label="Quiero ver cómo funciona"
+            data-translation-key="hero.cta_secondary"
+          >
+            Quiero ver cómo funciona
+          </Link>
+        </div>
       </section>
 
       {/* Services Section */}
-      <section className="landing-section">
-        <h2 className="text-3xl font-semibold mb-8 text-center">
-          Nuestros Servicios
-        </h2>
-        <div className="grid gap-8 md:grid-cols-3">
-          {services.map((service) => (
-            <div
-              key={service.title}
-              className="p-6 bg-white/30 dark:bg-gray-900/30 backdrop-blur-md rounded shadow"
-            >
-              <service.icon
-                className="h-12 w-12 mx-auto text-[var(--primary)]"
-                aria-hidden="true"
-              />
-              <h3 className="text-xl font-bold mt-4 mb-2 text-center">
-                {service.title}
-              </h3>
-              <p className="text-center text-sm">{service.description}</p>
+      <section id="servicios" className="landing-section">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-semibold mb-4 text-white" data-translation-key="services.title">
+            Los Robots de Humano SISU
+          </h2>
+          <p className="text-xl text-brand-400 font-medium mb-2">
+            Tus nuevos asistentes de RRHH
+          </p>
+          <p className="text-brand-200/75">
+            Adiós al Excel. Hola a la eficiencia.
+          </p>
+        </div>
+        <div className="space-y-8">
+          {services.map((service, index) => {
+            const sectionIds = ['certificacion', 'libro-rojo', 'planillero'];
+            const isReversed = index % 2 === 1;
+            
+            return (
+              <div
+                key={service.title}
+                id={sectionIds[index]}
+                className={`glass p-6 hover:glass-strong transition-all duration-300 flex flex-col ${isReversed ? 'lg:flex-row-reverse' : 'lg:flex-row'} items-center gap-8`}
+              >
+                {/* Icon and Title Section - Improved Typography Hierarchy */}
+                <div className="flex-shrink-0 text-center lg:text-left lg:w-1/3">
+                  <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-brand-500/10 border border-brand-500/20 mb-4">
+                    <service.icon
+                      className="h-10 w-10 text-brand-400"
+                      aria-hidden="true"
+                    />
+                  </div>
+                  {/* 1. Título principal (3-4xl, benefit claro) */}
+                  <h3 
+                    className="text-3xl md:text-4xl font-bold mb-4 text-white leading-tight"
+                    data-translation-key={`services.service${index + 1}.title`}
+                  >
+                    {service.title}
+                  </h3>
+                  {/* 2. Subtítulo emocional (lg-xl, brand-400) */}
+                  <p 
+                    className="text-lg md:text-xl text-brand-400 font-medium mb-6"
+                    data-translation-key={`services.service${index + 1}.subtitle`}
+                  >
+                    {service.subtitle}
+                  </p>
+                </div>
+
+                {/* Content Section - Compact 6-Block Structure */}
+                <div className="flex-grow lg:w-2/3">
+                  {/* 1. Título y 2. Subtítulo ya están en la sección izquierda */}
+                  
+                  {/* 3. ¿Qué hace? (funcional y directo) */}
+                  <p 
+                    className="text-base text-brand-200/90 mb-6 leading-relaxed"
+                    data-translation-key={`services.service${index + 1}.description`}
+                  >
+                    {service.description}
+                  </p>
+
+                  {/* 4. Beneficios (máximo 3 bullets con emojis) */}
+                  <div className="mb-6">
+                    <ul className="space-y-2">
+                      {service.benefits.map((benefit, benefitIndex) => (
+                        <li 
+                          key={benefitIndex}
+                          className="flex items-start space-x-3"
+                        >
+                          <div className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-brand-400 mt-2.5"></div>
+                          <span 
+                            className="text-sm text-brand-200/90 font-medium"
+                            data-translation-key={`services.service${index + 1}.benefit${benefitIndex + 1}`}
+                          >
+                            {benefit}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* 5. Incluye (tags visuales tipo badges) */}
+                  <div className="mb-6">
+                    <p className="text-xs text-brand-400 uppercase tracking-wide mb-3 font-semibold">Incluye</p>
+                    <div className="flex flex-wrap gap-2">
+                      {service.features.map((feature, featureIndex) => (
+                        <span 
+                          key={featureIndex}
+                          className="text-xs px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-300 font-medium backdrop-blur-sm"
+                          data-translation-key={`services.service${index + 1}.feature${featureIndex + 1}`}
+                        >
+                          {feature}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 6. CTA botón con verbo claro */}
+                  <div className="mt-6">
+                    <Link
+                      href="/activar"
+                      className="bg-brand-900 hover:bg-brand-800 text-white px-6 py-3 text-sm rounded-lg inline-flex items-center font-semibold transition-colors focus-visible:outline-none focus-visible:focus-ring"
+                      data-translation-key={`services.service${index + 1}.cta`}
+                    >
+                      {service.cta}
+                      <svg className="ml-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </section>
+
+      {/* Productivity Banner - Supabase Style */}
+      <section className="landing-section py-16">
+        <div className="glass-strong p-8 md:p-10">
+          {/* Grid Background Pattern */}
+          <div className="absolute inset-0 opacity-20">
+            <div className="absolute inset-0" style={{
+              backgroundImage: `
+                linear-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(59, 130, 246, 0.1) 1px, transparent 1px)
+              `,
+              backgroundSize: '50px 50px'
+            }}></div>
+          </div>
+          
+          <div className="relative text-center max-w-4xl mx-auto">
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6 leading-tight">
+              Mantente productivo y administra tu personal
+              <br />
+              <span className="text-brand-200/90">sin salir del dashboard</span>
+            </h2>
+            
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mt-12 mb-8">
+              {/* Feature Pills */}
+              <div className="flex items-center space-x-4 text-sm text-brand-200/90">
+                <div className="flex items-center space-x-2 bg-brand-500/10 border border-brand-500/20 px-4 py-2 rounded-full">
+                  <span className="w-2 h-2 bg-brand-400 rounded-full"></span>
+                  <span>Registro de Asistencia</span>
+                </div>
+                <div className="flex items-center space-x-2 bg-brand-500/10 border border-brand-500/20 px-4 py-2 rounded-full">
+                  <span className="w-2 h-2 bg-brand-400 rounded-full"></span>
+                  <span>Cálculo de Nómina</span>
+                </div>
+                <div className="flex items-center space-x-2 bg-brand-500/10 border border-brand-500/20 px-4 py-2 rounded-full">
+                  <span className="w-2 h-2 bg-brand-400 rounded-full"></span>
+                  <span>Reportes Automáticos</span>
+                </div>
+              </div>
             </div>
-          ))}
+            
+            <Link
+              href="/activar"
+              className="bg-brand-900 hover:bg-brand-800 text-white px-8 py-4 text-lg font-semibold rounded-lg inline-flex items-center transition-colors focus-visible:outline-none focus-visible:focus-ring"
+            >
+              Comenzar ahora
+              <svg className="ml-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing Section */}
+      <section id="pricing" className="landing-section">
+        <h2 className="text-3xl font-semibold mb-8 text-center text-white" data-translation-key="pricing.title">
+          Planes simples, precios sin letra pequeña
+        </h2>
+        <div className="text-center max-w-2xl mx-auto">
+          <div className="glass-strong p-8 hover:glass transition-all duration-300">
+            <h3 className="text-2xl font-bold text-white mb-4" data-translation-key="pricing.plan.title">
+              Todo incluido
+            </h3>
+            <div className="text-4xl font-bold text-brand-400 mb-4">
+              L420 <span className="text-lg text-brand-200/75">/empleado/mes</span>
+            </div>
+            <div className="text-2xl text-brand-300 mb-4">
+              $17.77 <span className="text-sm text-brand-200/75">USD/empleado/mes</span>
+            </div>
+            <p className="text-brand-200/90 mb-6" data-translation-key="pricing.plan.description">
+              Sin configuración inicial. Sin límites de uso. Soporte incluido.
+            </p>
+            <Link
+              href="/demo"
+              className="bg-brand-900 hover:bg-brand-800 text-white w-full py-3 text-center block rounded-lg transition-colors focus-visible:outline-none focus-visible:focus-ring"
+            >
+              Solicitar Demo
+            </Link>
+          </div>
         </div>
       </section>
     </div>
   )
 }
-
