@@ -293,7 +293,12 @@ export default function ReportsAndAnalytics() {
           break
       }
 
-      downloadCSV(data, filename)
+      // Ensure data is not null before downloading
+      if (data && data.length > 0) {
+        downloadCSV(data, filename)
+      } else {
+        console.warn('No data to export')
+      }
     } catch (error) {
       console.error('Error exporting report:', error)
     }
