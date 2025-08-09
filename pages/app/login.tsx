@@ -1,0 +1,202 @@
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/router'
+import Link from 'next/link'
+import Head from 'next/head'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
+import { Button } from '../../components/ui/button'
+import { Input } from '../../components/ui/input'
+import { Shield, Lock, Eye, EyeOff, AlertCircle, Clock } from 'lucide-react'
+import { useAuth } from '../../lib/auth'
+
+export default function AdminLogin() {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [currentTime, setCurrentTime] = useState('')
+  
+  const { user, loading: authLoading, login, error: authError } = useAuth()
+  const router = useRouter()
+
+  // Redirect if already logged in - ONLY when auth is not loading
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.push('/dashboard')
+    }
+  }, [user, authLoading, router])
+
+  // Update time
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date().toLocaleTimeString('es-HN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      }))
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+
+    const success = await login(email, password)
+    
+    if (!success) {
+      setError('Credenciales inválidas. Verifique su email y contraseña.')
+    }
+    
+    setLoading(false)
+  }
+
+  // Show loading state while auth is being checked
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-app flex items-center justify-center">
+        <div className="text-white text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p>Verificando sesión...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Don't show login form if user is already logged in
+  if (user) {
+    return null
+  }
+
+  return (
+    <>
+      <Head>
+        <title>Acceso Administrativo - Sistema HR</title>
+        <meta name="description" content="Acceso para administradores del sistema de recursos humanos" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+      </Head>
+
+      <div className="min-h-screen bg-app flex items-center justify-center p-4">        
+        <div className="relative w-full max-w-md space-y-8">
+          {/* Header */}
+          <div className="text-center">
+            <div className="mx-auto h-20 w-20 bg-white rounded-full flex items-center justify-center mb-6 shadow-xl">
+              <Shield className="h-10 w-10 text-brand-900" />
+            </div>
+            <h1 className="text-3xl font-bold text-white mb-2">
+              Sistema de Recursos Humanos
+            </h1>
+            <p className="text-brand-200/90">
+              Acceso para administradores
+            </p>
+            <div className="mt-4 text-lg font-mono text-brand-300">
+              {currentTime}
+            </div>
+          </div>
+
+          {/* Login Form */}
+          <Card variant="glass" className="shadow-xl">
+            <CardHeader className="text-center pb-6">
+              <CardTitle className="flex items-center justify-center gap-2 text-white">
+                <Lock className="h-5 w-5" />
+                Iniciar Sesión
+              </CardTitle>
+              <CardDescription className="text-brand-200/90">
+                Ingrese sus credenciales para acceder al sistema
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Email Field */}
+                <div className="space-y-2">
+                  <label htmlFor="email" className="text-sm font-medium text-brand-200/90">
+                    Correo Electrónico
+                  </label>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="admin@empresa.com"
+                    autoComplete="username"
+                    required
+                    disabled={loading}
+                    className="input-glass h-12"
+                  />
+                </div>
+
+                {/* Password Field */}
+                <div className="space-y-2">
+                  <label htmlFor="password" className="text-sm font-medium text-brand-200/90">
+                    Contraseña
+                  </label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      name="password"
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      autoComplete="current-password"
+                      required
+                      disabled={loading}
+                      className="input-glass h-12 pr-12"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-200/90 hover:text-white"
+                      disabled={loading}
+                    >
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Error Message */}
+                {(error || authError) && (
+                  <div className="flex items-center gap-2 text-red-200 text-sm glass-strong p-3 rounded-md">
+                    <AlertCircle className="h-4 w-4" />
+                    {error || authError}
+                  </div>
+                )}
+
+                {/* Submit Button */}
+                <Button 
+                  type="submit" 
+                  className="w-full h-12 bg-brand-900 hover:bg-brand-800 text-white focus-ring" 
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Verificando...
+                    </div>
+                  ) : (
+                    'Ingresar al Sistema'
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          {/* Public Access Link */}
+          <div className="text-center">
+            <p className="text-brand-200/90 text-sm mb-3">¿Eres empleado?</p>
+            <Link 
+              href="/attendance/register" 
+              className="inline-flex items-center gap-2 text-brand-300 hover:text-white transition-colors text-sm font-medium"
+            >
+              <Clock className="h-4 w-4" />
+              Registrar Asistencia
+            </Link>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}

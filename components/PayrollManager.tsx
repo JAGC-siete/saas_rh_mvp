@@ -1,6 +1,6 @@
 
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { createClient } from '../lib/supabase/client'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -132,10 +132,16 @@ export default function PayrollManager() {
     }
   }, [])
 
+  // Evitar setState tras desmontaje durante cargas largas
+  const isMountedRef = useRef(true)
   useEffect(() => {
-    if (supabase) {
-      fetchData()
+    return () => {
+      isMountedRef.current = false
     }
+  }, [])
+
+  useEffect(() => {
+    if (supabase) fetchData()
   }, [supabase])
 
   const resetGenerateForm = useCallback(() => {
@@ -261,6 +267,7 @@ export default function PayrollManager() {
       }
       
       console.log('✅ Payroll records loaded:', payrollData?.length || 0)
+      if (!isMountedRef.current) return
       setPayrollRecords(payrollData || [])
 
       // Fetch employees
@@ -282,6 +289,7 @@ export default function PayrollManager() {
       }
       
       console.log('✅ Employees loaded:', employeesData?.length || 0)
+      if (!isMountedRef.current) return
       setEmployees(employeesData || [])
 
       await loadDepartments()
@@ -292,7 +300,7 @@ export default function PayrollManager() {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
       alert(`❌ Error cargando datos: ${errorMessage}`)
     } finally {
-      setLoading(false)
+      if (isMountedRef.current) setLoading(false)
     }
   }, [supabase])
 
@@ -315,6 +323,7 @@ export default function PayrollManager() {
       })
       
       setDepartments(deptMap)
+      if (!isMountedRef.current) return
       console.log('✅ Departments loaded:', Object.keys(deptMap).length)
     } catch (error) {
       console.error('Error loading departments:', error)
@@ -335,7 +344,9 @@ export default function PayrollManager() {
 
     stats.payrollCoverage = emps.length > 0 ? (currentPeriodRecords.length / emps.length) * 100 : 0
 
-    currentPeriodRecords.forEach(record => {
+    // Una sola pasada: acumular totales y sumas por depto
+    const deptSumSalary: Record<string, number> = {}
+    currentPeriodRecords.forEach((record) => {
       stats.totalGrossSalary += record.gross_salary
       stats.totalDeductions += record.total_deductions
       stats.totalNetSalary += record.net_salary
@@ -344,23 +355,18 @@ export default function PayrollManager() {
       const deptName = departments[deptId] || 'Sin Departamento'
       
       if (!stats.departmentBreakdown[deptId]) {
-        stats.departmentBreakdown[deptId] = {
-          count: 0,
-          name: deptName,
-          avgSalary: 0
-        }
+        stats.departmentBreakdown[deptId] = { count: 0, name: deptName, avgSalary: 0 }
       }
       
       stats.departmentBreakdown[deptId].count += 1
+      deptSumSalary[deptId] = (deptSumSalary[deptId] ?? 0) + record.net_salary
     })
 
-    // Calculate average salary for each department
-    Object.keys(stats.departmentBreakdown).forEach(deptId => {
-      const deptRecords = currentPeriodRecords.filter(r => 
-        (r.employees?.department_id || 'sin-departamento') === deptId
-      )
-      const totalSalary = deptRecords.reduce((sum, r) => sum + r.net_salary, 0)
-      stats.departmentBreakdown[deptId].avgSalary = deptRecords.length > 0 ? totalSalary / deptRecords.length : 0
+    // Promedios por depto
+    Object.keys(stats.departmentBreakdown).forEach((deptId) => {
+      const count = stats.departmentBreakdown[deptId].count
+      const sum = deptSumSalary[deptId] ?? 0
+      stats.departmentBreakdown[deptId].avgSalary = count > 0 ? sum / count : 0
     })
 
     if (currentPeriodRecords.length > 0) {
@@ -371,7 +377,7 @@ export default function PayrollManager() {
     const expectedDays = currentPeriodRecords.length * 15
     stats.attendanceRate = expectedDays > 0 ? (totalDays / expectedDays) * 100 : 0
 
-    setPayrollStats(stats)
+    if (isMountedRef.current) setPayrollStats(stats)
   }, [currentPeriodRecords, departments])
 
   const generatePayroll = useCallback(async (e: React.FormEvent) => {
@@ -475,12 +481,12 @@ export default function PayrollManager() {
     }
   }, [supabase, fetchData])
 
-  const formatCurrency = useCallback((amount: number) => {
-    return new Intl.NumberFormat('es-HN', {
-      style: 'currency',
-      currency: 'HNL'
-    }).format(amount)
-  }, [])
+  // Memo del formateador para evitar recrearlo
+  const currencyFormatter = useMemo(
+    () => new Intl.NumberFormat('es-HN', { style: 'currency', currency: 'HNL' }),
+    []
+  )
+  const formatCurrency = useCallback((amount: number) => currencyFormatter.format(amount ?? 0), [currencyFormatter])
 
   const getStatusBadge = useCallback((status: string) => {
     const baseClasses = 'px-2 py-1 rounded-full text-xs font-medium'
@@ -599,36 +605,45 @@ export default function PayrollManager() {
     setActiveTab(tab)
   }, [])
 
+  // Pre-cálculos para la sección de distribución (evitar trabajo por iteración)
+  const { maxDeptCountMemo, totalDeptEmployeesMemo } = useMemo(() => {
+    const values = Object.values(payrollStats.departmentBreakdown)
+    const counts = values.map(d => d.count)
+    const maxDeptCount = Math.max(1, ...counts)
+    const totalDeptEmployees = counts.reduce((s, n) => s + n, 0)
+    return { maxDeptCountMemo: maxDeptCount, totalDeptEmployeesMemo: totalDeptEmployees }
+  }, [payrollStats.departmentBreakdown])
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">🏢 Gestión de Nómina - Paragon Honduras</h1>
-          <p className="text-gray-600">Sistema integral de procesamiento y administración de nóminas</p>
+          <h1 className="text-2xl font-bold text-white">🏢 Gestión de Nómina - Paragon Honduras</h1>
+          <p className="text-gray-300">Sistema integral de procesamiento y administración de nóminas</p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => handleTabChange('generate')}>
+          <Button onClick={() => handleTabChange('generate')} className="bg-brand-800 hover:bg-brand-700 text-white">
             📊 Generar Nómina
           </Button>
-          <Button variant="outline" onClick={exportToExcel}>
+          <Button variant="outline" onClick={exportToExcel} className="border-white/20 text-white hover:bg-white/10">
             📥 Exportar Excel
           </Button>
-          <Button variant="outline" onClick={() => handleTabChange('reports')}>
+          <Button variant="outline" onClick={() => handleTabChange('reports')} className="border-white/20 text-white hover:bg-white/10">
             📋 Reportes
           </Button>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200">
+      <div className="border-b border-white/10">
         <nav className="-mb-px flex space-x-8">
           <button
             onClick={() => handleTabChange('dashboard')}
             className={`py-2 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'dashboard'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'border-brand-500 text-brand-400'
+                : 'border-transparent text-gray-300 hover:text-white hover:border-white/30'
             }`}
           >
             📈 Dashboard Ejecutivo
@@ -637,8 +652,8 @@ export default function PayrollManager() {
             onClick={() => handleTabChange('records')}
             className={`py-2 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'records'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'border-brand-500 text-brand-400'
+                : 'border-transparent text-gray-300 hover:text-white hover:border-white/30'
             }`}
           >
             📋 Registros de Nómina
@@ -647,8 +662,8 @@ export default function PayrollManager() {
             onClick={() => handleTabChange('generate')}
             className={`py-2 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'generate'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'border-brand-500 text-brand-400'
+                : 'border-transparent text-gray-300 hover:text-white hover:border-white/30'
             }`}
           >
             ⚙️ Generar Nómina
@@ -657,8 +672,8 @@ export default function PayrollManager() {
             onClick={() => handleTabChange('reports')}
             className={`py-2 px-1 border-b-2 font-medium text-sm ${
               activeTab === 'reports'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'border-brand-500 text-brand-400'
+                : 'border-transparent text-gray-300 hover:text-white hover:border-white/30'
             }`}
           >
             📋 Reportes
@@ -671,46 +686,46 @@ export default function PayrollManager() {
         <div className="space-y-6">
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <Card>
+            <Card variant="glass">
               <CardContent className="pt-6">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">
+                  <div className="text-2xl font-bold text-green-400">
                     {payrollStats.totalEmployees}
                   </div>
-                  <div className="text-sm text-gray-600">Empleados Activos</div>
+                  <div className="text-sm text-gray-300">Empleados Activos</div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card variant="glass">
               <CardContent className="pt-6">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">
+                  <div className="text-2xl font-bold text-blue-400">
                     {formatCurrency(payrollStats.totalGrossSalary)}
                   </div>
-                  <div className="text-sm text-gray-600">Salario Bruto Quincenal</div>
+                  <div className="text-sm text-gray-300">Salario Bruto Quincenal</div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card variant="glass">
               <CardContent className="pt-6">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-orange-600">
+                  <div className="text-2xl font-bold text-orange-400">
                     {payrollStats.payrollCoverage.toFixed(1)}%
                   </div>
-                  <div className="text-sm text-gray-600">Cobertura Nómina</div>
+                  <div className="text-sm text-gray-300">Cobertura Nómina</div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card variant="glass">
               <CardContent className="pt-6">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-purple-600">
+                  <div className="text-2xl font-bold text-purple-400">
                     {formatCurrency(payrollStats.totalNetSalary)}
                   </div>
-                  <div className="text-sm text-gray-600">Salario Neto Quincenal</div>
+                  <div className="text-sm text-gray-300">Salario Neto Quincenal</div>
                 </div>
               </CardContent>
             </Card>
@@ -718,78 +733,76 @@ export default function PayrollManager() {
 
           {/* Additional Stats */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
+            <Card variant="glass">
               <CardHeader>
-                <CardTitle>📊 Métricas de Gestión</CardTitle>
+                <CardTitle className="text-white">📊 Métricas de Gestión</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex justify-between">
-                    <span>Salario Promedio:</span>
-                    <span className="font-semibold">{formatCurrency(payrollStats.averageSalary)}</span>
+                    <span className="text-gray-300">Salario Promedio:</span>
+                    <span className="font-semibold text-white">{formatCurrency(payrollStats.averageSalary)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Cobertura de Nómina:</span>
-                    <span className={`font-semibold ${payrollStats.payrollCoverage >= 95 ? 'text-green-600' : 'text-orange-600'}`}>
+                    <span className="text-gray-300">Cobertura de Nómina:</span>
+                    <span className={`font-semibold ${payrollStats.payrollCoverage >= 95 ? 'text-green-400' : 'text-orange-400'}`}>
                       {payrollStats.payrollCoverage.toFixed(1)}%
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Total Empleados:</span>
-                    <span className="font-semibold">{payrollStats.totalEmployees}</span>
+                    <span className="text-gray-300">Total Empleados:</span>
+                    <span className="font-semibold text-white">{payrollStats.totalEmployees}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Registros Procesados:</span>
-                    <span className="font-semibold">{Object.values(payrollStats.departmentBreakdown).reduce((sum, d) => sum + d.count, 0)}</span>
+                    <span className="text-gray-300">Registros Procesados:</span>
+                    <span className="font-semibold text-white">{Object.values(payrollStats.departmentBreakdown).reduce((sum, d) => sum + d.count, 0)}</span>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card variant="glass">
               <CardHeader>
-                <CardTitle>🏢 Distribución por Departamento</CardTitle>
-                <CardDescription>Cantidad de empleados y salario promedio por área</CardDescription>
+                <CardTitle className="text-white">🏢 Distribución por Departamento</CardTitle>
+                <CardDescription className="text-gray-300">Cantidad de empleados y salario promedio por área</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   {Object.entries(payrollStats.departmentBreakdown).map(([deptId, data]) => {
-                    const maxCount = Math.max(...Object.values(payrollStats.departmentBreakdown).map(d => d.count), 1)
-                    const percentage = (data.count / maxCount) * 100
-                    const totalEmployees = Object.values(payrollStats.departmentBreakdown).reduce((sum, d) => sum + d.count, 0)
-                    const deptPercentage = totalEmployees > 0 ? (data.count / totalEmployees) * 100 : 0
+                    const percentage = (data.count / maxDeptCountMemo) * 100
+                    const deptPercentage = totalDeptEmployeesMemo > 0 ? (data.count / totalDeptEmployeesMemo) * 100 : 0
                     
                     return (
                       <div key={deptId} className="space-y-2">
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
-                            <div className="font-medium text-sm text-gray-800">{data.name}</div>
-                            <div className="text-xs text-gray-500">{data.count} empleados ({deptPercentage.toFixed(1)}%)</div>
+                            <div className="font-medium text-sm text-white">{data.name}</div>
+                            <div className="text-xs text-gray-300">{data.count} empleados ({deptPercentage.toFixed(1)}%)</div>
                           </div>
                           <div className="text-right">
-                            <div className="text-sm font-semibold text-blue-600">{formatCurrency(data.avgSalary)}</div>
-                            <div className="text-xs text-gray-500">promedio</div>
+                            <div className="text-sm font-semibold text-brand-400">{formatCurrency(data.avgSalary)}</div>
+                            <div className="text-xs text-gray-300">promedio</div>
                           </div>
                         </div>
                         <div className="relative">
-                          <div className="w-full bg-gray-200 rounded-full h-3">
+                          <div className="w-full bg-white/10 rounded-full h-3">
                             <div 
-                              className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-700 relative"
+                              className="bg-gradient-to-r from-brand-500 to-brand-600 h-3 rounded-full transition-all duration-700 relative"
                               style={{ width: `${percentage}%` }}
                             >
                               <div className="absolute inset-0 bg-white/20 rounded-full animate-pulse"></div>
                             </div>
                           </div>
                           <div className="mt-1 flex justify-between text-xs">
-                            <span className="text-gray-600">{data.count} empleados</span>
-                            <span className="text-blue-600 font-medium">{deptPercentage.toFixed(1)}% del total</span>
+                            <span className="text-gray-300">{data.count} empleados</span>
+                            <span className="text-brand-400 font-medium">{deptPercentage.toFixed(1)}% del total</span>
                           </div>
                         </div>
                       </div>
                     )
                   })}
                   {Object.keys(payrollStats.departmentBreakdown).length === 0 && (
-                    <div className="text-center text-gray-500 py-8">
+                    <div className="text-center text-gray-300 py-8">
                       <div className="text-4xl mb-2">📊</div>
                       <div className="text-sm">No hay datos de departamentos para mostrar</div>
                       <div className="text-xs text-gray-400 mt-1">Los empleados necesitan tener departamentos asignados</div>
@@ -801,46 +814,46 @@ export default function PayrollManager() {
           </div>
 
           {/* Quick Actions */}
-          <Card>
+          <Card variant="glass">
             <CardHeader>
-              <CardTitle>⚡ Acciones Rápidas</CardTitle>
+              <CardTitle className="text-white">⚡ Acciones Rápidas</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Button 
-                  className="w-full"
+                  className="w-full bg-brand-800 hover:bg-brand-700 text-white"
                   onClick={() => handleTabChange('generate')}
                 >
                   Generar Nómina Actual
                 </Button>
                 <Button 
                   variant="outline"
-                  className="w-full"
+                  className="w-full border-white/20 text-white hover:bg-white/10"
                   onClick={exportToExcel}
                 >
                   Exportar Reporte
                 </Button>
                 <Button 
                   variant="outline"
-                  className="w-full"
+                  className="w-full border-white/20 text-white hover:bg-white/10"
                   onClick={() => handleTabChange('records')}
                 >
                   Ver Registros
                 </Button>
               </div>
-              <div className="mt-4 pt-4 border-t">
+              <div className="mt-4 pt-4 border-t border-white/10">
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-center">
-                  <div className="p-3 bg-blue-50 rounded-lg">
-                    <div className="text-blue-600 font-bold text-lg">{payrollStats.totalEmployees}</div>
-                    <div className="text-blue-600 text-xs">Empleados</div>
+                  <div className="p-3 bg-blue-500/20 rounded-lg border border-blue-400/20">
+                    <div className="text-blue-400 font-bold text-lg">{payrollStats.totalEmployees}</div>
+                    <div className="text-blue-300 text-xs">Empleados</div>
                   </div>
-                  <div className="p-3 bg-green-50 rounded-lg">
-                    <div className="text-green-600 font-bold text-lg">{Object.keys(payrollStats.departmentBreakdown).length}</div>
-                    <div className="text-green-600 text-xs">Departamentos</div>
+                  <div className="p-3 bg-green-500/20 rounded-lg border border-green-400/20">
+                    <div className="text-green-400 font-bold text-lg">{Object.keys(payrollStats.departmentBreakdown).length}</div>
+                    <div className="text-green-300 text-xs">Departamentos</div>
                   </div>
-                  <div className="p-3 bg-purple-50 rounded-lg">
-                    <div className="text-purple-600 font-bold text-lg">{payrollStats.payrollCoverage.toFixed(0)}%</div>
-                    <div className="text-purple-600 text-xs">Cobertura</div>
+                  <div className="p-3 bg-purple-500/20 rounded-lg border border-purple-400/20">
+                    <div className="text-purple-400 font-bold text-lg">{payrollStats.payrollCoverage.toFixed(0)}%</div>
+                    <div className="text-purple-300 text-xs">Cobertura</div>
                   </div>
                 </div>
               </div>
@@ -853,24 +866,25 @@ export default function PayrollManager() {
       {activeTab === 'records' && (
         <div className="space-y-6">
           {/* Filters */}
-          <Card>
+          <Card variant="glass">
             <CardContent className="pt-6">
               <div className="flex gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-white mb-1">
                     Filtrar por Período
                   </label>
                   <Input
                     type="month"
                     value={selectedPeriod}
                     onChange={handlePeriodChange}
-                    className="w-48"
+                    className="w-48 bg-white/10 border-white/20 text-white placeholder-gray-400"
                   />
                 </div>
                 <div className="flex items-end">
                   <Button 
                     variant="outline" 
                     onClick={clearPeriodFilter}
+                    className="border-white/20 text-white hover:bg-white/10"
                   >
                     Limpiar Filtro
                   </Button>
@@ -880,10 +894,10 @@ export default function PayrollManager() {
           </Card>
 
           {/* Payroll Records */}
-          <Card>
+          <Card variant="glass">
             <CardHeader>
-              <CardTitle>Registros de Nómina</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-white">Registros de Nómina</CardTitle>
+              <CardDescription className="text-gray-300">
                 {filteredRecords.length} registros
                 {selectedPeriod && ` para ${new Date(selectedPeriod + '-01').toLocaleDateString('es-HN', { year: 'numeric', month: 'long' })}`}
               </CardDescription>
@@ -892,56 +906,56 @@ export default function PayrollManager() {
               <div className="overflow-x-auto">
                 <table className="w-full table-auto">
                   <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-3 px-4">Empleado</th>
-                      <th className="text-left py-3 px-4">Período</th>
-                      <th className="text-left py-3 px-4">Salario Bruto</th>
-                      <th className="text-left py-3 px-4">Deducciones</th>
-                      <th className="text-left py-3 px-4">Salario Neto</th>
-                      <th className="text-left py-3 px-4">Asistencia</th>
-                      <th className="text-left py-3 px-4">Estado</th>
-                      <th className="text-left py-3 px-4">Acciones</th>
+                    <tr className="border-b border-white/20">
+                      <th className="text-left py-3 px-4 text-white">Empleado</th>
+                      <th className="text-left py-3 px-4 text-white">Período</th>
+                      <th className="text-left py-3 px-4 text-white">Salario Bruto</th>
+                      <th className="text-left py-3 px-4 text-white">Deducciones</th>
+                      <th className="text-left py-3 px-4 text-white">Salario Neto</th>
+                      <th className="text-left py-3 px-4 text-white">Asistencia</th>
+                      <th className="text-left py-3 px-4 text-white">Estado</th>
+                      <th className="text-left py-3 px-4 text-white">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredRecords.map((record, index) => (
-                      <tr key={`record-${index}`} className="border-b hover:bg-gray-50">
+                      <tr key={record.id ?? `record-${index}`} className="border-b border-white/10 hover:bg-white/5">
                         <td className="py-3 px-4">
                           <div>
-                            <div className="font-medium">{record.employees?.name}</div>
-                            <div className="text-sm text-gray-500">
+                            <div className="font-medium text-white">{record.employees?.name}</div>
+                            <div className="text-sm text-gray-300">
                               {record.employees?.employee_code} • {record.employees?.team}
                             </div>
                           </div>
                         </td>
                         <td className="py-3 px-4">
                           <div className="text-sm">
-                            <div>{new Date(record.period_start).toLocaleDateString('es-HN')}</div>
-                            <div className="text-gray-500">hasta {new Date(record.period_end).toLocaleDateString('es-HN')}</div>
+                            <div className="text-white">{new Date(record.period_start).toLocaleDateString('es-HN')}</div>
+                            <div className="text-gray-300">hasta {new Date(record.period_end).toLocaleDateString('es-HN')}</div>
                             <div className="text-xs text-gray-400 capitalize">{record.period_type}</div>
                           </div>
                         </td>
-                        <td className="py-3 px-4 font-mono">
+                        <td className="py-3 px-4 font-mono text-white">
                           {formatCurrency(record.gross_salary)}
                         </td>
                         <td className="py-3 px-4">
                           <div className="text-sm font-mono">
-                            <div>ISR: {formatCurrency(record.income_tax)}</div>
-                            <div>RAP: {formatCurrency(record.professional_tax)}</div>
-                            <div>IHSS: {formatCurrency(record.social_security)}</div>
-                            <div className="font-semibold border-t pt-1">
+                            <div className="text-white">ISR: {formatCurrency(record.income_tax)}</div>
+                            <div className="text-white">RAP: {formatCurrency(record.professional_tax)}</div>
+                            <div className="text-white">IHSS: {formatCurrency(record.social_security)}</div>
+                            <div className="font-semibold border-t border-white/20 pt-1 text-white">
                               Total: {formatCurrency(record.total_deductions)}
                             </div>
                           </div>
                         </td>
-                        <td className="py-3 px-4 font-mono font-semibold text-green-600">
+                        <td className="py-3 px-4 font-mono font-semibold text-green-400">
                           {formatCurrency(record.net_salary)}
                         </td>
                         <td className="py-3 px-4">
                           <div className="text-sm">
-                            <div>Trabajó: {record.days_worked} días</div>
-                            <div className="text-red-600">Ausente: {record.days_absent} días</div>
-                            <div className="text-yellow-600">Tardanza: {record.late_days} días</div>
+                            <div className="text-white">Trabajó: {record.days_worked} días</div>
+                            <div className="text-red-400">Ausente: {record.days_absent} días</div>
+                            <div className="text-yellow-400">Tardanza: {record.late_days} días</div>
                           </div>
                         </td>
                         <td className="py-3 px-4">
@@ -954,6 +968,7 @@ export default function PayrollManager() {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => approvePayroll(record.id)}
+                                className="border-white/20 text-white hover:bg-white/10"
                               >
                                 Aprobar
                               </Button>
@@ -962,6 +977,7 @@ export default function PayrollManager() {
                               <Button
                                 size="sm"
                                 onClick={() => markAsPaid(record.id)}
+                                className="bg-brand-800 hover:bg-brand-700 text-white"
                               >
                                 Marcar Pagado
                               </Button>
@@ -970,6 +986,7 @@ export default function PayrollManager() {
                               size="sm"
                               variant="ghost"
                               onClick={async () => await downloadPayrollPDF(record)}
+                              className="text-gray-300 hover:bg-white/10 hover:text-white"
                             >
                               📄 Descargar PDF
                             </Button>
@@ -977,6 +994,7 @@ export default function PayrollManager() {
                               size="sm"
                               variant="ghost"
                               onClick={async () => await downloadIndividualReceipt(record)}
+                              className="text-gray-300 hover:bg-white/10 hover:text-white"
                             >
                               📄 Descargar Recibo
                             </Button>
@@ -988,7 +1006,7 @@ export default function PayrollManager() {
                 </table>
 
                 {filteredRecords.length === 0 && (
-                  <div className="text-center py-8 text-gray-500">
+                  <div className="text-center py-8 text-gray-300">
                     No se encontraron registros de nómina.
                   </div>
                 )}
@@ -1001,17 +1019,17 @@ export default function PayrollManager() {
       {/* Generate Tab */}
       {activeTab === 'generate' && (
         <div className="space-y-6">
-          <Card>
+          <Card variant="glass">
             <CardHeader>
-              <CardTitle>📊 Generar Nómina</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-white">📊 Generar Nómina</CardTitle>
+              <CardDescription className="text-gray-300">
                 Genera la nómina para todos los empleados activos de Paragon Honduras para un período y quincena seleccionados
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={generatePayroll} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-white mb-1">
                     Mes
                   </label>
                   <Input
@@ -1019,20 +1037,21 @@ export default function PayrollManager() {
                     value={generateForm.periodo}
                     onChange={e => handleFormChange('periodo', e.target.value)}
                     required
+                    className="bg-white/10 border-white/20 text-white placeholder-gray-400"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-white mb-1">
                     Quincena
                   </label>
                   <select
                     value={generateForm.quincena}
                     onChange={e => handleFormChange('quincena', Number(e.target.value))}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                    className="w-full p-2 border border-white/20 rounded-md focus:ring-2 focus:ring-brand-500 bg-white/10 text-white"
                     required
                   >
-                    <option value={1}>Primera (1-15)</option>
-                    <option value={2}>Segunda (16-fin de mes)</option>
+                    <option value={1} className="bg-brand-900 text-white">Primera (1-15)</option>
+                    <option value={2} className="bg-brand-900 text-white">Segunda (16-fin de mes)</option>
                   </select>
                 </div>
                 <div className="flex items-center">
@@ -1040,10 +1059,10 @@ export default function PayrollManager() {
                     type="checkbox"
                     checked={generateForm.incluirDeducciones}
                     onChange={e => handleFormChange('incluirDeducciones', e.target.checked)}
-                    className="mr-2"
+                    className="mr-2 accent-brand-500"
                     id="deducciones"
                   />
-                  <label htmlFor="deducciones" className="text-sm font-medium text-gray-700">
+                  <label htmlFor="deducciones" className="text-sm font-medium text-white">
                     Incluir deducciones (ISR, IHSS, RAP)
                   </label>
                 </div>
@@ -1052,21 +1071,22 @@ export default function PayrollManager() {
                     type="checkbox"
                     checked={generateForm.soloEmpleadosConAsistencia}
                     onChange={e => handleFormChange('soloEmpleadosConAsistencia', e.target.checked)}
-                    className="mr-2"
+                    className="mr-2 accent-brand-500"
                     id="asistencia"
                   />
-                  <label htmlFor="asistencia" className="text-sm font-medium text-gray-700">
+                  <label htmlFor="asistencia" className="text-sm font-medium text-white">
                     Solo empleados con asistencia completa
                   </label>
                 </div>
                 <div className="md:col-span-2 flex gap-4">
-                  <Button type="submit" disabled={loading}>
+                  <Button type="submit" disabled={loading} className="bg-brand-800 hover:bg-brand-700 text-white">
                     {loading ? '🔄 Generando...' : '🚀 Generar Nómina'}
                   </Button>
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => handleTabChange('dashboard')}
+                    className="border-white/20 text-white hover:bg-white/10"
                   >
                     Cancelar
                   </Button>
@@ -1077,29 +1097,29 @@ export default function PayrollManager() {
 
           {/* Employee Preview */}
           {employees.length > 0 && (
-            <Card>
+            <Card variant="glass">
               <CardHeader>
-                <CardTitle>👥 Empleados Activos ({employees.length})</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-white">👥 Empleados Activos ({employees.length})</CardTitle>
+                <CardDescription className="text-gray-300">
                   Lista de empleados que serán incluidos en la nómina
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {employees.slice(0, 9).map((emp) => (
-                    <div key={emp.id} className="p-3 border rounded-lg">
-                      <div className="font-medium">{emp.name}</div>
-                      <div className="text-sm text-gray-500">
+                    <div key={emp.id} className="p-3 border border-white/20 rounded-lg bg-white/5">
+                      <div className="font-medium text-white">{emp.name}</div>
+                      <div className="text-sm text-gray-300">
                         {emp.employee_code} • {emp.department_id || 'Sin departamento'}
                       </div>
-                      <div className="text-sm font-mono text-green-600">
+                      <div className="text-sm font-mono text-green-400">
                         {formatCurrency(emp.base_salary)}
                       </div>
                     </div>
                   ))}
                   {employees.length > 9 && (
-                    <div className="p-3 border rounded-lg bg-gray-50 text-center">
-                      <div className="text-sm text-gray-500">
+                    <div className="p-3 border border-white/20 rounded-lg bg-white/5 text-center">
+                      <div className="text-sm text-gray-300">
                         +{employees.length - 9} empleados más
                       </div>
                     </div>
@@ -1114,33 +1134,33 @@ export default function PayrollManager() {
       {/* Reports Tab */}
       {activeTab === 'reports' && (
         <div className="space-y-6">
-          <Card>
+          <Card variant="glass">
             <CardHeader>
-              <CardTitle>📊 Reportes de Nómina</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-white">📊 Reportes de Nómina</CardTitle>
+              <CardDescription className="text-gray-300">
                 Genera reportes detallados de nómina en diferentes formatos
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {/* Reporte General */}
-                <Card>
+                <Card variant="glass">
                   <CardHeader>
-                    <CardTitle className="text-lg">📋 Reporte General</CardTitle>
-                    <CardDescription>Estadísticas completas de nómina</CardDescription>
+                    <CardTitle className="text-lg text-white">📋 Reporte General</CardTitle>
+                    <CardDescription className="text-gray-300">Estadísticas completas de nómina</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
                       <Button 
                         onClick={() => exportPayrollReport('general', 'pdf')}
-                        className="w-full"
+                        className="w-full bg-brand-800 hover:bg-brand-700 text-white"
                       >
                         📄 Exportar PDF
                       </Button>
                       <Button 
                         variant="outline"
                         onClick={() => exportPayrollReport('general', 'csv')}
-                        className="w-full"
+                        className="w-full border-white/20 text-white hover:bg-white/10"
                       >
                         📊 Exportar CSV
                       </Button>
@@ -1149,27 +1169,27 @@ export default function PayrollManager() {
                 </Card>
 
                 {/* Reporte por Período */}
-                <Card>
+                <Card variant="glass">
                   <CardHeader>
-                    <CardTitle className="text-lg">📅 Reporte por Período</CardTitle>
-                    <CardDescription>Nómina de un período específico</CardDescription>
+                    <CardTitle className="text-lg text-white">📅 Reporte por Período</CardTitle>
+                    <CardDescription className="text-gray-300">Nómina de un período específico</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-white mb-1">
                           Período
                         </label>
                         <Input
                           type="month"
                           value={selectedPeriod}
                           onChange={handlePeriodChange}
-                          className="w-full"
+                          className="w-full bg-white/10 border-white/20 text-white placeholder-gray-400"
                         />
                       </div>
                       <Button 
                         onClick={() => exportPayrollReport('period', 'pdf')}
-                        className="w-full"
+                        className="w-full bg-brand-800 hover:bg-brand-700 text-white"
                         disabled={!selectedPeriod}
                       >
                         📄 Exportar PDF
@@ -1177,7 +1197,7 @@ export default function PayrollManager() {
                       <Button 
                         variant="outline"
                         onClick={() => exportPayrollReport('period', 'csv')}
-                        className="w-full"
+                        className="w-full border-white/20 text-white hover:bg-white/10"
                         disabled={!selectedPeriod}
                       >
                         📊 Exportar CSV
@@ -1187,23 +1207,23 @@ export default function PayrollManager() {
                 </Card>
 
                 {/* Reporte de Deducciones */}
-                <Card>
+                <Card variant="glass">
                   <CardHeader>
-                    <CardTitle className="text-lg">💰 Reporte de Deducciones</CardTitle>
-                    <CardDescription>Análisis detallado de deducciones</CardDescription>
+                    <CardTitle className="text-lg text-white">💰 Reporte de Deducciones</CardTitle>
+                    <CardDescription className="text-gray-300">Análisis detallado de deducciones</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
                       <Button 
                         onClick={() => exportPayrollReport('deductions', 'pdf')}
-                        className="w-full"
+                        className="w-full bg-brand-800 hover:bg-brand-700 text-white"
                       >
                         📄 Exportar PDF
                       </Button>
                       <Button 
                         variant="outline"
                         onClick={() => exportPayrollReport('deductions', 'csv')}
-                        className="w-full"
+                        className="w-full border-white/20 text-white hover:bg-white/10"
                       >
                         📊 Exportar CSV
                       </Button>

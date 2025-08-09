@@ -25,34 +25,34 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const handleSignOut = async () => {
     await logout()
-    router.push('/login')
+    router.push('/app/login')
   }
 
   const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: ChartBarIcon },
-    { name: 'Empleados', href: '/employees', icon: UsersIcon },
-    { name: 'Departamentos', href: '/departments', icon: BuildingOfficeIcon },
+    { name: 'Dashboard', href: '/app/dashboard', icon: ChartBarIcon },
+    { name: 'Empleados', href: '/app/employees', icon: UsersIcon },
+    { name: 'Departamentos', href: '/app/departments', icon: BuildingOfficeIcon },
     { name: 'Asistencia', href: '/attendance/dashboard', icon: ClockIcon },
-    { name: 'Permisos', href: '/leave', icon: UserIcon },
-    { name: 'Nómina', href: '/payroll', icon: CurrencyDollarIcon },
-    { name: 'Reportes', href: '/reports', icon: ChartBarIcon },
-    { name: 'Configuración', href: '/settings', icon: Cog6ToothIcon },
+    { name: 'Permisos', href: '/app/leave', icon: UserIcon },
+    { name: 'Nómina', href: '/app/payroll', icon: CurrencyDollarIcon },
+    { name: 'Reportes', href: '/app/reports', icon: ChartBarIcon },
+    { name: 'Configuración', href: '/app/settings', icon: Cog6ToothIcon },
   ]
 
   return (
-    <div className="h-screen flex overflow-hidden bg-gray-100">
+    <div className="h-screen flex overflow-hidden bg-app">
       {/* Sidebar */}
-      <div className={`${sidebarOpen ? 'w-64' : 'w-16'} bg-white shadow-sm transition-all duration-300 ease-in-out`}>
+      <div className={`${sidebarOpen ? 'w-64' : 'w-16'} glass-strong border-r border-white/10 transition-all duration-300 ease-in-out`}>
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
+          <div className="flex items-center justify-between h-16 px-4 border-b border-white/10">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <BuildingOfficeIcon className="h-8 w-8 text-blue-600" />
+                <BuildingOfficeIcon className="h-8 w-8 text-brand-400" />
               </div>
               {sidebarOpen && (
                 <div className="ml-3">
-                  <h1 className="text-xl font-semibold text-gray-900">HR SaaS</h1>
+                  <h1 className="text-xl font-semibold text-white">HR SaaS</h1>
                 </div>
               )}
             </div>
@@ -60,7 +60,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               variant="ghost"
               size="sm"
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-1"
+              className="p-1 text-gray-200 hover:text-white hover:bg-white/10"
             >
               {sidebarOpen ? '←' : '→'}
             </Button>
@@ -76,13 +76,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   href={item.href}
                   className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors ${
                     isActive
-                      ? 'bg-blue-100 text-blue-900'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      ? 'bg-brand-900 text-white'
+                      : 'text-gray-200 hover:bg-white/10 hover:text-white'
                   }`}
                 >
                   <item.icon
                     className={`mr-3 h-5 w-5 ${
-                      isActive ? 'text-blue-500' : 'text-gray-400 group-hover:text-gray-500'
+                      isActive ? 'text-brand-400' : 'text-gray-300 group-hover:text-brand-400'
                     }`}
                   />
                   {sidebarOpen && item.name}
@@ -92,19 +92,19 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </nav>
 
           {/* User section */}
-          <div className="flex-shrink-0 border-t border-gray-200 p-4">
+          <div className="flex-shrink-0 border-t border-white/10 p-4">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center">
+                <div className="h-8 w-8 rounded-full bg-brand-900 flex items-center justify-center">
                   <UserIcon className="h-5 w-5 text-white" />
                 </div>
               </div>
               {sidebarOpen && (
                 <div className="ml-3 flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">
+                  <p className="text-sm font-medium text-white truncate">
                     {user?.user_metadata?.full_name || user?.email}
                   </p>
-                  <p className="text-xs text-gray-500 truncate capitalize">
+                  <p className="text-xs text-gray-300 truncate capitalize">
                     Employee
                   </p>
                 </div>
@@ -115,7 +115,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 variant="ghost"
                 size="sm"
                 onClick={handleSignOut}
-                className="mt-3 w-full justify-start text-gray-600 hover:text-gray-900"
+                className="mt-3 w-full justify-start text-gray-200 hover:text-white hover:bg-white/10"
               >
                 <ArrowLeftOnRectangleIcon className="h-4 w-4 mr-2" />
                 Sign out
