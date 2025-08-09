@@ -1,6 +1,6 @@
 /**
  * Client-only MSW enabler for demo mode
- * SOLO se ejecuta en browser, NUNCA en SSR
+ * DISABLED: Using real API endpoints instead
  */
 
 'use client'
@@ -25,46 +25,7 @@ export async function enableDemoMocks() {
     return
   }
 
-  // Guard: don't start multiple times
-  if (window.__msw_started) {
-    console.log('🔧 enableDemoMocks: MSW already started, skipping')
-    return
-  }
-
-  try {
-    console.log('🔧 enableDemoMocks: starting MSW for demo...')
-    
-    // Dynamic import to avoid SSR issues
-    const mod = await import('../mocks/browser')
-    
-    if (mod.worker) {
-      // Start MSW with detailed logging
-      await mod.worker.start({ 
-        onUnhandledRequest(req, print) {
-          // Only warn about unhandled requests that aren't static assets
-          if (req.url.includes('/api/') || req.url.includes('/demo-fixtures/')) {
-            print.warning()
-          }
-        },
-        serviceWorker: {
-          url: '/mockServiceWorker.js',
-        },
-        waitUntilReady: true
-      })
-      
-      // Extra wait to ensure MSW is fully operational
-      await new Promise(resolve => setTimeout(resolve, 200))
-      
-      window.__msw_started = true
-      console.log('✅ Demo MSW started successfully and ready to intercept')
-      
-      // Test that MSW is working
-      const testHandlers = await mod.worker.listHandlers()
-      console.log(`🔧 MSW handlers loaded: ${testHandlers.length}`)
-    } else {
-      console.warn('⚠️ MSW worker not available (probably SSR)')
-    }
-  } catch (error) {
-    console.error('❌ Failed to enable demo mocks:', error)
-  }
+  // MSW DISABLED - using real demo API endpoints instead
+  console.log('🔧 enableDemoMocks: MSW disabled, using real demo endpoints')
+  window.__msw_started = true
 }

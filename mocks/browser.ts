@@ -1,15 +1,12 @@
 /**
  * MSW Browser setup para el Demo de Humano SISU
- * Se inicializa solo en rutas /app/demo* - SOLO EN BROWSER
+ * DISABLED: Using real API endpoints instead of MSW
  */
-
-import { setupWorker } from 'msw/browser'
-import { handlers } from './handlers'
 
 const isBrowser = typeof window !== 'undefined'
 
-// NO ejecutes setupWorker en SSR
-export const worker = isBrowser ? setupWorker(...handlers) : null
+// MSW DISABLED - using real demo API endpoints instead
+export const worker = null
 
 // Helper to check if we're in demo mode
 export const isInDemo = () => {
@@ -17,36 +14,11 @@ export const isInDemo = () => {
   return window.location.pathname.startsWith('/app/demo')
 }
 
-// Start MSW only in demo routes - DEPRECATED: usar enableDemoMocks en su lugar
+// MSW functions disabled
 export const startMSW = async () => {
-  console.warn('startMSW is deprecated, use enableDemoMocks instead')
-  if (!isBrowser || !worker) {
-    console.log('🔧 Not in browser or worker not available, skipping MSW setup')
-    return
-  }
-
-  if (!isInDemo()) {
-    console.log('🔧 Not in demo mode, skipping MSW setup')
-    return
-  }
-
-  try {
-    await worker.start({
-      onUnhandledRequest: 'bypass',
-      serviceWorker: {
-        url: '/mockServiceWorker.js',
-      },
-    })
-    console.log('✅ MSW started successfully for demo')
-  } catch (error) {
-    console.error('❌ Failed to start MSW for demo:', error)
-  }
+  console.log('🔧 MSW disabled - using real demo API endpoints')
 }
 
-// Stop MSW (if needed)
 export const stopMSW = () => {
-  if (worker) {
-    worker.stop()
-    console.log('🛑 MSW stopped')
-  }
+  console.log('🔧 MSW disabled - using real demo API endpoints')
 }
