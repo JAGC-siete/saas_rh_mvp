@@ -425,7 +425,7 @@ export default function ActivarPage() {
                         <span className="text-2xl font-bold text-white">0123-4567-8901</span>
                       </div>
                       <p className="text-brand-300 text-sm mt-2">
-                        Monto: L{calculateTotal().toLocaleString()} • Concepto: "Activación SISU - {formData.empresa}"
+                        Monto: L{calculateTotal().toLocaleString()} • Concepto: &ldquo;Activación SISU - {formData.empresa}&rdquo;
                       </p>
                     </CardContent>
                   </Card>

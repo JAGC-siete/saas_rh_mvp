@@ -296,7 +296,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       let checkInStatus = 'normal'
       let checkInMessage = ''
       let requiresJustification = false
-      let requiresAuthorization = false
       
       if (earlyMinutes >= 120 && earlyMinutes <= 300) {
         // ⏳ Entrada temprana (⭐): Desde 2 horas antes hasta 5 minutos antes (120-300 min)
@@ -312,15 +311,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         checkInMessage = 'Entrada tardía ⏰, por favor justifica tu demora'
         requiresJustification = true
       } else if (lateMinutes >= 21 && lateMinutes <= 240) {
-        // 🚫 Muy tarde (requiere autorización): 21 minutos hasta 4 horas tarde
+        // ⚠️ Muy tarde (se registra pero requiere justificación posterior): 21 minutos hasta 4 horas tarde
         checkInStatus = 'very_late'
-        checkInMessage = 'Estás fuera de tu horario. Tu registro requiere autorización especial. Pasa a gerencia para aclarar el asunto'
-        requiresAuthorization = true
+        checkInMessage = 'Llegada muy tardía registrada. Debes justificar con gerencia tu demora.'
+        requiresJustification = false // No bloquear, solo registrar con status especial
       } else {
-        // Caso extremo: más de 4 horas tarde
+        // Caso extremo: más de 4 horas tarde (se registra pero requiere justificación)
         checkInStatus = 'extreme_late'
-        checkInMessage = 'Registro fuera del horario laboral. Contacta a RRHH inmediatamente.'
-        requiresAuthorization = true
+        checkInMessage = 'Registro fuera del horario laboral. Contacta a gerencia para justificar.'
+        requiresJustification = false // No bloquear, solo registrar con status especial
       }
       
       // Validar justificación si es requerida
@@ -328,19 +327,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         console.log('⚠️ Llegada tarde sin justificación')
         return res.status(422).json({
           requireJustification: true,
-          message: checkInMessage,
-          lateMinutes,
-          expectedTime: startTime,
-          actualTime: hondurasTime.toLocaleTimeString(),
-          status: checkInStatus
-        })
-      }
-      
-      // Validar autorización si es requerida
-      if (requiresAuthorization) {
-        console.log('🚫 Llegada muy tarde - requiere autorización')
-        return res.status(403).json({
-          requireAuthorization: true,
           message: checkInMessage,
           lateMinutes,
           expectedTime: startTime,

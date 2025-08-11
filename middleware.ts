@@ -13,6 +13,7 @@ const PUBLIC_ROUTES = new Set([
   '/features',         // Página de características - PÚBLICO
   '/about',            // Página acerca de - PÚBLICO
   '/app/login',        // Login de la aplicación
+  '/app/demo/pin',     // PIN de demo - PÚBLICO
   '/app/attendance/register', // Registro de asistencia - PÚBLICO
   '/registrodeasistencia',
   '/attendance/public',
@@ -22,6 +23,7 @@ const PUBLIC_ROUTES = new Set([
   '/api/attendance/first-time-check',
   '/api/attendance/update-schedule',
   '/api/activar',      // API para formulario de activación - PÚBLICO
+  '/api/demo/verify-pin', // API para verificar PIN demo - PÚBLICO
   '/api/health'
 ])
 
@@ -106,6 +108,52 @@ export async function middleware(request: NextRequest) {
     const duration = Date.now() - startTime
     logger.api(request.method, pathname, 200, duration, { type: 'public' })
     
+    return response
+  }
+
+  // Handle demo routes with PIN gate
+  if (pathname.startsWith('/app/demo')) {
+    logger.debug('Demo route accessed', { path: pathname })
+    
+    // Allow PIN page (it's already in PUBLIC_ROUTES but let's be explicit)
+    if (pathname === '/app/demo/pin') {
+      const response = NextResponse.next()
+      const duration = Date.now() - startTime
+      logger.api(request.method, pathname, 200, duration, { type: 'demo_pin' })
+      return response
+    }
+    
+    // Check for demo_ok cookie
+    const demoCookie = request.cookies.get('demo_ok')
+    if (!demoCookie || demoCookie.value !== '1') {
+      logger.debug('Demo access denied, redirecting to PIN', { path: pathname })
+      const pinUrl = new URL('/app/demo/pin', request.url)
+      pinUrl.searchParams.set('next', pathname)
+      return NextResponse.redirect(pinUrl)
+    }
+    
+    // Demo access granted, add X-Robots-Tag header
+    const response = NextResponse.next()
+    response.headers.set('X-Robots-Tag', 'noindex, nofollow')
+    
+    const duration = Date.now() - startTime
+    logger.api(request.method, pathname, 200, duration, { type: 'demo_protected' })
+    return response
+  }
+
+  // Handle demo API routes that require demo_ok cookie
+  if (pathname.startsWith('/api/demo/') && pathname !== '/api/demo/verify-pin') {
+    logger.debug('Demo API route accessed', { path: pathname })
+    
+    const demoCookie = request.cookies.get('demo_ok')
+    if (!demoCookie || demoCookie.value !== '1') {
+      logger.debug('Demo API access denied', { path: pathname })
+      return NextResponse.json({ error: 'Demo access required' }, { status: 401 })
+    }
+    
+    const response = NextResponse.next()
+    const duration = Date.now() - startTime
+    logger.api(request.method, pathname, 200, duration, { type: 'demo_api' })
     return response
   }
 
