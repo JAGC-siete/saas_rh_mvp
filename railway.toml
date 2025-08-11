@@ -12,3 +12,7 @@ startCommand = "node server.js"
 healthcheckPath = "/"
 healthcheckTimeout = 300
 restartPolicyType = "on_failure"
+
+# Environment variables for Railway
+[variables]
+TZ = "America/Tegucigalpa"

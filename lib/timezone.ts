@@ -112,3 +112,160 @@ export function getCurrentDayOfWeek(): string {
   const dayName = hondurasTime.toLocaleString('en-US', { weekday: 'long' }).toLowerCase();
   return dayName;
 }
+
+// =====================================================
+// NUEVAS FUNCIONES PARA SISTEMA DE ASISTENCIA
+// =====================================================
+
+/**
+ * Convert UTC time to Honduras time (UTC-6, sin DST)
+ */
+export function toHN(utcDate: Date): { time: string; date: string; dow: number; isWeekend: boolean } {
+  const hondurasTime = new Date(utcDate.toLocaleString("en-US", { timeZone: HONDURAS_TIMEZONE }));
+  
+  const time = hondurasTime.toTimeString().slice(0, 5); // HH:MM
+  const date = hondurasTime.toISOString().split('T')[0]; // YYYY-MM-DD
+  const dow = hondurasTime.getDay(); // 0=Sunday, 1=Monday, etc.
+  const isWeekend = dow === 0 || dow === 6;
+  
+  return { time, date, dow, isWeekend };
+}
+
+/**
+ * Check if time is inside hard window (check-in: 07:00-11:00, check-out: 16:30-21:00)
+ */
+export function assertInsideHardWindow(time: string, window: { open: string; close: string }): boolean {
+  const [timeHour, timeMin] = time.split(':').map(Number);
+  const [openHour, openMin] = window.open.split(':').map(Number);
+  const [closeHour, closeMin] = window.close.split(':').map(Number);
+  
+  const timeMinutes = timeHour * 60 + timeMin;
+  const openMinutes = openHour * 60 + openMin;
+  const closeMinutes = closeHour * 60 + closeMin;
+  
+  return timeMinutes >= openMinutes && timeMinutes <= closeMinutes;
+}
+
+/**
+ * Override Saturday schedule for half-day (08:00-12:00)
+ */
+export function overrideIfSaturdayHalfDay(expectedTime: string, schedule: any, nowLocal: any): string {
+  if (nowLocal.dow === 6) { // Saturday
+    return '08:00'; // Half-day start
+  }
+  return expectedTime;
+}
+
+/**
+ * Decide check-in rule based on business parameters
+ */
+export function decideCheckInRule(nowLocal: any, expectedIn: string, rules: { grace: number; late_to_inclusive: number; oor_from: number }) {
+  const [expectedHour, expectedMin] = expectedIn.split(':').map(Number);
+  const [currentHour, currentMin] = nowLocal.time.split(':').map(Number);
+  
+  const expectedMinutes = expectedHour * 60 + expectedMin;
+  const currentMinutes = currentHour * 60 + currentMin;
+  const diffMinutes = currentMinutes - expectedMinutes;
+  
+  let rule: 'early' | 'normal' | 'late' | 'oor';
+  let lateMinutes = 0;
+  let msgKey: string;
+  let needJust = false;
+  
+  if (diffMinutes < -rules.grace) {
+    rule = 'early';
+    msgKey = 'early';
+  } else if (diffMinutes <= rules.grace) {
+    rule = 'normal';
+    msgKey = 'on_time';
+  } else if (diffMinutes <= rules.late_to_inclusive) {
+    rule = 'late';
+    lateMinutes = diffMinutes;
+    msgKey = 'late';
+    needJust = true;
+  } else {
+    rule = 'oor';
+    lateMinutes = diffMinutes;
+    msgKey = 'oor';
+    needJust = true;
+  }
+  
+  return { rule, lateMinutes, msgKey, needJust };
+}
+
+/**
+ * Decide check-out rule based on business parameters
+ */
+export function decideCheckOutRule(nowLocal: any, expectedOut: string, rules: { early_out: string; on_time: number; overtime: number; oor_out: number }) {
+  const [expectedHour, expectedMin] = expectedOut.split(':').map(Number);
+  const [currentHour, currentMin] = nowLocal.time.split(':').map(Number);
+  
+  const expectedMinutes = expectedHour * 60 + expectedMin;
+  const currentMinutes = currentHour * 60 + currentMin;
+  const diffMinutes = currentMinutes - expectedMinutes;
+  
+  let rule: 'early_out' | 'normal_out' | 'overtime' | 'oor_out';
+  let overtimeMinutes = 0;
+  let msgKey: string;
+  let needJust = false;
+  
+  // Check if it's before early_out cutoff (13:00)
+  const [earlyHour, earlyMin] = rules.early_out.split(':').map(Number);
+  const earlyCutoff = earlyHour * 60 + earlyMin;
+  
+  if (currentMinutes < earlyCutoff) {
+    rule = 'early_out';
+    msgKey = 'early_out';
+    needJust = true;
+  } else if (diffMinutes >= 0 && diffMinutes <= rules.on_time) {
+    rule = 'normal_out';
+    msgKey = 'on_time';
+  } else if (diffMinutes > rules.on_time && diffMinutes <= rules.overtime) {
+    rule = 'overtime';
+    overtimeMinutes = diffMinutes;
+    msgKey = 'overtime';
+  } else {
+    rule = 'oor_out';
+    overtimeMinutes = diffMinutes;
+    msgKey = 'oor_out';
+    needJust = true;
+  }
+  
+  return { rule, overtimeMinutes, msgKey, needJust };
+}
+
+/**
+ * Map rule to database enum values
+ */
+export function mapRule(rule: string): string {
+  const ruleMap: Record<string, string> = {
+    'early': 'early',
+    'normal': 'on_time',
+    'late': 'late',
+    'oor': 'oor',
+    'early_out': 'early_out',
+    'normal_out': 'on_time',
+    'overtime': 'overtime',
+    'oor_out': 'oor_out'
+  };
+  return ruleMap[rule] || 'unknown';
+}
+
+/**
+ * Calculate distance between two coordinates in meters
+ */
+export function distanceMeters(coord1: [number, number], coord2: [number, number]): number {
+  const [lat1, lon1] = coord1;
+  const [lat2, lon2] = coord2;
+  
+  const R = 6371000; // Earth's radius in meters
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}

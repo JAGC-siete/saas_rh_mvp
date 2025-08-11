@@ -1,6 +1,12 @@
 # Use Node.js 20 Alpine for smaller size and better performance
 FROM node:20-alpine AS base
 
+# Set timezone to Honduras
+ENV TZ=America/Tegucigalpa
+RUN apk add --no-cache tzdata && \
+    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && \
+    echo $TZ > /etc/timezone
+
 # Install dependencies only when needed
 FROM base AS deps
 RUN apk add --no-cache libc6-compat
