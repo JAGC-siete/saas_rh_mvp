@@ -132,7 +132,7 @@ export function toHN(utcDate: Date): { time: string; date: string; dow: number; 
 }
 
 /**
- * Check if time is inside hard window (check-in: 07:00-11:00, check-out: 16:30-21:00)
+ * Check if time is inside hard window according to Call Center policy
  */
 export function assertInsideHardWindow(time: string, window: { open: string; close: string }): boolean {
   const [timeHour, timeMin] = time.split(':').map(Number);
@@ -144,6 +144,31 @@ export function assertInsideHardWindow(time: string, window: { open: string; clo
   const closeMinutes = closeHour * 60 + closeMin;
   
   return timeMinutes >= openMinutes && timeMinutes <= closeMinutes;
+}
+
+/**
+ * Get check-out window based on day of week (Call Center policy)
+ */
+export function getCheckOutWindow(nowLocal: any, schedule: any): { open: string; close: string } {
+  if (nowLocal.dow === 6) { // Saturday - half-day
+    return { open: "11:00", close: "13:00" }
+  }
+  // Monday-Friday: normal hours
+  return { open: "16:30", close: "21:00" }
+}
+
+/**
+ * Check if day is open for public registration (Call Center policy)
+ */
+export function isDayOpenForPublic(nowLocal: any): boolean {
+  if (nowLocal.dow === 0) return false; // Sunday closed
+  
+  if (nowLocal.dow === 6) { // Saturday
+    const currentHour = parseInt(nowLocal.time.split(':')[0]);
+    return currentHour >= 8 && currentHour <= 12; // Half-day only
+  }
+  
+  return true; // Monday-Friday open
 }
 
 /**
@@ -194,9 +219,9 @@ export function decideCheckInRule(nowLocal: any, expectedIn: string, rules: { gr
 }
 
 /**
- * Decide check-out rule based on business parameters
+ * Decide check-out rule based on Call Center policy
  */
-export function decideCheckOutRule(nowLocal: any, expectedOut: string, rules: { early_out: string; on_time: number; overtime: number; oor_out: number }) {
+export function decideCheckOutRule(nowLocal: any, expectedOut: string, rules: { early_from: string; on_time_to: number; overtime_to_minutes: number; oor_out_from_minutes: number }) {
   const [expectedHour, expectedMin] = expectedOut.split(':').map(Number);
   const [currentHour, currentMin] = nowLocal.time.split(':').map(Number);
   
@@ -209,22 +234,27 @@ export function decideCheckOutRule(nowLocal: any, expectedOut: string, rules: { 
   let msgKey: string;
   let needJust = false;
   
-  // Check if it's before early_out cutoff (13:00)
-  const [earlyHour, earlyMin] = rules.early_out.split(':').map(Number);
-  const earlyCutoff = earlyHour * 60 + earlyMin;
+  // Early out: desde 13:00 hasta 1 min antes de end_at (Call Center policy)
+  const [earlyHour, earlyMin] = rules.early_from.split(':').map(Number);
+  const earlyCutoff = earlyHour * 60 + earlyMin; // 13:00 = 780 minutos
   
-  if (currentMinutes < earlyCutoff) {
+  if (currentMinutes >= earlyCutoff && currentMinutes < expectedMinutes) {
     rule = 'early_out';
     msgKey = 'early_out';
     needJust = true;
-  } else if (diffMinutes >= 0 && diffMinutes <= rules.on_time) {
+  } else if (diffMinutes >= 0 && diffMinutes <= rules.on_time_to) {
+    // On-time: 0-5 min después de end_at
     rule = 'normal_out';
-    msgKey = 'on_time';
-  } else if (diffMinutes > rules.on_time && diffMinutes <= rules.overtime) {
+    msgKey = 'on_time_out';
+    needJust = false;
+  } else if (diffMinutes > rules.on_time_to && diffMinutes <= rules.overtime_to_minutes) {
+    // Overtime: +6 a +120 min
     rule = 'overtime';
     overtimeMinutes = diffMinutes;
-    msgKey = 'overtime';
+    msgKey = 'overtime_out';
+    needJust = true;
   } else {
+    // OOR: +121+ min
     rule = 'oor_out';
     overtimeMinutes = diffMinutes;
     msgKey = 'oor_out';
@@ -235,7 +265,7 @@ export function decideCheckOutRule(nowLocal: any, expectedOut: string, rules: { 
 }
 
 /**
- * Map rule to database enum values
+ * Map rule to database enum values (Call Center policy)
  */
 export function mapRule(rule: string): string {
   const ruleMap: Record<string, string> = {
@@ -244,7 +274,7 @@ export function mapRule(rule: string): string {
     'late': 'late',
     'oor': 'oor',
     'early_out': 'early_out',
-    'normal_out': 'on_time',
+    'normal_out': 'on_time_out',
     'overtime': 'overtime',
     'oor_out': 'oor_out'
   };

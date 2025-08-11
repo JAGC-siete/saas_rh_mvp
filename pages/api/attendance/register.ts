@@ -8,8 +8,11 @@ import {
   decideCheckInRule,
   decideCheckOutRule,
   mapRule,
-  distanceMeters
+  distanceMeters,
+  getCheckOutWindow,
+  isDayOpenForPublic
 } from '../../../lib/timezone'
+import { CALL_CENTER_CONFIG, CALL_CENTER_MESSAGES } from '../../../lib/call-center-config'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   
@@ -181,14 +184,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       expectedOut: adjustedExpectedOut 
     })
 
-    // PASO 8: Validar ventanas duras
+    // PASO 8: Validar ventanas duras según política Call Center
     const checkInWindow = { 
-      open: schedule.checkin_open || '07:00', 
-      close: schedule.checkin_close || '11:00' 
-    }
-    const checkOutWindow = { 
-      open: schedule.checkout_open || '16:30', 
-      close: schedule.checkout_close || '21:00' 
+      open: schedule.checkin_open || CALL_CENTER_CONFIG.windows.check_in_open, 
+      close: schedule.checkin_close || CALL_CENTER_CONFIG.windows.check_in_close 
     }
 
     // PASO 9: Buscar registro existente para hoy
@@ -204,24 +203,64 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: 'Error al verificar registro existente' })
     }
 
-    // PASO 10: Determinar acción (check-in o check-out)
+    // PASO 10: Determinar acción según política del Call Center
     let action: 'check_in' | 'check_out'
-    if (!existingRecord) {
-      action = 'check_in'
-    } else if (!existingRecord.check_out) {
+    
+    // REGLA 1: Si ya tiene check_in hoy y NO tiene check_out ⇒ check_out
+    if (existingRecord && !existingRecord.check_out) {
       action = 'check_out'
+      console.log('🎯 Regla 1: Ya tiene entrada, este evento es check-out')
+    } 
+    // REGLA 2: Si no tiene check_in hoy ⇒ determinar por contexto
+    else if (!existingRecord) {
+      const currentHour = nowLocal.time.split(':')[0]
+      const currentHourNum = parseInt(currentHour)
+      
+      // Validar que el día esté abierto para registro público
+      if (!isDayOpenForPublic(nowLocal)) {
+        return res.status(400).json({
+          error: CALL_CENTER_MESSAGES.closed_day,
+          currentTime: nowLocal.time,
+          dayOfWeek: nowLocal.dow
+        })
+      }
+      
+      // Determinar acción por hora según política Call Center
+      if (currentHourNum >= 6 && currentHourNum <= 11) {
+        action = 'check_in'  // 6:00-11:00 AM: Check-in
+      } else if (currentHourNum >= 13 && currentHourNum <= 21) {
+        action = 'check_out' // 1:00-9:00 PM: Check-out
+      } else if (currentHourNum < 6) {
+        action = 'check_in'  // Muy temprano: Check-in
+      } else if (currentHourNum > 21) {
+        action = 'check_out' // Muy tarde: Check-out
+      } else {
+        // 11:00 AM - 1:00 PM: Zona crítica
+        if (currentHourNum === 11) {
+          action = 'check_in'  // Última hora de check-in
+        } else {
+          action = 'check_out' // Primera hora de check-out
+        }
+      }
     } else {
       return res.status(400).json({ error: 'Ya tiene entrada y salida registradas para hoy' })
     }
 
-    console.log('🎯 Acción detectada:', action)
+    console.log('🎯 Acción detectada:', {
+      action,
+      currentTime: nowLocal.time,
+      hasExistingRecord: !!existingRecord,
+      hasCheckOut: !!existingRecord?.check_out
+    })
 
     // PASO 11: Procesar check-in o check-out
     if (action === 'check_in') {
       // Validar ventana de check-in
       if (!assertInsideHardWindow(nowLocal.time, checkInWindow)) {
-        return res.status(400).json({ 
-          error: `Check-in solo permitido entre ${checkInWindow.open} y ${checkInWindow.close}` 
+        return res.status(400).json({
+          error: `Check-in solo permitido entre ${checkInWindow.open} y ${checkInWindow.close}`,
+          currentTime: nowLocal.time,
+          suggestion: 'Intente después de las 6:00 AM o antes de las 11:00 AM'
         })
       }
 
@@ -230,6 +269,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         grace: schedule.grace_minutes || 5,
         late_to_inclusive: schedule.late_to_inclusive || 20,
         oor_from: schedule.oor_from_minutes || 21
+      }
+
+      // Validación adicional: si es muy tarde para check-in, sugerir check-out
+      const currentHour = nowLocal.time.split(':')[0]
+      const currentHourNum = parseInt(currentHour)
+      
+      if (currentHourNum > 11 && currentHourNum < 16) {
+        console.log('⚠️ Intento de check-in fuera de horario normal, sugiriendo check-out')
+        return res.status(400).json({
+          error: 'Horario de check-in cerrado',
+          currentTime: nowLocal.time,
+          suggestion: 'A las 16:15 es hora de check-out, no de check-in. Use su DNI para marcar salida.',
+          action: 'check_out'
+        })
       }
 
       const { rule, lateMinutes, msgKey, needJust } = decideCheckInRule(nowLocal, adjustedExpectedIn, rules)
@@ -300,23 +353,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         requireJustification: needJust,
         messageKey: msgKey,
         message: getMessageByKey(msgKey),
+        action: 'check_in',
+        currentTime: nowLocal.time,
         data: record
       })
 
     } else { // check_out
+      // Obtener ventana de check-out según día (Call Center policy)
+      const dynamicCheckOutWindow = getCheckOutWindow(nowLocal, schedule)
+      
       // Validar ventana de check-out
-      if (!assertInsideHardWindow(nowLocal.time, checkOutWindow)) {
+      if (!assertInsideHardWindow(nowLocal.time, dynamicCheckOutWindow)) {
         return res.status(400).json({ 
-          error: `Check-out solo permitido entre ${checkOutWindow.open} y ${checkOutWindow.close}` 
+          error: CALL_CENTER_MESSAGES.closed_window,
+          currentTime: nowLocal.time,
+          window: dynamicCheckOutWindow,
+          suggestion: `Check-out solo permitido entre ${dynamicCheckOutWindow.open} y ${dynamicCheckOutWindow.close}`
         })
       }
 
-      // Aplicar reglas de check-out
+      // Aplicar reglas de check-out según política Call Center
       const rules = {
-        early_out: '13:00',
-        on_time: 5,
-        overtime: 120,
-        oor_out: 120
+        early_from: CALL_CENTER_CONFIG.exit_rules.early_from,        // "13:00"
+        on_time_to: CALL_CENTER_CONFIG.exit_rules.on_time_to,       // 5
+        overtime_to_minutes: CALL_CENTER_CONFIG.exit_rules.overtime_to_minutes, // 120
+        oor_out_from_minutes: CALL_CENTER_CONFIG.exit_rules.oor_out_from_minutes // 121
       }
 
       const { rule, msgKey, needJust } = decideCheckOutRule(nowLocal, adjustedExpectedOut, rules)
@@ -378,6 +439,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         requireJustification: needJust,
         messageKey: msgKey,
         message: getMessageByKey(msgKey),
+        action: 'check_out',
+        currentTime: nowLocal.time,
         data: record
       })
     }
@@ -399,18 +462,19 @@ function calculateEarlyDepartureMinutes(currentTime: string, expectedTime: strin
   return Math.max(0, expectedMinutes - currentMinutes)
 }
 
-// Función auxiliar para obtener mensajes por clave
+// Función auxiliar para obtener mensajes estandarizados del Call Center
 function getMessageByKey(messageKey: string): string {
-  const messages: Record<string, string> = {
-    'early': '✅ Llegada temprana registrada',
-    'on_time': '✅ Llegada a tiempo registrada',
-    'late': '⚠️ Llegada tardía registrada',
-    'oor': '🚨 Llegada fuera de horario registrada',
-    'early_out': '⚠️ Salida temprana registrada',
-    'overtime': '✅ Horas extra registradas',
-    'oor_out': '🚨 Salida fuera de horario registrada'
+  const messageMap: Record<string, string> = {
+    'early': CALL_CENTER_MESSAGES.ejemplar_in,
+    'on_time': CALL_CENTER_MESSAGES.on_time_in,
+    'late': CALL_CENTER_MESSAGES.late_in,
+    'oor': CALL_CENTER_MESSAGES.oor_in,
+    'early_out': CALL_CENTER_MESSAGES.early_out,
+    'on_time_out': CALL_CENTER_MESSAGES.on_time_out,
+    'overtime_out': CALL_CENTER_MESSAGES.overtime_out,
+    'oor_out': CALL_CENTER_MESSAGES.oor_out
   }
-  return messages[messageKey] || 'Registro completado'
+  return messageMap[messageKey] || 'Registro completado'
 }
 
 // Función para aplicar puntos y rachas
@@ -463,7 +527,7 @@ async function applyPointsAndStreaks(employeeId: string, rule: string, nowLocal:
       if (updateError) {
         logger.error('Error updating employee score', updateError)
       }
-    } else {
+      } else {
       const { error: insertError } = await supabase
         .from('employee_scores')
         .insert({
