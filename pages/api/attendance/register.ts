@@ -12,7 +12,7 @@ import {
   getCheckOutWindow,
   isDayOpenForPublic
 } from '../../../lib/timezone'
-import { CALL_CENTER_CONFIG, CALL_CENTER_MESSAGES } from '../../../lib/call-center-config'
+import { CALL_CENTER_CONFIG, CALL_CENTER_MESSAGES, generateContextualMessage } from '../../../lib/call-center-config'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   
@@ -289,10 +289,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // Validar justificación si es necesaria
       if (needJust && !justification) {
+        const contextualMessage = getContextualMessage('check_in', msgKey, nowLocal.time, nowLocal.dow);
+        
         return res.status(422).json({
           requireJustification: true,
           messageKey: msgKey,
-          message: 'Se requiere justificación para este registro'
+          message: contextualMessage.mainMessage,
+          contextualMessage: contextualMessage.contextualMessage,
+          helpfulTip: contextualMessage.helpfulTip,
+          emoji: contextualMessage.emoji,
+          action: 'check_in',
+          currentTime: nowLocal.time
         })
       }
 
@@ -349,10 +356,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Aplicar puntos y rachas
       await applyPointsAndStreaks(employee.id, rule, nowLocal, supabase)
 
+      const contextualMessage = getContextualMessage('check_in', msgKey, nowLocal.time, nowLocal.dow);
+      
       return res.status(200).json({
         requireJustification: needJust,
         messageKey: msgKey,
-        message: getMessageByKey(msgKey),
+        message: contextualMessage.mainMessage,
+        contextualMessage: contextualMessage.contextualMessage,
+        helpfulTip: contextualMessage.helpfulTip,
+        emoji: contextualMessage.emoji,
         action: 'check_in',
         currentTime: nowLocal.time,
         data: record
@@ -384,10 +396,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // Validar justificación si es necesaria
       if (needJust && !justification) {
+        const contextualMessage = getContextualMessage('check_out', msgKey, nowLocal.time, nowLocal.dow);
+        
         return res.status(422).json({
           requireJustification: true,
           messageKey: msgKey,
-          message: 'Se requiere justificación para este registro'
+          message: contextualMessage.mainMessage,
+          contextualMessage: contextualMessage.contextualMessage,
+          helpfulTip: contextualMessage.helpfulTip,
+          emoji: contextualMessage.emoji,
+          action: 'check_out',
+          currentTime: nowLocal.time
         })
       }
 
@@ -435,10 +454,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // No fallar si no se puede insertar el evento
       }
 
+      const contextualMessage = getContextualMessage('check_out', msgKey, nowLocal.time, nowLocal.dow);
+      
       return res.status(200).json({
         requireJustification: needJust,
         messageKey: msgKey,
-        message: getMessageByKey(msgKey),
+        message: contextualMessage.mainMessage,
+        contextualMessage: contextualMessage.contextualMessage,
+        helpfulTip: contextualMessage.helpfulTip,
+        emoji: contextualMessage.emoji,
         action: 'check_out',
         currentTime: nowLocal.time,
         data: record
@@ -462,19 +486,33 @@ function calculateEarlyDepartureMinutes(currentTime: string, expectedTime: strin
   return Math.max(0, expectedMinutes - currentMinutes)
 }
 
-// Función auxiliar para obtener mensajes estandarizados del Call Center
-function getMessageByKey(messageKey: string): string {
-  const messageMap: Record<string, string> = {
-    'early': CALL_CENTER_MESSAGES.ejemplar_in,
-    'on_time': CALL_CENTER_MESSAGES.on_time_in,
-    'late': CALL_CENTER_MESSAGES.late_in,
-    'oor': CALL_CENTER_MESSAGES.oor_in,
-    'early_out': CALL_CENTER_MESSAGES.early_out,
-    'on_time_out': CALL_CENTER_MESSAGES.on_time_out,
-    'overtime_out': CALL_CENTER_MESSAGES.overtime_out,
-    'oor_out': CALL_CENTER_MESSAGES.oor_out
-  }
-  return messageMap[messageKey] || 'Registro completado'
+// Función auxiliar para obtener mensajes contextuales personalizados
+function getContextualMessage(
+  action: 'check_in' | 'check_out',
+  messageKey: string,
+  currentTime: string,
+  dayOfWeek: number
+): {
+  mainMessage: string;
+  contextualMessage: string;
+  helpfulTip: string;
+  emoji: string;
+} {
+  // Mapear messageKey a rule para la función contextual
+  const ruleMap: Record<string, string> = {
+    'early': 'early',
+    'on_time': 'on_time',
+    'late': 'late',
+    'oor': 'oor',
+    'early_out': 'early_out',
+    'on_time_out': 'on_time_out',
+    'overtime_out': 'overtime',
+    'oor_out': 'oor_out'
+  };
+  
+  const rule = ruleMap[messageKey] || messageKey;
+  
+  return generateContextualMessage(action, rule, currentTime, dayOfWeek);
 }
 
 // Función para aplicar puntos y rachas
