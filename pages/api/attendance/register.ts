@@ -203,64 +203,76 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: 'Error al verificar registro existente' })
     }
 
-    // PASO 10: Determinar acción según política del Call Center
+    // PASO 10: LÓGICA ROBUSTA de decisión de acción (Call Center v1)
     let action: 'check_in' | 'check_out'
+    let decisionReason: string
     
-    // REGLA 1: Si ya tiene check_in hoy y NO tiene check_out ⇒ check_out
-    if (existingRecord && !existingRecord.check_out) {
-      action = 'check_out'
-      console.log('🎯 Regla 1: Ya tiene entrada, este evento es check-out')
-    } 
-    // REGLA 2: Si no tiene check_in hoy ⇒ determinar por contexto
-    else if (!existingRecord) {
-      const currentHour = nowLocal.time.split(':')[0]
-      const currentHourNum = parseInt(currentHour)
-      
-      // Validar que el día esté abierto para registro público
-      if (!isDayOpenForPublic(nowLocal)) {
-        return res.status(400).json({
-          error: CALL_CENTER_MESSAGES.closed_day,
-          currentTime: nowLocal.time,
-          dayOfWeek: nowLocal.dow
+    // REGLA PRIMARIA: Estado del día (robusto para call center)
+    if (existingRecord) {
+      if (!existingRecord.check_out) {
+        // Ya tiene check_in pero NO check_out ⇒ este evento es check_out
+        action = 'check_out'
+        decisionReason = 'REGLA_PRIMARIA: Ya tiene entrada, próximo evento es salida'
+        console.log('🎯 REGLA PRIMARIA: Ya tiene entrada, este evento es check-out')
+      } else {
+        // Ya tiene entrada Y salida registradas
+        return res.status(400).json({ 
+          error: 'Ya tiene entrada y salida registradas para hoy',
+          suggestion: 'No se permiten registros adicionales en el mismo día'
         })
       }
-      
-      // Determinar acción por hora según política Call Center
-      if (currentHourNum >= 6 && currentHourNum <= 11) {
-        action = 'check_in'  // 6:00-11:00 AM: Check-in
-      } else if (currentHourNum >= 13 && currentHourNum <= 21) {
-        action = 'check_out' // 1:00-9:00 PM: Check-out
-      } else if (currentHourNum < 6) {
-        action = 'check_in'  // Muy temprano: Check-in
-      } else if (currentHourNum > 21) {
-        action = 'check_out' // Muy tarde: Check-out
-      } else {
-        // 11:00 AM - 1:00 PM: Zona crítica
-        if (currentHourNum === 11) {
-          action = 'check_in'  // Última hora de check-in
-        } else {
-          action = 'check_out' // Primera hora de check-out
-        }
-      }
     } else {
-      return res.status(400).json({ error: 'Ya tiene entrada y salida registradas para hoy' })
+      // No hay registro para hoy ⇒ determinar por contexto
+      action = 'check_in'
+      decisionReason = 'REGLA_SECUNDARIA: Sin registro previo, evento es entrada'
+      console.log('🎯 REGLA SECUNDARIA: Sin registro previo, evento es entrada')
+    }
+    
+    // Validar que el día esté abierto para registro público
+    if (!isDayOpenForPublic(nowLocal)) {
+      return res.status(400).json({
+        error: CALL_CENTER_MESSAGES.closed_day,
+        currentTime: nowLocal.time,
+        dayOfWeek: nowLocal.dow,
+        decisionReason: decisionReason
+      })
     }
 
-    console.log('🎯 Acción detectada:', {
+              console.log('🎯 Acción detectada:', {
       action,
       currentTime: nowLocal.time,
       hasExistingRecord: !!existingRecord,
-      hasCheckOut: !!existingRecord?.check_out
+      hasCheckOut: !!existingRecord?.check_out,
+      existingRecordId: existingRecord?.id || 'N/A',
+      employeeId: employee.id,
+      decisionReason: decisionReason
     })
+    
+    // VALIDACIÓN ANTI-DUPLICADOS ROBUSTA
+    if (action === 'check_in' && existingRecord && existingRecord.check_in) {
+      return res.status(400).json({
+        error: 'Registro duplicado detectado',
+        message: 'Ya tiene un check-in registrado para hoy',
+        suggestion: 'Si necesita corregir su registro, contacte a RR.HH',
+        existingRecord: {
+          checkInTime: existingRecord.check_in,
+          status: existingRecord.status
+        }
+      })
+    }
 
-    // PASO 11: Procesar check-in o check-out
+    // PASO 11: Procesar check-in o check-out con validación robusta
     if (action === 'check_in') {
-      // Validar ventana de check-in
+      // VALIDACIÓN DE VENTANA DE CHECK-IN (Call Center v1)
       if (!assertInsideHardWindow(nowLocal.time, checkInWindow)) {
         return res.status(400).json({
-          error: `Check-in solo permitido entre ${checkInWindow.open} y ${checkInWindow.close}`,
+          error: CALL_CENTER_MESSAGES.closed_window,
+          message: `Check-in solo permitido entre ${checkInWindow.open} y ${checkInWindow.close}`,
           currentTime: nowLocal.time,
-          suggestion: 'Intente después de las 6:00 AM o antes de las 11:00 AM'
+          window: checkInWindow,
+          suggestion: 'Intente dentro del horario de check-in autorizado',
+          action: 'check_in',
+          decisionReason: decisionReason
         })
       }
 
@@ -291,6 +303,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (needJust && !justification) {
         const contextualMessage = getContextualMessage('check_in', msgKey, nowLocal.time, nowLocal.dow);
         
+        console.log('⚠️ Justificación requerida para check-in:', {
+          employeeId: employee.id,
+          rule: rule,
+          messageKey: msgKey,
+          currentTime: nowLocal.time
+        });
+        
         return res.status(422).json({
           requireJustification: true,
           messageKey: msgKey,
@@ -299,8 +318,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           helpfulTip: contextualMessage.helpfulTip,
           emoji: contextualMessage.emoji,
           action: 'check_in',
-          currentTime: nowLocal.time
-        })
+          currentTime: nowLocal.time,
+          rule: rule,
+          suggestion: 'Envíe la justificación junto con su solicitud'
+        });
       }
 
       // UPSERT attendance_records (idempotente por local_date)
@@ -371,16 +392,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
 
     } else { // check_out
-      // Obtener ventana de check-out según día (Call Center policy)
+      // VALIDACIÓN DE VENTANA DE CHECK-OUT (Call Center v1)
       const dynamicCheckOutWindow = getCheckOutWindow(nowLocal, schedule)
       
       // Validar ventana de check-out
       if (!assertInsideHardWindow(nowLocal.time, dynamicCheckOutWindow)) {
         return res.status(400).json({ 
           error: CALL_CENTER_MESSAGES.closed_window,
+          message: `Check-out solo permitido entre ${dynamicCheckOutWindow.open} y ${dynamicCheckOutWindow.close}`,
           currentTime: nowLocal.time,
           window: dynamicCheckOutWindow,
-          suggestion: `Check-out solo permitido entre ${dynamicCheckOutWindow.open} y ${dynamicCheckOutWindow.close}`
+          suggestion: 'Intente dentro del horario de check-out autorizado',
+          action: 'check_out',
+          decisionReason: decisionReason
         })
       }
 
@@ -398,6 +422,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (needJust && !justification) {
         const contextualMessage = getContextualMessage('check_out', msgKey, nowLocal.time, nowLocal.dow);
         
+        console.log('⚠️ Justificación requerida para check-out:', {
+          employeeId: employee.id,
+          rule: rule,
+          messageKey: msgKey,
+          currentTime: nowLocal.time
+        });
+        
         return res.status(422).json({
           requireJustification: true,
           messageKey: msgKey,
@@ -406,28 +437,87 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           helpfulTip: contextualMessage.helpfulTip,
           emoji: contextualMessage.emoji,
           action: 'check_out',
-          currentTime: nowLocal.time
-        })
+          currentTime: nowLocal.time,
+          rule: rule,
+          suggestion: 'Envíe la justificación junto con su solicitud'
+        });
       }
 
-      // Actualizar registro existente
-      const { data: record, error: updateError } = await supabase
-        .from('attendance_records')
-        .update({
-          check_out: nowUtc,
-          expected_check_out: adjustedExpectedOut,
-          rule_applied_out: mapRule(rule),
-          early_departure_minutes: rule === 'early_out' ? 
-            calculateEarlyDepartureMinutes(nowLocal.time, adjustedExpectedOut) : 0,
-          updated_at: nowUtc
-        })
-        .eq('id', existingRecord.id)
-        .select()
-        .single()
+      let record: any;
 
-      if (updateError) {
-        logger.error('Error updating attendance record', updateError)
-        return res.status(500).json({ error: 'Error al registrar salida' })
+      // CASO 1: Orphan checkout (sin check-in previo) - Call Center v1
+      if (!existingRecord) {
+        console.log('⚠️ ORPHAN CHECKOUT detectado: Empleado sin entrada previa');
+        
+        // Log para auditoría y notificación a RR.HH
+        logger.warn('Orphan checkout detected', {
+          employeeId: employee.id,
+          employeeName: employee.name,
+          currentTime: nowLocal.time,
+          rule: rule,
+          justification: !!justification
+        });
+        
+        const { data: newRecord, error: insertError } = await supabase
+          .from('attendance_records')
+          .insert({
+            employee_id: employee.id,
+            local_date: nowLocal.date,
+            check_in: null, // Sin check-in previo
+            check_out: nowUtc,
+            expected_check_in: adjustedExpectedIn,
+            expected_check_out: adjustedExpectedOut,
+            status: 'orphan_checkout', // Estado especial para auditoría
+            rule_applied_out: mapRule(rule),
+            early_departure_minutes: rule === 'early_out' ? 
+              calculateEarlyDepartureMinutes(nowLocal.time, adjustedExpectedOut) : 0,
+            tz: 'America/Tegucigalpa',
+            tz_offset_minutes: -360,
+            justification: justification || null,
+            justification_category: justification_category || null
+          })
+          .select()
+          .single();
+
+        if (insertError) {
+          logger.error('Error creating orphan checkout record', insertError);
+          return res.status(500).json({ 
+            error: 'Error al crear registro de salida',
+            suggestion: 'Contacte a RR.HH para asistencia'
+          });
+        }
+        
+        record = newRecord;
+        console.log('✅ Orphan checkout registrado exitosamente');
+        
+      } else {
+        // CASO 2: Actualizar registro existente
+        const { data: updatedRecord, error: updateError } = await supabase
+          .from('attendance_records')
+          .update({
+            check_out: nowUtc,
+            expected_check_out: adjustedExpectedOut,
+            rule_applied_out: mapRule(rule),
+            early_departure_minutes: rule === 'early_out' ? 
+              calculateEarlyDepartureMinutes(nowLocal.time, adjustedExpectedOut) : 0,
+            updated_at: nowUtc
+          })
+          .eq('id', existingRecord.id)
+          .select()
+          .single();
+
+        if (updateError) {
+          logger.error('Error updating attendance record', updateError);
+          return res.status(500).json({ error: 'Error al registrar salida' });
+        }
+        
+        record = updatedRecord;
+      }
+
+      // Validar que el record existe antes de continuar
+      if (!record || !record.id) {
+        logger.error('Record is null or missing ID after check-out processing');
+        return res.status(500).json({ error: 'Error interno: Record no válido' });
       }
 
       // Insertar evento de check-out
@@ -447,14 +537,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           lon: lon || null,
           geofence_ok,
           ref_record_id: record.id
-        })
+        });
 
       if (eventError) {
-        logger.error('Error inserting attendance event', eventError)
+        logger.error('Error inserting attendance event', eventError);
         // No fallar si no se puede insertar el evento
       }
 
+      // Generar mensaje contextual para check-out
       const contextualMessage = getContextualMessage('check_out', msgKey, nowLocal.time, nowLocal.dow);
+      
+      // Log exitoso del check-out
+      console.log('✅ Check-out completado exitosamente:', {
+        employeeId: employee.id,
+        employeeName: employee.name,
+        rule: rule,
+        messageKey: msgKey,
+        recordId: record.id,
+        timestamp: nowLocal.time
+      });
       
       return res.status(200).json({
         requireJustification: needJust,
@@ -465,8 +566,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         emoji: contextualMessage.emoji,
         action: 'check_out',
         currentTime: nowLocal.time,
-        data: record
-      })
+        data: record,
+        success: true
+      });
     }
 
   } catch (error) {
