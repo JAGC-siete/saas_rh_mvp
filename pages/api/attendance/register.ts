@@ -263,27 +263,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // PASO 11: Procesar check-in o check-out con validación robusta
     if (action === 'check_in') {
-      // VALIDACIÓN DE VENTANA DE CHECK-IN (Call Center v1)
-      if (!assertInsideHardWindow(nowLocal.time, checkInWindow)) {
-        return res.status(400).json({
-          error: CALL_CENTER_MESSAGES.closed_window,
-          message: `Check-in solo permitido entre ${checkInWindow.open} y ${checkInWindow.close}`,
-          currentTime: nowLocal.time,
-          window: checkInWindow,
-          suggestion: 'Intente dentro del horario de check-in autorizado',
-          action: 'check_in',
-          decisionReason: decisionReason
-        })
-      }
-
-      // Aplicar reglas de check-in
-      const rules = {
-        grace: schedule.grace_minutes || 5,
-        late_to_inclusive: schedule.late_to_inclusive || 20,
-        oor_from: schedule.oor_from_minutes || 21
-      }
-
-      // Validación simplificada: solo permitir check-in en horario normal
+      // VALIDACIÓN SIMPLIFICADA: Solo bloquear check-in muy tarde
       const currentHour = nowLocal.time.split(':')[0]
       const currentHourNum = parseInt(currentHour)
       
@@ -295,6 +275,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           suggestion: 'Es hora de check-out, no de check-in. Use su DNI para marcar salida.',
           action: 'check_out'
         })
+      }
+
+      // Aplicar reglas de check-in
+      const rules = {
+        grace: schedule.grace_minutes || 5,
+        late_to_inclusive: schedule.late_to_inclusive || 20,
+        oor_from: schedule.oor_from_minutes || 21
       }
 
       const { rule, lateMinutes, msgKey, needJust } = decideCheckInRule(nowLocal, adjustedExpectedIn, rules)
