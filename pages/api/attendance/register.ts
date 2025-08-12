@@ -283,16 +283,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         oor_from: schedule.oor_from_minutes || 21
       }
 
-      // Validación adicional: si es muy tarde para check-in, sugerir check-out
+      // Validación simplificada: solo permitir check-in en horario normal
       const currentHour = nowLocal.time.split(':')[0]
       const currentHourNum = parseInt(currentHour)
       
-      if (currentHourNum > 11 && currentHourNum < 16) {
-        console.log('⚠️ Intento de check-in fuera de horario normal, sugiriendo check-out')
+      if (currentHourNum > 11) {
+        console.log('⚠️ Intento de check-in fuera de horario, sugiriendo check-out')
         return res.status(400).json({
           error: 'Horario de check-in cerrado',
           currentTime: nowLocal.time,
-          suggestion: 'A las 16:15 es hora de check-out, no de check-in. Use su DNI para marcar salida.',
+          suggestion: 'Es hora de check-out, no de check-in. Use su DNI para marcar salida.',
           action: 'check_out'
         })
       }
@@ -392,71 +392,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
 
     } else { // check_out
-      // VALIDACIÓN DE VENTANA DE CHECK-OUT (Call Center v1)
-      const dynamicCheckOutWindow = getCheckOutWindow(nowLocal, schedule)
+      // CHECK-OUT SIMPLIFICADO: Solo registro, sin validaciones ni justificaciones
+      console.log('📤 Check-out simplificado: Solo registro de salida')
       
-      // Validar ventana de check-out
-      if (!assertInsideHardWindow(nowLocal.time, dynamicCheckOutWindow)) {
-        return res.status(400).json({ 
-          error: CALL_CENTER_MESSAGES.closed_window,
-          message: `Check-out solo permitido entre ${dynamicCheckOutWindow.open} y ${dynamicCheckOutWindow.close}`,
-          currentTime: nowLocal.time,
-          window: dynamicCheckOutWindow,
-          suggestion: 'Intente dentro del horario de check-out autorizado',
-          action: 'check_out',
-          decisionReason: decisionReason
-        })
-      }
-
-      // Aplicar reglas de check-out según política Call Center
-      const rules = {
-        early_from: CALL_CENTER_CONFIG.exit_rules.early_from,        // "13:00"
-        on_time_to: CALL_CENTER_CONFIG.exit_rules.on_time_to,       // 5
-        overtime_to_minutes: CALL_CENTER_CONFIG.exit_rules.overtime_to_minutes, // 120
-        oor_out_from_minutes: CALL_CENTER_CONFIG.exit_rules.oor_out_from_minutes // 121
-      }
-
-      const { rule, msgKey, needJust } = decideCheckOutRule(nowLocal, adjustedExpectedOut, rules)
-
-      // Validar justificación si es necesaria
-      if (needJust && !justification) {
-        const contextualMessage = getContextualMessage('check_out', msgKey, nowLocal.time, nowLocal.dow);
-        
-        console.log('⚠️ Justificación requerida para check-out:', {
-          employeeId: employee.id,
-          rule: rule,
-          messageKey: msgKey,
-          currentTime: nowLocal.time
-        });
-        
-        return res.status(422).json({
-          requireJustification: true,
-          messageKey: msgKey,
-          message: contextualMessage.mainMessage,
-          contextualMessage: contextualMessage.contextualMessage,
-          helpfulTip: contextualMessage.helpfulTip,
-          emoji: contextualMessage.emoji,
-          action: 'check_out',
-          currentTime: nowLocal.time,
-          rule: rule,
-          suggestion: 'Envíe la justificación junto con su solicitud'
-        });
-      }
+      // No validamos ventanas ni reglas complejas para check-out
+      // Solo registramos la hora de salida
+      
+      const rule = 'simple_checkout' // Regla simplificada
+      const msgKey = 'check_out_success'
+      const needJust = false // No requiere justificación
+      
+      console.log('📤 Check-out simplificado procesado:', { 
+        rule, 
+        msgKey,
+        needJust: false
+      })
 
       let record: any;
 
-      // CASO 1: Orphan checkout (sin check-in previo) - Call Center v1
+      // CASO 1: Orphan checkout (sin check-in previo) - Simplificado
       if (!existingRecord) {
-        console.log('⚠️ ORPHAN CHECKOUT detectado: Empleado sin entrada previa');
-        
-        // Log para auditoría y notificación a RR.HH
-        logger.warn('Orphan checkout detected', {
-          employeeId: employee.id,
-          employeeName: employee.name,
-          currentTime: nowLocal.time,
-          rule: rule,
-          justification: !!justification
-        });
+        console.log('⚠️ Orphan checkout detectado: Creando registro simple');
         
         const { data: newRecord, error: insertError } = await supabase
           .from('attendance_records')
@@ -467,14 +423,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             check_out: nowUtc,
             expected_check_in: adjustedExpectedIn,
             expected_check_out: adjustedExpectedOut,
-            status: 'orphan_checkout', // Estado especial para auditoría
-            rule_applied_out: mapRule(rule),
-            early_departure_minutes: rule === 'early_out' ? 
-              calculateEarlyDepartureMinutes(nowLocal.time, adjustedExpectedOut) : 0,
+            status: 'simple_checkout', // Estado simplificado
+            rule_applied_out: 'simple_checkout',
             tz: 'America/Tegucigalpa',
-            tz_offset_minutes: -360,
-            justification: justification || null,
-            justification_category: justification_category || null
+            tz_offset_minutes: -360
           })
           .select()
           .single();
@@ -491,15 +443,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         console.log('✅ Orphan checkout registrado exitosamente');
         
       } else {
-        // CASO 2: Actualizar registro existente
+        // CASO 2: Actualizar registro existente - Simplificado
         const { data: updatedRecord, error: updateError } = await supabase
           .from('attendance_records')
           .update({
             check_out: nowUtc,
             expected_check_out: adjustedExpectedOut,
-            rule_applied_out: mapRule(rule),
-            early_departure_minutes: rule === 'early_out' ? 
-              calculateEarlyDepartureMinutes(nowLocal.time, adjustedExpectedOut) : 0,
+            rule_applied_out: 'simple_checkout',
             updated_at: nowUtc
           })
           .eq('id', existingRecord.id)
@@ -520,16 +470,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(500).json({ error: 'Error interno: Record no válido' });
       }
 
-      // Insertar evento de check-out
+      // Insertar evento de check-out simplificado
       const { error: eventError } = await supabase
         .from('attendance_events')
         .insert({
           employee_id: employee.id,
           event_type: 'check_out',
           ts_utc: nowUtc,
-          rule_applied: rule,
-          justification: justification || null,
-          justification_category: justification_category || null,
+          rule_applied: 'simple_checkout',
           source,
           ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
           device_id: device_id || null,
@@ -543,27 +491,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         logger.error('Error inserting attendance event', eventError);
         // No fallar si no se puede insertar el evento
       }
-
-      // Generar mensaje contextual para check-out
-      const contextualMessage = getContextualMessage('check_out', msgKey, nowLocal.time, nowLocal.dow);
       
-      // Log exitoso del check-out
-      console.log('✅ Check-out completado exitosamente:', {
+      // Log exitoso del check-out simplificado
+      console.log('✅ Check-out simplificado completado:', {
         employeeId: employee.id,
         employeeName: employee.name,
-        rule: rule,
-        messageKey: msgKey,
         recordId: record.id,
         timestamp: nowLocal.time
       });
       
       return res.status(200).json({
-        requireJustification: needJust,
-        messageKey: msgKey,
-        message: contextualMessage.mainMessage,
-        contextualMessage: contextualMessage.contextualMessage,
-        helpfulTip: contextualMessage.helpfulTip,
-        emoji: contextualMessage.emoji,
+        requireJustification: false,
+        messageKey: 'check_out_success',
+        message: '✅ Salida registrada exitosamente',
         action: 'check_out',
         currentTime: nowLocal.time,
         data: record,
