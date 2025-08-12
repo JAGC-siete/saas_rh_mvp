@@ -13,6 +13,7 @@ import {
   BuildingOfficeIcon,
   UsersIcon
 } from '@heroicons/react/24/outline'
+import { TrophyIcon } from '@heroicons/react/24/solid'
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -36,6 +37,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Permisos', href: '/app/leave', icon: UserIcon },
     { name: 'Nómina', href: '/app/payroll', icon: CurrencyDollarIcon },
     { name: 'Reportes', href: '/app/reports', icon: ChartBarIcon },
+    { name: 'Gamificación', href: '/app/gamification', icon: TrophyIcon },
     { name: 'Configuración', href: '/app/settings', icon: Cog6ToothIcon },
   ]
 
