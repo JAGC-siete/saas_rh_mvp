@@ -195,7 +195,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .from('attendance_records')
       .select('*')
       .eq('employee_id', employee.id)
-      .eq('local_date', nowLocal.date)
+      .eq('date', nowLocal.date)
       .single()
 
     if (recordError && recordError.code !== 'PGRST116') { // PGRST116 = no rows returned
@@ -311,12 +311,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
       }
 
-      // UPSERT attendance_records (idempotente por local_date)
+      // UPSERT attendance_records (corregido para usar campo 'date')
       const { data: record, error: insertError } = await supabase
         .from('attendance_records')
         .upsert({
           employee_id: employee.id,
-          local_date: nowLocal.date,
+          date: nowLocal.date, // Corregido: usar 'date' no 'local_date'
           check_in: nowUtc,
           expected_check_in: adjustedExpectedIn,
           status: rule === 'late' || rule === 'oor' ? 'late_in' : 'present',
@@ -327,7 +327,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           justification: justification || null,
           justification_category: justification_category || null
         }, {
-          onConflict: 'employee_id,local_date'
+          onConflict: 'employee_id,date' // Corregido: usar 'date' no 'local_date'
         })
         .select()
         .single()
@@ -405,7 +405,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           .from('attendance_records')
           .insert({
             employee_id: employee.id,
-            local_date: nowLocal.date,
+            date: nowLocal.date,
             check_in: null, // Sin check-in previo
             check_out: nowUtc,
             expected_check_in: adjustedExpectedIn,
