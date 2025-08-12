@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import { useSession } from '@supabase/auth-helpers-react'
+import { useCompanyContext } from '../lib/useCompanyContext'
 import { Button } from './ui/button'
 import { Card } from './ui/card'
 
@@ -84,6 +85,7 @@ const getTodayDate = () => new Date().toISOString().split('T')[0]
 
 export default function ReportsAndAnalytics() {
   const session = useSession()
+  const { companyId, loading: companyLoading } = useCompanyContext()
   const [stats, setStats] = useState<DashboardStats>(INITIAL_STATS)
   const [attendanceTrends, setAttendanceTrends] = useState<AttendanceTrend[]>([])
   const [loading, setLoading] = useState(false)
@@ -97,24 +99,33 @@ export default function ReportsAndAnalytics() {
   const { monthStart, monthEnd } = useMemo(() => getCurrentMonthRange(), [])
 
   const fetchDashboardStats = useCallback(async () => {
+    if (!companyId) {
+      console.log('⚠️ No company ID available, skipping fetch')
+      return
+    }
+    
     try {
       setLoading(true)
+      console.log('📊 Fetching dashboard stats for company:', companyId)
       
-      // Total and active employees
+      // Total and active employees - FILTRADO POR COMPANY
       const { data: employees, error: employeesError } = await supabase
         .from('employees')
         .select('id, status')
+        .eq('company_id', companyId)
       
       if (employeesError) throw employeesError
 
       const totalEmployees = employees?.length || 0
       const activeEmployees = employees?.filter((emp: any) => emp.status === 'active').length || 0
+      console.log('👥 Employees found:', totalEmployees, 'active:', activeEmployees)
 
-      // Today's attendance
+      // Today's attendance - FILTRADO POR COMPANY
       const { data: attendance, error: attendanceError } = await supabase
         .from('attendance_records')
         .select('id')
         .eq('date', today)
+        .eq('company_id', companyId)
         .not('check_in', 'is', null)
 
       if (attendanceError) throw attendanceError
@@ -156,13 +167,16 @@ export default function ReportsAndAnalytics() {
     } finally {
       setLoading(false)
     }
-  }, [today, monthStart, monthEnd])
+  }, [today, monthStart, monthEnd, companyId]) // Agregar companyId
 
   const fetchAttendanceTrends = useCallback(async () => {
+    if (!companyId) return
+    
     try {
       const { data, error } = await supabase
         .from('attendance_records')
         .select('date, status, check_in')
+        .eq('company_id', companyId) // Filtrar por company
         .gte('date', dateRange.startDate)
         .lte('date', dateRange.endDate)
         .order('date')
@@ -197,14 +211,15 @@ export default function ReportsAndAnalytics() {
     } catch (error) {
       console.error('Error fetching attendance trends:', error)
     }
-  }, [dateRange.startDate, dateRange.endDate])
+  }, [dateRange.startDate, dateRange.endDate, companyId]) // Agregar companyId como dependencia
 
   useEffect(() => {
-    if (session?.user) {
+    if (session?.user && companyId && !companyLoading) {
+      console.log('🔄 Refreshing dashboard for company:', companyId)
       fetchDashboardStats()
       fetchAttendanceTrends()
     }
-  }, [session, fetchDashboardStats, fetchAttendanceTrends])
+  }, [session, companyId, companyLoading, fetchDashboardStats, fetchAttendanceTrends])
 
   const downloadCSV = useCallback((data: any[], filename: string) => {
     if (data && data.length > 0) {
@@ -286,6 +301,7 @@ export default function ReportsAndAnalytics() {
               base_salary,
               department:departments(name)
             `)
+            .eq('company_id', companyId) // Filtrar por company
             .order('first_name')
 
           data = employeeData
@@ -302,7 +318,7 @@ export default function ReportsAndAnalytics() {
     } catch (error) {
       console.error('Error exporting report:', error)
     }
-  }, [dateRange.startDate, dateRange.endDate, today, downloadCSV])
+  }, [dateRange.startDate, dateRange.endDate, today, companyId, downloadCSV]) // Agregar companyId
 
   const formatPercentage = useCallback((value: number, total: number) => {
     if (total === 0) return '0%'
