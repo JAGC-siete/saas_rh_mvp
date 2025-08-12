@@ -1,6 +1,6 @@
 import Head from 'next/head'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, CloudArrowUpIcon, ClockIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 
@@ -39,6 +39,11 @@ export default function ActivarPage() {
     departamentos: []
   })
 
+  // Debug logging for department changes
+  useEffect(() => {
+    console.log('Departments state changed:', formData.departamentos)
+  }, [formData.departamentos])
+
   const handleEmpleadosChange = (value: number) => {
     setFormData(prev => ({ ...prev, empleados: Math.max(1, value) }))
   }
@@ -48,12 +53,21 @@ export default function ActivarPage() {
   }
 
   const handleDepartamentosChange = (dept: string) => {
-    setFormData(prev => ({
-      ...prev,
-      departamentos: prev.departamentos.includes(dept)
+    console.log('Department button clicked:', dept)
+    
+    setFormData(prev => {
+      const isSelected = prev.departamentos.includes(dept)
+      const newDepartments = isSelected
         ? prev.departamentos.filter(d => d !== dept)
         : [...prev.departamentos, dept]
-    }))
+      
+      console.log('Updating from:', prev.departamentos, 'to:', newDepartments)
+      
+      return {
+        ...prev,
+        departamentos: newDepartments
+      }
+    })
   }
 
   const handleFileUpload = (file: File) => {
@@ -363,6 +377,9 @@ export default function ActivarPage() {
                   <div>
                     <label className="block text-white font-medium mb-3">
                       Departamentos (selecciona todos los que apliquen)
+                      <span className="text-brand-400 text-sm ml-2">
+                        ({formData.departamentos.length} seleccionados)
+                      </span>
                     </label>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                       {departamentosOptions.map((dept) => (
@@ -373,17 +390,28 @@ export default function ActivarPage() {
                               ? 'glass-strong border-brand-500 text-brand-200 bg-brand-500/20'
                               : 'glass border-brand-600/30 text-brand-300 hover:border-brand-500/50 hover:text-white'
                           }`}
+                          onClick={() => handleDepartamentosChange(dept)}
                         >
                           <input
                             type="checkbox"
                             checked={formData.departamentos.includes(dept)}
-                            onChange={() => handleDepartamentosChange(dept)}
+                            onChange={() => {}} // Handled by label onClick
                             className="sr-only"
                           />
                           <span className="text-sm">{dept}</span>
+                          {formData.departamentos.includes(dept) && (
+                            <CheckCircleIcon className="h-4 w-4 ml-auto text-brand-400" />
+                          )}
                         </label>
                       ))}
                     </div>
+                    
+                    {/* Debug info - remove in production */}
+                    {formData.departamentos.length > 0 && (
+                      <div className="mt-3 p-2 bg-brand-500/10 rounded text-xs text-brand-300">
+                        Debug: {formData.departamentos.join(', ')}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -419,13 +447,14 @@ export default function ActivarPage() {
                   <Card variant="glass" className="border-yellow-500/30 bg-yellow-500/5">
                     <CardContent className="p-6">
                       <h3 className="text-yellow-400 font-bold mb-3 flex items-center">
-                        1. Transfiere a BAC:
+                        1. Transfiere a BANCO BAC HONDURAS:
                       </h3>
                       <div className="glass-strong p-4 rounded font-mono text-center">
-                        <span className="text-2xl font-bold text-white">0123-4567-8901</span>
+                        <span className="text-2xl font-bold text-white">722983451</span>
                       </div>
-                      <p className="text-brand-300 text-sm mt-2">
-                        Monto: L{calculateTotal().toLocaleString()} • Concepto: &ldquo;Activación SISU - {formData.empresa}&rdquo;
+                      <p className="text-brand-300 text-sm mt-2 font-medium">
+                        <span className="text-white">Titular:</span> JORGE ARTURO GOMEZ COELLO<br/>
+                        <span className="text-white">Monto:</span> L{calculateTotal().toLocaleString()} • <span className="text-white">Concepto:</span> &ldquo;Activación SISU - {formData.empresa}&rdquo;
                       </p>
                     </CardContent>
                   </Card>
