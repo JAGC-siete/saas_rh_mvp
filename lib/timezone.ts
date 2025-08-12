@@ -124,7 +124,7 @@ export function toHN(utcDate: Date): { time: string; date: string; dow: number; 
   const hondurasTime = new Date(utcDate.toLocaleString("en-US", { timeZone: HONDURAS_TIMEZONE }));
   
   const time = hondurasTime.toTimeString().slice(0, 5); // HH:MM
-  const date = hondurasTime.toISOString().split('T')[0]; // YYYY-MM-DD
+  const date = `${hondurasTime.getFullYear()}-${String(hondurasTime.getMonth() + 1).padStart(2, '0')}-${String(hondurasTime.getDate()).padStart(2, '0')}`;
   const dow = hondurasTime.getDay(); // 0=Sunday, 1=Monday, etc.
   const isWeekend = dow === 0 || dow === 6;
   
