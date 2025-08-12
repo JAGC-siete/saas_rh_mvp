@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient } from '../../../lib/supabase/server'
+import { getTodayInHonduras } from '../../../lib/timezone'
 
 // Horarios por defecto por departamento
 const DEFAULT_SCHEDULES = {
@@ -76,7 +77,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Para mañana (5 de agosto), TODOS pasan por onboarding
-    const today = new Date().toISOString().split('T')[0]
+    const today = getTodayInHonduras()
     const isFirstDayOfSaaS = today === '2025-08-05' // Mañana es el primer día
     
     // Check if already registered today

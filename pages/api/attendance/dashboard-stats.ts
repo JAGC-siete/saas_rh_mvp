@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '@supabase/supabase-js'
-import { getTodayInHonduras, getHondurasTime } from '../../../lib/timezone'
+import { getTodayInHonduras, getHondurasTime, getHondurasTimeISO } from '../../../lib/timezone'
 
 // Use service role key for admin access
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -19,7 +19,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     console.log('🔍 Dashboard stats: Iniciando...')
-    console.log('📅 Timestamp:', new Date().toISOString())
+    // 🌎 Obtener timestamp con zona horaria de Tegucigalpa
+    console.log('📅 Timestamp:', getHondurasTimeISO())
     
     // Use Honduras timezone for today's date
     const today = getTodayInHonduras()
@@ -102,7 +103,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('📅 PASO 5: Calculando estadísticas de los últimos 7 días...')
     const dailyStats = []
     for (let i = 6; i >= 0; i--) {
-      const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      const date = new Date(hondurasTime.getTime() - i * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
       const dayAttendance = weeklyAttendance?.filter((r: any) => r.date === date) || []
       const attendanceRate = totalEmployees > 0 ? (dayAttendance.length / totalEmployees) * 100 : 0
       

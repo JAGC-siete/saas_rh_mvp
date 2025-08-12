@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { supabase } from '../../../lib/supabase'
+import { getTodayInHonduras } from '../../../lib/timezone'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -52,7 +53,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('✅ Empleados activos:', employees?.length || 0)
 
     // Verificar si hay registros de asistencia de hoy
-    const today = new Date().toISOString().split('T')[0]
+    const today = getTodayInHonduras()
     const { data: attendance, error: attError } = await supabase
       .from('attendance_records')
       .select('count')
