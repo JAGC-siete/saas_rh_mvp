@@ -99,7 +99,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const employee = employees[0]
-    console.log('✅ Empleado encontrado:', { id: employee.id, name: employee.name, dni: employee.dni })
+    console.log('✅ Empleado encontrado:', { 
+      id: employee.id, 
+      name: employee.name, 
+      dni: employee.dni, 
+      company_id: employee.company_id,
+      work_schedule_id: employee.work_schedule_id 
+    })
 
     // PASO 3: Obtener horario del empleado
     if (!employee.work_schedule_id) {
@@ -362,7 +368,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       // Aplicar puntos y rachas
-      await applyPointsAndStreaks(employee.id, rule, nowLocal, supabase)
+      const employeeCompanyId = employee.company_id || '00000000-0000-0000-0000-000000000001' // Paragon fallback
+      console.log('🏢 Company ID para score:', { 
+        original: employee.company_id, 
+        fallback: employeeCompanyId,
+        usedFallback: !employee.company_id 
+      })
+      
+      if (!employee.company_id) {
+        logger.warn('Employee missing company_id, using Paragon fallback', {
+          employeeId: employee.id,
+          employeeName: employee.name,
+          fallbackCompanyId: employeeCompanyId
+        })
+      }
+      
+      await applyPointsAndStreaks(employee.id, employeeCompanyId, rule, nowLocal, supabase)
 
       const contextualMessage = getContextualMessage('check_in', msgKey, nowLocal.time, nowLocal.dow);
       
@@ -545,7 +566,7 @@ function getContextualMessage(
 }
 
 // Función para aplicar puntos y rachas
-async function applyPointsAndStreaks(employeeId: string, rule: string, nowLocal: any, supabase: any) {
+async function applyPointsAndStreaks(employeeId: string, companyId: string, rule: string, nowLocal: any, supabase: any) {
   try {
     // Obtener puntuación actual del empleado
     const { data: score, error: scoreError } = await supabase
@@ -595,11 +616,17 @@ async function applyPointsAndStreaks(employeeId: string, rule: string, nowLocal:
         logger.error('Error updating employee score', updateError)
       }
       } else {
+      console.log('🎯 Creando nuevo employee_score:', { 
+        employee_id: employeeId, 
+        company_id: companyId, 
+        points: pointsToAdd,
+        rule 
+      })
       const { error: insertError } = await supabase
         .from('employee_scores')
         .insert({
           employee_id: employeeId,
-          company_id: null, // Se puede obtener del empleado si es necesario
+          company_id: companyId,
           total_points: pointsToAdd,
           weekly_points: pointsToAdd,
           monthly_points: pointsToAdd,
@@ -609,6 +636,8 @@ async function applyPointsAndStreaks(employeeId: string, rule: string, nowLocal:
 
       if (insertError) {
         logger.error('Error creating employee score', insertError)
+      } else {
+        console.log('✅ Employee score creado exitosamente')
       }
     }
   } catch (error) {
