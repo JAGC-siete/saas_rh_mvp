@@ -348,7 +348,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           justification: justification || null,
           justification_category: justification_category || null,
           source,
-          ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+          ip: (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.socket.remoteAddress,
           device_id: device_id || null,
           lat: lat || null,
           lon: lon || null,
@@ -466,7 +466,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           ts_utc: nowUtc,
           rule_applied: 'simple_checkout',
           source,
-          ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+          ip: (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.socket.remoteAddress,
           device_id: device_id || null,
           lat: lat || null,
           lon: lon || null,
@@ -599,7 +599,7 @@ async function applyPointsAndStreaks(employeeId: string, rule: string, nowLocal:
         .from('employee_scores')
         .insert({
           employee_id: employeeId,
-          company_id: '', // Se debe obtener del empleado
+          company_id: null, // Se puede obtener del empleado si es necesario
           total_points: pointsToAdd,
           weekly_points: pointsToAdd,
           monthly_points: pointsToAdd,
