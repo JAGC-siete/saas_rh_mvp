@@ -1,6 +1,6 @@
 import Head from 'next/head'
 import Link from 'next/link'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, CloudArrowUpIcon, ClockIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 
@@ -39,11 +39,6 @@ export default function ActivarPage() {
     departamentos: []
   })
 
-  // Debug logging for department changes
-  useEffect(() => {
-    console.log('Departments state changed:', formData.departamentos)
-  }, [formData.departamentos])
-
   const handleEmpleadosChange = (value: number) => {
     setFormData(prev => ({ ...prev, empleados: Math.max(1, value) }))
   }
@@ -53,15 +48,11 @@ export default function ActivarPage() {
   }
 
   const handleDepartamentosChange = (dept: string) => {
-    console.log('Department button clicked:', dept)
-    
     setFormData(prev => {
       const isSelected = prev.departamentos.includes(dept)
       const newDepartments = isSelected
         ? prev.departamentos.filter(d => d !== dept)
         : [...prev.departamentos, dept]
-      
-      console.log('Updating from:', prev.departamentos, 'to:', newDepartments)
       
       return {
         ...prev,
@@ -405,13 +396,6 @@ export default function ActivarPage() {
                         </label>
                       ))}
                     </div>
-                    
-                    {/* Debug info - remove in production */}
-                    {formData.departamentos.length > 0 && (
-                      <div className="mt-3 p-2 bg-brand-500/10 rounded text-xs text-brand-300">
-                        Debug: {formData.departamentos.join(', ')}
-                      </div>
-                    )}
                   </div>
                 </div>
 
