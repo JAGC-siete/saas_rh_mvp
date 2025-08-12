@@ -49,6 +49,25 @@ secrets/
 ehthumbs.db
 Thumbs.db
 
+# CLIENT SETUP & CONFIGURATION FILES - NEVER COMMIT THESE
+scripts/auto-setup-client.*
+scripts/setup-*-client.*
+scripts/create-admin-*
+scripts/create-*-erre.*
+scripts/employees-template.*
+scripts/ejemplo-uso.*
+scripts/AUTO_SETUP_README.md
+scripts/RESUMEN_IMPLEMENTACION.md
+setup-client-*.sql
+client-access-info-*.txt
+*-gustavo-*
+create-gustavo-*
+check-gustavo-*
+diagnose-auth-*
+make-gustavo-*
+update-jefe-*
+check-employee-structure.*
+
 # Logs
 logs/
 *.log
