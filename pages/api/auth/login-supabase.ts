@@ -45,19 +45,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Buscar rol en tabla employees si es empleado
     const { data: employee } = await supabase
       .from('employees')
-      .select('name, role, position')
-      .eq('dni', email) // Si usas email en vez de DNI
+      .select('name, role, team')
+      .eq('email', email) // Buscar por email del usuario
       .single()
 
     if (employee) {
       userName = employee.name
-      // Determinar rol basado en posición
-      if (employee.position?.toLowerCase().includes('gerente') || 
-          employee.position?.toLowerCase().includes('manager') ||
+      // Determinar rol basado en role y team
+      if (employee.role?.toLowerCase().includes('gerente') || 
+          employee.role?.toLowerCase().includes('manager') ||
           employee.role?.toLowerCase().includes('jefe')) {
         userRole = 'manager'
-      } else if (employee.position?.toLowerCase().includes('recursos humanos') ||
-                 employee.position?.toLowerCase().includes('hr')) {
+      } else if (employee.role?.toLowerCase().includes('recursos humanos') ||
+                 employee.role?.toLowerCase().includes('hr')) {
         userRole = 'hr'
       } else {
         userRole = 'employee'
