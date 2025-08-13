@@ -13,10 +13,7 @@ import {
 export default function LandingPage() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  // Mini ROI calculator state
-  const [roiEmployees, setRoiEmployees] = useState<number>(20)
-  const ahorroPorEmpleado = 350
-  const ahorroTotal = Math.max(0, (Number.isFinite(roiEmployees) ? roiEmployees : 0) * ahorroPorEmpleado)
+
 
   useEffect(() => {
     const handleScroll = () => {
@@ -195,25 +192,7 @@ export default function LandingPage() {
               </Link>
             </div>
 
-            {/* ROI Calculator mini */}
-            <div id="roi" className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-8 max-w-md mx-auto hover:bg-white/10 transition-all duration-300 hover:border-brand-400/30">
-              <h3 className="text-white font-semibold mb-3">Calculá tu ahorro</h3>
-              <div className="flex items-center gap-3">
-                <input
-                  type="number"
-                  min={0}
-                  value={roiEmployees}
-                  onChange={(e) => setRoiEmployees(Number(e.target.value))}
-                  placeholder="# empleados"
-                  className="bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white placeholder:text-brand-200/60 w-28 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 transition-all duration-200"
-                />
-                <span className="text-brand-200">×</span>
-                <span className="text-brand-400 font-bold">L{ahorroPorEmpleado}/mes</span>
-                <span className="text-brand-200">=</span>
-                <span className="text-green-400 font-bold text-xl">L{ahorroTotal.toLocaleString('es-HN')}</span>
-              </div>
-              <p className="text-xs text-brand-200/80 mt-2">Ahorro promedio vs planilla manual</p>
-            </div>
+
           </div>
         </div>
       </section>
