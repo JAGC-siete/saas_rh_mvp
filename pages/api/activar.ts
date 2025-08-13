@@ -30,15 +30,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const supabase = createAdminClient()
     
     // Parse form data including file upload using multiparty
+    // Use /tmp for uploads in production environment
+    const uploadDir = process.env.NODE_ENV === 'production' ? '/tmp/uploads' : './public/uploads'
+    
     const form = new multiparty.Form({
-      uploadDir: './public/uploads',
+      uploadDir: uploadDir,
       maxFilesSize: 10 * 1024 * 1024, // 10MB
     })
 
     // Asegurar que el directorio existe
-    const uploadDir = './public/uploads'
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true })
+    try {
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true })
+      }
+    } catch (error) {
+      console.error('Error creating upload directory:', error)
+      // Continue without file upload capability
     }
 
     // Promisificar el parsing
@@ -73,8 +80,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const newPath = path.join(uploadDir, fileName)
       
       // Mover archivo a ubicación final
-      fs.renameSync(file.path, newPath)
-      comprobanteUrl = `/uploads/${fileName}`
+      try {
+        fs.renameSync(file.path, newPath)
+        comprobanteUrl = process.env.NODE_ENV === 'production' ? `/tmp/uploads/${fileName}` : `/uploads/${fileName}`
+      } catch (error) {
+        console.error('Error moving uploaded file:', error)
+        // Continue without saving the file
+        comprobanteUrl = ''
+      }
     }
 
     // Guardar en base de datos
