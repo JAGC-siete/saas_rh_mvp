@@ -6,7 +6,8 @@ interface ActivationData {
   empresa: string
   contactoNombre: string
   contactoWhatsApp: string
-  departamentos: string[]
+  contactoEmail: string
+  departamentosCount?: number
   monto: number
 }
 
@@ -24,12 +25,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       empresa,
       contactoNombre,
       contactoWhatsApp,
-      departamentos,
+      contactoEmail,
+      departamentosCount,
       monto
     }: ActivationData = req.body
 
     // Validaciones básicas
-    if (!empleados || !empresa || !contactoNombre || !contactoWhatsApp) {
+    if (!empleados || !empresa || !contactoNombre || !contactoWhatsApp || !contactoEmail) {
       return res.status(400).json({ error: 'Faltan campos requeridos' })
     }
 
@@ -41,20 +43,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Monto calculado incorrectamente' })
     }
 
+    // Estructurar payload compatible con la tabla actual
+    const payload: any = {
+      empleados,
+      empresa,
+      contacto_nombre: contactoNombre,
+      contacto_whatsapp: contactoWhatsApp,
+      contacto_email: contactoEmail,
+      // Guardamos un resumen de departamentos como número total dentro de JSON
+      departamentos: departamentosCount != null ? { total: departamentosCount } : [],
+      monto,
+      comprobante: null,
+      status: 'pending'
+    }
+
     // Guardar en base de datos
     const { data, error } = await supabase
       .from('activaciones')
-      .insert([{
-        empleados,
-        empresa,
-        contacto_nombre: contactoNombre,
-        contacto_whatsapp: contactoWhatsApp,
-        contacto_email: null, // No requerido en la nueva versión
-        departamentos,
-        monto,
-        comprobante: null, // Se manejará después del pago
-        status: 'pending'
-      }])
+      .insert([payload])
       .select()
 
     if (error) {
@@ -68,7 +74,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       empresa,
       contactoNombre,
       contactoWhatsApp,
-      departamentos,
+      contactoEmail,
+      departamentosCount,
       monto
     })
 
@@ -90,37 +97,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
 async function enviarNotificaciones(data: ActivationData) {
   try {
-    // Aquí implementarías el envío de emails/WhatsApp
-    // Por ejemplo usando Resend, Nodemailer, o Twilio
-    
     console.log('Enviando notificaciones para:', {
       empresa: data.empresa,
       contacto: data.contactoNombre,
       whatsapp: data.contactoWhatsApp,
+      email: data.contactoEmail,
       empleados: data.empleados,
       monto: data.monto,
-      departamentos: data.departamentos
+      departamentos: data.departamentosCount
     })
-
-    // Ejemplo de WhatsApp (necesitarás configurar Twilio o similar)
-    /*
-    await whatsappClient.send({
-      to: data.contactoWhatsApp,
-      body: `🎉 ¡Hola ${data.contactoNombre}! Hemos recibido tu solicitud para activar ${data.empleados} empleados en ${data.empresa}.
-
-💰 Monto total: L${data.monto.toLocaleString()}
-
-📋 Próximos pasos:
-1. Te enviaremos los datos bancarios por email
-2. Una vez confirmado el pago, activaremos tu sistema
-3. En máximo 24 horas tendrás acceso completo
-
-¿Preguntas? Responde este mensaje. ¡Bienvenido a HUMANO SISU! 🚀`
-    })
-    */
-
   } catch (error) {
     console.error('Error sending notifications:', error)
-    // No fallar todo el proceso si las notificaciones fallan
   }
 }
