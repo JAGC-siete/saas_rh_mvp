@@ -195,11 +195,12 @@ export default function LandingPage() {
           <div className="text-center max-w-4xl mx-auto">
             <h1 className="text-5xl md:text-6xl font-bold text-white mb-4 leading-tight">
               De 4 horas de planilla;
-              <span className="block text-brand-400">a 4 minutos</span>
+              <span className="block text-brand-400">a 2 minutos;</span>
+              <span className="block text-brand-700">a 0 errores.</span>
             </h1>
 
             <p className="text-xl text-brand-200/90 mb-8">
-              Adiós a las tareas repetitivas. Sin errores, sin pasivo laboral.
+              Adiós a las tareas repetitivas. Sin pasivo laboral. Sin dramas.
               <strong className="text-white"> Actívalo HOY.</strong>
             </p>
 
@@ -231,7 +232,7 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-3 gap-8">
             {[
               { name: 'Felix Garcia', company: 'Tony\'s Mar Restaurant', employees: '40 empleados', saving: 'L12,500/mes', quote: 'Ya no pierdo domingos haciendo planilla. 4 horas ahora son 4 minutos.' },
-              { name: 'Ana Rodríguez', company: 'Textiles Honduras', employees: '45 empleados', saving: 'L18,000/mes', quote: 'El control antifraude me devolvió 15% de productividad perdida.' },
+              { name: 'Gustavo Argueta', company: 'Paragon Honduras', employees: '37 empleados', saving: 'L18,000/mes', quote: 'Antes llevavamos la asistencia en un libro rojo, ahora tneemos dashboard interactivo.' },
               { name: 'Miguel Santos', company: 'Agroexport SAC', employees: '67 empleados', saving: 'L25,500/mes', quote: 'Cero errores en IHSS desde que lo uso. Mi contador está feliz.' }
             ].map((testimonial, i) => (
               <div key={i} className="bg-white/5 border border-white/10 rounded-xl p-6">

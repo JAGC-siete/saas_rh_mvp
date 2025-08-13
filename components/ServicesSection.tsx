@@ -12,9 +12,9 @@ export default function ServicesSection() {
         <div className="mx-auto h-72 w-72 blur-3xl rounded-full opacity-20 bg-brand-600/40 translate-y-8" />
       </div>
 
-      <header className="max-w-3xl mb-10">
+      <header className="max-w-3xl mb-10 mx-auto text-center">
         <h2 className="text-4xl md:text-5xl font-bold text-white tracking-tight">
-          Robots de RH de Humano SISU
+          Presentamos: Tus robots de Recursos Humanos
         </h2>
         <p className="mt-3 text-brand-200">
           Reemplazá tareas repetitivas y propensas a error con <span className="text-brand-400">automatización verificable</span>.
