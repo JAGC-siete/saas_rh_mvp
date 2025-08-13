@@ -1,9 +1,8 @@
-import { UserGroupIcon, ClockIcon, CurrencyDollarIcon, CheckCircleIcon, ArrowRightIcon, ChartBarIcon } from '@heroicons/react/24/outline'
+import { ClockIcon, CurrencyDollarIcon, CheckCircleIcon, ArrowRightIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 import { Button } from './ui/button'
 
-const badge =
-  "inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm border border-white/15 bg-white/5 text-brand-200"
+
 
 export default function ServicesSection() {
   return (
@@ -22,61 +21,10 @@ export default function ServicesSection() {
         </p>
       </header>
 
-      {/* GRID: spotlight (3 col) + stack de soporte (2 col) */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-        {/* SPOTLIGHT: Reclutamiento */}
-        <article className="group md:col-span-3 relative overflow-hidden rounded-2xl glass border border-white/15 p-6 md:p-8 transition-all duration-300 hover:border-brand-400/40 hover:shadow-2xl hover:shadow-brand-900/30">
-          {/* ring animado sutil */}
-          <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-white/10 group-hover:ring-brand-400/40 transition-colors" />
-          <div className="flex items-center gap-3">
-            <div className="h-11 w-11 grid place-items-center rounded-xl bg-white/10 border border-white/15">
-              <UserGroupIcon className="h-6 w-6 text-brand-300" />
-            </div>
-            <div>
-              <h3 className="text-2xl font-bold text-white">Candidatos listos</h3>
-              <p className="text-sm text-brand-300/90">Publicación → Pre-filtro → Verificación → Scoring automático</p>
-            </div>
-          </div>
-
-          <div className="mt-6 grid sm:grid-cols-2 gap-4">
-            {[
-              { icon: CheckCircleIcon, text: "Certificación previa + antifraude (documentos & referencias)" },
-              { icon: ClockIcon,       text: "Reducí semanas a horas: shortlist en <24 h" },
-              { icon: ChartBarIcon,    text: "Scoring por competencias y cultura" },
-              { icon: CurrencyDollarIcon, text: "Costo predecible: pagás por contratación real" }
-            ].map((i, idx) => (
-              <div key={idx} className="flex items-start gap-3">
-                <i.icon className="mt-0.5 h-5 w-5 text-brand-400" />
-                <p className="text-brand-200">{i.text}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* métricas + CTA */}
-          <div className="mt-7 flex flex-col sm:flex-row sm:items-center gap-4">
-            <div className="flex items-center gap-3">
-              <span className={badge}>✓ Cumple STSS</span>
-              <span className={badge}>⚡ Setup 24h</span>
-              <span className={badge}>🔥 37 empresas activas</span>
-            </div>
-            <div className="sm:ml-auto flex gap-3">
-              <Button asChild className="h-11 px-5">
-                <Link href="/demo" aria-label="Ver demo de Reclutamiento">
-                  Ver demo <ArrowRightIcon className="ml-2 h-5 w-5" />
-                </Link>
-              </Button>
-              <Button variant="outline" asChild className="h-11 px-5">
-                <Link href="/activar">Activar ahora</Link>
-              </Button>
-            </div>
-          </div>
-
-          {/* glow on hover */}
-          <div className="pointer-events-none absolute -right-24 -bottom-24 h-72 w-72 rounded-full bg-brand-500/20 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
-        </article>
-
+      {/* GRID: stack de soporte (2 col) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* SOPORTE: Asistencia */}
-        <article className="group md:col-span-2 relative overflow-hidden rounded-2xl glass border border-white/15 p-6 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
+        <article className="group relative overflow-hidden rounded-2xl glass border border-white/15 p-6 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 grid place-items-center rounded-lg bg-white/10 border border-white/15">
               <ClockIcon className="h-5 w-5 text-brand-300" />
@@ -104,7 +52,7 @@ export default function ServicesSection() {
         </article>
 
         {/* SOPORTE: Nómina */}
-        <article className="group md:col-span-2 relative overflow-hidden rounded-2xl glass border border-white/15 p-6 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
+        <article className="group relative overflow-hidden rounded-2xl glass border border-white/15 p-6 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 grid place-items-center rounded-lg bg-white/10 border border-white/15">
               <CurrencyDollarIcon className="h-5 w-5 text-brand-300" />

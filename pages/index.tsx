@@ -115,14 +115,7 @@ export default function LandingPage() {
           {isMobileMenuOpen && (
             <div className="md:hidden">
               <div className="px-2 pt-2 pb-3 space-y-1 glass-strong rounded-lg shadow-lg mt-2">
-                <a
-                  href="#certificacion"
-                  className="block px-3 py-2 text-base font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  data-translation-key="nav.certification"
-                >
-                  Certificación
-                </a>
+
                 <a
                   href="#libro-rojo"
                   className="block px-3 py-2 text-base font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"

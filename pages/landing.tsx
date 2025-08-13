@@ -11,19 +11,6 @@ import {
 
 const services = [
   {
-    title: 'Certificación de Candidatos.',
-    subtitle: 'Publicamos tu oferta, y certificamos candidatos por vos.',
-    description: 'Publicamos, filtramos, verificamos y administramos tu talent pool listo para contratar. Pagás solo por contratación.',
-    features: ['Publicación', 'Pre-filtrado', 'Evaluación', 'Scoring', 'Entrega de pool'],
-    benefits: [
-      '🎯 Candidatos reales, cero hojas inútiles',
-      '⏱️ 80% menos tiempo reclutando',
-      '💼 Contratación más segura'
-    ],
-    cta: 'Activar Certificación de Candidatos',
-    icon: UserGroupIcon,
-  },
-  {
     title: 'El libro Rojo de Asistencia.',
     subtitle: 'Un control de asistencia que no perdona ni improvisa.',
     description: 'Solo 5 dígitos de DNI. Detecta tarde, temprano, ausente. Reportes en tiempo real.',
@@ -43,8 +30,8 @@ const services = [
     features: ['IHSS', 'RAP', 'ISR', 'Vacaciones', 'Vouchers PDF', 'Envío automático'],
     benefits: [
       '⚡ De 4 horas a 4 minutos',
-      '�️ Cumplimiento legal total',
-      '� Vouchers automáticos por email o WhatsApp'
+      '⚖️ Cumplimiento legal total',
+      '📧 Vouchers automáticos por email o WhatsApp'
     ],
     cta: 'Activar generación de planilla',
     icon: CurrencyDollarIcon,
@@ -101,13 +88,6 @@ export default function LandingPage() {
               
               <div className="hidden md:block">
                 <div className="ml-10 flex items-baseline space-x-4">
-                  <a
-                    href="#certificacion"
-                    className="text-brand-200/90 hover:text-brand-400 hover:-translate-y-0.5 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 border-b-2 border-transparent hover:border-brand-400"
-                    onClick={scrollToSection}
-                  >
-                    Certificaciones SISU
-                  </a>
                   <a
                     href="#libro-rojo"
                     className="text-brand-200/90 hover:text-brand-400 hover:-translate-y-0.5 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 border-b-2 border-transparent hover:border-brand-400"
@@ -167,14 +147,6 @@ export default function LandingPage() {
           {isMobileMenuOpen && (
             <div className="md:hidden">
               <div className="glass-strong px-2 pt-2 pb-3 space-y-1 rounded-lg shadow-lg mt-2">
-                <a 
-                  href="#certificacion" 
-                  className="block px-3 py-2 text-base font-medium text-brand-200/90 hover:text-brand-400 hover:bg-white/5 rounded-md transition-colors"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  data-translation-key="nav.certification"
-                >
-                  Certificaciones SISU
-                </a>
                 <a 
                   href="#libro-rojo" 
                   className="block px-3 py-2 text-base font-medium text-brand-200/90 hover:text-brand-400 hover:bg-white/5 rounded-md transition-colors"
@@ -255,14 +227,14 @@ export default function LandingPage() {
             </p>
           </div>
 
-          {/* 80% menos tiempo */}
+          {/* Gestión de empleados */}
           <div className="flex flex-col items-center text-center p-6 rounded-xl border border-white/10 hover:-translate-y-2 hover:shadow-xl hover:border-brand-400 hover:bg-white/5 transition-all duration-300 transform cursor-pointer">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-500/10 border border-brand-500/20 mb-4 group-hover:bg-brand-500/20 transition-all duration-300">
               <UserGroupIcon className="h-8 w-8 text-brand-400" aria-hidden="true" />
             </div>
-            <h3 className="text-xl font-semibold mb-2 text-white">80% menos tiempo</h3>
+            <h3 className="text-xl font-semibold mb-2 text-white">Gestión de empleados</h3>
             <p className="text-brand-200/80 text-sm">
-              Publicamos, filtramos y certificamos candidatos. Solo contratás.
+              Administra tu personal, horarios y permisos desde un solo lugar.
             </p>
           </div>
         </div>
@@ -303,7 +275,7 @@ export default function LandingPage() {
         </div>
         <div className="space-y-8">
           {services.map((service, index) => {
-            const sectionIds = ['certificacion', 'libro-rojo', 'planillero'];
+            const sectionIds = ['libro-rojo', 'planillero'];
             const isReversed = index % 2 === 1;
             
             return (

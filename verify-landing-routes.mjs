@@ -13,7 +13,7 @@ const ROUTES_FROM_LANDING = [
   '/login',          // Iniciar sesión  
   '/activar',        // Formulario de activación
   // Fragmentos internos (no rutas):
-  // '#certificacion', '#libro-rojo', '#planillero', '#pricing'
+  // '#libro-rojo', '#planillero', '#pricing'
 ]
 
 // API endpoints identificados
