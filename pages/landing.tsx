@@ -1,5 +1,6 @@
 import Head from 'next/head'
 import Link from 'next/link'
+import { Button } from '../components/ui/button'
 import ServicesSection from '../components/ServicesSection'
 
 export default function LandingPage() {
@@ -21,13 +22,11 @@ export default function LandingPage() {
         <p className="mb-8 text-lg">
           Ahorra 35 h/mes y elimina 95 % de errores en RR.HH.
         </p>
-        <Link
-          href="/login"
-          className="btn-primary px-6 py-3 rounded font-semibold shadow"
-          aria-label="Comenzar"
-        >
-          Comenzar
-        </Link>
+        <Button asChild className="h-12 px-6">
+          <Link href="/login" aria-label="Comenzar">
+            Comenzar
+          </Link>
+        </Button>
       </section>
 
       {/* Services Section (rediseño) */}

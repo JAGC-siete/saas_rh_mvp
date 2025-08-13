@@ -1,4 +1,6 @@
 import { UserGroupIcon, ClockIcon, CurrencyDollarIcon, CheckCircleIcon, ArrowRightIcon, ChartBarIcon } from '@heroicons/react/24/outline'
+import Link from 'next/link'
+import { Button } from './ui/button'
 
 const btnPrimary =
   "inline-flex items-center justify-center h-11 px-5 rounded-xl bg-brand-600 text-white font-semibold shadow-lg shadow-black/20 " +
@@ -68,10 +70,14 @@ export default function ServicesSection() {
               <span className={badge}>🔥 37 empresas activas</span>
             </div>
             <div className="sm:ml-auto flex gap-3">
-              <a href="/demo" className={btnPrimary} aria-label="Ver demo de Reclutamiento">
-                Ver demo <ArrowRightIcon className="ml-2 h-5 w-5" />
-              </a>
-              <a href="/activar" className={btnGhost}>Activar ahora</a>
+              <Button asChild className="h-11 px-5">
+                <Link href="/demo" aria-label="Ver demo de Reclutamiento">
+                  Ver demo <ArrowRightIcon className="ml-2 h-5 w-5" />
+                </Link>
+              </Button>
+              <Button variant="outline" asChild className="h-11 px-5">
+                <Link href="/activar">Activar ahora</Link>
+              </Button>
             </div>
           </div>
 
@@ -98,8 +104,12 @@ export default function ServicesSection() {
           </ul>
 
           <div className="mt-5 flex gap-3">
-            <a href="/demo#asistencia" className={btnGhost}>Ver módulo</a>
-            <a href="/activar" className="text-brand-300 hover:text-white inline-flex items-center">Activar <ArrowRightIcon className="ml-1 h-4 w-4" /></a>
+            <Button variant="outline" asChild className="h-10 px-4">
+              <Link href="/demo#asistencia">Ver módulo</Link>
+            </Button>
+            <Link href="/activar" className="inline-flex items-center underline decoration-white/20 underline-offset-4 hover:decoration-brand-400 transition text-brand-300 hover:text-white">
+              Activar <ArrowRightIcon className="ml-1 h-4 w-4" />
+            </Link>
           </div>
         </article>
 
@@ -122,8 +132,12 @@ export default function ServicesSection() {
           </ul>
 
           <div className="mt-5 flex gap-3">
-            <a href="/demo#nomina" className={btnGhost}>Ver módulo</a>
-            <a href="/activar" className="text-brand-300 hover:text-white inline-flex items-center">Activar <ArrowRightIcon className="ml-1 h-4 w-4" /></a>
+            <Button variant="outline" asChild className="h-10 px-4">
+              <Link href="/demo#nomina">Ver módulo</Link>
+            </Button>
+            <Link href="/activar" className="inline-flex items-center underline decoration-white/20 underline-offset-4 hover:decoration-brand-400 transition text-brand-300 hover:text-white">
+              Activar <ArrowRightIcon className="ml-1 h-4 w-4" />
+            </Link>
           </div>
         </article>
       </div>
