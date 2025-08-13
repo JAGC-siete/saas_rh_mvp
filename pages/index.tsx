@@ -87,7 +87,7 @@ export default function LandingPage() {
         <title>Humano SISU - Automatiza tu RH</title>
         <meta
           name="description"
-          content="RH sin Excel: asistencia, nómina y vouchers en 1 clic. Actívalo hoy. Pago por empleado. 30 días gratis."
+          content="Automatiza HOY el 80% de RH en 24 horas: Asistencia, Nómina y Vouchers de pago en 1 solo clic. Paga por empleados. Sin pasivo laboral, sin errores."
         />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
@@ -234,46 +234,46 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6">
-              RH sin Excel: asistencia, nómina y vouchers en 1 clic
+              Automatiza el 80% del trabajo de RH en 24 horas: asistencia, nómina y vouchers en 1 click
             </h1>
             <p className="text-2xl text-brand-200/90 mb-16 max-w-4xl mx-auto font-medium">
-              Actívalo hoy. Pago por empleado. 30 días gratis.
+              Actívalo hoy. Sin errores, sin pasivo laboral. Pago por empleado. Sin letras pequeñas
             </p>
 
             {/* Horizontal Layout with Results-Focused Text */}
             <div className="flex flex-col lg:flex-row items-center justify-center gap-16 mb-16 max-w-6xl mx-auto">
-              <div className="flex items-center gap-6">
+              <div className="flex items-center gap-6 p-6 rounded-xl border border-white/10 hover:-translate-y-2 hover:shadow-xl hover:border-brand-400 hover:bg-white/5 transition-all duration-300 transform cursor-pointer">
                 <div className="w-20 h-20 bg-brand-900 rounded-2xl flex items-center justify-center flex-shrink-0">
                   <ClockIcon className="w-10 h-10 text-white" />
                 </div>
                 <div className="text-left">
                   <h3 className="text-3xl md:text-4xl font-bold text-white mb-2">Control antifraude</h3>
                   <p className="text-xl text-brand-200/90 font-medium">
-                    Solo DNI y geolocalización. Detecta tarde, temprano o ausente en tiempo real.
+                    Solo 5 dígitos de DNI. Detecta tarde, temprano, ausente. Cero trucos.
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-6">
+              <div className="flex items-center gap-6 p-6 rounded-xl border border-white/10 hover:-translate-y-2 hover:shadow-xl hover:border-brand-400 hover:bg-white/5 transition-all duration-300 transform cursor-pointer">
                 <div className="w-20 h-20 bg-brand-900 rounded-2xl flex items-center justify-center flex-shrink-0">
                   <CurrencyDollarIcon className="w-10 h-10 text-white" />
                 </div>
                 <div className="text-left">
-                  <h3 className="text-3xl md:text-4xl font-bold text-white mb-2">De 4 h a 4 min</h3>
+                  <h3 className="text-3xl md:text-4xl font-bold text-white mb-2">De 4h a 4min</h3>
                   <p className="text-xl text-brand-200/90 font-medium">
-                    Calcula IHSS, RAP, ISR. Genera vouchers PDF y envíalos por email o WhatsApp.
+                    Calcula IHSS, RAP, ISR. Genera vouchers y los envía automático.
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-6">
+              <div className="flex items-center gap-6 p-6 rounded-xl border border-white/10 hover:-translate-y-2 hover:shadow-xl hover:border-brand-400 hover:bg-white/5 transition-all duration-300 transform cursor-pointer">
                 <div className="w-20 h-20 bg-brand-900 rounded-2xl flex items-center justify-center flex-shrink-0">
                   <ChartBarIcon className="w-10 h-10 text-white" />
                 </div>
                 <div className="text-left">
                   <h3 className="text-3xl md:text-4xl font-bold text-white mb-2">80% menos tiempo</h3>
                   <p className="text-xl text-brand-200/90 font-medium">
-                    Publica, filtra, verifica y entrega candidatos listos para contratar.
+                    Publicamos, filtramos y certificamos candidatos. Solo contratás.
                   </p>
                 </div>
               </div>
@@ -282,9 +282,9 @@ export default function LandingPage() {
             <div className="flex justify-center gap-6">
               <Link
                 href="/activar"
-                className="px-12 py-5 bg-brand-900 hover:bg-brand-800 text-white rounded-lg font-bold text-2xl transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:-translate-y-1"
+                className="px-12 py-5 bg-brand-900 hover:bg-orange-500 hover:-translate-y-1 hover:shadow-lg text-white rounded-lg font-bold text-2xl transition-all duration-300 shadow-xl transform"
               >
-                Quiero automatizar
+                Quiero automatizar mi RH
               </Link>
             </div>
           </div>
