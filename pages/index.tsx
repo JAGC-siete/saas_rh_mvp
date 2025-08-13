@@ -240,9 +240,9 @@ export default function LandingPage() {
 
           <div className="grid md:grid-cols-3 gap-8">
             {[
-              { name: 'Felix Garcia', company: 'Tony\'s Mar Restaurant', employees: '40 empleados', saving: 'L12,500/mes', quote: 'Ya no pierdo domingos haciendo planilla. 4 horas ahora son 4 minutos.' },
-              { name: 'Gustavo Argueta', company: 'Paragon Honduras', employees: '37 empleados', saving: 'L18,000/mes', quote: 'Antes llevavamos la asistencia en un libro rojo, ahora tneemos dashboard interactivo.' },
-              { name: 'Luis Diego Maradiaga', company: 'AFI & Asociados', employees: '15 empleados', saving: 'L5,500/mes', quote: 'Cero errores en IHSS desde que lo uso. Mi contador está feliz.' }
+              { name: 'Felix Garcia', company: 'Tony\'s Mar Restaurant', employees: '40 empleados', quote: 'Ya no pierdo domingos haciendo planilla. 4 horas ahora son 4 minutos.' },
+              { name: 'Gustavo Argueta', company: 'Paragon Honduras', employees: '37 empleados', quote: 'Antes llevavamos la asistencia en un libro rojo, ahora tneemos dashboard interactivo.' },
+              { name: 'Luis Diego Maradiaga', company: 'AFI & Asociados', employees: '15 empleados', quote: 'Cero errores en IHSS desde que lo uso. Mi contador está feliz.' }
             ].map((testimonial, i) => (
               <div key={i} className="bg-white/5 border border-white/10 rounded-xl p-6">
                 <div className="flex items-center gap-3 mb-4">
@@ -257,7 +257,6 @@ export default function LandingPage() {
                 <blockquote className="text-brand-200/90 italic mb-4">&ldquo;{testimonial.quote}&rdquo;</blockquote>
                 <div className="flex justify-between text-sm">
                   <span className="text-brand-400">{testimonial.employees}</span>
-                  <span className="text-green-400 font-medium">Ahorra {testimonial.saving}</span>
                 </div>
               </div>
             ))}
