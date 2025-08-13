@@ -75,7 +75,7 @@ export default function AttendanceRegisterPage() {
             <p className="text-blue-200 text-sm mb-3">¿Eres administrador?</p>
             <Link 
               href="/login" 
-              className="inline-flex items-center gap-2 text-blue-300 hover:text-white transition-colors text-sm font-medium"
+              className="inline-flex items-center gap-2 underline decoration-white/20 underline-offset-4 hover:decoration-brand-400 transition text-blue-300 hover:text-white text-sm font-medium"
             >
               <ArrowLeft className="h-4 w-4" />
               Acceso Administrativo

@@ -1,31 +1,7 @@
 import Head from 'next/head'
 import Link from 'next/link'
-import {
-  IdentificationIcon,
-  CalculatorIcon,
-  ChartBarIcon,
-} from '@heroicons/react/24/outline'
-
-const services = [
-  {
-    title: 'Asistencia Inteligente',
-    description:
-      'Registro por DNI (5 dígitos) + detección de llegadas tarde → 95 % menos errores',
-    icon: IdentificationIcon,
-  },
-  {
-    title: 'Planilla Automática',
-    description:
-      'Cálculo con IHSS, RAP e ISR incluidos → 80 % menos tiempo y PDF listos para firma',
-    icon: CalculatorIcon,
-  },
-  {
-    title: 'Analytics en Tiempo Real',
-    description:
-      'Dashboard con métricas de puntualidad, costo de nómina y reportes exportables',
-    icon: ChartBarIcon,
-  },
-]
+import { Button } from '../components/ui/button'
+import ServicesSection from '../components/ServicesSection'
 
 export default function LandingPage() {
   return (
@@ -46,38 +22,15 @@ export default function LandingPage() {
         <p className="mb-8 text-lg">
           Ahorra 35 h/mes y elimina 95 % de errores en RR.HH.
         </p>
-        <Link
-          href="/login"
-          className="btn-primary px-6 py-3 rounded font-semibold shadow"
-          aria-label="Comenzar"
-        >
-          Comenzar
-        </Link>
+        <Button asChild className="h-12 px-6">
+          <Link href="/login" aria-label="Comenzar">
+            Comenzar
+          </Link>
+        </Button>
       </section>
 
-      {/* Services Section */}
-      <section className="landing-section">
-        <h2 className="text-3xl font-semibold mb-8 text-center">
-          Nuestros Servicios
-        </h2>
-        <div className="grid gap-8 md:grid-cols-3">
-          {services.map((service) => (
-            <div
-              key={service.title}
-              className="p-6 bg-white/30 dark:bg-gray-900/30 backdrop-blur-md rounded shadow"
-            >
-              <service.icon
-                className="h-12 w-12 mx-auto text-[var(--primary)]"
-                aria-hidden="true"
-              />
-              <h3 className="text-xl font-bold mt-4 mb-2 text-center">
-                {service.title}
-              </h3>
-              <p className="text-center text-sm">{service.description}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* Services Section (rediseño) */}
+      <ServicesSection />
     </div>
   )
 }

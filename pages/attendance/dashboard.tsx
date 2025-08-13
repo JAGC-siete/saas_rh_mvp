@@ -373,7 +373,6 @@ export default function AttendanceDashboard2() {
                 <Button 
                   onClick={exportReport} 
                   disabled={exportLoading}
-                  className="bg-green-600 hover:bg-green-700"
                 >
                   {exportLoading ? 'Generando...' : 'Exportar'}
                 </Button>
