@@ -55,7 +55,7 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-brand-900 to-indigo-900">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-brand-900 to-indigo-900 pt-20">
       <Head>
         <title>Humano SISU - Automatiza tu RH</title>
         <meta
@@ -67,12 +67,12 @@ export default function LandingPage() {
       </Head>
 
       {/* Header */}
-      <header className="relative z-50">
-        {/* Sticky Header */}
+      <header className="fixed top-0 left-0 right-0 z-50">
+        {/* Fixed Header with Glass Effect */}
         <div
-          className={`sticky-header sticky top-0 z-40 transition-all duration-700 ${
+          className={`w-full transition-all duration-700 ${
             isScrolled 
-              ? 'glass-strong border-b border-white/20 shadow-lg shadow-black/20' 
+              ? 'bg-black/80 backdrop-blur-xl border-b border-white/20 shadow-2xl shadow-black/40' 
               : 'bg-transparent backdrop-blur-sm border-b border-transparent'
           }`}
         >
@@ -80,7 +80,7 @@ export default function LandingPage() {
             <div className="flex items-center justify-between h-16">
               <div className="flex items-center">
                 <span className="text-2xl font-bold text-white">
-                  <span className="text-brand-400">SISU</span> - CLOUD HR TECH
+                  <span className="text-white font-bold">CLOUDHR Tech</span> <span className="text-brand-400">por SISU</span>
                 </span>
               </div>
 
