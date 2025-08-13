@@ -2,6 +2,7 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { useState } from 'react'
 import { ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, CloudArrowUpIcon, ClockIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline'
+import dynamic from 'next/dynamic'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 
 interface FormData {
@@ -83,8 +84,9 @@ export default function ActivarPage() {
 
   const calculateTotal = () => formData.empleados * 300
 
+  const CloudBackground = dynamic(() => import('../components/CloudBackground'), { ssr: false })
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-brand-900 to-indigo-900">
+    <div className="min-h-screen bg-app relative">
       <Head>
         <title>Activar Robot de RH - HUMANO SISU</title>
         <meta
@@ -93,7 +95,8 @@ export default function ActivarPage() {
         />
       </Head>
 
-      <div className="container mx-auto px-4 py-8">
+      <CloudBackground />
+      <div className="container mx-auto px-4 py-8 relative z-10">
         {/* Header */}
         <div className="text-center mb-8">
           <Link href="/landing" className="inline-flex items-center text-brand-300 hover:text-white mb-6 transition-colors">

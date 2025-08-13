@@ -1,11 +1,13 @@
 import Head from 'next/head'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { CheckCircle, Clock, MessageCircle, ArrowRight } from 'lucide-react'
 
 export default function GraciasPage() {
+  const CloudBackground = dynamic(() => import('../components/CloudBackground'), { ssr: false })
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-brand-900 to-indigo-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-app flex items-center justify-center p-4 relative">
       <Head>
         <title>¡Gracias! - HUMANO SISU</title>
         <meta
@@ -13,8 +15,8 @@ export default function GraciasPage() {
           content="Tu sistema de RH será activado en 24 horas"
         />
       </Head>
-
-      <div className="w-full max-w-2xl space-y-8">
+      <CloudBackground />
+      <div className="w-full max-w-2xl space-y-8 relative z-10">
         <div className="text-center">
           <div className="mx-auto h-24 w-24 bg-green-500/20 rounded-full flex items-center justify-center mb-6 shadow-lg">
             <CheckCircle className="h-16 w-16 text-green-400" />

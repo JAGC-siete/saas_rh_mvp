@@ -1,6 +1,8 @@
 import Head from 'next/head'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
+const CloudBackground = dynamic(() => import('../components/CloudBackground'), { ssr: false })
 import {
   UserGroupIcon,
   ClockIcon,
@@ -64,8 +66,9 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-brand-900 to-indigo-900"
-    >
+    <div className="min-h-screen bg-app relative">
+      {/* Shared dynamic background */}
+      <CloudBackground />
       <Head>
         <title>Humano SISU - Automatiza tu RH</title>
         <meta
