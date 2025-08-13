@@ -248,3 +248,40 @@ html, body, #__next, #root {
     background: rgba(255,255,255,.18) 
   }
 }
+
+/* Landing page conversion animations */
+@layer utilities {
+  @keyframes fade-up-subtle {
+    from { 
+      opacity: 0; 
+      transform: translateY(12px); 
+    }
+    to { 
+      opacity: 1; 
+      transform: translateY(0); 
+    }
+  }
+  
+  @keyframes pulse-glow {
+    0%, 100% { 
+      box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); 
+    }
+    50% { 
+      box-shadow: 0 0 20px 4px rgba(59, 130, 246, 0.1); 
+    }
+  }
+  
+  .animate-fade-up-subtle {
+    animation: fade-up-subtle 0.6s ease-out both;
+  }
+  
+  .animate-pulse-glow {
+    animation: pulse-glow 3s infinite;
+  }
+  
+  /* Staggered animations */
+  .animate-delay-100 { animation-delay: 100ms; }
+  .animate-delay-200 { animation-delay: 200ms; }
+  .animate-delay-300 { animation-delay: 300ms; }
+  .animate-delay-500 { animation-delay: 500ms; }
+}
