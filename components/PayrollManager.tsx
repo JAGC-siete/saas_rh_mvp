@@ -5,6 +5,7 @@ import { createClient } from '../lib/supabase/client'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from './ui/select'
 
 interface PayrollRecord {
   id: string
@@ -99,6 +100,13 @@ export default function PayrollManager() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'records' | 'generate' | 'reports'>('dashboard')
   const [generateForm, setGenerateForm] = useState(INITIAL_GENERATE_FORM)
   const [supabase, setSupabase] = useState<any>(null)
+  const [showQuickGenerate, setShowQuickGenerate] = useState(false)
+  const [showQuickVoucher, setShowQuickVoucher] = useState(false)
+  const [voucherForm, setVoucherForm] = useState<{ periodo: string; quincena: number; employeeId: string }>({
+    periodo: new Date().toISOString().slice(0, 7),
+    quincena: 1,
+    employeeId: ''
+  })
 
   // Memoized values
   const currentPeriodRecords = useMemo(() => 
@@ -613,6 +621,48 @@ export default function PayrollManager() {
     setActiveTab(tab)
   }, [])
 
+  const generateIndividualVoucher = useCallback(async () => {
+    try {
+      if (!voucherForm.employeeId) {
+        alert('Seleccione un empleado')
+        return
+      }
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        alert('Sesión no válida')
+        return
+      }
+      const [year, month] = voucherForm.periodo.split('-').map((n: any) => Number(n))
+      const lastDay = new Date(year, month, 0).getDate()
+      const startDay = voucherForm.quincena === 1 ? 1 : 16
+      const endDay = voucherForm.quincena === 1 ? 15 : lastDay
+      const emp = employees.find(e => e.id === voucherForm.employeeId)
+      const empCode = emp?.employee_code || 'empleado'
+
+      await downloadFile('/api/payroll/export', `recibo_${empCode}_${voucherForm.periodo}_q${voucherForm.quincena}.pdf`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/pdf',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          periodo: voucherForm.periodo,
+          formato: 'recibo-individual',
+          employeeId: voucherForm.employeeId,
+          quincena: voucherForm.quincena,
+          range: {
+            start: `${voucherForm.periodo}-${String(startDay).padStart(2, '0')}`,
+            end: `${voucherForm.periodo}-${String(endDay).padStart(2, '0')}`
+          }
+        })
+      })
+    } catch (error: any) {
+      console.error('Error generating individual voucher:', error)
+      alert(`❌ Error generando recibo: ${error.message}`)
+    }
+  }, [voucherForm, supabase, employees, downloadFile])
+
   // Pre-cálculos para la sección de distribución (evitar trabajo por iteración)
   const { maxDeptCountMemo, totalDeptEmployeesMemo } = useMemo(() => {
     const values = Object.values(payrollStats.departmentBreakdown)
@@ -642,6 +692,198 @@ export default function PayrollManager() {
           </Button>
         </div>
       </div>
+
+      {/* Minimal actions */}
+      <Card variant="glass">
+        <CardHeader>
+          <CardTitle className="text-white">⚡ Acciones mínimas</CardTitle>
+          <CardDescription className="text-gray-300">Dos acciones directas con parámetros requeridos</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Generar Nómina */}
+            <div className="p-4 rounded-lg border border-white/10 bg-white/5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-white font-medium">Generar nómina</div>
+                <Button
+                  size="sm"
+                  className="bg-brand-800 hover:bg-brand-700 text-white"
+                  onClick={() => setShowQuickGenerate(v => !v)}
+                >
+                  {showQuickGenerate ? 'Ocultar' : 'Configurar'}
+                </Button>
+              </div>
+              {showQuickGenerate && (
+                <form onSubmit={generatePayroll} className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-1">Mes</label>
+                    <Input
+                      type="month"
+                      value={generateForm.periodo}
+                      onChange={e => setGenerateForm(prev => ({ ...prev, periodo: e.target.value }))}
+                      className="bg-white/10 border-white/20 text-white placeholder-gray-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-1">Quincena</label>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        onClick={() => setGenerateForm(prev => ({ ...prev, quincena: 1 }))}
+                        className={`${generateForm.quincena === 1 ? 'bg-brand-800 hover:bg-brand-700 text-white' : 'border border-white/20 text-white hover:bg-white/10 bg-transparent'}`}
+                      >
+                        1 - 15
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={() => setGenerateForm(prev => ({ ...prev, quincena: 2 }))}
+                        className={`${generateForm.quincena === 2 ? 'bg-brand-800 hover:bg-brand-700 text-white' : 'border border-white/20 text-white hover:bg-white/10 bg-transparent'}`}
+                      >
+                        16 - {lastDayOfSelectedMonth}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <label className="text-sm text-white flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={generateForm.incluirDeducciones}
+                        onChange={e => setGenerateForm(prev => ({ ...prev, incluirDeducciones: e.target.checked }))}
+                        className="accent-brand-500"
+                      />
+                      Incluir deducciones (ISR, IHSS, RAP)
+                    </label>
+                    <label className="text-sm text-white flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={generateForm.soloEmpleadosConAsistencia}
+                        onChange={e => setGenerateForm(prev => ({ ...prev, soloEmpleadosConAsistencia: e.target.checked }))}
+                        className="accent-brand-500"
+                      />
+                      Solo empleados con asistencia completa
+                    </label>
+                  </div>
+                  <div className="text-xs text-gray-300">
+                    {(() => {
+                      const [y, m] = generateForm.periodo.split('-').map((n: any) => Number(n))
+                      const last = new Date(y, m, 0).getDate()
+                      const start = generateForm.quincena === 1 ? 1 : 16
+                      const end = generateForm.quincena === 1 ? 15 : last
+                      return `Período: ${generateForm.periodo}-${String(start).padStart(2,'0')} a ${generateForm.periodo}-${String(end).padStart(2,'0')}`
+                    })()}
+                  </div>
+                  <div className="text-xs">
+                    <div className="text-gray-400 mb-1">Payload:</div>
+                    <pre className="bg-black/40 border border-white/10 rounded p-2 text-gray-200 overflow-auto">
+{JSON.stringify({
+  periodo: generateForm.periodo,
+  quincena: generateForm.quincena,
+  incluirDeducciones: generateForm.incluirDeducciones,
+  soloEmpleadosConAsistencia: generateForm.soloEmpleadosConAsistencia
+}, null, 2)}
+                    </pre>
+                  </div>
+                  <div>
+                    <Button type="submit" disabled={loading} className="bg-brand-800 hover:bg-brand-700 text-white">
+                      {loading ? '🔄 Generando...' : '🚀 Generar Nómina ahora'}
+                    </Button>
+                  </div>
+                </form>
+              )}
+            </div>
+
+            {/* Voucher individual */}
+            <div className="p-4 rounded-lg border border-white/10 bg-white/5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-white font-medium">Generar voucher individual</div>
+                <Button
+                  size="sm"
+                  className="bg-brand-800 hover:bg-brand-700 text-white"
+                  onClick={() => setShowQuickVoucher(v => !v)}
+                >
+                  {showQuickVoucher ? 'Ocultar' : 'Configurar'}
+                </Button>
+              </div>
+              {showQuickVoucher && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-1">Empleado</label>
+                    <Select value={voucherForm.employeeId} onValueChange={(v) => setVoucherForm(prev => ({ ...prev, employeeId: v }))}>
+                      <SelectTrigger className="bg-white/10 border-white/20 text-white">
+                        <SelectValue placeholder="Selecciona un empleado" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {employees.map(emp => (
+                          <SelectItem key={emp.id} value={emp.id}>
+                            {emp.employee_code} — {emp.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-1">Mes</label>
+                    <Input
+                      type="month"
+                      value={voucherForm.periodo}
+                      onChange={e => setVoucherForm(prev => ({ ...prev, periodo: e.target.value }))}
+                      className="bg-white/10 border-white/20 text-white placeholder-gray-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-1">Quincena</label>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        onClick={() => setVoucherForm(prev => ({ ...prev, quincena: 1 }))}
+                        className={`${voucherForm.quincena === 1 ? 'bg-brand-800 hover:bg-brand-700 text-white' : 'border border-white/20 text-white hover:bg-white/10 bg-transparent'}`}
+                      >
+                        1 - 15
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={() => setVoucherForm(prev => ({ ...prev, quincena: 2 }))}
+                        className={`${voucherForm.quincena === 2 ? 'bg-brand-800 hover:bg-brand-700 text-white' : 'border border-white/20 text-white hover:bg-white/10 bg-transparent'}`}
+                      >
+                        {(() => {
+                          const [y, m] = voucherForm.periodo.split('-').map((n: any) => Number(n))
+                          const last = new Date(y, m, 0).getDate()
+                          return `16 - ${last}`
+                        })()}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-300">
+                    {(() => {
+                      const [y, m] = voucherForm.periodo.split('-').map((n: any) => Number(n))
+                      const last = new Date(y, m, 0).getDate()
+                      const start = voucherForm.quincena === 1 ? 1 : 16
+                      const end = voucherForm.quincena === 1 ? 15 : last
+                      return `Período: ${voucherForm.periodo}-${String(start).padStart(2,'0')} a ${voucherForm.periodo}-${String(end).padStart(2,'0')}`
+                    })()}
+                  </div>
+                  <div className="text-xs">
+                    <div className="text-gray-400 mb-1">Payload:</div>
+                    <pre className="bg-black/40 border border-white/10 rounded p-2 text-gray-200 overflow-auto">
+{JSON.stringify({
+  periodo: voucherForm.periodo,
+  formato: 'recibo-individual',
+  employeeId: voucherForm.employeeId,
+  quincena: voucherForm.quincena
+}, null, 2)}
+                    </pre>
+                  </div>
+                  <div>
+                    <Button onClick={generateIndividualVoucher} className="bg-brand-800 hover:bg-brand-700 text-white" disabled={!voucherForm.employeeId}>
+                      📄 Generar voucher
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Tabs */}
       <div className="border-b border-white/10">
