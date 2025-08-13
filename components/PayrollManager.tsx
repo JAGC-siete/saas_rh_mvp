@@ -63,7 +63,7 @@ const INITIAL_PAYROLL_STATS: PayrollStats = {
 }
 
 const INITIAL_GENERATE_FORM = {
-  periodo: '',
+  periodo: new Date().toISOString().slice(0, 7),
   quincena: 1,
   incluirDeducciones: false,
   soloEmpleadosConAsistencia: true
@@ -119,6 +119,13 @@ export default function PayrollManager() {
     selectedPeriod || new Date().toISOString().slice(0, 7),
     [selectedPeriod]
   )
+
+  // Add last day of selected month for range chips
+  const lastDayOfSelectedMonth = useMemo(() => {
+    if (!generateForm.periodo) return 30
+    const [year, month] = generateForm.periodo.split('-').map((n: any) => Number(n))
+    return new Date(year, month, 0).getDate()
+  }, [generateForm.periodo])
 
   // Initialize Supabase client
   useEffect(() => {
@@ -540,7 +547,8 @@ export default function PayrollManager() {
       body: JSON.stringify({
         periodo: period,
         formato: 'recibo-individual',
-        employeeId: record.employee_id
+        employeeId: record.employee_id,
+        quincena
       })
     })
   }, [supabase, downloadFile])
@@ -1042,17 +1050,24 @@ export default function PayrollManager() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-white mb-1">
-                    Quincena
+                    Rango
                   </label>
-                  <select
-                    value={generateForm.quincena}
-                    onChange={e => handleFormChange('quincena', Number(e.target.value))}
-                    className="w-full p-2 border border-white/20 rounded-md focus:ring-2 focus:ring-brand-500 bg-white/10 text-white"
-                    required
-                  >
-                    <option value={1} className="bg-brand-900 text-white">Primera (1-15)</option>
-                    <option value={2} className="bg-brand-900 text-white">Segunda (16-fin de mes)</option>
-                  </select>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      onClick={() => handleFormChange('quincena', 1)}
+                      className={`${generateForm.quincena === 1 ? 'bg-brand-800 hover:bg-brand-700 text-white' : 'border border-white/20 text-white hover:bg-white/10 bg-transparent'}`}
+                    >
+                      1 - 15
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => handleFormChange('quincena', 2)}
+                      className={`${generateForm.quincena === 2 ? 'bg-brand-800 hover:bg-brand-700 text-white' : 'border border-white/20 text-white hover:bg-white/10 bg-transparent'}`}
+                    >
+                      16 - {lastDayOfSelectedMonth}
+                    </Button>
+                  </div>
                 </div>
                 <div className="flex items-center">
                   <input
