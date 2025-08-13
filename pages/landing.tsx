@@ -439,10 +439,10 @@ export default function LandingPage() {
               Todo incluido
             </h3>
             <div className="text-4xl font-bold text-brand-400 mb-4">
-              L420 <span className="text-lg text-brand-200/75">/empleado/mes</span>
+              L300 <span className="text-lg text-brand-200/75">/empleado/mes</span>
             </div>
             <div className="text-2xl text-brand-300 mb-4">
-              $17.77 <span className="text-sm text-brand-200/75">USD/empleado/mes</span>
+              $12.50 <span className="text-sm text-brand-200/75">USD/empleado/mes</span>
             </div>
             <p className="text-brand-200/90 mb-6" data-translation-key="pricing.plan.description">
               Sin configuración inicial. Sin límites de uso. Soporte incluido.

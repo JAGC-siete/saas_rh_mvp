@@ -104,7 +104,7 @@ export default function ActivarPage() {
     }
   }
 
-  const calculateTotal = () => formData.empleados * 420
+  const calculateTotal = () => formData.empleados * 300
 
   return (
     <div className="min-h-screen bg-app">
@@ -112,7 +112,7 @@ export default function ActivarPage() {
         <title>Activar Robot de RH - HUMANO SISU</title>
         <meta
           name="description"
-          content="Activa tu robot de RH hoy. L420 por empleado. Listo en 24 horas."
+          content="Activa tu robot de RH hoy. L300 por empleado. Listo en 24 horas."
         />
       </Head>
 
@@ -128,7 +128,7 @@ export default function ActivarPage() {
             🔥 Activa tu robot de RH hoy
           </h1>
           <p className="text-xl text-brand-300">
-            L420 por empleado. Listo en 24 h.
+            L300 por empleado. Listo en 24 h.
           </p>
         </div>
 
@@ -281,7 +281,7 @@ export default function ActivarPage() {
                       Costo estimado: L{calculateTotal().toLocaleString()}
                     </p>
                     <p className="text-brand-400 text-sm">
-                      L420 por empleado × {formData.empleados} empleados
+                      L300 por empleado × {formData.empleados} empleados
                     </p>
                   </div>
                 </div>
@@ -303,7 +303,7 @@ export default function ActivarPage() {
                   Tu inversión: L{calculateTotal().toLocaleString()}
                 </h2>
                 <p className="text-brand-400 text-center mb-8">
-                  Por {formData.empleados} empleados a L420 cada uno
+                  Por {formData.empleados} empleados a L300 cada uno
                 </p>
 
                 <div className="space-y-6">

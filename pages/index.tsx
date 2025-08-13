@@ -247,21 +247,21 @@ export default function LandingPage() {
               </CardTitle>
               <div className="space-y-2">
                 <div className="text-5xl font-bold text-brand-400">
-                  L420 <span className="text-xl text-brand-200">/empleado/mes</span>
+                  L300 <span className="text-xl text-brand-200">/empleado/mes</span>
                 </div>
                 <div className="text-2xl text-brand-300">
-                  $17.77 <span className="text-base text-brand-200">USD/empleado/mes</span>
+                  $12.50 <span className="text-base text-brand-200">USD/empleado/mes</span>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
               <ul className="text-left text-brand-200/90 mb-6 space-y-1">
                 <li>🔥 Reducí los costos de RH, automatiza hoy.</li>
-                <li>💰 Costo L. 150.00 / empleado </li>
+                <li>💰 Costo L300 / empleado </li>
                 <li>⚡ Listo en 24 horas. Cancela cuando quieras.</li>
               </ul>
               <p className="text-brand-200 mb-6 leading-relaxed" data-translation-key="pricing.plan.description">
-                L150/empleado/mes. Todo incluido: Asistencia, Nómina, Vouchers, Dashboard.
+                L300/empleado/mes. Todo incluido: Asistencia, Nómina, Vouchers, Dashboard.
               </p>
               <Link
                 href="/activar"
