@@ -171,7 +171,7 @@ export default function AdminLogin() {
                 {/* Submit Button */}
                 <Button 
                   type="submit" 
-                  className="w-full h-12 bg-blue-600 hover:bg-blue-700" 
+                  className="w-full h-12" 
                   disabled={loading}
                 >
                   {loading ? (
@@ -192,7 +192,7 @@ export default function AdminLogin() {
             <p className="text-blue-200 text-sm mb-3">¿Eres empleado?</p>
             <Link 
               href="/attendance/register" 
-              className="inline-flex items-center gap-2 text-blue-300 hover:text-white transition-colors text-sm font-medium"
+              className="inline-flex items-center gap-2 underline decoration-white/20 underline-offset-4 hover:decoration-brand-400 transition text-blue-300 hover:text-white text-sm font-medium"
             >
               <Clock className="h-4 w-4" />
               Registrar Asistencia

@@ -26,7 +26,7 @@ export default function PublicAttendancePage() {
               </div>
               <Link 
                 href="/" 
-                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                className="underline decoration-black/20 underline-offset-4 hover:decoration-brand-400 transition text-blue-600 hover:text-blue-800 text-sm font-medium"
               >
                 ← Volver al inicio
               </Link>
