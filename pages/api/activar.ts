@@ -16,7 +16,7 @@ interface ActivationData {
   contactoNombre: string
   contactoWhatsApp: string
   contactoEmail: string
-  departamentos: string[]
+  departamentos: any
   monto: number
   comprobante?: string // URL del archivo subido
 }
@@ -59,10 +59,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const contactoNombre = fields.contactoNombre?.[0] || ''
     const contactoWhatsApp = fields.contactoWhatsApp?.[0] || ''
     const contactoEmail = fields.contactoEmail?.[0] || ''
-    const departamentosStr = fields.departamentos?.[0] || '[]'
+    const departamentosStr = fields.departamentos?.[0] || '{}'
     const departamentos = JSON.parse(departamentosStr)
     
-    const monto = empleados * 500
+    const monto = empleados * 300
 
     // Procesar archivo subido
     let comprobanteUrl = ''
