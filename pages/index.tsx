@@ -10,9 +10,33 @@ import {
   ArrowRightIcon
 } from '@heroicons/react/24/outline'
 
+// Custom hook for mouse parallax effect
+const useMouseParallax = () => {
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
+  
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      const { clientX, clientY } = e
+      const centerX = window.innerWidth / 2
+      const centerY = window.innerHeight / 2
+      
+      setMousePosition({
+        x: (clientX - centerX) / centerX,
+        y: (clientY - centerY) / centerY
+      })
+    }
+    
+    window.addEventListener('mousemove', handleMouseMove)
+    return () => window.removeEventListener('mousemove', handleMouseMove)
+  }, [])
+  
+  return mousePosition
+}
+
 export default function LandingPage() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const mousePosition = useMouseParallax()
 
 
   useEffect(() => {
@@ -275,7 +299,74 @@ export default function LandingPage() {
         </div>
       </section>
 
-            <DemoFooter />
+      {/* Cloud Layers System - Parallax Background */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+        {/* L1 - Far Layer: 0.5-0.8px, opacity 0.35-0.5, drift 5-10px/min */}
+        <div 
+          className="cloud-layer-1 absolute inset-0 transition-transform duration-1000 ease-out"
+          style={{
+            transform: `translateX(${mousePosition.x * 3}px) translateY(${mousePosition.y * 3}px)`
+          }}
+        >
+          {[...Array(8)].map((_, i) => (
+            <div
+              key={`cloud-l1-${i}`}
+              className="absolute w-2 h-2 bg-white/40 rounded-full animate-cloud-drift-slow"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                animationDelay: `${Math.random() * 20}s`,
+                animationDuration: `${60 + Math.random() * 30}s`
+              }}
+            />
+          ))}
         </div>
+
+        {/* L2 - Medium Layer: 1px, opacity 0.5-0.7, drift 15-25px/min, twinkle */}
+        <div 
+          className="cloud-layer-2 absolute inset-0 transition-transform duration-1000 ease-out"
+          style={{
+            transform: `translateX(${mousePosition.x * 6}px) translateY(${mousePosition.y * 6}px)`
+          }}
+        >
+          {[...Array(12)].map((_, i) => (
+            <div
+              key={`cloud-l2-${i}`}
+              className="absolute w-4 h-4 bg-white/60 rounded-full animate-cloud-drift-medium animate-cloud-twinkle"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                animationDelay: `${Math.random() * 15}s`,
+                animationDuration: `${40 + Math.random() * 20}s`,
+                '--twinkle-delay': `${Math.random() * 4}s`
+              } as React.CSSProperties}
+            />
+          ))}
+        </div>
+
+        {/* L3 - Close Layer: 1.2-1.6px, very low density, drift 30-45px/min */}
+        <div 
+          className="cloud-layer-3 absolute inset-0 transition-transform duration-1000 ease-out"
+          style={{
+            transform: `translateX(${mousePosition.x * 9}px) translateY(${mousePosition.y * 9}px)`
+          }}
+        >
+          {[...Array(6)].map((_, i) => (
+            <div
+              key={`cloud-l3-${i}`}
+              className="absolute w-6 h-6 bg-white/30 rounded-full animate-cloud-drift-fast"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                animationDelay: `${Math.random() * 10}s`,
+                animationDuration: `${25 + Math.random() * 15}s`
+              }}
+            />
+          ))}
+        </div>
+      </div>
+
+      <DemoFooter />
+    </div>
   )
 }

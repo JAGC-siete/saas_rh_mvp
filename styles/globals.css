@@ -285,3 +285,95 @@ html, body, #__next, #root {
   .animate-delay-300 { animation-delay: 300ms; }
   .animate-delay-500 { animation-delay: 500ms; }
 }
+
+/* Cloud Layers System - Parallax Animations */
+@layer utilities {
+  /* L1 - Far Layer: Very slow drift (5-10px/min) */
+  @keyframes cloud-drift-slow {
+    0% { 
+      transform: translateX(0px) translateY(0px); 
+    }
+    100% { 
+      transform: translateX(calc(100vw + 100px)) translateY(calc(50vh + 50px)); 
+    }
+  }
+  
+  /* L2 - Medium Layer: Medium drift (15-25px/min) with twinkle */
+  @keyframes cloud-drift-medium {
+    0% { 
+      transform: translateX(0px) translateY(0px); 
+    }
+    100% { 
+      transform: translateX(calc(100vw + 150px)) translateY(calc(75vh + 75px)); 
+    }
+  }
+  
+  /* L3 - Close Layer: Fast drift (30-45px/min) */
+  @keyframes cloud-drift-fast {
+    0% { 
+      transform: translateX(0px) translateY(0px); 
+    }
+    100% { 
+      transform: translateX(calc(100vw + 200px)) translateY(calc(100vh + 100px)); 
+    }
+  }
+  
+  /* Twinkle effect for medium layer */
+  @keyframes cloud-twinkle {
+    0%, 100% { 
+      opacity: 0.5; 
+    }
+    50% { 
+      opacity: 0.7; 
+    }
+  }
+  
+  /* Animation classes */
+  .animate-cloud-drift-slow {
+    animation: cloud-drift-slow linear infinite;
+  }
+  
+  .animate-cloud-drift-medium {
+    animation: cloud-drift-medium linear infinite;
+  }
+  
+  .animate-cloud-drift-fast {
+    animation: cloud-drift-fast linear infinite;
+  }
+  
+  .animate-cloud-twinkle {
+    animation: cloud-twinkle ease-in-out infinite;
+  }
+  
+  /* Mobile optimizations */
+  @media (max-width: 768px) {
+    .cloud-layer-1 .absolute,
+    .cloud-layer-2 .absolute,
+    .cloud-layer-3 .absolute {
+      animation-play-state: paused;
+    }
+    
+    .cloud-layer-2 .absolute,
+    .cloud-layer-3 .absolute {
+      display: none; /* Reduce density on mobile */
+    }
+  }
+  
+  /* Parallax effect on hover/gyroscope */
+  @media (hover: hover) {
+    .cloud-layer-1 .absolute:hover {
+      transform: translateX(3px) translateY(3px);
+      transition: transform 0.3s ease;
+    }
+    
+    .cloud-layer-2 .absolute:hover {
+      transform: translateX(6px) translateY(6px);
+      transition: transform 0.3s ease;
+    }
+    
+    .cloud-layer-3 .absolute:hover {
+      transform: translateX(9px) translateY(9px);
+      transition: transform 0.3s ease;
+    }
+  }
+}
