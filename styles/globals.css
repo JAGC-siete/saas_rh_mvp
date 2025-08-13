@@ -58,6 +58,13 @@
   }
 }
 
+/* Glass utility */
+.glass {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
