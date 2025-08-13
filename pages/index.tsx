@@ -10,69 +10,30 @@ import {
   ArrowRightIcon
 } from '@heroicons/react/24/outline'
 
-// Custom hook for optimized mouse parallax effect
-const useMouseParallax = () => {
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
-  const [shouldParallax, setShouldParallax] = useState(true)
+// Simple hook for mobile detection and performance optimization
+const usePerformanceOptimization = () => {
+  const [isMobile, setIsMobile] = useState(false)
   
   useEffect(() => {
-    // Check for reduced motion preference
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    
-    // Check for save data mode
-    const saveData = (navigator as any).connection?.saveData
-    
     // Check if mobile device
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-    
-    // Disable parallax if any of these conditions are met
-    if (prefersReducedMotion || saveData || isMobile) {
-      setShouldParallax(false)
-      return
+    const checkMobile = () => {
+      const mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+      setIsMobile(mobile)
     }
     
-    let rafId: number
-    let lastMouseX = 0
-    let lastMouseY = 0
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
     
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!shouldParallax) return
-      
-      const { clientX, clientY } = e
-      const centerX = window.innerWidth / 2
-      const centerY = window.innerHeight / 2
-      
-      // Throttle updates to 60fps
-      rafId = requestAnimationFrame(() => {
-        // Smooth interpolation for natural movement
-        const targetX = (clientX - centerX) / centerX
-        const targetY = (clientY - centerY) / centerY
-        
-        const newX = lastMouseX + (targetX - lastMouseX) * 0.1
-        const newY = lastMouseY + (targetY - lastMouseY) * 0.1
-        
-        setMousePosition({ x: newX, y: newY })
-        
-        lastMouseX = newX
-        lastMouseY = newY
-      })
-    }
-    
-    window.addEventListener('mousemove', handleMouseMove, { passive: true })
-    
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove)
-      if (rafId) cancelAnimationFrame(rafId)
-    }
-  }, [shouldParallax])
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
   
-  return { mousePosition, shouldParallax }
+  return { isMobile }
 }
 
 export default function LandingPage() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const { mousePosition, shouldParallax } = useMouseParallax()
+  const { isMobile } = usePerformanceOptimization()
 
 
   useEffect(() => {
@@ -338,12 +299,7 @@ export default function LandingPage() {
       {/* Cloud Layers System - Doodle Style with Optimized Parallax */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         {/* L1 - Far Layer: Very subtle, slow drift */}
-        <div 
-          className="cloud-layer-1 absolute inset-0 transition-transform duration-2000 ease-out"
-          style={{
-            transform: shouldParallax ? `translateX(${mousePosition.x * 2}px) translateY(${mousePosition.y * 2}px)` : 'none'
-          }}
-        >
+        <div className="cloud-layer-1 absolute inset-0">
           {[...Array(25)].map((_, i) => (
             <div
               key={`cloud-l1-${i}`}
@@ -372,12 +328,7 @@ export default function LandingPage() {
         </div>
 
         {/* L2 - Medium Layer: Medium density, subtle twinkle */}
-        <div 
-          className="cloud-layer-2 absolute inset-0 transition-transform duration-2000 ease-out"
-          style={{
-            transform: shouldParallax ? `translateX(${mousePosition.x * 4}px) translateY(${mousePosition.y * 4}px)` : 'none'
-          }}
-        >
+        <div className="cloud-layer-2 absolute inset-0">
           {[...Array(35)].map((_, i) => (
             <div
               key={`cloud-l2-${i}`}
@@ -406,12 +357,7 @@ export default function LandingPage() {
         </div>
 
         {/* L3 - Close Layer: Low density, minimal parallax */}
-        <div 
-          className="cloud-layer-3 absolute inset-0 transition-transform duration-2000 ease-out"
-          style={{
-            transform: shouldParallax ? `translateX(${mousePosition.x * 6}px) translateY(${mousePosition.y * 6}px)` : 'none'
-          }}
-        >
+        <div className="cloud-layer-3 absolute inset-0">
           {[...Array(20)].map((_, i) => (
             <div
               key={`cloud-l3-${i}`}
