@@ -86,6 +86,15 @@ export default function LandingPage() {
 
               <div className="hidden md:block">
                 <div className="ml-10 flex items-baseline space-x-4">
+                  {/* Logo Humano SISU */}
+                  <div className="flex items-center mr-4">
+                    <img 
+                      src="/logo-humano-sisu.png" 
+                      alt="Humano SISU Logo" 
+                      className="h-8 w-auto object-contain"
+                    />
+                  </div>
+                  
                   <a
                     href="#libro-rojo"
                     className="text-brand-200 hover:text-white px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0"
