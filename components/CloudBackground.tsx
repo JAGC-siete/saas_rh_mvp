@@ -1,6 +1,6 @@
 import React from 'react'
 
-export default function CloudBackground(): JSX.Element {
+export default function CloudBackground() {
   return (
     <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
       {/* L1 - Far Layer: Very subtle, slow drift */}

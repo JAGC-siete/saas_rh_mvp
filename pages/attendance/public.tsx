@@ -1,5 +1,6 @@
 import Head from 'next/head'
 import dynamic from 'next/dynamic'
+const CloudBackground = dynamic(() => import('../../components/CloudBackground'), { ssr: false })
 import Link from 'next/link'
 import AttendanceManager from '../../components/AttendanceManager'
 
@@ -12,7 +13,7 @@ export default function PublicAttendancePage() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
       <div className="min-h-screen bg-app relative">
-        {dynamic(() => import('../../components/CloudBackground'), { ssr: false })({})}
+        <CloudBackground />
         {/* Header */}
         <div className="bg-white shadow-sm border-b">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
