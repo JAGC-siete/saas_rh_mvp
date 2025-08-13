@@ -78,7 +78,14 @@ export default function LandingPage() {
         >
           <nav className="px-6 lg:px-8">
             <div className="flex items-center justify-between h-16">
-              <div className="flex items-center">
+              <div className="flex items-center space-x-3">
+                {/* Logo Humano SISU */}
+                <img 
+                  src="/logo-humano-sisu.png" 
+                  alt="Humano SISU Logo" 
+                  className="h-10 w-auto object-contain"
+                />
+                
                 <span className="text-2xl font-bold text-white">
                   <span className="text-white font-bold">CLOUDHR Tech</span> <span className="text-brand-400">por SISU</span>
                 </span>
@@ -86,15 +93,6 @@ export default function LandingPage() {
 
               <div className="hidden md:block">
                 <div className="ml-10 flex items-baseline space-x-4">
-                  {/* Logo Humano SISU */}
-                  <div className="flex items-center mr-4">
-                    <img 
-                      src="/logo-humano-sisu.png" 
-                      alt="Humano SISU Logo" 
-                      className="h-8 w-auto object-contain"
-                    />
-                  </div>
-                  
                   <a
                     href="#libro-rojo"
                     className="text-brand-200 hover:text-white px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0"
