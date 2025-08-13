@@ -2,16 +2,6 @@ import { UserGroupIcon, ClockIcon, CurrencyDollarIcon, CheckCircleIcon, ArrowRig
 import Link from 'next/link'
 import { Button } from './ui/button'
 
-const btnPrimary =
-  "inline-flex items-center justify-center h-11 px-5 rounded-xl bg-brand-600 text-white font-semibold shadow-lg shadow-black/20 " +
-  "transition-transform duration-200 ease-out hover:-translate-y-0.5 active:translate-y-0 focus:outline-none " +
-  "focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
-
-const btnGhost =
-  "inline-flex items-center justify-center h-11 px-5 rounded-xl border border-white/20 text-brand-200/90 hover:text-white " +
-  "hover:border-brand-400/40 transition-colors duration-200 focus:outline-none focus-visible:ring-2 " +
-  "focus-visible:ring-brand-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
-
 const badge =
   "inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm border border-white/15 bg-white/5 text-brand-200"
 
