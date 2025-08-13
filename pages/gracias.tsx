@@ -94,8 +94,9 @@ export default function GraciasPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm text-brand-200">
-            <p>📧 Email: soporte@humanosisu.com</p>
-            <p>📱 WhatsApp: +504 9999-9999</p>
+            <p>📧 Email: jorge7gomez@gmail.com</p>
+            <p>📱 WhatsApp: +504 9470-7007</p>
+            <p>📞 Llamadas: +504 3214-8010</p>
             <p>⏰ Horario: Lunes a Viernes, 8:00 AM - 6:00 PM</p>
           </CardContent>
         </Card>
