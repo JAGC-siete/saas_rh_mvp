@@ -51,7 +51,41 @@ export default function ServicesSection() {
             </div>
           </article>
 
-          {/* SOPORTE: Nómina */}
+          {/* SOPORTE: Reportes ejecutivos */}
+          <article className="group relative overflow-hidden rounded-2xl glass border border-white/15 p-6 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 grid place-items-center rounded-lg bg-white/10 border border-white/15">
+                <CheckCircleIcon className="h-5 w-5 text-brand-300" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-white">Reportes ejecutivos</h3>
+                <p className="text-sm text-brand-300/90">Dashboard interactivo y exportación automática</p>
+              </div>
+            </div>
+
+            <ul className="mt-4 space-y-3">
+              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Métricas en tiempo real</li>
+              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Exportación Excel/PDF automática</li>
+              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Alertas inteligentes y notificaciones</li>
+            </ul>
+
+            <div className="mt-5 flex gap-3">
+              <Button variant="outline" asChild className="h-10 px-4">
+                <Link href="/demo#reportes">Ver módulo</Link>
+              </Button>
+              <Link href="/activar" className="inline-flex items-center underline decoration-white/20 underline-offset-4 hover:decoration-brand-400 transition text-brand-300 hover:text-white">
+                Activar <ArrowRightIcon className="ml-1 h-4 w-4" />
+              </Link>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      {/* El Planillero - Nómina */}
+      <div id="planillero" className="mb-16">
+        <h3 className="text-2xl font-bold text-white mb-6 text-center">El Planillero Automático</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* SOPORTE: Nómina sin errores */}
           <article className="group relative overflow-hidden rounded-2xl glass border border-white/15 p-6 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 grid place-items-center rounded-lg bg-white/10 border border-white/15">
@@ -78,14 +112,8 @@ export default function ServicesSection() {
               </Link>
             </div>
           </article>
-        </div>
-      </div>
 
-      {/* El Planillero - Nómina */}
-      <div id="planillero" className="mb-16">
-        <h3 className="text-2xl font-bold text-white mb-6 text-center">El Planillero Automático</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* SOPORTE: Nómina Avanzada */}
+          {/* SOPORTE: Cálculo automático */}
           <article className="group relative overflow-hidden rounded-2xl glass border border-white/15 p-6 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 grid place-items-center rounded-lg bg-white/10 border border-white/15">
@@ -113,33 +141,7 @@ export default function ServicesSection() {
             </div>
           </article>
 
-          {/* SOPORTE: Reportes */}
-          <article className="group relative overflow-hidden rounded-2xl glass border border-white/15 p-6 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 grid place-items-center rounded-lg bg-white/10 border border-white/15">
-                <CheckCircleIcon className="h-5 w-5 text-brand-300" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-white">Reportes ejecutivos</h3>
-                <p className="text-sm text-brand-300/90">Dashboard interactivo y exportación automática</p>
-              </div>
-            </div>
 
-            <ul className="mt-4 space-y-3">
-              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Métricas en tiempo real</li>
-              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Exportación Excel/PDF automática</li>
-              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Alertas inteligentes y notificaciones</li>
-            </ul>
-
-            <div className="mt-5 flex gap-3">
-              <Button variant="outline" asChild className="h-10 px-4">
-                <Link href="/demo#reportes">Ver módulo</Link>
-              </Button>
-              <Link href="/activar" className="inline-flex items-center underline decoration-white/20 underline-offset-4 hover:decoration-brand-400 transition text-brand-300 hover:text-white">
-                Activar <ArrowRightIcon className="ml-1 h-4 w-4" />
-              </Link>
-            </div>
-          </article>
         </div>
       </div>
 
