@@ -69,41 +69,41 @@ export default function LandingPage() {
                 <div className="ml-10 flex items-baseline space-x-4">
                   <a
                     href="#certificacion"
-                    className="text-brand-200 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                    className="text-brand-200 hover:text-white px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0"
                     onClick={scrollToSection}
                   >
                     Certificación
                   </a>
                   <a
                     href="#libro-rojo"
-                    className="text-brand-200 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                    className="text-brand-200 hover:text-white px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0"
                     onClick={scrollToSection}
                   >
                     Asistencia
                   </a>
                   <a
                     href="#planillero"
-                    className="text-brand-200 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                    className="text-brand-200 hover:text-white px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0"
                     onClick={scrollToSection}
                   >
                     Nómina
                   </a>
                   <a
                     href="#pricing"
-                    className="text-brand-200 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                    className="text-brand-200 hover:text-white px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0"
                     onClick={scrollToSection}
                   >
                     Precios
                   </a>
                   <Link
                     href="/demo"
-                    className="text-brand-200 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                    className="text-brand-200 hover:text-white px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0"
                   >
                     Ver demo
                   </Link>
                   <Link
                     href="/app/login"
-                    className="bg-brand-900 hover:bg-brand-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                    className="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 shadow-lg shadow-black/20 hover:-translate-y-0.5 active:translate-y-0"
                   >
                     Iniciar sesión
                   </Link>
@@ -230,7 +230,7 @@ export default function LandingPage() {
             </div>
 
             {/* ROI Calculator mini */}
-            <div id="roi" className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-8 max-w-md mx-auto">
+            <div id="roi" className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-8 max-w-md mx-auto hover:bg-white/10 transition-all duration-300 hover:border-brand-400/30">
               <h3 className="text-white font-semibold mb-3">Calculá tu ahorro</h3>
               <div className="flex items-center gap-3">
                 <input
@@ -239,12 +239,12 @@ export default function LandingPage() {
                   value={roiEmployees}
                   onChange={(e) => setRoiEmployees(Number(e.target.value))}
                   placeholder="# empleados"
-                  className="bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white placeholder:text-brand-200/60 w-28"
+                  className="bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white placeholder:text-brand-200/60 w-28 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 transition-all duration-200"
                 />
                 <span className="text-brand-200">×</span>
                 <span className="text-brand-400 font-bold">L{ahorroPorEmpleado}/mes</span>
                 <span className="text-brand-200">=</span>
-                <span className="text-green-400 font-bold">L{ahorroTotal.toLocaleString('es-HN')}</span>
+                <span className="text-green-400 font-bold text-xl">L{ahorroTotal.toLocaleString('es-HN')}</span>
               </div>
               <p className="text-xs text-brand-200/80 mt-2">Ahorro promedio vs planilla manual</p>
             </div>
@@ -320,7 +320,7 @@ export default function LandingPage() {
               </p>
               <Link
                 href="/activar"
-                className="w-full bg-brand-900 hover:bg-brand-800 text-white py-4 px-4 rounded-lg font-bold transition-colors inline-flex items-center justify-center gap-2 text-lg"
+                className="w-full bg-brand-600 hover:bg-brand-700 text-white py-4 px-4 rounded-lg font-bold transition-all duration-300 inline-flex items-center justify-center gap-2 text-lg shadow-lg shadow-black/20 hover:-translate-y-0.5 active:translate-y-0 hover:shadow-xl hover:shadow-brand-900/50"
               >
                 Automatizar mi RH hoy
                 <ArrowRightIcon className="w-4 h-4" />
