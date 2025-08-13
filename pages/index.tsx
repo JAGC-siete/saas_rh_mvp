@@ -173,12 +173,12 @@ export default function LandingPage() {
 
           <div className="text-center max-w-4xl mx-auto">
             <h1 className="text-5xl md:text-6xl font-bold text-white mb-4 leading-tight">
-              De 4 horas de planilla
+              De 4 horas de planilla;
               <span className="block text-brand-400">a 4 minutos</span>
             </h1>
 
             <p className="text-xl text-brand-200/90 mb-8">
-              + Control antifraude en tiempo real. Sin errores, sin pasivo laboral.
+              Adiós a las tareas repetitivas. Sin errores, sin pasivo laboral.
               <strong className="text-white"> Actívalo HOY.</strong>
             </p>
 
@@ -209,7 +209,7 @@ export default function LandingPage() {
 
           <div className="grid md:grid-cols-3 gap-8">
             {[
-              { name: 'Carlos Mendoza', company: 'Distribuidora La Ceiba', employees: '23 empleados', saving: 'L12,500/mes', quote: 'Ya no pierdo domingos haciendo planilla. 4 horas ahora son 4 minutos.' },
+              { name: 'Felix Garcia', company: 'Tony\'s Mar Restaurant', employees: '40 empleados', saving: 'L12,500/mes', quote: 'Ya no pierdo domingos haciendo planilla. 4 horas ahora son 4 minutos.' },
               { name: 'Ana Rodríguez', company: 'Textiles Honduras', employees: '45 empleados', saving: 'L18,000/mes', quote: 'El control antifraude me devolvió 15% de productividad perdida.' },
               { name: 'Miguel Santos', company: 'Agroexport SAC', employees: '67 empleados', saving: 'L25,500/mes', quote: 'Cero errores en IHSS desde que lo uso. Mi contador está feliz.' }
             ].map((testimonial, i) => (
@@ -256,12 +256,12 @@ export default function LandingPage() {
             </CardHeader>
             <CardContent>
               <ul className="text-left text-brand-200/90 mb-6 space-y-1">
-                <li>🔥 Ahorra L15,000/mes vs planilla manual</li>
-                <li>💰 Solo L420/empleado (vs L800 costo fraude)</li>
-                <li>⚡ ROI del 300% el primer mes</li>
+                <li>🔥 Reducí los costos de RH, automatiza hoy.</li>
+                <li>💰 Costo L. 150.00 / empleado </li>
+                <li>⚡ Listo en 24 horas. Cancela cuando quieras.</li>
               </ul>
               <p className="text-brand-200 mb-6 leading-relaxed" data-translation-key="pricing.plan.description">
-                US$17.77/empleado/mes. Todo incluido, soporte, sin instalación. Cancelá cuando quieras. 30 días gratis.
+                L150/empleado/mes. Todo incluido: Asistencia, Nómina, Vouchers, Dashboard.
               </p>
               <Link
                 href="/activar"
