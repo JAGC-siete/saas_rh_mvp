@@ -60,33 +60,25 @@ export default function LandingPage() {
             <div className="flex items-center justify-between h-16">
               <div className="flex items-center">
                 <span className="text-2xl font-bold text-white">
-                  HUMANO <span className="text-brand-400">SISU</span>{' '}
-                  <span className="text-brand-300 text-lg">- La Agencia de Empleo Privada</span>
+                  <span className="text-brand-400">SISU</span> - CLOUD HR TECH
                 </span>
               </div>
 
               <div className="hidden md:block">
                 <div className="ml-10 flex items-baseline space-x-4">
                   <a
-                    href="#certificacion"
-                    className="text-brand-200 hover:text-white px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0"
-                    onClick={scrollToSection}
-                  >
-                    Certificación
-                  </a>
-                  <a
                     href="#libro-rojo"
                     className="text-brand-200 hover:text-white px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0"
                     onClick={scrollToSection}
                   >
-                    Asistencia
+                    El Libro Rojo
                   </a>
                   <a
                     href="#planillero"
                     className="text-brand-200 hover:text-white px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0"
                     onClick={scrollToSection}
                   >
-                    Nómina
+                    El Planillero
                   </a>
                   <a
                     href="#pricing"
@@ -95,12 +87,6 @@ export default function LandingPage() {
                   >
                     Precios
                   </a>
-                  <Link
-                    href="/demo"
-                    className="text-brand-200 hover:text-white px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0"
-                  >
-                    Ver demo
-                  </Link>
                   <Link
                     href="/app/login"
                     className="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 shadow-lg shadow-black/20 hover:-translate-y-0.5 active:translate-y-0"
@@ -212,21 +198,8 @@ export default function LandingPage() {
                 href="/activar"
                 className="px-6 md:px-8 py-3 md:py-4 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-semibold text-base md:text-lg transition-all duration-300 shadow-lg shadow-black/20 hover:-translate-y-0.5 active:translate-y-0 hover:shadow-xl hover:shadow-brand-900/50 animate-pulse-glow"
               >
-                Empezar mi prueba gratuita
+                Quiero Automatizar mi RH
               </Link>
-              <Link
-                href="/demo"
-                className="px-6 md:px-8 py-3 md:py-4 border border-white/20 bg-white/10 text-white rounded-lg font-semibold text-base md:text-lg hover:bg-white/20 hover:border-brand-400/40 transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0"
-              >
-                Ver demo en 5 min
-              </Link>
-              <a
-                href="#roi"
-                onClick={scrollToSection}
-                className="px-6 md:px-8 py-3 md:py-4 text-brand-300 hover:text-white rounded-lg font-semibold text-base md:text-lg hover:bg-white/10 transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0"
-              >
-                Calcular mi ahorro
-              </a>
             </div>
 
             {/* ROI Calculator mini */}
