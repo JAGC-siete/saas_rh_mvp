@@ -10,7 +10,6 @@ import {
   ChartBarIcon,
   Cog6ToothIcon,
   ArrowLeftOnRectangleIcon,
-  BuildingOfficeIcon,
   UsersIcon
 } from '@heroicons/react/24/outline'
 import { TrophyIcon } from '@heroicons/react/24/solid'
@@ -100,7 +99,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigationItems = [
     { name: 'Dashboard', href: '/app/dashboard', icon: ChartBarIcon, permission: 'dashboard' },
     { name: 'Empleados', href: '/app/employees', icon: UsersIcon, permission: 'employees' },
-    { name: 'Departamentos', href: '/app/departments', icon: BuildingOfficeIcon, permission: 'departments' },
+    { name: 'Departamentos', href: '/app/departments', icon: UsersIcon, permission: 'departments' },
     { name: 'Asistencia', href: '/attendance/dashboard', icon: ClockIcon, permission: 'attendance' },
     { name: 'Permisos', href: '/app/leave', icon: UserIcon, permission: 'leave' },
     { name: 'Nómina', href: '/app/payroll', icon: CurrencyDollarIcon, permission: 'payroll' },
@@ -124,11 +123,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <div className="flex items-center justify-between h-16 px-4 border-b border-white/10">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <BuildingOfficeIcon className="h-8 w-8 text-brand-400" />
+                <img 
+                  src="/logo-humano-sisu.png" 
+                  alt="Humano SISU Logo" 
+                  className="h-8 w-auto"
+                />
               </div>
               {sidebarOpen && (
                 <div className="ml-3">
-                  <h1 className="text-xl font-semibold text-white">HR SaaS</h1>
+                  <h1 className="text-xl font-semibold text-white">Humano SISU</h1>
                 </div>
               )}
             </div>

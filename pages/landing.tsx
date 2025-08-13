@@ -83,7 +83,11 @@ export default function LandingPage() {
           <nav className="px-6 lg:px-8">
             <div className="flex items-center justify-between h-16">
               <div className="flex items-center">
-                <span className="text-2xl font-bold text-white">HUMANO <span className="text-brand-400">SISU</span></span>
+                <img 
+                  src="/logo-humano-sisu.png" 
+                  alt="Humano SISU Logo" 
+                  className="h-12 w-auto"
+                />
               </div>
               
               <div className="hidden md:block">
@@ -151,7 +155,7 @@ export default function LandingPage() {
                   href="#libro-rojo" 
                   className="block px-3 py-2 text-base font-medium text-brand-200/90 hover:text-brand-400 hover:bg-white/5 rounded-md transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  data-translation-key="nav.attendance"
+
                 >
                   El Libro Rojo
                 </a>
@@ -159,7 +163,7 @@ export default function LandingPage() {
                   href="#planillero" 
                   className="block px-3 py-2 text-base font-medium text-brand-200/90 hover:text-brand-400 hover:bg-white/5 rounded-md transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  data-translation-key="nav.payroll"
+
                 >
                   El Planillero
                 </a>
@@ -167,7 +171,7 @@ export default function LandingPage() {
                   href="#pricing" 
                   className="block px-3 py-2 text-base font-medium text-brand-200/90 hover:text-brand-400 hover:bg-white/5 rounded-md transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  data-translation-key="nav.pricing"
+
                 >
                   Precios
                 </a>
@@ -183,7 +187,7 @@ export default function LandingPage() {
                     href="/login"
                     className="bg-brand-900 hover:bg-brand-800 text-white w-full text-center block py-2 px-4 rounded-lg transition-colors focus-visible:outline-none focus-visible:focus-ring"
                     onClick={() => setIsMobileMenuOpen(false)}
-                    data-translation-key="nav.automate"
+
                   >
                     Iniciar Sesión
                   </Link>
@@ -196,10 +200,10 @@ export default function LandingPage() {
 
       {/* Hero Section with proper padding for fixed header */}
       <section className="landing-section text-center glass-strong pt-20 border-b border-white/10">
-        <h1 className="text-4xl font-bold mb-4 text-white" data-translation-key="hero.title">
+        <h1 className="text-4xl font-bold mb-4 text-white">
           Automatiza el 80% del trabajo de RH en 24 horas: asistencia, nómina y vouchers en 1 click
         </h1>
-        <p className="mb-8 text-lg max-w-3xl mx-auto text-brand-200/90" data-translation-key="hero.subtitle">
+        <p className="mb-8 text-lg max-w-3xl mx-auto text-brand-200/90">
           Actívalo hoy. Sin errores, sin pasivo laboral. Pago por empleado. Sin letras pequeñas
         </p>
         
@@ -245,7 +249,7 @@ export default function LandingPage() {
             href="/activar"
             className="bg-brand-900 hover:bg-orange-500 hover:-translate-y-1 hover:shadow-lg text-white px-8 py-3 rounded-lg font-semibold shadow text-base transition-all duration-300 focus-visible:outline-none focus-visible:focus-ring transform"
             aria-label="Quiero automatizar mi RH"
-            data-translation-key="hero.cta_primary"
+
           >
             Quiero automatizar mi RH
           </Link>
@@ -253,7 +257,7 @@ export default function LandingPage() {
             href="/demo"
             className="bg-white/10 border border-white/20 text-white px-8 py-3 rounded-lg font-semibold text-base backdrop-blur hover:bg-white/20 hover:-translate-y-1 hover:shadow-lg hover:border-brand-400 transition-all duration-300 focus-visible:outline-none focus-visible:focus-ring transform"
             aria-label="Quiero ver cómo funciona"
-            data-translation-key="hero.cta_secondary"
+
           >
             Quiero ver cómo funciona
           </Link>
@@ -263,7 +267,7 @@ export default function LandingPage() {
       {/* Services Section */}
       <section id="servicios" className="landing-section">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-semibold mb-4 text-white" data-translation-key="services.title">
+          <h2 className="text-3xl font-semibold mb-4 text-white">
             Los Robots de Humano SISU
           </h2>
           <p className="text-xl text-brand-400 font-medium mb-2">
@@ -280,7 +284,7 @@ export default function LandingPage() {
             
             return (
               <div
-                key={service.title}
+                key={`service-${index}`}
                 id={sectionIds[index]}
                 className={`glass p-6 hover:glass-strong transition-all duration-300 flex flex-col ${isReversed ? 'lg:flex-row-reverse' : 'lg:flex-row'} items-center gap-8`}
               >
@@ -295,14 +299,12 @@ export default function LandingPage() {
                   {/* 1. Título principal (3-4xl, benefit claro) */}
                   <h3 
                     className="text-3xl md:text-4xl font-bold mb-4 text-white leading-tight"
-                    data-translation-key={`services.service${index + 1}.title`}
                   >
                     {service.title}
                   </h3>
                   {/* 2. Subtítulo emocional (lg-xl, brand-400) */}
                   <p 
                     className="text-lg md:text-xl text-brand-400 font-medium mb-6"
-                    data-translation-key={`services.service${index + 1}.subtitle`}
                   >
                     {service.subtitle}
                   </p>
@@ -315,7 +317,6 @@ export default function LandingPage() {
                   {/* 3. ¿Qué hace? (funcional y directo) */}
                   <p 
                     className="text-base text-brand-200/90 mb-6 leading-relaxed"
-                    data-translation-key={`services.service${index + 1}.description`}
                   >
                     {service.description}
                   </p>
@@ -325,13 +326,12 @@ export default function LandingPage() {
                     <ul className="space-y-2">
                       {service.benefits.map((benefit, benefitIndex) => (
                         <li 
-                          key={benefitIndex}
+                          key={`benefit-${benefitIndex}`}
                           className="flex items-start space-x-3"
                         >
                           <div className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-brand-400 mt-2.5"></div>
                           <span 
                             className="text-sm text-brand-200/90 font-medium"
-                            data-translation-key={`services.service${index + 1}.benefit${benefitIndex + 1}`}
                           >
                             {benefit}
                           </span>
@@ -346,9 +346,8 @@ export default function LandingPage() {
                     <div className="flex flex-wrap gap-2">
                       {service.features.map((feature, featureIndex) => (
                         <span 
-                          key={featureIndex}
+                          key={`feature-${featureIndex}`}
                           className="text-xs px-3 py-1 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-300 font-medium backdrop-blur-sm"
-                          data-translation-key={`services.service${index + 1}.feature${featureIndex + 1}`}
                         >
                           {feature}
                         </span>
@@ -361,7 +360,6 @@ export default function LandingPage() {
                     <Link
                       href="/activar"
                       className="bg-brand-900 hover:bg-brand-800 text-white px-6 py-3 text-sm rounded-lg inline-flex items-center font-semibold transition-colors focus-visible:outline-none focus-visible:focus-ring"
-                      data-translation-key={`services.service${index + 1}.cta`}
                     >
                       {service.cta}
                       <svg className="ml-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -430,12 +428,12 @@ export default function LandingPage() {
 
       {/* Pricing Section */}
       <section id="pricing" className="landing-section">
-        <h2 className="text-3xl font-semibold mb-8 text-center text-white" data-translation-key="pricing.title">
+        <h2 className="text-3xl font-semibold mb-8 text-center text-white">
           Planes simples, precios sin letra pequeña
         </h2>
         <div className="text-center max-w-2xl mx-auto">
           <div className="glass-strong p-8 hover:glass transition-all duration-300">
-            <h3 className="text-2xl font-bold text-white mb-4" data-translation-key="pricing.plan.title">
+            <h3 className="text-2xl font-bold text-white mb-4">
               Todo incluido
             </h3>
             <div className="text-4xl font-bold text-brand-400 mb-4">
@@ -444,7 +442,7 @@ export default function LandingPage() {
             <div className="text-2xl text-brand-300 mb-4">
               $12.50 <span className="text-sm text-brand-200/75">USD/empleado/mes</span>
             </div>
-            <p className="text-brand-200/90 mb-6" data-translation-key="pricing.plan.description">
+            <p className="text-brand-200/90 mb-6">
               Sin configuración inicial. Sin límites de uso. Soporte incluido.
             </p>
             <Link

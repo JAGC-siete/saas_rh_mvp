@@ -10,30 +10,11 @@ import {
   ArrowRightIcon
 } from '@heroicons/react/24/outline'
 
-// Simple hook for mobile detection and performance optimization
-const usePerformanceOptimization = () => {
-  const [isMobile, setIsMobile] = useState(false)
-  
-  useEffect(() => {
-    // Check if mobile device
-    const checkMobile = () => {
-      const mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-      setIsMobile(mobile)
-    }
-    
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [])
-  
-  return { isMobile }
-}
+
 
 export default function LandingPage() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const { isMobile } = usePerformanceOptimization()
 
 
   useEffect(() => {
@@ -147,7 +128,7 @@ export default function LandingPage() {
                   href="#libro-rojo"
                   className="block px-3 py-2 text-base font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  data-translation-key="nav.attendance"
+
                 >
                   Asistencia
                 </a>
@@ -155,7 +136,7 @@ export default function LandingPage() {
                   href="#planillero"
                   className="block px-3 py-2 text-base font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  data-translation-key="nav.payroll"
+
                 >
                   Nómina
                 </a>
@@ -163,7 +144,7 @@ export default function LandingPage() {
                   href="#pricing"
                   className="block px-3 py-2 text-base font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  data-translation-key="nav.pricing"
+
                 >
                   Precios
                 </a>
@@ -179,7 +160,7 @@ export default function LandingPage() {
                     href="/app/login"
                     className="bg-brand-900 hover:bg-brand-800 text-white w-full text-center block py-2 px-4 rounded-lg transition-colors"
                     onClick={() => setIsMobileMenuOpen(false)}
-                    data-translation-key="nav.automate"
+
                   >
                     Iniciar sesión
                   </Link>
@@ -244,7 +225,7 @@ export default function LandingPage() {
               { name: 'Gustavo Argueta', company: 'Paragon Honduras', employees: '37 empleados', quote: 'Antes llevavamos la asistencia en un libro rojo, ahora tneemos dashboard interactivo.' },
               { name: 'Luis Diego Maradiaga', company: 'AFI & Asociados', employees: '15 empleados', quote: 'Cero errores en IHSS desde que lo uso. Mi contador está feliz.' }
             ].map((testimonial, i) => (
-              <div key={i} className="bg-white/5 border border-white/10 rounded-xl p-6">
+              <div key={`testimonial-${i}`} className="bg-white/5 border border-white/10 rounded-xl p-6">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-12 h-12 bg-brand-500 rounded-full flex items-center justify-center text-white font-bold">
                     {testimonial.name[0]}
@@ -266,13 +247,13 @@ export default function LandingPage() {
 
       {/* Pricing Section */}
       <section id="pricing" className="py-20 px-6 max-w-4xl mx-auto">
-        <h2 className="text-3xl md:text-4xl font-bold mb-8 text-center text-white" data-translation-key="pricing.title">
+        <h2 className="text-3xl md:text-4xl font-bold mb-8 text-center text-white">
           Planes simples, precios sin letra pequeña
         </h2>
         <div className="text-center max-w-lg mx-auto">
           <Card variant="glass" className="hover:border-brand-500/50 transition-all duration-300">
             <CardHeader className="text-center pb-6">
-              <CardTitle className="text-3xl font-bold text-white mb-4" data-translation-key="pricing.plan.title">
+              <CardTitle className="text-3xl font-bold text-white mb-4">
                 RH 100% Digital
               </CardTitle>
               <div className="space-y-2">
@@ -290,7 +271,7 @@ export default function LandingPage() {
                 <li>💰 Costo L300 / empleado </li>
                 <li>⚡ Listo en 24 horas. Cancela cuando quieras.</li>
               </ul>
-              <p className="text-brand-200 mb-6 leading-relaxed" data-translation-key="pricing.plan.description">
+              <p className="text-brand-200 mb-6 leading-relaxed">
                 L300/empleado/mes. Todo incluido: Asistencia, Nómina, Vouchers, Dashboard.
               </p>
               <Link
