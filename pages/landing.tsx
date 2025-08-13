@@ -11,7 +11,7 @@ import {
 
 const services = [
   {
-    title: 'La Universidad del Trabajo.',
+    title: 'Certificación de Candidatos.',
     subtitle: 'Publicamos tu oferta, y certificamos candidatos por vos.',
     description: 'Publicamos, filtramos, verificamos y administramos tu talent pool listo para contratar. Pagás solo por contratación.',
     features: ['Publicación', 'Pre-filtrado', 'Evaluación', 'Scoring', 'Entrega de pool'],
@@ -103,41 +103,41 @@ export default function LandingPage() {
                 <div className="ml-10 flex items-baseline space-x-4">
                   <a
                     href="#certificacion"
-                    className="text-brand-200/90 hover:text-brand-400 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                    className="text-brand-200/90 hover:text-brand-400 hover:-translate-y-0.5 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 border-b-2 border-transparent hover:border-brand-400"
                     onClick={scrollToSection}
                   >
                     Certificaciones SISU
                   </a>
                   <a
                     href="#libro-rojo"
-                    className="text-brand-200/90 hover:text-brand-400 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                    className="text-brand-200/90 hover:text-brand-400 hover:-translate-y-0.5 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 border-b-2 border-transparent hover:border-brand-400"
                     onClick={scrollToSection}
                   >
                     El Libro Rojo
                   </a>
                   <a
                     href="#planillero"
-                    className="text-brand-200/90 hover:text-brand-400 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                    className="text-brand-200/90 hover:text-brand-400 hover:-translate-y-0.5 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 border-b-2 border-transparent hover:border-brand-400"
                     onClick={scrollToSection}
                   >
                     El Planillero
                   </a>
                   <a
                     href="#pricing"
-                    className="text-brand-200/90 hover:text-brand-400 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                    className="text-brand-200/90 hover:text-brand-400 hover:-translate-y-0.5 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 border-b-2 border-transparent hover:border-brand-400"
                     onClick={scrollToSection}
                   >
                     Precios
                   </a>
                   <Link
                     href="/demo"
-                    className="text-brand-200/90 hover:text-brand-400 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                    className="text-brand-200/90 hover:text-brand-400 hover:-translate-y-0.5 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 border-b-2 border-transparent hover:border-brand-400"
                   >
                     Solicitar Prueba
                   </Link>
                   <Link
                     href="/login"
-                    className="bg-brand-900 hover:bg-brand-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:focus-ring"
+                    className="bg-brand-900 hover:bg-orange-500 hover:-translate-y-1 hover:shadow-lg text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 focus-visible:outline-none focus-visible:focus-ring transform"
                   >
                     Iniciar Sesión
                   </Link>
@@ -225,26 +225,61 @@ export default function LandingPage() {
       {/* Hero Section with proper padding for fixed header */}
       <section className="landing-section text-center glass-strong pt-20 border-b border-white/10">
         <h1 className="text-4xl font-bold mb-4 text-white" data-translation-key="hero.title">
-          Hacer planilla ya no tiene que doler
+          Automatiza el 80% del trabajo de RH en 24 horas: asistencia, nómina y vouchers en 1 click
         </h1>
         <p className="mb-8 text-lg max-w-3xl mx-auto text-brand-200/90" data-translation-key="hero.subtitle">
-          Tu robot de RH hace todo: marca entradas, calcula planilla y envía comprobantes.<br />
-          Vos solo aprobás con un clic.
+          Actívalo hoy. Sin errores, sin pasivo laboral. Pago por empleado. Sin letras pequeñas
         </p>
+        
+        {/* Hero Features - 3 bloques horizontales */}
+        <div className="mb-12 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          {/* Control antifraude */}
+          <div className="flex flex-col items-center text-center p-6 rounded-xl border border-white/10 hover:-translate-y-2 hover:shadow-xl hover:border-brand-400 hover:bg-white/5 transition-all duration-300 transform cursor-pointer">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-500/10 border border-brand-500/20 mb-4 group-hover:bg-brand-500/20 transition-all duration-300">
+              <ClockIcon className="h-8 w-8 text-brand-400" aria-hidden="true" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2 text-white">Control antifraude</h3>
+            <p className="text-brand-200/80 text-sm">
+              Solo 5 dígitos de DNI. Detecta tarde, temprano, ausente. Cero trucos.
+            </p>
+          </div>
+
+          {/* De 4h a 4min */}
+          <div className="flex flex-col items-center text-center p-6 rounded-xl border border-white/10 hover:-translate-y-2 hover:shadow-xl hover:border-brand-400 hover:bg-white/5 transition-all duration-300 transform cursor-pointer">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-500/10 border border-brand-500/20 mb-4 group-hover:bg-brand-500/20 transition-all duration-300">
+              <CurrencyDollarIcon className="h-8 w-8 text-brand-400" aria-hidden="true" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2 text-white">De 4h a 4min</h3>
+            <p className="text-brand-200/80 text-sm">
+              Calcula IHSS, RAP, ISR. Genera vouchers y los envía automático.
+            </p>
+          </div>
+
+          {/* 80% menos tiempo */}
+          <div className="flex flex-col items-center text-center p-6 rounded-xl border border-white/10 hover:-translate-y-2 hover:shadow-xl hover:border-brand-400 hover:bg-white/5 transition-all duration-300 transform cursor-pointer">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-500/10 border border-brand-500/20 mb-4 group-hover:bg-brand-500/20 transition-all duration-300">
+              <UserGroupIcon className="h-8 w-8 text-brand-400" aria-hidden="true" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2 text-white">80% menos tiempo</h3>
+            <p className="text-brand-200/80 text-sm">
+              Publicamos, filtramos y certificamos candidatos. Solo contratás.
+            </p>
+          </div>
+        </div>
         
         {/* Hero CTA Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
           <Link
             href="/activar"
-            className="bg-brand-900 hover:bg-brand-800 text-white px-8 py-3 rounded-lg font-semibold shadow text-base transition-colors focus-visible:outline-none focus-visible:focus-ring"
-            aria-label="Automatizar mi RH ahora"
+            className="bg-brand-900 hover:bg-orange-500 hover:-translate-y-1 hover:shadow-lg text-white px-8 py-3 rounded-lg font-semibold shadow text-base transition-all duration-300 focus-visible:outline-none focus-visible:focus-ring transform"
+            aria-label="Quiero automatizar mi RH"
             data-translation-key="hero.cta_primary"
           >
-            Automatizar mi RH ahora
+            Quiero automatizar mi RH
           </Link>
           <Link
             href="/demo"
-            className="bg-white/10 border border-white/20 text-white px-8 py-3 rounded-lg font-semibold text-base backdrop-blur hover:bg-white/20 transition-colors focus-visible:outline-none focus-visible:focus-ring"
+            className="bg-white/10 border border-white/20 text-white px-8 py-3 rounded-lg font-semibold text-base backdrop-blur hover:bg-white/20 hover:-translate-y-1 hover:shadow-lg hover:border-brand-400 transition-all duration-300 focus-visible:outline-none focus-visible:focus-ring transform"
             aria-label="Quiero ver cómo funciona"
             data-translation-key="hero.cta_secondary"
           >
