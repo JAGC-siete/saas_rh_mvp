@@ -90,17 +90,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return exportToPDF(payrollRecords, periodo, res)
     } else if (formato === 'recibo-individual') {
       // Generar recibo individual para un empleado específico
-      const { employeeId } = req.body
+      const { employeeId, quincena = 1 } = req.body
       if (!employeeId) {
         return res.status(400).json({ error: 'employeeId es requerido para recibo individual' })
       }
       
-      const employeeRecord = payrollRecords.find(record => record.employee_id === employeeId)
+      const startDay = quincena === 1 ? 1 : 16
+      const employeeRecord = payrollRecords.find(record => {
+        if (record.employee_id !== employeeId) return false
+        try {
+          const day = new Date(record.period_start).getDate()
+          return day === startDay
+        } catch {
+          return true
+        }
+      })
       if (!employeeRecord) {
         return res.status(404).json({ error: 'Empleado no encontrado en la nómina' })
       }
       
-      return generateEmployeeReceipt(employeeRecord, periodo, 1, res) // Asumimos quincena 1 por defecto
+      return generateEmployeeReceipt(employeeRecord, periodo, quincena, res)
     } else {
       return res.status(400).json({ error: 'Formato no soportado. Use "excel", "pdf" o "recibo-individual"' })
     }
