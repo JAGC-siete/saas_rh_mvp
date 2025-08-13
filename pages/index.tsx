@@ -70,8 +70,10 @@ export default function LandingPage() {
       <header className="relative z-50">
         {/* Sticky Header */}
         <div
-          className={`sticky-header ${isScrolled ? 'visible' : ''} sticky top-0 z-40 transition-all duration-500 ${
-            isScrolled ? 'glass-strong' : 'bg-transparent backdrop-blur-sm border-b border-transparent'
+          className={`sticky-header sticky top-0 z-40 transition-all duration-700 ${
+            isScrolled 
+              ? 'glass-strong border-b border-white/20 shadow-lg shadow-black/20' 
+              : 'bg-transparent backdrop-blur-sm border-b border-transparent'
           }`}
         >
           <nav className="px-6 lg:px-8">
@@ -193,11 +195,11 @@ export default function LandingPage() {
           </div>
 
           <div className="text-center max-w-4xl mx-auto">
-            <h1 className="text-5xl md:text-6xl font-bold text-white mb-4 leading-tight">
-              De 4 horas de planilla;
-              <span className="block text-brand-400">a 2 minutos;</span>
-              <span className="block text-brand-700">a 0 errores.</span>
-            </h1>
+                          <h1 className="text-5xl md:text-6xl font-bold text-white mb-4 leading-tight">
+                De 4 horas de planilla;
+                <span className="block text-brand-400">a 2 minutos;</span>
+                <span className="block text-brand-700">0 errores.</span>
+              </h1>
 
             <p className="text-xl text-brand-200/90 mb-8">
               Adiós a las tareas repetitivas. Sin pasivo laboral. Sin dramas.
@@ -233,7 +235,7 @@ export default function LandingPage() {
             {[
               { name: 'Felix Garcia', company: 'Tony\'s Mar Restaurant', employees: '40 empleados', saving: 'L12,500/mes', quote: 'Ya no pierdo domingos haciendo planilla. 4 horas ahora son 4 minutos.' },
               { name: 'Gustavo Argueta', company: 'Paragon Honduras', employees: '37 empleados', saving: 'L18,000/mes', quote: 'Antes llevavamos la asistencia en un libro rojo, ahora tneemos dashboard interactivo.' },
-              { name: 'Miguel Santos', company: 'Agroexport SAC', employees: '67 empleados', saving: 'L25,500/mes', quote: 'Cero errores en IHSS desde que lo uso. Mi contador está feliz.' }
+              { name: 'Luis Diego Maradiaga', company: 'AFI & Asociados', employees: '15 empleados', saving: 'L5,500/mes', quote: 'Cero errores en IHSS desde que lo uso. Mi contador está feliz.' }
             ].map((testimonial, i) => (
               <div key={i} className="bg-white/5 border border-white/10 rounded-xl p-6">
                 <div className="flex items-center gap-3 mb-4">
