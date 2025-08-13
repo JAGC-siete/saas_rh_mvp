@@ -64,7 +64,7 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-app"
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-brand-900 to-indigo-900"
     >
       <Head>
         <title>Humano SISU - Automatiza tu RH</title>

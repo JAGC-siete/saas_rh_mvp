@@ -5,7 +5,7 @@ import { ArrowRight, Briefcase, Clock } from 'lucide-react'
 
 export default function DemoPage() {
   return (
-    <div className="min-h-screen bg-app flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-brand-900 to-indigo-900 flex items-center justify-center p-4">
       <Head>
         <title>Request a Demo - HUMANO SISU</title>
         <meta

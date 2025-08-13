@@ -5,7 +5,7 @@ import { CheckCircle, Clock, MessageCircle, ArrowRight } from 'lucide-react'
 
 export default function GraciasPage() {
   return (
-    <div className="min-h-screen bg-app flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-brand-900 to-indigo-900 flex items-center justify-center p-4">
       <Head>
         <title>¡Gracias! - HUMANO SISU</title>
         <meta
@@ -111,7 +111,7 @@ export default function GraciasPage() {
           </Link>
           
           <a
-            href="https://wa.me/50499999999?text=Hola, acabo de activar mi sistema HUMANO SISU"
+            href="https://wa.me/50494707007?text=Hola, acabo de activar mi sistema HUMANO SISU"
             target="_blank"
             rel="noopener noreferrer"
             className="bg-brand-600 hover:bg-brand-700 text-white px-6 py-3 rounded-lg font-medium transition-colors inline-flex items-center justify-center gap-2"

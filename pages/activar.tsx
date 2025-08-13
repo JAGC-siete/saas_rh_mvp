@@ -84,7 +84,7 @@ export default function ActivarPage() {
   const calculateTotal = () => formData.empleados * 300
 
   return (
-    <div className="min-h-screen bg-app">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-brand-900 to-indigo-900">
       <Head>
         <title>Activar Robot de RH - HUMANO SISU</title>
         <meta
