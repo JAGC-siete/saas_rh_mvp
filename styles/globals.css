@@ -286,45 +286,45 @@ html, body, #__next, #root {
   .animate-delay-500 { animation-delay: 500ms; }
 }
 
-/* Cloud Layers System - Parallax Animations */
+/* Cloud Layers System - Doodle Style with Optimized Animations */
 @layer utilities {
-  /* L1 - Far Layer: Very slow drift (5-10px/min) */
+  /* L1 - Far Layer: Very slow drift (2-4px/min) */
   @keyframes cloud-drift-slow {
     0% { 
       transform: translateX(0px) translateY(0px); 
     }
     100% { 
-      transform: translateX(calc(100vw + 100px)) translateY(calc(50vh + 50px)); 
+      transform: translateX(calc(100vw + 50px)) translateY(calc(25vh + 25px)); 
     }
   }
   
-  /* L2 - Medium Layer: Medium drift (15-25px/min) with twinkle */
+  /* L2 - Medium Layer: Medium drift (6-8px/min) with subtle twinkle */
   @keyframes cloud-drift-medium {
     0% { 
       transform: translateX(0px) translateY(0px); 
     }
     100% { 
-      transform: translateX(calc(100vw + 150px)) translateY(calc(75vh + 75px)); 
+      transform: translateX(calc(100vw + 75px)) translateY(calc(35vh + 35px)); 
     }
   }
   
-  /* L3 - Close Layer: Fast drift (30-45px/min) */
+  /* L3 - Close Layer: Fast drift (10-12px/min) */
   @keyframes cloud-drift-fast {
     0% { 
       transform: translateX(0px) translateY(0px); 
     }
     100% { 
-      transform: translateX(calc(100vw + 200px)) translateY(calc(100vh + 100px)); 
+      transform: translateX(calc(100vw + 100px)) translateY(calc(45vh + 45px)); 
     }
   }
   
-  /* Twinkle effect for medium layer */
-  @keyframes cloud-twinkle {
+  /* Subtle twinkle effect for medium layer */
+  @keyframes cloud-twinkle-subtle {
     0%, 100% { 
-      opacity: 0.5; 
+      opacity: 0.2; 
     }
     50% { 
-      opacity: 0.7; 
+      opacity: 0.25; 
     }
   }
   
@@ -341,16 +341,15 @@ html, body, #__next, #root {
     animation: cloud-drift-fast linear infinite;
   }
   
-  .animate-cloud-twinkle {
-    animation: cloud-twinkle ease-in-out infinite;
+  .animate-cloud-twinkle-subtle {
+    animation: cloud-twinkle-subtle ease-in-out infinite;
+    animation-duration: 8s;
   }
   
   /* Mobile optimizations */
   @media (max-width: 768px) {
-    .cloud-layer-1 .absolute,
-    .cloud-layer-2 .absolute,
-    .cloud-layer-3 .absolute {
-      animation-play-state: paused;
+    .cloud-layer-1 .absolute {
+      animation-duration: 180s !important; /* Even slower on mobile */
     }
     
     .cloud-layer-2 .absolute,
@@ -359,21 +358,22 @@ html, body, #__next, #root {
     }
   }
   
-  /* Parallax effect on hover/gyroscope */
-  @media (hover: hover) {
-    .cloud-layer-1 .absolute:hover {
-      transform: translateX(3px) translateY(3px);
-      transition: transform 0.3s ease;
+  /* High DPI displays optimization */
+  @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .cloud-layer-1 .absolute svg,
+    .cloud-layer-2 .absolute svg,
+    .cloud-layer-3 .absolute svg {
+      shape-rendering: geometricPrecision;
     }
-    
-    .cloud-layer-2 .absolute:hover {
-      transform: translateX(6px) translateY(6px);
-      transition: transform 0.3s ease;
-    }
-    
-    .cloud-layer-3 .absolute:hover {
-      transform: translateX(9px) translateY(9px);
-      transition: transform 0.3s ease;
+  }
+  
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-cloud-drift-slow,
+    .animate-cloud-drift-medium,
+    .animate-cloud-drift-fast,
+    .animate-cloud-twinkle-subtle {
+      animation: none;
     }
   }
 }

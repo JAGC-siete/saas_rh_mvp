@@ -10,33 +10,69 @@ import {
   ArrowRightIcon
 } from '@heroicons/react/24/outline'
 
-// Custom hook for mouse parallax effect
+// Custom hook for optimized mouse parallax effect
 const useMouseParallax = () => {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
+  const [shouldParallax, setShouldParallax] = useState(true)
   
   useEffect(() => {
+    // Check for reduced motion preference
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    
+    // Check for save data mode
+    const saveData = (navigator as any).connection?.saveData
+    
+    // Check if mobile device
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+    
+    // Disable parallax if any of these conditions are met
+    if (prefersReducedMotion || saveData || isMobile) {
+      setShouldParallax(false)
+      return
+    }
+    
+    let rafId: number
+    let lastMouseX = 0
+    let lastMouseY = 0
+    
     const handleMouseMove = (e: MouseEvent) => {
+      if (!shouldParallax) return
+      
       const { clientX, clientY } = e
       const centerX = window.innerWidth / 2
       const centerY = window.innerHeight / 2
       
-      setMousePosition({
-        x: (clientX - centerX) / centerX,
-        y: (clientY - centerY) / centerY
+      // Throttle updates to 60fps
+      rafId = requestAnimationFrame(() => {
+        // Smooth interpolation for natural movement
+        const targetX = (clientX - centerX) / centerX
+        const targetY = (clientY - centerY) / centerY
+        
+        const newX = lastMouseX + (targetX - lastMouseX) * 0.1
+        const newY = lastMouseY + (targetY - lastMouseY) * 0.1
+        
+        setMousePosition({ x: newX, y: newY })
+        
+        lastMouseX = newX
+        lastMouseY = newY
       })
     }
     
-    window.addEventListener('mousemove', handleMouseMove)
-    return () => window.removeEventListener('mousemove', handleMouseMove)
-  }, [])
+    window.addEventListener('mousemove', handleMouseMove, { passive: true })
+    
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      if (rafId) cancelAnimationFrame(rafId)
+    }
+  }, [shouldParallax])
   
-  return mousePosition
+  return { mousePosition, shouldParallax }
 }
 
 export default function LandingPage() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const mousePosition = useMouseParallax()
+  const { mousePosition, shouldParallax } = useMouseParallax()
 
 
   useEffect(() => {
@@ -299,69 +335,107 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Cloud Layers System - Parallax Background */}
+      {/* Cloud Layers System - Doodle Style with Optimized Parallax */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        {/* L1 - Far Layer: 0.5-0.8px, opacity 0.35-0.5, drift 5-10px/min */}
+        {/* L1 - Far Layer: Very subtle, slow drift */}
         <div 
-          className="cloud-layer-1 absolute inset-0 transition-transform duration-1000 ease-out"
+          className="cloud-layer-1 absolute inset-0 transition-transform duration-2000 ease-out"
           style={{
-            transform: `translateX(${mousePosition.x * 3}px) translateY(${mousePosition.y * 3}px)`
+            transform: shouldParallax ? `translateX(${mousePosition.x * 2}px) translateY(${mousePosition.y * 2}px)` : 'none'
           }}
         >
-          {[...Array(8)].map((_, i) => (
+          {[...Array(25)].map((_, i) => (
             <div
               key={`cloud-l1-${i}`}
-              className="absolute w-2 h-2 bg-white/40 rounded-full animate-cloud-drift-slow"
+              className="absolute animate-cloud-drift-slow"
               style={{
                 left: `${Math.random() * 100}%`,
                 top: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 20}s`,
-                animationDuration: `${60 + Math.random() * 30}s`
+                width: `${8 + Math.random() * 12}px`,
+                height: `${6 + Math.random() * 8}px`,
+                animationDelay: `${Math.random() * 30}s`,
+                animationDuration: `${120 + Math.random() * 60}s`,
+                opacity: 0.15 + Math.random() * 0.08
               }}
-            />
+            >
+              <svg viewBox="0 0 100 60" className="w-full h-full">
+                <path
+                  d="M10,30 Q25,10 40,30 Q55,50 70,30 Q85,10 90,30 Q95,50 90,30 Q85,10 70,30 Q55,50 40,30 Q25,10 10,30 Z"
+                  fill="none"
+                  stroke="rgba(255,255,255,0.4)"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </div>
           ))}
         </div>
 
-        {/* L2 - Medium Layer: 1px, opacity 0.5-0.7, drift 15-25px/min, twinkle */}
+        {/* L2 - Medium Layer: Medium density, subtle twinkle */}
         <div 
-          className="cloud-layer-2 absolute inset-0 transition-transform duration-1000 ease-out"
+          className="cloud-layer-2 absolute inset-0 transition-transform duration-2000 ease-out"
           style={{
-            transform: `translateX(${mousePosition.x * 6}px) translateY(${mousePosition.y * 6}px)`
+            transform: shouldParallax ? `translateX(${mousePosition.x * 4}px) translateY(${mousePosition.y * 4}px)` : 'none'
           }}
         >
-          {[...Array(12)].map((_, i) => (
+          {[...Array(35)].map((_, i) => (
             <div
               key={`cloud-l2-${i}`}
-              className="absolute w-4 h-4 bg-white/60 rounded-full animate-cloud-drift-medium animate-cloud-twinkle"
+              className="absolute animate-cloud-drift-medium animate-cloud-twinkle-subtle"
               style={{
                 left: `${Math.random() * 100}%`,
                 top: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 15}s`,
-                animationDuration: `${40 + Math.random() * 20}s`,
-                '--twinkle-delay': `${Math.random() * 4}s`
-              } as React.CSSProperties}
-            />
+                width: `${12 + Math.random() * 16}px`,
+                height: `${8 + Math.random() * 12}px`,
+                animationDelay: `${Math.random() * 25}s`,
+                animationDuration: `${90 + Math.random() * 45}s`,
+                opacity: 0.2 + Math.random() * 0.1
+              }}
+            >
+              <svg viewBox="0 0 100 60" className="w-full h-full">
+                <path
+                  d="M5,30 Q20,5 35,30 Q50,55 65,30 Q80,5 95,30 Q100,55 95,30 Q80,5 65,30 Q50,55 35,30 Q20,5 5,30 Z"
+                  fill="none"
+                  stroke="rgba(255,255,255,0.5)"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </div>
           ))}
         </div>
 
-        {/* L3 - Close Layer: 1.2-1.6px, very low density, drift 30-45px/min */}
+        {/* L3 - Close Layer: Low density, minimal parallax */}
         <div 
-          className="cloud-layer-3 absolute inset-0 transition-transform duration-1000 ease-out"
+          className="cloud-layer-3 absolute inset-0 transition-transform duration-2000 ease-out"
           style={{
-            transform: `translateX(${mousePosition.x * 9}px) translateY(${mousePosition.y * 9}px)`
+            transform: shouldParallax ? `translateX(${mousePosition.x * 6}px) translateY(${mousePosition.y * 6}px)` : 'none'
           }}
         >
-          {[...Array(6)].map((_, i) => (
+          {[...Array(20)].map((_, i) => (
             <div
               key={`cloud-l3-${i}`}
-              className="absolute w-6 h-6 bg-white/30 rounded-full animate-cloud-drift-fast"
+              className="absolute animate-cloud-drift-fast"
               style={{
                 left: `${Math.random() * 100}%`,
                 top: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 10}s`,
-                animationDuration: `${25 + Math.random() * 15}s`
+                width: `${16 + Math.random() * 20}px`,
+                height: `${12 + Math.random() * 16}px`,
+                animationDelay: `${Math.random() * 20}s`,
+                animationDuration: `${60 + Math.random() * 30}s`,
+                opacity: 0.25 + Math.random() * 0.1
               }}
-            />
+            >
+              <svg viewBox="0 0 100 60" className="w-full h-full">
+                <path
+                  d="M0,30 Q15,0 30,30 Q45,60 60,30 Q75,0 90,30 Q100,60 90,30 Q75,0 60,30 Q45,60 30,30 Q15,0 0,30 Z"
+                  fill="none"
+                  stroke="rgba(255,255,255,0.6)"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </div>
           ))}
         </div>
       </div>
