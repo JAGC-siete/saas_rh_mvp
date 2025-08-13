@@ -2,62 +2,13 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import DemoFooter from '../components/DemoFooter'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
+import ServicesSection from '../components/ServicesSection'
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import {
-  UserGroupIcon,
-  ClockIcon,
-  CurrencyDollarIcon,
   Bars3Icon,
   XMarkIcon,
-  CheckIcon,
-  ArrowRightIcon,
-  ChartBarIcon
+  ArrowRightIcon
 } from '@heroicons/react/24/outline'
-
-const services = [
-  {
-    title: 'Candidatos listos. Sin perder tiempo.',
-    subtitle: 'Tu robot reclutador publica, filtra y certifica por vos.',
-    description:
-      'Encontrá talento real sin leer CV basura. Publica, pre-filtra, verifica y entrega candidatos listos para contratar en tiempo récord: hasta 80% menos tiempo de reclutamiento.',
-    features: ['Publicación automática', 'Pre-filtro inteligente', 'Verificación de datos', 'Scoring por competencias', 'Entrega de pool listo'],
-    benefits: [
-      '🎯 Solo perfiles que cumplen',
-      '⏱️ Reclutamiento hasta 80% más rápido',
-      '💼 Contrataciones seguras y sin sorpresas'
-    ],
-    cta: 'Activar reclutador inteligente',
-    icon: UserGroupIcon,
-  },
-  {
-    title: 'Asistencia en tiempo real. Sin excusas.',
-    subtitle: 'Sistema antifraude que detecta todo.',
-    description:
-      'Registro con últimos 5 dígitos del DNI y geolocalización. Detecta llegadas tarde, temprano o ausencias al instante. Cero fraude, reportes claros on-demand.',
-    features: ['Registro por DNI', 'Detección de tardanzas', 'Control de horas extras', 'Reportes automáticos'],
-    benefits: [
-      '🔍 Control total en tiempo real',
-      '🔒 100% antifraude',
-      '📊 Dashboards y reportes en 1 clic'
-    ],
-    cta: 'Activar control de asistencia',
-    icon: ClockIcon,
-  },
-  {
-    title: 'Nómina sin errores. En minutos.',
-    subtitle: 'Tu robot de planilla, legal y automático.',
-    description:
-      'Calcula IHSS, RAP, ISR y vacaciones. Genera vouchers PDF y envíalos por email o WhatsApp. De 4 horas de trabajo a solo 4 minutos.',
-    features: ['Cálculo IHSS', 'Cálculo RAP', 'Cálculo ISR', 'Vacaciones', 'Vouchers PDF', 'Envío automático'],
-    benefits: [
-      '⚡ De horas a minutos',
-      '⚖️ Compliance legal total',
-      '📱 Vouchers enviados al instante'
-    ],
-    cta: 'Activar generación de planilla',
-    icon: CurrencyDollarIcon,
-  },
-]
 
 export default function LandingPage() {
   const [isScrolled, setIsScrolled] = useState(false)
@@ -238,10 +189,10 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Trust badges */}
           <div className="flex flex-wrap justify-center gap-3 md:gap-6 mb-8">
-            <span className="text-sm bg-green-500/10 text-green-400 px-3 py-1 rounded-full">✓ Cumple STSS Honduras</span>
-            <span className="text-sm bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full">⚡ Setup en 24 horas</span>
-            <span className="text-sm bg-orange-500/10 text-orange-400 px-3 py-1 rounded-full">🔥 37 empresas activas</span>
-            <span className="text-sm bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full">0 errores de cálculo</span>
+            <span className="text-sm bg-green-500/10 text-green-400 px-3 py-1 rounded-full border border-green-500/20 hover:bg-green-500/20 transition-all duration-300 hover:-translate-y-0.5">✓ Cumple STSS Honduras</span>
+            <span className="text-sm bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full border border-blue-500/20 hover:bg-blue-500/20 transition-all duration-300 hover:-translate-y-0.5">⚡ Setup en 24 horas</span>
+            <span className="text-sm bg-orange-500/10 text-orange-400 px-3 py-1 rounded-full border border-orange-500/20 hover:bg-orange-500/20 transition-all duration-300 hover:-translate-y-0.5">🔥 37 empresas activas</span>
+            <span className="text-sm bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full border border-emerald-500/20 hover:bg-emerald-500/20 transition-all duration-300 hover:-translate-y-0.5">0 errores de cálculo</span>
           </div>
 
           <div className="text-center max-w-4xl mx-auto">
@@ -259,20 +210,20 @@ export default function LandingPage() {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 md:gap-4 mb-8">
               <Link
                 href="/activar"
-                className="px-6 md:px-8 py-3 md:py-4 bg-brand-900 hover:bg-brand-800 text-white rounded-lg font-semibold text-base md:text-lg transition-all duration-300 shadow-lg"
+                className="px-6 md:px-8 py-3 md:py-4 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-semibold text-base md:text-lg transition-all duration-300 shadow-lg shadow-black/20 hover:-translate-y-0.5 active:translate-y-0 hover:shadow-xl hover:shadow-brand-900/50"
               >
                 Empezar mi prueba gratuita
               </Link>
               <Link
                 href="/demo"
-                className="px-6 md:px-8 py-3 md:py-4 border border-white/20 bg-white/10 text-white rounded-lg font-semibold text-base md:text-lg hover:bg-white/20 transition-all"
+                className="px-6 md:px-8 py-3 md:py-4 border border-white/20 bg-white/10 text-white rounded-lg font-semibold text-base md:text-lg hover:bg-white/20 hover:border-brand-400/40 transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0"
               >
                 Ver demo en 5 min
               </Link>
               <a
                 href="#roi"
                 onClick={scrollToSection}
-                className="px-6 md:px-8 py-3 md:py-4 text-brand-300 hover:text-white rounded-lg font-semibold text-base md:text-lg hover:bg-white/10 transition-all"
+                className="px-6 md:px-8 py-3 md:py-4 text-brand-300 hover:text-white rounded-lg font-semibold text-base md:text-lg hover:bg-white/10 transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0"
               >
                 Calcular mi ahorro
               </a>
@@ -301,93 +252,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Services Section */}
-      <section id="servicios" className="py-20 px-6 max-w-7xl mx-auto">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold mb-4 text-white" data-translation-key="services.title">
-            Robots de RH de Humano SISU
-          </h2>
-          <p className="text-xl text-brand-400 font-medium mb-2">Tus nuevos Robots de RH</p>
-          <p className="text-brand-200">Adiós al Excel. Hola a la eficiencia.</p>
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-8">
-          {services.map((service, index) => {
-            const sectionIds = ['certificacion', 'libro-rojo', 'planillero']
-            return (
-              <Card
-                key={service.title}
-                id={sectionIds[index]}
-                variant="glass"
-                className="hover:border-brand-500/50 transition-all duration-300"
-              >
-                <CardHeader className="text-center pb-8">
-                  <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-brand-500/10 border border-brand-500/20 mb-6 mx-auto">
-                    <service.icon className="h-12 w-12 text-brand-400" aria-hidden="true" />
-                  </div>
-                  <CardTitle
-                    className="text-3xl md:text-4xl font-bold text-white mb-4"
-                    data-translation-key={`services.service${index + 1}.title`}
-                  >
-                    {service.title}
-                  </CardTitle>
-                  <CardDescription
-                    className="text-brand-300 font-medium text-xl"
-                    data-translation-key={`services.service${index + 1}.subtitle`}
-                  >
-                    {service.subtitle}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-8">
-                  <p
-                    className="text-brand-200 leading-relaxed text-lg"
-                    data-translation-key={`services.service${index + 1}.description`}
-                  >
-                    {service.description}
-                  </p>
-
-                  {/* Features */}
-                  <div className="space-y-3">
-                    <h4 className="font-semibold text-white text-lg">Incluye:</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {service.features.map((feature, featureIndex) => (
-                        <span
-                          key={featureIndex}
-                          className="px-4 py-2 bg-brand-700/20 border border-brand-600/30 rounded-full text-sm text-brand-200"
-                        >
-                          {feature}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Benefits */}
-                  <div className="space-y-3">
-                    <h4 className="font-semibold text-white text-lg">Beneficios:</h4>
-                    <ul className="space-y-2">
-                      {service.benefits.map((benefit, benefitIndex) => (
-                        <li key={benefitIndex} className="flex items-center gap-3 text-brand-200">
-                          <CheckIcon className="w-5 h-5 text-brand-400 flex-shrink-0" />
-                          <span className="text-base">{benefit}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {/* CTA */}
-                  <Link
-                    href="/activar"
-                    className="w-full bg-brand-900 hover:bg-brand-800 text-white py-4 px-6 rounded-lg font-medium transition-colors inline-flex items-center justify-center gap-2 text-lg"
-                  >
-                    {service.cta}
-                    <ArrowRightIcon className="w-5 h-5" />
-                  </Link>
-                </CardContent>
-              </Card>
-            )
-          })}
-        </div>
-      </section>
+      {/* Services Section - Rediseñada */}
+      <ServicesSection />
 
       {/* Social Proof Section */}
       <section className="py-16 bg-white/5">
@@ -412,7 +278,7 @@ export default function LandingPage() {
                     <p className="text-brand-200/80 text-sm">{testimonial.company}</p>
                   </div>
                 </div>
-                <blockquote className="text-brand-200/90 italic mb-4">"{testimonial.quote}"</blockquote>
+                <blockquote className="text-brand-200/90 italic mb-4">&ldquo;{testimonial.quote}&rdquo;</blockquote>
                 <div className="flex justify-between text-sm">
                   <span className="text-brand-400">{testimonial.employees}</span>
                   <span className="text-green-400 font-medium">Ahorra {testimonial.saving}</span>
