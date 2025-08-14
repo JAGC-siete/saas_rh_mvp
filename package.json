@@ -11,6 +11,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "node --test tests/*.js",
     "audit": "./scripts/run-complete-audit.sh",
     "audit:system": "node scripts/audit-system.js",
     "audit:supabase": "node scripts/audit-supabase.js",
