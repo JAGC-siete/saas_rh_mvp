@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
+import { getDateRange } from '../../lib/attendance'
+import { createAdminClient } from '../../lib/supabase/server'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import DashboardLayout from '../../components/DashboardLayout'
 import FiltersBar from '../../components/attendance/FiltersBar'
@@ -7,8 +9,6 @@ import AbsenceTable from '../../components/attendance/AbsenceTable'
 import PunctualityTable from '../../components/attendance/PunctualityTable'
 import EmployeeDrawer from '../../components/attendance/EmployeeDrawer'
 import ExportButton from '../../components/attendance/ExportButton'
-import { getDateRange } from '../../lib/attendance'
-import { createAdminClient } from '../../lib/supabase/server'
 
 interface DashboardProps {
   initialKpis: any
@@ -58,11 +58,10 @@ export default function AttendanceDashboard({ initialKpis, initialLists }: Dashb
 
   const handlePresetChange = (p: string) => {
     setPreset(p)
-    loadData(p)
   }
 
   const handleExport = async (format: string) => {
-    await fetch(`/api/attendance/export?format=${format}&preset=${preset}`)
+    await fetch(`/api/attendance/export?format=${format}`)
   }
 
   const handleEmployeeClick = async (id: string, name: string) => {
