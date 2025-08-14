@@ -1,3 +1,5 @@
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
+
 interface AbsenceRow {
   id: string
   name: string
@@ -12,8 +14,9 @@ interface AbsenceTableProps {
 
 export default function AbsenceTable({ data, title, onSelect }: AbsenceTableProps) {
   return (
-    <div className="bg-gray-800 rounded p-4">
-      <h3 className="text-white font-semibold mb-2">{title}</h3>
+    <Card variant="glass">
+      <CardHeader className="pb-2"><CardTitle className="text-white text-base">{title}</CardTitle></CardHeader>
+      <CardContent className="pt-0">
       <table className="w-full text-sm text-left">
         <thead className="text-gray-300">
           <tr>
@@ -35,6 +38,7 @@ export default function AbsenceTable({ data, title, onSelect }: AbsenceTableProp
           )}
         </tbody>
       </table>
-    </div>
+      </CardContent>
+    </Card>
   )
 }
