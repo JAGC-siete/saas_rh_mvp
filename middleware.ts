@@ -168,7 +168,7 @@ export async function middleware(request: NextRequest) {
       const supabaseUrl = process.env['NEXT_PUBLIC_SUPABASE_URL']
       const anon = process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY']
       
-      if (!supabaseUrl || !supabaseKey) {
+      if (!supabaseUrl || !anon) {
         logger.error('Missing Supabase environment variables', undefined, {
           hasUrl: !!supabaseUrl,
           hasAnon: !!anon
@@ -228,7 +228,7 @@ export async function middleware(request: NextRequest) {
     const supabaseUrl = process.env['NEXT_PUBLIC_SUPABASE_URL']
     const anon = process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY']
     
-    if (!supabaseUrl || !supabaseKey) {
+    if (!supabaseUrl || !anon) {
       logger.error('Missing Supabase environment variables', undefined, {
       hasUrl: !!supabaseUrl,
       hasAnon: !!anon
