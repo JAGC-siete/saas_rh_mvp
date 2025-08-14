@@ -8,6 +8,8 @@ const requiredEnvVars = {
   NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
   NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  RESEND_API_KEY: process.env.RESEND_API_KEY,
+  RESEND_FROM: process.env.RESEND_FROM,
 }
 
 // Validate that all required environment variables are present
@@ -35,6 +37,9 @@ export const env = {
   NEXT_PUBLIC_SUPABASE_URL: requiredEnvVars.NEXT_PUBLIC_SUPABASE_URL!,
   NEXT_PUBLIC_SUPABASE_ANON_KEY: requiredEnvVars.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   SUPABASE_SERVICE_ROLE_KEY: requiredEnvVars.SUPABASE_SERVICE_ROLE_KEY!,
+  RESEND_API_KEY: requiredEnvVars.RESEND_API_KEY!,
+  RESEND_FROM: requiredEnvVars.RESEND_FROM!,
+  PAYROLL_ADMIN_EMAILS: process.env.PAYROLL_ADMIN_EMAILS || '',
   NODE_ENV: process.env.NODE_ENV || 'development',
   PORT: process.env.PORT || '3000',
   TIMEZONE: process.env.TIMEZONE || 'America/Tegucigalpa',
