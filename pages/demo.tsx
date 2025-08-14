@@ -1,11 +1,13 @@
 import Head from 'next/head'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { ArrowRight, Briefcase, Clock } from 'lucide-react'
 
 export default function DemoPage() {
+  const CloudBackground = dynamic(() => import('../components/CloudBackground'), { ssr: false })
   return (
-    <div className="min-h-screen bg-app flex items-center justify-center p-4">
+    <div className="min-h-screen bg-app flex items-center justify-center p-4 relative">
       <Head>
         <title>Request a Demo - HUMANO SISU</title>
         <meta
@@ -13,8 +15,8 @@ export default function DemoPage() {
           content="Solicita una demostración de Los Robots de Humano SISU"
         />
       </Head>
-
-      <div className="w-full max-w-md space-y-8">
+      <CloudBackground />
+      <div className="w-full max-w-md space-y-8 relative z-10">
         <div className="text-center">
           <div className="mx-auto h-20 w-20 bg-white rounded-full flex items-center justify-center mb-6 shadow-lg">
             <Briefcase className="h-10 w-10 text-brand-600" />

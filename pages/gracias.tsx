@@ -1,11 +1,13 @@
 import Head from 'next/head'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { CheckCircle, Clock, MessageCircle, ArrowRight } from 'lucide-react'
 
 export default function GraciasPage() {
+  const CloudBackground = dynamic(() => import('../components/CloudBackground'), { ssr: false })
   return (
-    <div className="min-h-screen bg-app flex items-center justify-center p-4">
+    <div className="min-h-screen bg-app flex items-center justify-center p-4 relative">
       <Head>
         <title>¡Gracias! - HUMANO SISU</title>
         <meta
@@ -13,8 +15,8 @@ export default function GraciasPage() {
           content="Tu sistema de RH será activado en 24 horas"
         />
       </Head>
-
-      <div className="w-full max-w-2xl space-y-8">
+      <CloudBackground />
+      <div className="w-full max-w-2xl space-y-8 relative z-10">
         <div className="text-center">
           <div className="mx-auto h-24 w-24 bg-green-500/20 rounded-full flex items-center justify-center mb-6 shadow-lg">
             <CheckCircle className="h-16 w-16 text-green-400" />
@@ -94,8 +96,9 @@ export default function GraciasPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm text-brand-200">
-            <p>📧 Email: soporte@humanosisu.com</p>
-            <p>📱 WhatsApp: +504 9999-9999</p>
+            <p>📧 Email: jorge7gomez@gmail.com</p>
+            <p>📱 WhatsApp: +504 9470-7007</p>
+            <p>📞 Llamadas: +504 3214-8010</p>
             <p>⏰ Horario: Lunes a Viernes, 8:00 AM - 6:00 PM</p>
           </CardContent>
         </Card>
@@ -110,7 +113,7 @@ export default function GraciasPage() {
           </Link>
           
           <a
-            href="https://wa.me/50499999999?text=Hola, acabo de activar mi sistema HUMANO SISU"
+            href="https://wa.me/50494707007?text=Hola, acabo de activar mi sistema HUMANO SISU"
             target="_blank"
             rel="noopener noreferrer"
             className="bg-brand-600 hover:bg-brand-700 text-white px-6 py-3 rounded-lg font-medium transition-colors inline-flex items-center justify-center gap-2"

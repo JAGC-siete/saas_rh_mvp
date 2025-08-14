@@ -1,4 +1,5 @@
 import { createAdminClient } from '../../lib/supabase/server'
+import { getTodayInHonduras, getHondurasTime } from '../../lib/timezone'
 
 // Gamification helper functions
 async function calculateAttendancePoints(employeeId: string, lateMinutes: number, isEarly: boolean): Promise<number> {
@@ -29,7 +30,7 @@ async function updateEmployeeScore(employeeId: string, companyId: string, points
         total_points: existingScore.total_points + points,
         weekly_points: existingScore.weekly_points + points,
         monthly_points: existingScore.monthly_points + points,
-        updated_at: new Date().toISOString()
+        updated_at: getHondurasTime().toISOString()
       })
       .eq('employee_id', employeeId)
   } else {
@@ -72,7 +73,7 @@ async function checkForAchievements(employeeId: string, companyId: string): Prom
     .select('late_minutes')
     .eq('employee_id', employeeId)
     .gte('date', startOfWeek.toISOString().split('T')[0])
-    .lte('date', new Date().toISOString().split('T')[0])
+            .lte('date', getTodayInHonduras())
   
   if (weeklyRecords && weeklyRecords.length >= 5) {
     const punctualDays = weeklyRecords.filter(r => (r.late_minutes || 0) <= 5).length
@@ -162,8 +163,8 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
       return res.status(400).json({ error: 'Either last5 or employee_id required' })
     }
 
-    const today = new Date().toISOString().split('T')[0]
-    const now = new Date()
+    const today = getTodayInHonduras()
+    const now = getHondurasTime()
     
     // Check if attendance record exists for today
     const { data: existingRecord } = await supabase

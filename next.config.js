@@ -16,6 +16,12 @@ const nextConfig = {
   // Redirecciones para mantener compatibilidad
   async redirects() {
     return [
+      // Redirigir attendance legacy dashboard a la ruta homologada
+      {
+        source: '/attendance/dashboard',
+        destination: '/app/attendance/dashboard',
+        permanent: false,
+      },
       // Redirigir /landing a la página principal
       {
         source: '/landing',

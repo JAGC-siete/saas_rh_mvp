@@ -2,6 +2,7 @@ import Head from 'next/head'
 import Link from 'next/link'
 import { useState } from 'react'
 import { ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, CloudArrowUpIcon, ClockIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline'
+import dynamic from 'next/dynamic'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 
 interface FormData {
@@ -10,22 +11,9 @@ interface FormData {
   contactoNombre: string
   contactoWhatsApp: string
   contactoEmail: string
-  departamentos: string[]
+  departamentosCount: number
   comprobante?: File
 }
-
-const departamentosOptions = [
-  'Administración',
-  'Ventas',
-  'Marketing',
-  'Operaciones',
-  'Producción',
-  'Recursos Humanos',
-  'Finanzas',
-  'Tecnología',
-  'Logística',
-  'Servicio al Cliente'
-]
 
 export default function ActivarPage() {
   const [step, setStep] = useState(1)
@@ -36,7 +24,7 @@ export default function ActivarPage() {
     contactoNombre: '',
     contactoWhatsApp: '',
     contactoEmail: '',
-    departamentos: []
+    departamentosCount: 1
   })
 
   const handleEmpleadosChange = (value: number) => {
@@ -47,13 +35,8 @@ export default function ActivarPage() {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
-  const handleDepartamentosChange = (dept: string) => {
-    setFormData(prev => ({
-      ...prev,
-      departamentos: prev.departamentos.includes(dept)
-        ? prev.departamentos.filter(d => d !== dept)
-        : [...prev.departamentos, dept]
-    }))
+  const handleDepartamentosCountChange = (value: number) => {
+    setFormData(prev => ({ ...prev, departamentosCount: Math.max(1, value) }))
   }
 
   const handleFileUpload = (file: File) => {
@@ -71,7 +54,7 @@ export default function ActivarPage() {
       submitData.append('contactoNombre', formData.contactoNombre)
       submitData.append('contactoWhatsApp', formData.contactoWhatsApp)
       submitData.append('contactoEmail', formData.contactoEmail)
-      submitData.append('departamentos', JSON.stringify(formData.departamentos))
+      submitData.append('departamentos', JSON.stringify({ total: formData.departamentosCount }))
       
       if (formData.comprobante) {
         submitData.append('comprobante', formData.comprobante)
@@ -99,19 +82,21 @@ export default function ActivarPage() {
     }
   }
 
-  const calculateTotal = () => formData.empleados * 420
+  const calculateTotal = () => formData.empleados * 300
 
+  const CloudBackground = dynamic(() => import('../components/CloudBackground'), { ssr: false })
   return (
-    <div className="min-h-screen bg-app">
+    <div className="min-h-screen bg-app relative">
       <Head>
         <title>Activar Robot de RH - HUMANO SISU</title>
         <meta
           name="description"
-          content="Activa tu robot de RH hoy. L420 por empleado. Listo en 24 horas."
+          content="Activa tu robot de RH hoy. L300 por empleado. Listo en 24 horas."
         />
       </Head>
 
-      <div className="container mx-auto px-4 py-8">
+      <CloudBackground />
+      <div className="container mx-auto px-4 py-8 relative z-10">
         {/* Header */}
         <div className="text-center mb-8">
           <Link href="/landing" className="inline-flex items-center text-brand-300 hover:text-white mb-6 transition-colors">
@@ -123,37 +108,13 @@ export default function ActivarPage() {
             🔥 Activa tu robot de RH hoy
           </h1>
           <p className="text-xl text-brand-300">
-            L420 por empleado. Listo en 24 h.
+            L300 por empleado. Listo en 24 h.
           </p>
         </div>
 
         {/* Services Section - Horizontal Layout */}
         <div className="max-w-7xl mx-auto mb-16">
-          <div className="grid md:grid-cols-3 gap-8">
-            <Card variant="glass" className="text-center">
-              <CardHeader className="pb-6">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-500/10 border border-brand-500/20 mb-4 mx-auto">
-                  <CheckCircleIcon className="h-8 w-8 text-brand-400" />
-                </div>
-                <CardTitle className="text-2xl font-bold text-white mb-2">
-                  Talento real. No más CV basura.
-                </CardTitle>
-                <CardDescription className="text-brand-300 font-medium text-lg">
-                  Tu robot reclutador filtra y certifica por vos.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-brand-200 leading-relaxed mb-6">
-                  Publicamos, filtramos, verificamos y entregamos un pool listo para contratar. Pagás solo si contratás.
-                </p>
-                <div className="space-y-2 text-sm text-brand-200 mb-6">
-                  <p>🎯 Talento real, cero hojas inútiles</p>
-                  <p>⏱️ 80% menos tiempo reclutando</p>
-                  <p>💼 Contratación sin riesgo</p>
-                </div>
-              </CardContent>
-            </Card>
-
+          <div className="grid md:grid-cols-2 gap-8">
             <Card variant="glass" className="text-center">
               <CardHeader className="pb-6">
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-500/10 border border-brand-500/20 mb-4 mx-auto">
@@ -237,57 +198,108 @@ export default function ActivarPage() {
             
             {/* STEP 1 */}
             {step === 1 && (
-              <div className="text-center">
-                <h2 className="text-2xl font-bold text-white mb-6">
-                  ¿Cuántos empleados querés automatizar?
-                </h2>
-                
+              <div>
                 <div className="mb-8">
-                  <div className="flex items-center justify-center space-x-4">
-                    <button
-                      onClick={() => handleEmpleadosChange(formData.empleados - 1)}
-                      className="w-12 h-12 rounded-full glass border border-brand-600/30 hover:border-brand-500 flex items-center justify-center text-2xl font-bold transition-all text-white hover:text-brand-200"
-                      disabled={formData.empleados <= 1}
-                    >
-                      -
-                    </button>
-                    
-                    <div className="text-center">
-                      <input
-                        type="number"
-                        value={formData.empleados}
-                        onChange={(e) => handleEmpleadosChange(parseInt(e.target.value) || 1)}
-                        className="w-24 h-16 text-3xl font-bold text-center glass border-2 border-brand-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 transition-all"
-                        min="1"
-                      />
-                      <p className="text-brand-400 text-sm mt-2">empleados</p>
-                    </div>
-                    
-                    <button
-                      onClick={() => handleEmpleadosChange(formData.empleados + 1)}
-                      className="w-12 h-12 rounded-full glass border border-brand-600/30 hover:border-brand-500 flex items-center justify-center text-2xl font-bold transition-all text-white hover:text-brand-200"
-                    >
-                      +
-                    </button>
-                  </div>
-                  
-                  <div className="mt-6 p-4 glass-strong border border-brand-500/30 rounded-lg">
-                    <p className="text-brand-300 font-medium">
-                      Costo estimado: L{calculateTotal().toLocaleString()}
-                    </p>
-                    <p className="text-brand-400 text-sm">
-                      L420 por empleado × {formData.empleados} empleados
-                    </p>
-                  </div>
+                  <label className="block text-white font-medium mb-2 text-center">
+                    Nombre de empresa *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.empresa}
+                    onChange={(e) => handleInputChange('empresa', e.target.value)}
+                    className="w-full p-3 rounded-lg glass border border-brand-600/30 text-white placeholder-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all"
+                    placeholder="Mi Empresa S.A."
+                    required
+                  />
                 </div>
 
-                <button
-                  onClick={() => setStep(2)}
-                  className="bg-brand-600 hover:bg-brand-700 text-white px-8 py-3 rounded-lg font-semibold inline-flex items-center transition-colors shadow-lg"
-                >
-                  Siguiente
-                  <ArrowRightIcon className="ml-2 h-5 w-5" />
-                </button>
+                <div className="text-center">
+                  <h2 className="text-2xl font-bold text-white mb-6">
+                    ¿Cuántos empleados tienes en nómina?
+                  </h2>
+                  
+                  <div className="mb-8">
+                    <div className="flex items-center justify-center space-x-4">
+                      <button
+                        onClick={() => handleEmpleadosChange(formData.empleados - 1)}
+                        className="w-12 h-12 rounded-full glass border border-brand-600/30 hover:border-brand-500 flex items-center justify-center text-2xl font-bold transition-all text-white hover:text-brand-200"
+                        disabled={formData.empleados <= 1}
+                      >
+                        -
+                      </button>
+                      
+                      <div className="text-center">
+                        <input
+                          type="number"
+                          value={formData.empleados}
+                          onChange={(e) => handleEmpleadosChange(parseInt(e.target.value) || 1)}
+                          className="w-24 h-16 text-3xl font-bold text-center glass border-2 border-brand-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 transition-all"
+                          min="1"
+                        />
+                        <p className="text-brand-400 text-sm mt-2">empleados</p>
+                      </div>
+                      
+                      <button
+                        onClick={() => handleEmpleadosChange(formData.empleados + 1)}
+                        className="w-12 h-12 rounded-full glass border border-brand-600/30 hover:border-brand-500 flex items-center justify-center text-2xl font-bold transition-all text-white hover:text-brand-200"
+                      >
+                        +
+                      </button>
+                    </div>
+                    
+                    <div className="mt-6 p-4 glass-strong border border-brand-500/30 rounded-lg">
+                      <p className="text-brand-300 font-medium">
+                        Costo estimado: L{calculateTotal().toLocaleString()}
+                      </p>
+                      <p className="text-brand-400 text-sm">
+                        L300 por empleado × {formData.empleados} empleados
+                      </p>
+                    </div>
+                  </div>
+
+                  <h2 className="text-2xl font-bold text-white mb-6">
+                    ¿Cuántos departamentos o equipos conforman tu empresa?
+                  </h2>
+                  
+                  <div className="mb-8">
+                    <div className="flex items-center justify-center space-x-4">
+                      <button
+                        onClick={() => handleDepartamentosCountChange(formData.departamentosCount - 1)}
+                        className="w-12 h-12 rounded-full glass border border-brand-600/30 hover:border-brand-500 flex items-center justify-center text-2xl font-bold transition-all text-white hover:text-brand-200"
+                        disabled={formData.departamentosCount <= 1}
+                      >
+                        -
+                      </button>
+                      
+                      <div className="text-center">
+                        <input
+                          type="number"
+                          value={formData.departamentosCount}
+                          onChange={(e) => handleDepartamentosCountChange(parseInt(e.target.value) || 1)}
+                          className="w-24 h-16 text-3xl font-bold text-center glass border-2 border-brand-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 transition-all"
+                          min="1"
+                        />
+                        <p className="text-brand-400 text-sm mt-2">departamentos</p>
+                      </div>
+                      
+                      <button
+                        onClick={() => handleDepartamentosCountChange(formData.departamentosCount + 1)}
+                        className="w-12 h-12 rounded-full glass border border-brand-600/30 hover:border-brand-500 flex items-center justify-center text-2xl font-bold transition-all text-white hover:text-brand-200"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setStep(2)}
+                    disabled={!formData.empresa}
+                    className="bg-brand-600 hover:bg-brand-700 text-white px-8 py-3 rounded-lg font-semibold inline-flex items-center transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Siguiente
+                    <ArrowRightIcon className="ml-2 h-5 w-5" />
+                  </button>
+                </div>
               </div>
             )}
 
@@ -298,24 +310,10 @@ export default function ActivarPage() {
                   Tu inversión: L{calculateTotal().toLocaleString()}
                 </h2>
                 <p className="text-brand-400 text-center mb-8">
-                  Por {formData.empleados} empleados a L420 cada uno
+                  Por {formData.empleados} empleados a L300 cada uno
                 </p>
 
                 <div className="space-y-6">
-                  <div>
-                    <label className="block text-white font-medium mb-2">
-                      Nombre de empresa *
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.empresa}
-                      onChange={(e) => handleInputChange('empresa', e.target.value)}
-                      className="w-full p-3 rounded-lg glass border border-brand-600/30 text-white placeholder-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all"
-                      placeholder="Mi Empresa S.A."
-                      required
-                    />
-                  </div>
-
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-white font-medium mb-2">
@@ -359,32 +357,6 @@ export default function ActivarPage() {
                       required
                     />
                   </div>
-
-                  <div>
-                    <label className="block text-white font-medium mb-3">
-                      Departamentos (selecciona todos los que apliquen)
-                    </label>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {departamentosOptions.map((dept) => (
-                        <label
-                          key={dept}
-                          className={`flex items-center p-3 rounded-lg border cursor-pointer transition-all ${
-                            formData.departamentos.includes(dept)
-                              ? 'glass-strong border-brand-500 text-brand-200 bg-brand-500/20'
-                              : 'glass border-brand-600/30 text-brand-300 hover:border-brand-500/50 hover:text-white'
-                          }`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={formData.departamentos.includes(dept)}
-                            onChange={() => handleDepartamentosChange(dept)}
-                            className="sr-only"
-                          />
-                          <span className="text-sm">{dept}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
                 </div>
 
                 <div className="flex justify-between mt-8">
@@ -398,7 +370,7 @@ export default function ActivarPage() {
                   
                   <button
                     onClick={() => setStep(3)}
-                    disabled={!formData.empresa || !formData.contactoNombre || !formData.contactoWhatsApp || !formData.contactoEmail}
+                    disabled={!formData.contactoNombre || !formData.contactoWhatsApp || !formData.contactoEmail}
                     className="bg-brand-600 hover:bg-brand-700 text-white px-6 py-3 rounded-lg font-semibold inline-flex items-center disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
                   >
                     Continuar al pago
@@ -419,13 +391,14 @@ export default function ActivarPage() {
                   <Card variant="glass" className="border-yellow-500/30 bg-yellow-500/5">
                     <CardContent className="p-6">
                       <h3 className="text-yellow-400 font-bold mb-3 flex items-center">
-                        1. Transfiere a BAC:
+                        1. Transfiere a BANCO BAC HONDURAS:
                       </h3>
                       <div className="glass-strong p-4 rounded font-mono text-center">
-                        <span className="text-2xl font-bold text-white">0123-4567-8901</span>
+                        <span className="text-2xl font-bold text-white">722983451</span>
                       </div>
-                      <p className="text-brand-300 text-sm mt-2">
-                        Monto: L{calculateTotal().toLocaleString()} • Concepto: "Activación SISU - {formData.empresa}"
+                      <p className="text-brand-300 text-sm mt-2 font-medium">
+                        <span className="text-white">Titular:</span> JORGE ARTURO GOMEZ COELLO<br/>
+                        <span className="text-white">Monto:</span> L{calculateTotal().toLocaleString()} • <span className="text-white">Concepto:</span> &ldquo;Activación SISU - {formData.empresa}&rdquo;
                       </p>
                     </CardContent>
                   </Card>

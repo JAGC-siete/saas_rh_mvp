@@ -192,6 +192,49 @@ export default function Dashboard() {
             </Card>
           </div>
 
+          {/* Gamification Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Employee Leaderboard */}
+            <Card variant="glass">
+              <CardHeader>
+                <CardTitle className="text-white">🏆 Leaderboard de Empleados</CardTitle>
+                <CardDescription className="text-gray-300">
+                  Top performers del mes
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {/* Placeholder for leaderboard - will be replaced with actual component */}
+                  <div className="text-center py-8 text-gray-300">
+                    <div className="text-4xl mb-2">🏆</div>
+                    <p>Leaderboard de gamificación</p>
+                    <p className="text-sm">Se mostrará cuando los empleados empiecen a ganar puntos</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Employee Achievements */}
+            <Card variant="glass">
+              <CardHeader>
+                <CardTitle className="text-white">🎖️ Logros Recientes</CardTitle>
+                <CardDescription className="text-gray-300">
+                  Últimos logros obtenidos
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {/* Placeholder for achievements - will be replaced with actual component */}
+                  <div className="text-center py-8 text-gray-300">
+                    <div className="text-4xl mb-2">🎖️</div>
+                    <p>Logros de empleados</p>
+                    <p className="text-sm">Se mostrarán cuando se obtengan logros</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
           {/* Quick Actions */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Quick Actions */}
@@ -237,6 +280,13 @@ export default function Dashboard() {
                     onClick={() => router.push('/reports')}
                   >
                     📋 Reportes
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full border-brand-600 bg-white/10 text-white hover:bg-brand-800 hover:text-white font-medium"
+                    onClick={() => router.push('/gamification')}
+                  >
+                    🎮 Gamificación
                   </Button>
                 </div>
               </CardContent>

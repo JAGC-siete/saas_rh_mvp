@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import Head from 'next/head'
+import dynamic from 'next/dynamic'
+const CloudBackground = dynamic(() => import('../../components/CloudBackground'), { ssr: false })
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
 import { Clock, User, ArrowLeft } from 'lucide-react'
@@ -31,8 +33,9 @@ export default function AttendanceRegisterPage() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
 
-      <div className="flex items-center justify-center p-4">
-        <div className="relative w-full max-w-md space-y-8">
+      <div className="min-h-screen bg-app flex items-center justify-center p-4 relative">
+        <CloudBackground />
+        <div className="relative w-full max-w-md space-y-8 z-10">
           {/* Header */}
           <div className="text-center">
             <div className="mx-auto h-20 w-20 bg-white rounded-full flex items-center justify-center mb-6 shadow-lg">

@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../lib/supabase/server'
 import { authenticateUser } from '../../../lib/auth-helpers'
+import { getHondurasTime } from '../../../lib/timezone'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -68,7 +69,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 function calculateDateRange(range: string) {
-  const today = new Date()
+  const today = getHondurasTime()
   let startDate: Date
   let endDate = today
 
@@ -247,7 +248,7 @@ function generateAttendancePDFReport(res: NextApiResponse, reportData: any, date
     doc.fontSize(10).text('INFORMACIÓN DEL REPORTE:', 30, 100)
     doc.fontSize(9).text(`Período: ${dateFilter.startDate} - ${dateFilter.endDate}`, 30, 115)
     doc.fontSize(9).text(`Tipo: Reporte de Asistencia - ${range}`, 30, 130)
-    doc.fontSize(9).text(`Fecha de generación: ${new Date().toLocaleDateString('es-HN')}`, 30, 145)
+    doc.fontSize(9).text(`Fecha de generación: ${getHondurasTime().toLocaleDateString('es-HN')}`, 30, 145)
     
     // Resumen ejecutivo
     doc.rect(30, 170, 535, 80).stroke()
@@ -366,7 +367,7 @@ function generateAttendancePDFReport(res: NextApiResponse, reportData: any, date
     
     // Pie de página
     doc.fontSize(8).text('Documento generado automáticamente - Sistema de Recursos Humanos', 30, 800, { align: 'center', width: 535 })
-    doc.fontSize(8).text(`Fecha de generación: ${new Date().toLocaleString('es-HN')}`, 30, 815, { align: 'center', width: 535 })
+    doc.fontSize(8).text(`Fecha de generación: ${getHondurasTime().toLocaleString('es-HN')}`, 30, 815, { align: 'center', width: 535 })
 
     doc.end()
   } catch (error) {
@@ -383,7 +384,7 @@ function generateAttendanceCSVReport(res: NextApiResponse, reportData: any, date
     csvContent += 'REPORTE DE ASISTENCIA\n'
     csvContent += `Período: ${dateFilter.startDate} - ${dateFilter.endDate}\n`
     csvContent += `Tipo: ${range}\n`
-    csvContent += `Fecha de generación: ${new Date().toLocaleDateString('es-HN')}\n\n`
+    csvContent += `Fecha de generación: ${getHondurasTime().toLocaleDateString('es-HN')}\n\n`
     
     // Resumen ejecutivo
     csvContent += 'RESUMEN EJECUTIVO\n'

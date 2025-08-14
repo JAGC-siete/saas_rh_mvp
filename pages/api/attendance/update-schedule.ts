@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient } from '../../../lib/supabase/server'
+import { getHondurasTimeISO } from '../../../lib/timezone'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -7,7 +8,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { employee_id, start_time, end_time, department_id } = req.body
+    const { employee_id, start_time, end_time } = req.body
 
     if (!employee_id || !start_time || !end_time) {
       return res.status(400).json({ error: 'employee_id, start_time, and end_time are required' })
@@ -88,7 +89,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           thursday_end: end_time,
           friday_start: start_time,
           friday_end: end_time,
-          updated_at: new Date().toISOString()
+          updated_at: getHondurasTimeISO()
         })
         .eq('id', workScheduleId)
 

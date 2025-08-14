@@ -10,11 +10,8 @@ export const SupabaseContext = createContext<any>(null)
 
 export default function App({ Component, pageProps }: AppProps) {
   const [supabaseClient, setSupabaseClient] = useState<any>(null)
-  const [isClient, setIsClient] = useState(false)
 
   useEffect(() => {
-    setIsClient(true)
-    
     // Initialize Supabase client only on client side
     try {
       const client = createClient()
