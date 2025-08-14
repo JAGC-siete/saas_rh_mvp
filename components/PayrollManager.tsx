@@ -5,7 +5,7 @@ import { createClient } from '../lib/supabase/client'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from './ui/select'
+
 
 interface PayrollRecord {
   id: string
@@ -97,16 +97,9 @@ export default function PayrollManager() {
   const [userProfile, setUserProfile] = useState<any>(null)
   const [payrollStats, setPayrollStats] = useState<PayrollStats>(INITIAL_PAYROLL_STATS)
   const [departments, setDepartments] = useState<{ [key: string]: string }>({})
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'records' | 'generate' | 'reports'>('dashboard')
   const [generateForm, setGenerateForm] = useState(INITIAL_GENERATE_FORM)
   const [supabase, setSupabase] = useState<any>(null)
-  const [showQuickGenerate, setShowQuickGenerate] = useState(false)
-  const [showQuickVoucher, setShowQuickVoucher] = useState(false)
-  const [voucherForm, setVoucherForm] = useState<{ periodo: string; quincena: number; employeeId: string }>({
-    periodo: new Date().toISOString().slice(0, 7),
-    quincena: 1,
-    employeeId: ''
-  })
+  
 
   // Memoized values
   const currentPeriodRecords = useMemo(() => 
@@ -123,10 +116,7 @@ export default function PayrollManager() {
     [payrollRecords, selectedPeriod]
   )
 
-  const currentPeriod = useMemo(() => 
-    selectedPeriod || new Date().toISOString().slice(0, 7),
-    [selectedPeriod]
-  )
+  
 
   // Add last day of selected month for range chips
   const lastDayOfSelectedMonth = useMemo(() => {
@@ -156,7 +146,10 @@ export default function PayrollManager() {
   }, [])
 
   useEffect(() => {
-    if (supabase) fetchData()
+    if (!supabase) return
+    // Llama a fetchData sin agregarlo como dependencia para evitar orden de declaración
+    fetchData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase])
 
   const resetGenerateForm = useCallback(() => {
@@ -189,6 +182,65 @@ export default function PayrollManager() {
       alert(`❌ Error descargando archivo: ${error.message}`)
     }
   }, [])
+
+  const loadDepartments = useCallback(async () => {
+    if (!supabase) return
+    try {
+      const { data: deptData, error } = await supabase
+        .from('departments')
+        .select('id, name')
+      if (error) {
+        console.error('Error loading departments:', error)
+        return
+      }
+      const deptMap: { [key: string]: string } = {}
+      deptData?.forEach((dept: any) => { deptMap[dept.id] = dept.name })
+      setDepartments(deptMap)
+      if (!isMountedRef.current) return
+      console.log('✅ Departments loaded:', Object.keys(deptMap).length)
+    } catch (error) {
+      console.error('Error loading departments:', error)
+    }
+  }, [supabase])
+
+  const calculatePayrollStats = useCallback((records: PayrollRecord[], emps: Employee[]) => {
+    const stats: PayrollStats = {
+      totalEmployees: emps.length,
+      totalGrossSalary: 0,
+      totalDeductions: 0,
+      totalNetSalary: 0,
+      averageSalary: 0,
+      departmentBreakdown: {},
+      attendanceRate: 0,
+      payrollCoverage: 0
+    }
+    stats.payrollCoverage = emps.length > 0 ? (currentPeriodRecords.length / emps.length) * 100 : 0
+    const deptSumSalary: Record<string, number> = {}
+    currentPeriodRecords.forEach((record) => {
+      stats.totalGrossSalary += record.gross_salary
+      stats.totalDeductions += record.total_deductions
+      stats.totalNetSalary += record.net_salary
+      const deptId = record.employees?.department_id || 'sin-departamento'
+      const deptName = departments[deptId] || 'Sin Departamento'
+      if (!stats.departmentBreakdown[deptId]) {
+        stats.departmentBreakdown[deptId] = { count: 0, name: deptName, avgSalary: 0 }
+      }
+      stats.departmentBreakdown[deptId].count += 1
+      deptSumSalary[deptId] = (deptSumSalary[deptId] ?? 0) + record.net_salary
+    })
+    Object.keys(stats.departmentBreakdown).forEach((deptId) => {
+      const count = stats.departmentBreakdown[deptId].count
+      const sum = deptSumSalary[deptId] ?? 0
+      stats.departmentBreakdown[deptId].avgSalary = count > 0 ? sum / count : 0
+    })
+    if (currentPeriodRecords.length > 0) {
+      stats.averageSalary = stats.totalNetSalary / currentPeriodRecords.length
+    }
+    const totalDays = currentPeriodRecords.reduce((sum, r) => sum + r.days_worked, 0)
+    const expectedDays = currentPeriodRecords.length * 15
+    stats.attendanceRate = expectedDays > 0 ? (totalDays / expectedDays) * 100 : 0
+    if (isMountedRef.current) setPayrollStats(stats)
+  }, [currentPeriodRecords, departments])
 
   const fetchData = useCallback(async () => {
     if (!supabase) return
@@ -317,83 +369,7 @@ export default function PayrollManager() {
     } finally {
       if (isMountedRef.current) setLoading(false)
     }
-  }, [supabase])
-
-  const loadDepartments = useCallback(async () => {
-    if (!supabase) return
-    
-    try {
-      const { data: deptData, error } = await supabase
-        .from('departments')
-        .select('id, name')
-      
-      if (error) {
-        console.error('Error loading departments:', error)
-        return
-      }
-      
-      const deptMap: { [key: string]: string } = {}
-      deptData?.forEach((dept: any) => {
-        deptMap[dept.id] = dept.name
-      })
-      
-      setDepartments(deptMap)
-      if (!isMountedRef.current) return
-      console.log('✅ Departments loaded:', Object.keys(deptMap).length)
-    } catch (error) {
-      console.error('Error loading departments:', error)
-    }
-  }, [supabase])
-
-  const calculatePayrollStats = useCallback((records: PayrollRecord[], emps: Employee[]) => {
-    const stats: PayrollStats = {
-      totalEmployees: emps.length,
-      totalGrossSalary: 0,
-      totalDeductions: 0,
-      totalNetSalary: 0,
-      averageSalary: 0,
-      departmentBreakdown: {},
-      attendanceRate: 0,
-      payrollCoverage: 0
-    }
-
-    stats.payrollCoverage = emps.length > 0 ? (currentPeriodRecords.length / emps.length) * 100 : 0
-
-    // Una sola pasada: acumular totales y sumas por depto
-    const deptSumSalary: Record<string, number> = {}
-    currentPeriodRecords.forEach((record) => {
-      stats.totalGrossSalary += record.gross_salary
-      stats.totalDeductions += record.total_deductions
-      stats.totalNetSalary += record.net_salary
-      
-      const deptId = record.employees?.department_id || 'sin-departamento'
-      const deptName = departments[deptId] || 'Sin Departamento'
-      
-      if (!stats.departmentBreakdown[deptId]) {
-        stats.departmentBreakdown[deptId] = { count: 0, name: deptName, avgSalary: 0 }
-      }
-      
-      stats.departmentBreakdown[deptId].count += 1
-      deptSumSalary[deptId] = (deptSumSalary[deptId] ?? 0) + record.net_salary
-    })
-
-    // Promedios por depto
-    Object.keys(stats.departmentBreakdown).forEach((deptId) => {
-      const count = stats.departmentBreakdown[deptId].count
-      const sum = deptSumSalary[deptId] ?? 0
-      stats.departmentBreakdown[deptId].avgSalary = count > 0 ? sum / count : 0
-    })
-
-    if (currentPeriodRecords.length > 0) {
-      stats.averageSalary = stats.totalNetSalary / currentPeriodRecords.length
-    }
-
-    const totalDays = currentPeriodRecords.reduce((sum, r) => sum + r.days_worked, 0)
-    const expectedDays = currentPeriodRecords.length * 15
-    stats.attendanceRate = expectedDays > 0 ? (totalDays / expectedDays) * 100 : 0
-
-    if (isMountedRef.current) setPayrollStats(stats)
-  }, [currentPeriodRecords, departments])
+  }, [supabase, loadDepartments, calculatePayrollStats])
 
   const generatePayroll = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
@@ -561,49 +537,7 @@ export default function PayrollManager() {
     })
   }, [supabase, downloadFile])
 
-  const exportToExcel = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession()
-    
-    if (!session?.access_token) {
-      alert('❌ No se encontró token de sesión. Por favor, inicia sesión nuevamente.')
-      return
-    }
-
-    await downloadFile('/api/payroll/export', `nomina_paragon_${currentPeriod}.xlsx`, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`
-      },
-      body: JSON.stringify({
-        periodo: currentPeriod,
-        formato: 'excel'
-      })
-    })
-  }, [supabase, downloadFile, currentPeriod])
-
-  const exportPayrollReport = useCallback(async (reportType: string, format: 'pdf' | 'csv') => {
-    const { data: { session } } = await supabase.auth.getSession()
-    
-    if (!session?.access_token) {
-      alert('❌ No se encontró token de sesión. Por favor, inicia sesión nuevamente.')
-      return
-    }
-
-    await downloadFile('/api/reports/export-payroll', `reporte_nomina_${reportType}_${currentPeriod}.${format}`, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Accept': format === 'pdf' ? 'application/pdf' : 'text/csv',
-        'Authorization': `Bearer ${session.access_token}`
-      },
-      body: JSON.stringify({
-        reportType,
-        format,
-        periodo: currentPeriod
-      })
-    })
-  }, [supabase, downloadFile, currentPeriod])
+  
 
   const handleFormChange = useCallback((field: keyof typeof INITIAL_GENERATE_FORM, value: string | number | boolean) => {
     setGenerateForm(prev => ({ ...prev, [field]: value }))
@@ -617,51 +551,9 @@ export default function PayrollManager() {
     setSelectedPeriod('')
   }, [])
 
-  const handleTabChange = useCallback((tab: typeof activeTab) => {
-    setActiveTab(tab)
-  }, [])
+  
 
-  const generateIndividualVoucher = useCallback(async () => {
-    try {
-      if (!voucherForm.employeeId) {
-        alert('Seleccione un empleado')
-        return
-      }
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        alert('Sesión no válida')
-        return
-      }
-      const [year, month] = voucherForm.periodo.split('-').map((n: any) => Number(n))
-      const lastDay = new Date(year, month, 0).getDate()
-      const startDay = voucherForm.quincena === 1 ? 1 : 16
-      const endDay = voucherForm.quincena === 1 ? 15 : lastDay
-      const emp = employees.find(e => e.id === voucherForm.employeeId)
-      const empCode = emp?.employee_code || 'empleado'
-
-      await downloadFile('/api/payroll/export', `recibo_${empCode}_${voucherForm.periodo}_q${voucherForm.quincena}.pdf`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/pdf',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({
-          periodo: voucherForm.periodo,
-          formato: 'recibo-individual',
-          employeeId: voucherForm.employeeId,
-          quincena: voucherForm.quincena,
-          range: {
-            start: `${voucherForm.periodo}-${String(startDay).padStart(2, '0')}`,
-            end: `${voucherForm.periodo}-${String(endDay).padStart(2, '0')}`
-          }
-        })
-      })
-    } catch (error: any) {
-      console.error('Error generating individual voucher:', error)
-      alert(`❌ Error generando recibo: ${error.message}`)
-    }
-  }, [voucherForm, supabase, employees, downloadFile])
+  
 
   // Pre-cálculos para la sección de distribución (evitar trabajo por iteración)
   const { maxDeptCountMemo, totalDeptEmployeesMemo } = useMemo(() => {
@@ -679,260 +571,15 @@ export default function PayrollManager() {
         <div>
           <h1 className="text-2xl font-bold text-white">🏢 Gestión de Nómina - Paragon Honduras</h1>
           <p className="text-gray-300">Sistema integral de procesamiento y administración de nóminas</p>
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={() => handleTabChange('generate')} className="bg-brand-800 hover:bg-brand-700 text-white">
-            📊 Generar Nómina
-          </Button>
-          <Button variant="outline" onClick={exportToExcel} className="border-white/20 text-white hover:bg-white/10">
-            📥 Exportar Excel
-          </Button>
-          <Button variant="outline" onClick={() => handleTabChange('reports')} className="border-white/20 text-white hover:bg-white/10">
-            📋 Reportes
-          </Button>
-        </div>
       </div>
 
-      {/* Minimal actions */}
-      <Card variant="glass">
-        <CardHeader>
-          <CardTitle className="text-white">⚡ Acciones mínimas</CardTitle>
-          <CardDescription className="text-gray-300">Dos acciones directas con parámetros requeridos</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Generar Nómina */}
-            <div className="p-4 rounded-lg border border-white/10 bg-white/5">
-              <div className="flex items-center justify-between mb-3">
-                <div className="text-white font-medium">Generar nómina</div>
-                <Button
-                  size="sm"
-                  className="bg-brand-800 hover:bg-brand-700 text-white"
-                  onClick={() => setShowQuickGenerate(v => !v)}
-                >
-                  {showQuickGenerate ? 'Ocultar' : 'Configurar'}
-                </Button>
-              </div>
-              {showQuickGenerate && (
-                <form onSubmit={generatePayroll} className="space-y-3">
-                  <div>
-                    <label className="block text-sm font-medium text-white mb-1">Mes</label>
-                    <Input
-                      type="month"
-                      value={generateForm.periodo}
-                      onChange={e => setGenerateForm(prev => ({ ...prev, periodo: e.target.value }))}
-                      className="bg-white/10 border-white/20 text-white placeholder-gray-400"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-white mb-1">Quincena</label>
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        onClick={() => setGenerateForm(prev => ({ ...prev, quincena: 1 }))}
-                        className={`${generateForm.quincena === 1 ? 'bg-brand-800 hover:bg-brand-700 text-white' : 'border border-white/20 text-white hover:bg-white/10 bg-transparent'}`}
-                      >
-                        1 - 15
-                      </Button>
-                      <Button
-                        type="button"
-                        onClick={() => setGenerateForm(prev => ({ ...prev, quincena: 2 }))}
-                        className={`${generateForm.quincena === 2 ? 'bg-brand-800 hover:bg-brand-700 text-white' : 'border border-white/20 text-white hover:bg-white/10 bg-transparent'}`}
-                      >
-                        16 - {lastDayOfSelectedMonth}
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <label className="text-sm text-white flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={generateForm.incluirDeducciones}
-                        onChange={e => setGenerateForm(prev => ({ ...prev, incluirDeducciones: e.target.checked }))}
-                        className="accent-brand-500"
-                      />
-                      Incluir deducciones (ISR, IHSS, RAP)
-                    </label>
-                    <label className="text-sm text-white flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={generateForm.soloEmpleadosConAsistencia}
-                        onChange={e => setGenerateForm(prev => ({ ...prev, soloEmpleadosConAsistencia: e.target.checked }))}
-                        className="accent-brand-500"
-                      />
-                      Solo empleados con asistencia completa
-                    </label>
-                  </div>
-                  <div className="text-xs text-gray-300">
-                    {(() => {
-                      const [y, m] = generateForm.periodo.split('-').map((n: any) => Number(n))
-                      const last = new Date(y, m, 0).getDate()
-                      const start = generateForm.quincena === 1 ? 1 : 16
-                      const end = generateForm.quincena === 1 ? 15 : last
-                      return `Período: ${generateForm.periodo}-${String(start).padStart(2,'0')} a ${generateForm.periodo}-${String(end).padStart(2,'0')}`
-                    })()}
-                  </div>
-                  <div className="text-xs">
-                    <div className="text-gray-400 mb-1">Payload:</div>
-                    <pre className="bg-black/40 border border-white/10 rounded p-2 text-gray-200 overflow-auto">
-{JSON.stringify({
-  periodo: generateForm.periodo,
-  quincena: generateForm.quincena,
-  incluirDeducciones: generateForm.incluirDeducciones,
-  soloEmpleadosConAsistencia: generateForm.soloEmpleadosConAsistencia
-}, null, 2)}
-                    </pre>
-                  </div>
-                  <div>
-                    <Button type="submit" disabled={loading} className="bg-brand-800 hover:bg-brand-700 text-white">
-                      {loading ? '🔄 Generando...' : '🚀 Generar Nómina ahora'}
-                    </Button>
-                  </div>
-                </form>
-              )}
-            </div>
-
-            {/* Voucher individual */}
-            <div className="p-4 rounded-lg border border-white/10 bg-white/5">
-              <div className="flex items-center justify-between mb-3">
-                <div className="text-white font-medium">Generar voucher individual</div>
-                <Button
-                  size="sm"
-                  className="bg-brand-800 hover:bg-brand-700 text-white"
-                  onClick={() => setShowQuickVoucher(v => !v)}
-                >
-                  {showQuickVoucher ? 'Ocultar' : 'Configurar'}
-                </Button>
-              </div>
-              {showQuickVoucher && (
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-sm font-medium text-white mb-1">Empleado</label>
-                    <Select value={voucherForm.employeeId} onValueChange={(v) => setVoucherForm(prev => ({ ...prev, employeeId: v }))}>
-                      <SelectTrigger className="bg-white/10 border-white/20 text-white">
-                        <SelectValue placeholder="Selecciona un empleado" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {employees.map(emp => (
-                          <SelectItem key={emp.id} value={emp.id}>
-                            {emp.employee_code} — {emp.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-white mb-1">Mes</label>
-                    <Input
-                      type="month"
-                      value={voucherForm.periodo}
-                      onChange={e => setVoucherForm(prev => ({ ...prev, periodo: e.target.value }))}
-                      className="bg-white/10 border-white/20 text-white placeholder-gray-400"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-white mb-1">Quincena</label>
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        onClick={() => setVoucherForm(prev => ({ ...prev, quincena: 1 }))}
-                        className={`${voucherForm.quincena === 1 ? 'bg-brand-800 hover:bg-brand-700 text-white' : 'border border-white/20 text-white hover:bg-white/10 bg-transparent'}`}
-                      >
-                        1 - 15
-                      </Button>
-                      <Button
-                        type="button"
-                        onClick={() => setVoucherForm(prev => ({ ...prev, quincena: 2 }))}
-                        className={`${voucherForm.quincena === 2 ? 'bg-brand-800 hover:bg-brand-700 text-white' : 'border border-white/20 text-white hover:bg-white/10 bg-transparent'}`}
-                      >
-                        {(() => {
-                          const [y, m] = voucherForm.periodo.split('-').map((n: any) => Number(n))
-                          const last = new Date(y, m, 0).getDate()
-                          return `16 - ${last}`
-                        })()}
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="text-xs text-gray-300">
-                    {(() => {
-                      const [y, m] = voucherForm.periodo.split('-').map((n: any) => Number(n))
-                      const last = new Date(y, m, 0).getDate()
-                      const start = voucherForm.quincena === 1 ? 1 : 16
-                      const end = voucherForm.quincena === 1 ? 15 : last
-                      return `Período: ${voucherForm.periodo}-${String(start).padStart(2,'0')} a ${voucherForm.periodo}-${String(end).padStart(2,'0')}`
-                    })()}
-                  </div>
-                  <div className="text-xs">
-                    <div className="text-gray-400 mb-1">Payload:</div>
-                    <pre className="bg-black/40 border border-white/10 rounded p-2 text-gray-200 overflow-auto">
-{JSON.stringify({
-  periodo: voucherForm.periodo,
-  formato: 'recibo-individual',
-  employeeId: voucherForm.employeeId,
-  quincena: voucherForm.quincena
-}, null, 2)}
-                    </pre>
-                  </div>
-                  <div>
-                    <Button onClick={generateIndividualVoucher} className="bg-brand-800 hover:bg-brand-700 text-white" disabled={!voucherForm.employeeId}>
-                      📄 Generar voucher
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Tabs */}
-      <div className="border-b border-white/10">
-        <nav className="-mb-px flex space-x-8">
-          <button
-            onClick={() => handleTabChange('dashboard')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'dashboard'
-                ? 'border-brand-500 text-brand-400'
-                : 'border-transparent text-gray-300 hover:text-white hover:border-white/30'
-            }`}
-          >
-            📈 Dashboard Ejecutivo
-          </button>
-          <button
-            onClick={() => handleTabChange('records')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'records'
-                ? 'border-brand-500 text-brand-400'
-                : 'border-transparent text-gray-300 hover:text-white hover:border-white/30'
-            }`}
-          >
-            📋 Registros de Nómina
-          </button>
-          <button
-            onClick={() => handleTabChange('generate')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'generate'
-                ? 'border-brand-500 text-brand-400'
-                : 'border-transparent text-gray-300 hover:text-white hover:border-white/30'
-            }`}
-          >
-            ⚙️ Generar Nómina
-          </button>
-          <button
-            onClick={() => handleTabChange('reports')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'reports'
-                ? 'border-brand-500 text-brand-400'
-                : 'border-transparent text-gray-300 hover:text-white hover:border-white/30'
-            }`}
-          >
-            📋 Reportes
-          </button>
-        </nav>
       </div>
 
-      {/* Dashboard Tab */}
-      {activeTab === 'dashboard' && (
+      
+
+      
+
+      {/* Dashboard Ejecutivo */}
         <div className="space-y-6">
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -1063,57 +710,121 @@ export default function PayrollManager() {
             </Card>
           </div>
 
-          {/* Quick Actions */}
+      </div>
+
+      {/* Generar Nómina */}
+      <div className="space-y-6">
           <Card variant="glass">
             <CardHeader>
-              <CardTitle className="text-white">⚡ Acciones Rápidas</CardTitle>
+            <CardTitle className="text-white">📊 Generar Nómina</CardTitle>
+            <CardDescription className="text-gray-300">
+              Genera la nómina para todos los empleados activos para un período y quincena seleccionados
+            </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <form onSubmit={generatePayroll} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-white mb-1">
+                  Mes
+                </label>
+                <Input
+                  type="month"
+                  value={generateForm.periodo}
+                  onChange={e => handleFormChange('periodo', e.target.value)}
+                  required
+                  className="bg-white/10 border-white/20 text-white placeholder-gray-400"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-white mb-1">
+                  Rango
+                </label>
+                <div className="flex gap-2">
                 <Button 
-                  className="w-full bg-brand-800 hover:bg-brand-700 text-white"
-                  onClick={() => handleTabChange('generate')}
+                    type="button"
+                    onClick={() => handleFormChange('quincena', 1)}
+                    className={`${generateForm.quincena === 1 ? 'bg-brand-800 hover:bg-brand-700 text-white' : 'border border-white/20 text-white hover:bg-white/10 bg-transparent'}`}
                 >
-                  Generar Nómina Actual
+                    1 - 15
                 </Button>
                 <Button 
-                  variant="outline"
-                  className="w-full border-white/20 text-white hover:bg-white/10"
-                  onClick={exportToExcel}
-                >
-                  Exportar Reporte
+                    type="button"
+                    onClick={() => handleFormChange('quincena', 2)}
+                    className={`${generateForm.quincena === 2 ? 'bg-brand-800 hover:bg-brand-700 text-white' : 'border border-white/20 text-white hover:bg-white/10 bg-transparent'}`}
+                  >
+                    16 - {lastDayOfSelectedMonth}
                 </Button>
-                <Button 
-                  variant="outline"
-                  className="w-full border-white/20 text-white hover:bg-white/10"
-                  onClick={() => handleTabChange('records')}
-                >
-                  Ver Registros
+                </div>
+              </div>
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={generateForm.incluirDeducciones}
+                  onChange={e => handleFormChange('incluirDeducciones', e.target.checked)}
+                  className="mr-2 accent-brand-500"
+                  id="deducciones"
+                />
+                <label htmlFor="deducciones" className="text-sm font-medium text-white">
+                  Incluir deducciones (ISR, IHSS, RAP)
+                </label>
+              </div>
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={generateForm.soloEmpleadosConAsistencia}
+                  onChange={e => handleFormChange('soloEmpleadosConAsistencia', e.target.checked)}
+                  className="mr-2 accent-brand-500"
+                  id="asistencia"
+                />
+                <label htmlFor="asistencia" className="text-sm font-medium text-white">
+                  Solo empleados con asistencia completa
+                </label>
+              </div>
+              <div className="md:col-span-2 flex gap-4">
+                <Button type="submit" disabled={loading} className="bg-brand-800 hover:bg-brand-700 text-white">
+                  {loading ? '🔄 Generando...' : '🚀 Generar Nómina'}
                 </Button>
               </div>
-              <div className="mt-4 pt-4 border-t border-white/10">
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-center">
-                  <div className="p-3 bg-blue-500/20 rounded-lg border border-blue-400/20">
-                    <div className="text-blue-400 font-bold text-lg">{payrollStats.totalEmployees}</div>
-                    <div className="text-blue-300 text-xs">Empleados</div>
+            </form>
+          </CardContent>
+        </Card>
+
+        {/* Employee Preview */}
+        {employees.length > 0 && (
+          <Card variant="glass">
+            <CardHeader>
+              <CardTitle className="text-white">👥 Empleados Activos ({employees.length})</CardTitle>
+              <CardDescription className="text-gray-300">
+                Lista de empleados que serán incluidos en la nómina
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {employees.slice(0, 9).map((emp) => (
+                  <div key={emp.id} className="p-3 border border-white/20 rounded-lg bg-white/5">
+                    <div className="font-medium text-white">{emp.name}</div>
+                    <div className="text-sm text-gray-300">
+                      {emp.employee_code} • {emp.department_id || 'Sin departamento'}
                   </div>
-                  <div className="p-3 bg-green-500/20 rounded-lg border border-green-400/20">
-                    <div className="text-green-400 font-bold text-lg">{Object.keys(payrollStats.departmentBreakdown).length}</div>
-                    <div className="text-green-300 text-xs">Departamentos</div>
+                    <div className="text-sm font-mono text-green-400">
+                      {formatCurrency(emp.base_salary)}
                   </div>
-                  <div className="p-3 bg-purple-500/20 rounded-lg border border-purple-400/20">
-                    <div className="text-purple-400 font-bold text-lg">{payrollStats.payrollCoverage.toFixed(0)}%</div>
-                    <div className="text-purple-300 text-xs">Cobertura</div>
                   </div>
+                ))}
+                {employees.length > 9 && (
+                  <div className="p-3 border border-white/20 rounded-lg bg-white/5 text-center">
+                    <div className="text-sm text-gray-300">
+                      +{employees.length - 9} empleados más
                 </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
-        </div>
       )}
+      </div>
 
-      {/* Records Tab */}
-      {activeTab === 'records' && (
+      {/* Registros de Nómina */}
         <div className="space-y-6">
           {/* Filters */}
           <Card variant="glass">
@@ -1264,234 +975,10 @@ export default function PayrollManager() {
             </CardContent>
           </Card>
         </div>
-      )}
 
-      {/* Generate Tab */}
-      {activeTab === 'generate' && (
-        <div className="space-y-6">
-          <Card variant="glass">
-            <CardHeader>
-              <CardTitle className="text-white">📊 Generar Nómina</CardTitle>
-              <CardDescription className="text-gray-300">
-                Genera la nómina para todos los empleados activos de Paragon Honduras para un período y quincena seleccionados
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={generatePayroll} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-white mb-1">
-                    Mes
-                  </label>
-                  <Input
-                    type="month"
-                    value={generateForm.periodo}
-                    onChange={e => handleFormChange('periodo', e.target.value)}
-                    required
-                    className="bg-white/10 border-white/20 text-white placeholder-gray-400"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-white mb-1">
-                    Rango
-                  </label>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      onClick={() => handleFormChange('quincena', 1)}
-                      className={`${generateForm.quincena === 1 ? 'bg-brand-800 hover:bg-brand-700 text-white' : 'border border-white/20 text-white hover:bg-white/10 bg-transparent'}`}
-                    >
-                      1 - 15
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={() => handleFormChange('quincena', 2)}
-                      className={`${generateForm.quincena === 2 ? 'bg-brand-800 hover:bg-brand-700 text-white' : 'border border-white/20 text-white hover:bg-white/10 bg-transparent'}`}
-                    >
-                      16 - {lastDayOfSelectedMonth}
-                    </Button>
-                  </div>
-                </div>
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={generateForm.incluirDeducciones}
-                    onChange={e => handleFormChange('incluirDeducciones', e.target.checked)}
-                    className="mr-2 accent-brand-500"
-                    id="deducciones"
-                  />
-                  <label htmlFor="deducciones" className="text-sm font-medium text-white">
-                    Incluir deducciones (ISR, IHSS, RAP)
-                  </label>
-                </div>
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={generateForm.soloEmpleadosConAsistencia}
-                    onChange={e => handleFormChange('soloEmpleadosConAsistencia', e.target.checked)}
-                    className="mr-2 accent-brand-500"
-                    id="asistencia"
-                  />
-                  <label htmlFor="asistencia" className="text-sm font-medium text-white">
-                    Solo empleados con asistencia completa
-                  </label>
-                </div>
-                <div className="md:col-span-2 flex gap-4">
-                  <Button type="submit" disabled={loading} className="bg-brand-800 hover:bg-brand-700 text-white">
-                    {loading ? '🔄 Generando...' : '🚀 Generar Nómina'}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => handleTabChange('dashboard')}
-                    className="border-white/20 text-white hover:bg-white/10"
-                  >
-                    Cancelar
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
+      
 
-          {/* Employee Preview */}
-          {employees.length > 0 && (
-            <Card variant="glass">
-              <CardHeader>
-                <CardTitle className="text-white">👥 Empleados Activos ({employees.length})</CardTitle>
-                <CardDescription className="text-gray-300">
-                  Lista de empleados que serán incluidos en la nómina
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {employees.slice(0, 9).map((emp) => (
-                    <div key={emp.id} className="p-3 border border-white/20 rounded-lg bg-white/5">
-                      <div className="font-medium text-white">{emp.name}</div>
-                      <div className="text-sm text-gray-300">
-                        {emp.employee_code} • {emp.department_id || 'Sin departamento'}
-                      </div>
-                      <div className="text-sm font-mono text-green-400">
-                        {formatCurrency(emp.base_salary)}
-                      </div>
-                    </div>
-                  ))}
-                  {employees.length > 9 && (
-                    <div className="p-3 border border-white/20 rounded-lg bg-white/5 text-center">
-                      <div className="text-sm text-gray-300">
-                        +{employees.length - 9} empleados más
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      )}
-
-      {/* Reports Tab */}
-      {activeTab === 'reports' && (
-        <div className="space-y-6">
-          <Card variant="glass">
-            <CardHeader>
-              <CardTitle className="text-white">📊 Reportes de Nómina</CardTitle>
-              <CardDescription className="text-gray-300">
-                Genera reportes detallados de nómina en diferentes formatos
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {/* Reporte General */}
-                <Card variant="glass">
-                  <CardHeader>
-                    <CardTitle className="text-lg text-white">📋 Reporte General</CardTitle>
-                    <CardDescription className="text-gray-300">Estadísticas completas de nómina</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <Button 
-                        onClick={() => exportPayrollReport('general', 'pdf')}
-                        className="w-full bg-brand-800 hover:bg-brand-700 text-white"
-                      >
-                        📄 Exportar PDF
-                      </Button>
-                      <Button 
-                        variant="outline"
-                        onClick={() => exportPayrollReport('general', 'csv')}
-                        className="w-full border-white/20 text-white hover:bg-white/10"
-                      >
-                        📊 Exportar CSV
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Reporte por Período */}
-                <Card variant="glass">
-                  <CardHeader>
-                    <CardTitle className="text-lg text-white">📅 Reporte por Período</CardTitle>
-                    <CardDescription className="text-gray-300">Nómina de un período específico</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div>
-                        <label className="block text-sm font-medium text-white mb-1">
-                          Período
-                        </label>
-                        <Input
-                          type="month"
-                          value={selectedPeriod}
-                          onChange={handlePeriodChange}
-                          className="w-full bg-white/10 border-white/20 text-white placeholder-gray-400"
-                        />
-                      </div>
-                      <Button 
-                        onClick={() => exportPayrollReport('period', 'pdf')}
-                        className="w-full bg-brand-800 hover:bg-brand-700 text-white"
-                        disabled={!selectedPeriod}
-                      >
-                        📄 Exportar PDF
-                      </Button>
-                      <Button 
-                        variant="outline"
-                        onClick={() => exportPayrollReport('period', 'csv')}
-                        className="w-full border-white/20 text-white hover:bg-white/10"
-                        disabled={!selectedPeriod}
-                      >
-                        📊 Exportar CSV
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Reporte de Deducciones */}
-                <Card variant="glass">
-                  <CardHeader>
-                    <CardTitle className="text-lg text-white">💰 Reporte de Deducciones</CardTitle>
-                    <CardDescription className="text-gray-300">Análisis detallado de deducciones</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <Button 
-                        onClick={() => exportPayrollReport('deductions', 'pdf')}
-                        className="w-full bg-brand-800 hover:bg-brand-700 text-white"
-                      >
-                        📄 Exportar PDF
-                      </Button>
-                      <Button 
-                        variant="outline"
-                        onClick={() => exportPayrollReport('deductions', 'csv')}
-                        className="w-full border-white/20 text-white hover:bg-white/10"
-                      >
-                        📊 Exportar CSV
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      
     </div>
   )
 }

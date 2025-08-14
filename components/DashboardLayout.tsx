@@ -119,22 +119,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Sidebar */}
       <div className={`${sidebarOpen ? 'w-64' : 'w-16'} glass-strong border-r border-white/10 transition-all duration-300 ease-in-out`}>
         <div className="flex flex-col h-full">
-          {/* Logo */}
+          {/* Header (sin logo) */}
           <div className="flex items-center justify-between h-16 px-4 border-b border-white/10">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <img 
-                  src="/logo-humano-sisu.png" 
-                  alt="Humano SISU Logo" 
-                  className="h-8 w-auto"
-                />
-              </div>
-              {sidebarOpen && (
-                <div className="ml-3">
-                  <h1 className="text-xl font-semibold text-white">Humano SISU</h1>
-                </div>
-              )}
-            </div>
+            <div />
             <Button
               variant="ghost"
               size="sm"

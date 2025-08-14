@@ -85,13 +85,7 @@ export default function LandingPage() {
         <div className={`sticky-header ${isScrolled ? 'visible' : ''} sticky top-0 z-40 glass border-b border-white/10 transition-all duration-300`}>
           <nav className="px-6 lg:px-8">
             <div className="flex items-center justify-between h-16">
-              <div className="flex items-center">
-                <img 
-                  src="/logo-humano-sisu.png" 
-                  alt="Humano SISU Logo" 
-                  className="h-12 w-auto"
-                />
-              </div>
+              <div className="flex items-center" />
               
               <div className="hidden md:block">
                 <div className="ml-10 flex items-baseline space-x-4">
