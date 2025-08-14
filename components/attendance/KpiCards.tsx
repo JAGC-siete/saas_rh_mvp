@@ -1,3 +1,5 @@
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
+
 interface KpiCardsProps {
   presentes: number
   ausentes: number
@@ -16,10 +18,14 @@ export default function KpiCards({ presentes, ausentes, temprano, tarde }: KpiCa
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
       {items.map((k) => (
-        <div key={k.label} className="bg-gray-800 rounded p-4 text-center">
-          <div className={`text-2xl font-bold ${k.color}`}>{k.value}</div>
-          <div className="text-gray-300 text-sm">{k.label}</div>
-        </div>
+        <Card key={k.label} variant="glass" className="text-center">
+          <CardHeader className="pb-1">
+            <CardTitle className="text-sm text-gray-300 font-medium">{k.label}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className={`text-3xl font-bold ${k.color}`}>{k.value}</div>
+          </CardContent>
+        </Card>
       ))}
     </div>
   )

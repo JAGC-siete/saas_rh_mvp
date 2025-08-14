@@ -1,3 +1,5 @@
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
+
 interface Row {
   id: string
   name: string
@@ -14,8 +16,9 @@ interface PunctualityTableProps {
 
 export default function PunctualityTable({ data, type, onSelect }: PunctualityTableProps) {
   return (
-    <div className="bg-gray-800 rounded p-4">
-      <h3 className="text-white font-semibold mb-2">{type === 'early' ? 'Tempranos' : 'Tarde'} hoy</h3>
+    <Card variant="glass">
+      <CardHeader className="pb-2"><CardTitle className="text-white text-base">{type === 'early' ? 'Tempranos' : 'Tarde'} hoy</CardTitle></CardHeader>
+      <CardContent className="pt-0">
       <table className="w-full text-sm text-left">
         <thead className="text-gray-300">
           <tr>
@@ -41,6 +44,7 @@ export default function PunctualityTable({ data, type, onSelect }: PunctualityTa
           )}
         </tbody>
       </table>
-    </div>
+      </CardContent>
+    </Card>
   )
 }
