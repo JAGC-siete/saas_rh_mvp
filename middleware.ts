@@ -36,6 +36,8 @@ const PROTECTED_APP_ROUTES = new Set([
   '/app/settings',
   '/app/departments',
   '/app/leave',
+  // Legacy attendance dashboard outside /app
+  '/attendance/dashboard',
 ])
 
 // Helper function to check if route is protected app route
@@ -163,28 +165,24 @@ export async function middleware(request: NextRequest) {
     
     try {
       // Create Supabase client for middleware
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      const supabaseUrl = process.env['NEXT_PUBLIC_SUPABASE_URL']
+      const anon = process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY']
       
       if (!supabaseUrl || !supabaseKey) {
         logger.error('Missing Supabase environment variables', undefined, {
           hasUrl: !!supabaseUrl,
-          hasKey: !!supabaseKey
+          hasAnon: !!anon
         })
         return NextResponse.redirect(new URL('/app/login', request.url))
       }
       
-      const supabase = createServerClient(supabaseUrl, supabaseKey, {
+      const supabase = createServerClient(supabaseUrl, anon as string, {
         cookies: {
           get(name: string) {
             return request.cookies.get(name)?.value
           },
-          set(_name: string, _value: string, _options: any) {
-            // This will be handled by the response
-          },
-          remove(_name: string, _options: any) {
-            // This will be handled by the response
-          },
+          set() {},
+          remove() {},
         },
       })
       
@@ -227,28 +225,24 @@ export async function middleware(request: NextRequest) {
   // For other private routes (legacy), check for Supabase session
   try {
     // Create Supabase client for middleware
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    const supabaseUrl = process.env['NEXT_PUBLIC_SUPABASE_URL']
+    const anon = process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY']
     
     if (!supabaseUrl || !supabaseKey) {
       logger.error('Missing Supabase environment variables', undefined, {
-        hasUrl: !!supabaseUrl,
-        hasKey: !!supabaseKey
+      hasUrl: !!supabaseUrl,
+      hasAnon: !!anon
       })
       return NextResponse.redirect(new URL('/app/login', request.url))
     }
     
-    const supabase = createServerClient(supabaseUrl, supabaseKey, {
+    const supabase = createServerClient(supabaseUrl, anon as string, {
       cookies: {
         get(name: string) {
           return request.cookies.get(name)?.value
         },
-        set(_name: string, _value: string, _options: any) {
-          // This will be handled by the response
-        },
-        remove(_name: string, _options: any) {
-          // This will be handled by the response
-        },
+        set() {},
+        remove() {},
       },
     })
     
