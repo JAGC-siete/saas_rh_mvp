@@ -99,6 +99,13 @@ export default function PayrollManager() {
   const [departments, setDepartments] = useState<{ [key: string]: string }>({})
   const [generateForm, setGenerateForm] = useState(INITIAL_GENERATE_FORM)
   const [supabase, setSupabase] = useState<any>(null)
+  // Filtros avanzados (quincena/mes/año/departamento/empleado)
+  const [filterYear, setFilterYear] = useState<string>('')
+  const [filterMonth, setFilterMonth] = useState<string>('')
+  const [filterQuincena, setFilterQuincena] = useState<number|''>('')
+  const [filterDept, setFilterDept] = useState<string>('')
+  const [filterEmployee, setFilterEmployee] = useState<string>('')
+  const [suspendedCount, setSuspendedCount] = useState<number>(0)
   
 
   // Memoized values
@@ -109,12 +116,34 @@ export default function PayrollManager() {
     [payrollRecords, selectedPeriod]
   )
 
-  const filteredRecords = useMemo(() => 
-    selectedPeriod 
-      ? payrollRecords.filter(record => record.period_start.startsWith(selectedPeriod))
-      : payrollRecords,
-    [payrollRecords, selectedPeriod]
-  )
+  const filteredRecords = useMemo(() => {
+    let list = payrollRecords
+    // Filtro por periodo (mes)
+    if (selectedPeriod) {
+      list = list.filter(r => r.period_start.startsWith(selectedPeriod))
+    }
+    // Filtro por año/mes/quincena
+    if (filterYear) list = list.filter(r => r.period_start.startsWith(filterYear))
+    if (filterMonth) list = list.filter(r => r.period_start.slice(0,7) === `${filterYear || r.period_start.slice(0,4)}-${filterMonth}`)
+    if (filterQuincena) {
+      list = list.filter(r => {
+        const day = Number(r.period_start.slice(8,10))
+        const q = day === 1 ? 1 : 2
+        return q === filterQuincena
+      })
+    }
+    // Filtro por departamento
+    if (filterDept) list = list.filter(r => (r.employees?.department_id || '') === filterDept)
+    // Filtro por empleado (nombre o código)
+    if (filterEmployee) {
+      const q = filterEmployee.toLowerCase()
+      list = list.filter(r =>
+        (r.employees?.name || '').toLowerCase().includes(q) ||
+        (r.employees?.employee_code || '').toLowerCase().includes(q)
+      )
+    }
+    return list
+  }, [payrollRecords, selectedPeriod, filterYear, filterMonth, filterQuincena, filterDept, filterEmployee])
 
   
 
@@ -236,9 +265,10 @@ export default function PayrollManager() {
     if (currentPeriodRecords.length > 0) {
       stats.averageSalary = stats.totalNetSalary / currentPeriodRecords.length
     }
-    const totalDays = currentPeriodRecords.reduce((sum, r) => sum + r.days_worked, 0)
+    const totalDays = currentPeriodRecords.reduce((sum, r) => sum + (r.days_worked || 0), 0)
     const expectedDays = currentPeriodRecords.length * 15
     stats.attendanceRate = expectedDays > 0 ? (totalDays / expectedDays) * 100 : 0
+    // Guardar conteo de suspendidos en estado aparte
     if (isMountedRef.current) setPayrollStats(stats)
   }, [currentPeriodRecords, departments])
 
@@ -337,11 +367,11 @@ export default function PayrollManager() {
       if (!isMountedRef.current) return
       setPayrollRecords(payrollData || [])
 
-      // Fetch employees
+      // Fetch employees (activos y suspendidos)
       let employeesQuery = supabase
         .from('employees')
-        .select('id, name, employee_code, base_salary, department_id')
-        .eq('status', 'active')
+        .select('id, name, employee_code, base_salary, department_id, status')
+        .in('status', ['active','suspended'])
         .order('name')
 
       if (profile.company_id) {
@@ -358,6 +388,8 @@ export default function PayrollManager() {
       console.log('✅ Employees loaded:', employeesData?.length || 0)
       if (!isMountedRef.current) return
       setEmployees(employeesData || [])
+      const suspended = (employeesData || []).filter((e: any) => e.status === 'suspended').length
+      setSuspendedCount(suspended)
 
       await loadDepartments()
       calculatePayrollStats(payrollData || [], employeesData || [])
@@ -537,6 +569,34 @@ export default function PayrollManager() {
     })
   }, [supabase, downloadFile])
 
+  const sendPayrollEmail = useCallback(async (record?: PayrollRecord) => {
+    const to = prompt('Correo de destino:')
+    if (!to) return
+    const period = (record?.period_start || new Date().toISOString()).slice(0,7)
+    const day = record ? Number(record.period_start.slice(8,10)) : 1
+    const quincena = day === 1 ? 1 : 2
+    const payload: any = { to, periodo: period, quincena }
+    if (record) { payload.type = 'recibo'; payload.employeeId = record.employee_id } else { payload.type = 'planilla' }
+    const res = await fetch('/api/payroll/send-email', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
+    const json = await res.json().catch(()=>({}))
+    if (!res.ok) return alert(`❌ Error: ${json.error || res.status}`)
+    alert(json.sent ? '✅ Enviado' : `⚠️ Enlace listo: ${json.downloadUrl}`)
+  }, [])
+
+  const sendPayrollWhatsApp = useCallback(async (record?: PayrollRecord) => {
+    const phone = prompt('Número WhatsApp (E.164, ej. 5049xxxxxxx):')
+    if (!phone) return
+    const period = (record?.period_start || new Date().toISOString()).slice(0,7)
+    const day = record ? Number(record.period_start.slice(8,10)) : 1
+    const quincena = day === 1 ? 1 : 2
+    const payload: any = { phone, periodo: period, quincena }
+    if (record) { payload.type = 'recibo'; payload.employeeId = record.employee_id } else { payload.type = 'planilla' }
+    const res = await fetch('/api/payroll/send-whatsapp', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
+    const json = await res.json().catch(()=>({}))
+    if (!res.ok) return alert(`❌ Error: ${json.error || res.status}`)
+    if (json.url) window.open(json.url, '_blank')
+  }, [])
+
   
 
   const handleFormChange = useCallback((field: keyof typeof INITIAL_GENERATE_FORM, value: string | number | boolean) => {
@@ -624,6 +684,45 @@ export default function PayrollManager() {
                   </div>
                   <div className="text-sm text-gray-300">Salario Neto Quincenal</div>
                 </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Extra Summary: Suspendidos y Horas */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card variant="glass">
+              <CardContent className="pt-6">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-red-400">{suspendedCount}</div>
+                  <div className="text-sm text-gray-300">Empleados Suspendidos</div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card variant="glass" className="md:col-span-2">
+              <CardHeader>
+                <CardTitle className="text-white">⏱️ Horas Trabajadas vs Plan</CardTitle>
+                <CardDescription className="text-gray-300">Estimado: 8h por día</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  const totalDays = currentPeriodRecords.reduce((sum, r) => sum + (r.days_worked || 0), 0)
+                  const expectedDays = currentPeriodRecords.length * 15
+                  const hoursWorked = totalDays * 8
+                  const hoursPlanned = expectedDays * 8
+                  const pct = hoursPlanned > 0 ? Math.min(100, Math.round((hoursWorked / hoursPlanned) * 100)) : 0
+                  return (
+                    <div>
+                      <div className="flex justify-between text-sm text-gray-300 mb-1">
+                        <span>{hoursWorked} h</span>
+                        <span>{hoursPlanned} h plan</span>
+                      </div>
+                      <div className="w-full bg-white/10 rounded-full h-3">
+                        <div className="bg-green-500 h-3 rounded-full" style={{ width: `${pct}%` }}></div>
+                      </div>
+                      <div className="text-right text-xs text-gray-300 mt-1">{pct}%</div>
+                    </div>
+                  )
+                })()}
               </CardContent>
             </Card>
           </div>
@@ -829,7 +928,7 @@ export default function PayrollManager() {
           {/* Filters */}
           <Card variant="glass">
             <CardContent className="pt-6">
-              <div className="flex gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-white mb-1">
                     Filtrar por Período
@@ -841,7 +940,7 @@ export default function PayrollManager() {
                     className="w-48 bg-white/10 border-white/20 text-white placeholder-gray-400"
                   />
                 </div>
-                <div className="flex items-end">
+                <div className="flex items-end gap-2">
                   <Button 
                     variant="outline" 
                     onClick={clearPeriodFilter}
@@ -849,6 +948,37 @@ export default function PayrollManager() {
                   >
                     Limpiar Filtro
                   </Button>
+                  <Button variant="outline" className="border-white/20 text-white hover:bg-white/10" onClick={()=>sendPayrollEmail()}>Enviar Planilla por Email</Button>
+                  <Button variant="outline" className="border-white/20 text-white hover:bg-white/10" onClick={()=>sendPayrollWhatsApp()}>Enviar por WhatsApp</Button>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-white mb-1">Año</label>
+                  <Input type="number" placeholder="2025" value={filterYear} onChange={e=>setFilterYear(e.target.value)} className="bg-white/10 border-white/20 text-white" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-white mb-1">Mes (01-12)</label>
+                  <Input type="text" placeholder="08" value={filterMonth} onChange={e=>setFilterMonth(e.target.value)} className="bg-white/10 border-white/20 text-white" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-white mb-1">Quincena</label>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant={filterQuincena===1?undefined:'outline'} onClick={()=>setFilterQuincena(1)} className={filterQuincena===1? 'bg-brand-800 text-white':'border-white/20 text-white'}>1-15</Button>
+                    <Button size="sm" variant={filterQuincena===2?undefined:'outline'} onClick={()=>setFilterQuincena(2)} className={filterQuincena===2? 'bg-brand-800 text-white':'border-white/20 text-white'}>16-fin</Button>
+                    <Button size="sm" variant="ghost" onClick={()=>setFilterQuincena('')} className="text-gray-300 hover:bg-white/10">Limpiar</Button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-white mb-1">Departamento</label>
+                  <select value={filterDept} onChange={e=>setFilterDept(e.target.value)} className="bg-white/10 border-white/20 text-white rounded px-2 py-2">
+                    <option value="">Todos</option>
+                    {Object.entries(departments).map(([id,name])=> (
+                      <option key={id} value={id}>{name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-white mb-1">Empleado</label>
+                  <Input placeholder="Nombre o código" value={filterEmployee} onChange={e=>setFilterEmployee(e.target.value)} className="bg-white/10 border-white/20 text-white" />
                 </div>
               </div>
             </CardContent>
@@ -958,6 +1088,22 @@ export default function PayrollManager() {
                               className="text-gray-300 hover:bg-white/10 hover:text-white"
                             >
                               📄 Descargar Recibo
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => sendPayrollEmail(record)}
+                              className="text-gray-300 hover:bg-white/10 hover:text-white"
+                            >
+                              ✉️ Enviar por Email
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => sendPayrollWhatsApp(record)}
+                              className="text-gray-300 hover:bg-white/10 hover:text-white"
+                            >
+                              💬 Enviar WhatsApp
                             </Button>
                           </div>
                         </td>
