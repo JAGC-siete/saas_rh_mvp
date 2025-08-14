@@ -190,7 +190,12 @@ export async function middleware(request: NextRequest) {
       const { data: { user }, error } = await supabase.auth.getUser()
       
       if (error) {
-        logger.error('Error getting user', error)
+        const isMissing = (error as any)?.message?.toLowerCase?.().includes('auth session missing')
+        if (isMissing) {
+          logger.info('No session for protected app route', { path: pathname })
+        } else {
+          logger.error('Error getting user', error)
+        }
         return NextResponse.redirect(new URL('/app/login', request.url))
       }
       
@@ -250,8 +255,13 @@ export async function middleware(request: NextRequest) {
     const { data: { user }, error } = await supabase.auth.getUser()
     
     if (error) {
-      logger.error('Error getting user', error)
-      return NextResponse.redirect(new URL('/login', request.url))
+      const isMissing = (error as any)?.message?.toLowerCase?.().includes('auth session missing')
+      if (isMissing) {
+        logger.info('No session for private route', { path: pathname })
+      } else {
+        logger.error('Error getting user', error)
+      }
+      return NextResponse.redirect(new URL('/app/login', request.url))
     }
     
     if (!user) {
