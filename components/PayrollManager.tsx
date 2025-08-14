@@ -67,7 +67,8 @@ const INITIAL_GENERATE_FORM = {
   periodo: new Date().toISOString().slice(0, 7),
   quincena: 1,
   incluirDeducciones: false,
-  soloEmpleadosConAsistencia: true
+  soloEmpleadosConAsistencia: true,
+  sendEmailsNow: false,
 }
 
 const STATUS_CONFIG = {
@@ -446,7 +447,30 @@ export default function PayrollManager() {
       } else {
         alert('✅ Nómina generada exitosamente!')
       }
-      
+
+      // Dispatch emails if requested
+      if (generateForm.sendEmailsNow) {
+        try {
+          const { data: { session } } = await supabase.auth.getSession()
+          await fetch('/api/payroll/send-emails', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': session?.access_token ? `Bearer ${session.access_token}` : '',
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+              periodo: generateForm.periodo,
+              quincena: generateForm.quincena,
+              sendAdmin: true,
+              sendEmployees: true,
+            }),
+          })
+        } catch (err) {
+          console.error('Error triggering email dispatch', err)
+        }
+      }
+
       resetGenerateForm()
       fetchData()
 
@@ -1333,6 +1357,18 @@ export default function PayrollManager() {
                   />
                   <label htmlFor="asistencia" className="text-sm font-medium text-white">
                     Solo empleados con asistencia completa
+                  </label>
+                </div>
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={generateForm.sendEmailsNow}
+                    onChange={e => handleFormChange('sendEmailsNow', e.target.checked)}
+                    className="mr-2 accent-brand-500"
+                    id="sendEmailsNow"
+                  />
+                  <label htmlFor="sendEmailsNow" className="text-sm font-medium text-white">
+                    También enviar correos (admin y empleados)
                   </label>
                 </div>
                 <div className="md:col-span-2 flex gap-4">
