@@ -9,11 +9,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     : getDateRange(preset as string)
 
   const supabase = createAdminClient()
-  const { data, error } = await supabase.rpc('attendance_kpis', {
+  const rpcArgs: any = {
     from: range.from,
     to: range.to,
-    team: team as string | null
-  })
+  }
+  if (typeof team === 'string' && team.trim() !== '') {
+    rpcArgs.team = team
+  } else {
+    rpcArgs.team = null
+  }
+  const { data, error } = await supabase.rpc('attendance_kpis', rpcArgs)
 
   if (error) {
     console.error('attendance_kpis error', error)

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import DashboardLayout from '../../components/DashboardLayout'
 import FiltersBar from '../../components/attendance/FiltersBar'
@@ -7,40 +7,41 @@ import AbsenceTable from '../../components/attendance/AbsenceTable'
 import PunctualityTable from '../../components/attendance/PunctualityTable'
 import EmployeeDrawer from '../../components/attendance/EmployeeDrawer'
 import ExportButton from '../../components/attendance/ExportButton'
-import { getDateRange } from '../../lib/attendance'
-import { createAdminClient } from '../../lib/supabase/server'
 
-interface DashboardProps {
-  initialKpis: any
-  initialLists: { absent: any[]; early: any[]; late: any[] }
-}
-
-export default function AttendanceDashboard({ initialKpis, initialLists }: DashboardProps) {
+export default function AttendanceDashboard() {
   const [preset, setPreset] = useState('today')
-  const [kpis, setKpis] = useState(initialKpis)
-  const [absent, setAbsent] = useState(initialLists.absent)
-  const [early, setEarly] = useState(initialLists.early)
-  const [late, setLate] = useState(initialLists.late)
+  const [kpis, setKpis] = useState({ presentes: 0, ausentes: 0, tempranos: 0, tardes: 0 })
+  const [absent, setAbsent] = useState<any[]>([])
+  const [early, setEarly] = useState<any[]>([])
+  const [late, setLate] = useState<any[]>([])
   const [drawer, setDrawer] = useState<{open:boolean; name:string; events:any[]}>({open:false,name:'',events:[]})
 
-  const loadData = async (p: string) => {
-    const kpiRes = await fetch(`/api/attendance/kpis?preset=${p}`)
-    setKpis(await kpiRes.json())
-    const absentRes = await fetch(`/api/attendance/lists?scope=today&type=absent`)
-    setAbsent(await absentRes.json())
-    const earlyRes = await fetch(`/api/attendance/lists?scope=today&type=early`)
-    setEarly(await earlyRes.json())
-    const lateRes = await fetch(`/api/attendance/lists?scope=today&type=late`)
-    setLate(await lateRes.json())
-  }
+  const loadData = useCallback(async () => {
+    // Nota: por ahora dashboard-stats retorna "hoy"; si agregamos soporte de preset, pasar ?preset=...
+    const res = await fetch(`/api/attendance/dashboard-stats`)
+    if (!res.ok) return
+    const data = await res.json()
+    setKpis({
+      presentes: data.presentToday || 0,
+      ausentes: data.absentToday || 0,
+      tempranos: (data.earlyList?.length) || 0,
+      tardes: (data.lateList?.length) || 0,
+    })
+    setAbsent(data.absentList || [])
+    setEarly(data.earlyList || [])
+    setLate(data.lateList || [])
+  }, [])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData, preset])
 
   const handlePresetChange = (p: string) => {
     setPreset(p)
-    loadData(p)
   }
 
   const handleExport = async (format: string) => {
-    await fetch(`/api/attendance/export?format=${format}&preset=${preset}`)
+    await fetch(`/api/attendance/export?format=${format}`)
   }
 
   const handleEmployeeClick = async (id: string, name: string) => {
@@ -66,14 +67,4 @@ export default function AttendanceDashboard({ initialKpis, initialLists }: Dashb
       </DashboardLayout>
     </ProtectedRoute>
   )
-}
-
-export async function getServerSideProps() {
-  const supabase = createAdminClient()
-  const range = getDateRange('today')
-  const { data: kpis } = await supabase.rpc('attendance_kpis', { from: range.from, to: range.to })
-  const { data: absent } = await supabase.rpc('attendance_lists', { scope: 'today', type: 'absent' })
-  const { data: early } = await supabase.rpc('attendance_lists', { scope: 'today', type: 'early' })
-  const { data: late } = await supabase.rpc('attendance_lists', { scope: 'today', type: 'late' })
-  return { props: { initialKpis: kpis, initialLists: { absent, early, late } } }
 }

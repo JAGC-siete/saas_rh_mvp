@@ -32,7 +32,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('👥 PASO 1: Obteniendo empleados activos...')
     const { data: employees, error: empError } = await supabase
       .from('employees')
-      .select('id, name, employee_code, base_salary, department_id')
+      .select('id, name, employee_code, base_salary, department_id, status, team')
       .eq('status', 'active')
 
     if (empError) {
@@ -83,7 +83,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('🧮 PASO 4: Calculando estadísticas del día...')
     const presentToday = todayAttendance?.length || 0
     const absentToday = totalEmployees - presentToday
-    const lateToday = todayAttendance?.filter((r: any) => r.late_minutes > 0).length || 0
+    const lateToday = todayAttendance?.filter((r: any) => (r.late_minutes || 0) > 0).length || 0
     const onTimeToday = presentToday - lateToday
 
     console.log('📊 Estadísticas calculadas:', {
@@ -100,7 +100,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // 6. Calcular estadísticas de los últimos 7 días
     console.log('📅 PASO 5: Calculando estadísticas de los últimos 7 días...')
-    const dailyStats = []
+    const dailyStats = [] as any[]
     for (let i = 6; i >= 0; i--) {
       const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
       const dayAttendance = weeklyAttendance?.filter((r: any) => r.date === date) || []
@@ -137,7 +137,64 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log('🏢 Estadísticas por departamento:', Object.keys(departmentStats).length, 'departamentos')
 
-    // 9. Asistencia de hoy con detalles
+    // 9. Construir listas: ausentes, tempranos y tarde
+    const employeeById = new Map((employees || []).map((e: any) => [e.id, e]))
+    const presentSet = new Set((todayAttendance || []).map((a: any) => a.employee_id))
+
+    const absentList = (employees || [])
+      .filter((e: any) => e.status === 'active' && !presentSet.has(e.id))
+      .map((e: any) => ({ id: e.id, name: e.name, team: e.team || null }))
+
+    function parseExpectedToMinutes(t: string | null | undefined): number | null {
+      if (!t) return null
+      const [h, m] = String(t).split(':').map(Number)
+      if (Number.isNaN(h) || Number.isNaN(m)) return null
+      return h * 60 + m
+    }
+
+    function getCheckInMinutes(d: string | null | undefined): number | null {
+      if (!d) return null
+      const dt = new Date(d)
+      if (Number.isNaN(dt.getTime())) return null
+      return dt.getHours() * 60 + dt.getMinutes()
+    }
+
+    const earlyList = (todayAttendance || [])
+      .filter((a: any) => a.check_in && a.expected_check_in)
+      .map((a: any) => {
+        const e = employeeById.get(a.employee_id)
+        const expMin = parseExpectedToMinutes(a.expected_check_in)
+        const inMin = getCheckInMinutes(a.check_in)
+        let delta = 0
+        if (expMin != null && inMin != null) {
+          delta = Math.max(0, expMin - inMin) // minutos de adelanto
+        }
+        return {
+          id: a.employee_id,
+          name: e?.name || 'N/A',
+          team: e?.team || null,
+          delta_min: delta,
+          check_in_time: a.check_in,
+        }
+      })
+      .filter((r: any) => r.delta_min > 0)
+      .sort((a: any, b: any) => b.delta_min - a.delta_min)
+
+    const lateList = (todayAttendance || [])
+      .filter((a: any) => (a.late_minutes || 0) > 0)
+      .map((a: any) => {
+        const e = employeeById.get(a.employee_id)
+        return {
+          id: a.employee_id,
+          name: e?.name || 'N/A',
+          team: e?.team || null,
+          delta_min: a.late_minutes || 0,
+          check_in_time: a.check_in,
+        }
+      })
+      .sort((a: any, b: any) => b.delta_min - a.delta_min)
+
+    // 10. Asistencia de hoy con detalles
     console.log('📋 PASO 7: Generando detalles de asistencia de hoy...')
     const todayAttendanceDetails = todayAttendance?.map((att: any) => {
       const employee = employees?.find((emp: any) => emp.id === att.employee_id)
@@ -146,6 +203,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         employee_id: att.employee_id,
         employee_name: employee?.name || 'N/A',
         employee_code: employee?.employee_code || 'N/A',
+        team: employee?.team || null,
         check_in: att.check_in,
         check_out: att.check_out,
         late_minutes: att.late_minutes || 0,
@@ -172,7 +230,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       dailyCost,
       dailyStats,
       departmentStats,
-      todayAttendance: todayAttendanceDetails
+      todayAttendance: todayAttendanceDetails,
+      absentList,
+      earlyList,
+      lateList,
     }
 
     console.log('✅ RESPUESTA FINAL GENERADA:')
@@ -183,7 +244,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       lateToday,
       onTimeToday,
       dailyCost,
-      todayAttendanceCount: todayAttendanceDetails.length
+      todayAttendanceCount: todayAttendanceDetails.length,
+      absentCount: absentList.length,
+      earlyCount: earlyList.length,
+      lateCount: lateList.length,
     })
 
     console.log('🚀 Enviando respuesta al frontend...')
