@@ -15,23 +15,45 @@ interface DashboardProps {
   initialLists: { absent: any[]; early: any[]; late: any[] }
 }
 
+const DEFAULT_KPIS = { presentes: 0, ausentes: 0, tempranos: 0, tardes: 0 }
+
 export default function AttendanceDashboard({ initialKpis, initialLists }: DashboardProps) {
   const [preset, setPreset] = useState('today')
-  const [kpis, setKpis] = useState(initialKpis)
-  const [absent, setAbsent] = useState(initialLists.absent)
-  const [early, setEarly] = useState(initialLists.early)
-  const [late, setLate] = useState(initialLists.late)
+  const [kpis, setKpis] = useState(initialKpis ?? DEFAULT_KPIS)
+  const [absent, setAbsent] = useState(Array.isArray(initialLists.absent) ? initialLists.absent : [])
+  const [early, setEarly] = useState(Array.isArray(initialLists.early) ? initialLists.early : [])
+  const [late, setLate] = useState(Array.isArray(initialLists.late) ? initialLists.late : [])
   const [drawer, setDrawer] = useState<{open:boolean; name:string; events:any[]}>({open:false,name:'',events:[]})
 
   const loadData = async (p: string) => {
-    const kpiRes = await fetch(`/api/attendance/kpis?preset=${p}`)
-    setKpis(await kpiRes.json())
-    const absentRes = await fetch(`/api/attendance/lists?scope=today&type=absent`)
-    setAbsent(await absentRes.json())
-    const earlyRes = await fetch(`/api/attendance/lists?scope=today&type=early`)
-    setEarly(await earlyRes.json())
-    const lateRes = await fetch(`/api/attendance/lists?scope=today&type=late`)
-    setLate(await lateRes.json())
+    try {
+      const kpiRes = await fetch(`/api/attendance/kpis?preset=${p}`)
+      const kpiJson = await kpiRes.json().catch(() => null)
+      setKpis(kpiJson ?? DEFAULT_KPIS)
+    } catch {
+      setKpis(DEFAULT_KPIS)
+    }
+    try {
+      const absentRes = await fetch(`/api/attendance/lists?scope=today&type=absent`)
+      const absentJson = await absentRes.json().catch(() => [])
+      setAbsent(Array.isArray(absentJson) ? absentJson : [])
+    } catch {
+      setAbsent([])
+    }
+    try {
+      const earlyRes = await fetch(`/api/attendance/lists?scope=today&type=early`)
+      const earlyJson = await earlyRes.json().catch(() => [])
+      setEarly(Array.isArray(earlyJson) ? earlyJson : [])
+    } catch {
+      setEarly([])
+    }
+    try {
+      const lateRes = await fetch(`/api/attendance/lists?scope=today&type=late`)
+      const lateJson = await lateRes.json().catch(() => [])
+      setLate(Array.isArray(lateJson) ? lateJson : [])
+    } catch {
+      setLate([])
+    }
   }
 
   const handlePresetChange = (p: string) => {
@@ -54,7 +76,7 @@ export default function AttendanceDashboard({ initialKpis, initialLists }: Dashb
       <DashboardLayout>
         <div className="space-y-6">
           <FiltersBar preset={preset} onPresetChange={handlePresetChange} />
-          <KpiCards presentes={kpis.presentes||0} ausentes={kpis.ausentes||0} temprano={kpis.tempranos||0} tarde={kpis.tardes||0} />
+          <KpiCards presentes={kpis?.presentes ?? 0} ausentes={kpis?.ausentes ?? 0} temprano={kpis?.tempranos ?? 0} tarde={kpis?.tardes ?? 0} />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <AbsenceTable data={absent} title="Ausentes hoy" onSelect={handleEmployeeClick} />
             <PunctualityTable data={early} type='early' onSelect={handleEmployeeClick} />
@@ -69,11 +91,16 @@ export default function AttendanceDashboard({ initialKpis, initialLists }: Dashb
 }
 
 export async function getServerSideProps() {
-  const supabase = createAdminClient()
-  const range = getDateRange('today')
-  const { data: kpis } = await supabase.rpc('attendance_kpis', { from: range.from, to: range.to })
-  const { data: absent } = await supabase.rpc('attendance_lists', { scope: 'today', type: 'absent' })
-  const { data: early } = await supabase.rpc('attendance_lists', { scope: 'today', type: 'early' })
-  const { data: late } = await supabase.rpc('attendance_lists', { scope: 'today', type: 'late' })
-  return { props: { initialKpis: kpis, initialLists: { absent, early, late } } }
+  try {
+    const supabase = createAdminClient()
+    const range = getDateRange('today')
+    const { data: kpis } = await supabase.rpc('attendance_kpis', { from: range.from, to: range.to })
+    const { data: absent } = await supabase.rpc('attendance_lists', { scope: 'today', type: 'absent' })
+    const { data: early } = await supabase.rpc('attendance_lists', { scope: 'today', type: 'early' })
+    const { data: late } = await supabase.rpc('attendance_lists', { scope: 'today', type: 'late' })
+    return { props: { initialKpis: kpis ?? null, initialLists: { absent: absent ?? [], early: early ?? [], late: late ?? [] } } }
+  } catch (e) {
+    console.error('attendance/dashboard SSR error', e)
+    return { props: { initialKpis: null, initialLists: { absent: [], early: [], late: [] } } }
+  }
 }

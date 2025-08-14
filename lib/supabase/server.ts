@@ -34,14 +34,28 @@ export function createClient(req: NextApiRequest, res: NextApiResponse) {
 export function createAdminClient() {
   // Get environment variables directly
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   // Check if environment variables are available
-  if (!supabaseUrl || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    console.error('Missing Supabase environment variables')
+  if (!supabaseUrl) {
+    console.error('Missing Supabase URL environment variable (NEXT_PUBLIC_SUPABASE_URL)')
     throw new Error('Supabase environment variables are not configured')
   }
 
-  return createServerClient(supabaseUrl, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+  // Prefer service role for server-side operations; fall back to anon to avoid hard crashes.
+  // Note: For production, ensure RPCs required by dashboards are SECURITY DEFINER so anon can execute safely.
+  const keyToUse = serviceKey || anonKey
+  if (!keyToUse) {
+    console.error('Missing Supabase keys (SUPABASE_SERVICE_ROLE_KEY and NEXT_PUBLIC_SUPABASE_ANON_KEY)')
+    throw new Error('Supabase environment variables are not configured')
+  }
+
+  if (!serviceKey) {
+    console.warn('SUPABASE_SERVICE_ROLE_KEY is missing. Falling back to anon key for server client.')
+  }
+
+  return createServerClient(supabaseUrl, keyToUse, {
     cookies: {
       get() { return undefined },
       set() {},
