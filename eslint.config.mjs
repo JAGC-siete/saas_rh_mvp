@@ -21,6 +21,14 @@ const eslintConfig = [
       "@next/next/no-page-custom-font": "warn",
     },
   },
+  {
+    ignores: [
+      "**/node_modules/**",
+      "**/.next/**",
+      "**/out/**",
+      "**/dist/**"
+    ]
+  }
 ];
 
 export default eslintConfig;
