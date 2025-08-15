@@ -148,10 +148,11 @@ export default function BenefitsCarousel() {
       {/* Main carousel container */}
       <div 
         ref={carouselRef}
-        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 p-8 md:p-12 shadow-2xl"
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 p-8 md:p-12 shadow-2xl border-4 border-red-500"
         role="region"
         aria-label="Beneficios del SaaS"
         aria-live="polite"
+        style={{ zIndex: 1000 }}
       >
         {/* Current benefit */}
         <div 
