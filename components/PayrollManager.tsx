@@ -5,6 +5,7 @@ import { createClient } from '../lib/supabase/client'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
 
 
 interface PayrollRecord {
@@ -106,6 +107,8 @@ export default function PayrollManager() {
   const [filterDept, setFilterDept] = useState<string>('')
   const [filterEmployee, setFilterEmployee] = useState<string>('')
   const [suspendedCount, setSuspendedCount] = useState<number>(0)
+  const [compareData, setCompareData] = useState<any>(null)
+  const [trendSeries, setTrendSeries] = useState<any[]>([])
   
 
   // Memoized values
@@ -623,6 +626,24 @@ export default function PayrollManager() {
     const totalDeptEmployees = counts.reduce((s, n) => s + n, 0)
     return { maxDeptCountMemo: maxDeptCount, totalDeptEmployeesMemo: totalDeptEmployees }
   }, [payrollStats.departmentBreakdown])
+
+  // Cargar comparativa y tendencia
+  useEffect(() => {
+    const ym = (selectedPeriod || new Date().toISOString().slice(0,7))
+    const q = (filterQuincena || 1) as number
+    ;(async () => {
+      try {
+        const cmpRes = await fetch(`/api/payroll/compare?periodo=${encodeURIComponent(ym)}&quincena=${q}`)
+        const cmpJson = await cmpRes.json().catch(()=>null)
+        if (cmpRes.ok) setCompareData(cmpJson)
+      } catch {}
+      try {
+        const trRes = await fetch(`/api/payroll/trend?months=6`)
+        const trJson = await trRes.json().catch(()=>null)
+        if (trRes.ok) setTrendSeries(trJson?.series || [])
+      } catch {}
+    })()
+  }, [selectedPeriod, filterQuincena])
 
   return (
     <div className="space-y-6">
