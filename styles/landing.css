@@ -18,11 +18,7 @@
   font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 }
 
-.landing-section {
-  padding: 4rem 1rem;
-  max-width: 1200px;
-  margin: 0 auto;
-}
+/* Removed duplicate landing-section definition to avoid conflicts */
 
 /* Button styles */
 .btn-primary {

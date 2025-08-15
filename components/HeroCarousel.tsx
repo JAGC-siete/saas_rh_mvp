@@ -34,8 +34,8 @@ const SLIDES: Slide[] = [
     id: "transparencia",
     title: "Historial claro y vouchers individuales por empleado.",
     subtitle: "Transparencia interna y cero discusiones.",
-    ctaText: "Ver ejemplos",
-    ctaHref: "/ejemplos",
+    ctaText: "Ver reportes",
+    ctaHref: "/app/reports",
   },
   {
     id: "un-clic",
@@ -107,6 +107,7 @@ export default function HeroCarousel() {
       aria-roledescription="carousel"
       aria-label="Beneficios del SaaS"
       className="relative overflow-hidden bg-[#0f2147] text-white"
+      style={{ zIndex: 10, position: 'relative' }}
       onMouseEnter={() => {
         if (timerRef.current) {
           clearInterval(timerRef.current);
@@ -119,7 +120,7 @@ export default function HeroCarousel() {
         }
       }}
     >
-      <div ref={containerRef} className="mx-auto max-w-6xl px-6 py-20">
+      <div ref={containerRef} className="mx-auto max-w-6xl px-6 py-20 border-2 border-yellow-400">
         {SLIDES.map((s, i) => (
           <div
             key={s.id}
@@ -142,10 +143,10 @@ export default function HeroCarousel() {
                 {s.ctaText}
               </a>
               <a
-                href="/contacto"
+                href="/demo"
                 className="rounded-2xl px-6 py-3 text-base font-semibold border border-white/25 hover:border-white/50"
               >
-                Hablar con ventas
+                Solicitar Demo
               </a>
             </div>
           </div>
