@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 const CloudBackground = dynamic(() => import('../components/CloudBackground'), { ssr: false })
+const BenefitsCarousel = dynamic(() => import('../components/BenefitsCarousel'), { ssr: false })
 import {
   UserGroupIcon,
   ClockIcon,
@@ -259,6 +260,19 @@ export default function LandingPage() {
             Quiero ver cómo funciona
           </Link>
         </div>
+      </section>
+
+      {/* Benefits Carousel Section */}
+      <section className="landing-section py-16">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-semibold mb-4 text-white">
+            ¿Por qué elegir Humano SISU?
+          </h2>
+          <p className="text-xl text-brand-400 font-medium mb-2">
+            Beneficios que transforman tu gestión de RH
+          </p>
+        </div>
+        <BenefitsCarousel />
       </section>
 
       {/* Services Section */}
