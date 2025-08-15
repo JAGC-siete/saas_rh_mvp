@@ -196,8 +196,13 @@ export default function LandingPage() {
         </div>
       </header>
 
+      {/* Hero Carousel Section - MOVIDO AL INICIO */}
+      <section className="pt-20">
+        <HeroCarousel />
+      </section>
+
       {/* Hero Section with proper padding for fixed header */}
-      <section className="landing-section text-center glass-strong pt-20 border-b border-white/10">
+      <section className="landing-section text-center glass-strong pt-16 border-b border-white/10">
         <h1 className="text-4xl font-bold mb-4 text-white">
           Automatiza el 80% del trabajo de RH en 24 horas: asistencia, nómina y vouchers en 1 click
         </h1>
@@ -260,19 +265,6 @@ export default function LandingPage() {
             Quiero ver cómo funciona
           </Link>
         </div>
-      </section>
-
-      {/* Benefits Carousel Section */}
-      <section className="landing-section py-16">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-semibold mb-4 text-white">
-            ¿Por qué elegir Humano SISU?
-          </h2>
-          <p className="text-xl text-brand-400 font-medium mb-2">
-            Beneficios que transforman tu gestión de RH
-          </p>
-        </div>
-        <HeroCarousel />
       </section>
 
       {/* Services Section */}
