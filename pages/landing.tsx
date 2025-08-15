@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 const CloudBackground = dynamic(() => import('../components/CloudBackground'), { ssr: false })
-const BenefitsCarousel = dynamic(() => import('../components/BenefitsCarousel'), { ssr: false })
+const HeroCarousel = dynamic(() => import('../components/HeroCarousel'), { ssr: false })
 import {
   UserGroupIcon,
   ClockIcon,
@@ -272,7 +272,7 @@ export default function LandingPage() {
             Beneficios que transforman tu gestión de RH
           </p>
         </div>
-        <BenefitsCarousel />
+        <HeroCarousel />
       </section>
 
       {/* Services Section */}
