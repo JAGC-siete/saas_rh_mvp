@@ -52,6 +52,9 @@ export default function HeroCarousel() {
   const containerRef = useRef<HTMLDivElement>(null);
   const intervalMs = 4500;
 
+  // Debug: verificar que el componente se renderice
+  console.log('🎠 HeroCarousel renderizando, index:', index);
+
   // autoplay (respeta reduced motion y visibilidad de pestaña)
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -107,7 +110,7 @@ export default function HeroCarousel() {
       aria-roledescription="carousel"
       aria-label="Beneficios del SaaS"
       className="relative overflow-hidden bg-[#0f2147] text-white"
-      style={{ zIndex: 10, position: 'relative' }}
+      style={{ zIndex: 20, position: 'relative', minHeight: '400px', marginTop: '6rem' }}
       onMouseEnter={() => {
         if (timerRef.current) {
           clearInterval(timerRef.current);
@@ -120,7 +123,12 @@ export default function HeroCarousel() {
         }
       }}
     >
-      <div ref={containerRef} className="mx-auto max-w-6xl px-6 py-20 border-2 border-yellow-400">
+      <div ref={containerRef} className="mx-auto max-w-6xl px-6 py-12 border-4 border-red-500 bg-red-100/10">
+        {/* DEBUG TEXT */}
+        <div className="text-center mb-8 p-4 bg-yellow-400 text-black font-bold text-2xl">
+          🎠 CARRUSEL DEBUG - DEBERÍA SER VISIBLE
+        </div>
+        
         {SLIDES.map((s, i) => (
           <div
             key={s.id}
