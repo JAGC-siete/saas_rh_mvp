@@ -110,7 +110,7 @@ export default function HeroCarousel() {
       aria-roledescription="carousel"
       aria-label="Beneficios del SaaS"
       className="relative overflow-hidden bg-[#0f2147] text-white"
-      style={{ zIndex: 20, position: 'relative', minHeight: '400px', marginTop: '6rem' }}
+      style={{ zIndex: 20, position: 'relative', minHeight: '400px', marginTop: '8rem' }}
       onMouseEnter={() => {
         if (timerRef.current) {
           clearInterval(timerRef.current);

@@ -197,7 +197,7 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Carousel Section - MOVIDO AL INICIO */}
-      <section className="pt-20">
+      <section className="pt-24">
         <HeroCarousel />
       </section>
 
