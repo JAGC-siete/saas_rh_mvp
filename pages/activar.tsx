@@ -44,7 +44,7 @@ export default function ActivarPage() {
 
   const openWhatsApp = () => {
     const message = `Hola! Quiero activar mi sistema SISU para ${formData.empresa} con ${formData.empleados} empleados. Total: L${calculateTotal().toLocaleString()}/mes.`
-    const whatsappUrl = `https://wa.me/50499999999?text=${encodeURIComponent(message)}`
+    const whatsappUrl = `https://wa.me/50494707007?text=${encodeURIComponent(message)}`
     window.open(whatsappUrl, '_blank')
   }
 
@@ -96,7 +96,7 @@ export default function ActivarPage() {
         <title>Activar Robot de RH - HUMANO SISU</title>
         <meta
           name="description"
-          content="Activa tu robot de RH hoy. L300 por empleado. Listo en 24 horas."
+          content="Automatiza tu operación de asistencia, nómina y vouchers hoy. L300 por empleado. Listo en 24 horas."
         />
       </Head>
 
