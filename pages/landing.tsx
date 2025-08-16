@@ -32,7 +32,6 @@ const services = [
     description: 'Calcula IHSS, RAP, ISR, genera comprobantes y los envía por correo o WhatsApp. Planilla sin errores.',
     features: ['IHSS', 'RAP', 'ISR', 'Vacaciones', 'Vouchers PDF', 'Envío automático'],
     benefits: [
-      '⚡ De 4 horas a 4 minutos',
       '⚖️ Cumplimiento legal total',
       '📧 Vouchers automáticos por email o WhatsApp'
     ],
