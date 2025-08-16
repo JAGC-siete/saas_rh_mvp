@@ -16,11 +16,7 @@ interface ActivationData {
   aceptaTrial: boolean
 }
 
-interface TrialEnvironment {
-  tenant_id: string
-  magic_link: string
-  trial_expires_at: Date
-}
+
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -54,7 +50,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (!aceptaTrial) {
       return res.status(400).json({ 
-        error: 'Debes aceptar el trial para continuar' 
+        error: '✅ Debes aceptar el trial gratuito para continuar' 
       })
     }
 
@@ -62,7 +58,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const whatsappRegex = /^(\+504|504)?[0-9]{8}$/
     if (!whatsappRegex.test(contactoWhatsApp.replace(/[-\s]/g, ''))) {
       return res.status(400).json({ 
-        error: 'Formato de WhatsApp inválido. Use formato hondureño (ej: 9999-9999 o +50499999999)' 
+        error: '📱 Formato de WhatsApp inválido. Usa formato hondureño: 9999-9999 o +50499999999' 
       })
     }
 
@@ -70,14 +66,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(contactoEmail)) {
       return res.status(400).json({ 
-        error: 'Formato de email inválido' 
+        error: '📧 Por favor ingresa un email válido' 
       })
     }
 
     // Validar número de empleados
     if (empleados < 1 || empleados > 1000) {
       return res.status(400).json({ 
-        error: 'Número de empleados debe estar entre 1 y 1000' 
+        error: '👥 El número de empleados debe estar entre 1 y 1000' 
       })
     }
 
@@ -125,15 +121,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log('✅ Datos guardados exitosamente en activaciones')
 
-    // TODO: Crear entorno de trial (Company + Owner + Demo data) - TEMPORALMENTE DESHABILITADO
-    // console.log('🏗️ Creando entorno de trial...')
-    // const trialEnvironment = await crearEntornoTrial(supabase, {
-    //   tenant_id,
-    //   empresa,
-    //   nombre,
-    //   contactoEmail,
-    //   empleados
-    // })
+    // Crear entorno de trial (Company + Owner + Demo data)
+    console.log('🏗️ Creando entorno de trial...')
+    const trialEnvironment = await crearEntornoTrial(supabase, {
+      tenant_id,
+      empresa,
+      nombre,
+      contactoEmail,
+      empleados
+    })
+
+    if (trialEnvironment.success) {
+      console.log('✅ Entorno de trial creado exitosamente:', trialEnvironment.data)
+    } else {
+      console.error('❌ Error creando entorno de trial:', trialEnvironment.error)
+      // No fallar todo el proceso, pero logear el error
+    }
 
     // Enviar notificaciones inmediatas
     console.log('📱 Enviando notificaciones...')
@@ -209,7 +212,7 @@ async function crearEntornoTrial(supabase: any, data: {
     const { data: owner, error: ownerError } = await supabase
       .from('user_profiles')
       .insert([{
-        id: data.tenant_id, // Usar tenant_id como user_id temporal
+        id: crypto.randomUUID(), // Generar UUID real para el usuario
         company_id: company[0].id,
         role: 'company_admin',
         permissions: {
@@ -323,9 +326,6 @@ async function enviarNotificacionesTrial(data: {
   tenant_id: string
 }) {
   try {
-    // Aquí implementarías el envío real de emails/WhatsApp
-    // Por ejemplo usando Resend, Nodemailer, o Twilio
-    
     console.log('🚀 Enviando notificaciones de trial para:', {
       empresa: data.empresa,
       nombre: data.nombre,
@@ -336,40 +336,101 @@ async function enviarNotificacionesTrial(data: {
       tenant_id: data.tenant_id
     })
 
-    // TODO: Implementar envío real de WhatsApp
-    // Ejemplo con Twilio:
-    /*
-    await twilioClient.messages.create({
-      body: `Hola ${data.nombre}, ya activamos SISU – ${data.empresa}. Entra aquí: ${data.magic_link}. Paso siguiente: sube tu plantilla (CSV/Excel) o respóndenos con 5 empleados y te lo dejamos corriendo hoy. ¿Querés una demo de 15 min?`,
-      from: process.env.TWILIO_PHONE_NUMBER,
-      to: `whatsapp:+504${data.contactoWhatsApp.replace(/[-\s]/g, '')}`
-    })
-    */
+    // Envío de email con Resend
+    const apiKey = process.env.RESEND_API_KEY
+    if (apiKey) {
+      try {
+        const { Resend } = await import('resend')
+        const resend = new Resend(apiKey)
+        
+        const emailResult = await resend.emails.send({
+          from: process.env.RESEND_FROM || 'SISU <noreply@humanosisu.net>',
+          to: data.contactoEmail,
+          subject: `🎉 ¡Tu trial de SISU está activo! - ${data.empresa}`,
+          html: `
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Tu trial de SISU está activo</title>
+              <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+                .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+                .button { display: inline-block; background: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+                .steps { background: white; padding: 20px; border-radius: 5px; margin: 20px 0; }
+                .step { margin: 10px 0; padding: 10px; border-left: 3px solid #667eea; }
+                .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
+              </style>
+            </head>
+            <body>
+              <div class="container">
+                <div class="header">
+                  <h1>🎉 ¡Tu trial de SISU está activo!</h1>
+                  <p>Empresa: <strong>${data.empresa}</strong></p>
+                </div>
+                
+                <div class="content">
+                  <h2>¡Hola ${data.nombre}!</h2>
+                  <p>Tu entorno de prueba SISU está listo y funcionando. Ya puedes empezar a explorar todas las funcionalidades.</p>
+                  
+                  <div style="text-align: center; margin: 30px 0;">
+                    <a href="${data.magic_link}" class="button">🚀 Acceder a mi Dashboard</a>
+                  </div>
+                  
+                  <div class="steps">
+                    <h3>📋 Próximos pasos:</h3>
+                    <div class="step">
+                      <strong>1.</strong> Entra al dashboard y explora las funciones
+                    </div>
+                    <div class="step">
+                      <strong>2.</strong> Sube tu plantilla de empleados o pide que te carguemos ${data.empleados} empleados demo
+                    </div>
+                    <div class="step">
+                      <strong>3.</strong> Agenda una demo de 15 min si quieres
+                    </div>
+                  </div>
+                  
+                  <div style="background: #e8f4fd; padding: 20px; border-radius: 5px; margin: 20px 0;">
+                    <h4>📱 ¿Necesitas ayuda?</h4>
+                    <p>Responde a este email o escríbenos por WhatsApp al <strong>+504 ${data.contactoWhatsApp}</strong></p>
+                  </div>
+                  
+                  <div style="background: #fff3cd; padding: 20px; border-radius: 5px; margin: 20px 0;">
+                    <h4>⏰ Tu trial expira en 7 días</h4>
+                    <p>Disfruta explorando SISU y conoce todas las funcionalidades que te ofrecemos.</p>
+                  </div>
+                </div>
+                
+                <div class="footer">
+                  <p>Este email fue enviado desde SISU - Sistema de Gestión de Recursos Humanos</p>
+                  <p>Si no solicitaste este trial, puedes ignorar este mensaje.</p>
+                </div>
+              </div>
+            </body>
+            </html>
+          `
+        })
+        
+        console.log('✅ Email enviado exitosamente:', emailResult)
+      } catch (emailError) {
+        console.error('❌ Error enviando email:', emailError)
+      }
+    } else {
+      console.log('⚠️ RESEND_API_KEY no configurado, saltando envío de email')
+    }
 
-    // TODO: Implementar envío real de email
-    // Ejemplo con Resend:
-    /*
-    await resend.emails.send({
-      from: 'SISU <noreply@humanosisu.net>',
-      to: data.contactoEmail,
-      subject: 'Tu acceso a SISU – ' + data.empresa,
-      html: `
-        <h1>¡Hola ${data.nombre}!</h1>
-        <p>Tu entorno de prueba SISU está listo.</p>
-        <p><strong>Acceso directo:</strong> <a href="${data.magic_link}">${data.magic_link}</a></p>
-        <p><strong>Próximos pasos:</strong></p>
-        <ol>
-          <li>Entra al dashboard y explora las funciones</li>
-          <li>Sube tu plantilla de empleados o pide que te carguemos 5</li>
-          <li>Agenda una demo de 15 min si quieres</li>
-        </ol>
-        <p>Tu trial expira en 7 días. ¡Disfruta explorando SISU!</p>
-      `
+    // TODO: Implementar envío real de WhatsApp con Twilio
+    // Por ahora solo log
+    console.log('📱 WhatsApp notification (to be implemented):', {
+      to: `+504${data.contactoWhatsApp.replace(/[-\s]/g, '')}`,
+      message: `Hola ${data.nombre}, ya activamos SISU – ${data.empresa}. Entra aquí: ${data.magic_link}. Paso siguiente: sube tu plantilla (CSV/Excel) o respóndenos con ${data.empleados} empleados y te lo dejamos corriendo hoy. ¿Querés una demo de 15 min?`
     })
-    */
 
   } catch (error) {
-    console.error('Error sending trial notifications:', error)
+    console.error('❌ Error sending trial notifications:', error)
     // No fallar todo el proceso si las notificaciones fallan
   }
 }

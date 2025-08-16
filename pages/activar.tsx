@@ -1,9 +1,9 @@
 import Head from 'next/head'
 import Link from 'next/link'
 import { useState } from 'react'
-import { ArrowLeftIcon, CheckCircleIcon, CloudArrowUpIcon, ClockIcon, CurrencyDollarIcon, ShieldCheckIcon, UserGroupIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
+import { ArrowLeftIcon, CheckCircleIcon, ClockIcon, CurrencyDollarIcon, ShieldCheckIcon, UserGroupIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
 import dynamic from 'next/dynamic'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 
 interface FormData {
   empleados: number
@@ -86,26 +86,48 @@ export default function ActivarPage() {
                 ¡Listo, {formData.nombre}!
               </h1>
               <p className="text-xl text-brand-300 mb-8">
-                Acabamos de crear tu entorno. Te mandamos el acceso por WhatsApp y email.
+                Estamos configurando tu entorno de Recursos Humanos. Te mandaremos el acceso por WhatsApp y mail.
               </p>
             </div>
 
             <Card variant="glass" className="mb-8">
               <CardContent className="p-8">
                 <h2 className="text-2xl font-bold text-white mb-6">
-                  Siguiente paso (opcional):
+                  ¡Gracias por confiar en SISU!
                 </h2>
-                <div className="grid md:grid-cols-3 gap-4">
-                  <button className="bg-brand-600 hover:bg-brand-700 text-white p-4 rounded-lg font-semibold transition-colors">
-                    🚀 Ir a mi dashboard
-                  </button>
-                  <button className="glass border border-brand-600/30 text-white hover:border-brand-500 p-4 rounded-lg font-semibold transition-all">
-                    📊 Subir plantilla
-                  </button>
-                  <button className="glass border border-brand-600/30 text-white hover:border-brand-500 p-4 rounded-lg font-semibold transition-all">
-                    🎯 Pedir demo 15 min
-                  </button>
+                <p className="text-lg text-brand-300 mb-6">
+                  Tu sistema estará listo en las próximas horas. Mientras tanto, únete a nuestra comunidad.
+                </p>
+                
+                <div className="grid md:grid-cols-3 gap-4 mb-6">
+                  <div className="text-center">
+                    <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <span className="text-2xl">📱</span>
+                    </div>
+                    <p className="text-sm text-brand-300">WhatsApp</p>
+                    <p className="text-xs text-brand-400">+504 9999-9999</p>
+                  </div>
+                  
+                  <div className="text-center">
+                    <div className="w-12 h-12 bg-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <span className="text-2xl">💬</span>
+                    </div>
+                    <p className="text-sm text-brand-300">Telegram</p>
+                    <p className="text-xs text-brand-400">@humanosisu</p>
+                  </div>
+                  
+                  <div className="text-center">
+                    <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <span className="text-2xl">📧</span>
+                    </div>
+                    <p className="text-sm text-brand-300">Email</p>
+                    <p className="text-xs text-brand-400">soporte@humanosisu.net</p>
+                  </div>
                 </div>
+                
+                <p className="text-sm text-brand-400 text-center">
+                  Comparte SISU con otros empresarios y ayúdanos a crecer la comunidad de RH en Honduras 🇭🇳
+                </p>
               </CardContent>
             </Card>
 
@@ -145,14 +167,7 @@ export default function ActivarPage() {
             Asistencia y planilla funcionando en menos de 24 h. Sin tarjeta. Sin compromiso.
           </p>
           
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button className="bg-brand-600 hover:bg-brand-700 text-white px-8 py-4 rounded-lg font-semibold text-lg transition-colors shadow-lg">
-              Activar mi sistema ahora
-            </button>
-            <button className="glass border border-brand-600/30 text-white hover:border-brand-500 px-8 py-4 rounded-lg font-semibold text-lg transition-all">
-              Quiero una demo de 15 min
-            </button>
-          </div>
+
         </div>
 
         {/* Sub-hero */}
@@ -160,7 +175,7 @@ export default function ActivarPage() {
           <Card variant="glass" className="border-green-500/30 bg-green-500/5">
             <CardContent className="p-8">
               <p className="text-xl text-white mb-4">
-                <span className="text-green-400 font-bold">"Paragon Financial redujo 80% el tiempo de planilla con SISU."</span>
+                <span className="text-green-400 font-bold">&ldquo;Paragon Financial redujo 80% el tiempo de planilla con SISU.&rdquo;</span>
               </p>
               <p className="text-brand-300">
                 Seguridad: datos cifrados, roles y auditoría. Soporte por WhatsApp.
@@ -432,7 +447,7 @@ export default function ActivarPage() {
                 </button>
 
                 <p className="text-brand-400 text-xs text-center">
-                  Entorno de prueba por 7 días o 50 eventos. Puedes activarlo cuando quieras.
+                  Entorno de prueba por 7 días. Sin costo, sin compromiso.
                 </p>
               </div>
             </CardContent>
