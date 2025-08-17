@@ -345,9 +345,9 @@ async function enviarNotificacionesTrial(data: {
         
         const emailResult = await resend.emails.send({
           from: process.env.RESEND_FROM || 'SISU <noreply@humanosisu.net>',
-          to: data.contactoEmail,
+      to: data.contactoEmail,
           subject: `🎉 ¡Tu trial de SISU está activo! - ${data.empresa}`,
-          html: `
+      html: `
             <!DOCTYPE html>
             <html>
             <head>

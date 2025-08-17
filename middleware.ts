@@ -14,6 +14,7 @@ const PUBLIC_ROUTES = new Set([
   '/about',            // Página acerca de - PÚBLICO
   '/trial-dashboard',  // Dashboard de trial - PÚBLICO
   '/trial-dashboard/*', // Dashboard de trial con parámetros - PÚBLICO
+  '/politicadeprivacidad', // Política de privacidad - PÚBLICO
   '/app/login',        // Login de la aplicación
   '/app/demo/pin',     // PIN de demo - PÚBLICO
   '/app/attendance/register', // Registro de asistencia - PÚBLICO

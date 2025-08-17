@@ -520,6 +520,27 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* Footer */}
+      <footer className="border-t border-white/10 mt-20">
+        <div className="max-w-6xl mx-auto px-4 py-12">
+          <div className="text-center">
+            <p className="text-slate-400 mb-4">
+              Protegemos tu información. Sin spam, sin venta de datos. <strong>Solo para contactarte</strong>.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center text-sm">
+              <Link 
+                href="/politicadeprivacidad" 
+                className="text-brand-300 hover:text-brand-400 transition-colors underline decoration-brand-400/30 hover:decoration-brand-400"
+              >
+                Política de Privacidad
+              </Link>
+              <span className="text-slate-500">•</span>
+              <span className="text-slate-500">© 2025 Humano SISU. Todos los derechos reservados.</span>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 }
