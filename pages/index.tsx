@@ -147,7 +147,7 @@ export default function LandingPage() {
                 </a>
                 <div className="px-3 py-2 space-y-2">
                   <Link
-                    href="/demo"
+                    href="/activar"
                     className="text-brand-200/90 hover:text-white block w-full text-center py-2 px-4 font-medium"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >

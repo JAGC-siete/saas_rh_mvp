@@ -111,7 +111,7 @@ export default function LandingPage() {
                     Precios
                   </a>
                   <Link
-                    href="/demo"
+                    href="/activar"
                     className="text-brand-200/90 hover:text-brand-400 hover:-translate-y-0.5 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 border-b-2 border-transparent hover:border-brand-400"
                   >
                     Solicitar Prueba
@@ -174,7 +174,7 @@ export default function LandingPage() {
                 </a>
                 <div className="px-3 py-2 space-y-2">
                   <Link
-                    href="/demo"
+                    href="/activar"
                     className="text-brand-200/90 hover:text-brand-400 block w-full text-center py-2 px-4 font-medium transition-colors"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
@@ -223,7 +223,7 @@ export default function LandingPage() {
             🚀 Activar mi RH automático
           </Link>
           <Link
-            href="/demo"
+            href="/activar"
             className="bg-white/10 border-2 border-white/20 text-white px-10 py-4 rounded-xl font-bold text-lg backdrop-blur hover:bg-white/20 hover:-translate-y-1 hover:shadow-xl hover:border-brand-400 transition-all duration-300 focus-visible:outline-none focus-visible:focus-ring transform"
             aria-label="Quiero ver cómo funciona"
           >
@@ -511,7 +511,7 @@ export default function LandingPage() {
                 🚀 Activar ahora
               </Link>
               <Link
-                href="/demo"
+                href="/activar"
                 className="bg-white/10 border-2 border-white/20 text-white px-8 py-4 text-lg font-bold rounded-xl backdrop-blur hover:bg-white/20 hover:border-brand-400 transition-all duration-300 focus-visible:outline-none focus-visible:focus-ring flex-1 text-center"
               >
                 🎯 Solicitar Demo

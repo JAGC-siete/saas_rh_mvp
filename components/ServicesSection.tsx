@@ -43,7 +43,7 @@ export default function ServicesSection() {
 
             <div className="mt-5 flex gap-3">
               <Button variant="outline" asChild className="h-10 px-4">
-                <Link href="/demo#asistencia">Solicitar Demo</Link>
+                <Link href="/activar">Solicitar Demo</Link>
               </Button>
               <Link href="/activar" className="inline-flex items-center underline decoration-white/20 underline-offset-4 hover:decoration-brand-400 transition text-brand-300 hover:text-white">
                 Activar <ArrowRightIcon className="ml-1 h-4 w-4" />
@@ -71,7 +71,7 @@ export default function ServicesSection() {
 
             <div className="mt-5 flex gap-3">
               <Button variant="outline" asChild className="h-10 px-4">
-                <Link href="/demo#reportes">Solicitar Demo</Link>
+                <Link href="/activar">Solicitar Demo</Link>
               </Button>
               <Link href="/activar" className="inline-flex items-center underline decoration-white/20 underline-offset-4 hover:decoration-brand-400 transition text-brand-300 hover:text-white">
                 Activar <ArrowRightIcon className="ml-1 h-4 w-4" />
@@ -105,7 +105,7 @@ export default function ServicesSection() {
 
             <div className="mt-5 flex gap-3">
               <Button variant="outline" asChild className="h-10 px-4">
-                <Link href="/demo#nomina">Solicitar Demo</Link>
+                <Link href="/activar">Solicitar Demo</Link>
               </Button>
               <Link href="/activar" className="inline-flex items-center underline decoration-white/20 underline-offset-4 hover:decoration-brand-400 transition text-brand-300 hover:text-white">
                 Activar <ArrowRightIcon className="ml-1 h-4 w-4" />
@@ -133,7 +133,7 @@ export default function ServicesSection() {
 
             <div className="mt-5 flex gap-3">
               <Button variant="outline" asChild className="h-10 px-4">
-                <Link href="/demo#nomina">Solicitar Demo</Link>
+                <Link href="/activar">Solicitar Demo</Link>
               </Button>
               <Link href="/activar" className="inline-flex items-center underline decoration-white/20 underline-offset-4 hover:decoration-brand-400 transition text-brand-300 hover:text-white">
                 Activar <ArrowRightIcon className="ml-1 h-4 w-4" />
