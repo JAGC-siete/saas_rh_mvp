@@ -6,7 +6,7 @@
 NEXT_PUBLIC_SUPABASE_URL="https://YOUR-PROJECT.supabase.co"
 NEXT_PUBLIC_SUPABASE_ANON_KEY="<SET-IN-RAILWAY>"
 SUPABASE_SERVICE_ROLE_KEY="<SET-IN-RAILWAY>"
-DATABASE_URL="postgresql://postgres:password@host:5432/database" # example only
+DATABASE_URL="<SET-IN-RAILWAY>"
 NODE_ENV="production"
 ```
 
