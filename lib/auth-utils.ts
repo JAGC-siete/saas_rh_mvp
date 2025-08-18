@@ -52,9 +52,10 @@ export async function authenticateUser(
 ): Promise<AuthResult> {
   try {
     const supabase = createClient(req, res)
-    const { data: { session } } = await supabase.auth.getSession()
+    // ✅ Usar getUser() para validar token con servidor de Supabase
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
     
-    if (!session) {
+    if (authError || !user) {
       return {
         success: false,
         error: 'No autorizado',
@@ -66,7 +67,7 @@ export async function authenticateUser(
     const { data: userProfile, error: profileError } = await supabase
       .from('user_profiles')
       .select('role, permissions, company_id, is_active')
-      .eq('id', session.user.id)
+      .eq('id', user.id)
       .single()
 
     if (profileError || !userProfile) {
@@ -95,7 +96,7 @@ export async function authenticateUser(
       if (userRole === 'super_admin') {
         return {
           success: true,
-          user: session.user,
+          user: user,
           userProfile
         }
       }
@@ -133,7 +134,7 @@ export async function authenticateUser(
     }
 
     console.log('🔐 Usuario autenticado:', { 
-      userId: session.user.id, 
+      userId: user.id, 
       role: userProfile.role,
       companyId: userProfile.company_id,
       permissions: requiredPermissions
@@ -141,7 +142,7 @@ export async function authenticateUser(
 
     return {
       success: true,
-      user: session.user,
+      user: user,
       userProfile
     }
 

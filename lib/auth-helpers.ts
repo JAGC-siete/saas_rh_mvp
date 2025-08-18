@@ -123,20 +123,20 @@ export async function authenticateUser(
   try {
     const supabase = getSupabaseClient(req, res)
     
-    // 1. Verificar sesión
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    // 1. ✅ Verificar usuario con getUser() para validar token con servidor
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
     
-    if (sessionError) {
-      console.error('❌ Error obteniendo sesión:', sessionError)
+    if (authError) {
+      console.error('❌ Error obteniendo usuario:', authError)
       return {
         success: false,
-        error: 'Error de sesión',
-        message: 'No se pudo verificar la sesión'
+        error: 'Error de autenticación',
+        message: 'No se pudo verificar la autenticación'
       }
     }
 
-    if (!session) {
-      console.log('⚠️ No hay sesión activa')
+    if (!user) {
+      console.log('⚠️ No hay usuario autenticado')
       return {
         success: false,
         error: 'No autorizado',
@@ -144,15 +144,15 @@ export async function authenticateUser(
       }
     }
 
-    console.log('🔐 Sesión válida encontrada:', {
-      userId: session.user.id,
-      email: session.user.email
+    console.log('🔐 Usuario válido encontrado:', {
+      userId: user.id,
+      email: user.email
     })
 
     // 2. Obtener o crear perfil (VERSIÓN TEMPORAL SIN RLS)
     let userProfile: UserProfile
     try {
-      userProfile = await getOrCreateProfile(supabase, session.user.id)
+      userProfile = await getOrCreateProfile(supabase, user.id)
     } catch (profileError) {
       console.error('❌ Error con perfil:', profileError)
       return {
@@ -173,14 +173,14 @@ export async function authenticateUser(
 
     // 4. Verificar permisos requeridos (TEMPORALMENTE PERMITIR TODO)
     console.log('✅ Usuario autenticado y autorizado (modo temporal):', {
-      userId: session.user.id,
+      userId: user.id,
       role: userProfile.role,
       permissions: requiredPermissions
     })
 
     return {
       success: true,
-      user: session.user,
+      user: user,
       userProfile
     }
 

@@ -206,17 +206,21 @@ export default function EmployeeManager() {
       setIsSubmitting(true)
       
       const url = editingEmployee 
-        ? `/api/employees/${editingEmployee.id}`
-        : '/api/employees'
+        ? '/api/employees/update'
+        : '/api/employees/create'
       
       const method = editingEmployee ? 'PUT' : 'POST'
+      
+      const requestBody = editingEmployee 
+        ? { id: editingEmployee.id, ...formData }
+        : formData
       
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(requestBody),
       })
 
       if (!response.ok) {
@@ -277,12 +281,15 @@ export default function EmployeeManager() {
     try {
       setIsSubmitting(true)
       
-      const response = await fetch(`/api/employees/${employeeToDeactivate.id}`, {
+      const response = await fetch('/api/employees/update', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ status: 'inactive' }),
+        body: JSON.stringify({ 
+          id: employeeToDeactivate.id,
+          status: 'inactive' 
+        }),
       })
 
       if (!response.ok) {
