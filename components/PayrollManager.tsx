@@ -94,7 +94,7 @@ export default function PayrollManager() {
   const [payrollRecords, setPayrollRecords] = useState<PayrollRecord[]>([])
   const [employees, setEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(false)
-  const [selectedPeriod, setSelectedPeriod] = useState('')
+  const [selectedPeriod, setSelectedPeriod] = useState(new Date().toISOString().slice(0, 7))
   const [userProfile, setUserProfile] = useState<any>(null)
   const [payrollStats, setPayrollStats] = useState<PayrollStats>(INITIAL_PAYROLL_STATS)
   const [departments, setDepartments] = useState<{ [key: string]: string }>({})
@@ -616,8 +616,13 @@ export default function PayrollManager() {
     setSelectedPeriod(e.target.value)
   }, [])
 
-  const clearPeriodFilter = useCallback(() => {
+  const clearAllFilters = useCallback(() => {
     setSelectedPeriod('')
+    setFilterYear('')
+    setFilterMonth('')
+    setFilterQuincena('')
+    setFilterDept('')
+    setFilterEmployee('')
   }, [])
 
   
@@ -662,178 +667,379 @@ export default function PayrollManager() {
 
       </div>
 
-      
-
-      
-
-      {/* Dashboard Ejecutivo */}
-        <div className="space-y-6">
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <Card variant="glass">
-              <CardContent className="pt-6">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-400">
-                    {payrollStats.totalEmployees}
-                  </div>
-                  <div className="text-sm text-gray-300">Empleados Activos</div>
+      {/* 1. 📊 Dashboard Ejecutivo */}
+      <div className="space-y-6">
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <Card variant="glass">
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-400">
+                  {payrollStats.totalEmployees}
                 </div>
-              </CardContent>
-            </Card>
+                <div className="text-sm text-gray-300">Empleados Activos</div>
+              </div>
+            </CardContent>
+          </Card>
 
-            <Card variant="glass">
-              <CardContent className="pt-6">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-400">
-                    {formatCurrency(payrollStats.totalGrossSalary)}
-                  </div>
-                  <div className="text-sm text-gray-300">Salario Bruto Quincenal</div>
+          <Card variant="glass">
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-400">
+                  {formatCurrency(payrollStats.totalGrossSalary)}
                 </div>
-              </CardContent>
-            </Card>
+                <div className="text-sm text-gray-300">Salario Bruto Quincenal</div>
+              </div>
+            </CardContent>
+          </Card>
 
-            <Card variant="glass">
-              <CardContent className="pt-6">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-orange-400">
+          <Card variant="glass">
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-orange-400">
+                  {payrollStats.payrollCoverage.toFixed(1)}%
+                </div>
+                <div className="text-sm text-gray-300">Cobertura Nómina</div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card variant="glass">
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-purple-400">
+                  {formatCurrency(payrollStats.totalNetSalary)}
+                </div>
+                <div className="text-sm text-gray-300">Salario Neto Quincenal</div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Extra Summary: Suspendidos, Ausentismo y Horas */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card variant="glass">
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-red-400">{suspendedCount}</div>
+                <div className="text-sm text-gray-300">Empleados Suspendidos</div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card variant="glass">
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-yellow-400">{absenteeismPercent.toFixed(1)}%</div>
+                <div className="text-sm text-gray-300">Ausentismo (periodo)</div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card variant="glass">
+            <CardHeader>
+              <CardTitle className="text-white">⏱️ Horas Trabajadas vs Plan</CardTitle>
+              <CardDescription className="text-gray-300">Estimado: 8h por día</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {(() => {
+                const totalDays = currentPeriodRecords.reduce((sum, r) => sum + (r.days_worked || 0), 0)
+                const expectedDays = currentPeriodRecords.length * 15
+                const hoursWorked = totalDays * 8
+                const hoursPlanned = expectedDays * 8
+                const pct = hoursPlanned > 0 ? Math.min(100, Math.round((hoursWorked / hoursPlanned) * 100)) : 0
+                return (
+                  <div>
+                    <div className="flex justify-between text-sm text-gray-300 mb-1">
+                      <span>{hoursWorked} h</span>
+                      <span>{hoursPlanned} h plan</span>
+                    </div>
+                    <div className="w-full bg-white/10 rounded-full h-3">
+                      <div className="bg-green-500 h-3 rounded-full" style={{ width: `${pct}%` }}></div>
+                    </div>
+                    <div className="text-right text-xs text-gray-300 mt-1">{pct}%</div>
+                  </div>
+                )
+              })()}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Additional Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card variant="glass">
+            <CardHeader>
+              <CardTitle className="text-white">📊 Métricas de Gestión</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex justify-between">
+                  <span className="text-gray-300">Salario Promedio:</span>
+                  <span className="font-semibold text-white">{formatCurrency(payrollStats.averageSalary)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-300">Cobertura de Nómina:</span>
+                  <span className={`font-semibold ${payrollStats.payrollCoverage >= 95 ? 'text-green-400' : 'text-orange-400'}`}>
                     {payrollStats.payrollCoverage.toFixed(1)}%
-                  </div>
-                  <div className="text-sm text-gray-300">Cobertura Nómina</div>
+                  </span>
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card variant="glass">
-              <CardContent className="pt-6">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-purple-400">
-                    {formatCurrency(payrollStats.totalNetSalary)}
-                  </div>
-                  <div className="text-sm text-gray-300">Salario Neto Quincenal</div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Extra Summary: Suspendidos, Ausentismo y Horas */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card variant="glass">
-              <CardContent className="pt-6">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-red-400">{suspendedCount}</div>
-                  <div className="text-sm text-gray-300">Empleados Suspendidos</div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card variant="glass">
-              <CardContent className="pt-6">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-yellow-400">{absenteeismPercent.toFixed(1)}%</div>
-                  <div className="text-sm text-gray-300">Ausentismo (periodo)</div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card variant="glass">
-              <CardHeader>
-                <CardTitle className="text-white">⏱️ Horas Trabajadas vs Plan</CardTitle>
-                <CardDescription className="text-gray-300">Estimado: 8h por día</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {(() => {
-                  const totalDays = currentPeriodRecords.reduce((sum, r) => sum + (r.days_worked || 0), 0)
-                  const expectedDays = currentPeriodRecords.length * 15
-                  const hoursWorked = totalDays * 8
-                  const hoursPlanned = expectedDays * 8
-                  const pct = hoursPlanned > 0 ? Math.min(100, Math.round((hoursWorked / hoursPlanned) * 100)) : 0
-                  return (
-                    <div>
-                      <div className="flex justify-between text-sm text-gray-300 mb-1">
-                        <span>{hoursWorked} h</span>
-                        <span>{hoursPlanned} h plan</span>
-                      </div>
-                      <div className="w-full bg-white/10 rounded-full h-3">
-                        <div className="bg-green-500 h-3 rounded-full" style={{ width: `${pct}%` }}></div>
-                      </div>
-                      <div className="text-right text-xs text-gray-300 mt-1">{pct}%</div>
+                {compareData && (
+                  <div className="border-t border-white/10 pt-2 space-y-1 text-sm">
+                    <div className="text-gray-300">Comparativa vs {compareData.prev_periodo} Q{compareData.quincena}</div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-300">Bruto Δ:</span>
+                      <span className={compareData.delta?.gross >= 0 ? 'text-green-400' : 'text-red-400'}>
+                        {formatCurrency(compareData.delta?.gross || 0)}
+                      </span>
                     </div>
-                  )
-                })()}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Additional Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card variant="glass">
-              <CardHeader>
-                <CardTitle className="text-white">📊 Métricas de Gestión</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex justify-between">
-                    <span className="text-gray-300">Salario Promedio:</span>
-                    <span className="font-semibold text-white">{formatCurrency(payrollStats.averageSalary)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-300">Cobertura de Nómina:</span>
-                    <span className={`font-semibold ${payrollStats.payrollCoverage >= 95 ? 'text-green-400' : 'text-orange-400'}`}>
-                      {payrollStats.payrollCoverage.toFixed(1)}%
-                    </span>
-                  </div>
-                  {compareData && (
-                    <div className="border-t border-white/10 pt-2 space-y-1 text-sm">
-                      <div className="text-gray-300">Comparativa vs {compareData.prev_periodo} Q{compareData.quincena}</div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-300">Bruto Δ:</span>
-                        <span className={compareData.delta?.gross >= 0 ? 'text-green-400' : 'text-red-400'}>
-                          {formatCurrency(compareData.delta?.gross || 0)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-300">Neto Δ:</span>
-                        <span className={compareData.delta?.net >= 0 ? 'text-green-400' : 'text-red-400'}>
-                          {formatCurrency(compareData.delta?.net || 0)}
-                        </span>
-                      </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-300">Neto Δ:</span>
+                      <span className={compareData.delta?.net >= 0 ? 'text-green-400' : 'text-red-400'}>
+                        {formatCurrency(compareData.delta?.net || 0)}
+                      </span>
                     </div>
-                  )}
-                  <div className="flex justify-between">
-                    <span className="text-gray-300">Total Empleados:</span>
-                    <span className="font-semibold text-white">{payrollStats.totalEmployees}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-300">Registros Procesados:</span>
-                    <span className="font-semibold text-white">{Object.values(payrollStats.departmentBreakdown).reduce((sum, d) => sum + d.count, 0)}</span>
-                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-gray-300">Total Empleados:</span>
+                  <span className="font-semibold text-white">{payrollStats.totalEmployees}</span>
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card variant="glass">
-              <CardHeader>
-                <CardTitle className="text-white">📈 Tendencia 6 meses (Neto)</CardTitle>
-                <CardDescription className="text-gray-300">Costo neto mensual</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-56">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={trendSeries} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={chartGridColor} />
-                      <XAxis dataKey="month" stroke={axisColor} />
-                      <YAxis stroke={axisColor} tickFormatter={(v)=>formatCurrency(v as any)} />
-                      <Tooltip 
-                        formatter={(v: any)=>formatCurrency(Number(v))} 
-                        labelStyle={{ color: 'rgb(255,255,255)' }} 
-                        contentStyle={{ background: tooltipBg, border: `1px solid ${tooltipBorder}` }} 
-                      />
-                      <Line type="monotone" dataKey="total_net" stroke={trendLineColor} strokeWidth={2} dot={false} />
-                    </LineChart>
-                  </ResponsiveContainer>
+                <div className="flex justify-between">
+                  <span className="text-gray-300">Registros Procesados:</span>
+                  <span className="font-semibold text-white">{Object.values(payrollStats.departmentBreakdown).reduce((sum, d) => sum + d.count, 0)}</span>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+            </CardContent>
+          </Card>
 
+          <Card variant="glass">
+            <CardHeader>
+              <CardTitle className="text-white">📈 Tendencia 6 meses (Neto)</CardTitle>
+              <CardDescription className="text-gray-300">Costo neto mensual</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={trendSeries} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={chartGridColor} />
+                    <XAxis dataKey="month" stroke={axisColor} />
+                    <YAxis stroke={axisColor} tickFormatter={(v)=>formatCurrency(v as any)} />
+                    <Tooltip 
+                      formatter={(v: any)=>formatCurrency(Number(v))} 
+                      labelStyle={{ color: 'rgb(255,255,255)' }} 
+                      contentStyle={{ background: tooltipBg, border: `1px solid ${tooltipBorder}` }} 
+                    />
+                    <Line type="monotone" dataKey="total_net" stroke={trendLineColor} strokeWidth={2} dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* 2. 🔍 Filtros Avanzados */}
+      <div className="space-y-6">
+        <Card variant="glass">
+          <CardHeader>
+            <CardTitle className="text-white">🔍 Filtros Avanzados</CardTitle>
+            <CardDescription className="text-gray-300">
+              Filtra los registros de nómina por período, departamento y empleado
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-white mb-1">
+                  Filtrar por Período
+                </label>
+                <Input
+                  type="month"
+                  value={selectedPeriod}
+                  onChange={handlePeriodChange}
+                  className="w-48 bg-white/10 border-white/20 text-white placeholder-gray-400"
+                />
+              </div>
+              <div className="flex items-end gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={clearAllFilters}
+                  className="border-white/20 text-white hover:bg-white/10"
+                >
+                  Limpiar Todos los Filtros
+                </Button>
+                <Button variant="outline" className="border-white/20 text-white hover:bg-white/10" onClick={()=>sendPayrollEmail()}>Enviar Planilla por Email</Button>
+                <Button variant="outline" className="border-white/20 text-white hover:bg-white/10" onClick={()=>sendPayrollWhatsApp()}>Enviar por WhatsApp</Button>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-white mb-1">Año</label>
+                <Input type="number" placeholder="2025" value={filterYear} onChange={e=>setFilterYear(e.target.value)} className="bg-white/10 border-white/20 text-white" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-white mb-1">Mes (01-12)</label>
+                <Input type="text" placeholder="08" value={filterMonth} onChange={e=>setFilterMonth(e.target.value)} className="bg-white/10 border-white/20 text-white" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-white mb-1">Quincena</label>
+                <div className="flex gap-2">
+                  <Button size="sm" variant={filterQuincena===1?undefined:'outline'} onClick={()=>setFilterQuincena(1)} className={filterQuincena===1? 'bg-brand-800 text-white':'border-white/20 text-white'}>1-15</Button>
+                  <Button size="sm" variant={filterQuincena===2?undefined:'outline'} onClick={()=>setFilterQuincena(2)} className={filterQuincena===2? 'bg-brand-800 text-white':'border-white/20 text-white'}>16-30</Button>
+                  <Button size="sm" variant="ghost" onClick={()=>setFilterQuincena('')} className="text-gray-300 hover:bg-white/10">Limpiar</Button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-white mb-1">Departamento</label>
+                <select value={filterDept} onChange={e=>setFilterDept(e.target.value)} className="bg-white/10 border-white/20 text-white rounded px-2 py-2">
+                  <option value="">Todos</option>
+                  {Object.entries(departments).map(([id,name])=> (
+                    <option key={id} value={id}>{name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-white mb-1">Empleado</label>
+                <Input placeholder="Nombre o código" value={filterEmployee} onChange={e=>setFilterEmployee(e.target.value)} className="bg-white/10 border-white/20 text-white" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 3. 📋 Tabla de Registros de Nómina */}
+      <div className="space-y-6">
+        <Card variant="glass">
+          <CardHeader>
+            <CardTitle className="text-white">📋 Registros de Nómina</CardTitle>
+            <CardDescription className="text-gray-300">
+              {filteredRecords.length} registros
+              {selectedPeriod && ` para ${new Date(selectedPeriod + '-01').toLocaleDateString('es-HN', { year: 'numeric', month: 'long' })}`}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full table-auto">
+                <thead>
+                  <tr className="border-b border-white/20">
+                    <th className="text-left py-3 px-4 text-white">Empleado</th>
+                    <th className="text-left py-3 px-4 text-white">Período</th>
+                    <th className="text-left py-3 px-4 text-white">Salario Bruto</th>
+                    <th className="text-left py-3 px-4 text-white">Deducciones</th>
+                    <th className="text-left py-3 px-4 text-white">Salario Neto</th>
+                    <th className="text-left py-3 px-4 text-white">Asistencia</th>
+                    <th className="text-left py-3 px-4 text-white">Estado</th>
+                    <th className="text-left py-3 px-4 text-white">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredRecords.map((record, index) => (
+                    <tr key={record.id ?? `record-${index}`} className="border-b border-white/10 hover:bg-white/5">
+                      <td className="py-3 px-4">
+                        <div>
+                          <div className="font-medium text-white">{record.employees?.name}</div>
+                          <div className="text-sm text-gray-300">
+                            {record.employees?.employee_code} • {record.employees?.team}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="text-sm">
+                          <div className="text-white">{new Date(record.period_start).toLocaleDateString('es-HN')}</div>
+                          <div className="text-gray-300">hasta {new Date(record.period_end).toLocaleDateString('es-HN')}</div>
+                          <div className="text-xs text-gray-400 capitalize">{record.period_type}</div>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 font-mono text-white">
+                        {formatCurrency(record.gross_salary)}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="text-sm font-mono">
+                          <div className="text-white">ISR: {formatCurrency(record.income_tax)}</div>
+                          <div className="text-white">RAP: {formatCurrency(record.professional_tax)}</div>
+                          <div className="text-white">IHSS: {formatCurrency(record.social_security)}</div>
+                          <div className="font-semibold border-t border-white/20 pt-1 text-white">
+                            Total: {formatCurrency(record.total_deductions)}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 font-mono font-semibold text-green-400">
+                        {formatCurrency(record.net_salary)}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="text-sm">
+                          <div className="text-white">Trabajó: {record.days_worked} días</div>
+                          <div className="text-red-400">Ausente: {record.days_absent} días</div>
+                          <div className="text-yellow-400">Tardanza: {record.late_days} días</div>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        {getStatusBadge(record.status)}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex flex-col gap-1">
+                          {record.status === 'draft' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => approvePayroll(record.id)}
+                              className="border-white/20 text-white hover:bg-white/10"
+                            >
+                              Aprobar
+                            </Button>
+                          )}
+                          {record.status === 'approved' && (
+                            <Button
+                              size="sm"
+                              onClick={() => markAsPaid(record.id)}
+                              className="bg-brand-800 hover:bg-brand-700 text-white"
+                            >
+                              Marcar Pagado
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={async () => await downloadPayrollPDF(record)}
+                            className="text-gray-300 hover:bg-white/10 hover:text-white"
+                          >
+                            📄 Descargar PDF
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={async () => await downloadIndividualReceipt(record)}
+                            className="text-gray-300 hover:bg-white/10 hover:text-white"
+                          >
+                            📄 Descargar Recibo
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => sendPayrollEmail(record)}
+                            className="text-gray-300 hover:bg-white/10 hover:text-white"
+                          >
+                            ✉️ Enviar por Email
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => sendPayrollWhatsApp(record)}
+                            className="text-gray-300 hover:bg-white/10 hover:text-white"
+                          >
+                            💬 Enviar WhatsApp
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {filteredRecords.length === 0 && (
+                <div className="text-center py-8 text-gray-300">
+                  No se encontraron registros de nómina.
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Generar Nómina */}
@@ -903,7 +1109,7 @@ export default function PayrollManager() {
                 <label htmlFor="asistencia" className="text-sm font-medium text-white">
                   Solo empleados con asistencia completa
                 </label>
-              </div>
+                </div>
               <div className="md:col-span-2 flex gap-4">
                 <Button type="submit" disabled={loading} className="bg-brand-800 hover:bg-brand-700 text-white">
                   {loading ? '🔄 Generando...' : '🚀 Generar Nómina'}
@@ -947,205 +1153,6 @@ export default function PayrollManager() {
           </Card>
       )}
       </div>
-
-      {/* Registros de Nómina */}
-        <div className="space-y-6">
-          {/* Filters */}
-          <Card variant="glass">
-            <CardContent className="pt-6">
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-white mb-1">
-                    Filtrar por Período
-                  </label>
-                  <Input
-                    type="month"
-                    value={selectedPeriod}
-                    onChange={handlePeriodChange}
-                    className="w-48 bg-white/10 border-white/20 text-white placeholder-gray-400"
-                  />
-                </div>
-                <div className="flex items-end gap-2">
-                  <Button 
-                    variant="outline" 
-                    onClick={clearPeriodFilter}
-                    className="border-white/20 text-white hover:bg-white/10"
-                  >
-                    Limpiar Filtro
-                  </Button>
-                  <Button variant="outline" className="border-white/20 text-white hover:bg-white/10" onClick={()=>sendPayrollEmail()}>Enviar Planilla por Email</Button>
-                  <Button variant="outline" className="border-white/20 text-white hover:bg-white/10" onClick={()=>sendPayrollWhatsApp()}>Enviar por WhatsApp</Button>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-white mb-1">Año</label>
-                  <Input type="number" placeholder="2025" value={filterYear} onChange={e=>setFilterYear(e.target.value)} className="bg-white/10 border-white/20 text-white" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-white mb-1">Mes (01-12)</label>
-                  <Input type="text" placeholder="08" value={filterMonth} onChange={e=>setFilterMonth(e.target.value)} className="bg-white/10 border-white/20 text-white" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-white mb-1">Quincena</label>
-                  <div className="flex gap-2">
-                    <Button size="sm" variant={filterQuincena===1?undefined:'outline'} onClick={()=>setFilterQuincena(1)} className={filterQuincena===1? 'bg-brand-800 text-white':'border-white/20 text-white'}>1-15</Button>
-                    <Button size="sm" variant={filterQuincena===2?undefined:'outline'} onClick={()=>setFilterQuincena(2)} className={filterQuincena===2? 'bg-brand-800 text-white':'border-white/20 text-white'}>16-fin</Button>
-                    <Button size="sm" variant="ghost" onClick={()=>setFilterQuincena('')} className="text-gray-300 hover:bg-white/10">Limpiar</Button>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-white mb-1">Departamento</label>
-                  <select value={filterDept} onChange={e=>setFilterDept(e.target.value)} className="bg-white/10 border-white/20 text-white rounded px-2 py-2">
-                    <option value="">Todos</option>
-                    {Object.entries(departments).map(([id,name])=> (
-                      <option key={id} value={id}>{name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-white mb-1">Empleado</label>
-                  <Input placeholder="Nombre o código" value={filterEmployee} onChange={e=>setFilterEmployee(e.target.value)} className="bg-white/10 border-white/20 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Payroll Records */}
-          <Card variant="glass">
-            <CardHeader>
-              <CardTitle className="text-white">Registros de Nómina</CardTitle>
-              <CardDescription className="text-gray-300">
-                {filteredRecords.length} registros
-                {selectedPeriod && ` para ${new Date(selectedPeriod + '-01').toLocaleDateString('es-HN', { year: 'numeric', month: 'long' })}`}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full table-auto">
-                  <thead>
-                    <tr className="border-b border-white/20">
-                      <th className="text-left py-3 px-4 text-white">Empleado</th>
-                      <th className="text-left py-3 px-4 text-white">Período</th>
-                      <th className="text-left py-3 px-4 text-white">Salario Bruto</th>
-                      <th className="text-left py-3 px-4 text-white">Deducciones</th>
-                      <th className="text-left py-3 px-4 text-white">Salario Neto</th>
-                      <th className="text-left py-3 px-4 text-white">Asistencia</th>
-                      <th className="text-left py-3 px-4 text-white">Estado</th>
-                      <th className="text-left py-3 px-4 text-white">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredRecords.map((record, index) => (
-                      <tr key={record.id ?? `record-${index}`} className="border-b border-white/10 hover:bg-white/5">
-                        <td className="py-3 px-4">
-                          <div>
-                            <div className="font-medium text-white">{record.employees?.name}</div>
-                            <div className="text-sm text-gray-300">
-                              {record.employees?.employee_code} • {record.employees?.team}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="text-sm">
-                            <div className="text-white">{new Date(record.period_start).toLocaleDateString('es-HN')}</div>
-                            <div className="text-gray-300">hasta {new Date(record.period_end).toLocaleDateString('es-HN')}</div>
-                            <div className="text-xs text-gray-400 capitalize">{record.period_type}</div>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 font-mono text-white">
-                          {formatCurrency(record.gross_salary)}
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="text-sm font-mono">
-                            <div className="text-white">ISR: {formatCurrency(record.income_tax)}</div>
-                            <div className="text-white">RAP: {formatCurrency(record.professional_tax)}</div>
-                            <div className="text-white">IHSS: {formatCurrency(record.social_security)}</div>
-                            <div className="font-semibold border-t border-white/20 pt-1 text-white">
-                              Total: {formatCurrency(record.total_deductions)}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 font-mono font-semibold text-green-400">
-                          {formatCurrency(record.net_salary)}
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="text-sm">
-                            <div className="text-white">Trabajó: {record.days_worked} días</div>
-                            <div className="text-red-400">Ausente: {record.days_absent} días</div>
-                            <div className="text-yellow-400">Tardanza: {record.late_days} días</div>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          {getStatusBadge(record.status)}
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex flex-col gap-1">
-                            {record.status === 'draft' && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => approvePayroll(record.id)}
-                                className="border-white/20 text-white hover:bg-white/10"
-                              >
-                                Aprobar
-                              </Button>
-                            )}
-                            {record.status === 'approved' && (
-                              <Button
-                                size="sm"
-                                onClick={() => markAsPaid(record.id)}
-                                className="bg-brand-800 hover:bg-brand-700 text-white"
-                              >
-                                Marcar Pagado
-                              </Button>
-                            )}
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={async () => await downloadPayrollPDF(record)}
-                              className="text-gray-300 hover:bg-white/10 hover:text-white"
-                            >
-                              📄 Descargar PDF
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={async () => await downloadIndividualReceipt(record)}
-                              className="text-gray-300 hover:bg-white/10 hover:text-white"
-                            >
-                              📄 Descargar Recibo
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => sendPayrollEmail(record)}
-                              className="text-gray-300 hover:bg-white/10 hover:text-white"
-                            >
-                              ✉️ Enviar por Email
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => sendPayrollWhatsApp(record)}
-                              className="text-gray-300 hover:bg-white/10 hover:text-white"
-                            >
-                              💬 Enviar WhatsApp
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-
-                {filteredRecords.length === 0 && (
-                  <div className="text-center py-8 text-gray-300">
-                    No se encontraron registros de nómina.
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
 
       
 
