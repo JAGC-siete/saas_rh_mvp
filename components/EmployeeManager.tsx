@@ -56,6 +56,7 @@ export default function EmployeeManager() {
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null)
   const [showDeactivateModal, setShowDeactivateModal] = useState(false)
   const [employeeToDeactivate, setEmployeeToDeactivate] = useState<Employee | null>(null)
+  const [terminationDate, setTerminationDate] = useState('')
   const { user, loading: sessionLoading } = useAuth()
 
   const getErrorMessage = useCallback((error: unknown) => {
@@ -281,6 +282,9 @@ export default function EmployeeManager() {
     try {
       setIsSubmitting(true)
       
+      // Usar fecha seleccionada o fecha actual
+      const finalTerminationDate = terminationDate || new Date().toISOString().split('T')[0]
+      
       const response = await fetch('/api/employees/update', {
         method: 'PATCH',
         headers: {
@@ -288,7 +292,8 @@ export default function EmployeeManager() {
         },
         body: JSON.stringify({ 
           id: employeeToDeactivate.id,
-          status: 'inactive' 
+          status: 'inactive',
+          termination_date: finalTerminationDate
         }),
       })
 
@@ -299,6 +304,7 @@ export default function EmployeeManager() {
 
       setShowDeactivateModal(false)
       setEmployeeToDeactivate(null)
+      setTerminationDate('') // Resetear fecha
       fetchEmployees()
     } catch (error) {
       console.error('Error deactivating employee:', error)
@@ -306,7 +312,7 @@ export default function EmployeeManager() {
     } finally {
       setIsSubmitting(false)
     }
-  }, [employeeToDeactivate, fetchEmployees])
+  }, [employeeToDeactivate, fetchEmployees, terminationDate])
 
   const shouldFetch = useMemo(() => !!user?.id && !sessionLoading, [user?.id, sessionLoading])
 
@@ -552,10 +558,29 @@ export default function EmployeeManager() {
             <h3 className="text-lg font-semibold text-white mb-4">
               Confirmar Baja de Empleado
             </h3>
-            <p className="text-gray-300 mb-6">
+            <p className="text-gray-300 mb-4">
               ¿Estás seguro de que quieres dar de baja a <strong className="text-white">{employeeToDeactivate.name}</strong>?
               Esta acción cambiará su estado a "Inactivo".
             </p>
+            
+            {/* Campo de fecha de terminación */}
+            <div className="mb-6">
+              <label htmlFor="termination-date" className="block text-sm font-medium text-gray-300 mb-2">
+                Fecha de Terminación
+              </label>
+              <input
+                type="date"
+                id="termination-date"
+                value={terminationDate}
+                onChange={(e) => setTerminationDate(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-800 border border-white/20 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent"
+                placeholder="Selecciona la fecha de terminación"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                Deja vacío para usar la fecha actual
+              </p>
+            </div>
+            
             <div className="flex gap-3">
               <Button
                 onClick={confirmDeactivate}
@@ -569,6 +594,7 @@ export default function EmployeeManager() {
                 onClick={() => {
                   setShowDeactivateModal(false)
                   setEmployeeToDeactivate(null)
+                  setTerminationDate('') // Resetear fecha
                 }}
                 variant="outline"
                 className="flex-1 bg-white/5 border-white/20 text-white hover:bg-white/10"
