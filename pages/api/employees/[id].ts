@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../lib/supabase/server'
+import { authenticateUser } from '../../../lib/auth-utils'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query
@@ -11,14 +12,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === 'PUT') {
     // Update employee
     try {
-      const supabase = createClient(req, res)
-
-      // Get user session
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-      
-      if (authError || !user) {
-        return res.status(401).json({ error: 'Unauthorized' })
+      // AuthN + AuthZ
+      const auth = await authenticateUser(req, res, ['can_manage_employees'])
+      if (!auth.success) {
+        const status = auth.error === 'Permisos insuficientes' ? 403 : 401
+        return res.status(status).json({ error: auth.error, message: auth.message })
       }
+      const supabase = createClient(req, res)
 
       // Validate required fields
       const { 
@@ -50,14 +50,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         })
       }
 
-      // Check if employee exists and belongs to user's company
-      const { data: userProfile, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('company_id')
-        .eq('user_id', user.id)
-        .single()
-
-      if (profileError || !userProfile?.company_id) {
+      // Company context from authenticated user profile
+      const companyId = auth.userProfile?.company_id
+      if (!companyId) {
         return res.status(400).json({ error: 'User profile not found or no company assigned' })
       }
 
@@ -73,7 +68,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(404).json({ error: 'Employee not found' })
       }
 
-      if (existingEmployee.company_id !== userProfile.company_id) {
+      if (existingEmployee.company_id !== companyId) {
         console.error(`Access denied: Employee ${existingEmployee.name} (${existingEmployee.employee_code}) does not belong to user's company`)
         return res.status(403).json({ error: 'Access denied: Employee does not belong to your company' })
       }
@@ -85,6 +80,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .from('employees')
         .select('id')
         .eq('employee_code', employee_code)
+        .eq('company_id', companyId)
         .neq('id', id)
         .single()
 
@@ -148,23 +144,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === 'PATCH') {
     // Partial update (e.g., status change)
     try {
+      // AuthN + AuthZ
+      const auth = await authenticateUser(req, res, ['can_manage_employees'])
+      if (!auth.success) {
+        const status = auth.error === 'Permisos insuficientes' ? 403 : 401
+        return res.status(status).json({ error: auth.error, message: auth.message })
+      }
       const supabase = createClient(req, res)
 
-      // Get user session
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-      
-      if (authError || !user) {
-        return res.status(401).json({ error: 'Unauthorized' })
-      }
-
-      // Check if employee exists and belongs to user's company
-      const { data: userProfile, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('company_id')
-        .eq('user_id', user.id)
-        .single()
-
-      if (profileError || !userProfile?.company_id) {
+      // Company context from authenticated user profile
+      const companyId = auth.userProfile?.company_id
+      if (!companyId) {
         return res.status(400).json({ error: 'User profile not found or no company assigned' })
       }
 
@@ -180,7 +170,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(404).json({ error: 'Employee not found' })
       }
 
-      if (existingEmployee.company_id !== userProfile.company_id) {
+      if (existingEmployee.company_id !== companyId) {
         console.error(`Access denied: Employee ${existingEmployee.name} (${existingEmployee.employee_code}) does not belong to user's company`)
         return res.status(403).json({ error: 'Access denied: Employee does not belong to your company' })
       }

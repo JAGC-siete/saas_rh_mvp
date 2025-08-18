@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../lib/supabase/server'
+import { authenticateUser } from '../../../lib/auth-utils'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -9,32 +10,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     console.log('🔍 Employees Search API: Iniciando...')
 
+    // AuthN + AuthZ (read access allowed for company admins, HR, managers)
+    const auth = await authenticateUser(req, res, ['can_view_employees', 'can_manage_employees'])
+    if (!auth.success) {
+      const status = auth.error === 'Permisos insuficientes' ? 403 : 401
+      return res.status(status).json({ error: auth.error, message: auth.message })
+    }
+
     // Create Supabase client for Pages API
     const supabase = createClient(req, res)
 
-    // Get user (more secure than getSession)
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
-    if (authError || !user) {
-      console.error('❌ Auth error:', authError)
-      return res.status(401).json({ error: 'Unauthorized' })
-    }
-
-    // Get user's company_id (optional for now)
-    let companyId = '00000000-0000-0000-0000-000000000001' // Default company ID
-    
-    try {
-      const { data: userProfile, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('company_id')
-        .eq('user_id', user.id)
-        .single()
-
-      if (!profileError && userProfile?.company_id) {
-        companyId = userProfile.company_id
-      }
-    } catch (error) {
-      console.log('⚠️ No user profile found, using default company ID')
+    // Company context from authenticated user profile (no defaults)
+    const companyId = auth.userProfile?.company_id
+    if (!companyId) {
+      return res.status(400).json({ error: 'User profile not found or no company assigned' })
     }
 
     // Get query parameters

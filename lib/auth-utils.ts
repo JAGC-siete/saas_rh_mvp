@@ -17,6 +17,7 @@ export interface RolePermissions {
 const ROLE_PERMISSIONS: RolePermissions = {
   'super_admin': ['*'], // Todos los permisos
   'company_admin': [
+    'can_view_employees',
     'can_manage_employees',
     'can_view_payroll', 
     'can_manage_attendance',
@@ -24,6 +25,7 @@ const ROLE_PERMISSIONS: RolePermissions = {
     'can_view_reports'
   ],
   'hr_manager': [
+    'can_view_employees',
     'can_manage_employees',
     'can_view_payroll',
     'can_manage_attendance', 
