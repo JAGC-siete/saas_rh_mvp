@@ -55,18 +55,19 @@ export default function LandingPage() {
       <header className="fixed top-0 left-0 right-0 z-50">
         {/* Fixed Header with Glass Effect */}
         <div
-          className={`w-full transition-all duration-700 ${
+          className={`w-full transition-all duration-300 ${
             isScrolled 
-              ? 'bg-black/80 backdrop-blur-xl border-b border-white/20 shadow-2xl shadow-black/40' 
-              : 'bg-transparent backdrop-blur-sm border-b border-transparent'
+              ? 'bg-slate-900/90 backdrop-blur-sm border-b border-white/20 shadow-lg' 
+              : 'bg-transparent border-b border-white/10'
           }`}
         >
           <nav className="px-6 lg:px-8">
             <div className="flex items-center justify-between h-16">
               <div className="flex items-center space-x-3">
-                <span className="text-2xl font-bold text-white">
-                  <span className="text-white font-bold">CLOUDHR Tech</span> <span className="text-brand-400">por SISU</span>
-                </span>
+                <h1 className="text-xl font-bold text-white">
+                  <span className="text-white">Humano SISU</span>{' '}
+                  <span className="text-brand-300">presenta Los Robots de RRHH</span>
+                </h1>
               </div>
 
               <div className="hidden md:block">
