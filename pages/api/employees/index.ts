@@ -48,6 +48,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
+    // Company context from authenticated user profile
+    const companyId = auth.userProfile?.company_id
+    if (!companyId) {
+      return res.status(400).json({ error: 'User profile not found or no company assigned' })
+    }
+
     // Check if employee code already exists within the same company
     const { data: existingEmployee, error: checkError } = await supabase
       .from('employees')
@@ -62,12 +68,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (existingEmployee) {
       return res.status(409).json({ error: 'Employee code already exists' })
-    }
-
-    // Company context from authenticated user profile
-    const companyId = auth.userProfile?.company_id
-    if (!companyId) {
-      return res.status(400).json({ error: 'User profile not found or no company assigned' })
     }
 
     // Create employee data
