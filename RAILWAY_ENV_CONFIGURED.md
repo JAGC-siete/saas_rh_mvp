@@ -3,10 +3,10 @@
 ## 🔧 Variables Aplicadas (NUEVAS CLAVES)
 
 ```bash
-NEXT_PUBLIC_SUPABASE_URL="https://fwyxmovfrzauebiqxchz.supabase.co"
-NEXT_PUBLIC_SUPABASE_ANON_KEY="your_supabase_jwt_token_here"
-SUPABASE_SERVICE_ROLE_KEY="your_supabase_jwt_token_here"
-DATABASE_URL="postgresql://postgres:your_database_password_here@aws-0-us-east-2.pooler.supabase.com:6543/postgres"
+NEXT_PUBLIC_SUPABASE_URL="https://YOUR-PROJECT.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="<SET-IN-RAILWAY>"
+SUPABASE_SERVICE_ROLE_KEY="<SET-IN-RAILWAY>"
+DATABASE_URL="postgresql://postgres:password@host:5432/database" # example only
 NODE_ENV="production"
 ```
 

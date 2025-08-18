@@ -58,13 +58,13 @@ function createEnvFile() {
 # =============================================================================
 
 # URL de Supabase (pública - accesible desde el frontend)
-NEXT_PUBLIC_SUPABASE_URL=https://fwyxmovfrzauebiqxchz.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://YOUR-PROJECT.supabase.co
 
 # Clave anónima de Supabase (pública - accesible desde el frontend)
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ3eXhtb3ZmcnphdWViaXF4Y2h6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIxODk5MjEsImV4cCI6MjA2Nzc2NTkyMX0.pXArDqHGA4yjprTqJfsNQXwzS-WLz6NCK5QRbLAyYmA
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
 
 # Clave de servicio de Supabase (privada - solo backend)
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ3eXhtb3ZmcnphdWViaXF4Y2h6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MjE4OTkyMSwiZXhwIjoyMDY3NzY1OTIxfQ.7tCj7HGw9MevF1Q9EEoOvD6CXf4M6f0iu37U-vjE76I
+SUPABASE_SERVICE_ROLE_KEY=
 
 # =============================================================================
 # 🔑 JWT CONFIGURATION
@@ -78,14 +78,14 @@ JWT_SECRET=${jwtSecret}
 # =============================================================================
 
 # URL del sitio (para CORS y redirecciones)
-NEXT_PUBLIC_SITE_URL=https://humanosisu.net
+NEXT_PUBLIC_SITE_URL=
 
 # =============================================================================
 # 🗄️ DATABASE CONFIGURATION
 # =============================================================================
 
 # URL de conexión a la base de datos (para microservicios)
-DATABASE_URL=postgresql://postgres:p5duKqOflWx7bBmJ@aws-0-us-east-2.pooler.supabase.com:6543/postgres
+DATABASE_URL=
 
 # =============================================================================
 # 🔄 REDIS CONFIGURATION (para sesiones y cache)
@@ -258,18 +258,18 @@ function showEnvInstructions() {
   log('', 'reset');
   
   const manualContent = `# Supabase Configuration
-NEXT_PUBLIC_SUPABASE_URL=https://fwyxmovfrzauebiqxchz.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ3eXhtb3ZmcnphdWViaXF4Y2h6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIxODk5MjEsImV4cCI6MjA2Nzc2NTkyMX0.pXArDqHGA4yjprTqJfsNQXwzS-WLz6NCK5QRbLAyYmA
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ3eXhtb3ZmcnphdWViaXF4Y2h6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MjE4OTkyMSwiZXhwIjoyMDY3NzY1OTIxfQ.7tCj7HGw9MevF1Q9EEoOvD6CXf4M6f0iu37U-vjE76I
+NEXT_PUBLIC_SUPABASE_URL=https://YOUR-PROJECT.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
 
 # JWT Configuration
 JWT_SECRET=tu_jwt_secret_unico_y_seguro_aqui
 
 # Site Configuration
-NEXT_PUBLIC_SITE_URL=https://humanosisu.net
+NEXT_PUBLIC_SITE_URL=
 
 # Database Configuration
-DATABASE_URL=postgresql://postgres:p5duKqOflWx7bBmJ@aws-0-us-east-2.pooler.supabase.com:6543/postgres
+DATABASE_URL=
 
 # Session Configuration
 SESSION_SECRET=tu_session_secret_unico_y_seguro_aqui

@@ -1,4 +1,5 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { serialize } from 'cookie'
 import { NextApiRequest, NextApiResponse } from 'next'
 
 export function createClient(req: NextApiRequest, res: NextApiResponse) {
@@ -17,14 +18,44 @@ export function createClient(req: NextApiRequest, res: NextApiResponse) {
         return req.cookies[name]
       },
       set(name: string, value: string, options: CookieOptions) {
-        res.setHeader('Set-Cookie', [
-          `${name}=${value}; Path=/; ${options.httpOnly ? 'HttpOnly;' : ''} ${options.secure ? 'Secure;' : ''} SameSite=${options.sameSite || 'Lax'}`
-        ])
+        const cookie = serialize(name, value, {
+          path: options?.path ?? '/',
+          httpOnly: options?.httpOnly ?? false,
+          secure: options?.secure ?? false,
+          sameSite: (options?.sameSite as any) ?? 'lax',
+          domain: options?.domain,
+          maxAge: options?.maxAge,
+          expires: options?.expires,
+        })
+
+        const prev = res.getHeader('Set-Cookie')
+        if (!prev) {
+          res.setHeader('Set-Cookie', cookie)
+        } else if (Array.isArray(prev)) {
+          res.setHeader('Set-Cookie', [...prev, cookie])
+        } else {
+          res.setHeader('Set-Cookie', [prev as string, cookie])
+        }
       },
       remove(name: string, options: CookieOptions) {
-        res.setHeader('Set-Cookie', [
-          `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; ${options.httpOnly ? 'HttpOnly;' : ''} ${options.secure ? 'Secure;' : ''} SameSite=${options.sameSite || 'Lax'}`
-        ])
+        const cookie = serialize(name, '', {
+          path: options?.path ?? '/',
+          httpOnly: options?.httpOnly ?? false,
+          secure: options?.secure ?? false,
+          sameSite: (options?.sameSite as any) ?? 'lax',
+          domain: options?.domain,
+          maxAge: 0,
+          expires: new Date(0),
+        })
+
+        const prev = res.getHeader('Set-Cookie')
+        if (!prev) {
+          res.setHeader('Set-Cookie', cookie)
+        } else if (Array.isArray(prev)) {
+          res.setHeader('Set-Cookie', [...prev, cookie])
+        } else {
+          res.setHeader('Set-Cookie', [prev as string, cookie])
+        }
       },
     },
   })

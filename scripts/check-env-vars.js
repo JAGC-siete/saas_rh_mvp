@@ -151,8 +151,8 @@ function showQuickFix() {
   log('\n2. O crear manualmente .env.local con:', 'blue');
   log('   # Supabase Configuration', 'yellow');
   log('   NEXT_PUBLIC_SUPABASE_URL=https://fwyxmovfrzauebiqxchz.supabase.co', 'yellow');
-  log('   NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ3eXhtb3ZmcnphdWViaXF4Y2h6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIxODk5MjEsImV4cCI6MjA2Nzc2NTkyMX0.pXArDqHGA4yjprTqJfsNQXwzS-WLz6NCK5QRbLAyYmA', 'yellow');
-  log('   SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ3eXhtb3ZmcnphdWViaXF4Y2h6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MjE4OTkyMSwiZXhwIjoyMDY3NzY1OTIxfQ.7tCj7HGw9MevF1Q9EEoOvD6CXf4M6f0iu37U-vjE76I', 'yellow');
+  log('   NEXT_PUBLIC_SUPABASE_ANON_KEY=XXXXX', 'yellow');
+  log('   SUPABASE_SERVICE_ROLE_KEY=XXXXX', 'yellow');
   log('   ', 'reset');
   log('   # JWT Configuration', 'yellow');
   log('   JWT_SECRET=tu_jwt_secret_unico_y_seguro_aqui', 'yellow');
@@ -161,7 +161,7 @@ function showQuickFix() {
   log('   NEXT_PUBLIC_SITE_URL=https://humanosisu.net', 'yellow');
   log('   ', 'reset');
   log('   # Database Configuration', 'yellow');
-  log('   DATABASE_URL=postgresql://postgres:p5duKqOflWx7bBmJ@aws-0-us-east-2.pooler.supabase.com:6543/postgres', 'yellow');
+  log('   DATABASE_URL=postgresql://postgres:password@host:port/database', 'yellow');
   log('   ', 'reset');
   log('   # Session Configuration', 'yellow');
   log('   SESSION_SECRET=tu_session_secret_unico_y_seguro_aqui', 'yellow');

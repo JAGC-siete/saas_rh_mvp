@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createPagesServerClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '../../../lib/supabase/server'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -7,8 +7,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Create Supabase client for Pages API
-    const supabase = createPagesServerClient({ req, res })
+    // Create Supabase client for Pages API (SSR-safe cookies)
+    const supabase = createClient(req, res)
 
     // Get user session
     const { data: { user }, error: authError } = await supabase.auth.getUser()

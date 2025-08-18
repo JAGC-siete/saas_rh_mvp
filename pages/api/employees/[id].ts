@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createPagesServerClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '../../../lib/supabase/server'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query
@@ -11,7 +11,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === 'PUT') {
     // Update employee
     try {
-      const supabase = createPagesServerClient({ req, res })
+      const supabase = createClient(req, res)
 
       // Get user session
       const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -148,7 +148,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === 'PATCH') {
     // Partial update (e.g., status change)
     try {
-      const supabase = createPagesServerClient({ req, res })
+      const supabase = createClient(req, res)
 
       // Get user session
       const { data: { user }, error: authError } = await supabase.auth.getUser()
