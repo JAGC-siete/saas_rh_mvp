@@ -33,7 +33,7 @@ export default function EmployeeRow({
         </div>
       </td>
       <td className="py-3 px-4">
-        <div className="font-medium">{employee.position}</div>
+        <div className="font-medium">{employee.team}</div>
         <div className="text-sm text-gray-500 capitalize">{employee.role}</div>
       </td>
       <td className="py-3 px-4">{employee.departments?.name || 'N/A'}</td>

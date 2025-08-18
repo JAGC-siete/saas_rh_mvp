@@ -8,7 +8,6 @@ export interface Employee {
   phone: string
   role: string
   team: string
-  position: string
   base_salary: number
   hire_date: string
   termination_date: string

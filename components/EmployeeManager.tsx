@@ -25,7 +25,6 @@ const INITIAL_FORM_DATA = {
   phone: '',
   role: '',
   team: '',
-  position: '',
   department_id: '',
   work_schedule_id: '',
   base_salary: '',
@@ -253,8 +252,7 @@ export default function EmployeeManager() {
       email: employee.email || '',
       phone: employee.phone || '',
       role: employee.role || '',
-      team: employee.team || '',
-      position: employee.position || '',
+      team: employee.team || '', // Usar team que sí existe en la BD
       department_id: employee.department_id || '',
       work_schedule_id: employee.work_schedule_id || '',
       base_salary: employee.base_salary?.toString() || '',

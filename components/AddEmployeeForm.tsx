@@ -177,22 +177,6 @@ function AddEmployeeForm({
                   className="bg-white/10 border-white/20 text-white placeholder-gray-400"
                 />
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-white mb-1" htmlFor="position">
-                  Posición
-                </label>
-                <Input
-                  id="position"
-                  name="position"
-                  autoComplete="off"
-                  disabled={loading}
-                  value={v(formData?.position)}
-                  onChange={(e) => onFormChange('position', e.target.value)}
-                  placeholder="Software Developer"
-                  className="bg-white/10 border-white/20 text-white placeholder-gray-400"
-                />
-              </div>
             </div>
           </div>
 

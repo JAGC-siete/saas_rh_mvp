@@ -69,7 +69,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       phone,
       role,
       team,
-      position,
       department_id,
       work_schedule_id,
       base_salary,
@@ -90,7 +89,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       name: !!name,
       status: status,
       termination_date: termination_date,
-      hasOtherFields: !!(email || phone || role || team || position || department_id || work_schedule_id || base_salary || hire_date || bank_name || bank_account || emergency_contact_name || emergency_contact_phone || address || metadata)
+      hasOtherFields: !!(email || phone || role || team || department_id || work_schedule_id || base_salary || hire_date || bank_name || bank_account || emergency_contact_name || emergency_contact_phone || address || metadata)
     })
 
     // If updating employee_code, ensure uniqueness within the company
@@ -120,7 +119,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ...(phone !== undefined ? { phone: phone || null } : {}),
       ...(role !== undefined ? { role: role || null } : {}),
       ...(team !== undefined ? { team: team || null } : {}),
-      ...(position !== undefined ? { position: position || null } : {}),
       ...(department_id !== undefined ? { department_id: department_id || null } : {}),
       ...(work_schedule_id !== undefined ? { work_schedule_id: work_schedule_id || null } : {}),
       ...(base_salary !== undefined ? { base_salary: typeof base_salary === 'string' ? parseFloat(base_salary) : base_salary } : {}),
