@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../lib/supabase/server'
+import { createAdminClient } from '../../../lib/supabase/server'
 import { authenticateUser } from '../../../lib/auth-utils'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -18,7 +18,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const status = auth.error === 'Permisos insuficientes' ? 403 : 401
         return res.status(status).json({ error: auth.error, message: auth.message })
       }
-      const supabase = createClient(req, res)
+      const supabase = createAdminClient()
 
       // Validate required fields
       const { 
@@ -150,7 +150,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const status = auth.error === 'Permisos insuficientes' ? 403 : 401
         return res.status(status).json({ error: auth.error, message: auth.message })
       }
-      const supabase = createClient(req, res)
+      const supabase = createAdminClient()
 
       // Company context from authenticated user profile
       const companyId = auth.userProfile?.company_id

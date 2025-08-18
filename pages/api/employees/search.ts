@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../lib/supabase/server'
+import { createAdminClient } from '../../../lib/supabase/server'
 import { authenticateUser } from '../../../lib/auth-utils'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -17,8 +17,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(status).json({ error: auth.error, message: auth.message })
     }
 
-    // Create Supabase client for Pages API
-    const supabase = createClient(req, res)
+    // Use admin client for server-side operation (read)
+    const supabase = createAdminClient()
 
     // Company context from authenticated user profile (no defaults)
     const companyId = auth.userProfile?.company_id
