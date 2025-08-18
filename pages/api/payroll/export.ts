@@ -9,9 +9,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     // 🔒 AUTENTICACIÓN REQUERIDA
     const supabase = createClient(req, res)
-    const { data: { session } } = await supabase.auth.getSession()
+    // ✅ Get user with getUser() to validate token with Supabase server
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
     
-    if (!session) {
+    if (authError || !user) {
       return res.status(401).json({ 
         error: 'No autorizado',
         message: 'Debe iniciar sesión para exportar nómina'
@@ -22,7 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { data: userProfile } = await supabase
       .from('user_profiles')
       .select('role, permissions, company_id')
-      .eq('id', session.user.id)
+      .eq('id', user.id)
       .single()
 
     if (!userProfile) {

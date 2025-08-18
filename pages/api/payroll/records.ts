@@ -9,14 +9,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     // Validar autenticación
     const supabase = createClient(req, res)
-    // Get user session
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    // ✅ Get user with getUser() to validate token with Supabase server
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
     
-    if (sessionError || !session?.user) {
+    if (authError || !user) {
       return res.status(401).json({ error: 'Unauthorized' })
     }
 
-    const userId = session.user.id
+    const userId = user.id
 
     // Verificar permisos del usuario
     const { data: userProfile } = await supabase
