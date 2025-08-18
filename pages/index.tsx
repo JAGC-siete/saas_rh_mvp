@@ -6,6 +6,7 @@ import ServicesSection from '../components/ServicesSection'
 import dynamic from 'next/dynamic'
 
 const CloudBackground = dynamic(() => import('../components/CloudBackground'), { ssr: false })
+const HeroCarousel = dynamic(() => import('../components/HeroCarousel'), { ssr: false })
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import {
   Bars3Icon,
@@ -54,18 +55,19 @@ export default function LandingPage() {
       <header className="fixed top-0 left-0 right-0 z-50">
         {/* Fixed Header with Glass Effect */}
         <div
-          className={`w-full transition-all duration-700 ${
+          className={`w-full transition-all duration-300 ${
             isScrolled 
-              ? 'bg-black/80 backdrop-blur-xl border-b border-white/20 shadow-2xl shadow-black/40' 
-              : 'bg-transparent backdrop-blur-sm border-b border-transparent'
+              ? 'bg-slate-900/90 backdrop-blur-sm border-b border-white/20 shadow-lg' 
+              : 'bg-transparent border-b border-white/10'
           }`}
         >
           <nav className="px-6 lg:px-8">
             <div className="flex items-center justify-between h-16">
               <div className="flex items-center space-x-3">
-                <span className="text-2xl font-bold text-white">
-                  <span className="text-white font-bold">CLOUDHR Tech</span> <span className="text-brand-400">por SISU</span>
-                </span>
+                <h1 className="text-xl font-bold text-white">
+                  <span className="text-white">Humano SISU</span>{' '}
+                  <span className="text-brand-300">presenta Los Robots de RRHH</span>
+                </h1>
               </div>
 
               <div className="hidden md:block">
@@ -146,7 +148,7 @@ export default function LandingPage() {
                 </a>
                 <div className="px-3 py-2 space-y-2">
                   <Link
-                    href="/demo"
+                    href="/activar"
                     className="text-brand-200/90 hover:text-white block w-full text-center py-2 px-4 font-medium"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
@@ -174,34 +176,16 @@ export default function LandingPage() {
           <div className="flex flex-wrap justify-center gap-3 md:gap-6 mb-8 animate-fade-up-subtle">
             <span className="text-sm bg-green-500/10 text-green-400 px-3 py-1 rounded-full border border-green-500/20 hover:bg-green-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-100">✓ Cumple STSS Honduras</span>
             <span className="text-sm bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full border border-blue-500/20 hover:bg-blue-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-200">⚡ Setup en 24 horas</span>
-            <span className="text-sm bg-orange-500/10 text-orange-400 px-3 py-1 rounded-full border border-orange-500/20 hover:bg-orange-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-300">🔥 37 empresas activas</span>
+            <span className="text-sm bg-orange-500/10 text-orange-400 px-3 py-1 rounded-full border border-orange-500/20 hover:bg-orange-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-300">🔥 02 empresas activas</span>
             <span className="text-sm bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full border border-emerald-500/20 hover:bg-emerald-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-500">0 errores de cálculo</span>
+            <span className="text-sm bg-purple-500/10 text-purple-400 px-3 py-1 rounded-full border border-purple-500/20 hover:bg-purple-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-600">📊 IHSS, RAP, ISR 2025</span>
           </div>
 
-          <div className="text-center max-w-4xl mx-auto">
-                          <h1 className="text-5xl md:text-6xl font-bold text-white mb-4 leading-tight">
-                De 4 horas de planilla;
-                <span className="block text-brand-400">a 2 minutos;</span>
-                <span className="block text-brand-700">0 errores.</span>
-              </h1>
-
-            <p className="text-xl text-brand-200/90 mb-8">
-              Adiós a las tareas repetitivas. Sin pasivo laboral. Sin dramas.
-              <strong className="text-white"> Actívalo HOY.</strong>
-            </p>
-
-            {/* CTA group */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 md:gap-4 mb-8">
-              <Link
-                href="/activar"
-                className="px-6 md:px-8 py-3 md:py-4 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-semibold text-base md:text-lg transition-all duration-300 shadow-lg shadow-black/20 hover:-translate-y-0.5 active:translate-y-0 hover:shadow-xl hover:shadow-brand-900/50 animate-pulse-glow"
-              >
-                Quiero Automatizar mi RH
-              </Link>
-            </div>
-
-
+          {/* Hero Carousel Section */}
+          <div className="text-center max-w-6xl mx-auto mb-12">
+            <HeroCarousel />
           </div>
+
         </div>
       </section>
 
@@ -284,6 +268,27 @@ export default function LandingPage() {
 
       {/* Shared Cloud Background */}
       <CloudBackground />
+
+      {/* Footer */}
+      <footer className="border-t border-white/10 mt-20">
+        <div className="max-w-6xl mx-auto px-4 py-12">
+          <div className="text-center">
+            <p className="text-slate-400 mb-4">
+              Protegemos tu información. Sin spam, sin venta de datos. <strong>Solo para contactarte</strong>.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center text-sm">
+              <Link 
+                href="/politicadeprivacidad" 
+                className="text-brand-300 hover:text-brand-400 transition-colors underline decoration-brand-400/30 hover:decoration-brand-400"
+              >
+                Política de Privacidad
+              </Link>
+              <span className="text-slate-500">•</span>
+              <span className="text-slate-500">© 2025 Humano SISU. Todos los derechos reservados.</span>
+            </div>
+          </div>
+        </div>
+      </footer>
 
       <DemoFooter />
     </div>

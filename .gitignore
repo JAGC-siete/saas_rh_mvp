@@ -87,6 +87,9 @@ archived_versions/
 nuevo-clon/
 terraform/
 
+# Exclude problematic directories from build
+SAAS 2.0/
+
 # SQL Scripts and Reports (Local only - DO NOT COMMIT)
 create-*-user.sql
 create-*-*.sql

@@ -43,7 +43,7 @@ export default function ServicesSection() {
 
             <div className="mt-5 flex gap-3">
               <Button variant="outline" asChild className="h-10 px-4">
-                <Link href="/demo#asistencia">Ver módulo</Link>
+                <Link href="/activar">Solicitar Demo</Link>
               </Button>
               <Link href="/activar" className="inline-flex items-center underline decoration-white/20 underline-offset-4 hover:decoration-brand-400 transition text-brand-300 hover:text-white">
                 Activar <ArrowRightIcon className="ml-1 h-4 w-4" />
@@ -71,7 +71,7 @@ export default function ServicesSection() {
 
             <div className="mt-5 flex gap-3">
               <Button variant="outline" asChild className="h-10 px-4">
-                <Link href="/demo#reportes">Ver módulo</Link>
+                <Link href="/activar">Solicitar Demo</Link>
               </Button>
               <Link href="/activar" className="inline-flex items-center underline decoration-white/20 underline-offset-4 hover:decoration-brand-400 transition text-brand-300 hover:text-white">
                 Activar <ArrowRightIcon className="ml-1 h-4 w-4" />
@@ -105,7 +105,7 @@ export default function ServicesSection() {
 
             <div className="mt-5 flex gap-3">
               <Button variant="outline" asChild className="h-10 px-4">
-                <Link href="/demo#nomina">Ver módulo</Link>
+                <Link href="/activar">Solicitar Demo</Link>
               </Button>
               <Link href="/activar" className="inline-flex items-center underline decoration-white/20 underline-offset-4 hover:decoration-brand-400 transition text-brand-300 hover:text-white">
                 Activar <ArrowRightIcon className="ml-1 h-4 w-4" />
@@ -133,7 +133,7 @@ export default function ServicesSection() {
 
             <div className="mt-5 flex gap-3">
               <Button variant="outline" asChild className="h-10 px-4">
-                <Link href="/demo#nomina">Ver módulo</Link>
+                <Link href="/activar">Solicitar Demo</Link>
               </Button>
               <Link href="/activar" className="inline-flex items-center underline decoration-white/20 underline-offset-4 hover:decoration-brand-400 transition text-brand-300 hover:text-white">
                 Activar <ArrowRightIcon className="ml-1 h-4 w-4" />
@@ -147,10 +147,10 @@ export default function ServicesSection() {
 
       {/* Mini-proof bar */}
       <div className="mt-8 rounded-xl glass border border-white/10 p-4 flex flex-col sm:flex-row sm:items-center gap-3 text-brand-200">
-        <span className="text-white/90 font-medium">Prueba social:</span>
-        <span className="flex items-center gap-2"><CheckCircleIcon className="h-5 w-5 text-emerald-400" /> 80% menos tiempo en Paragon</span>
-        <span className="flex items-center gap-2"><CheckCircleIcon className="h-5 w-5 text-emerald-400" /> 0 multas STSS desde implementación</span>
-        <span className="sm:ml-auto text-brand-300/90">Transparencia total en auditoría</span>
+        <span className="text-white/90 font-medium">Pruébalo:</span>
+        <span className="flex items-center gap-2"><CheckCircleIcon className="h-5 w-5 text-emerald-400" /> 99% menos tiempo corrigiendo errores</span>
+        <span className="flex items-center gap-2"><CheckCircleIcon className="h-5 w-5 text-emerald-400" /> IHSS, RAP, ISR, 2025 en 1 click</span>
+        <span className="flex items-center gap-2"><CheckCircleIcon className="h-5 w-5 text-emerald-400" /> Cumplimiento STSS desde implementación</span>
       </div>
 
       {/* Animaciones clave globales, sin JS */}
