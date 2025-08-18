@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
 const CloudBackground = dynamic(() => import('../components/CloudBackground'), { ssr: false })
 const HeroCarousel = dynamic(() => import('../components/HeroCarousel'), { ssr: false })
+import LanguageToggle from '../components/LanguageToggle'
+import { useLanguage } from '../lib/hooks/useLanguage'
 import {
   UserGroupIcon,
   ClockIcon,
@@ -41,6 +43,7 @@ const services = [
 ]
 
 export default function LandingPage() {
+  const { t } = useLanguage()
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
@@ -82,10 +85,19 @@ export default function LandingPage() {
       {/* Header */}
       <header className="relative z-50">
         {/* Sticky Header */}
-        <div className={`sticky-header ${isScrolled ? 'visible' : ''} sticky top-0 z-40 glass border-b border-white/10 transition-all duration-300`}>
+        <div className={`sticky-header ${isScrolled ? 'visible' : ''} sticky top-0 z-40 transition-all duration-300 ${
+          isScrolled 
+            ? 'bg-slate-900/90 backdrop-blur-sm border-b border-white/20 shadow-lg' 
+            : 'bg-transparent border-b border-white/10'
+        }`}>
           <nav className="px-6 lg:px-8">
             <div className="flex items-center justify-between h-16">
-              <div className="flex items-center" />
+              <div className="flex items-center">
+                <h1 className="text-xl font-bold text-white">
+                  <span className="text-white">Humano SISU</span>{' '}
+                  <span className="text-brand-300">presenta Los Robots de RRHH</span>
+                </h1>
+              </div>
               
               <div className="hidden md:block">
                 <div className="ml-10 flex items-baseline space-x-4">
@@ -110,11 +122,12 @@ export default function LandingPage() {
                   >
                     Precios
                   </a>
+                  <LanguageToggle />
                   <Link
                     href="/activar"
                     className="text-brand-200/90 hover:text-brand-400 hover:-translate-y-0.5 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 border-b-2 border-transparent hover:border-brand-400"
                   >
-                    Solicitar Prueba
+                    {t('landing.hero.cta')}
                   </Link>
                   <Link
                     href="/login"
@@ -203,14 +216,10 @@ export default function LandingPage() {
       {/* Hero Section - Título principal y CTA */}
       <section className="landing-section text-center glass-strong pt-16 border-b border-white/10">
         <h1 className="text-4xl md:text-6xl font-bold mb-6 text-white leading-tight">
-          Automatiza el 80% del trabajo de RH
-          <br />
-          <span className="text-brand-400">en menos de 24 horas</span>
+          {t('landing.hero.title')}
         </h1>
         <p className="mb-8 text-xl max-w-4xl mx-auto text-brand-200/90 leading-relaxed">
-          Asistencia, nómina y vouchers funcionando automáticamente. 
-          <br />
-          <span className="text-brand-300 font-medium">Sin errores, sin pasivo laboral, sin letras pequeñas.</span>
+          {t('landing.hero.subtitle')}
         </p>
         
         {/* Hero CTA Buttons - Más prominentes */}
@@ -220,14 +229,14 @@ export default function LandingPage() {
             className="bg-brand-900 hover:bg-orange-500 hover:-translate-y-1 hover:shadow-xl text-white px-10 py-4 rounded-xl font-bold text-lg shadow-lg transition-all duration-300 focus-visible:outline-none focus-visible:focus-ring transform"
             aria-label="Quiero automatizar mi RH"
           >
-            🚀 Activar mi RH automático
+            🚀 {t('landing.hero.cta')}
           </Link>
           <Link
             href="/activar"
             className="bg-white/10 border-2 border-white/20 text-white px-10 py-4 rounded-xl font-bold text-lg backdrop-blur hover:bg-white/20 hover:-translate-y-1 hover:shadow-xl hover:border-brand-400 transition-all duration-300 focus-visible:outline-none focus-visible:focus-ring transform"
             aria-label="Quiero ver cómo funciona"
           >
-            🎯 Ver demo en vivo
+            🎯 {t('landing.hero.ctaDemo')}
           </Link>
         </div>
         
@@ -526,17 +535,17 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-4 py-12">
           <div className="text-center">
             <p className="text-slate-400 mb-4">
-              Protegemos tu información. Sin spam, sin venta de datos. <strong>Solo para contactarte</strong>.
+              {t('landing.footer.protection')}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center text-sm">
               <Link 
                 href="/politicadeprivacidad" 
                 className="text-brand-300 hover:text-brand-400 transition-colors underline decoration-brand-400/30 hover:decoration-brand-400"
               >
-                Política de Privacidad
+                {t('landing.footer.privacy')}
               </Link>
               <span className="text-slate-500">•</span>
-              <span className="text-slate-500">© 2025 Humano SISU. Todos los derechos reservados.</span>
+              <span className="text-slate-500">{t('landing.footer.copyright')}</span>
             </div>
           </div>
         </div>
