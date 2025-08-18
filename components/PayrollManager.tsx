@@ -846,64 +846,255 @@ export default function PayrollManager() {
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-white mb-1">
-                  Filtrar por Período
-                </label>
-                <Input
-                  type="month"
-                  value={selectedPeriod}
-                  onChange={handlePeriodChange}
-                  className="w-48 bg-white/10 border-white/20 text-white placeholder-gray-400"
-                />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    📅 Filtro por Período
+                  </label>
+                  <Input
+                    type="month"
+                    value={selectedPeriod}
+                    onChange={handlePeriodChange}
+                    className="w-full bg-white/10 border-white/20 text-white placeholder-gray-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">🏢 Departamento</label>
+                  <select value={filterDept} onChange={e=>setFilterDept(e.target.value)} className="w-full p-3 bg-white/10 border border-white/20 text-white rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
+                    <option value="">Todos los Departamentos</option>
+                    {Object.entries(departments).map(([id,name])=> (
+                      <option key={id} value={id}>{name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <div className="flex items-end gap-2">
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">📅 Año</label>
+                  <Input 
+                    type="number" 
+                    placeholder="2025" 
+                    value={filterYear} 
+                    onChange={e=>setFilterYear(e.target.value)} 
+                    className="w-full bg-white/10 border-white/20 text-white" 
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">📅 Mes (01-12)</label>
+                  <Input 
+                    type="text" 
+                    placeholder="08" 
+                    value={filterMonth} 
+                    onChange={e=>setFilterMonth(e.target.value)} 
+                    className="w-full bg-white/10 border-white/20 text-white" 
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">⏰ Quincena</label>
+                  <div className="flex gap-2">
+                    <Button 
+                      size="sm" 
+                      variant={filterQuincena===1?undefined:'outline'} 
+                      onClick={()=>setFilterQuincena(1)} 
+                      className={`flex-1 ${filterQuincena===1? 'bg-brand-800 text-white':'border-white/20 text-white hover:bg-white/10'}`}
+                    >
+                      1-15
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant={filterQuincena===2?undefined:'outline'} 
+                      onClick={()=>setFilterQuincena(2)} 
+                      className={`flex-1 ${filterQuincena===2? 'bg-brand-800 text-white':'border-white/20 text-white hover:bg-white/10'}`}
+                    >
+                      16-30
+                    </Button>
+                  </div>
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={()=>setFilterQuincena('')} 
+                    className="w-full mt-2 text-gray-300 hover:bg-white/10 hover:text-white"
+                  >
+                    Limpiar Quincena
+                  </Button>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">👤 Empleado</label>
+                  <Input 
+                    placeholder="Nombre o código" 
+                    value={filterEmployee} 
+                    onChange={e=>setFilterEmployee(e.target.value)} 
+                    className="w-full bg-white/10 border-white/20 text-white" 
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-6 pt-6 border-t border-white/10">
+              <div className="flex justify-between items-center">
+                <div className="text-sm text-gray-300">
+                  Filtros activos: {[
+                    selectedPeriod && 'Período',
+                    filterYear && 'Año',
+                    filterMonth && 'Mes',
+                    filterQuincena && 'Quincena',
+                    filterDept && 'Departamento',
+                    filterEmployee && 'Empleado'
+                  ].filter(Boolean).length}
+                </div>
                 <Button 
                   variant="outline" 
                   onClick={clearAllFilters}
                   className="border-white/20 text-white hover:bg-white/10"
                 >
-                  Limpiar Todos los Filtros
+                  🗑️ Limpiar Todos los Filtros
                 </Button>
-                <Button variant="outline" className="border-white/20 text-white hover:bg-white/10" onClick={()=>sendPayrollEmail()}>Enviar Planilla por Email</Button>
-                <Button variant="outline" className="border-white/20 text-white hover:bg-white/10" onClick={()=>sendPayrollWhatsApp()}>Enviar por WhatsApp</Button>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-white mb-1">Año</label>
-                <Input type="number" placeholder="2025" value={filterYear} onChange={e=>setFilterYear(e.target.value)} className="bg-white/10 border-white/20 text-white" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-white mb-1">Mes (01-12)</label>
-                <Input type="text" placeholder="08" value={filterMonth} onChange={e=>setFilterMonth(e.target.value)} className="bg-white/10 border-white/20 text-white" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-white mb-1">Quincena</label>
-                <div className="flex gap-2">
-                  <Button size="sm" variant={filterQuincena===1?undefined:'outline'} onClick={()=>setFilterQuincena(1)} className={filterQuincena===1? 'bg-brand-800 text-white':'border-white/20 text-white'}>1-15</Button>
-                  <Button size="sm" variant={filterQuincena===2?undefined:'outline'} onClick={()=>setFilterQuincena(2)} className={filterQuincena===2? 'bg-brand-800 text-white':'border-white/20 text-white'}>16-30</Button>
-                  <Button size="sm" variant="ghost" onClick={()=>setFilterQuincena('')} className="text-gray-300 hover:bg-white/10">Limpiar</Button>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-white mb-1">Departamento</label>
-                <select value={filterDept} onChange={e=>setFilterDept(e.target.value)} className="bg-white/10 border-white/20 text-white rounded px-2 py-2">
-                  <option value="">Todos</option>
-                  {Object.entries(departments).map(([id,name])=> (
-                    <option key={id} value={id}>{name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-white mb-1">Empleado</label>
-                <Input placeholder="Nombre o código" value={filterEmployee} onChange={e=>setFilterEmployee(e.target.value)} className="bg-white/10 border-white/20 text-white" />
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* 3. 📋 Tabla de Registros de Nómina */}
+      {/* 3. 📊 Generar Nómina */}
+      <div className="space-y-6">
+        <Card variant="glass">
+          <CardHeader>
+            <CardTitle className="text-white">📊 Generar Nómina</CardTitle>
+            <CardDescription className="text-gray-300">
+              Genera la nómina para todos los empleados activos para un período y quincena seleccionados
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={generatePayroll} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    📅 Mes
+                  </label>
+                  <Input
+                    type="month"
+                    value={generateForm.periodo}
+                    onChange={e => handleFormChange('periodo', e.target.value)}
+                    required
+                    className="w-full bg-white/10 border-white/20 text-white placeholder-gray-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    ⏰ Rango de Quincena
+                  </label>
+                  <div className="flex gap-3">
+                    <Button 
+                      type="button"
+                      onClick={() => handleFormChange('quincena', 1)}
+                      className={`flex-1 ${generateForm.quincena === 1 ? 'bg-brand-800 hover:bg-brand-700 text-white' : 'border border-white/20 text-white hover:bg-white/10 bg-transparent'}`}
+                    >
+                      1 - 15
+                    </Button>
+                    <Button 
+                      type="button"
+                      onClick={() => handleFormChange('quincena', 2)}
+                      className={`flex-1 ${generateForm.quincena === 2 ? 'bg-brand-800 hover:bg-brand-700 text-white' : 'border border-white/20 text-white hover:bg-white/10 bg-transparent'}`}
+                    >
+                      16 - {lastDayOfSelectedMonth}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    checked={generateForm.incluirDeducciones}
+                    onChange={e => handleFormChange('incluirDeducciones', e.target.checked)}
+                    className="w-4 h-4 accent-brand-500"
+                    id="deducciones"
+                  />
+                  <label htmlFor="deducciones" className="text-sm font-medium text-white">
+                    💰 Incluir deducciones (ISR, IHSS, RAP)
+                  </label>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    checked={generateForm.soloEmpleadosConAsistencia}
+                    onChange={e => handleFormChange('soloEmpleadosConAsistencia', e.target.checked)}
+                    className="w-4 h-4 accent-brand-500"
+                    id="asistencia"
+                  />
+                  <label htmlFor="asistencia" className="text-sm font-medium text-white">
+                    ✅ Solo empleados con asistencia completa
+                  </label>
+                </div>
+              </div>
+              
+              <div className="flex flex-wrap gap-4 pt-4 border-t border-white/10">
+                <Button type="submit" disabled={loading} className="bg-brand-800 hover:bg-brand-700 text-white px-8 py-3">
+                  {loading ? '🔄 Generando...' : '🚀 Generar Nómina'}
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={()=>sendPayrollEmail()} 
+                  className="border-white/20 text-white hover:bg-white/10 px-6 py-3"
+                >
+                  ✉️ Enviar Planilla por Email
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={()=>sendPayrollWhatsApp()} 
+                  className="border-white/20 text-white hover:bg-white/10 px-6 py-3"
+                >
+                  💬 Enviar por WhatsApp
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+
+        {/* Employee Preview */}
+        {employees.length > 0 && (
+          <Card variant="glass">
+            <CardHeader>
+              <CardTitle className="text-white">👥 Empleados Activos ({employees.length})</CardTitle>
+              <CardDescription className="text-gray-300">
+                Lista de empleados que serán incluidos en la nómina
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {employees.slice(0, 9).map((emp) => (
+                  <div key={emp.id} className="p-3 border border-white/20 rounded-lg bg-white/5">
+                    <div className="font-medium text-white">{emp.name}</div>
+                    <div className="text-sm text-gray-300">
+                      {emp.employee_code} • {emp.department_id || 'Sin departamento'}
+                  </div>
+                    <div className="text-sm font-mono text-green-400">
+                      {formatCurrency(emp.base_salary)}
+                  </div>
+                  </div>
+                ))}
+                {employees.length > 9 && (
+                  <div className="p-3 border border-white/20 rounded-lg bg-white/5 text-center">
+                    <div className="text-sm text-gray-300">
+                      +{employees.length - 9} empleados más
+                </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+      )}
+      </div>
+
+      {/* 4. 📋 Tabla de Registros de Nómina */}
       <div className="space-y-6">
         <Card variant="glass">
           <CardHeader>
@@ -1040,118 +1231,6 @@ export default function PayrollManager() {
             </div>
           </CardContent>
         </Card>
-      </div>
-
-      {/* Generar Nómina */}
-      <div className="space-y-6">
-          <Card variant="glass">
-            <CardHeader>
-            <CardTitle className="text-white">📊 Generar Nómina</CardTitle>
-            <CardDescription className="text-gray-300">
-              Genera la nómina para todos los empleados activos para un período y quincena seleccionados
-            </CardDescription>
-            </CardHeader>
-            <CardContent>
-            <form onSubmit={generatePayroll} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-white mb-1">
-                  Mes
-                </label>
-                <Input
-                  type="month"
-                  value={generateForm.periodo}
-                  onChange={e => handleFormChange('periodo', e.target.value)}
-                  required
-                  className="bg-white/10 border-white/20 text-white placeholder-gray-400"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-white mb-1">
-                  Rango
-                </label>
-                <div className="flex gap-2">
-                <Button 
-                    type="button"
-                    onClick={() => handleFormChange('quincena', 1)}
-                    className={`${generateForm.quincena === 1 ? 'bg-brand-800 hover:bg-brand-700 text-white' : 'border border-white/20 text-white hover:bg-white/10 bg-transparent'}`}
-                >
-                    1 - 15
-                </Button>
-                <Button 
-                    type="button"
-                    onClick={() => handleFormChange('quincena', 2)}
-                    className={`${generateForm.quincena === 2 ? 'bg-brand-800 hover:bg-brand-700 text-white' : 'border border-white/20 text-white hover:bg-white/10 bg-transparent'}`}
-                  >
-                    16 - {lastDayOfSelectedMonth}
-                </Button>
-                </div>
-              </div>
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={generateForm.incluirDeducciones}
-                  onChange={e => handleFormChange('incluirDeducciones', e.target.checked)}
-                  className="mr-2 accent-brand-500"
-                  id="deducciones"
-                />
-                <label htmlFor="deducciones" className="text-sm font-medium text-white">
-                  Incluir deducciones (ISR, IHSS, RAP)
-                </label>
-              </div>
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={generateForm.soloEmpleadosConAsistencia}
-                  onChange={e => handleFormChange('soloEmpleadosConAsistencia', e.target.checked)}
-                  className="mr-2 accent-brand-500"
-                  id="asistencia"
-                />
-                <label htmlFor="asistencia" className="text-sm font-medium text-white">
-                  Solo empleados con asistencia completa
-                </label>
-                </div>
-              <div className="md:col-span-2 flex gap-4">
-                <Button type="submit" disabled={loading} className="bg-brand-800 hover:bg-brand-700 text-white">
-                  {loading ? '🔄 Generando...' : '🚀 Generar Nómina'}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-
-        {/* Employee Preview */}
-        {employees.length > 0 && (
-          <Card variant="glass">
-            <CardHeader>
-              <CardTitle className="text-white">👥 Empleados Activos ({employees.length})</CardTitle>
-              <CardDescription className="text-gray-300">
-                Lista de empleados que serán incluidos en la nómina
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {employees.slice(0, 9).map((emp) => (
-                  <div key={emp.id} className="p-3 border border-white/20 rounded-lg bg-white/5">
-                    <div className="font-medium text-white">{emp.name}</div>
-                    <div className="text-sm text-gray-300">
-                      {emp.employee_code} • {emp.department_id || 'Sin departamento'}
-                  </div>
-                    <div className="text-sm font-mono text-green-400">
-                      {formatCurrency(emp.base_salary)}
-                  </div>
-                  </div>
-                ))}
-                {employees.length > 9 && (
-                  <div className="p-3 border border-white/20 rounded-lg bg-white/5 text-center">
-                    <div className="text-sm text-gray-300">
-                      +{employees.length - 9} empleados más
-                </div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-      )}
       </div>
 
       
