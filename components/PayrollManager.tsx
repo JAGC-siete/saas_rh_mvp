@@ -137,7 +137,8 @@ export default function PayrollManager() {
     if (filterQuincena) {
       list = list.filter(r => {
         const day = Number(r.period_start.slice(8,10))
-        const q = day === 1 ? 1 : 2
+        // Períodos fijos: 1-15 (quincena 1) y 16-30 (quincena 2)
+        const q = day <= 15 ? 1 : 2
         return q === filterQuincena
       })
     }
@@ -156,12 +157,11 @@ export default function PayrollManager() {
 
   
 
-  // Add last day of selected month for range chips
+  // Add last day of selected month for range chips - FIXED PERIODS
   const lastDayOfSelectedMonth = useMemo(() => {
-    if (!generateForm.periodo) return 30
-    const [year, month] = generateForm.periodo.split('-').map((n: any) => Number(n))
-    return new Date(year, month, 0).getDate()
-  }, [generateForm.periodo])
+    // Períodos fijos: 1-15 y 16-30 siempre
+    return 30
+  }, [])
 
   // Initialize Supabase client
   useEffect(() => {
@@ -534,7 +534,7 @@ export default function PayrollManager() {
   const downloadPayrollPDF = useCallback(async (record: PayrollRecord) => {
     const period = record.period_start.slice(0, 7)
     const day = Number(record.period_start.slice(8, 10))
-    const quincena = day === 1 ? 1 : 2
+    const quincena = day <= 15 ? 1 : 2
     
     await downloadFile('/api/payroll/calculate', `planilla_paragon_${period}_q${quincena}.pdf`, {
       method: 'POST',
@@ -560,7 +560,7 @@ export default function PayrollManager() {
 
     const period = record.period_start.slice(0, 7)
     const day = Number(record.period_start.slice(8, 10))
-    const quincena = day === 1 ? 1 : 2
+    const quincena = day <= 15 ? 1 : 2
 
     await downloadFile('/api/payroll/export', `recibo_${record.employees?.employee_code}_${period}_q${quincena}.pdf`, {
       method: 'POST',
@@ -583,7 +583,7 @@ export default function PayrollManager() {
     if (!to) return
     const period = (record?.period_start || new Date().toISOString()).slice(0,7)
     const day = record ? Number(record.period_start.slice(8,10)) : 1
-    const quincena = day === 1 ? 1 : 2
+    const quincena = day <= 15 ? 1 : 2
     const payload: any = { to, periodo: period, quincena }
     if (record) { payload.type = 'recibo'; payload.employeeId = record.employee_id } else { payload.type = 'planilla' }
     const res = await fetch('/api/payroll/send-email', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
@@ -597,7 +597,7 @@ export default function PayrollManager() {
     if (!phone) return
     const period = (record?.period_start || new Date().toISOString()).slice(0,7)
     const day = record ? Number(record.period_start.slice(8,10)) : 1
-    const quincena = day === 1 ? 1 : 2
+    const quincena = day <= 15 ? 1 : 2
     const payload: any = { phone, periodo: period, quincena }
     if (record) { payload.type = 'recibo'; payload.employeeId = record.employee_id } else { payload.type = 'planilla' }
     const res = await fetch('/api/payroll/send-whatsapp', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
@@ -623,6 +623,23 @@ export default function PayrollManager() {
     setFilterQuincena('')
     setFilterDept('')
     setFilterEmployee('')
+  }, [])
+
+  const editPayrollRecord = useCallback((record: PayrollRecord) => {
+    // TODO: Implementar edición de registro de nómina
+    console.log('Editando registro de nómina:', record)
+    alert('Funcionalidad de edición en desarrollo')
+  }, [])
+
+  const recalculatePayroll = useCallback(async (recordId: string) => {
+    try {
+      // TODO: Implementar recálculo de nómina
+      console.log('Recalculando nómina para:', recordId)
+      alert('Funcionalidad de recálculo en desarrollo')
+    } catch (error) {
+      console.error('Error recalculando nómina:', error)
+      alert('Error al recalcular nómina')
+    }
   }, [])
 
   
@@ -1164,7 +1181,28 @@ export default function PayrollManager() {
                         {getStatusBadge(record.status)}
                       </td>
                       <td className="py-3 px-4">
-                        <div className="flex flex-col gap-1">
+                        <div className="flex flex-col gap-2">
+                          {/* Botón Editar - siempre visible */}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => editPayrollRecord(record)}
+                            className="border-white/20 text-white hover:bg-white/10"
+                          >
+                            ✏️ Editar
+                          </Button>
+                          
+                          {/* Botón Recalcular - siempre visible */}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => recalculatePayroll(record.id)}
+                            className="border-white/20 text-white hover:bg-white/10"
+                          >
+                            🔄 Recalcular
+                          </Button>
+                          
+                          {/* Botón Aprobar - solo si está en borrador */}
                           {record.status === 'draft' && (
                             <Button
                               size="sm"
@@ -1172,18 +1210,22 @@ export default function PayrollManager() {
                               onClick={() => approvePayroll(record.id)}
                               className="border-white/20 text-white hover:bg-white/10"
                             >
-                              Aprobar
+                              ✅ Aprobar
                             </Button>
                           )}
+                          
+                          {/* Botón Marcar Pagado - solo si está aprobada */}
                           {record.status === 'approved' && (
                             <Button
                               size="sm"
                               onClick={() => markAsPaid(record.id)}
                               className="bg-brand-800 hover:bg-brand-700 text-white"
                             >
-                              Marcar Pagado
+                              💰 Marcar Pagado
                             </Button>
                           )}
+                          
+                          {/* Botones de descarga - siempre visibles */}
                           <Button
                             size="sm"
                             variant="ghost"
@@ -1199,22 +1241,6 @@ export default function PayrollManager() {
                             className="text-gray-300 hover:bg-white/10 hover:text-white"
                           >
                             📄 Descargar Recibo
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => sendPayrollEmail(record)}
-                            className="text-gray-300 hover:bg-white/10 hover:text-white"
-                          >
-                            ✉️ Enviar por Email
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => sendPayrollWhatsApp(record)}
-                            className="text-gray-300 hover:bg-white/10 hover:text-white"
-                          >
-                            💬 Enviar WhatsApp
                           </Button>
                         </div>
                       </td>
