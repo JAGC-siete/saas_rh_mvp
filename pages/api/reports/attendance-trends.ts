@@ -101,12 +101,11 @@ async function getAttendanceTrends(supabase: any, userProfile: any, startDate: s
   // Determinar base de empleados
   let employeesCount = 0
   if (companyId) {
-    // companyEmployees fue consultado arriba
     const { data: companyEmployees } = await supabase
       .from('employees')
-      .select('id')
+      .select('id, status')
       .eq('company_id', companyId)
-    employeesCount = (companyEmployees || []).length
+    employeesCount = (companyEmployees || []).filter((e: any) => e.status === 'active').length
   } else {
     // Fallback: usar empleados observados en registros
     employeesCount = new Set((data || []).map((r: any) => r.employee_id)).size

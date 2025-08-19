@@ -68,7 +68,7 @@ export default function ReportsAndAnalytics() {
   
   // Estado local para datos
   const [stats, setStats] = useState<DashboardStats | null>(null)
-  const [attendanceTrends, setAttendanceTrends] = useState<AttendanceTrend[]>([])
+  // const [attendanceTrends, setAttendanceTrends] = useState<AttendanceTrend[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   
@@ -126,44 +126,7 @@ export default function ReportsAndAnalytics() {
   }, [monthStart, monthEnd, companyId])
 
   // Función para obtener tendencias de asistencia
-  const fetchAttendanceTrends = useCallback(async () => {
-    if (!companyId) {
-      setError('No hay empresa seleccionada')
-      return
-    }
-
-    try {
-      setLoading(true)
-      setError(null)
-
-      console.log('🔄 Fetching attendance trends for company:', companyId, 'period:', dateRange)
-
-      const response = await fetch(`/api/reports/attendance-trends?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`)
-      
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || `Error HTTP: ${response.status}`)
-      }
-      
-      const result = await response.json()
-      
-      console.log('📈 Attendance trends response:', result)
-      
-      if (result.success) {
-        setAttendanceTrends(result.data)
-        console.log('✅ Attendance trends loaded successfully:', result.data)
-      } else {
-        throw new Error(result.error || 'Error en la respuesta del servidor')
-      }
-
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Error desconocido'
-      setError(errorMessage)
-      console.error('❌ Error fetching attendance trends:', err)
-    } finally {
-      setLoading(false)
-    }
-  }, [dateRange.startDate, dateRange.endDate, companyId])
+  // Tendencias movidas al dashboard de asistencia
 
   // Función para exportar reportes
   const exportReport = useCallback(async (type: 'attendance' | 'payroll' | 'employees') => {
@@ -219,11 +182,7 @@ export default function ReportsAndAnalytics() {
   }, [session, companyId, companyLoading, monthStart, monthEnd, fetchDashboardStats])
 
   // Actualizar datos cuando cambie el rango de fechas
-  useEffect(() => {
-    if (companyId && !companyLoading) {
-      fetchAttendanceTrends()
-    }
-  }, [dateRange.startDate, dateRange.endDate, companyId, companyLoading, fetchAttendanceTrends])
+  // Tendencias removidas de este módulo
 
   // Funciones auxiliares
   const formatPercentage = useCallback((value: number, total: number) => {
@@ -261,10 +220,7 @@ export default function ReportsAndAnalytics() {
   }
 
   // Tendencias recientes (últimas 10)
-  const recentTrends = useMemo(() => 
-    attendanceTrends.slice(-10),
-    [attendanceTrends]
-  )
+  // Tendencias removidas de este módulo
 
   // Mostrar error si existe
   if (error) {
@@ -376,53 +332,7 @@ export default function ReportsAndAnalytics() {
         </Card>
       </div>
 
-      {/* Tendencias de asistencia */}
-      <Card variant="glass" className="p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-white">Tendencias de Asistencia</h3>
-          <ChartBarIcon className="h-6 w-6 text-gray-400" />
-        </div>
-        
-        {recentTrends.length > 0 ? (
-          <div className="space-y-4">
-            <div className="grid grid-cols-7 gap-2 text-sm font-medium text-gray-300">
-              <div>Fecha</div>
-              <div>Presentes</div>
-              <div>Ausentes</div>
-              <div>Tardanzas</div>
-              <div>Total</div>
-              <div>% Asistencia</div>
-              <div>% Puntualidad</div>
-            </div>
-            
-            {recentTrends.map((trend) => {
-              const total = trend.present + trend.absent + trend.late
-              const attendanceRate = total > 0 ? ((trend.present + trend.late) / total * 100) : 0
-              const punctualityRate = total > 0 ? (trend.present / total * 100) : 0
-              
-              return (
-                <div key={trend.date} className="grid grid-cols-7 gap-2 text-sm py-2 border-b border-gray-700">
-                  <div className="text-gray-300">{new Date(trend.date).toLocaleDateString('es-HN')}</div>
-                  <div className="text-emerald-400 font-medium">{trend.present}</div>
-                  <div className="text-red-400 font-medium">{trend.absent}</div>
-                  <div className="text-orange-400 font-medium">{trend.late}</div>
-                  <div className="font-medium text-white">{total}</div>
-                  <div className={`font-medium ${getAttendanceColor(attendanceRate)}`}>
-                    {attendanceRate.toFixed(1)}%
-                  </div>
-                  <div className={`font-medium ${getAttendanceColor(punctualityRate)}`}>
-                    {punctualityRate.toFixed(1)}%
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        ) : (
-          <div className="text-center py-8 text-gray-400">
-            No hay datos de asistencia para el período seleccionado
-          </div>
-        )}
-      </Card>
+      {/* Tendencias movidas al dashboard de asistencia */}
 
       {/* Exportar reportes */}
       <Card variant="glass" className="p-6">
