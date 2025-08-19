@@ -91,7 +91,7 @@ export default function LandingPage() {
                     className="text-brand-200 hover:text-white px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0"
                     onClick={scrollToSection}
                   >
-                    Precios
+                    Activar Demo Gratis
                   </a>
                   <Link
                     href="/app/login"
@@ -258,7 +258,7 @@ export default function LandingPage() {
                 href="/activar"
                 className="w-full bg-brand-600 hover:bg-brand-700 text-white py-4 px-4 rounded-lg font-bold transition-all duration-300 inline-flex items-center justify-center gap-2 text-lg shadow-lg shadow-black/20 hover:-translate-y-0.5 active:translate-y-0 hover:shadow-xl hover:shadow-brand-900/50"
               >
-                Automatizar mi RH hoy
+                Activar Demo Gratis
                 <ArrowRightIcon className="w-4 h-4" />
               </Link>
             </CardContent>
