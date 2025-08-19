@@ -136,9 +136,18 @@ export default function PayrollManager() {
     if (filterMonth) list = list.filter(r => r.period_start.slice(0,7) === `${filterYear || r.period_start.slice(0,4)}-${filterMonth}`)
     if (filterQuincena) {
       list = list.filter(r => {
-        const day = Number(r.period_start.slice(8,10))
+        const startDay = Number(r.period_start.slice(8,10))
+        const endDay = Number(r.period_end.slice(8,10))
+        
         // Períodos fijos: 1-15 (quincena 1) y 16-30 (quincena 2)
-        const q = day <= 15 ? 1 : 2
+        // Verificar que tanto el inicio como el fin estén en la misma quincena
+        let q = 0
+        if (startDay <= 15 && endDay <= 15) {
+          q = 1 // Quincena 1: 1-15
+        } else if (startDay >= 16 && endDay >= 16) {
+          q = 2 // Quincena 2: 16-30
+        }
+        
         return q === filterQuincena
       })
     }
@@ -154,6 +163,23 @@ export default function PayrollManager() {
     }
     return list
   }, [payrollRecords, selectedPeriod, filterYear, filterMonth, filterQuincena, filterDept, filterEmployee])
+
+  // Función para obtener descripción del filtro aplicado
+  const getFilterDescription = useMemo(() => {
+    let description = `${filteredRecords.length} registros`
+    
+    if (selectedPeriod) {
+      const monthName = new Date(selectedPeriod + '-01').toLocaleDateString('es-HN', { year: 'numeric', month: 'long' })
+      description += ` para ${monthName}`
+      
+      if (filterQuincena) {
+        const quincenaText = filterQuincena === 1 ? '1-15' : '16-30'
+        description += ` (Quincena ${quincenaText})`
+      }
+    }
+    
+    return description
+  }, [filteredRecords.length, selectedPeriod, filterQuincena])
 
   
 
@@ -939,6 +965,18 @@ export default function PayrollManager() {
                   >
                     Limpiar Quincena
                   </Button>
+                  
+                  {/* Indicador de quincena seleccionada */}
+                  {filterQuincena && (
+                    <div className="mt-2 p-2 bg-brand-800/20 border border-brand-500/30 rounded-lg">
+                      <div className="text-xs text-brand-300 font-medium">
+                        Quincena seleccionada: {filterQuincena === 1 ? '1-15' : '16-30'}
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        Mostrando registros del {filterQuincena === 1 ? '1 al 15' : '16 al 30'} del mes
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-white mb-2">👤 Empleado</label>
@@ -1117,8 +1155,7 @@ export default function PayrollManager() {
           <CardHeader>
             <CardTitle className="text-white">📋 Registros de Nómina</CardTitle>
             <CardDescription className="text-gray-300">
-              {filteredRecords.length} registros
-              {selectedPeriod && ` para ${new Date(selectedPeriod + '-01').toLocaleDateString('es-HN', { year: 'numeric', month: 'long' })}`}
+              {getFilterDescription}
             </CardDescription>
           </CardHeader>
           <CardContent>
