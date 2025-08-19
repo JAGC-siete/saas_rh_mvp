@@ -17,6 +17,9 @@ export interface LeaveRequest {
   start_date: string
   end_date: string
   days_requested: number
+  duration_hours?: number
+  duration_type: 'hours' | 'days'
+  is_half_day?: boolean
   reason?: string
   status: 'pending' | 'approved' | 'rejected'
   approved_by?: string
@@ -45,6 +48,9 @@ export interface CreateLeaveRequestData {
   leave_type_id: string
   start_date: string
   end_date: string
+  duration_type: 'hours' | 'days'
+  duration_hours?: number
+  is_half_day?: boolean
   reason?: string
   attachment?: File
 }

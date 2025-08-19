@@ -1,47 +1,31 @@
 // LeaveManager.tsx
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { useSession } from '@supabase/auth-helpers-react'
-import { Button } from './ui/button'
-import { Input } from './ui/input'
-import { Card, CardHeader, CardTitle, CardContent } from './ui/card'
-import { PlusIcon, CheckIcon, XMarkIcon, CalendarIcon, DocumentIcon, XCircleIcon } from '@heroicons/react/24/outline'
+import React, { useState, useEffect } from 'react'
 import { useLeave } from '../lib/hooks/useLeave'
-import { LeaveType } from '../lib/types/leave'
+import { LeaveType, LeaveRequest, CreateLeaveRequestData } from '../lib/types/leave'
 
-interface Employee {
-  id: string
-  first_name: string
-  last_name: string
-  email: string
-  dni: string
-  company_id: string
-  status: string
+interface FormData {
+  employee_dni: string
+  leave_type_id: string
+  start_date: string
+  end_date: string
+  duration_type: 'hours' | 'days'
+  duration_hours?: number
+  is_half_day: boolean
+  reason: string
 }
 
-const STATUS_CONFIG = {
-  pending: { color: 'bg-yellow-500/20 text-yellow-400', label: 'Pendiente' },
-  approved: { color: 'bg-emerald-500/20 text-emerald-400', label: 'Aprobada' },
-  rejected: { color: 'bg-red-500/20 text-red-400', label: 'Rechazada' }
-} as const
-
-const INITIAL_FORM_DATA = {
+const INITIAL_FORM_DATA: FormData = {
   employee_dni: '',
   leave_type_id: '',
   start_date: '',
   end_date: '',
-  reason: '',
-  attachment: null as File | null
+  duration_type: 'days',
+  duration_hours: undefined,
+  is_half_day: false,
+  reason: ''
 }
 
 export default function LeaveManager() {
-  const session = useSession()
-  const [employees, setEmployees] = useState<Employee[]>([])
-  const [showForm, setShowForm] = useState(false)
-  const [formData, setFormData] = useState(INITIAL_FORM_DATA)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [filePreview, setFilePreview] = useState<string | null>(null)
-
-  // Use custom hook for leave operations
   const {
     leaveRequests,
     leaveTypes,
@@ -52,84 +36,80 @@ export default function LeaveManager() {
     fetchLeaveTypes,
     createLeaveRequest,
     updateLeaveRequest,
-    clearError
+    deleteLeaveRequest
   } = useLeave()
 
-  // Mount guard to avoid state updates after unmount
-  const isMountedRef = useRef(true)
+  const [formData, setFormData] = useState<FormData>(INITIAL_FORM_DATA)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [filePreview, setFilePreview] = useState<string | null>(null)
+  const [employees, setEmployees] = useState<any[]>([])
+  const [showForm, setShowForm] = useState(false)
+
   useEffect(() => {
-    return () => {
-      isMountedRef.current = false
-    }
+    fetchLeaveRequests()
+    fetchLeaveTypes()
+    fetchEmployees()
   }, [])
 
-  const resetForm = useCallback(() => {
-    setFormData(INITIAL_FORM_DATA)
-    setSelectedFile(null)
-    setFilePreview(null)
-    setShowForm(false)
-    clearError()
-  }, [clearError])
-
-  const fetchEmployees = useCallback(async () => {
+  const fetchEmployees = async () => {
     try {
       const response = await fetch('/api/employees')
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Error fetching employees')
+      if (response.ok) {
+        const data = await response.json()
+        setEmployees(data)
       }
-      
-      const { data } = await response.json()
-      if (!isMountedRef.current) return
-      setEmployees(data || [])
     } catch (error) {
       console.error('Error fetching employees:', error)
     }
-  }, [])
+  }
 
-  useEffect(() => {
-    if (session?.user) {
-      fetchLeaveRequests()
-      fetchEmployees()
-      fetchLeaveTypes()
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target
+    
+    if (type === 'checkbox') {
+      const checked = (e.target as HTMLInputElement).checked
+      setFormData(prev => ({ ...prev, [name]: checked }))
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }))
     }
-  }, [session, fetchLeaveRequests, fetchEmployees, fetchLeaveTypes])
+    
+    // Auto-calculate duration_hours for hourly permissions
+    if (name === 'duration_type' && value === 'hours') {
+      setFormData(prev => ({ ...prev, duration_hours: 8 }))
+    } else if (name === 'duration_type' && value === 'days') {
+      setFormData(prev => ({ ...prev, duration_hours: undefined }))
+    }
+    
+    // Handle half-day toggle
+    if (name === 'is_half_day') {
+      const checked = (e.target as HTMLInputElement).checked
+      setFormData(prev => ({ 
+        ...prev, 
+        is_half_day: checked,
+        duration_hours: checked ? 4 : 8
+      }))
+    }
+  }
 
-  const calculateDays = useCallback((startDate: string, endDate: string): number => {
-    if (!startDate || !endDate) return 0
-    const start = new Date(startDate)
-    const end = new Date(endDate)
-    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 0
-    const timeDiff = end.getTime() - start.getTime()
-    return timeDiff < 0 ? 0 : Math.floor(timeDiff / (1000 * 60 * 60 * 24)) + 1
-  }, [])
-
-  const datesInvalid = useMemo(() => {
-    if (!formData.start_date || !formData.end_date) return false
-    const start = new Date(formData.start_date)
-    const end = new Date(formData.end_date)
-    return end < start
-  }, [formData.start_date, formData.end_date])
-
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
       // Validate file type
-      if (!file.type.includes('pdf') && !file.type.includes('image')) {
-        alert('Solo se permiten archivos PDF o imágenes (JPG, PNG)')
+      if (!['application/pdf', 'image/jpeg', 'image/jpg'].includes(file.type)) {
+        alert('Solo se permiten archivos PDF o JPG')
         return
       }
       
-      // Validate file size (10MB)
-      if (file.size > 10 * 1024 * 1024) {
-        alert('El archivo no puede ser mayor a 10MB')
+      // Validate file size (5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('El archivo debe ser menor a 5MB')
         return
       }
-
+      
       setSelectedFile(file)
       
       // Create preview for images
-      if (file.type.includes('image')) {
+      if (file.type.startsWith('image/')) {
         const reader = new FileReader()
         reader.onload = (e) => setFilePreview(e.target?.result as string)
         reader.readAsDataURL(file)
@@ -137,381 +117,454 @@ export default function LeaveManager() {
         setFilePreview(null)
       }
     }
-  }, [])
+  }
 
-  const removeFile = useCallback(() => {
+  const removeFile = () => {
     setSelectedFile(null)
     setFilePreview(null)
-    setFormData(prev => ({ ...prev, attachment: null }))
-  }, [])
+    const fileInput = document.getElementById('file-input') as HTMLInputElement
+    if (fileInput) fileInput.value = ''
+  }
 
-  const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault()
-      if (datesInvalid) return
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!formData.employee_dni || !formData.leave_type_id || !formData.start_date || !formData.end_date) {
+      alert('Por favor complete todos los campos obligatorios')
+      return
+    }
 
-      try {
-        const daysRequested = calculateDays(formData.start_date, formData.end_date)
-        if (daysRequested <= 0) {
-          return
-        }
+    // Validate employee exists
+    const employee = employees.find(emp => emp.dni === formData.employee_dni)
+    if (!employee) {
+      alert('DNI no encontrado en la base de datos')
+      return
+    }
 
-        // Validate DNI exists
-        const employeeExists = employees.find(emp => emp.dni === formData.employee_dni)
-        if (!employeeExists) {
-          alert('No se encontró un empleado con ese DNI')
-          return
-        }
+    // Validate duration for hourly permissions
+    if (formData.duration_type === 'hours' && (!formData.duration_hours || formData.duration_hours <= 0)) {
+      alert('Para permisos por horas, debe especificar la duración')
+      return
+    }
 
-        await createLeaveRequest({
-          employee_dni: formData.employee_dni,
-          leave_type_id: formData.leave_type_id,
-          start_date: formData.start_date,
-          end_date: formData.end_date,
-          reason: formData.reason || undefined,
-          attachment: selectedFile || undefined,
-        })
+    try {
+      await createLeaveRequest({
+        employee_dni: formData.employee_dni,
+        leave_type_id: formData.leave_type_id,
+        start_date: formData.start_date,
+        end_date: formData.end_date,
+        duration_type: formData.duration_type,
+        duration_hours: formData.duration_hours,
+        is_half_day: formData.is_half_day,
+        reason: formData.reason || undefined,
+        attachment: selectedFile || undefined
+      })
 
-        resetForm()
-      } catch (error) {
-        // Error is handled by the hook
-        console.error('Error creating leave request:', error)
+      setFormData(INITIAL_FORM_DATA)
+      setSelectedFile(null)
+      setFilePreview(null)
+      setShowForm(false)
+      fetchLeaveRequests()
+    } catch (error) {
+      console.error('Error creating leave request:', error)
+    }
+  }
+
+  const getLeaveTypeName = (leaveTypeId: string) => {
+    const leaveType = leaveTypes.find(lt => lt.id === leaveTypeId)
+    return leaveType ? leaveType.name : 'Tipo no encontrado'
+  }
+
+  const getEmployeeName = (dni: string) => {
+    const employee = employees.find(emp => emp.dni === dni)
+    return employee ? `${employee.first_name} ${employee.last_name}` : 'Empleado no encontrado'
+  }
+
+  const formatDuration = (request: LeaveRequest) => {
+    if (request.duration_type === 'hours') {
+      if (request.is_half_day) {
+        return '4 horas (Medio día)'
       }
-    },
-    [formData, calculateDays, resetForm, createLeaveRequest, datesInvalid, employees, selectedFile]
-  )
+      return `${request.duration_hours || 8} horas`
+    }
+    return `${request.days_requested} días`
+  }
 
-  const handleStatusChange = useCallback(
-    async (id: string, status: 'approved' | 'rejected') => {
-      try {
-        await updateLeaveRequest(id, {
-          status,
-          rejection_reason: status === 'rejected' ? 'Rechazado por el administrador' : undefined
-        })
-      } catch (error) {
-        // Error is handled by the hook
-        console.error('Error updating leave request:', error)
-      }
-    },
-    [updateLeaveRequest]
-  )
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'approved': return 'text-green-600 bg-green-100'
+      case 'rejected': return 'text-red-600 bg-red-100'
+      default: return 'text-yellow-600 bg-yellow-100'
+    }
+  }
 
-  const formatDate = useCallback((dateString: string): string => {
-    const d = new Date(dateString)
-    if (Number.isNaN(d.getTime())) return '-'
-    return d.toLocaleDateString('es-HN', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    })
-  }, [])
-
-  const getLeaveTypeName = useCallback(
-    (leaveTypeId: string): string => {
-      const leaveType = leaveTypes.find(lt => lt.id === leaveTypeId)
-      return leaveType?.name || leaveTypeId
-    },
-    [leaveTypes]
-  )
-
-  const handleFormChange = useCallback(
-    (field: keyof typeof INITIAL_FORM_DATA, value: string) => {
-      setFormData((prev) => ({ ...prev, [field]: value }))
-    },
-    []
-  )
-
-  const isLoadingInitial = isLoading && leaveRequests.length === 0
-
-  if (isLoadingInitial) {
+  if (isLoading) {
     return (
-      <div className="flex justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-400"></div>
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      {/* Error Display */}
+    <div className="max-w-6xl mx-auto p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold text-gray-900">Solicitud de Permisos</h1>
+        <button
+          onClick={() => setShowForm(!showForm)}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors"
+        >
+          {showForm ? 'Cancelar' : 'Nueva Solicitud'}
+        </button>
+      </div>
+
       {error && (
-        <div className="bg-red-500/20 border border-red-400/50 rounded-md p-4">
-          <p className="text-red-400 text-sm">{error}</p>
-          <Button 
-            onClick={clearError} 
-            variant="outline" 
-            size="sm" 
-            className="mt-2 border-red-400/50 text-red-400 hover:bg-red-500/30"
-          >
-            Cerrar
-          </Button>
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          {error}
         </div>
       )}
 
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold text-white">Solicitudes de Permisos</h2>
-        <Button onClick={() => setShowForm(true)} className="flex items-center space-x-2 bg-brand-600 hover:bg-brand-700">
-          <PlusIcon className="h-5 w-5" />
-          <span>Nueva Solicitud</span>
-        </Button>
-      </div>
-
       {showForm && (
-        <Card variant="glass">
-          <CardHeader>
-            <CardTitle className="text-white">Nueva Solicitud de Permiso</CardTitle>
-            <p className="text-sm text-gray-300">Registro de permisos previamente autorizados</p>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">DNI del Empleado *</label>
-                  <Input
-                    type="text"
-                    value={formData.employee_dni}
-                    onChange={(e) => handleFormChange('employee_dni', e.target.value)}
-                    required
-                    placeholder="Ingrese el DNI del empleado"
-                    className="bg-white/10 border-white/20 text-white placeholder-gray-400 focus:border-brand-400 focus:ring-1 focus:ring-brand-400"
-                  />
-                  {formData.employee_dni && (
-                    <p className="text-xs text-gray-400 mt-1">
-                      {employees.find(emp => emp.dni === formData.employee_dni)?.first_name 
-                        ? `Empleado: ${employees.find(emp => emp.dni === formData.employee_dni)?.first_name} ${employees.find(emp => emp.dni === formData.employee_dni)?.last_name}`
-                        : 'DNI no encontrado en la base de datos'
-                      }
-                    </p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Tipo de Permiso *</label>
-                  <select
-                    value={formData.leave_type_id}
-                    onChange={(e) => handleFormChange('leave_type_id', e.target.value)}
-                    required
-                    className="w-full px-3 py-2 border border-white/20 bg-white/10 rounded-md text-white placeholder-gray-400 focus:border-brand-400 focus:ring-1 focus:ring-brand-400"
-                  >
-                    <option value="" className="text-gray-900">Seleccionar tipo</option>
-                    {leaveTypes.map((type) => (
-                      <option key={type.id} value={type.id} className="text-gray-900">
-                        {type.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Fecha de Inicio *</label>
-                  <Input
-                    type="date"
-                    value={formData.start_date}
-                    onChange={(e) => handleFormChange('start_date', e.target.value)}
-                    required
-                    className="bg-white/10 border-white/20 text-white placeholder-gray-400 focus:border-brand-400 focus:ring-1 focus:ring-brand-400"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Fecha de Fin *</label>
-                  <Input
-                    type="date"
-                    value={formData.end_date}
-                    onChange={(e) => handleFormChange('end_date', e.target.value)}
-                    required
-                    className="bg-white/10 border-white/20 text-white placeholder-gray-400 focus:border-brand-400 focus:ring-1 focus:ring-brand-400"
-                  />
-                </div>
-              </div>
-
-              {formData.start_date && formData.end_date && (
-                <div className={`p-3 rounded-md ${datesInvalid ? 'bg-red-500/20' : 'bg-brand-500/20'}`}>
-                  <p className={`text-sm ${datesInvalid ? 'text-red-400' : 'text-brand-400'}`}>
-                    {datesInvalid
-                      ? 'La fecha de fin no puede ser anterior a la fecha de inicio.'
-                      : `Días solicitados: ${calculateDays(formData.start_date, formData.end_date)}`}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h2 className="text-xl font-semibold mb-4">Registrar Permiso Pre-autorizado</h2>
+          
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Employee DNI */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  DNI del Empleado *
+                </label>
+                <input
+                  type="text"
+                  name="employee_dni"
+                  value={formData.employee_dni}
+                  onChange={handleInputChange}
+                  placeholder="Ej: 0801-2003-14588"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+                {formData.employee_dni && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    Empleado: {getEmployeeName(formData.employee_dni)}
                   </p>
+                )}
+              </div>
+
+              {/* Leave Type */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tipo de Permiso *
+                </label>
+                <select
+                  name="leave_type_id"
+                  value={formData.leave_type_id}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  <option value="">Seleccionar tipo</option>
+                  {leaveTypes.map((type) => (
+                    <option key={type.id} value={type.id}>
+                      {type.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Duration Type */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tipo de Duración *
+                </label>
+                <select
+                  name="duration_type"
+                  value={formData.duration_type}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  <option value="days">Días</option>
+                  <option value="hours">Horas</option>
+                </select>
+              </div>
+
+              {/* Duration Hours (for hourly permissions) */}
+              {formData.duration_type === 'hours' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Duración en Horas
+                  </label>
+                  <div className="space-y-2">
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        name="is_half_day"
+                        checked={formData.is_half_day}
+                        onChange={handleInputChange}
+                        className="mr-2"
+                      />
+                      Medio día (4 horas)
+                    </label>
+                    {!formData.is_half_day && (
+                      <input
+                        type="number"
+                        name="duration_hours"
+                        value={formData.duration_hours || ''}
+                        onChange={handleInputChange}
+                        min="1"
+                        max="24"
+                        placeholder="8"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    )}
+                  </div>
                 </div>
               )}
 
+              {/* Start Date */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Motivo</label>
-                <textarea
-                  value={formData.reason}
-                  onChange={(e) => handleFormChange('reason', e.target.value)}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-white/20 bg-white/10 rounded-md text-white placeholder-gray-400 focus:border-brand-400 focus:ring-1 focus:ring-brand-400"
-                  placeholder="Descripción del motivo del permiso"
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Fecha de Inicio *
+                </label>
+                <input
+                  type="date"
+                  name="start_date"
+                  value={formData.start_date}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
                 />
               </div>
 
+              {/* End Date */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  Comprobante/Respaldo (PDF o JPG)
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Fecha de Fin *
                 </label>
-                <div className="border-2 border-dashed border-white/20 rounded-lg p-4 text-center">
-                  {!selectedFile ? (
-                    <div>
-                      <DocumentIcon className="mx-auto h-12 w-12 text-gray-400" />
-                      <div className="mt-2">
-                        <label htmlFor="file-upload" className="cursor-pointer">
-                          <span className="text-brand-400 hover:text-brand-300">Seleccionar archivo</span>
-                          <span className="text-gray-400"> o arrastrar y soltar</span>
-                        </label>
-                        <input
-                          id="file-upload"
-                          type="file"
-                          accept=".pdf,.jpg,.jpeg,.png"
-                          onChange={handleFileChange}
-                          className="hidden"
-                        />
-                      </div>
-                      <p className="text-xs text-gray-400 mt-1">
-                        PDF, JPG, PNG hasta 10MB
-                      </p>
+                <input
+                  type="date"
+                  name="end_date"
+                  value={formData.end_date}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Reason */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Motivo del Permiso
+              </label>
+              <textarea
+                name="reason"
+                value={formData.reason}
+                onChange={handleInputChange}
+                rows={3}
+                placeholder="Describa el motivo del permiso..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {/* File Attachment */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Archivo de Respaldo (PDF o JPG)
+              </label>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                <input
+                  id="file-input"
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+                <label htmlFor="file-input" className="cursor-pointer">
+                  <div className="space-y-2">
+                    <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                      <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <div className="text-gray-600">
+                      <span className="font-medium">Haga clic para subir</span> o arrastre y suelte
                     </div>
-                  ) : (
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        {filePreview ? (
-                          <img src={filePreview} alt="Preview" className="h-10 w-10 object-cover rounded" />
-                        ) : (
-                          <DocumentIcon className="h-10 w-10 text-gray-400" />
-                        )}
-                        <div className="text-left">
-                          <p className="text-sm text-white">{selectedFile.name}</p>
-                          <p className="text-xs text-gray-400">
-                            {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                          </p>
+                    <p className="text-xs text-gray-500">PDF o JPG hasta 5MB</p>
+                  </div>
+                </label>
+              </div>
+              
+              {selectedFile && (
+                <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      {filePreview ? (
+                        <img src={filePreview} alt="Preview" className="w-10 h-10 object-cover rounded" />
+                      ) : (
+                        <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center">
+                          <span className="text-xs text-gray-500">PDF</span>
                         </div>
-                      </div>
-                      <Button
-                        type="button"
-                        onClick={removeFile}
-                        variant="outline"
-                        size="sm"
-                        className="text-red-400 border-red-400/50 hover:bg-red-500/20"
-                      >
-                        <XCircleIcon className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex space-x-3">
-                <Button type="submit" disabled={isSubmitting || datesInvalid} className="bg-brand-600 hover:bg-brand-700">
-                  {isSubmitting ? 'Creando...' : 'Crear Solicitud'}
-                </Button>
-                <Button type="button" variant="outline" onClick={resetForm} className="bg-white/5 border-white/20 text-white hover:bg-white/10">
-                  Cancelar
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
-
-      <div className="space-y-4">
-        {leaveRequests.map((request) => (
-          <Card key={request.id} variant="glass">
-            <CardContent className="p-6">
-              <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-2">
-                    <h3 className="text-lg font-medium text-white">
-                      {request.employee?.first_name} {request.employee?.last_name}
-                    </h3>
-                    <span className="text-sm text-gray-400">DNI: {request.employee_dni}</span>
-                    <span className={`px-2 py-1 text-xs rounded-full ${STATUS_CONFIG[request.status].color}`}>
-                      {STATUS_CONFIG[request.status].label}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <span className="font-medium text-gray-300">Tipo:</span>
-                      <p className="text-gray-400">{getLeaveTypeName(request.leave_type_id)}</p>
-                    </div>
-                    <div>
-                      <span className="font-medium text-gray-300">Fechas:</span>
-                      <p className="text-gray-400">
-                        {formatDate(request.start_date)} - {formatDate(request.end_date)}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="font-medium text-gray-300">Días:</span>
-                      <p className="text-gray-400">{request.days_requested} días</p>
-                    </div>
-                    <div>
-                      <span className="font-medium text-gray-300">Solicitado:</span>
-                      <p className="text-gray-400">{formatDate(request.created_at)}</p>
-                    </div>
-                  </div>
-
-                  {request.reason && (
-                    <div className="mt-3">
-                      <span className="font-medium text-gray-300">Motivo:</span>
-                      <p className="text-gray-400 mt-1">{request.reason}</p>
-                    </div>
-                  )}
-
-                  {request.attachment_url && (
-                    <div className="mt-3">
-                      <span className="font-medium text-gray-300">Comprobante:</span>
-                      <div className="mt-1">
-                        <a
-                          href={request.attachment_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center space-x-2 text-brand-400 hover:text-brand-300"
-                        >
-                          <DocumentIcon className="h-4 w-4" />
-                          <span>{request.attachment_name || 'Ver archivo'}</span>
-                        </a>
+                      )}
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{selectedFile.name}</p>
+                        <p className="text-xs text-gray-500">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
                       </div>
                     </div>
-                  )}
-                </div>
-
-                {request.status === 'pending' && (
-                  <div className="flex space-x-2 ml-4">
-                    <Button
-                      size="sm"
-                      onClick={() => handleStatusChange(request.id, 'approved')}
-                      className="bg-emerald-600 hover:bg-emerald-700 flex items-center space-x-1"
-                      disabled={isSubmitting}
+                    <button
+                      type="button"
+                      onClick={removeFile}
+                      className="text-red-600 hover:text-red-800"
                     >
-                      <CheckIcon className="h-4 w-4" />
-                      <span>Aprobar</span>
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleStatusChange(request.id, 'rejected')}
-                      className="border-red-400/50 bg-red-500/20 text-red-400 hover:bg-red-500/30 flex items-center space-x-1"
-                      disabled={isSubmitting}
-                    >
-                      <XMarkIcon className="h-4 w-4" />
-                      <span>Rechazar</span>
-                    </Button>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
                   </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                </div>
+              )}
+            </div>
 
-      {leaveRequests.length === 0 && !isLoading && (
-        <div className="text-center py-8">
-          <CalendarIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-400">No hay solicitudes de permisos</p>
+            <div className="flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setFormData(INITIAL_FORM_DATA)
+                  setSelectedFile(null)
+                  setFilePreview(null)
+                  setShowForm(false)
+                }}
+                className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              >
+                {isSubmitting ? 'Enviando...' : 'Enviar Solicitud'}
+              </button>
+            </div>
+          </form>
         </div>
       )}
+
+      {/* Leave Requests List */}
+      <div className="bg-white rounded-lg shadow-md">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h2 className="text-xl font-semibold text-gray-900">Solicitudes de Permisos</h2>
+        </div>
+        
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Empleado
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Tipo
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Duración
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Fechas
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Estado
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Archivo
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Acciones
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {leaveRequests.map((request) => (
+                <tr key={request.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">
+                        {getEmployeeName(request.employee_dni)}
+                      </div>
+                      <div className="text-sm text-gray-500">DNI: {request.employee_dni}</div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      {getLeaveTypeName(request.leave_type_id)}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {formatDuration(request)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <div>
+                      <div>Inicio: {new Date(request.start_date).toLocaleDateString()}</div>
+                      <div>Fin: {new Date(request.end_date).toLocaleDateString()}</div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(request.status)}`}>
+                      {request.status === 'pending' ? 'Pendiente' : 
+                       request.status === 'approved' ? 'Aprobado' : 'Rechazado'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {request.attachment_url ? (
+                      <a
+                        href={request.attachment_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 underline"
+                      >
+                        Ver archivo
+                      </a>
+                    ) : (
+                      <span className="text-gray-400">Sin archivo</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex space-x-2">
+                      {request.status === 'pending' && (
+                        <>
+                          <button
+                            onClick={() => updateLeaveRequest(request.id, { status: 'approved' })}
+                            className="text-green-600 hover:text-green-900"
+                          >
+                            Aprobar
+                          </button>
+                          <button
+                            onClick={() => updateLeaveRequest(request.id, { status: 'rejected' })}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            Rechazar
+                          </button>
+                        </>
+                      )}
+                      <button
+                        onClick={() => deleteLeaveRequest(request.id)}
+                        className="text-red-600 hover:text-red-900"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          
+          {leaveRequests.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              No hay solicitudes de permisos registradas
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

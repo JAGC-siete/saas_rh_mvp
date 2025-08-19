@@ -1,238 +1,195 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { authenticateUser } from '../../../lib/auth-utils'
-import { createClient } from '../../../lib/supabase/server'
-import { logger } from '../../../lib/logger'
+import { createClient } from '@supabase/supabase-js'
 import formidable from 'formidable'
-import { promises as fs } from 'fs'
-import path from 'path'
+import { authenticateUser } from '../../../lib/auth-helpers'
+import { logger } from '../../../lib/logger'
 
-// Disable body parsing for file uploads
 export const config = {
   api: {
     bodyParser: false,
   },
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const startTime = Date.now()
-  
-  try {
-    // Log request
-    logger.info('Leave API request', {
-      method: req.method,
-      path: req.url,
-      userAgent: req.headers['user-agent'],
-      ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress
-    })
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
-    // Authenticate user
-    const authResult = await authenticateUser(req, res, ['can_manage_employees'])
-    if (!authResult.success) {
-      logger.warn('Leave API authentication failed', {
-        error: authResult.error,
-        userId: authResult.user?.id
-      })
-      return res.status(401).json({ error: authResult.error, message: authResult.message })
+async function handleGetLeaveRequests(req: NextApiRequest, res: NextApiResponse) {
+  try {
+    const { user, error: authError } = await authenticateUser(req)
+    if (authError) {
+      return res.status(401).json({ error: authError })
     }
 
-    const { user, userProfile } = authResult
-    const supabase = createClient(req, res)
-
-    // Log successful authentication
-    logger.info('Leave API authenticated', {
-      userId: user.id,
-      userRole: userProfile.role,
-      companyId: userProfile.company_id
-    })
-
-    switch (req.method) {
-      case 'GET':
-        return await handleGetLeaveRequests(req, res, supabase, userProfile)
-      
-      case 'POST':
-        return await handleCreateLeaveRequest(req, res, supabase, userProfile)
-      
-      default:
-        logger.warn('Leave API method not allowed', { method: req.method })
-        return res.status(405).json({ error: 'Method not allowed' })
-    }
-
-  } catch (error) {
-    const duration = Date.now() - startTime
-    logger.error('Leave API error', error, {
-      method: req.method,
-      path: req.url,
-      duration
-    })
-    
-    return res.status(500).json({ 
-      error: 'Internal server error',
-      message: 'Ocurrió un error procesando la solicitud'
-    })
-  }
-}
-
-async function handleGetLeaveRequests(
-  req: NextApiRequest, 
-  res: NextApiResponse, 
-  supabase: any, 
-  userProfile: any
-) {
-  try {
     let query = supabase
       .from('leave_requests')
       .select(`
         *,
-        employee:employees(
-          id,
-          first_name,
-          last_name,
-          email,
-          dni,
-          company_id
-        ),
-        leave_type:leave_types(
-          id,
-          name,
-          max_days_per_year,
-          is_paid,
-          requires_approval,
-          color
-        )
+        employee:employees(id, first_name, last_name, email, dni, company_id),
+        leave_type:leave_types(id, name, color, is_paid, requires_approval)
       `)
       .order('created_at', { ascending: false })
 
-    // Filter by company if not super_admin
-    if (userProfile.role !== 'super_admin' && userProfile.company_id) {
-      query = query.eq('employee.company_id', userProfile.company_id)
+    // Filter by company for non-super_admin users
+    if (user.role !== 'super_admin') {
+      query = query.eq('employee.company_id', user.company_id)
     }
 
     const { data, error } = await query
 
     if (error) {
-      logger.error('Error fetching leave requests', error)
+      logger.error('Error fetching leave requests:', { error: error.message, userId: user.id })
       return res.status(500).json({ error: 'Error fetching leave requests' })
     }
 
-    logger.info('Leave requests fetched successfully', {
-      count: data?.length || 0,
-      userId: userProfile.id,
-      role: userProfile.role
+    logger.info('Leave requests fetched successfully', { 
+      count: data?.length || 0, 
+      userId: user.id,
+      userRole: user.role 
     })
 
-    return res.status(200).json({ data })
-
+    res.status(200).json(data || [])
   } catch (error) {
-    logger.error('Error in handleGetLeaveRequests', error)
-    return res.status(500).json({ error: 'Internal server error' })
+    logger.error('Unexpected error in handleGetLeaveRequests:', { error: error.message })
+    res.status(500).json({ error: 'Internal server error' })
   }
 }
 
-async function handleCreateLeaveRequest(
-  req: NextApiRequest, 
-  res: NextApiResponse, 
-  supabase: any, 
-  userProfile: any
-) {
+async function handleCreateLeaveRequest(req: NextApiRequest, res: NextApiResponse) {
   try {
-    // Parse form data with file upload
+    const { user, error: authError } = await authenticateUser(req)
+    if (authError) {
+      return res.status(401).json({ error: authError })
+    }
+
+    // Parse form data
     const form = formidable({
-      uploadDir: path.join(process.cwd(), 'public', 'uploads'),
-      keepExtensions: true,
-      maxFileSize: 10 * 1024 * 1024, // 10MB limit
-      filter: (part) => {
-        // Only allow PDF and JPG files
-        if (part.mimetype) {
-          return part.mimetype.includes('pdf') || part.mimetype.includes('image')
+      maxFileSize: 5 * 1024 * 1024, // 5MB
+      filter: ({ name, originalFilename }) => {
+        if (name === 'attachment') {
+          const ext = originalFilename?.toLowerCase().split('.').pop()
+          return ext === 'pdf' || ext === 'jpg' || ext === 'jpeg'
         }
         return true
       }
     })
 
-    const [fields, files] = await form.parse(req)
-    
-    const employee_dni = fields.employee_dni?.[0]
-    const leave_type_id = fields.leave_type_id?.[0]
-    const start_date = fields.start_date?.[0]
-    const end_date = fields.end_date?.[0]
-    const reason = fields.reason?.[0]
+    const [fields, files] = await new Promise<[formidable.Fields, formidable.Files]>((resolve, reject) => {
+      form.parse(req, (err, fields, files) => {
+        if (err) reject(err)
+        else resolve([fields, files])
+      })
+    })
+
+    // Extract form data
+    const employee_dni = fields.employee_dni?.[0] as string
+    const leave_type_id = fields.leave_type_id?.[0] as string
+    const start_date = fields.start_date?.[0] as string
+    const end_date = fields.end_date?.[0] as string
+    const duration_type = fields.duration_type?.[0] as 'hours' | 'days'
+    const duration_hours = fields.duration_hours?.[0] ? parseFloat(fields.duration_hours[0]) : undefined
+    const is_half_day = fields.is_half_day?.[0] === 'true'
+    const reason = fields.reason?.[0] as string
     const attachment = files.attachment?.[0]
 
     // Validate required fields
-    if (!employee_dni || !leave_type_id || !start_date || !end_date) {
+    if (!employee_dni || !leave_type_id || !start_date || !end_date || !duration_type) {
       return res.status(400).json({ 
-        error: 'Missing required fields',
-        message: 'DNI, tipo de permiso, fecha de inicio y fecha de fin son obligatorios'
+        error: 'Missing required fields: employee_dni, leave_type_id, start_date, end_date, duration_type' 
       })
     }
 
     // Validate dates
-    const start = new Date(start_date)
-    const end = new Date(end_date)
-    if (end < start) {
-      return res.status(400).json({ 
-        error: 'Invalid dates',
-        message: 'La fecha de fin no puede ser anterior a la fecha de inicio'
-      })
+    const startDate = new Date(start_date)
+    const endDate = new Date(end_date)
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      return res.status(400).json({ error: 'Invalid date format' })
+    }
+    if (endDate < startDate) {
+      return res.status(400).json({ error: 'End date cannot be before start date' })
     }
 
-    // Calculate days requested
-    const timeDiff = end.getTime() - start.getTime()
-    const daysRequested = Math.floor(timeDiff / (1000 * 60 * 60 * 24)) + 1
-
-    if (daysRequested <= 0) {
-      return res.status(400).json({ 
-        error: 'Invalid date range',
-        message: 'El rango de fechas debe ser válido'
-      })
+    // Validate duration for hourly permissions
+    if (duration_type === 'hours') {
+      if (is_half_day && duration_hours !== 4) {
+        return res.status(400).json({ error: 'Half-day permissions must be exactly 4 hours' })
+      }
+      if (!is_half_day && (!duration_hours || duration_hours <= 0 || duration_hours > 24)) {
+        return res.status(400).json({ error: 'Duration hours must be between 1 and 24' })
+      }
     }
 
     // Find employee by DNI
     const { data: employee, error: empError } = await supabase
       .from('employees')
-      .select('id, company_id, dni')
+      .select('id, company_id')
       .eq('dni', employee_dni)
       .single()
 
     if (empError || !employee) {
-      return res.status(404).json({ 
-        error: 'Employee not found',
-        message: 'No se encontró un empleado con ese DNI'
-      })
+      logger.warn('Employee not found by DNI', { dni: employee_dni, userId: user.id })
+      return res.status(404).json({ error: 'Employee not found' })
     }
 
     // Verify employee belongs to user's company (unless super_admin)
-    if (userProfile.role !== 'super_admin' && userProfile.company_id) {
-      if (employee.company_id !== userProfile.company_id) {
-        return res.status(403).json({ 
-          error: 'Access denied',
-          message: 'No tiene acceso a empleados de otra empresa'
-        })
-      }
+    if (user.role !== 'super_admin' && employee.company_id !== user.company_id) {
+      logger.warn('User trying to create leave request for employee from different company', {
+        userId: user.id,
+        userCompanyId: user.company_id,
+        employeeCompanyId: employee.company_id
+      })
+      return res.status(403).json({ error: 'Access denied' })
     }
 
-    // Handle file upload if present
-    let attachmentData = {}
+    // Calculate days_requested based on duration type
+    let days_requested: number
+    if (duration_type === 'hours') {
+      const actualHours = is_half_day ? 4 : (duration_hours || 8)
+      days_requested = actualHours / 8.0 // Convert hours to days (8-hour workday)
+    } else {
+      // For daily permissions, calculate actual days
+      const timeDiff = endDate.getTime() - startDate.getTime()
+      days_requested = Math.ceil(timeDiff / (1000 * 60 * 60 * 24)) + 1
+    }
+
+    // Handle file upload
+    let attachment_url: string | undefined
+    let attachment_type: 'pdf' | 'jpg' | undefined
+    let attachment_name: string | undefined
+
     if (attachment) {
-      const fileExtension = path.extname(attachment.originalFilename || '').toLowerCase()
-      const attachmentType = fileExtension === '.pdf' ? 'pdf' : 'jpg'
-      
-      // Generate unique filename
-      const uniqueFilename = `${Date.now()}-${Math.random().toString(36).substring(2)}${fileExtension}`
-      const uploadPath = path.join(process.cwd(), 'public', 'uploads', uniqueFilename)
-      
+      const fileExtension = attachment.originalFilename?.toLowerCase().split('.').pop()
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExtension}`
+      const filePath = `public/uploads/${fileName}`
+
       // Move file to uploads directory
-      await fs.rename(attachment.filepath, uploadPath)
+      const fs = require('fs')
+      const path = require('path')
+      const uploadsDir = path.join(process.cwd(), 'public', 'uploads')
       
-      attachmentData = {
-        attachment_url: `/uploads/${uniqueFilename}`,
-        attachment_type: attachmentType,
-        attachment_name: attachment.originalFilename || uniqueFilename
+      // Ensure uploads directory exists
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true })
       }
+
+      fs.copyFileSync(attachment.filepath, path.join(uploadsDir, fileName))
+      fs.unlinkSync(attachment.filepath) // Clean up temp file
+
+      attachment_url = `/uploads/${fileName}`
+      attachment_type = fileExtension === 'pdf' ? 'pdf' : 'jpg'
+      attachment_name = attachment.originalFilename
+
+      logger.info('File uploaded successfully', {
+        fileName,
+        originalName: attachment.originalFilename,
+        size: attachment.size,
+        userId: user.id
+      })
     }
 
     // Create leave request
-    const { data, error } = await supabase
+    const { data: leaveRequest, error: createError } = await supabase
       .from('leave_requests')
       .insert([{
         employee_id: employee.id,
@@ -240,29 +197,76 @@ async function handleCreateLeaveRequest(
         employee_dni,
         start_date,
         end_date,
-        days_requested: daysRequested,
-        reason: reason || null,
-        status: 'pending',
-        ...attachmentData
+        days_requested,
+        duration_type,
+        duration_hours: duration_type === 'hours' ? (is_half_day ? 4 : duration_hours) : undefined,
+        is_half_day: duration_type === 'hours' ? is_half_day : false,
+        reason,
+        attachment_url,
+        attachment_type,
+        attachment_name,
+        status: 'pending'
       }])
       .select()
       .single()
 
-    if (error) {
-      logger.error('Error creating leave request', error)
+    if (createError) {
+      logger.error('Error creating leave request:', { 
+        error: createError.message, 
+        userId: user.id,
+        employeeId: employee.id 
+      })
       return res.status(500).json({ error: 'Error creating leave request' })
     }
 
     logger.info('Leave request created successfully', {
-      leaveRequestId: data.id,
-      employeeDni: employee_dni,
-      userId: userProfile.id
+      leaveRequestId: leaveRequest.id,
+      employeeId: employee.id,
+      userId: user.id,
+      durationType: duration_type,
+      daysRequested: days_requested
     })
 
-    return res.status(201).json({ data })
-
+    res.status(201).json(leaveRequest)
   } catch (error) {
-    logger.error('Error in handleCreateLeaveRequest', error)
-    return res.status(500).json({ error: 'Internal server error' })
+    logger.error('Unexpected error in handleCreateLeaveRequest:', { error: error.message })
+    res.status(500).json({ error: 'Internal server error' })
+  }
+}
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const { method } = req
+
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+
+  if (method === 'OPTIONS') {
+    res.status(200).end()
+    return
+  }
+
+  // Set security headers
+  res.setHeader('X-Content-Type-Options', 'nosniff')
+  res.setHeader('X-Frame-Options', 'DENY')
+  res.setHeader('X-XSS-Protection', '1; mode=block')
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
+
+  try {
+    switch (method) {
+      case 'GET':
+        await handleGetLeaveRequests(req, res)
+        break
+      case 'POST':
+        await handleCreateLeaveRequest(req, res)
+        break
+      default:
+        res.setHeader('Allow', ['GET', 'POST'])
+        res.status(405).json({ error: `Method ${method} Not Allowed` })
+    }
+  } catch (error) {
+    logger.error('Unexpected error in leave API:', { error: error.message, method })
+    res.status(500).json({ error: 'Internal server error' })
   }
 }
