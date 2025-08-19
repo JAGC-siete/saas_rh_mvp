@@ -96,6 +96,8 @@ export default function ReportsAndAnalytics() {
       setLoading(true)
       setError(null)
 
+      console.log('🔄 Fetching dashboard stats for company:', companyId, 'period:', { monthStart, monthEnd })
+
       const response = await fetch(`/api/reports/dashboard-stats?startDate=${monthStart}&endDate=${monthEnd}`)
       
       if (!response.ok) {
@@ -105,8 +107,11 @@ export default function ReportsAndAnalytics() {
       
       const result = await response.json()
       
+      console.log('📊 Dashboard stats response:', result)
+      
       if (result.success) {
         setStats(result.data)
+        console.log('✅ Dashboard stats loaded successfully:', result.data)
       } else {
         throw new Error(result.error || 'Error en la respuesta del servidor')
       }
@@ -114,7 +119,7 @@ export default function ReportsAndAnalytics() {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error desconocido'
       setError(errorMessage)
-      console.error('Error fetching dashboard stats:', err)
+      console.error('❌ Error fetching dashboard stats:', err)
     } finally {
       setLoading(false)
     }
@@ -131,6 +136,8 @@ export default function ReportsAndAnalytics() {
       setLoading(true)
       setError(null)
 
+      console.log('🔄 Fetching attendance trends for company:', companyId, 'period:', dateRange)
+
       const response = await fetch(`/api/reports/attendance-trends?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`)
       
       if (!response.ok) {
@@ -140,8 +147,11 @@ export default function ReportsAndAnalytics() {
       
       const result = await response.json()
       
+      console.log('📈 Attendance trends response:', result)
+      
       if (result.success) {
         setAttendanceTrends(result.data)
+        console.log('✅ Attendance trends loaded successfully:', result.data)
       } else {
         throw new Error(result.error || 'Error en la respuesta del servidor')
       }
@@ -149,7 +159,7 @@ export default function ReportsAndAnalytics() {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error desconocido'
       setError(errorMessage)
-      console.error('Error fetching attendance trends:', err)
+      console.error('❌ Error fetching attendance trends:', err)
     } finally {
       setLoading(false)
     }
@@ -205,9 +215,8 @@ export default function ReportsAndAnalytics() {
     if (session?.user && companyId && !companyLoading) {
       console.log('🔄 Refreshing dashboard for company:', companyId)
       fetchDashboardStats()
-      fetchAttendanceTrends()
     }
-  }, [session, companyId, companyLoading, monthStart, monthEnd, fetchDashboardStats, fetchAttendanceTrends])
+  }, [session, companyId, companyLoading, monthStart, monthEnd, fetchDashboardStats])
 
   // Actualizar datos cuando cambie el rango de fechas
   useEffect(() => {
@@ -392,7 +401,7 @@ export default function ReportsAndAnalytics() {
               const punctualityRate = total > 0 ? (trend.present / total * 100) : 0
               
               return (
-                <div key={trend.date} className="grid grid-cols-7 gap-2 text-sm py-2 mb-2">
+                <div key={trend.date} className="grid grid-cols-7 gap-2 text-sm py-2 border-b border-gray-700">
                   <div className="text-gray-300">{new Date(trend.date).toLocaleDateString('es-HN')}</div>
                   <div className="text-emerald-400 font-medium">{trend.present}</div>
                   <div className="text-red-400 font-medium">{trend.absent}</div>

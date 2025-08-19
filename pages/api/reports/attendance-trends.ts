@@ -54,20 +54,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 async function getAttendanceTrends(supabase: any, userProfile: any, startDate: string, endDate: string) {
   const companyId = userProfile?.company_id
 
-  // Obtener registros de asistencia del período - FILTRADO POR COMPANY a través de employees
-  // Usar la relación específica attendance_records_employee_id_fkey
-  const { data, error } = await supabase
+  // Obtener registros de asistencia del período - FILTRADO POR COMPANY
+  // attendance_records podría no tener company_id; filtrar por empleados de la empresa si aplica
+  let attendanceQuery = supabase
     .from('attendance_records')
-    .select(`
-      date, 
-      status, 
-      check_in,
-      employees!attendance_records_employee_id_fkey(company_id)
-    `)
-    .eq('employees.company_id', companyId)
+    .select('date, status, check_in, employee_id')
     .gte('date', startDate)
     .lte('date', endDate)
     .order('date')
+
+  if (companyId) {
+    // Obtener IDs de empleados de la empresa
+    const { data: companyEmployees } = await supabase
+      .from('employees')
+      .select('id')
+      .eq('company_id', companyId)
+    const employeeIds = (companyEmployees || []).map((e: any) => e.id)
+    if (employeeIds.length > 0) {
+      attendanceQuery = attendanceQuery.in('employee_id', employeeIds)
+    } else {
+      attendanceQuery = attendanceQuery.eq('employee_id', '__none__')
+    }
+  }
+
+  const { data, error } = await attendanceQuery
 
   if (error) throw error
 

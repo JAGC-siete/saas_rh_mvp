@@ -67,19 +67,25 @@ async function getDashboardStats(supabase: any, userProfile: any, startDate: str
   const totalEmployees = employees?.length || 0
   const activeEmployees = employees?.filter((emp: any) => emp.status === 'active').length || 0
 
-  // Asistencia del período - FILTRADO POR COMPANY a través de employees
-  // Usar la relación específica attendance_records_employee_id_fkey
+  // Asistencia del período - filtrar por empleados de la empresa si aplica
   let attendanceQuery = supabase
     .from('attendance_records')
-    .select(`
-      id, 
-      status, 
-      date,
-      employees!attendance_records_employee_id_fkey(company_id)
-    `)
-    .eq('employees.company_id', companyId)
+    .select('id, status, date, employee_id')
     .gte('date', startDate)
     .lte('date', endDate)
+
+  if (companyId) {
+    const { data: companyEmployees } = await supabase
+      .from('employees')
+      .select('id')
+      .eq('company_id', companyId)
+    const employeeIds = (companyEmployees || []).map((e: any) => e.id)
+    if (employeeIds.length > 0) {
+      attendanceQuery = attendanceQuery.in('employee_id', employeeIds)
+    } else {
+      attendanceQuery = attendanceQuery.eq('employee_id', '__none__')
+    }
+  }
 
   const { data: attendance, error: attendanceError } = await attendanceQuery
 
@@ -90,17 +96,15 @@ async function getDashboardStats(supabase: any, userProfile: any, startDate: str
   const lateDays = attendance?.filter((r: any) => r.status === 'late').length || 0
   const absentDays = attendance?.filter((r: any) => r.status === 'absent').length || 0
 
-  // Nóminas pendientes - FILTRADO POR COMPANY a través de employees
-  // Usar la relación específica payroll_records_employee_id_fkey
+  // Nóminas pendientes - FILTRADO POR COMPANY
   let payrollQuery = supabase
     .from('payroll_records')
-    .select(`
-      id, 
-      status,
-      employees!payroll_records_employee_id_fkey(company_id)
-    `)
+    .select('id, status')
     .eq('status', 'draft')
-    .eq('employees.company_id', companyId)
+
+  if (companyId) {
+    payrollQuery = payrollQuery.eq('company_id', companyId)
+  }
 
   const { data: payrolls, error: payrollsError } = await payrollQuery
 
@@ -108,21 +112,17 @@ async function getDashboardStats(supabase: any, userProfile: any, startDate: str
 
   const pendingPayrolls = payrolls?.length || 0
 
-  // Permisos del período - FILTRADO POR COMPANY a través de employees
-  // Usar la relación específica leave_requests_employee_id_fkey
+  // Permisos del período - FILTRADO POR COMPANY
   let leavesQuery = supabase
     .from('leave_requests')
-    .select(`
-      id, 
-      status, 
-      start_date, 
-      end_date,
-      employees!leave_requests_employee_id_fkey(company_id)
-    `)
+    .select('id, status, start_date, end_date')
     .gte('start_date', startDate)
     .lte('end_date', endDate)
     .eq('status', 'approved')
-    .eq('employees.company_id', companyId)
+
+  if (companyId) {
+    leavesQuery = leavesQuery.eq('company_id', companyId)
+  }
 
   const { data: leaves, error: leavesError } = await leavesQuery
 
@@ -130,9 +130,13 @@ async function getDashboardStats(supabase: any, userProfile: any, startDate: str
 
   const thisPeriodLeaves = leaves?.length || 0
 
-  // Calcular métricas
-  const attendanceRate = totalAttendance > 0 ? ((presentDays + lateDays) / totalAttendance * 100) : 0
-  const punctualityRate = totalAttendance > 0 ? (presentDays / totalAttendance * 100) : 0
+  // Calcular métricas normalizadas por día del período
+  const start = new Date(startDate)
+  const end = new Date(endDate)
+  const daysInRange = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1)
+  const expectedAttendances = (activeEmployees || 0) * daysInRange
+  const attendanceRate = expectedAttendances > 0 ? ((presentDays + lateDays) / expectedAttendances * 100) : 0
+  const punctualityRate = expectedAttendances > 0 ? (presentDays / expectedAttendances * 100) : 0
 
   return {
     totalEmployees,
