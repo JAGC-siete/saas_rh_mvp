@@ -67,11 +67,16 @@ async function getDashboardStats(supabase: any, userProfile: any, startDate: str
   const totalEmployees = employees?.length || 0
   const activeEmployees = employees?.filter((emp: any) => emp.status === 'active').length || 0
 
-  // Asistencia del período - FILTRADO POR COMPANY
+  // Asistencia del período - FILTRADO POR COMPANY a través de employees
   let attendanceQuery = supabase
     .from('attendance_records')
-    .select('id, status, date')
-    .eq('company_id', companyId)
+    .select(`
+      id, 
+      status, 
+      date,
+      employees!inner(company_id)
+    `)
+    .eq('employees.company_id', companyId)
     .gte('date', startDate)
     .lte('date', endDate)
 
@@ -84,15 +89,16 @@ async function getDashboardStats(supabase: any, userProfile: any, startDate: str
   const lateDays = attendance?.filter((r: any) => r.status === 'late').length || 0
   const absentDays = attendance?.filter((r: any) => r.status === 'absent').length || 0
 
-  // Nóminas pendientes - FILTRADO POR COMPANY
+  // Nóminas pendientes - FILTRADO POR COMPANY a través de employees
   let payrollQuery = supabase
     .from('payroll_records')
-    .select('id, status')
+    .select(`
+      id, 
+      status,
+      employees!inner(company_id)
+    `)
     .eq('status', 'draft')
-
-  if (companyId) {
-    payrollQuery = payrollQuery.eq('company_id', companyId)
-  }
+    .eq('employees.company_id', companyId)
 
   const { data: payrolls, error: payrollsError } = await payrollQuery
 
@@ -100,17 +106,20 @@ async function getDashboardStats(supabase: any, userProfile: any, startDate: str
 
   const pendingPayrolls = payrolls?.length || 0
 
-  // Permisos del período - FILTRADO POR COMPANY
+  // Permisos del período - FILTRADO POR COMPANY a través de employees
   let leavesQuery = supabase
     .from('leave_requests')
-    .select('id, status, start_date, end_date')
+    .select(`
+      id, 
+      status, 
+      start_date, 
+      end_date,
+      employees!inner(company_id)
+    `)
     .gte('start_date', startDate)
     .lte('end_date', endDate)
     .eq('status', 'approved')
-
-  if (companyId) {
-    leavesQuery = leavesQuery.eq('company_id', companyId)
-  }
+    .eq('employees.company_id', companyId)
 
   const { data: leaves, error: leavesError } = await leavesQuery
 

@@ -54,11 +54,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 async function getAttendanceTrends(supabase: any, userProfile: any, startDate: string, endDate: string) {
   const companyId = userProfile?.company_id
 
-  // Obtener registros de asistencia del período - FILTRADO POR COMPANY
+  // Obtener registros de asistencia del período - FILTRADO POR COMPANY a través de employees
   const { data, error } = await supabase
     .from('attendance_records')
-    .select('date, status, check_in')
-    .eq('company_id', companyId)
+    .select(`
+      date, 
+      status, 
+      check_in,
+      employees!inner(company_id)
+    `)
+    .eq('employees.company_id', companyId)
     .gte('date', startDate)
     .lte('date', endDate)
     .order('date')
