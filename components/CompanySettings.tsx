@@ -10,7 +10,9 @@ import {
   ClockIcon,
   CreditCardIcon,
   ShieldCheckIcon,
-  BellIcon
+  BellIcon,
+  CogIcon,
+  LinkIcon
 } from '@heroicons/react/24/outline'
 
 interface Company {
@@ -258,12 +260,10 @@ export default function CompanySettings() {
   }
 
   const tabs = [
-    { id: 'general', name: 'General', icon: BuildingOfficeIcon },
+    { id: 'general', name: 'General', icon: CogIcon },
+    { id: 'departments', name: 'Departamentos', icon: BuildingOfficeIcon },
     { id: 'schedules', name: 'Horarios', icon: ClockIcon },
-    { id: 'users', name: 'Usuarios', icon: UserGroupIcon },
-    { id: 'billing', name: 'Facturación', icon: CreditCardIcon },
-    { id: 'security', name: 'Seguridad', icon: ShieldCheckIcon },
-    { id: 'notifications', name: 'Notificaciones', icon: BellIcon }
+    { id: 'integrations', name: 'Integraciones', icon: LinkIcon },
   ]
 
   const days = [
@@ -503,31 +503,17 @@ export default function CompanySettings() {
         </div>
       )}
 
-      {activeTab === 'users' && (
+      {activeTab === 'departments' && (
         <Card className="p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Gestión de Usuarios</h3>
-          <p className="text-gray-600">Próximamente: Gestión de roles y permisos de usuarios</p>
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Gestión de Departamentos</h3>
+          <p className="text-gray-600">Próximamente: Gestión de departamentos y empleados</p>
         </Card>
       )}
 
-      {activeTab === 'billing' && (
+      {activeTab === 'integrations' && (
         <Card className="p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Facturación y Suscripción</h3>
-          <p className="text-gray-600">Próximamente: Gestión de facturación y planes</p>
-        </Card>
-      )}
-
-      {activeTab === 'security' && (
-        <Card className="p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Configuración de Seguridad</h3>
-          <p className="text-gray-600">Próximamente: Configuración de autenticación y seguridad</p>
-        </Card>
-      )}
-
-      {activeTab === 'notifications' && (
-        <Card className="p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Configuración de Notificaciones</h3>
-          <p className="text-gray-600">Próximamente: Configuración de notificaciones por email y SMS</p>
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Integraciones</h3>
+          <p className="text-gray-600">Próximamente: Configuración de integraciones con otras aplicaciones</p>
         </Card>
       )}
     </div>
