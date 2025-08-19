@@ -27,11 +27,6 @@ export default function EmployeeAchievements({ companyId, employeeId, limit = 10
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!companyId) return
-    fetchAchievements()
-  }, [companyId, employeeId, fetchAchievements])
-
   const fetchAchievements = useCallback(async () => {
     try {
       setLoading(true)
@@ -57,6 +52,11 @@ export default function EmployeeAchievements({ companyId, employeeId, limit = 10
       setLoading(false)
     }
   }, [companyId, employeeId, limit])
+
+  useEffect(() => {
+    if (!companyId) return
+    fetchAchievements()
+  }, [companyId, employeeId, fetchAchievements])
 
   const getBadgeColor = (color: string) => {
     const colorMap: { [key: string]: string } = {

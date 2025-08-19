@@ -30,11 +30,6 @@ export default function GamificationLeaderboard({ companyId, limit = 20 }: Gamif
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!companyId) return
-    fetchLeaderboard()
-  }, [companyId, fetchLeaderboard])
-
   const fetchLeaderboard = useCallback(async () => {
     try {
       setLoading(true)
@@ -55,6 +50,11 @@ export default function GamificationLeaderboard({ companyId, limit = 20 }: Gamif
       setLoading(false)
     }
   }, [companyId, limit])
+
+  useEffect(() => {
+    if (!companyId) return
+    fetchLeaderboard()
+  }, [companyId, fetchLeaderboard])
 
   const getRankIcon = (rank: number) => {
     if (rank === 1) return <TrophyIcon className="h-6 w-6 text-yellow-500" />
