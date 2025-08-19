@@ -1329,53 +1329,8 @@ export default function PayrollManager() {
           </Card>
         </div>
 
-        {/* Additional Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card variant="glass">
-            <CardHeader>
-              <CardTitle className="text-white">📊 Métricas de Gestión</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between">
-                  <span className="text-gray-300">Salario Promedio:</span>
-                  <span className="font-semibold text-white">{formatCurrency(payrollMetrics.averageSalary)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-300">Cobertura de Nómina:</span>
-                  <span className={`font-semibold ${payrollMetrics.payrollCoverage >= 95 ? 'text-green-400' : 'text-orange-400'}`}>
-                    {payrollMetrics.payrollCoverage.toFixed(1)}%
-                  </span>
-                </div>
-                {compareData && (
-                  <div className="border-t border-white/10 pt-2 space-y-1 text-sm">
-                    <div className="text-gray-300">Comparativa vs {compareData.prev_periodo} Q{compareData.quincena}</div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-300">Bruto Δ:</span>
-                      <span className={compareData.delta?.gross >= 0 ? 'text-green-400' : 'text-red-400'}>
-                        {formatCurrency(compareData.delta?.gross || 0)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-300">Neto Δ:</span>
-                      <span className={compareData.delta?.net >= 0 ? 'text-green-400' : 'text-red-400'}>
-                        {formatCurrency(compareData.delta?.net || 0)}
-                      </span>
-                    </div>
-                  </div>
-                )}
-                <div className="flex justify-between">
-                  <span className="text-gray-300">Total Empleados:</span>
-                  <span className="font-semibold text-white">{payrollMetrics.activeEmployees}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-300">Registros Procesados:</span>
-                  <span className="font-semibold text-white">{Object.values(payrollMetrics.departmentBreakdown).reduce((sum, d) => sum + d.count, 0)}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
+        {/* Gráfico de Tendencia */}
+        <div className="grid grid-cols-1 gap-6">
           <Card variant="glass">
             <CardHeader>
               <CardTitle className="text-white">📈 Tendencia 6 meses (Neto)</CardTitle>
