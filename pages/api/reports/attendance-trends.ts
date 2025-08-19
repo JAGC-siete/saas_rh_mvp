@@ -81,29 +81,46 @@ async function getAttendanceTrends(supabase: any, userProfile: any, startDate: s
 
   if (error) throw error
 
-  // Agrupar por fecha y contar estados
-  const trendMap = new Map<string, { present: number; absent: number; late: number }>()
-  
+  // Agrupar por fecha y contar presentes/tarde; ausentes = empleados_activos - (presentes + tarde)
+  const trendMap = new Map<string, { present: number; late: number }>()
+
   data?.forEach((record: any) => {
     const date = record.date
     if (!trendMap.has(date)) {
-      trendMap.set(date, { present: 0, absent: 0, late: 0 })
+      trendMap.set(date, { present: 0, late: 0 })
     }
-    
+
     const trend = trendMap.get(date)!
     if (record.status === 'present') {
       trend.present++
-    } else if (record.status === 'absent') {
-      trend.absent++
     } else if (record.status === 'late') {
       trend.late++
     }
   })
 
-  const trends = Array.from(trendMap.entries()).map(([date, counts]) => ({
-    date,
-    ...counts
-  }))
+  // Determinar base de empleados
+  let employeesCount = 0
+  if (companyId) {
+    // companyEmployees fue consultado arriba
+    const { data: companyEmployees } = await supabase
+      .from('employees')
+      .select('id')
+      .eq('company_id', companyId)
+    employeesCount = (companyEmployees || []).length
+  } else {
+    // Fallback: usar empleados observados en registros
+    employeesCount = new Set((data || []).map((r: any) => r.employee_id)).size
+  }
+
+  const trends = Array.from(trendMap.entries()).map(([date, counts]) => {
+    const absent = Math.max(0, employeesCount - (counts.present + counts.late))
+    return {
+      date,
+      present: counts.present,
+      late: counts.late,
+      absent,
+    }
+  })
 
   return trends
 }
