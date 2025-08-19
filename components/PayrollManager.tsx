@@ -137,12 +137,8 @@ export default function PayrollManager() {
   const [suspendedCount, setSuspendedCount] = useState<number>(0)
   const [compareData, setCompareData] = useState<any>(null)
   const [trendSeries, setTrendSeries] = useState<any[]>([])
-  // UI colors (computed to avoid static strings triggering secret scanner)
-  const chartGridColor = useMemo(() => `rgba(${[255,255,255,0.13].join(',')})`, [])
-  const axisColor = useMemo(() => `rgb(${[156,163,175].join(',')})`, [])
-  const tooltipBg = useMemo(() => `rgb(${[17,24,39].join(',')})`, [])
-  const tooltipBorder = useMemo(() => `rgb(${[55,65,81].join(',')})`, [])
-  const trendLineColor = useMemo(() => `rgb(${[139,92,246].join(',')})`, [])
+    // UI colors (computed to avoid static strings triggering secret scanner)
+
   
 
   // Memoized values
@@ -376,6 +372,20 @@ export default function PayrollManager() {
       const startDay = quincena === 1 ? 1 : 16
       const endDay = quincena === 1 ? 15 : lastDay
 
+      // FÓRMULAS OFICIALES DE HONDURAS 2025:
+      // - IHSS: 5% del salario base (máximo L.11,903.13 según Google Sheets)
+      //   * Si salario > 11,903.13, entonces IHSS = 11,903.13 × 5%
+      //   * Si no, IHSS = salario mensual × 5%
+      // - RAP: 1.5% sobre excedente del salario mínimo (L.11,903.13)
+      //   * Si salario ≤ 11,903.13, entonces RAP = 0
+      //   * Si no, RAP = (salario mensual - 11,903.13) × 1.5%
+      // - ISR: Tabla progresiva 2025 con exención L.40k anual
+      //   * 0% hasta L.217,493.16 (base imponible)
+      //   * 15% hasta L.331,638.50 (base imponible)
+      //   * 20% hasta L.771,252.38 (base imponible)
+      //   * 25% más de L.771,252.38 (base imponible)
+      // - Todas las deducciones se dividen por 2 para quincena
+      
       // Generar registros Preview para cada empleado activo
       const previewRecords: PreviewPayrollRecord[] = activeEmployees.map((emp: any) => {
         // MODE: por días (cálculo basado en días trabajados)
@@ -383,10 +393,40 @@ export default function PayrollManager() {
         const daysWorked = 15 // Estimación estándar para quincena
         const grossSalary = dailyRate * daysWorked
 
-        // Cálculo de deducciones (estimaciones)
-        const ihss = grossSalary * 0.035 // 3.5% IHSS
-        const rap = grossSalary * 0.01   // 1% RAP
-        const isr = grossSalary * 0.05   // 5% ISR (estimado)
+        // Cálculo de deducciones según fórmulas oficiales de Honduras 2025
+        // Constantes específicas para Honduras
+        const SALARIO_MINIMO = 11903.13
+        
+        // IHSS: 5% del salario base (máximo L.11,903.13 según Google Sheets)
+        // Si salario > 11,903.13, entonces IHSS = 11,903.13 × 5%
+        // Si no, IHSS = salario mensual × 5%
+        const ihss = Math.min(emp.base_salary, SALARIO_MINIMO) * 0.05 / 2 // Dividir por 2 para quincena
+        
+        // RAP: 1.5% sobre el excedente del salario mínimo (según Google Sheets)
+        // Si salario ≤ 11,903.13, entonces RAP = 0
+        // Si no, RAP = (salario mensual - 11,903.13) × 1.5%
+        const rap = Math.max(0, emp.base_salary - SALARIO_MINIMO) * 0.015 / 2 // Dividir por 2 para quincena
+        
+        // ISR según tabla progresiva de Honduras 2025 (fórmula de Google Sheets)
+        // Base imponible = salario anual - 40,000 (exención)
+        // Escalas: 0% hasta 217,493.16, 15% hasta 331,638.50, 20% hasta 771,252.38, 25%+
+        const salarioAnual = emp.base_salary * 12
+        const baseImponible = salarioAnual - 40000
+        
+        let isr = 0
+        if (baseImponible <= 217493.16) {
+          isr = 0
+        } else if (baseImponible <= 331638.50) {
+          isr = (baseImponible - 217493.16) * 0.15
+        } else if (baseImponible <= 771252.38) {
+          isr = 17121.80 + (baseImponible - 331638.50) * 0.20
+        } else {
+          isr = 105044.58 + (baseImponible - 771252.38) * 0.25
+        }
+        
+        // Convertir ISR anual a mensual y luego a quincenal
+        isr = (isr / 12) / 2
+        
         const totalDeductions = ihss + rap + isr
         const netSalary = grossSalary - totalDeductions
 
@@ -974,7 +1014,7 @@ export default function PayrollManager() {
                 </div>
                 <div className="text-sm text-gray-300">Total IHSS (Q)</div>
                 <div className="text-xs text-gray-400 mt-1">
-                  3.5% del bruto
+                  5% del salario base (máx. L.11,903.13)
                 </div>
               </div>
             </CardContent>
@@ -988,7 +1028,7 @@ export default function PayrollManager() {
                 </div>
                 <div className="text-sm text-gray-300">Total RAP (Q)</div>
                 <div className="text-xs text-gray-400 mt-1">
-                  1% del bruto
+                  1.5% sobre excedente del mínimo
                 </div>
               </div>
             </CardContent>
@@ -1002,7 +1042,7 @@ export default function PayrollManager() {
                 </div>
                 <div className="text-sm text-gray-300">Total ISR (Q)</div>
                 <div className="text-xs text-gray-400 mt-1">
-                  5% estimado
+                  Tabla progresiva 2025 (exención L.40k anual)
                 </div>
               </div>
             </CardContent>
@@ -1151,15 +1191,15 @@ export default function PayrollManager() {
               <div className="h-56">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={trendSeries} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
-                    <CartesianGrid strokeDasharray="2 2" stroke={chartGridColor} />
-                    <XAxis dataKey="month" stroke={axisColor} />
-                    <YAxis stroke={axisColor} tickFormatter={(v)=>formatCurrency(v as any)} />
+                    <CartesianGrid strokeDasharray="2 2" stroke="rgba(255,255,255,0.13)" />
+                    <XAxis dataKey="month" stroke="#9ca3af" />
+                    <YAxis stroke="#9ca3af" tickFormatter={(v)=>formatCurrency(v as any)} />
                     <Tooltip 
                       formatter={(v: any)=>formatCurrency(Number(v))} 
                       labelStyle={{ color: 'rgb(255,255,255)' }} 
-                      contentStyle={{ background: tooltipBg, border: `1px solid ${tooltipBorder}` }} 
+                                              contentStyle={{ background: 'rgb(17,24,39)', border: '1px solid rgb(55,65,81)' }} 
                     />
-                    <Line type="monotone" dataKey="netSalary" stroke={trendLineColor} strokeWidth={1} dot={false} />
+                    <Line type="monotone" dataKey="netSalary" stroke="#8b5cf6" strokeWidth={1} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
