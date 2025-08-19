@@ -55,13 +55,29 @@ async function getAttendanceTrends(supabase: any, userProfile: any, startDate: s
   const companyId = userProfile?.company_id
 
   // Obtener registros de asistencia del período - FILTRADO POR COMPANY
-  const { data, error } = await supabase
+  // attendance_records podría no tener company_id; filtrar por empleados de la empresa si aplica
+  let attendanceQuery = supabase
     .from('attendance_records')
-    .select('date, status, check_in')
-    .eq('company_id', companyId)
+    .select('date, status, check_in, employee_id')
     .gte('date', startDate)
     .lte('date', endDate)
     .order('date')
+
+  if (companyId) {
+    // Obtener IDs de empleados de la empresa
+    const { data: companyEmployees } = await supabase
+      .from('employees')
+      .select('id')
+      .eq('company_id', companyId)
+    const employeeIds = (companyEmployees || []).map((e: any) => e.id)
+    if (employeeIds.length > 0) {
+      attendanceQuery = attendanceQuery.in('employee_id', employeeIds)
+    } else {
+      attendanceQuery = attendanceQuery.eq('employee_id', '__none__')
+    }
+  }
+
+  const { data, error } = await attendanceQuery
 
   if (error) throw error
 

@@ -98,23 +98,41 @@ async function generateReportData(supabase: any, dateFilter: any, userProfile: a
   }
 
   // Obtener registros de asistencia del período
-  const { data: attendanceRecords, error: attError } = await supabase
+  let attendanceQuery = supabase
     .from('attendance_records')
     .select('employee_id, date, check_in, check_out, status')
     .gte('date', dateFilter.startDate)
     .lte('date', dateFilter.endDate)
+
+  // attendance_records puede no tener company_id; filtrar por empleados de la compañía
+  if (userProfile?.company_id) {
+    const employeeIds = (employees || []).map((e: any) => e.id)
+    if (employeeIds.length > 0) {
+      attendanceQuery = attendanceQuery.in('employee_id', employeeIds)
+    } else {
+      attendanceQuery = attendanceQuery.eq('employee_id', '__none__')
+    }
+  }
+
+  const { data: attendanceRecords, error: attError } = await attendanceQuery
 
   if (attError) {
     console.error('Error obteniendo registros de asistencia:', attError)
     throw new Error('Error obteniendo registros de asistencia')
   }
 
-  // Obtener registros de nómina del período
-  const { data: payrollRecords, error: payrollError } = await supabase
+  // Obtener registros de nómina del período, filtrados por empresa si aplica
+  let payrollQuery = supabase
     .from('payroll_records')
     .select('*')
     .gte('period_start', dateFilter.startDate)
     .lte('period_end', dateFilter.endDate)
+
+  if (userProfile?.company_id) {
+    payrollQuery = payrollQuery.eq('company_id', userProfile.company_id)
+  }
+
+  const { data: payrollRecords, error: payrollError } = await payrollQuery
 
   if (payrollError) {
     console.error('Error obteniendo registros de nómina:', payrollError)
@@ -125,7 +143,10 @@ async function generateReportData(supabase: any, dateFilter: any, userProfile: a
   const totalEmployees = employees?.length || 0
   const totalAttendance = attendanceRecords?.length || 0
   const totalPayroll = payrollRecords?.reduce((sum: number, record: any) => sum + (record.net_salary || 0), 0) || 0
-  const averageAttendance = totalEmployees > 0 ? totalAttendance / totalEmployees : 0
+  // Promedio de asistencia normalizado por día del período
+  const daysInRange = Math.max(1, Math.ceil((new Date(dateFilter.endDate).getTime() - new Date(dateFilter.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1)
+  const expectedAttendances = totalEmployees * daysInRange
+  const averageAttendance = expectedAttendances > 0 ? (totalAttendance / expectedAttendances) * 100 : 0
 
   // Calcular empleados tardíos y ausentes
   const lateEmployees = new Set(
