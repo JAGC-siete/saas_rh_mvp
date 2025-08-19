@@ -1,128 +1,43 @@
-# Dependencies
-node_modules/
-node_modules/**/*
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Next.js
-.next/
-out/
-build/
-dist/
-tsconfig.tsbuildinfo
+# local env files
+.env*.local
 
-# Railway
-railway.json
+# vercel
+.vercel
 
-# Environment variables
-.env
-.env.*
-!.env.example
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-.env.production
+# typescript
+*.tsbuildinfo
+next-env.d.ts
 
-# Secrets and credentials
-secrets/
-.secrets
-*.pem
-*.key
-*.p12
-*.pfx
+# uploads
+/public/uploads/*
+!/public/uploads/.gitkeep
 
 # IDE
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
-
-# OS
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# Logs
-logs/
-*.log
-
-# Database
-*.db
-*.sqlite
-
-# Cache
-.cache/
-
-# Sensitive configuration files
-.github/copilot-instructions.md
-
-# Temporary or auto-generated files
-*.tsbuildinfo
-tsconfig.tsbuildinfo
-.parcel-cache/
-
-# Runtime data
-pids/
-*.pid
-*.seed
-*.pid.lock
-
-# Archives
-*.tar.gz
-*.zip
-
-# Temporary files
-tmp/
-temp/
-
-# Build artifacts
-archived_versions/
-nuevo-clon/
-terraform/
-
-# Exclude problematic directories from build
-SAAS 2.0/
-
-# SQL Scripts and Reports (Local only - DO NOT COMMIT)
-create-*-user.sql
-create-*-*.sql
-update-*-password*.sql
-*-report.json
-*-report.md
-audit-*.json
-audit-*.md
-test-*.sql
-test-*.js
-test-*.md
-debug-*.js
-check-*.js
-verify-*.js
-fix-*.sql
-fix-*.js
-
-# Diagnostic scripts (contain credentials)
-diagnose-dashboard-issue.js
-check-late-minutes.js
-fix-late-minutes.js
-test-dashboard-api.js
-restore-correct-attendance.js
-generate-today-attendance.js
-restore-real-employees.js
-check-employee-ids.js
-check-companies.js
-verify-restoration.js
-diagnose-attendance-dashboard.js
-fix-employee-codes.js
-test-complete-flow.js
-generate-attendance-data.js
-
-# Backup files and directories
-backups/
-*.backup*

@@ -4,24 +4,19 @@ import { useSession } from '@supabase/auth-helpers-react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card'
-import { PlusIcon, CheckIcon, XMarkIcon, CalendarIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, CheckIcon, XMarkIcon, CalendarIcon, DocumentIcon, XCircleIcon } from '@heroicons/react/24/outline'
 import { useLeave } from '../lib/hooks/useLeave'
+import { LeaveType } from '../lib/types/leave'
 
 interface Employee {
   id: string
   first_name: string
   last_name: string
   email: string
+  dni: string
+  company_id: string
+  status: string
 }
-
-const LEAVE_TYPES = [
-  { value: 'vacation', label: 'Vacaciones' },
-  { value: 'sick', label: 'Enfermedad' },
-  { value: 'personal', label: 'Personal' },
-  { value: 'maternity', label: 'Maternidad' },
-  { value: 'paternity', label: 'Paternidad' },
-  { value: 'emergency', label: 'Emergencia' }
-] as const
 
 const STATUS_CONFIG = {
   pending: { color: 'bg-yellow-500/20 text-yellow-400', label: 'Pendiente' },
@@ -30,11 +25,12 @@ const STATUS_CONFIG = {
 } as const
 
 const INITIAL_FORM_DATA = {
-  employee_id: '',
-  leave_type: '',
+  employee_dni: '',
+  leave_type_id: '',
   start_date: '',
   end_date: '',
-  reason: ''
+  reason: '',
+  attachment: null as File | null
 }
 
 export default function LeaveManager() {
@@ -42,6 +38,8 @@ export default function LeaveManager() {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState(INITIAL_FORM_DATA)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [filePreview, setFilePreview] = useState<string | null>(null)
 
   // Use custom hook for leave operations
   const {
@@ -65,14 +63,10 @@ export default function LeaveManager() {
     }
   }, [])
 
-  // Memoized leave types map for better performance
-  const leaveTypesMap = useMemo(
-    () => Object.fromEntries(LEAVE_TYPES.map((type) => [type.value, type.label])),
-    []
-  )
-
   const resetForm = useCallback(() => {
     setFormData(INITIAL_FORM_DATA)
+    setSelectedFile(null)
+    setFilePreview(null)
     setShowForm(false)
     clearError()
   }, [clearError])
@@ -117,6 +111,40 @@ export default function LeaveManager() {
     return end < start
   }, [formData.start_date, formData.end_date])
 
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      // Validate file type
+      if (!file.type.includes('pdf') && !file.type.includes('image')) {
+        alert('Solo se permiten archivos PDF o imágenes (JPG, PNG)')
+        return
+      }
+      
+      // Validate file size (10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        alert('El archivo no puede ser mayor a 10MB')
+        return
+      }
+
+      setSelectedFile(file)
+      
+      // Create preview for images
+      if (file.type.includes('image')) {
+        const reader = new FileReader()
+        reader.onload = (e) => setFilePreview(e.target?.result as string)
+        reader.readAsDataURL(file)
+      } else {
+        setFilePreview(null)
+      }
+    }
+  }, [])
+
+  const removeFile = useCallback(() => {
+    setSelectedFile(null)
+    setFilePreview(null)
+    setFormData(prev => ({ ...prev, attachment: null }))
+  }, [])
+
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault()
@@ -128,12 +156,20 @@ export default function LeaveManager() {
           return
         }
 
+        // Validate DNI exists
+        const employeeExists = employees.find(emp => emp.dni === formData.employee_dni)
+        if (!employeeExists) {
+          alert('No se encontró un empleado con ese DNI')
+          return
+        }
+
         await createLeaveRequest({
-          employee_id: formData.employee_id,
-          leave_type: formData.leave_type,
+          employee_dni: formData.employee_dni,
+          leave_type_id: formData.leave_type_id,
           start_date: formData.start_date,
           end_date: formData.end_date,
           reason: formData.reason || undefined,
+          attachment: selectedFile || undefined,
         })
 
         resetForm()
@@ -142,7 +178,7 @@ export default function LeaveManager() {
         console.error('Error creating leave request:', error)
       }
     },
-    [formData, calculateDays, resetForm, createLeaveRequest, datesInvalid]
+    [formData, calculateDays, resetForm, createLeaveRequest, datesInvalid, employees, selectedFile]
   )
 
   const handleStatusChange = useCallback(
@@ -170,11 +206,12 @@ export default function LeaveManager() {
     })
   }, [])
 
-  const getLeaveTypeLabel = useCallback(
-    (type: string): string => {
-      return leaveTypesMap[type] || type
+  const getLeaveTypeName = useCallback(
+    (leaveTypeId: string): string => {
+      const leaveType = leaveTypes.find(lt => lt.id === leaveTypeId)
+      return leaveType?.name || leaveTypeId
     },
-    [leaveTypesMap]
+    [leaveTypes]
   )
 
   const handleFormChange = useCallback(
@@ -223,39 +260,43 @@ export default function LeaveManager() {
         <Card variant="glass">
           <CardHeader>
             <CardTitle className="text-white">Nueva Solicitud de Permiso</CardTitle>
+            <p className="text-sm text-gray-300">Registro de permisos previamente autorizados</p>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Empleado *</label>
-                  <select
-                    value={formData.employee_id}
-                    onChange={(e) => handleFormChange('employee_id', e.target.value)}
+                  <label className="block text-sm font-medium text-gray-300 mb-1">DNI del Empleado *</label>
+                  <Input
+                    type="text"
+                    value={formData.employee_dni}
+                    onChange={(e) => handleFormChange('employee_dni', e.target.value)}
                     required
-                    className="w-full px-3 py-2 border border-white/20 bg-white/10 rounded-md text-white placeholder-gray-400 focus:border-brand-400 focus:ring-1 focus:ring-brand-400"
-                  >
-                    <option value="" className="text-gray-900">Seleccionar empleado</option>
-                    {employees.map((employee) => (
-                      <option key={employee.id} value={employee.id} className="text-gray-900">
-                        {employee.first_name} {employee.last_name}
-                      </option>
-                    ))}
-                  </select>
+                    placeholder="Ingrese el DNI del empleado"
+                    className="bg-white/10 border-white/20 text-white placeholder-gray-400 focus:border-brand-400 focus:ring-1 focus:ring-brand-400"
+                  />
+                  {formData.employee_dni && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      {employees.find(emp => emp.dni === formData.employee_dni)?.first_name 
+                        ? `Empleado: ${employees.find(emp => emp.dni === formData.employee_dni)?.first_name} ${employees.find(emp => emp.dni === formData.employee_dni)?.last_name}`
+                        : 'DNI no encontrado en la base de datos'
+                      }
+                    </p>
+                  )}
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-1">Tipo de Permiso *</label>
                   <select
-                    value={formData.leave_type}
-                    onChange={(e) => handleFormChange('leave_type', e.target.value)}
+                    value={formData.leave_type_id}
+                    onChange={(e) => handleFormChange('leave_type_id', e.target.value)}
                     required
                     className="w-full px-3 py-2 border border-white/20 bg-white/10 rounded-md text-white placeholder-gray-400 focus:border-brand-400 focus:ring-1 focus:ring-brand-400"
                   >
                     <option value="" className="text-gray-900">Seleccionar tipo</option>
-                    {LEAVE_TYPES.map((type) => (
-                      <option key={type.value} value={type.value} className="text-gray-900">
-                        {type.label}
+                    {leaveTypes.map((type) => (
+                      <option key={type.id} value={type.id} className="text-gray-900">
+                        {type.name}
                       </option>
                     ))}
                   </select>
@@ -303,8 +344,62 @@ export default function LeaveManager() {
                   onChange={(e) => handleFormChange('reason', e.target.value)}
                   rows={3}
                   className="w-full px-3 py-2 border border-white/20 bg-white/10 rounded-md text-white placeholder-gray-400 focus:border-brand-400 focus:ring-1 focus:ring-brand-400"
-                  placeholder="Motivo de la solicitud"
+                  placeholder="Descripción del motivo del permiso"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">
+                  Comprobante/Respaldo (PDF o JPG)
+                </label>
+                <div className="border-2 border-dashed border-white/20 rounded-lg p-4 text-center">
+                  {!selectedFile ? (
+                    <div>
+                      <DocumentIcon className="mx-auto h-12 w-12 text-gray-400" />
+                      <div className="mt-2">
+                        <label htmlFor="file-upload" className="cursor-pointer">
+                          <span className="text-brand-400 hover:text-brand-300">Seleccionar archivo</span>
+                          <span className="text-gray-400"> o arrastrar y soltar</span>
+                        </label>
+                        <input
+                          id="file-upload"
+                          type="file"
+                          accept=".pdf,.jpg,.jpeg,.png"
+                          onChange={handleFileChange}
+                          className="hidden"
+                        />
+                      </div>
+                      <p className="text-xs text-gray-400 mt-1">
+                        PDF, JPG, PNG hasta 10MB
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        {filePreview ? (
+                          <img src={filePreview} alt="Preview" className="h-10 w-10 object-cover rounded" />
+                        ) : (
+                          <DocumentIcon className="h-10 w-10 text-gray-400" />
+                        )}
+                        <div className="text-left">
+                          <p className="text-sm text-white">{selectedFile.name}</p>
+                          <p className="text-xs text-gray-400">
+                            {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        onClick={removeFile}
+                        variant="outline"
+                        size="sm"
+                        className="text-red-400 border-red-400/50 hover:bg-red-500/20"
+                      >
+                        <XCircleIcon className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="flex space-x-3">
@@ -330,6 +425,7 @@ export default function LeaveManager() {
                     <h3 className="text-lg font-medium text-white">
                       {request.employee?.first_name} {request.employee?.last_name}
                     </h3>
+                    <span className="text-sm text-gray-400">DNI: {request.employee_dni}</span>
                     <span className={`px-2 py-1 text-xs rounded-full ${STATUS_CONFIG[request.status].color}`}>
                       {STATUS_CONFIG[request.status].label}
                     </span>
@@ -338,7 +434,7 @@ export default function LeaveManager() {
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
                     <div>
                       <span className="font-medium text-gray-300">Tipo:</span>
-                      <p className="text-gray-400">{getLeaveTypeLabel(request.leave_type)}</p>
+                      <p className="text-gray-400">{getLeaveTypeName(request.leave_type_id)}</p>
                     </div>
                     <div>
                       <span className="font-medium text-gray-300">Fechas:</span>
@@ -360,6 +456,23 @@ export default function LeaveManager() {
                     <div className="mt-3">
                       <span className="font-medium text-gray-300">Motivo:</span>
                       <p className="text-gray-400 mt-1">{request.reason}</p>
+                    </div>
+                  )}
+
+                  {request.attachment_url && (
+                    <div className="mt-3">
+                      <span className="font-medium text-gray-300">Comprobante:</span>
+                      <div className="mt-1">
+                        <a
+                          href={request.attachment_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center space-x-2 text-brand-400 hover:text-brand-300"
+                        >
+                          <DocumentIcon className="h-4 w-4" />
+                          <span>{request.attachment_name || 'Ver archivo'}</span>
+                        </a>
+                      </div>
                     </div>
                   )}
                 </div>

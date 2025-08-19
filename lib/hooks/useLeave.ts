@@ -1,46 +1,6 @@
 import { useState, useCallback } from 'react'
 import { logger } from '../logger'
-
-interface LeaveRequest {
-  id: string
-  employee_id: string
-  employee?: {
-    first_name: string
-    last_name: string
-    email: string
-  }
-  leave_type: string
-  start_date: string
-  end_date: string
-  days_requested: number
-  reason?: string
-  status: 'pending' | 'approved' | 'rejected'
-  approved_by?: string
-  approved_at?: string
-  created_at: string
-}
-
-interface LeaveType {
-  id: string
-  name: string
-  max_days_per_year?: number
-  is_paid: boolean
-  requires_approval: boolean
-  color: string
-}
-
-interface CreateLeaveRequestData {
-  employee_id: string
-  leave_type: string
-  start_date: string
-  end_date: string
-  reason?: string
-}
-
-interface UpdateLeaveRequestData {
-  status: 'approved' | 'rejected'
-  rejection_reason?: string
-}
+import { LeaveRequest, LeaveType, CreateLeaveRequestData, UpdateLeaveRequestData } from '../types/leave'
 
 interface UseLeaveReturn {
   // State
@@ -126,12 +86,22 @@ export function useLeave(): UseLeaveReturn {
       setIsSubmitting(true)
       setError(null)
 
+      // Create FormData for file upload
+      const formData = new FormData()
+      formData.append('employee_dni', data.employee_dni)
+      formData.append('leave_type_id', data.leave_type_id)
+      formData.append('start_date', data.start_date)
+      formData.append('end_date', data.end_date)
+      if (data.reason) {
+        formData.append('reason', data.reason)
+      }
+      if (data.attachment) {
+        formData.append('attachment', data.attachment)
+      }
+
       const response = await fetch('/api/leave', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
+        body: formData, // Use FormData for file upload
       })
 
       if (!response.ok) {
@@ -146,7 +116,7 @@ export function useLeave(): UseLeaveReturn {
       
       logger.info('Leave request created successfully', {
         leaveRequestId: createdRequest.id,
-        employeeId: data.employee_id
+        employeeDni: data.employee_dni
       })
       
       return createdRequest

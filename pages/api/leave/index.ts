@@ -2,6 +2,16 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { authenticateUser } from '../../../lib/auth-utils'
 import { createClient } from '../../../lib/supabase/server'
 import { logger } from '../../../lib/logger'
+import formidable from 'formidable'
+import { promises as fs } from 'fs'
+import path from 'path'
+
+// Disable body parsing for file uploads
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const startTime = Date.now()
@@ -78,6 +88,7 @@ async function handleGetLeaveRequests(
           first_name,
           last_name,
           email,
+          dni,
           company_id
         ),
         leave_type:leave_types(
@@ -85,7 +96,8 @@ async function handleGetLeaveRequests(
           name,
           max_days_per_year,
           is_paid,
-          requires_approval
+          requires_approval,
+          color
         )
       `)
       .order('created_at', { ascending: false })
@@ -123,13 +135,34 @@ async function handleCreateLeaveRequest(
   userProfile: any
 ) {
   try {
-    const { employee_id, leave_type, start_date, end_date, reason } = req.body
+    // Parse form data with file upload
+    const form = formidable({
+      uploadDir: path.join(process.cwd(), 'public', 'uploads'),
+      keepExtensions: true,
+      maxFileSize: 10 * 1024 * 1024, // 10MB limit
+      filter: (part) => {
+        // Only allow PDF and JPG files
+        if (part.mimetype) {
+          return part.mimetype.includes('pdf') || part.mimetype.includes('image')
+        }
+        return true
+      }
+    })
+
+    const [fields, files] = await form.parse(req)
+    
+    const employee_dni = fields.employee_dni?.[0]
+    const leave_type_id = fields.leave_type_id?.[0]
+    const start_date = fields.start_date?.[0]
+    const end_date = fields.end_date?.[0]
+    const reason = fields.reason?.[0]
+    const attachment = files.attachment?.[0]
 
     // Validate required fields
-    if (!employee_id || !leave_type || !start_date || !end_date) {
+    if (!employee_dni || !leave_type_id || !start_date || !end_date) {
       return res.status(400).json({ 
         error: 'Missing required fields',
-        message: 'Todos los campos obligatorios deben ser completados'
+        message: 'DNI, tipo de permiso, fecha de inicio y fecha de fin son obligatorios'
       })
     }
 
@@ -154,20 +187,47 @@ async function handleCreateLeaveRequest(
       })
     }
 
+    // Find employee by DNI
+    const { data: employee, error: empError } = await supabase
+      .from('employees')
+      .select('id, company_id, dni')
+      .eq('dni', employee_dni)
+      .single()
+
+    if (empError || !employee) {
+      return res.status(404).json({ 
+        error: 'Employee not found',
+        message: 'No se encontró un empleado con ese DNI'
+      })
+    }
+
     // Verify employee belongs to user's company (unless super_admin)
     if (userProfile.role !== 'super_admin' && userProfile.company_id) {
-      const { data: employee, error: empError } = await supabase
-        .from('employees')
-        .select('company_id')
-        .eq('id', employee_id)
-        .single()
-
-      if (empError || !employee) {
-        return res.status(404).json({ error: 'Employee not found' })
-      }
-
       if (employee.company_id !== userProfile.company_id) {
-        return res.status(403).json({ error: 'Access denied to employee' })
+        return res.status(403).json({ 
+          error: 'Access denied',
+          message: 'No tiene acceso a empleados de otra empresa'
+        })
+      }
+    }
+
+    // Handle file upload if present
+    let attachmentData = {}
+    if (attachment) {
+      const fileExtension = path.extname(attachment.originalFilename || '').toLowerCase()
+      const attachmentType = fileExtension === '.pdf' ? 'pdf' : 'jpg'
+      
+      // Generate unique filename
+      const uniqueFilename = `${Date.now()}-${Math.random().toString(36).substring(2)}${fileExtension}`
+      const uploadPath = path.join(process.cwd(), 'public', 'uploads', uniqueFilename)
+      
+      // Move file to uploads directory
+      await fs.rename(attachment.filepath, uploadPath)
+      
+      attachmentData = {
+        attachment_url: `/uploads/${uniqueFilename}`,
+        attachment_type: attachmentType,
+        attachment_name: attachment.originalFilename || uniqueFilename
       }
     }
 
@@ -175,13 +235,15 @@ async function handleCreateLeaveRequest(
     const { data, error } = await supabase
       .from('leave_requests')
       .insert([{
-        employee_id,
-        leave_type,
+        employee_id: employee.id,
+        leave_type_id,
+        employee_dni,
         start_date,
         end_date,
         days_requested: daysRequested,
         reason: reason || null,
-        status: 'pending'
+        status: 'pending',
+        ...attachmentData
       }])
       .select()
       .single()
@@ -193,7 +255,7 @@ async function handleCreateLeaveRequest(
 
     logger.info('Leave request created successfully', {
       leaveRequestId: data.id,
-      employeeId: employee_id,
+      employeeDni: employee_dni,
       userId: userProfile.id
     })
 
