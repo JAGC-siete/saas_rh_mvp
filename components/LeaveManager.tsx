@@ -1,30 +1,11 @@
 // LeaveManager.tsx
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { supabase } from '../lib/supabase'
 import { useSession } from '@supabase/auth-helpers-react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card'
 import { PlusIcon, CheckIcon, XMarkIcon, CalendarIcon } from '@heroicons/react/24/outline'
-
-interface LeaveRequest {
-  id: string
-  employee_id: string
-  employee?: {
-    first_name: string
-    last_name: string
-    email: string
-  }
-  leave_type: string
-  start_date: string
-  end_date: string
-  days_requested: number
-  reason?: string
-  status: 'pending' | 'approved' | 'rejected'
-  approved_by?: string
-  approved_at?: string
-  created_at: string
-}
+import { useLeave } from '../lib/hooks/useLeave'
 
 interface Employee {
   id: string
@@ -58,12 +39,23 @@ const INITIAL_FORM_DATA = {
 
 export default function LeaveManager() {
   const session = useSession()
-  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([])
   const [employees, setEmployees] = useState<Employee[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState(INITIAL_FORM_DATA)
+
+  // Use custom hook for leave operations
+  const {
+    leaveRequests,
+    leaveTypes,
+    isLoading,
+    isSubmitting,
+    error,
+    fetchLeaveRequests,
+    fetchLeaveTypes,
+    createLeaveRequest,
+    updateLeaveRequest,
+    clearError
+  } = useLeave()
 
   // Mount guard to avoid state updates after unmount
   const isMountedRef = useRef(true)
@@ -82,40 +74,18 @@ export default function LeaveManager() {
   const resetForm = useCallback(() => {
     setFormData(INITIAL_FORM_DATA)
     setShowForm(false)
-  }, [])
-
-  const fetchLeaveRequests = useCallback(async () => {
-    try {
-      setIsLoading(true)
-      const { data, error } = await supabase
-        .from('leave_requests')
-        .select(
-          `
-          *,
-          employee:employees(first_name, last_name, email)
-        `
-        )
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      if (!isMountedRef.current) return
-      setLeaveRequests(data || [])
-    } catch (error) {
-      console.error('Error fetching leave requests:', error)
-    } finally {
-      if (isMountedRef.current) setIsLoading(false)
-    }
-  }, [])
+    clearError()
+  }, [clearError])
 
   const fetchEmployees = useCallback(async () => {
     try {
-      const { data, error } = await supabase
-        .from('employees')
-        .select('id, first_name, last_name, email')
-        .eq('status', 'active')
-        .order('first_name')
-
-      if (error) throw error
+      const response = await fetch('/api/employees')
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Error fetching employees')
+      }
+      
+      const { data } = await response.json()
       if (!isMountedRef.current) return
       setEmployees(data || [])
     } catch (error) {
@@ -127,8 +97,9 @@ export default function LeaveManager() {
     if (session?.user) {
       fetchLeaveRequests()
       fetchEmployees()
+      fetchLeaveTypes()
     }
-  }, [session, fetchLeaveRequests, fetchEmployees])
+  }, [session, fetchLeaveRequests, fetchEmployees, fetchLeaveTypes])
 
   const calculateDays = useCallback((startDate: string, endDate: string): number => {
     if (!startDate || !endDate) return 0
@@ -152,61 +123,41 @@ export default function LeaveManager() {
       if (datesInvalid) return
 
       try {
-        setIsSubmitting(true)
-
         const daysRequested = calculateDays(formData.start_date, formData.end_date)
         if (daysRequested <= 0) {
-          setIsSubmitting(false)
           return
         }
 
-        const { error } = await supabase.from('leave_requests').insert([
-          {
-            employee_id: formData.employee_id,
-            leave_type: formData.leave_type,
-            start_date: formData.start_date,
-            end_date: formData.end_date,
-            days_requested: daysRequested,
-            reason: formData.reason || null,
-            status: 'pending'
-          }
-        ])
-
-        if (error) throw error
+        await createLeaveRequest({
+          employee_id: formData.employee_id,
+          leave_type: formData.leave_type,
+          start_date: formData.start_date,
+          end_date: formData.end_date,
+          reason: formData.reason || undefined,
+        })
 
         resetForm()
-        fetchLeaveRequests()
       } catch (error) {
+        // Error is handled by the hook
         console.error('Error creating leave request:', error)
-      } finally {
-        if (isMountedRef.current) setIsSubmitting(false)
       }
     },
-    [formData, calculateDays, resetForm, fetchLeaveRequests, datesInvalid]
+    [formData, calculateDays, resetForm, createLeaveRequest, datesInvalid]
   )
 
   const handleStatusChange = useCallback(
     async (id: string, status: 'approved' | 'rejected') => {
       try {
-        setIsLoading(true)
-        const { error } = await supabase
-          .from('leave_requests')
-          .update({
-            status,
-            approved_by: session?.user?.id,
-            approved_at: new Date().toISOString()
-          })
-          .eq('id', id)
-
-        if (error) throw error
-        fetchLeaveRequests()
+        await updateLeaveRequest(id, {
+          status,
+          rejection_reason: status === 'rejected' ? 'Rechazado por el administrador' : undefined
+        })
       } catch (error) {
+        // Error is handled by the hook
         console.error('Error updating leave request:', error)
-      } finally {
-        if (isMountedRef.current) setIsLoading(false)
       }
     },
-    [session?.user?.id, fetchLeaveRequests]
+    [updateLeaveRequest]
   )
 
   const formatDate = useCallback((dateString: string): string => {
@@ -245,6 +196,21 @@ export default function LeaveManager() {
 
   return (
     <div className="space-y-6">
+      {/* Error Display */}
+      {error && (
+        <div className="bg-red-500/20 border border-red-400/50 rounded-md p-4">
+          <p className="text-red-400 text-sm">{error}</p>
+          <Button 
+            onClick={clearError} 
+            variant="outline" 
+            size="sm" 
+            className="mt-2 border-red-400/50 text-red-400 hover:bg-red-500/30"
+          >
+            Cerrar
+          </Button>
+        </div>
+      )}
+
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold text-white">Solicitudes de Permisos</h2>
         <Button onClick={() => setShowForm(true)} className="flex items-center space-x-2 bg-brand-600 hover:bg-brand-700">
@@ -404,7 +370,7 @@ export default function LeaveManager() {
                       size="sm"
                       onClick={() => handleStatusChange(request.id, 'approved')}
                       className="bg-emerald-600 hover:bg-emerald-700 flex items-center space-x-1"
-                      disabled={isLoading}
+                      disabled={isSubmitting}
                     >
                       <CheckIcon className="h-4 w-4" />
                       <span>Aprobar</span>
@@ -414,7 +380,7 @@ export default function LeaveManager() {
                       variant="outline"
                       onClick={() => handleStatusChange(request.id, 'rejected')}
                       className="border-red-400/50 bg-red-500/20 text-red-400 hover:bg-red-500/30 flex items-center space-x-1"
-                      disabled={isLoading}
+                      disabled={isSubmitting}
                     >
                       <XMarkIcon className="h-4 w-4" />
                       <span>Rechazar</span>

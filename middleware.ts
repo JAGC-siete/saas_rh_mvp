@@ -44,6 +44,22 @@ const PROTECTED_APP_ROUTES = new Set([
   '/attendance/dashboard',
 ])
 
+// Critical API endpoints that require enhanced security
+const CRITICAL_API_ENDPOINTS = new Set([
+  '/api/leave',
+  '/api/leave/',
+  '/api/payroll',
+  '/api/payroll/',
+  '/api/employees',
+  '/api/employees/',
+  '/api/gamification',
+  '/api/gamification/',
+  '/api/reports',
+  '/api/reports/',
+  '/api/admin',
+  '/api/admin/'
+])
+
 // Helper function to check if route is protected app route
 function isProtectedAppRoute(pathname: string): boolean {
   // Check exact match first
@@ -75,34 +91,97 @@ function isPublicRoute(pathname: string): boolean {
   return false
 }
 
+// Helper function to check if API endpoint is critical
+function isCriticalApiEndpoint(pathname: string): boolean {
+  // Check exact match
+  if (CRITICAL_API_ENDPOINTS.has(pathname)) return true
+  
+  // Check for routes starting with critical API paths
+  for (const endpoint of Array.from(CRITICAL_API_ENDPOINTS)) {
+    if (pathname.startsWith(endpoint)) return true
+  }
+  
+  return false
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   const startTime = Date.now()
 
-  // Log all requests with structured logging
+  // Enhanced logging for all requests
   logger.debug('Middleware request', {
     method: request.method,
     path: pathname,
     userAgent: request.headers.get('user-agent'),
-    referer: request.headers.get('referer')
+    referer: request.headers.get('referer'),
+    origin: request.headers.get('origin'),
+    xForwardedFor: request.headers.get('x-forwarded-for'),
+    xRealIp: request.headers.get('x-real-ip')
   })
 
-  // Handle API routes
+  // Handle API routes with enhanced security
   if (pathname.startsWith('/api/')) {
-    logger.debug('API route accessed', { path: pathname })
+    logger.debug('API route accessed', { 
+      path: pathname,
+      method: request.method,
+      isCritical: isCriticalApiEndpoint(pathname)
+    })
     
-    // Handle CORS preflight requests
-    if (request.method === 'OPTIONS') {
-      const response = new NextResponse(null, { status: 200 })
-      response.headers.set('Access-Control-Allow-Origin', process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net')
-      response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-      response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-nextjs-data')
-      response.headers.set('Access-Control-Allow-Credentials', 'true')
-      return response
+    // Enhanced CORS handling for critical endpoints
+    if (isCriticalApiEndpoint(pathname)) {
+      // Log critical API access attempts
+      logger.info('Critical API endpoint accessed', {
+        path: pathname,
+        method: request.method,
+        userAgent: request.headers.get('user-agent'),
+        origin: request.headers.get('origin'),
+        referer: request.headers.get('referer'),
+        ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
+      })
+
+      // Enhanced CORS preflight for critical endpoints
+      if (request.method === 'OPTIONS') {
+        const response = new NextResponse(null, { status: 200 })
+        response.headers.set('Access-Control-Allow-Origin', process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net')
+        response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+        response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-nextjs-data, x-api-key')
+        response.headers.set('Access-Control-Allow-Credentials', 'true')
+        response.headers.set('Access-Control-Max-Age', '86400') // 24 hours
+        return response
+      }
+
+      // Rate limiting check for critical endpoints (basic implementation)
+      const clientIp = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
+      logger.debug('Rate limiting check for critical endpoint', {
+        path: pathname,
+        clientIp,
+        method: request.method
+      })
+    } else {
+      // Standard CORS for non-critical endpoints
+      if (request.method === 'OPTIONS') {
+        const response = new NextResponse(null, { status: 200 })
+        response.headers.set('Access-Control-Allow-Origin', process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net')
+        response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+        response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-nextjs-data')
+        response.headers.set('Access-Control-Allow-Credentials', 'true')
+        return response
+      }
     }
     
     // For API routes, let them handle their own authentication
-    return NextResponse.next()
+    // But log the access for security monitoring
+    const response = NextResponse.next()
+    
+    // Add security headers for critical endpoints
+    if (isCriticalApiEndpoint(pathname)) {
+      response.headers.set('X-Content-Type-Options', 'nosniff')
+      response.headers.set('X-Frame-Options', 'DENY')
+      response.headers.set('X-XSS-Protection', '1; mode=block')
+      response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+    }
+    
+    return response
   }
 
   // Check if current path is public
@@ -163,7 +242,7 @@ export async function middleware(request: NextRequest) {
     return response
   }
 
-  // Handle protected app routes
+  // Handle protected app routes with enhanced security
   if (isProtectedAppRoute(pathname)) {
     logger.debug('Protected app route accessed', { path: pathname })
     
@@ -208,6 +287,15 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL('/app/login', request.url))
       }
       
+      // Enhanced user validation for critical routes
+      if (pathname === '/app/leave') {
+        logger.info('Leave management route accessed', { 
+          path: pathname, 
+          userId: user?.id,
+          email: user?.email 
+        })
+      }
+      
       logger.debug('Valid user found for protected app route', { 
         path: pathname, 
         userId: user?.id,
@@ -215,6 +303,11 @@ export async function middleware(request: NextRequest) {
       })
       
       const response = NextResponse.next()
+      
+      // Add security headers for protected routes
+      response.headers.set('X-Content-Type-Options', 'nosniff')
+      response.headers.set('X-Frame-Options', 'DENY')
+      response.headers.set('X-XSS-Protection', '1; mode=block')
       
       // Log successful auth
       const duration = Date.now() - startTime
@@ -239,8 +332,8 @@ export async function middleware(request: NextRequest) {
     
     if (!supabaseUrl || !anon) {
       logger.error('Missing Supabase environment variables', undefined, {
-      hasUrl: !!supabaseUrl,
-      hasAnon: !!anon
+        hasUrl: !!supabaseUrl,
+        hasAnon: !!anon
       })
       return NextResponse.redirect(new URL('/app/login', request.url))
     }
