@@ -1,5 +1,3 @@
-
-
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { createClient } from '../lib/supabase/client'
 import { Button } from './ui/button'
@@ -39,6 +37,44 @@ interface PreviewPayrollRecord extends Omit<PayrollRecord, 'id' | 'created_at'> 
   id?: string
   status: 'preview' | 'draft'
   isPreview: true
+  previewConfig?: {
+    daysWorked: number
+    includeOvertime: boolean
+    overtimeHours?: number
+    overtimeRate?: number
+  }
+}
+
+// Configuración de escenarios para Preview
+interface PreviewScenario {
+  daysWorked: number
+  includeOvertime: boolean
+  overtimeHours: number
+  overtimeRate: number
+  baseSalaryAdjustment: number
+}
+
+// Constantes para fórmulas oficiales de Honduras 2025
+const HONDURAS_2025_CONSTANTS = {
+  SALARIO_MINIMO: 11903.13,
+  IHSS_TECHO: 11903.13,
+  IHSS_PORCENTAJE: 0.05,
+  RAP_PORCENTAJE: 0.015,
+  ISR_EXENCION_ANUAL: 40000,
+  ISR_BRACKETS: [
+    { limit: 217493.16, rate: 0.00, base: 0 },
+    { limit: 331638.50, rate: 0.15, base: 0 },
+    { limit: 771252.38, rate: 0.20, base: 17121.80 },
+    { limit: Infinity, rate: 0.25, base: 105044.58 }
+  ]
+} as const
+
+const DEFAULT_PREVIEW_SCENARIO: PreviewScenario = {
+  daysWorked: 15,
+  includeOvertime: false,
+  overtimeHours: 0,
+  overtimeRate: 1.5,
+  baseSalaryAdjustment: 0
 }
 
 interface Employee {
@@ -137,7 +173,9 @@ export default function PayrollManager() {
   const [suspendedCount, setSuspendedCount] = useState<number>(0)
   const [compareData, setCompareData] = useState<any>(null)
   const [trendSeries, setTrendSeries] = useState<any[]>([])
-    // UI colors (computed to avoid static strings triggering secret scanner)
+  // Estado para modo Preview mejorado
+  const [previewScenario, setPreviewScenario] = useState<PreviewScenario>(DEFAULT_PREVIEW_SCENARIO)
+  // UI colors (computed to avoid static strings triggering secret scanner)
 
   
 
@@ -216,6 +254,68 @@ export default function PayrollManager() {
     const [y, m] = (selectedPeriod || new Date().toISOString().slice(0, 7)).split('-').map(Number)
     return new Date(y, m, 0).getDate() // 28–31
   }, [selectedPeriod])
+
+  // Función para calcular ISR según tabla progresiva de Honduras 2025
+  const calculateISR = useCallback((annualSalary: number): number => {
+    const baseImponible = annualSalary - HONDURAS_2025_CONSTANTS.ISR_EXENCION_ANUAL
+    
+    if (baseImponible <= 0) return 0
+    
+    for (const bracket of HONDURAS_2025_CONSTANTS.ISR_BRACKETS) {
+      if (baseImponible <= bracket.limit) {
+        return bracket.base + (baseImponible - (bracket.base > 0 ? bracket.limit : 0)) * bracket.rate
+      }
+    }
+    
+    return 0
+  }, [])
+
+  // Función para calcular deducciones según fórmulas oficiales de Honduras
+  const calculateHondurasDeductions = useCallback((baseSalary: number, daysWorked: number, includeOvertime: boolean = false, overtimeHours: number = 0, overtimeRate: number = 1.5): {
+    grossSalary: number
+    ihss: number
+    rap: number
+    isr: number
+    totalDeductions: number
+    netSalary: number
+  } => {
+    // MODE: por días (cálculo basado en días trabajados)
+    const dailyRate = baseSalary / 30
+    const baseGrossSalary = dailyRate * daysWorked
+    
+    // Calcular horas extra si se incluyen
+    let overtimeAmount = 0
+    if (includeOvertime && overtimeHours > 0) {
+      const hourlyRate = baseSalary / (30 * 8)
+      overtimeAmount = hourlyRate * overtimeHours * overtimeRate
+    }
+    
+    const grossSalary = baseGrossSalary + overtimeAmount
+    
+    // IHSS: 5% del salario base (máximo L.11,903.13)
+    const ihssBase = Math.min(baseSalary, HONDURAS_2025_CONSTANTS.IHSS_TECHO)
+    const ihss = (ihssBase * HONDURAS_2025_CONSTANTS.IHSS_PORCENTAJE) / 2 // Dividir por 2 para quincena
+    
+    // RAP: 1.5% sobre el excedente del salario mínimo
+    const rap = Math.max(0, baseSalary - HONDURAS_2025_CONSTANTS.SALARIO_MINIMO) * HONDURAS_2025_CONSTANTS.RAP_PORCENTAJE / 2
+    
+    // ISR según tabla progresiva de Honduras 2025
+    const annualSalary = baseSalary * 12
+    const isrAnnual = calculateISR(annualSalary)
+    const isr = (isrAnnual / 12) / 2 // Convertir a quincenal
+    
+    const totalDeductions = ihss + rap + isr
+    const netSalary = grossSalary - totalDeductions
+    
+    return {
+      grossSalary,
+      ihss,
+      rap,
+      isr,
+      totalDeductions,
+      netSalary
+    }
+  }, [calculateISR])
 
   // Initialize Supabase client
   useEffect(() => {
@@ -372,77 +472,33 @@ export default function PayrollManager() {
       const startDay = quincena === 1 ? 1 : 16
       const endDay = quincena === 1 ? 15 : lastDay
 
-      // FÓRMULAS OFICIALES DE HONDURAS 2025:
-      // - IHSS: 5% del salario base (máximo L.11,903.13 según Google Sheets)
-      //   * Si salario > 11,903.13, entonces IHSS = 11,903.13 × 5%
-      //   * Si no, IHSS = salario mensual × 5%
-      // - RAP: 1.5% sobre excedente del salario mínimo (L.11,903.13)
-      //   * Si salario ≤ 11,903.13, entonces RAP = 0
-      //   * Si no, RAP = (salario mensual - 11,903.13) × 1.5%
-      // - ISR: Tabla progresiva 2025 con exención L.40k anual
-      //   * 0% hasta L.217,493.16 (base imponible)
-      //   * 15% hasta L.331,638.50 (base imponible)
-      //   * 20% hasta L.771,252.38 (base imponible)
-      //   * 25% más de L.771,252.38 (base imponible)
-      // - Todas las deducciones se dividen por 2 para quincena
-      
-      // Generar registros Preview para cada empleado activo
+      // Generar registros Preview para cada empleado activo usando fórmulas reales
       const previewRecords: PreviewPayrollRecord[] = activeEmployees.map((emp: any) => {
-        // MODE: por días (cálculo basado en días trabajados)
-        const dailyRate = emp.base_salary / 30
-        const daysWorked = 15 // Estimación estándar para quincena
-        const grossSalary = dailyRate * daysWorked
-
-        // Cálculo de deducciones según fórmulas oficiales de Honduras 2025
-        // Constantes específicas para Honduras
-        const SALARIO_MINIMO = 11903.13
+        // Aplicar ajuste de salario base si está configurado
+        const adjustedBaseSalary = emp.base_salary + previewScenario.baseSalaryAdjustment
         
-        // IHSS: 5% del salario base (máximo L.11,903.13 según Google Sheets)
-        // Si salario > 11,903.13, entonces IHSS = 11,903.13 × 5%
-        // Si no, IHSS = salario mensual × 5%
-        const ihss = Math.min(emp.base_salary, SALARIO_MINIMO) * 0.05 / 2 // Dividir por 2 para quincena
-        
-        // RAP: 1.5% sobre el excedente del salario mínimo (según Google Sheets)
-        // Si salario ≤ 11,903.13, entonces RAP = 0
-        // Si no, RAP = (salario mensual - 11,903.13) × 1.5%
-        const rap = Math.max(0, emp.base_salary - SALARIO_MINIMO) * 0.015 / 2 // Dividir por 2 para quincena
-        
-        // ISR según tabla progresiva de Honduras 2025 (fórmula de Google Sheets)
-        // Base imponible = salario anual - 40,000 (exención)
-        // Escalas: 0% hasta 217,493.16, 15% hasta 331,638.50, 20% hasta 771,252.38, 25%+
-        const salarioAnual = emp.base_salary * 12
-        const baseImponible = salarioAnual - 40000
-        
-        let isr = 0
-        if (baseImponible <= 217493.16) {
-          isr = 0
-        } else if (baseImponible <= 331638.50) {
-          isr = (baseImponible - 217493.16) * 0.15
-        } else if (baseImponible <= 771252.38) {
-          isr = 17121.80 + (baseImponible - 331638.50) * 0.20
-        } else {
-          isr = 105044.58 + (baseImponible - 771252.38) * 0.25
-        }
-        
-        // Convertir ISR anual a mensual y luego a quincenal
-        isr = (isr / 12) / 2
-        
-        const totalDeductions = ihss + rap + isr
-        const netSalary = grossSalary - totalDeductions
+        // Calcular deducciones usando fórmulas oficiales de Honduras
+        const deductions = calculateHondurasDeductions(
+          adjustedBaseSalary,
+          previewScenario.daysWorked,
+          previewScenario.includeOvertime,
+          previewScenario.overtimeHours,
+          previewScenario.overtimeRate
+        )
 
         return {
           employee_id: emp.id,
           period_start: `${period}-${startDay.toString().padStart(2, '0')}`,
           period_end: `${period}-${endDay.toString().padStart(2, '0')}`,
           period_type: 'quincenal',
-          base_salary: emp.base_salary,
-          gross_salary: grossSalary,
-          income_tax: isr,
-          professional_tax: rap,
-          social_security: ihss,
-          total_deductions: totalDeductions,
-          net_salary: netSalary,
-          days_worked: daysWorked,
+          base_salary: adjustedBaseSalary,
+          gross_salary: deductions.grossSalary,
+          income_tax: deductions.isr,
+          professional_tax: deductions.rap,
+          social_security: deductions.ihss,
+          total_deductions: deductions.totalDeductions,
+          net_salary: deductions.netSalary,
+          days_worked: previewScenario.daysWorked,
           days_absent: 0,
           late_days: 0,
           status: 'preview',
@@ -452,7 +508,13 @@ export default function PayrollManager() {
             team: '',
             department_id: emp.department_id
           },
-          isPreview: true
+          isPreview: true,
+          previewConfig: {
+            daysWorked: previewScenario.daysWorked,
+            includeOvertime: previewScenario.includeOvertime,
+            overtimeHours: previewScenario.overtimeHours,
+            overtimeRate: previewScenario.overtimeRate
+          }
         }
       })
 
@@ -461,7 +523,7 @@ export default function PayrollManager() {
       console.error('Error generating preview records:', error)
       return []
     }
-  }, [supabase, userProfile, getLastDayOfMonth])
+  }, [supabase, userProfile, getLastDayOfMonth, previewScenario, calculateHondurasDeductions])
 
   // Función para obtener registros del periodo actual (reales o preview)
   const getCurrentPeriodRecords = useCallback(async () => {
@@ -945,6 +1007,138 @@ export default function PayrollManager() {
           </div>
         )}
 
+        {/* Controles de Escenario para Preview */}
+        {previewRecords.length > 0 && (
+          <Card variant="glass">
+            <CardHeader>
+              <CardTitle className="text-white">🔧 Configuración de Escenario Preview</CardTitle>
+              <CardDescription className="text-gray-300">
+                Ajusta parámetros para simular diferentes escenarios de nómina
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* Días Trabajados */}
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    📅 Días Trabajados
+                  </label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="31"
+                    value={previewScenario.daysWorked}
+                    onChange={(e) => setPreviewScenario(prev => ({ 
+                      ...prev, 
+                      daysWorked: Math.max(1, Math.min(31, Number(e.target.value))) 
+                    }))}
+                    className="w-full bg-white/10 border-white/20 text-white"
+                  />
+                </div>
+
+                {/* Incluir Horas Extra */}
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    checked={previewScenario.includeOvertime}
+                    onChange={(e) => setPreviewScenario(prev => ({ 
+                      ...prev, 
+                      includeOvertime: e.target.checked 
+                    }))}
+                    className="w-4 h-4 accent-brand-500"
+                    id="includeOvertime"
+                  />
+                  <label htmlFor="includeOvertime" className="text-sm font-medium text-white">
+                    ⏰ Incluir Horas Extra
+                  </label>
+                </div>
+
+                {/* Horas Extra */}
+                {previewScenario.includeOvertime && (
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      🔥 Horas Extra
+                    </label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={previewScenario.overtimeHours}
+                      onChange={(e) => setPreviewScenario(prev => ({ 
+                        ...prev, 
+                        overtimeHours: Math.max(0, Number(e.target.value)) 
+                      }))}
+                      className="w-full bg-white/10 border-white/20 text-white"
+                    />
+                  </div>
+                )}
+
+                {/* Tasa de Horas Extra */}
+                {previewScenario.includeOvertime && (
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      💰 Tasa Hora Extra
+                    </label>
+                    <Input
+                      type="number"
+                      min="1"
+                      step="0.1"
+                      value={previewScenario.overtimeRate}
+                      onChange={(e) => setPreviewScenario(prev => ({ 
+                        ...prev, 
+                        overtimeRate: Math.max(1, Number(e.target.value)) 
+                      }))}
+                      className="w-full bg-white/10 border-white/20 text-white"
+                    />
+                  </div>
+                )}
+
+                {/* Ajuste de Salario Base */}
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    💵 Ajuste Salario Base
+                  </label>
+                  <Input
+                    type="number"
+                    value={previewScenario.baseSalaryAdjustment}
+                    onChange={(e) => setPreviewScenario(prev => ({ 
+                      ...prev, 
+                      baseSalaryAdjustment: Number(e.target.value) 
+                    }))}
+                    className="w-full bg-white/10 border-white/20 text-white"
+                    placeholder="0"
+                  />
+                </div>
+
+                {/* Botón Actualizar Preview */}
+                <div className="flex items-end">
+                  <Button
+                    onClick={() => {
+                      getCurrentPeriodRecords().then(currentRecords => {
+                        const activeEmployees = employees.filter(e => e.status === 'active')
+                        calculatePayrollStats(currentRecords, activeEmployees)
+                      })
+                    }}
+                    className="bg-brand-800 hover:bg-brand-700 text-white w-full"
+                  >
+                    🔄 Actualizar Preview
+                  </Button>
+                </div>
+              </div>
+
+              {/* Información de Fórmulas */}
+              <div className="mt-4 p-3 bg-brand-800/20 border border-brand-500/30 rounded-lg">
+                <div className="text-sm text-brand-300 font-medium mb-2">📊 Fórmulas Oficiales de Honduras 2025:</div>
+                <div className="text-xs text-gray-400 space-y-1">
+                  <div>• <strong>IHSS:</strong> 5% del salario base (máx. L.11,903.13)</div>
+                  <div>• <strong>RAP:</strong> 1.5% sobre excedente del mínimo</div>
+                  <div>• <strong>ISR:</strong> Tabla progresiva Honduras 2025</div>
+                  <div>• <strong>Horas Extra:</strong> Tasa configurable</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Summary Cards - Fila 1 */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <Card variant="glass">
@@ -1199,7 +1393,7 @@ export default function PayrollManager() {
                       labelStyle={{ color: 'rgb(255,255,255)' }} 
                                               contentStyle={{ background: 'rgb(17,24,39)', border: '1px solid rgb(55,65,81)' }} 
                     />
-                    <Line type="monotone" dataKey="netSalary" stroke="#8b5cf6" strokeWidth={1} dot={false} />
+                    <Line type="monotone" dataKey="netSalary" stroke="blue" strokeWidth={1} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
