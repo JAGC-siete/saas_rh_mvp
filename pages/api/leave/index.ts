@@ -17,10 +17,12 @@ const supabase = createClient(
 
 async function handleGetLeaveRequests(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const { user, error: authError } = await authenticateUser(req)
-    if (authError) {
-      return res.status(401).json({ error: authError })
+    const authResult = await authenticateUser(req, res, ['can_manage_employees'])
+    if (!authResult.success || !authResult.user || !authResult.userProfile) {
+      return res.status(401).json({ error: authResult.error || 'Authentication failed' })
     }
+
+    const { user, userProfile } = authResult
 
     let query = supabase
       .from('leave_requests')
@@ -32,8 +34,8 @@ async function handleGetLeaveRequests(req: NextApiRequest, res: NextApiResponse)
       .order('created_at', { ascending: false })
 
     // Filter by company for non-super_admin users
-    if (user.role !== 'super_admin') {
-      query = query.eq('employee.company_id', user.company_id)
+    if (userProfile.role !== 'super_admin') {
+      query = query.eq('employee.company_id', userProfile.company_id)
     }
 
     const { data, error } = await query
@@ -46,11 +48,11 @@ async function handleGetLeaveRequests(req: NextApiRequest, res: NextApiResponse)
     logger.info('Leave requests fetched successfully', { 
       count: data?.length || 0, 
       userId: user.id,
-      userRole: user.role 
+      userRole: userProfile.role 
     })
 
     res.status(200).json(data || [])
-  } catch (error) {
+  } catch (error: any) {
     logger.error('Unexpected error in handleGetLeaveRequests:', { error: error.message })
     res.status(500).json({ error: 'Internal server error' })
   }
@@ -58,10 +60,12 @@ async function handleGetLeaveRequests(req: NextApiRequest, res: NextApiResponse)
 
 async function handleCreateLeaveRequest(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const { user, error: authError } = await authenticateUser(req)
-    if (authError) {
-      return res.status(401).json({ error: authError })
+    const authResult = await authenticateUser(req, res, ['can_manage_employees'])
+    if (!authResult.success || !authResult.user || !authResult.userProfile) {
+      return res.status(401).json({ error: authResult.error || 'Authentication failed' })
     }
+
+    const { user, userProfile } = authResult
 
     // Parse form data
     const form = formidable({
@@ -133,10 +137,10 @@ async function handleCreateLeaveRequest(req: NextApiRequest, res: NextApiRespons
     }
 
     // Verify employee belongs to user's company (unless super_admin)
-    if (user.role !== 'super_admin' && employee.company_id !== user.company_id) {
+    if (userProfile.role !== 'super_admin' && employee.company_id !== userProfile.company_id) {
       logger.warn('User trying to create leave request for employee from different company', {
         userId: user.id,
-        userCompanyId: user.company_id,
+        userCompanyId: userProfile.company_id,
         employeeCompanyId: employee.company_id
       })
       return res.status(403).json({ error: 'Access denied' })
@@ -161,7 +165,6 @@ async function handleCreateLeaveRequest(req: NextApiRequest, res: NextApiRespons
     if (attachment) {
       const fileExtension = attachment.originalFilename?.toLowerCase().split('.').pop()
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExtension}`
-      const filePath = `public/uploads/${fileName}`
 
       // Move file to uploads directory
       const fs = require('fs')
@@ -178,7 +181,7 @@ async function handleCreateLeaveRequest(req: NextApiRequest, res: NextApiRespons
 
       attachment_url = `/uploads/${fileName}`
       attachment_type = fileExtension === 'pdf' ? 'pdf' : 'jpg'
-      attachment_name = attachment.originalFilename
+      attachment_name = attachment.originalFilename || undefined
 
       logger.info('File uploaded successfully', {
         fileName,
@@ -228,7 +231,7 @@ async function handleCreateLeaveRequest(req: NextApiRequest, res: NextApiRespons
     })
 
     res.status(201).json(leaveRequest)
-  } catch (error) {
+  } catch (error: any) {
     logger.error('Unexpected error in handleCreateLeaveRequest:', { error: error.message })
     res.status(500).json({ error: 'Internal server error' })
   }
@@ -265,7 +268,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         res.setHeader('Allow', ['GET', 'POST'])
         res.status(405).json({ error: `Method ${method} Not Allowed` })
     }
-  } catch (error) {
+  } catch (error: any) {
     logger.error('Unexpected error in leave API:', { error: error.message, method })
     res.status(500).json({ error: 'Internal server error' })
   }
