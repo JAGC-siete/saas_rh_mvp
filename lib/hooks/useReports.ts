@@ -43,7 +43,9 @@ export function useReports(): UseReportsReturn {
   const { companyId } = useCompanyContext()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [attendanceTrends, setAttendanceTrends] = useState<AttendanceTrend[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loadingStats, setLoadingStats] = useState(false)
+  const [loadingTrends, setLoadingTrends] = useState(false)
+  const [loadingExport, setLoadingExport] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const clearError = useCallback(() => {
@@ -57,7 +59,7 @@ export function useReports(): UseReportsReturn {
     }
 
     try {
-      setLoading(true)
+      setLoadingStats(true)
       setError(null)
 
       const response = await fetch(`/api/reports/dashboard-stats?startDate=${startDate}&endDate=${endDate}`)
@@ -80,7 +82,7 @@ export function useReports(): UseReportsReturn {
       setError(errorMessage)
       console.error('Error fetching dashboard stats:', err)
     } finally {
-      setLoading(false)
+      setLoadingStats(false)
     }
   }, [companyId])
 
@@ -91,7 +93,7 @@ export function useReports(): UseReportsReturn {
     }
 
     try {
-      setLoading(true)
+      setLoadingTrends(true)
       setError(null)
 
       const response = await fetch(`/api/reports/attendance-trends?startDate=${startDate}&endDate=${endDate}`)
@@ -114,7 +116,7 @@ export function useReports(): UseReportsReturn {
       setError(errorMessage)
       console.error('Error fetching attendance trends:', err)
     } finally {
-      setLoading(false)
+      setLoadingTrends(false)
     }
   }, [companyId])
 
@@ -125,7 +127,7 @@ export function useReports(): UseReportsReturn {
     }
 
     try {
-      setLoading(true)
+      setLoadingExport(true)
       setError(null)
 
       const response = await fetch(`/api/reports/export-${type}`, {
@@ -158,14 +160,14 @@ export function useReports(): UseReportsReturn {
       setError(errorMessage)
       console.error('Error exporting report:', err)
     } finally {
-      setLoading(false)
+      setLoadingExport(false)
     }
   }, [companyId])
 
   return {
     stats,
     attendanceTrends,
-    loading,
+    loading: loadingStats || loadingTrends || loadingExport,
     error,
     fetchDashboardStats,
     fetchAttendanceTrends,

@@ -67,13 +67,25 @@ async function getDashboardStats(supabase: any, userProfile: any, startDate: str
   const totalEmployees = employees?.length || 0
   const activeEmployees = employees?.filter((emp: any) => emp.status === 'active').length || 0
 
-  // Asistencia del período - FILTRADO POR COMPANY
+  // Asistencia del período - filtrar por empleados de la empresa si aplica
   let attendanceQuery = supabase
     .from('attendance_records')
-    .select('id, status, date')
-    .eq('company_id', companyId)
+    .select('id, status, date, employee_id')
     .gte('date', startDate)
     .lte('date', endDate)
+
+  if (companyId) {
+    const { data: companyEmployees } = await supabase
+      .from('employees')
+      .select('id')
+      .eq('company_id', companyId)
+    const employeeIds = (companyEmployees || []).map((e: any) => e.id)
+    if (employeeIds.length > 0) {
+      attendanceQuery = attendanceQuery.in('employee_id', employeeIds)
+    } else {
+      attendanceQuery = attendanceQuery.eq('employee_id', '__none__')
+    }
+  }
 
   const { data: attendance, error: attendanceError } = await attendanceQuery
 
@@ -118,9 +130,13 @@ async function getDashboardStats(supabase: any, userProfile: any, startDate: str
 
   const thisPeriodLeaves = leaves?.length || 0
 
-  // Calcular métricas
-  const attendanceRate = totalAttendance > 0 ? ((presentDays + lateDays) / totalAttendance * 100) : 0
-  const punctualityRate = totalAttendance > 0 ? (presentDays / totalAttendance * 100) : 0
+  // Calcular métricas normalizadas por día del período
+  const start = new Date(startDate)
+  const end = new Date(endDate)
+  const daysInRange = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1)
+  const expectedAttendances = (activeEmployees || 0) * daysInRange
+  const attendanceRate = expectedAttendances > 0 ? ((presentDays + lateDays) / expectedAttendances * 100) : 0
+  const punctualityRate = expectedAttendances > 0 ? (presentDays / expectedAttendances * 100) : 0
 
   return {
     totalEmployees,

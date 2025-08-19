@@ -85,9 +85,8 @@ export default function ReportsAndAnalytics() {
     if (session?.user && companyId && !companyLoading) {
       console.log('🔄 Refreshing dashboard for company:', companyId)
       fetchDashboardStats(monthStart, monthEnd)
-      fetchAttendanceTrends(dateRange.startDate, dateRange.endDate)
     }
-  }, [session, companyId, companyLoading, monthStart, monthEnd, dateRange.startDate, dateRange.endDate, fetchDashboardStats, fetchAttendanceTrends])
+  }, [session, companyId, companyLoading, monthStart, monthEnd, fetchDashboardStats])
 
   // Actualizar datos cuando cambie el rango de fechas
   useEffect(() => {
