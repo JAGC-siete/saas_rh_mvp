@@ -1,11 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useSession } from '@supabase/auth-helpers-react'
 import { useCompanyContext } from '../lib/useCompanyContext'
-import { useReports } from '../lib/hooks/useReports'
 import { Button } from './ui/button'
 import { Card } from './ui/card'
 
-// Simple icon components as placeholders
+// Iconos simples como placeholders
 const UsersIcon = ({ className }: { className?: string }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m3 5.197V9a3 3 0 00-6 0v2.25" />
@@ -42,80 +41,217 @@ const DocumentChartBarIcon = ({ className }: { className?: string }) => (
   </svg>
 )
 
-const ATTENDANCE_THRESHOLDS = {
-  excellent: 90,
-  good: 75,
-  punctuality: {
-    excellent: 85,
-    good: 70
-  }
-} as const
+interface DashboardStats {
+  totalEmployees: number
+  activeEmployees: number
+  totalAttendance: number
+  presentDays: number
+  lateDays: number
+  absentDays: number
+  attendanceRate: number
+  punctualityRate: number
+  pendingPayrolls: number
+  thisPeriodLeaves: number
+  period: { startDate: string; endDate: string }
+}
 
-const getCurrentMonthRange = () => {
-  const now = new Date()
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
-  return { monthStart, monthEnd }
+interface AttendanceTrend {
+  date: string
+  present: number
+  absent: number
+  late: number
 }
 
 export default function ReportsAndAnalytics() {
   const session = useSession()
   const { companyId, loading: companyLoading } = useCompanyContext()
-  const { 
-    stats, 
-    attendanceTrends, 
-    loading, 
-    error, 
-    fetchDashboardStats, 
-    fetchAttendanceTrends, 
-    exportReport,
-    clearError 
-  } = useReports()
+  
+  // Estado local para datos
+  const [stats, setStats] = useState<DashboardStats | null>(null)
+  const [attendanceTrends, setAttendanceTrends] = useState<AttendanceTrend[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   
   const [dateRange, setDateRange] = useState({
     startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
     endDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0]
   })
 
-  // Memoized values
-  const { monthStart, monthEnd } = useMemo(() => getCurrentMonthRange(), [])
+  // Obtener rango del mes actual
+  const { monthStart, monthEnd } = useMemo(() => {
+    const now = new Date()
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
+    return { monthStart, monthEnd }
+  }, [])
+
+  // Función para obtener estadísticas del dashboard
+  const fetchDashboardStats = useCallback(async () => {
+    if (!companyId) {
+      setError('No hay empresa seleccionada')
+      return
+    }
+
+    try {
+      setLoading(true)
+      setError(null)
+
+      const response = await fetch(`/api/reports/dashboard-stats?startDate=${monthStart}&endDate=${monthEnd}`)
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || `Error HTTP: ${response.status}`)
+      }
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        setStats(result.data)
+      } else {
+        throw new Error(result.error || 'Error en la respuesta del servidor')
+      }
+
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error desconocido'
+      setError(errorMessage)
+      console.error('Error fetching dashboard stats:', err)
+    } finally {
+      setLoading(false)
+    }
+  }, [monthStart, monthEnd, companyId])
+
+  // Función para obtener tendencias de asistencia
+  const fetchAttendanceTrends = useCallback(async () => {
+    if (!companyId) {
+      setError('No hay empresa seleccionada')
+      return
+    }
+
+    try {
+      setLoading(true)
+      setError(null)
+
+      const response = await fetch(`/api/reports/attendance-trends?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`)
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || `Error HTTP: ${response.status}`)
+      }
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        setAttendanceTrends(result.data)
+      } else {
+        throw new Error(result.error || 'Error en la respuesta del servidor')
+      }
+
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error desconocido'
+      setError(errorMessage)
+      console.error('Error fetching attendance trends:', err)
+    } finally {
+      setLoading(false)
+    }
+  }, [dateRange.startDate, dateRange.endDate, companyId])
+
+  // Función para exportar reportes
+  const exportReport = useCallback(async (type: 'attendance' | 'payroll' | 'employees') => {
+    if (!companyId) {
+      setError('No hay empresa seleccionada')
+      return
+    }
+
+    try {
+      setLoading(true)
+      setError(null)
+
+      const response = await fetch(`/api/reports/export-${type}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          format: 'csv',
+          dateFilter: { startDate: dateRange.startDate, endDate: dateRange.endDate }
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || `Error HTTP: ${response.status}`)
+      }
+
+      // Descargar el archivo CSV
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${type}_report_${dateRange.startDate}_${dateRange.endDate}.csv`
+      a.click()
+      window.URL.revokeObjectURL(url)
+
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error desconocido'
+      setError(errorMessage)
+      console.error('Error exporting report:', err)
+    } finally {
+      setLoading(false)
+    }
+  }, [dateRange.startDate, dateRange.endDate, companyId])
 
   // Cargar datos iniciales
   useEffect(() => {
     if (session?.user && companyId && !companyLoading) {
       console.log('🔄 Refreshing dashboard for company:', companyId)
-      fetchDashboardStats(monthStart, monthEnd)
-      fetchAttendanceTrends(dateRange.startDate, dateRange.endDate)
+      fetchDashboardStats()
+      fetchAttendanceTrends()
     }
-  }, [session, companyId, companyLoading, monthStart, monthEnd, dateRange.startDate, dateRange.endDate, fetchDashboardStats, fetchAttendanceTrends])
+  }, [session, companyId, companyLoading, monthStart, monthEnd, fetchDashboardStats, fetchAttendanceTrends])
 
   // Actualizar datos cuando cambie el rango de fechas
   useEffect(() => {
     if (companyId && !companyLoading) {
-      fetchAttendanceTrends(dateRange.startDate, dateRange.endDate)
+      fetchAttendanceTrends()
     }
   }, [dateRange.startDate, dateRange.endDate, companyId, companyLoading, fetchAttendanceTrends])
 
-  const handleDateRangeChange = useCallback((field: 'startDate' | 'endDate', value: string) => {
-    setDateRange(prev => ({ ...prev, [field]: value }))
-  }, [])
-
-  const handleExportReport = useCallback((type: 'attendance' | 'payroll' | 'employees') => {
-    exportReport(type, dateRange.startDate, dateRange.endDate)
-  }, [exportReport, dateRange.startDate, dateRange.endDate])
-
+  // Funciones auxiliares
   const formatPercentage = useCallback((value: number, total: number) => {
     if (total === 0) return '0%'
     return `${Math.round((value / total) * 100)}%`
   }, [])
 
-  const getAttendanceColor = useCallback((rate: number, type: 'attendance' | 'punctuality' = 'attendance') => {
-    const thresholds = type === 'punctuality' ? ATTENDANCE_THRESHOLDS.punctuality : ATTENDANCE_THRESHOLDS
-    if (rate >= thresholds.excellent) return 'text-emerald-400'
-    if (rate >= thresholds.good) return 'text-orange-400'
+  const getAttendanceColor = useCallback((rate: number) => {
+    if (rate >= 90) return 'text-emerald-400'
+    if (rate >= 75) return 'text-orange-400'
     return 'text-red-400'
   }, [])
 
+  const handleDateRangeChange = useCallback((field: 'startDate' | 'endDate', value: string) => {
+    setDateRange(prev => ({ ...prev, [field]: value }))
+  }, [])
+
+  const clearError = useCallback(() => {
+    setError(null)
+  }, [])
+
+  // Datos para mostrar (usar stats del backend o valores por defecto)
+  const currentStats = stats || {
+    totalEmployees: 0,
+    activeEmployees: 0,
+    totalAttendance: 0,
+    presentDays: 0,
+    lateDays: 0,
+    absentDays: 0,
+    attendanceRate: 0,
+    punctualityRate: 0,
+    pendingPayrolls: 0,
+    thisPeriodLeaves: 0,
+    period: { startDate: '', endDate: '' }
+  }
+
+  // Tendencias recientes (últimas 10)
   const recentTrends = useMemo(() => 
     attendanceTrends.slice(-10),
     [attendanceTrends]
@@ -140,6 +276,7 @@ export default function ReportsAndAnalytics() {
     )
   }
 
+  // Mostrar loading
   if (loading) {
     return (
       <div className="flex justify-center py-8">
@@ -148,23 +285,9 @@ export default function ReportsAndAnalytics() {
     )
   }
 
-  // Usar stats del hook o valores por defecto
-  const currentStats = stats || {
-    totalEmployees: 0,
-    activeEmployees: 0,
-    totalAttendance: 0,
-    presentDays: 0,
-    lateDays: 0,
-    absentDays: 0,
-    attendanceRate: 0,
-    punctualityRate: 0,
-    pendingPayrolls: 0,
-    thisPeriodLeaves: 0,
-    period: { startDate: '', endDate: '' }
-  }
-
   return (
     <div className="space-y-6">
+      {/* Header con título y selector de fechas */}
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-xl font-semibold text-white">Reportes y Analítica</h2>
@@ -187,7 +310,7 @@ export default function ReportsAndAnalytics() {
         </div>
       </div>
 
-      {/* Key Metrics */}
+      {/* Métricas clave */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card variant="glass" className="p-6">
           <div className="flex items-center">
@@ -244,7 +367,7 @@ export default function ReportsAndAnalytics() {
         </Card>
       </div>
 
-      {/* Attendance Trends */}
+      {/* Tendencias de asistencia */}
       <Card variant="glass" className="p-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold text-white">Tendencias de Asistencia</h3>
@@ -269,7 +392,7 @@ export default function ReportsAndAnalytics() {
               const punctualityRate = total > 0 ? (trend.present / total * 100) : 0
               
               return (
-                <div key={trend.date} className="grid grid-cols-7 gap-2 text-sm py-2 border-b border-gray-700">
+                <div key={trend.date} className="grid grid-cols-7 gap-2 text-sm py-2 mb-2">
                   <div className="text-gray-300">{new Date(trend.date).toLocaleDateString('es-HN')}</div>
                   <div className="text-emerald-400 font-medium">{trend.present}</div>
                   <div className="text-red-400 font-medium">{trend.absent}</div>
@@ -278,7 +401,7 @@ export default function ReportsAndAnalytics() {
                   <div className={`font-medium ${getAttendanceColor(attendanceRate)}`}>
                     {attendanceRate.toFixed(1)}%
                   </div>
-                  <div className={`font-medium ${getAttendanceColor(punctualityRate, 'punctuality')}`}>
+                  <div className={`font-medium ${getAttendanceColor(punctualityRate)}`}>
                     {punctualityRate.toFixed(1)}%
                   </div>
                 </div>
@@ -292,7 +415,7 @@ export default function ReportsAndAnalytics() {
         )}
       </Card>
 
-      {/* Export Reports */}
+      {/* Exportar reportes */}
       <Card variant="glass" className="p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -304,7 +427,7 @@ export default function ReportsAndAnalytics() {
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Button
-            onClick={() => handleExportReport('attendance')}
+            onClick={() => exportReport('attendance')}
             variant="outline"
             className="flex items-center justify-center space-x-2 bg-white/5 border-white/20 text-white hover:bg-white/10"
           >
@@ -313,7 +436,7 @@ export default function ReportsAndAnalytics() {
           </Button>
           
           <Button
-            onClick={() => handleExportReport('payroll')}
+            onClick={() => exportReport('payroll')}
             variant="outline"
             className="flex items-center justify-center space-x-2 bg-white/5 border-white/20 text-white hover:bg-white/10"
           >
@@ -322,7 +445,7 @@ export default function ReportsAndAnalytics() {
           </Button>
           
           <Button
-            onClick={() => handleExportReport('employees')}
+            onClick={() => exportReport('employees')}
             variant="outline"
             className="flex items-center justify-center space-x-2 bg-white/5 border-white/20 text-white hover:bg-white/10"
           >

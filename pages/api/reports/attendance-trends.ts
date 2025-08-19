@@ -55,13 +55,14 @@ async function getAttendanceTrends(supabase: any, userProfile: any, startDate: s
   const companyId = userProfile?.company_id
 
   // Obtener registros de asistencia del período - FILTRADO POR COMPANY a través de employees
+  // Usar la relación específica attendance_records_employee_id_fkey
   const { data, error } = await supabase
     .from('attendance_records')
     .select(`
       date, 
       status, 
       check_in,
-      employees!inner(company_id)
+      employees!attendance_records_employee_id_fkey(company_id)
     `)
     .eq('employees.company_id', companyId)
     .gte('date', startDate)

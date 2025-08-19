@@ -68,13 +68,14 @@ async function getDashboardStats(supabase: any, userProfile: any, startDate: str
   const activeEmployees = employees?.filter((emp: any) => emp.status === 'active').length || 0
 
   // Asistencia del período - FILTRADO POR COMPANY a través de employees
+  // Usar la relación específica attendance_records_employee_id_fkey
   let attendanceQuery = supabase
     .from('attendance_records')
     .select(`
       id, 
       status, 
       date,
-      employees!inner(company_id)
+      employees!attendance_records_employee_id_fkey(company_id)
     `)
     .eq('employees.company_id', companyId)
     .gte('date', startDate)
@@ -90,12 +91,13 @@ async function getDashboardStats(supabase: any, userProfile: any, startDate: str
   const absentDays = attendance?.filter((r: any) => r.status === 'absent').length || 0
 
   // Nóminas pendientes - FILTRADO POR COMPANY a través de employees
+  // Usar la relación específica payroll_records_employee_id_fkey
   let payrollQuery = supabase
     .from('payroll_records')
     .select(`
       id, 
       status,
-      employees!inner(company_id)
+      employees!payroll_records_employee_id_fkey(company_id)
     `)
     .eq('status', 'draft')
     .eq('employees.company_id', companyId)
@@ -107,6 +109,7 @@ async function getDashboardStats(supabase: any, userProfile: any, startDate: str
   const pendingPayrolls = payrolls?.length || 0
 
   // Permisos del período - FILTRADO POR COMPANY a través de employees
+  // Usar la relación específica leave_requests_employee_id_fkey
   let leavesQuery = supabase
     .from('leave_requests')
     .select(`
@@ -114,7 +117,7 @@ async function getDashboardStats(supabase: any, userProfile: any, startDate: str
       status, 
       start_date, 
       end_date,
-      employees!inner(company_id)
+      employees!leave_requests_employee_id_fkey(company_id)
     `)
     .gte('start_date', startDate)
     .lte('end_date', endDate)
