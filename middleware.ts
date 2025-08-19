@@ -39,6 +39,7 @@ const PROTECTED_APP_ROUTES = new Set([
   '/app/settings',
   '/app/departments',
   '/app/leave',
+  '/app/gamification',
   // Legacy attendance dashboard outside /app
   '/attendance/dashboard',
 ])

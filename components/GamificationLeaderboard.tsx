@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { TrophyIcon, StarIcon } from '@heroicons/react/24/solid'
 import { AcademicCapIcon } from '@heroicons/react/24/outline'
-import { useSupabaseSession } from '../lib/hooks/useSession'
 
 interface LeaderboardEntry {
   id: number
@@ -27,7 +26,6 @@ interface GamificationLeaderboardProps {
 }
 
 export default function GamificationLeaderboard({ companyId, limit = 20 }: GamificationLeaderboardProps) {
-  const session = useSupabaseSession()
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -35,14 +33,14 @@ export default function GamificationLeaderboard({ companyId, limit = 20 }: Gamif
   useEffect(() => {
     if (!companyId) return
     fetchLeaderboard()
-  }, [companyId])
+  }, [companyId, fetchLeaderboard])
 
-  const fetchLeaderboard = async () => {
+  const fetchLeaderboard = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
       
-      const response = await fetch(`/api/gamification/leaderboard?company_id=${companyId}&limit=${limit}`)
+      const response = await fetch(`/api/gamification?action=leaderboard&company_id=${companyId}&limit=${limit}`)
       const data = await response.json()
       
       if (data.success) {
@@ -56,7 +54,7 @@ export default function GamificationLeaderboard({ companyId, limit = 20 }: Gamif
     } finally {
       setLoading(false)
     }
-  }
+  }, [companyId, limit])
 
   const getRankIcon = (rank: number) => {
     if (rank === 1) return <TrophyIcon className="h-6 w-6 text-yellow-500" />

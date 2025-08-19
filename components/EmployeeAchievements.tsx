@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
-import { useSupabaseSession } from '../lib/hooks/useSession'
 
 interface Achievement {
   id: number
@@ -24,7 +23,6 @@ interface EmployeeAchievementsProps {
 }
 
 export default function EmployeeAchievements({ companyId, employeeId, limit = 10 }: EmployeeAchievementsProps) {
-  const session = useSupabaseSession()
   const [achievements, setAchievements] = useState<Achievement[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -32,14 +30,14 @@ export default function EmployeeAchievements({ companyId, employeeId, limit = 10
   useEffect(() => {
     if (!companyId) return
     fetchAchievements()
-  }, [companyId, employeeId])
+  }, [companyId, employeeId, fetchAchievements])
 
-  const fetchAchievements = async () => {
+  const fetchAchievements = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
       
-      let url = `/api/gamification/achievements?company_id=${companyId}&limit=${limit}`
+      let url = `/api/gamification?action=achievements&company_id=${companyId}&limit=${limit}`
       if (employeeId) {
         url += `&employee_id=${employeeId}`
       }
@@ -58,7 +56,7 @@ export default function EmployeeAchievements({ companyId, employeeId, limit = 10
     } finally {
       setLoading(false)
     }
-  }
+  }, [companyId, employeeId, limit])
 
   const getBadgeColor = (color: string) => {
     const colorMap: { [key: string]: string } = {

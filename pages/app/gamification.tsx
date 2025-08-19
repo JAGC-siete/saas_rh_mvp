@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Button } from '../../components/ui/button'
 import GamificationLeaderboard from '../../components/GamificationLeaderboard'
 import EmployeeAchievements from '../../components/EmployeeAchievements'
-import { useSupabaseSession } from '../../lib/hooks/useSession'
+import { useCompanyContext } from '../../lib/useCompanyContext'
 
 interface GamificationStats {
   totalPoints: number
@@ -17,8 +17,8 @@ interface GamificationStats {
 }
 
 export default function GamificationDashboard() {
-  const session = useSupabaseSession()
   const router = useRouter()
+  const { companyId, loading: companyLoading } = useCompanyContext()
   const [stats, setStats] = useState<GamificationStats>({
     totalPoints: 0,
     totalAchievements: 0,
@@ -27,58 +27,25 @@ export default function GamificationDashboard() {
     averageScore: 0
   })
   const [loading, setLoading] = useState(true)
-  const [companyId, setCompanyId] = useState<string>('')
 
   useEffect(() => {
-    if (session?.user) {
-      // Get company ID from user profile
-      fetchCompanyId()
+    if (companyId && !companyLoading) {
+      fetchGamificationStats(companyId)
     }
-  }, [session])
-
-  const fetchCompanyId = async () => {
-    try {
-      const response = await fetch('/api/user-profile')
-      if (response.ok) {
-        const data = await response.json()
-        if (data.company_id) {
-          setCompanyId(data.company_id)
-          fetchGamificationStats(data.company_id)
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching company ID:', error)
-    }
-  }
+  }, [companyId, companyLoading])
 
   const fetchGamificationStats = async (companyId: string) => {
     try {
       setLoading(true)
       
-      // Fetch basic stats
-      const [leaderboardResponse, achievementsResponse] = await Promise.all([
-        fetch(`/api/gamification/leaderboard?company_id=${companyId}&limit=100`),
-        fetch(`/api/gamification/achievements?company_id=${companyId}&limit=100`)
-      ])
+      // Fetch stats using unified endpoint
+      const response = await fetch(`/api/gamification?action=stats&company_id=${companyId}`)
+      const data = await response.json()
 
-      const leaderboardData = await leaderboardResponse.json()
-      const achievementsData = await achievementsResponse.json()
-
-      if (leaderboardData.success && achievementsData.success) {
-        const scores = leaderboardData.data || []
-        const achievements = achievementsData.data || []
-
-        const totalPoints = scores.reduce((sum: number, score: any) => sum + score.total_points, 0)
-        const topScore = scores.length > 0 ? Math.max(...scores.map((s: any) => s.total_points)) : 0
-        const averageScore = scores.length > 0 ? totalPoints / scores.length : 0
-
-        setStats({
-          totalPoints,
-          totalAchievements: achievements.length,
-          activeEmployees: scores.length,
-          topScore,
-          averageScore
-        })
+      if (data.success) {
+        setStats(data.data)
+      } else {
+        console.error('Error fetching stats:', data.error)
       }
     } catch (error) {
       console.error('Error fetching gamification stats:', error)
@@ -87,12 +54,24 @@ export default function GamificationDashboard() {
     }
   }
 
-  if (loading) {
+  if (companyLoading || loading) {
     return (
       <ProtectedRoute>
         <DashboardLayout>
           <div className="flex items-center justify-center h-64">
             <div className="text-lg text-white font-medium">Cargando gamificación...</div>
+          </div>
+        </DashboardLayout>
+      </ProtectedRoute>
+    )
+  }
+
+  if (!companyId) {
+    return (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <div className="flex items-center justify-center h-64">
+            <div className="text-lg text-white font-medium">Error: No se pudo cargar la información de la empresa</div>
           </div>
         </DashboardLayout>
       </ProtectedRoute>
