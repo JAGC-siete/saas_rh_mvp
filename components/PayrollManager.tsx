@@ -7,7 +7,7 @@ import { Input } from './ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
 
-
+// MODE: por días (cálculo basado en días trabajados)
 interface PayrollRecord {
   id: string
   employee_id: string
@@ -17,8 +17,8 @@ interface PayrollRecord {
   base_salary: number
   gross_salary: number
   income_tax: number
-  professional_tax: number
-  social_security: number
+  professional_tax: number // Mapeado a RAP en UI
+  social_security: number // Mapeado a IHSS en UI
   total_deductions: number
   net_salary: number
   days_worked: number
@@ -34,34 +34,55 @@ interface PayrollRecord {
   }
 }
 
+// Nuevo tipo para registros Preview (no persistidos)
+interface PreviewPayrollRecord extends Omit<PayrollRecord, 'id' | 'created_at'> {
+  id?: string
+  status: 'preview' | 'draft'
+  isPreview: true
+}
+
 interface Employee {
   id: string
   name: string
   employee_code: string
   base_salary: number
   department_id: string
+  status: string
 }
 
-interface PayrollStats {
-  totalEmployees: number
+// Métricas completas para las 8 tarjetas
+interface PayrollMetrics {
+  // Fila 1
+  activeEmployees: number
   totalGrossSalary: number
   totalDeductions: number
   totalNetSalary: number
+  // Fila 2
+  totalIHSS: number
+  totalRAP: number
+  totalISR: number
+  totalDaysWorked: number
+  // Cálculos adicionales
+  payrollCoverage: number
+  attendanceRate: number
+  // Propiedades adicionales para compatibilidad
   averageSalary: number
   departmentBreakdown: { [key: string]: { count: number, name: string, avgSalary: number } }
-  attendanceRate: number
-  payrollCoverage: number
 }
 
-const INITIAL_PAYROLL_STATS: PayrollStats = {
-  totalEmployees: 0,
+const INITIAL_PAYROLL_METRICS: PayrollMetrics = {
+  activeEmployees: 0,
   totalGrossSalary: 0,
   totalDeductions: 0,
   totalNetSalary: 0,
-  averageSalary: 0,
-  departmentBreakdown: {},
+  totalIHSS: 0,
+  totalRAP: 0,
+  totalISR: 0,
+  totalDaysWorked: 0,
+  payrollCoverage: 0,
   attendanceRate: 0,
-  payrollCoverage: 0
+  averageSalary: 0,
+  departmentBreakdown: {}
 }
 
 const INITIAL_GENERATE_FORM = {
@@ -74,7 +95,8 @@ const INITIAL_GENERATE_FORM = {
 const STATUS_CONFIG = {
   draft: { label: 'Borrador', classes: 'bg-gray-100 text-gray-800' },
   approved: { label: 'Aprobada', classes: 'bg-blue-100 text-blue-800' },
-  paid: { label: 'Pagada', classes: 'bg-green-100 text-green-800' }
+  paid: { label: 'Pagada', classes: 'bg-green-100 text-green-800' },
+  preview: { label: 'Preview', classes: 'bg-yellow-100 text-yellow-800' }
 } as const
 
 const DEFAULT_PERMISSIONS = {
@@ -92,11 +114,17 @@ const DEFAULT_PERMISSIONS = {
 
 export default function PayrollManager() {
   const [payrollRecords, setPayrollRecords] = useState<PayrollRecord[]>([])
+  const [previewRecords, setPreviewRecords] = useState<PreviewPayrollRecord[]>([])
   const [employees, setEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(false)
   const [selectedPeriod, setSelectedPeriod] = useState(new Date().toISOString().slice(0, 7))
+  const [selectedQuincena, setSelectedQuincena] = useState<number>(() => {
+    const today = new Date()
+    const day = today.getDate()
+    return day <= 15 ? 1 : 2
+  })
   const [userProfile, setUserProfile] = useState<any>(null)
-  const [payrollStats, setPayrollStats] = useState<PayrollStats>(INITIAL_PAYROLL_STATS)
+  const [payrollMetrics, setPayrollMetrics] = useState<PayrollMetrics>(INITIAL_PAYROLL_METRICS)
   const [departments, setDepartments] = useState<{ [key: string]: string }>({})
   const [generateForm, setGenerateForm] = useState(INITIAL_GENERATE_FORM)
   const [supabase, setSupabase] = useState<any>(null)
@@ -126,7 +154,10 @@ export default function PayrollManager() {
   )
 
   const filteredRecords = useMemo(() => {
-    let list = payrollRecords
+    // Combinar registros reales y de preview
+    const allRecords = [...payrollRecords, ...previewRecords]
+    let list = allRecords
+    
     // Filtro por periodo (mes)
     if (selectedPeriod) {
       list = list.filter(r => r.period_start.startsWith(selectedPeriod))
@@ -139,13 +170,13 @@ export default function PayrollManager() {
         const startDay = Number(r.period_start.slice(8,10))
         const endDay = Number(r.period_end.slice(8,10))
         
-        // Períodos fijos: 1-15 (quincena 1) y 16-30 (quincena 2)
+        // Períodos fijos: 1-15 (quincena 1) y 16-<lastDay> (quincena 2)
         // Verificar que tanto el inicio como el fin estén en la misma quincena
         let q = 0
         if (startDay <= 15 && endDay <= 15) {
           q = 1 // Quincena 1: 1-15
         } else if (startDay >= 16 && endDay >= 16) {
-          q = 2 // Quincena 2: 16-30
+          q = 2 // Quincena 2: 16-<lastDay>
         }
         
         return q === filterQuincena
@@ -162,7 +193,7 @@ export default function PayrollManager() {
       )
     }
     return list
-  }, [payrollRecords, selectedPeriod, filterYear, filterMonth, filterQuincena, filterDept, filterEmployee])
+  }, [payrollRecords, previewRecords, selectedPeriod, filterYear, filterMonth, filterQuincena, filterDept, filterEmployee])
 
   // Función para obtener descripción del filtro aplicado
   const getFilterDescription = useMemo(() => {
@@ -185,9 +216,10 @@ export default function PayrollManager() {
 
   // Add last day of selected month for range chips - FIXED PERIODS
   const lastDayOfSelectedMonth = useMemo(() => {
-    // Períodos fijos: 1-15 y 16-30 siempre
-    return 30
-  }, [])
+    // Calcular el último día real del mes seleccionado
+    const [y, m] = (selectedPeriod || new Date().toISOString().slice(0, 7)).split('-').map(Number)
+    return new Date(y, m, 0).getDate() // 28–31
+  }, [selectedPeriod])
 
   // Initialize Supabase client
   useEffect(() => {
@@ -267,23 +299,31 @@ export default function PayrollManager() {
     }
   }, [supabase])
 
-  const calculatePayrollStats = useCallback((records: PayrollRecord[], emps: Employee[]) => {
-    const stats: PayrollStats = {
-      totalEmployees: emps.length,
+  const calculatePayrollStats = useCallback((records: (PayrollRecord | PreviewPayrollRecord)[], emps: Employee[]) => {
+    const stats: PayrollMetrics = {
+      activeEmployees: emps.length,
       totalGrossSalary: 0,
       totalDeductions: 0,
       totalNetSalary: 0,
-      averageSalary: 0,
-      departmentBreakdown: {},
+      totalIHSS: 0,
+      totalRAP: 0,
+      totalISR: 0,
+      totalDaysWorked: 0,
+      payrollCoverage: 0,
       attendanceRate: 0,
-      payrollCoverage: 0
+      averageSalary: 0,
+      departmentBreakdown: {}
     }
-    stats.payrollCoverage = emps.length > 0 ? (currentPeriodRecords.length / emps.length) * 100 : 0
+    stats.payrollCoverage = emps.length > 0 ? (records.length / emps.length) * 100 : 0
     const deptSumSalary: Record<string, number> = {}
-    currentPeriodRecords.forEach((record) => {
+    records.forEach((record) => {
       stats.totalGrossSalary += record.gross_salary
       stats.totalDeductions += record.total_deductions
       stats.totalNetSalary += record.net_salary
+      stats.totalIHSS += record.social_security
+      stats.totalRAP += record.professional_tax
+      stats.totalISR += record.income_tax
+      stats.totalDaysWorked += record.days_worked || 0
       const deptId = record.employees?.department_id || 'sin-departamento'
       const deptName = departments[deptId] || 'Sin Departamento'
       if (!stats.departmentBreakdown[deptId]) {
@@ -297,15 +337,123 @@ export default function PayrollManager() {
       const sum = deptSumSalary[deptId] ?? 0
       stats.departmentBreakdown[deptId].avgSalary = count > 0 ? sum / count : 0
     })
-    if (currentPeriodRecords.length > 0) {
-      stats.averageSalary = stats.totalNetSalary / currentPeriodRecords.length
+    if (records.length > 0) {
+      stats.averageSalary = stats.totalNetSalary / records.length
     }
-    const totalDays = currentPeriodRecords.reduce((sum, r) => sum + (r.days_worked || 0), 0)
-    const expectedDays = currentPeriodRecords.length * 15
+    const totalDays = records.reduce((sum, r) => sum + (r.days_worked || 0), 0)
+    const expectedDays = records.length * 15
     stats.attendanceRate = expectedDays > 0 ? (totalDays / expectedDays) * 100 : 0
     // Guardar conteo de suspendidos en estado aparte
-    if (isMountedRef.current) setPayrollStats(stats)
-  }, [currentPeriodRecords, departments])
+    if (isMountedRef.current) setPayrollMetrics(stats)
+  }, [departments])
+
+  // Función para calcular el último día del mes seleccionado
+  const getLastDayOfMonth = useCallback((period: string) => {
+    const [y, m] = period.split('-').map(Number)
+    return new Date(y, m, 0).getDate() // 28–31
+  }, [])
+
+  // Función para generar registros Preview cuando no existen payroll_records
+  const generatePreviewRecords = useCallback(async (period: string, quincena: number) => {
+    if (!supabase || !userProfile) return []
+
+    try {
+      // Obtener empleados activos de la empresa
+      let employeesQuery = supabase
+        .from('employees')
+        .select('id, name, employee_code, base_salary, department_id, status')
+        .eq('status', 'active')
+        .order('name')
+
+      if (userProfile.company_id) {
+        employeesQuery = employeesQuery.eq('company_id', userProfile.company_id)
+      }
+
+      const { data: activeEmployees, error: empError } = await employeesQuery
+      if (empError) throw empError
+
+      const lastDay = getLastDayOfMonth(period)
+      const startDay = quincena === 1 ? 1 : 16
+      const endDay = quincena === 1 ? 15 : lastDay
+
+      // Generar registros Preview para cada empleado activo
+      const previewRecords: PreviewPayrollRecord[] = activeEmployees.map((emp: any) => {
+        // MODE: por días (cálculo basado en días trabajados)
+        const dailyRate = emp.base_salary / 30
+        const daysWorked = 15 // Estimación estándar para quincena
+        const grossSalary = dailyRate * daysWorked
+
+        // Cálculo de deducciones (estimaciones)
+        const ihss = grossSalary * 0.035 // 3.5% IHSS
+        const rap = grossSalary * 0.01   // 1% RAP
+        const isr = grossSalary * 0.05   // 5% ISR (estimado)
+        const totalDeductions = ihss + rap + isr
+        const netSalary = grossSalary - totalDeductions
+
+        return {
+          employee_id: emp.id,
+          period_start: `${period}-${startDay.toString().padStart(2, '0')}`,
+          period_end: `${period}-${endDay.toString().padStart(2, '0')}`,
+          period_type: 'quincenal',
+          base_salary: emp.base_salary,
+          gross_salary: grossSalary,
+          income_tax: isr,
+          professional_tax: rap,
+          social_security: ihss,
+          total_deductions: totalDeductions,
+          net_salary: netSalary,
+          days_worked: daysWorked,
+          days_absent: 0,
+          late_days: 0,
+          status: 'preview',
+          employees: {
+            name: emp.name,
+            employee_code: emp.employee_code,
+            team: '',
+            department_id: emp.department_id
+          },
+          isPreview: true
+        }
+      })
+
+      return previewRecords
+    } catch (error) {
+      console.error('Error generating preview records:', error)
+      return []
+    }
+  }, [supabase, userProfile, getLastDayOfMonth])
+
+  // Función para obtener registros del periodo actual (reales o preview)
+  const getCurrentPeriodRecords = useCallback(async () => {
+    const currentPeriod = selectedPeriod || new Date().toISOString().slice(0, 7)
+    const currentQuincena = selectedQuincena
+
+    // Buscar registros reales del periodo
+    let realRecords = payrollRecords.filter(record => {
+      const recordPeriod = record.period_start.slice(0, 7)
+      const startDay = Number(record.period_start.slice(8, 10))
+      const endDay = Number(record.period_end.slice(8, 10))
+      
+      if (recordPeriod !== currentPeriod) return false
+      
+      if (currentQuincena === 1) {
+        return startDay <= 15 && endDay <= 15
+      } else {
+        const lastDay = getLastDayOfMonth(currentPeriod)
+        return startDay >= 16 && endDay >= 16 && endDay <= lastDay
+      }
+    })
+
+    // Si no hay registros reales, generar Preview
+    if (realRecords.length === 0) {
+      const previewRecords = await generatePreviewRecords(currentPeriod, currentQuincena)
+      setPreviewRecords(previewRecords)
+      return previewRecords
+    } else {
+      setPreviewRecords([])
+      return realRecords
+    }
+  }, [payrollRecords, selectedPeriod, selectedQuincena, generatePreviewRecords, getLastDayOfMonth])
 
   const fetchData = useCallback(async () => {
     if (!supabase) return
@@ -427,7 +575,13 @@ export default function PayrollManager() {
       setSuspendedCount(suspended)
 
       await loadDepartments()
-      calculatePayrollStats(payrollData || [], employeesData || [])
+      
+      // Obtener registros del periodo actual (reales o preview)
+      const currentRecords = await getCurrentPeriodRecords()
+      
+      // Calcular métricas con los registros actuales
+      const activeEmployees = (employeesData || []).filter((e: any) => e.status === 'active')
+      calculatePayrollStats(currentRecords, activeEmployees)
 
     } catch (error) {
       console.error('Error fetching data:', error)
@@ -436,7 +590,7 @@ export default function PayrollManager() {
     } finally {
       if (isMountedRef.current) setLoading(false)
     }
-  }, [supabase, loadDepartments, calculatePayrollStats])
+  }, [supabase, loadDepartments, calculatePayrollStats, getCurrentPeriodRecords])
 
   const generatePayroll = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
@@ -557,7 +711,7 @@ export default function PayrollManager() {
     return <span className={`${baseClasses} bg-gray-100 text-gray-800`}>{status}</span>
   }, [])
 
-  const downloadPayrollPDF = useCallback(async (record: PayrollRecord) => {
+  const downloadPayrollPDF = useCallback(async (record: PayrollRecord | PreviewPayrollRecord) => {
     const period = record.period_start.slice(0, 7)
     const day = Number(record.period_start.slice(8, 10))
     const quincena = day <= 15 ? 1 : 2
@@ -576,7 +730,7 @@ export default function PayrollManager() {
     })
   }, [downloadFile])
 
-  const downloadIndividualReceipt = useCallback(async (record: PayrollRecord) => {
+  const downloadIndividualReceipt = useCallback(async (record: PayrollRecord | PreviewPayrollRecord) => {
     const { data: { session } } = await supabase.auth.getSession()
     
     if (!session?.access_token) {
@@ -587,8 +741,9 @@ export default function PayrollManager() {
     const period = record.period_start.slice(0, 7)
     const day = Number(record.period_start.slice(8, 10))
     const quincena = day <= 15 ? 1 : 2
+    const employeeCode = record.employees?.employee_code || 'unknown'
 
-    await downloadFile('/api/payroll/export', `recibo_${record.employees?.employee_code}_${period}_q${quincena}.pdf`, {
+    await downloadFile('/api/payroll/export', `recibo_${employeeCode}_${period}_q${quincena}.pdf`, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
@@ -604,28 +759,38 @@ export default function PayrollManager() {
     })
   }, [supabase, downloadFile])
 
-  const sendPayrollEmail = useCallback(async (record?: PayrollRecord) => {
+  const sendPayrollEmail = useCallback(async (record?: PayrollRecord | PreviewPayrollRecord) => {
     const to = prompt('Correo de destino:')
     if (!to) return
     const period = (record?.period_start || new Date().toISOString()).slice(0,7)
     const day = record ? Number(record.period_start.slice(8,10)) : 1
     const quincena = day <= 15 ? 1 : 2
     const payload: any = { to, periodo: period, quincena }
-    if (record) { payload.type = 'recibo'; payload.employeeId = record.employee_id } else { payload.type = 'planilla' }
+    if (record) { 
+      payload.type = 'recibo'; 
+      payload.employeeId = record.employee_id || 'unknown'
+    } else { 
+      payload.type = 'planilla' 
+    }
     const res = await fetch('/api/payroll/send-email', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
     const json = await res.json().catch(()=>({}))
     if (!res.ok) return alert(`❌ Error: ${json.error || res.status}`)
     alert(json.sent ? '✅ Enviado' : `⚠️ Enlace listo: ${json.downloadUrl}`)
   }, [])
 
-  const sendPayrollWhatsApp = useCallback(async (record?: PayrollRecord) => {
+  const sendPayrollWhatsApp = useCallback(async (record?: PayrollRecord | PreviewPayrollRecord) => {
     const phone = prompt('Número WhatsApp (E.164, ej. 5049xxxxxxx):')
     if (!phone) return
     const period = (record?.period_start || new Date().toISOString()).slice(0,7)
     const day = record ? Number(record.period_start.slice(8,10)) : 1
     const quincena = day <= 15 ? 1 : 2
     const payload: any = { phone, periodo: period, quincena }
-    if (record) { payload.type = 'recibo'; payload.employeeId = record.employee_id } else { payload.type = 'planilla' }
+    if (record) { 
+      payload.type = 'recibo'; 
+      payload.employeeId = record.employee_id || 'unknown'
+    } else { 
+      payload.type = 'planilla' 
+    }
     const res = await fetch('/api/payroll/send-whatsapp', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
     const json = await res.json().catch(()=>({}))
     if (!res.ok) return alert(`❌ Error: ${json.error || res.status}`)
@@ -644,6 +809,11 @@ export default function PayrollManager() {
 
   const clearAllFilters = useCallback(() => {
     setSelectedPeriod('')
+    setSelectedQuincena(() => {
+      const today = new Date()
+      const day = today.getDate()
+      return day <= 15 ? 1 : 2
+    })
     setFilterYear('')
     setFilterMonth('')
     setFilterQuincena('')
@@ -651,7 +821,7 @@ export default function PayrollManager() {
     setFilterEmployee('')
   }, [])
 
-  const editPayrollRecord = useCallback((record: PayrollRecord) => {
+  const editPayrollRecord = useCallback((record: PayrollRecord | PreviewPayrollRecord) => {
     // TODO: Implementar edición de registro de nómina
     console.log('Editando registro de nómina:', record)
     alert('Funcionalidad de edición en desarrollo')
@@ -692,6 +862,16 @@ export default function PayrollManager() {
     })()
   }, [selectedPeriod, filterQuincena])
 
+  // Actualizar registros cuando cambie el periodo o quincena
+  useEffect(() => {
+    if (userProfile && supabase) {
+      getCurrentPeriodRecords().then(currentRecords => {
+        const activeEmployees = employees.filter(e => e.status === 'active')
+        calculatePayrollStats(currentRecords, activeEmployees)
+      })
+    }
+  }, [selectedPeriod, selectedQuincena, userProfile, supabase, employees, getCurrentPeriodRecords, calculatePayrollStats])
+
   // % Ausentismo (periodo actual)
   const absenteeismPercent = useMemo(() => {
     const plannedDays = currentPeriodRecords.length * 15
@@ -712,15 +892,31 @@ export default function PayrollManager() {
 
       {/* 1. 📊 Dashboard Ejecutivo */}
       <div className="space-y-6">
-        {/* Summary Cards */}
+        {/* Banner de Preview */}
+        {previewRecords.length > 0 && (
+          <div className="bg-yellow-500/20 border border-yellow-500/30 rounded-lg p-4">
+            <div className="flex items-center gap-2">
+              <span className="text-yellow-400">⚠️</span>
+              <span className="text-yellow-200 font-medium">Modo Preview</span>
+              <span className="text-yellow-300 text-sm">
+                Mostrando estimado en vivo (no persistido) para {selectedPeriod} Q{selectedQuincena}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Summary Cards - Fila 1 */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <Card variant="glass">
             <CardContent className="pt-6">
               <div className="text-center">
                 <div className="text-2xl font-bold text-green-400">
-                  {payrollStats.totalEmployees}
+                  {payrollMetrics.activeEmployees}
                 </div>
-                <div className="text-sm text-gray-300">Empleados Activos</div>
+                <div className="text-sm text-gray-300">Empleados en Planilla</div>
+                <div className="text-xs text-gray-400 mt-1">
+                  {payrollMetrics.payrollCoverage.toFixed(1)}% cobertura
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -729,9 +925,12 @@ export default function PayrollManager() {
             <CardContent className="pt-6">
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-400">
-                  {formatCurrency(payrollStats.totalGrossSalary)}
+                  {formatCurrency(payrollMetrics.totalGrossSalary)}
                 </div>
-                <div className="text-sm text-gray-300">Salario Bruto Quincenal</div>
+                <div className="text-sm text-gray-300">Salario Bruto (Q)</div>
+                <div className="text-xs text-gray-400 mt-1">
+                  {selectedPeriod} Q{selectedQuincena}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -740,9 +939,12 @@ export default function PayrollManager() {
             <CardContent className="pt-6">
               <div className="text-center">
                 <div className="text-2xl font-bold text-orange-400">
-                  {payrollStats.payrollCoverage.toFixed(1)}%
+                  {formatCurrency(payrollMetrics.totalDeductions)}
                 </div>
-                <div className="text-sm text-gray-300">Cobertura Nómina</div>
+                <div className="text-sm text-gray-300">Total Deducciones (Q)</div>
+                <div className="text-xs text-gray-400 mt-1">
+                  ISR + RAP + IHSS
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -751,12 +953,99 @@ export default function PayrollManager() {
             <CardContent className="pt-6">
               <div className="text-center">
                 <div className="text-2xl font-bold text-purple-400">
-                  {formatCurrency(payrollStats.totalNetSalary)}
+                  {formatCurrency(payrollMetrics.totalNetSalary)}
                 </div>
-                <div className="text-sm text-gray-300">Salario Neto Quincenal</div>
+                <div className="text-sm text-gray-300">Salario Neto (Q)</div>
+                <div className="text-xs text-gray-400 mt-1">
+                  Bruto - Deducciones
+                </div>
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Summary Cards - Fila 2 */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <Card variant="glass">
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-red-400">
+                  {formatCurrency(payrollMetrics.totalIHSS)}
+                </div>
+                <div className="text-sm text-gray-300">Total IHSS (Q)</div>
+                <div className="text-xs text-gray-400 mt-1">
+                  3.5% del bruto
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card variant="glass">
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-yellow-400">
+                  {formatCurrency(payrollMetrics.totalRAP)}
+                </div>
+                <div className="text-sm text-gray-300">Total RAP (Q)</div>
+                <div className="text-xs text-gray-400 mt-1">
+                  1% del bruto
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card variant="glass">
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-indigo-400">
+                  {formatCurrency(payrollMetrics.totalISR)}
+                </div>
+                <div className="text-sm text-gray-300">Total ISR (Q)</div>
+                <div className="text-xs text-gray-400 mt-1">
+                  5% estimado
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card variant="glass">
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-teal-400">
+                  {payrollMetrics.totalDaysWorked}
+                </div>
+                <div className="text-sm text-gray-300">Días Trabajados (Q)</div>
+                <div className="text-xs text-gray-400 mt-1">
+                  {payrollMetrics.attendanceRate.toFixed(1)}% cumplimiento
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Chips de Contexto */}
+        <div className="flex flex-wrap gap-2 items-center">
+          <div className="px-3 py-1 bg-brand-800/20 border border-brand-500/30 rounded-full text-sm text-brand-300">
+            📅 {selectedPeriod ? new Date(selectedPeriod + '-01').toLocaleDateString('es-HN', { year: 'numeric', month: 'long' }) : 'Período actual'}
+          </div>
+          <div className="px-3 py-1 bg-brand-800/20 border border-brand-500/30 rounded-full text-sm text-brand-300">
+            ⏰ Quincena {selectedQuincena}: {selectedQuincena === 1 ? '1-15' : `16-${lastDayOfSelectedMonth}`}
+          </div>
+          {filterDept && (
+            <div className="px-3 py-1 bg-brand-800/20 border border-brand-500/30 rounded-full text-sm text-brand-300">
+              🏢 {departments[filterDept] || filterDept}
+            </div>
+          )}
+          {filterEmployee && (
+            <div className="px-3 py-1 bg-brand-800/20 border border-brand-500/30 rounded-full text-sm text-brand-300">
+              👤 {filterEmployee}
+            </div>
+          )}
+          {previewRecords.length > 0 && (
+            <div className="px-3 py-1 bg-yellow-500/20 border border-yellow-500/30 rounded-full text-sm text-yellow-300">
+              🔍 Modo Preview
+            </div>
+          )}
         </div>
 
         {/* Extra Summary: Suspendidos, Ausentismo y Horas */}
@@ -816,12 +1105,12 @@ export default function PayrollManager() {
               <div className="space-y-4">
                 <div className="flex justify-between">
                   <span className="text-gray-300">Salario Promedio:</span>
-                  <span className="font-semibold text-white">{formatCurrency(payrollStats.averageSalary)}</span>
+                  <span className="font-semibold text-white">{formatCurrency(payrollMetrics.averageSalary)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-300">Cobertura de Nómina:</span>
-                  <span className={`font-semibold ${payrollStats.payrollCoverage >= 95 ? 'text-green-400' : 'text-orange-400'}`}>
-                    {payrollStats.payrollCoverage.toFixed(1)}%
+                  <span className={`font-semibold ${payrollMetrics.payrollCoverage >= 95 ? 'text-green-400' : 'text-orange-400'}`}>
+                    {payrollMetrics.payrollCoverage.toFixed(1)}%
                   </span>
                 </div>
                 {compareData && (
@@ -843,11 +1132,11 @@ export default function PayrollManager() {
                 )}
                 <div className="flex justify-between">
                   <span className="text-gray-300">Total Empleados:</span>
-                  <span className="font-semibold text-white">{payrollStats.totalEmployees}</span>
+                  <span className="font-semibold text-white">{payrollMetrics.activeEmployees}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-300">Registros Procesados:</span>
-                  <span className="font-semibold text-white">{Object.values(payrollStats.departmentBreakdown).reduce((sum, d) => sum + d.count, 0)}</span>
+                  <span className="font-semibold text-white">{Object.values(payrollMetrics.departmentBreakdown).reduce((sum, d) => sum + d.count, 0)}</span>
                 </div>
               </div>
             </CardContent>
@@ -862,7 +1151,7 @@ export default function PayrollManager() {
               <div className="h-56">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={trendSeries} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={chartGridColor} />
+                    <CartesianGrid strokeDasharray="2 2" stroke={chartGridColor} />
                     <XAxis dataKey="month" stroke={axisColor} />
                     <YAxis stroke={axisColor} tickFormatter={(v)=>formatCurrency(v as any)} />
                     <Tooltip 
@@ -870,7 +1159,7 @@ export default function PayrollManager() {
                       labelStyle={{ color: 'rgb(255,255,255)' }} 
                       contentStyle={{ background: tooltipBg, border: `1px solid ${tooltipBorder}` }} 
                     />
-                    <Line type="monotone" dataKey="total_net" stroke={trendLineColor} strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="netSalary" stroke={trendLineColor} strokeWidth={1} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -1211,40 +1500,47 @@ export default function PayrollManager() {
                         <div className="text-sm">
                           <div className="text-white">Trabajó: {record.days_worked} días</div>
                           <div className="text-red-400">Ausente: {record.days_absent} días</div>
-                          <div className="text-yellow-400">Tardanza: {record.late_days} días</div>
+                          <div className="text-red-400">Tardanza: {record.late_days} días</div>
                         </div>
                       </td>
                       <td className="py-3 px-4">
                         {getStatusBadge(record.status)}
+                        {('isPreview' in record && record.isPreview) && (
+                          <div className="text-xs text-yellow-400 mt-1">Preview</div>
+                        )}
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex flex-col gap-2">
-                          {/* Botón Editar - siempre visible */}
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => editPayrollRecord(record)}
-                            className="border-white/20 text-white hover:bg-white/10"
-                          >
-                            ✏️ Editar
-                          </Button>
-                          
-                          {/* Botón Recalcular - siempre visible */}
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => recalculatePayroll(record.id)}
-                            className="border-white/20 text-white hover:bg-white/10"
-                          >
-                            🔄 Recalcular
-                          </Button>
-                          
-                          {/* Botón Aprobar - solo si está en borrador */}
-                          {record.status === 'draft' && (
+                          {/* Botón Editar - solo para registros reales */}
+                          {!('isPreview' in record && record.isPreview) && (
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => approvePayroll(record.id)}
+                              onClick={() => editPayrollRecord(record)}
+                              className="border-white/20 text-white hover:bg-white/10"
+                            >
+                              ✏️ Editar
+                            </Button>
+                          )}
+                          
+                          {/* Botón Recalcular - solo para registros reales */}
+                          {!('isPreview' in record && record.isPreview) && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => recalculatePayroll(record.id || '')}
+                              className="border-white/20 text-white hover:bg-white/10"
+                            >
+                              🔄 Recalcular
+                            </Button>
+                          )}
+                          
+                          {/* Botón Aprobar - solo si está en borrador */}
+                          {record.status === 'draft' && !('isPreview' in record && record.isPreview) && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => approvePayroll(record.id || '')}
                               className="border-white/20 text-white hover:bg-white/10"
                             >
                               ✅ Aprobar
@@ -1252,10 +1548,10 @@ export default function PayrollManager() {
                           )}
                           
                           {/* Botón Marcar Pagado - solo si está aprobada */}
-                          {record.status === 'approved' && (
+                          {record.status === 'approved' && !('isPreview' in record && record.isPreview) && (
                             <Button
                               size="sm"
-                              onClick={() => markAsPaid(record.id)}
+                              onClick={() => markAsPaid(record.id || '')}
                               className="bg-brand-800 hover:bg-brand-700 text-white"
                             >
                               💰 Marcar Pagado
@@ -1268,6 +1564,8 @@ export default function PayrollManager() {
                             variant="ghost"
                             onClick={async () => await downloadPayrollPDF(record)}
                             className="text-gray-300 hover:bg-white/10 hover:text-white"
+                            disabled={'isPreview' in record && record.isPreview}
+                            title={'isPreview' in record && record.isPreview ? 'Generá primero la nómina' : 'Descargar PDF'}
                           >
                             📄 Descargar PDF
                           </Button>
@@ -1276,6 +1574,8 @@ export default function PayrollManager() {
                             variant="ghost"
                             onClick={async () => await downloadIndividualReceipt(record)}
                             className="text-gray-300 hover:bg-white/10 hover:text-white"
+                            disabled={'isPreview' in record && record.isPreview}
+                            title={'isPreview' in record && record.isPreview ? 'Generá primero la nómina' : 'Descargar recibo individual'}
                           >
                             📄 Descargar Recibo
                           </Button>
