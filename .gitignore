@@ -26,6 +26,16 @@ yarn-error.log*
 
 # local env files
 .env*.local
+.env.local
+.env.production
+.env.development
+.env.test
+
+# Environment backups and old files (SECURITY CRITICAL)
+.env*.backup
+.env*.old
+.env.backup
+.env.old
 
 # vercel
 .vercel
@@ -41,3 +51,69 @@ next-env.d.ts
 # IDE
 .vscode/
 .idea/
+
+# SECURITY: SQL Scripts with credentials (DO NOT COMMIT)
+# Only allow Supabase migrations and seed files
+*.sql
+!supabase/migrations/*.sql
+!supabase/seed.sql
+!supabase/config.toml
+
+# SECURITY: Backup and temporary files
+*.backup
+*.old
+*.tmp
+*.temp
+backup-*/
+temp/
+tmp/
+
+# SECURITY: Log files that might contain sensitive data
+*.log
+logs/
+dev.log
+
+# SECURITY: Test files that might contain credentials
+test-*.js
+test-*.sql
+check-*.js
+check-*.sql
+verify-*.js
+verify-*.sql
+fix-*.js
+fix-*.sql
+debug-*.js
+debug-*.sql
+
+# SECURITY: Terraform state files
+terraform/
+.terraform/
+*.tfstate
+*.tfstate.*
+
+# SECURITY: GitHub Copilot instructions (might contain sensitive info)
+.github/copilot-instructions.md
+
+# SECURITY: Railway and deployment configs
+railway.json
+railway.toml
+vercel.json
+
+# SECURITY: Local development files
+dev.log
+local-*.js
+local-*.sql
+
+# SECURITY: Specific sensitive files (DO NOT COMMIT)
+create-*-user.sql
+create-*-admin.sql
+create-*-step-by-step.sql
+create-*-direct.sql
+fix-*-*.sql
+check-*-*.sql
+debug-*.sql
+get-*-password.sql
+insert_*.sql
+migrations-*.sql
+complete-*.sql
+copy-*.sql
