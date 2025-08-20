@@ -1512,10 +1512,16 @@ export default function PayrollManager() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Botón 1: Generar Preview */}
               <Button
-                onClick={() => setShowPreviewForm(!showPreviewForm)}
+                onClick={async () => {
+                  setShowPreviewForm(!showPreviewForm)
+                  // Si no hay draft, generar uno automáticamente
+                  if (!draft) {
+                    await generatePreview()
+                  }
+                }}
                 disabled={isWorking || employees.length === 0}
                 className="bg-green-600 hover:bg-green-700 text-white h-20 flex flex-col items-center justify-center gap-2"
-                title={employees.length === 0 ? 'No hay empleados activos' : 'Configurar y generar preview de nómina'}
+                title={employees.length === 0 ? 'No hay empleados activos' : 'Generar preview de nómina'}
               >
                 <span className="text-2xl">📝</span>
                 <span className="text-sm font-medium">Generar Preview</span>
