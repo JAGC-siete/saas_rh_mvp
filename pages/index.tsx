@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import DemoFooter from '../components/DemoFooter'
 import ServicesSection from '../components/ServicesSection'
 import LandingHero from '../components/LandingHero'
+import CountdownTimer from '../components/CountdownTimer'
 import dynamic from 'next/dynamic'
 
 const CloudBackground = dynamic(() => import('../components/CloudBackground'), { ssr: false })
@@ -135,6 +136,9 @@ export default function LandingPage() {
             <span className="text-sm bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full border border-blue-500/20 hover:bg-blue-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-200">Setup en 24 horas</span>
             <span className="text-sm bg-orange-500/10 text-orange-400 px-3 py-1 rounded-full border border-orange-500/20 hover:bg-orange-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-300">02 empresas activas</span>
           </div>
+
+          {/* Countdown Timer - Centrado debajo de los trust badges */}
+          <CountdownTimer />
 
           {/* LandingHero Section - Reemplaza completamente al carrusel */}
           <div className="text-center max-w-6xl mx-auto mb-12">

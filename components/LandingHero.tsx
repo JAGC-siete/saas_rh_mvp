@@ -1,41 +1,20 @@
 import React, { useEffect, useMemo, useState } from "react";
 
 export default function LandingHero() {
-  // Countdown to next quincena (15 o último día del mes)
-  const [now, setNow] = useState(new Date());
-
-  useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 60_000); // update cada minuto
-    return () => clearInterval(t);
-  }, []);
-
-  const { daysLeft, hoursLeft, minutesLeft, nextPayday } = useMemo(() => {
-    const d = new Date(now);
-    const y = d.getFullYear();
-    const m = d.getMonth(); // 0-11
-    const day = d.getDate();
-
-    // Definimos quincenas: 15 y último día del mes
-    const fifteenth = new Date(y, m, 15, 23, 59, 59);
-    const lastOfMonth = new Date(y, m + 1, 0, 23, 59, 59); // 0 => último día del mes anterior
-
-    const target = day <= 15 ? fifteenth : lastOfMonth;
-    const diffMs = target.getTime() - d.getTime();
+  // Función simple para obtener la próxima quincena
+  const getNextPayday = () => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth();
+    const day = now.getDate();
     
-    // Calcular días, horas y minutos
-    const diffDays = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
-    const diffHours = Math.max(0, Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)));
-    const diffMinutes = Math.max(0, Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60)));
+    const fifteenth = new Date(y, m, 15, 23, 59, 59);
+    const lastOfMonth = new Date(y, m + 1, 0, 23, 59, 59);
+    
+    return day <= 15 ? fifteenth : lastOfMonth;
+  };
 
-    return { 
-      daysLeft: diffDays, 
-      hoursLeft: diffHours, 
-      minutesLeft: diffMinutes, 
-      nextPayday: target 
-    };
-  }, [now]);
-
-
+  const nextPayday = getNextPayday();
 
   return (
     <div className="relative isolate overflow-hidden">
@@ -44,31 +23,7 @@ export default function LandingHero() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
             {/* Copy */}
             <div className="space-y-6">
-              {/* Countdown profesional de nómina */}
-              <div className="bg-gradient-to-r from-red-500/20 to-orange-500/20 border border-red-400/30 rounded-2xl p-6 backdrop-blur-sm shadow-xl">
-                <div className="text-center mb-4">
-                  <h3 className="text-lg font-semibold text-red-100 mb-2">🚨 PRÓXIMA PLANILLA EN</h3>
-                  <div className="flex items-center justify-center gap-3 text-3xl font-bold text-white">
-                    <div className="bg-white/20 rounded-xl px-4 py-2 min-w-[80px]">
-                      <span className="block text-4xl">{daysLeft}</span>
-                      <span className="text-sm text-red-100">DÍAS</span>
-                    </div>
-                    <span className="text-red-300">:</span>
-                    <div className="bg-white/20 rounded-xl px-4 py-2 min-w-[80px]">
-                      <span className="block text-4xl">{hoursLeft.toString().padStart(2, '0')}</span>
-                      <span className="text-sm text-red-100">HORAS</span>
-                    </div>
-                    <span className="text-red-300">:</span>
-                    <div className="bg-white/20 rounded-xl px-4 py-2 min-w-[80px]">
-                      <span className="block text-4xl">{minutesLeft.toString().padStart(2, '0')}</span>
-                      <span className="text-sm text-red-100">MIN</span>
-                    </div>
-                  </div>
-                </div>
-                <p className="text-center text-red-100 text-sm font-medium">
-                  ¿Vas a seguir perdiendo tiempo con Excel o activás tu robot RH ahora?
-                </p>
-              </div>
+
 
               <h1 className="text-4xl sm:text-5xl font-extrabold leading-tight text-white">
                 ¿Otra quincena corriendo detrás de la planilla?
