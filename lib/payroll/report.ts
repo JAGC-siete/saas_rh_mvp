@@ -1,4 +1,4 @@
-import type { Buffer } from 'buffer'
+import { Buffer } from 'buffer'
 
 export interface PlanillaItem {
   id: string
