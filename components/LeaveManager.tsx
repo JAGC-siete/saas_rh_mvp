@@ -1,8 +1,8 @@
 // LeaveManager.tsx
 import React, { useState, useEffect } from 'react'
 import { useLeave } from '../lib/hooks/useLeave'
-import { LeaveType, LeaveRequest, CreateLeaveRequestData } from '../lib/types/leave'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
+import { LeaveRequest } from '../lib/types/leave'
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 
 interface FormData {
   employee_dni: string
@@ -50,7 +50,7 @@ export default function LeaveManager() {
     fetchLeaveRequests()
     fetchLeaveTypes()
     fetchEmployees()
-  }, [])
+  }, [fetchLeaveRequests, fetchLeaveTypes])
 
   const fetchEmployees = async () => {
     try {
