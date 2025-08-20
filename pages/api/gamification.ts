@@ -79,66 +79,145 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 async function handleLeaderboard(req: NextApiRequest, res: NextApiResponse, supabase: any, companyId: string, limit: number) {
-  const { data: leaderboard, error } = await supabase
-    .from('employee_scores')
-    .select(`
-      *,
-      employee:employees(
-        id,
-        name,
-        employee_code,
-        department:departments(name)
-      )
-    `)
-    .eq('company_id', companyId)
-    .order('total_points', { ascending: false })
-    .limit(limit)
+  try {
+    // First get employee scores
+    const { data: scores, error: scoresError } = await supabase
+      .from('employee_scores')
+      .select('*')
+      .eq('company_id', companyId)
+      .order('total_points', { ascending: false })
+      .limit(limit)
 
-  if (error) {
-    console.error('Leaderboard fetch error:', error)
-    return res.status(500).json({ error: 'Failed to fetch leaderboard' })
+    if (scoresError) {
+      console.error('Scores fetch error:', scoresError)
+      return res.status(500).json({ error: 'Failed to fetch scores' })
+    }
+
+    if (!scores || scores.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: [],
+        total: 0
+      })
+    }
+
+    // Then get employee details separately to avoid complex joins
+    const employeeIds = scores.map((score: any) => score.employee_id)
+    const { data: employees, error: employeesError } = await supabase
+      .from('employees')
+      .select('id, name, employee_code, department_id')
+      .in('id', employeeIds)
+
+    if (employeesError) {
+      console.error('Employees fetch error:', employeesError)
+      // Continue without employee details
+    }
+
+    // Get department names
+    const departmentIds = employees?.map((emp: any) => emp.department_id).filter(Boolean) || []
+    let departments: any[] = []
+    if (departmentIds.length > 0) {
+      const { data: deps } = await supabase
+        .from('departments')
+        .select('id, name')
+        .in('id', departmentIds)
+      departments = deps || []
+    }
+
+    // Combine the data
+    const leaderboard = scores.map((score: any, index: number) => {
+      const employee = employees?.find((emp: any) => emp.id === score.employee_id) || {}
+      const department = departments?.find((dept: any) => dept.id === employee.department_id)
+      
+      return {
+        ...score,
+        rank: index + 1,
+        employee: {
+          id: employee.id,
+          name: employee.name || `Employee ${employee.employee_code}`,
+          employee_code: employee.employee_code,
+          department: department ? { name: department.name } : null
+        }
+      }
+    })
+
+    res.status(200).json({
+      success: true,
+      data: leaderboard,
+      total: leaderboard.length
+    })
+  } catch (error) {
+    console.error('Leaderboard error:', error)
+    res.status(500).json({ error: 'Internal server error' })
   }
-
-  // Add rankings
-  const rankedLeaderboard = leaderboard?.map((entry: any, index: number) => ({
-    ...entry,
-    rank: index + 1,
-    employee: entry.employee || {}
-  })) || []
-
-  res.status(200).json({
-    success: true,
-    data: rankedLeaderboard,
-    total: rankedLeaderboard.length
-  })
 }
 
 async function handleAchievements(req: NextApiRequest, res: NextApiResponse, supabase: any, companyId: string, employeeId?: string) {
-  let query = supabase
-    .from('employee_achievements')
-    .select(`
-      *,
-      achievement_type:achievement_types(*)
-    `)
-    .eq('company_id', companyId)
+  try {
+    // Build query for employee achievements
+    let query = supabase
+      .from('employee_achievements')
+      .select('*')
+      .eq('company_id', companyId)
 
-  // If employee_id is provided, filter by specific employee
-  if (employeeId) {
-    query = query.eq('employee_id', employeeId)
+    // If employee_id is provided, filter by specific employee
+    if (employeeId) {
+      query = query.eq('employee_id', employeeId)
+    }
+
+    const { data: achievements, error } = await query
+
+    if (error) {
+      console.error('Achievements fetch error:', error)
+      return res.status(500).json({ error: 'Failed to fetch achievements' })
+    }
+
+    if (!achievements || achievements.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: [],
+        total: 0
+      })
+    }
+
+    // Get achievement types separately to avoid complex joins
+    const achievementTypeIds = achievements.map((ach: any) => ach.achievement_type_id)
+    const { data: achievementTypes, error: typesError } = await supabase
+      .from('achievement_types')
+      .select('*')
+      .in('id', achievementTypeIds)
+
+    if (typesError) {
+      console.error('Achievement types fetch error:', typesError)
+      // Continue without achievement type details
+    }
+
+    // Combine the data
+    const enrichedAchievements = achievements.map((achievement: any) => {
+      const achievementType = achievementTypes?.find((type: any) => type.id === achievement.achievement_type_id) || {}
+      
+      return {
+        ...achievement,
+        achievement_type: {
+          id: achievementType.id,
+          name: achievementType.name || 'Unknown Achievement',
+          description: achievementType.description || '',
+          icon: achievementType.icon || '🏆',
+          points_reward: achievementType.points_reward || 0,
+          badge_color: achievementType.badge_color || 'blue'
+        }
+      }
+    })
+
+    res.status(200).json({
+      success: true,
+      data: enrichedAchievements,
+      total: enrichedAchievements.length
+    })
+  } catch (error) {
+    console.error('Achievements error:', error)
+    res.status(500).json({ error: 'Internal server error' })
   }
-
-  const { data: achievements, error } = await query
-
-  if (error) {
-    console.error('Achievements fetch error:', error)
-    return res.status(500).json({ error: 'Failed to fetch achievements' })
-  }
-
-  res.status(200).json({
-    success: true,
-    data: achievements || [],
-    total: achievements?.length || 0
-  })
 }
 
 async function handleEmployeeProgress(req: NextApiRequest, res: NextApiResponse, supabase: any, companyId: string, employeeId: string) {
