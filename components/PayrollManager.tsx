@@ -1045,7 +1045,7 @@ export default function PayrollManager() {
         throw new Error('No hay sesión activa')
       }
 
-      const response = await fetch('/api/payroll/calculate', {
+      const response = await fetch('/api/payroll/report', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1054,14 +1054,7 @@ export default function PayrollManager() {
         },
         body: JSON.stringify({
           periodo: draft.meta.periodo,
-          quincena: draft.meta.quincena,
-          incluirDeducciones: true,
-          draft_overrides: draft.rows.map(row => ({
-            employee_id: row.employee_id,
-            adj_bonus: row.adj_bonus || 0,
-            adj_discount: row.adj_discount || 0,
-            note: row.note || ''
-          }))
+          quincena: draft.meta.quincena
         })
       })
 
