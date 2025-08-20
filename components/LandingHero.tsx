@@ -122,7 +122,7 @@ export default function LandingHero() {
                 <div className="mt-4">
                   <div className="rounded-2xl border bg-white p-4">
                     <p className="text-gray-800 italic">
-                      "Antes tardaba 6 horas cada quincena. Ahora son 15 minutos y cero reclamos el día de pago."
+                      &ldquo;Antes tardaba 6 horas cada quincena. Ahora son 15 minutos y cero reclamos el día de pago.&rdquo;
                     </p>
                     <div className="mt-2 text-sm text-gray-600">— Gerente de RRHH </div>
                   </div>
