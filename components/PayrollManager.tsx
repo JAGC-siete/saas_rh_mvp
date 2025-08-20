@@ -203,6 +203,15 @@ export default function PayrollManager() {
   const [draft, setDraft] = useState<{rows: DraftRow[], totals: any, meta: {periodo:string, quincena:1|2}}|null>(null)
   const [isEditingDraft, setIsEditingDraft] = useState(false)
   const [isWorking, setIsWorking] = useState(false)
+  const [showPreviewForm, setShowPreviewForm] = useState(false)
+
+  // Estado para el formulario de preview
+  const [previewForm, setPreviewForm] = useState({
+    periodo: new Date().toISOString().slice(0, 7),
+    quincena: 1,
+    incluirDeducciones: true,
+    soloEmpleadosConAsistencia: false
+  })
 
   
 
@@ -912,8 +921,8 @@ export default function PayrollManager() {
         return
       }
 
-      const periodo = selectedPeriod || new Date().toISOString().slice(0, 7)
-      const quincena = (filterQuincena || selectedQuincena) as 1 | 2
+      const periodo = previewForm.periodo
+      const quincena = previewForm.quincena as 1 | 2
       const [year, month] = periodo.split('-').map(Number)
       const lastDay = new Date(year, month, 0).getDate()
       
@@ -926,7 +935,20 @@ export default function PayrollManager() {
         const grossSalary = dailyRate * daysInQuincena
         
         // Calcular deducciones usando las fórmulas existentes
-        const deductions = calculateHondurasDeductions(emp.base_salary, daysInQuincena)
+        let deductions
+        if (previewForm.incluirDeducciones) {
+          deductions = calculateHondurasDeductions(emp.base_salary, daysInQuincena)
+        } else {
+          // Sin deducciones
+          deductions = {
+            grossSalary,
+            ihss: 0,
+            rap: 0,
+            isr: 0,
+            totalDeductions: 0,
+            netSalary: grossSalary
+          }
+        }
         
         return {
           employee_id: emp.id,
@@ -936,7 +958,7 @@ export default function PayrollManager() {
           days_worked: daysInQuincena,
           days_absent: 0, // Por defecto
           late_days: 0, // Por defecto
-          gross_salary: grossSalary,
+          gross_salary: deductions.grossSalary,
           ihss: deductions.ihss,
           rap: deductions.rap,
           isr: deductions.isr,
@@ -961,6 +983,9 @@ export default function PayrollManager() {
         meta: { periodo, quincena }
       })
 
+      // Cerrar el formulario después de generar
+      setShowPreviewForm(false)
+      
       alert(`✅ Preview generado para ${draftRows.length} empleados activos`)
     } catch (error: any) {
       console.error('Error generando preview:', error)
@@ -968,7 +993,7 @@ export default function PayrollManager() {
     } finally {
       setIsWorking(false)
     }
-  }, [supabase, selectedPeriod, filterQuincena, selectedQuincena, calculateHondurasDeductions])
+  }, [supabase, previewForm, calculateHondurasDeductions])
 
   const toggleEditDraft = useCallback(() => {
     setIsEditingDraft(prev => !prev)
@@ -1487,10 +1512,10 @@ export default function PayrollManager() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Botón 1: Generar Preview */}
               <Button
-                onClick={generatePreview}
+                onClick={() => setShowPreviewForm(!showPreviewForm)}
                 disabled={isWorking || employees.length === 0}
                 className="bg-green-600 hover:bg-green-700 text-white h-20 flex flex-col items-center justify-center gap-2"
-                title={employees.length === 0 ? 'No hay empleados activos' : 'Generar preview de nómina'}
+                title={employees.length === 0 ? 'No hay empleados activos' : 'Configurar y generar preview de nómina'}
               >
                 <span className="text-2xl">📝</span>
                 <span className="text-sm font-medium">Generar Preview</span>
@@ -1741,7 +1766,10 @@ export default function PayrollManager() {
                       onClick={() => handleFormChange('quincena', 2)}
                       className={`flex-1 ${generateForm.quincena === 2 ? 'bg-brand-800 hover:bg-brand-700 text-white' : 'border border-white/20 text-white hover:bg-white/10 bg-transparent'}`}
                     >
-                      16 - {lastDayOfSelectedMonth}
+                      16 - {(() => {
+                        const [year, month] = generateForm.periodo.split('-').map(Number)
+                        return new Date(year, month, 0).getDate()
+                      })()}
                     </Button>
                   </div>
                 </div>
@@ -1992,9 +2020,105 @@ export default function PayrollManager() {
         </Card>
       </div>
 
-      
-
-      
+      {/* Formulario de Preview */}
+      {showPreviewForm && (
+        <div className="mt-6 p-6 bg-brand-800/20 border border-brand-500/30 rounded-lg">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold text-white">⚙️ Configurar Preview de Nómina</h3>
+            <Button
+              onClick={() => setShowPreviewForm(false)}
+              variant="outline"
+              size="sm"
+              className="border-white/20 text-white hover:bg-white/10"
+            >
+              ✕ Cerrar
+            </Button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Mes */}
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">
+                📅 Mes
+              </label>
+              <Input
+                type="month"
+                value={previewForm.periodo}
+                onChange={(e) => setPreviewForm(prev => ({ ...prev, periodo: e.target.value }))}
+                required
+                className="w-full bg-white/10 border-white/20 text-white placeholder-gray-400"
+              />
+            </div>
+            
+            {/* Rango de Quincena */}
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">
+                ⏰ Rango de Quincena
+              </label>
+              <div className="flex gap-3">
+                <Button 
+                  type="button"
+                  onClick={() => setPreviewForm(prev => ({ ...prev, quincena: 1 }))}
+                  className={`flex-1 ${previewForm.quincena === 1 ? 'bg-brand-800 hover:bg-brand-700 text-white' : 'border border-white/20 text-white hover:bg-white/10 bg-transparent'}`}
+                >
+                  1 - 15
+                </Button>
+                <Button 
+                  type="button"
+                  onClick={() => setPreviewForm(prev => ({ ...prev, quincena: 2 }))}
+                  className={`flex-1 ${previewForm.quincena === 2 ? 'bg-brand-800 hover:bg-brand-700 text-white' : 'border border-white/20 text-white hover:bg-white/10 bg-transparent'}`}
+                >
+                  16 - {(() => {
+                    const [year, month] = previewForm.periodo.split('-').map(Number)
+                    return new Date(year, month, 0).getDate()
+                  })()}
+                </Button>
+              </div>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            {/* Incluir Deducciones */}
+            <div className="flex items-center space-x-3">
+              <input
+                type="checkbox"
+                checked={previewForm.incluirDeducciones}
+                onChange={(e) => setPreviewForm(prev => ({ ...prev, incluirDeducciones: e.target.checked }))}
+                className="w-4 h-4 accent-brand-500"
+                id="preview-deducciones"
+              />
+              <label htmlFor="preview-deducciones" className="text-sm font-medium text-white">
+                💰 Incluir deducciones (ISR, IHSS, RAP)
+              </label>
+            </div>
+            
+            {/* Solo Empleados con Asistencia */}
+            <div className="flex items-center space-x-3">
+              <input
+                type="checkbox"
+                checked={previewForm.soloEmpleadosConAsistencia}
+                onChange={(e) => setPreviewForm(prev => ({ ...prev, soloEmpleadosConAsistencia: e.target.checked }))}
+                className="w-4 h-4 accent-brand-500"
+                id="preview-asistencia"
+              />
+              <label htmlFor="preview-asistencia" className="text-sm font-medium text-white">
+                ✅ Solo empleados con asistencia completa
+              </label>
+            </div>
+          </div>
+          
+          {/* Botón Generar Preview */}
+          <div className="mt-6 pt-4 border-t border-white/10">
+            <Button 
+              onClick={generatePreview}
+              disabled={isWorking}
+              className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 w-full md:w-auto"
+            >
+              {isWorking ? '🔄 Generando...' : '🚀 Generar Preview'}
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
