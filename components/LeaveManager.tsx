@@ -220,9 +220,14 @@ export default function LeaveManager() {
       </div>
 
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
-        </div>
+        <Card variant="glass" className="mb-4 border-red-400/30">
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-red-400 rounded-full"></div>
+              <p className="text-red-200 font-medium">{error}</p>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {showForm && (
@@ -236,7 +241,7 @@ export default function LeaveManager() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Employee DNI */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-white mb-2">
                   DNI del Empleado *
                 </label>
                 <input
@@ -245,11 +250,11 @@ export default function LeaveManager() {
                   value={formData.employee_dni}
                   onChange={handleInputChange}
                   placeholder="Ej: 0801-2003-14588"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white/90 text-gray-800"
                   required
                 />
                 {formData.employee_dni && (
-                  <p className="text-sm text-gray-600 mt-1">
+                  <p className="text-sm text-gray-300 mt-1">
                     Empleado: {getEmployeeName(formData.employee_dni)}
                   </p>
                 )}
@@ -257,14 +262,14 @@ export default function LeaveManager() {
 
               {/* Leave Type */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-white mb-2">
                   Tipo de Permiso *
                 </label>
                 <select
                   name="leave_type_id"
                   value={formData.leave_type_id}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white/90 text-gray-800"
                   required
                 >
                   <option value="">Seleccionar tipo</option>
@@ -278,14 +283,14 @@ export default function LeaveManager() {
 
               {/* Duration Type */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-white mb-2">
                   Tipo de Duración *
                 </label>
                 <select
                   name="duration_type"
                   value={formData.duration_type}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white/90 text-gray-800"
                   required
                 >
                   <option value="days">Días</option>
@@ -461,52 +466,52 @@ export default function LeaveManager() {
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-gray-300/30">
+            <thead className="bg-white/10 backdrop-blur-sm">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                   Empleado
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                   Tipo
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                   Duración
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                   Fechas
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                   Estado
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                   Archivo
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">
                   Acciones
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-300/30">
               {leaveRequests.map((request) => (
-                <tr key={request.id} className="hover:bg-gray-50">
+                <tr key={request.id} className="hover:bg-white/5 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div>
-                      <div className="text-sm font-medium text-gray-900">
+                      <div className="text-sm font-medium text-white">
                         {getEmployeeName(request.employee_dni)}
                       </div>
-                      <div className="text-sm text-gray-500">DNI: {request.employee_dni}</div>
+                      <div className="text-sm text-gray-300">DNI: {request.employee_dni}</div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-400/20 text-blue-200 border border-blue-400/30">
                       {getLeaveTypeName(request.leave_type_id)}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
                     {formatDuration(request)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
                     <div>
                       <div>Inicio: {new Date(request.start_date).toLocaleDateString()}</div>
                       <div>Fin: {new Date(request.end_date).toLocaleDateString()}</div>
@@ -518,13 +523,13 @@ export default function LeaveManager() {
                        request.status === 'approved' ? 'Aprobado' : 'Rechazado'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
                     {request.attachment_url ? (
                       <a
                         href={request.attachment_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-800 underline"
+                        className="text-blue-300 hover:text-blue-200 underline"
                       >
                         Ver archivo
                       </a>
@@ -538,13 +543,13 @@ export default function LeaveManager() {
                         <>
                           <button
                             onClick={() => updateLeaveRequest(request.id, { status: 'approved' })}
-                            className="text-green-600 hover:text-green-900"
+                            className="text-green-400 hover:text-green-300"
                           >
                             Aprobar
                           </button>
                           <button
                             onClick={() => updateLeaveRequest(request.id, { status: 'rejected' })}
-                            className="text-red-600 hover:text-red-900"
+                            className="text-red-400 hover:text-red-300"
                           >
                             Rechazar
                           </button>
@@ -552,7 +557,7 @@ export default function LeaveManager() {
                       )}
                       <button
                         onClick={() => deleteLeaveRequest(request.id)}
-                        className="text-red-600 hover:text-red-900"
+                        className="text-red-400 hover:text-red-300"
                       >
                         Eliminar
                       </button>
@@ -565,8 +570,9 @@ export default function LeaveManager() {
           </div>
           
           {leaveRequests.length === 0 && (
-            <div className="text-center py-8 text-gray-400">
-              No hay solicitudes de permisos registradas
+            <div className="text-center py-8">
+              <div className="text-gray-300 text-lg font-medium">No hay solicitudes de permisos registradas</div>
+              <div className="text-gray-400 text-sm mt-2">Las solicitudes aparecerán aquí una vez que sean creadas</div>
             </div>
           )}
         </CardContent>
