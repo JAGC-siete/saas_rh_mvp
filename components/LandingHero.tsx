@@ -9,7 +9,7 @@ export default function LandingHero() {
     return () => clearInterval(t);
   }, []);
 
-  const { daysLeft, nextPayday } = useMemo(() => {
+  const { daysLeft, hoursLeft, minutesLeft, nextPayday } = useMemo(() => {
     const d = new Date(now);
     const y = d.getFullYear();
     const m = d.getMonth(); // 0-11
@@ -21,9 +21,18 @@ export default function LandingHero() {
 
     const target = day <= 15 ? fifteenth : lastOfMonth;
     const diffMs = target.getTime() - d.getTime();
-    const diffDays = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+    
+    // Calcular días, horas y minutos
+    const diffDays = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+    const diffHours = Math.max(0, Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)));
+    const diffMinutes = Math.max(0, Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60)));
 
-    return { daysLeft: diffDays, nextPayday: target };
+    return { 
+      daysLeft: diffDays, 
+      hoursLeft: diffHours, 
+      minutesLeft: diffMinutes, 
+      nextPayday: target 
+    };
   }, [now]);
 
 
@@ -32,15 +41,22 @@ export default function LandingHero() {
     <div className="relative isolate overflow-hidden">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 lg:py-20">
         <div className="glass-strong rounded-3xl p-8 lg:p-12 backdrop-blur-sm border border-white/20 shadow-2xl">
+          {/* Contador centrado en todo el hero */}
+          <div className="text-center mb-12 col-span-full">
+            <div className="inline-flex flex-col items-center gap-3 rounded-full border border-white/20 px-8 py-4 bg-white/10 backdrop-blur-sm shadow-sm">
+              <span className="font-bold text-3xl text-white">⏱️ Faltan {daysLeft} días</span>
+              <div className="flex items-center gap-4 text-lg text-brand-200/80">
+                <span>{hoursLeft} horas</span>
+                <span>•</span>
+                <span>{minutesLeft} minutos</span>
+              </div>
+              <span className="text-lg text-brand-200/80">para tu próxima quincena</span>
+            </div>
+          </div>
+          
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
             {/* Copy */}
             <div className="space-y-6">
-              <div className="text-center mb-8">
-                <div className="inline-flex flex-col items-center gap-2 rounded-full border border-white/20 px-6 py-3 bg-white/10 backdrop-blur-sm shadow-sm">
-                  <span className="font-bold text-2xl text-white">⏱️ Faltan {daysLeft} días</span>
-                  <span className="text-lg text-brand-200/80">para tu próxima quincena</span>
-                </div>
-              </div>
 
               <h1 className="text-4xl sm:text-5xl font-extrabold leading-tight text-white">
                 ¿Otra quincena corriendo detrás de la planilla?
@@ -110,7 +126,7 @@ export default function LandingHero() {
                     <p className="text-gray-800 italic">
                       "Antes tardaba 6 horas cada quincena. Ahora son 15 minutos y cero reclamos el día de pago."
                     </p>
-                    <div className="mt-2 text-sm text-gray-600">— Gerente de RRHH</div>
+                    <div className="mt-2 text-sm text-gray-600">— Gerente de RRHH </div>
                   </div>
                 </div>
               </div>
