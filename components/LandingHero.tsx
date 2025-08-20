@@ -44,16 +44,30 @@ export default function LandingHero() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
             {/* Copy */}
             <div className="space-y-6">
-              {/* Contador profesional y elegante */}
-              <div className="inline-flex items-center gap-3 rounded-xl border border-white/20 px-4 py-2.5 bg-gradient-to-r from-white/10 to-white/5 backdrop-blur-sm shadow-lg">
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">⏱️</span>
-                  <div className="flex flex-col">
-                    <span className="font-bold text-lg text-white">Faltan {daysLeft} días</span>
-                    <span className="text-sm text-brand-200/70">{hoursLeft}h {minutesLeft}m</span>
+              {/* Countdown profesional de nómina */}
+              <div className="bg-gradient-to-r from-red-500/20 to-orange-500/20 border border-red-400/30 rounded-2xl p-6 backdrop-blur-sm shadow-xl">
+                <div className="text-center mb-4">
+                  <h3 className="text-lg font-semibold text-red-100 mb-2">🚨 PRÓXIMA PLANILLA EN</h3>
+                  <div className="flex items-center justify-center gap-3 text-3xl font-bold text-white">
+                    <div className="bg-white/20 rounded-xl px-4 py-2 min-w-[80px]">
+                      <span className="block text-4xl">{daysLeft}</span>
+                      <span className="text-sm text-red-100">DÍAS</span>
+                    </div>
+                    <span className="text-red-300">:</span>
+                    <div className="bg-white/20 rounded-xl px-4 py-2 min-w-[80px]">
+                      <span className="block text-4xl">{hoursLeft.toString().padStart(2, '0')}</span>
+                      <span className="text-sm text-red-100">HORAS</span>
+                    </div>
+                    <span className="text-red-300">:</span>
+                    <div className="bg-white/20 rounded-xl px-4 py-2 min-w-[80px]">
+                      <span className="block text-4xl">{minutesLeft.toString().padStart(2, '0')}</span>
+                      <span className="text-sm text-red-100">MIN</span>
+                    </div>
                   </div>
                 </div>
-                <span className="text-xs text-brand-200/60 border-l border-white/20 pl-3">próxima quincena</span>
+                <p className="text-center text-red-100 text-sm font-medium">
+                  ¿Vas a seguir perdiendo tiempo con Excel o activás tu robot RH ahora?
+                </p>
               </div>
 
               <h1 className="text-4xl sm:text-5xl font-extrabold leading-tight text-white">
