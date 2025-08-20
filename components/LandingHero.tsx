@@ -52,18 +52,7 @@ export default function LandingHero() {
 
 
 
-              <div className="flex justify-center items-center gap-4 text-sm text-brand-200/80">
-                <div className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-sm px-3 py-1 border border-white/20">
-                  <span>🧾 Vouchers por WhatsApp</span>
-                </div>
-                <div className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-sm px-3 py-1 border border-white/20">
-                  <span>🧮 I.H.S.S. • R.A.P. • I.S.R</span>
-                </div>
-                <div className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-sm px-3 py-1 border border-white/20">
-                  <span>🛡️ Cumplimiento desde el día 1 con S.T.S.S</span>
-                </div>
-              </div>
-            </div>
+            
 
             {/* Proof */}
             <div className="relative">
@@ -103,6 +92,18 @@ export default function LandingHero() {
           </div>
           
           {/* Frase de urgencia al final del componente */}
+          <div className="flex justify-center items-center gap-4 text-sm text-brand-200/80">
+                <div className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-sm px-3 py-1 border border-white/20">
+                  <span>🧾 Vouchers por WhatsApp</span>
+                </div>
+                <div className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-sm px-3 py-1 border border-white/20">
+                  <span>🧮 I.H.S.S. • R.A.P. • I.S.R</span>
+                </div>
+                <div className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-sm px-3 py-1 border border-white/20">
+                  <span>🛡️ Cumplimiento desde el día 1 con S.T.S.S</span>
+                </div>
+              </div>
+            </div>
           <div className="text-center mt-12">
             <p className="text-xl font-semibold text-brand-200/90">
               Próxima planilla: {nextPayday.toLocaleDateString()}. Déjala lista hoy en 5 minutos.
