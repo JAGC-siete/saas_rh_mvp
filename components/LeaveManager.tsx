@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react'
 import { useLeave } from '../lib/hooks/useLeave'
 import { LeaveType, LeaveRequest, CreateLeaveRequestData } from '../lib/types/leave'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 
 interface FormData {
   employee_dni: string
@@ -225,8 +226,11 @@ export default function LeaveManager() {
       )}
 
       {showForm && (
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Registrar Permiso Pre-autorizado</h2>
+        <Card variant="glass" className="mb-6">
+          <CardHeader>
+            <CardTitle className="text-white text-xl">Registrar Permiso Pre-autorizado</CardTitle>
+          </CardHeader>
+          <CardContent>
           
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -446,17 +450,18 @@ export default function LeaveManager() {
               </button>
             </div>
           </form>
-        </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Leave Requests List */}
-      <div className="bg-white rounded-lg shadow-md">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">Solicitudes de Permisos</h2>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+      <Card variant="glass">
+        <CardHeader>
+          <CardTitle className="text-white text-xl">Solicitudes de Permisos</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -557,14 +562,15 @@ export default function LeaveManager() {
               ))}
             </tbody>
           </table>
+          </div>
           
           {leaveRequests.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-gray-400">
               No hay solicitudes de permisos registradas
             </div>
           )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
