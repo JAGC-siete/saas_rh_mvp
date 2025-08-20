@@ -41,22 +41,20 @@ export default function LandingHero() {
     <div className="relative isolate overflow-hidden">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 lg:py-20">
         <div className="glass-strong rounded-3xl p-8 lg:p-12 backdrop-blur-sm border border-white/20 shadow-2xl">
-          {/* Contador centrado en todo el hero */}
-          <div className="text-center mb-12 col-span-full">
-            <div className="inline-flex flex-col items-center gap-3 rounded-full border border-white/20 px-8 py-4 bg-white/10 backdrop-blur-sm shadow-sm">
-              <span className="font-bold text-3xl text-white">⏱️ Faltan {daysLeft} días</span>
-              <div className="flex items-center gap-4 text-lg text-brand-200/80">
-                <span>{hoursLeft} horas</span>
-                <span>•</span>
-                <span>{minutesLeft} minutos</span>
-              </div>
-              <span className="text-lg text-brand-200/80">para tu próxima quincena</span>
-            </div>
-          </div>
-          
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
             {/* Copy */}
             <div className="space-y-6">
+              {/* Contador profesional y elegante */}
+              <div className="inline-flex items-center gap-3 rounded-xl border border-white/20 px-4 py-2.5 bg-gradient-to-r from-white/10 to-white/5 backdrop-blur-sm shadow-lg">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">⏱️</span>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-lg text-white">Faltan {daysLeft} días</span>
+                    <span className="text-sm text-brand-200/70">{hoursLeft}h {minutesLeft}m</span>
+                  </div>
+                </div>
+                <span className="text-xs text-brand-200/60 border-l border-white/20 pl-3">próxima quincena</span>
+              </div>
 
               <h1 className="text-4xl sm:text-5xl font-extrabold leading-tight text-white">
                 ¿Otra quincena corriendo detrás de la planilla?
