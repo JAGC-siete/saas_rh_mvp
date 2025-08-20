@@ -72,13 +72,13 @@ export default function GamificationLeaderboard({ companyId, limit = 20 }: Gamif
 
   if (loading) {
     return (
-      <Card>
+      <Card variant="glass">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-white">
             <TrophyIcon className="h-6 w-6 text-yellow-500" />
             Employee Leaderboard
           </CardTitle>
-          <CardDescription>Loading employee rankings...</CardDescription>
+          <CardDescription className="text-gray-300">Loading employee rankings...</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex justify-center py-8">
@@ -91,9 +91,9 @@ export default function GamificationLeaderboard({ companyId, limit = 20 }: Gamif
 
   if (error) {
     return (
-      <Card>
+      <Card variant="glass">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-white">
             <TrophyIcon className="h-6 w-6 text-yellow-500" />
             Employee Leaderboard
           </CardTitle>
@@ -115,13 +115,13 @@ export default function GamificationLeaderboard({ companyId, limit = 20 }: Gamif
 
   if (leaderboard.length === 0) {
     return (
-      <Card>
+      <Card variant="glass">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-white">
             <TrophyIcon className="h-6 w-6 text-yellow-500" />
             Employee Leaderboard
           </CardTitle>
-          <CardDescription>No employees have earned points yet</CardDescription>
+          <CardDescription className="text-gray-300">No employees have earned points yet</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8 text-gray-400">
@@ -133,13 +133,13 @@ export default function GamificationLeaderboard({ companyId, limit = 20 }: Gamif
   }
 
   return (
-    <Card>
+    <Card variant="glass">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 text-white">
           <TrophyIcon className="h-6 w-6 text-yellow-500" />
           Employee Leaderboard
         </CardTitle>
-        <CardDescription>Top performers this month</CardDescription>
+        <CardDescription className="text-gray-300">Top performers this month</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-3">

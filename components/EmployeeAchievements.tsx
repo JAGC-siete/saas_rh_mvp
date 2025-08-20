@@ -73,10 +73,10 @@ export default function EmployeeAchievements({ companyId, employeeId, limit = 10
 
   if (loading) {
     return (
-      <Card>
+      <Card variant="glass">
         <CardHeader>
-          <CardTitle>🏆 Employee Achievements</CardTitle>
-          <CardDescription>Loading achievements...</CardDescription>
+          <CardTitle className="text-white">🏆 Employee Achievements</CardTitle>
+          <CardDescription className="text-gray-300">Loading achievements...</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex justify-center py-8">
@@ -89,9 +89,9 @@ export default function EmployeeAchievements({ companyId, employeeId, limit = 10
 
   if (error) {
     return (
-      <Card>
+      <Card variant="glass">
         <CardHeader>
-          <CardTitle>🏆 Employee Achievements</CardTitle>
+          <CardTitle className="text-white">🏆 Employee Achievements</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
@@ -110,10 +110,10 @@ export default function EmployeeAchievements({ companyId, employeeId, limit = 10
 
   if (achievements.length === 0) {
     return (
-      <Card>
+      <Card variant="glass">
         <CardHeader>
-          <CardTitle>🏆 Employee Achievements</CardTitle>
-          <CardDescription>No achievements earned yet</CardDescription>
+          <CardTitle className="text-white">🏆 Employee Achievements</CardTitle>
+          <CardDescription className="text-gray-300">No achievements earned yet</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8 text-gray-400">
@@ -125,10 +125,10 @@ export default function EmployeeAchievements({ companyId, employeeId, limit = 10
   }
 
   return (
-    <Card>
+    <Card variant="glass">
       <CardHeader>
-        <CardTitle>🏆 Employee Achievements</CardTitle>
-        <CardDescription>
+        <CardTitle className="text-white">🏆 Employee Achievements</CardTitle>
+        <CardDescription className="text-gray-300">
           {employeeId ? 'Individual achievements' : 'Company achievements'}
         </CardDescription>
       </CardHeader>
