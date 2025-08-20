@@ -86,13 +86,6 @@ export default function LandingPage() {
                   >
                     El Planillero
                   </a>
-                  <a
-                    href="#pricing"
-                    className="text-brand-200 hover:text-white px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0"
-                    onClick={scrollToSection}
-                  >
-                    Precios
-                  </a>
                   <Link
                     href="/app/login"
                     className="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 shadow-lg shadow-black/20 hover:-translate-y-0.5 active:translate-y-0"
@@ -138,14 +131,6 @@ export default function LandingPage() {
                 >
                   Nómina
                 </a>
-                <a
-                  href="#pricing"
-                  className="block px-3 py-2 text-base font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"
-                  onClick={() => setIsMobileMenuOpen(false)}
-
-                >
-                  Precios
-                </a>
                 <div className="px-3 py-2 space-y-2">
                   <Link
                     href="/activar"
@@ -177,8 +162,6 @@ export default function LandingPage() {
             <span className="text-sm bg-green-500/10 text-green-400 px-3 py-1 rounded-full border border-green-500/20 hover:bg-green-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-100">✓ Cumple STSS Honduras</span>
             <span className="text-sm bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full border border-blue-500/20 hover:bg-blue-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-200">⚡ Setup en 24 horas</span>
             <span className="text-sm bg-orange-500/10 text-orange-400 px-3 py-1 rounded-full border border-orange-500/20 hover:bg-orange-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-300">🔥 02 empresas activas</span>
-            <span className="text-sm bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full border border-emerald-500/20 hover:bg-emerald-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-500">0 errores de cálculo</span>
-            <span className="text-sm bg-purple-500/10 text-purple-400 px-3 py-1 rounded-full border border-purple-500/20 hover:bg-purple-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-600">📊 IHSS, RAP, ISR 2025</span>
           </div>
 
           {/* Hero Carousel Section */}
@@ -222,47 +205,6 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* Pricing Section */}
-      <section id="pricing" className="py-20 px-6 max-w-4xl mx-auto">
-        <h2 className="text-3xl md:text-4xl font-bold mb-8 text-center text-white">
-          Planes simples, precios sin letra pequeña
-        </h2>
-        <div className="text-center max-w-lg mx-auto">
-          <Card variant="glass" className="hover:border-brand-500/50 transition-all duration-300">
-            <CardHeader className="text-center pb-6">
-              <CardTitle className="text-3xl font-bold text-white mb-4">
-                RH 100% Digital
-              </CardTitle>
-              <div className="space-y-2">
-                <div className="text-5xl font-bold text-brand-400">
-                  L300 <span className="text-xl text-brand-200">/empleado/mes</span>
-                </div>
-                <div className="text-2xl text-brand-300">
-                  $12.50 <span className="text-base text-brand-200">USD/empleado/mes</span>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <ul className="text-left text-brand-200/90 mb-6 space-y-1">
-                <li>🔥 Reducí los costos de RH, automatiza hoy.</li>
-                <li>💰 Costo L300 / empleado </li>
-                <li>⚡ Listo en 24 horas. Cancela cuando quieras.</li>
-              </ul>
-              <p className="text-brand-200 mb-6 leading-relaxed">
-                L300/empleado/mes. Todo incluido: Asistencia, Nómina, Vouchers, Dashboard.
-              </p>
-              <Link
-                href="/activar"
-                className="w-full bg-brand-600 hover:bg-brand-700 text-white py-4 px-4 rounded-lg font-bold transition-all duration-300 inline-flex items-center justify-center gap-2 text-lg shadow-lg shadow-black/20 hover:-translate-y-0.5 active:translate-y-0 hover:shadow-xl hover:shadow-brand-900/50"
-              >
-                Automatizar mi RH hoy
-                <ArrowRightIcon className="w-4 h-4" />
-              </Link>
-            </CardContent>
-          </Card>
         </div>
       </section>
 

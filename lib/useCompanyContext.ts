@@ -30,30 +30,36 @@ export function useCompanyContext() {
         }
         
         // Obtener el company_id del user_profile
+        console.log('🔍 Buscando perfil para usuario:', user.id)
         const { data: userProfile, error: profileError } = await supabase
           .from('user_profiles')
-          .select('company_id')
+          .select('company_id, role')
           .eq('id', user.id)
           .single()
+        
+        console.log('📊 Resultado perfil:', { userProfile, profileError })
 
         if (profileError) {
           console.error('❌ Error obteniendo perfil de usuario:', profileError)
-          // Usar Paragon como fallback
-          const fallbackCompanyId = '00000000-0000-0000-0000-000000000001'
-          console.log('⚠️ Usando company_id fallback:', fallbackCompanyId)
-          setCompanyId(fallbackCompanyId)
+          // No usar fallback hardcodeado - esto causa problemas
+          setError('No se pudo obtener el perfil de usuario')
+          setLoading(false)
+          return
         } else {
           setCompanyId(userProfile.company_id)
         }
 
         // Obtener información de la empresa
-        const currentCompanyId = profileError ? '00000000-0000-0000-0000-000000000001' : userProfile.company_id
+        const currentCompanyId = userProfile.company_id
+        console.log('🏢 Buscando empresa con ID:', currentCompanyId)
         
         const { data: companyData, error: companyError } = await supabase
           .from('companies')
           .select('id, name, settings')
           .eq('id', currentCompanyId)
           .single()
+        
+        console.log('📊 Resultado empresa:', { companyData, companyError })
 
         if (companyError) {
           console.error('❌ Error obteniendo empresa:', companyError)

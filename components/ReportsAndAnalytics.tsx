@@ -1,11 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { supabase } from '../lib/supabase'
 import { useSession } from '@supabase/auth-helpers-react'
 import { useCompanyContext } from '../lib/useCompanyContext'
 import { Button } from './ui/button'
 import { Card } from './ui/card'
 
-// Simple icon components as placeholders
+// Iconos simples como placeholders
 const UsersIcon = ({ className }: { className?: string }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m3 5.197V9a3 3 0 00-6 0v2.25" />
@@ -45,9 +44,15 @@ const DocumentChartBarIcon = ({ className }: { className?: string }) => (
 interface DashboardStats {
   totalEmployees: number
   activeEmployees: number
-  todayAttendance: number
+  totalAttendance: number
+  presentDays: number
+  lateDays: number
+  absentDays: number
+  attendanceRate: number
+  punctualityRate: number
   pendingPayrolls: number
-  thisMonthLeaves: number
+  thisPeriodLeaves: number
+  period: { startDate: string; endDate: string }
 }
 
 interface AttendanceTrend {
@@ -57,278 +62,137 @@ interface AttendanceTrend {
   late: number
 }
 
-const INITIAL_STATS: DashboardStats = {
-  totalEmployees: 0,
-  activeEmployees: 0,
-  todayAttendance: 0,
-  pendingPayrolls: 0,
-  thisMonthLeaves: 0
-}
-
-const ATTENDANCE_THRESHOLDS = {
-  excellent: 90,
-  good: 75,
-  punctuality: {
-    excellent: 85,
-    good: 70
-  }
-} as const
-
-const getCurrentMonthRange = () => {
-  const now = new Date()
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
-  return { monthStart, monthEnd }
-}
-
-const getTodayDate = () => new Date().toISOString().split('T')[0]
-
 export default function ReportsAndAnalytics() {
   const session = useSession()
   const { companyId, loading: companyLoading } = useCompanyContext()
-  const [stats, setStats] = useState<DashboardStats>(INITIAL_STATS)
-  const [attendanceTrends, setAttendanceTrends] = useState<AttendanceTrend[]>([])
+  
+  // Estado local para datos
+  const [stats, setStats] = useState<DashboardStats | null>(null)
+  // const [attendanceTrends, setAttendanceTrends] = useState<AttendanceTrend[]>([])
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  
   const [dateRange, setDateRange] = useState({
     startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-    endDate: new Date().toISOString().split('T')[0]
+    endDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0]
   })
 
-  // Memoized values
-  const today = useMemo(() => getTodayDate(), [])
-  const { monthStart, monthEnd } = useMemo(() => getCurrentMonthRange(), [])
+  // Obtener rango del mes actual
+  const { monthStart, monthEnd } = useMemo(() => {
+    const now = new Date()
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
+    return { monthStart, monthEnd }
+  }, [])
 
+  // Función para obtener estadísticas del dashboard
   const fetchDashboardStats = useCallback(async () => {
     if (!companyId) {
-      console.log('⚠️ No company ID available, skipping fetch')
+      setError('No hay empresa seleccionada')
       return
     }
-    
+
     try {
       setLoading(true)
-      console.log('📊 Fetching dashboard stats for company:', companyId)
+      setError(null)
+
+      console.log('🔄 Fetching dashboard stats for company:', companyId, 'period:', { monthStart, monthEnd })
+
+      const response = await fetch(`/api/reports/dashboard-stats?startDate=${monthStart}&endDate=${monthEnd}`)
       
-      // Total and active employees - FILTRADO POR COMPANY
-      const { data: employees, error: employeesError } = await supabase
-        .from('employees')
-        .select('id, status')
-        .eq('company_id', companyId)
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || `Error HTTP: ${response.status}`)
+      }
       
-      if (employeesError) throw employeesError
+      const result = await response.json()
+      
+      console.log('📊 Dashboard stats response:', result)
+      
+      if (result.success) {
+        setStats(result.data)
+        console.log('✅ Dashboard stats loaded successfully:', result.data)
+      } else {
+        throw new Error(result.error || 'Error en la respuesta del servidor')
+      }
 
-      const totalEmployees = employees?.length || 0
-      const activeEmployees = employees?.filter((emp: any) => emp.status === 'active').length || 0
-      console.log('👥 Employees found:', totalEmployees, 'active:', activeEmployees)
-
-      // Today's attendance - FILTRADO POR COMPANY
-      const { data: attendance, error: attendanceError } = await supabase
-        .from('attendance_records')
-        .select('id')
-        .eq('date', today)
-        .eq('company_id', companyId)
-        .not('check_in', 'is', null)
-
-      if (attendanceError) throw attendanceError
-
-      const todayAttendance = attendance?.length || 0
-
-      // Pending payrolls
-      const { data: payrolls, error: payrollsError } = await supabase
-        .from('payroll_records')
-        .select('id')
-        .eq('status', 'draft')
-
-      if (payrollsError) throw payrollsError
-
-      const pendingPayrolls = payrolls?.length || 0
-
-      // This month's leave requests
-      const { data: leaves, error: leavesError } = await supabase
-        .from('leave_requests')
-        .select('id')
-        .gte('start_date', monthStart)
-        .lte('end_date', monthEnd)
-        .eq('status', 'approved')
-
-      if (leavesError) throw leavesError
-
-      const thisMonthLeaves = leaves?.length || 0
-
-      setStats({
-        totalEmployees,
-        activeEmployees,
-        todayAttendance,
-        pendingPayrolls,
-        thisMonthLeaves
-      })
-
-    } catch (error) {
-      console.error('Error fetching dashboard stats:', error)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error desconocido'
+      setError(errorMessage)
+      console.error('❌ Error fetching dashboard stats:', err)
     } finally {
       setLoading(false)
     }
-  }, [today, monthStart, monthEnd, companyId]) // Agregar companyId
+  }, [monthStart, monthEnd, companyId])
 
-  const fetchAttendanceTrends = useCallback(async () => {
-    if (!companyId) return
-    
+  // Función para obtener tendencias de asistencia
+  // Tendencias movidas al dashboard de asistencia
+
+  // Función para exportar reportes
+  const exportReport = useCallback(async (type: 'attendance' | 'payroll' | 'employees') => {
+    if (!companyId) {
+      setError('No hay empresa seleccionada')
+      return
+    }
+
     try {
-      const { data, error } = await supabase
-        .from('attendance_records')
-        .select('date, status, check_in')
-        .eq('company_id', companyId) // Filtrar por company
-        .gte('date', dateRange.startDate)
-        .lte('date', dateRange.endDate)
-        .order('date')
+      setLoading(true)
+      setError(null)
 
-      if (error) throw error
-
-      // Group by date and count statuses
-      const trendMap = new Map<string, { present: number; absent: number; late: number }>()
-      
-      data?.forEach((record: any) => {
-        const date = record.date
-        if (!trendMap.has(date)) {
-          trendMap.set(date, { present: 0, absent: 0, late: 0 })
-        }
-        
-        const trend = trendMap.get(date)!
-        if (record.status === 'present') {
-          trend.present++
-        } else if (record.status === 'absent') {
-          trend.absent++
-        } else if (record.status === 'late') {
-          trend.late++
-        }
+      const response = await fetch(`/api/reports/export-${type}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          format: 'csv',
+          dateFilter: { startDate: dateRange.startDate, endDate: dateRange.endDate }
+        })
       })
 
-      const trends = Array.from(trendMap.entries()).map(([date, counts]) => ({
-        date,
-        ...counts
-      }))
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || `Error HTTP: ${response.status}`)
+      }
 
-      setAttendanceTrends(trends)
-    } catch (error) {
-      console.error('Error fetching attendance trends:', error)
+      // Descargar el archivo CSV
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${type}_report_${dateRange.startDate}_${dateRange.endDate}.csv`
+      a.click()
+      window.URL.revokeObjectURL(url)
+
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error desconocido'
+      setError(errorMessage)
+      console.error('Error exporting report:', err)
+    } finally {
+      setLoading(false)
     }
-  }, [dateRange.startDate, dateRange.endDate, companyId]) // Agregar companyId como dependencia
+  }, [dateRange.startDate, dateRange.endDate, companyId])
 
+  // Cargar datos iniciales
   useEffect(() => {
     if (session?.user && companyId && !companyLoading) {
       console.log('🔄 Refreshing dashboard for company:', companyId)
       fetchDashboardStats()
-      fetchAttendanceTrends()
     }
-  }, [session, companyId, companyLoading, fetchDashboardStats, fetchAttendanceTrends])
+  }, [session, companyId, companyLoading, monthStart, monthEnd, fetchDashboardStats])
 
-  const downloadCSV = useCallback((data: any[], filename: string) => {
-    if (data && data.length > 0) {
-      // Convert to CSV
-      const headers = Object.keys(data[0]).filter(key => typeof data[0][key] !== 'object')
-      const csvContent = [
-        headers.join(','),
-        ...data.map((row: any) => 
-          headers.map(header => {
-            const value = row[header]
-            return typeof value === 'string' ? `"${value}"` : value
-          }).join(',')
-        )
-      ].join('\n')
+  // Actualizar datos cuando cambie el rango de fechas
+  // Tendencias removidas de este módulo
 
-      // Download file
-      const blob = new Blob([csvContent], { type: 'text/csv' })
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = filename
-      a.click()
-      window.URL.revokeObjectURL(url)
-    }
-  }, [])
-
-  const exportReport = useCallback(async (type: 'attendance' | 'payroll' | 'employees') => {
-    try {
-      let data, filename
-
-      switch (type) {
-        case 'attendance':
-          const { data: attendanceData } = await supabase
-            .from('attendance_records')
-            .select(`
-              date,
-              check_in,
-              check_out,
-              status,
-              late_minutes,
-              employee:employees(first_name, last_name, employee_code)
-            `)
-            .gte('date', dateRange.startDate)
-            .lte('date', dateRange.endDate)
-            .order('date', { ascending: false })
-
-          data = attendanceData
-          filename = `attendance_report_${dateRange.startDate}_${dateRange.endDate}.csv`
-          break
-
-        case 'payroll':
-          const { data: payrollData } = await supabase
-            .from('payroll_records')
-            .select(`
-              period_start,
-              period_end,
-              gross_salary,
-              net_salary,
-              status,
-              employee:employees(first_name, last_name, employee_code)
-            `)
-            .order('period_start', { ascending: false })
-
-          data = payrollData
-          filename = `payroll_report_${today}.csv`
-          break
-
-        case 'employees':
-          const { data: employeeData } = await supabase
-            .from('employees')
-            .select(`
-              first_name,
-              last_name,
-              email,
-              employee_code,
-              position,
-              hire_date,
-              status,
-              base_salary,
-              department:departments(name)
-            `)
-            .eq('company_id', companyId) // Filtrar por company
-            .order('first_name')
-
-          data = employeeData
-          filename = `employees_report_${today}.csv`
-          break
-      }
-
-      // Ensure data is not null before downloading
-      if (data && data.length > 0) {
-        downloadCSV(data, filename)
-      } else {
-        console.warn('No data to export')
-      }
-    } catch (error) {
-      console.error('Error exporting report:', error)
-    }
-  }, [dateRange.startDate, dateRange.endDate, today, companyId, downloadCSV]) // Agregar companyId
-
+  // Funciones auxiliares
   const formatPercentage = useCallback((value: number, total: number) => {
     if (total === 0) return '0%'
     return `${Math.round((value / total) * 100)}%`
   }, [])
 
-  const getAttendanceColor = useCallback((rate: number, type: 'attendance' | 'punctuality' = 'attendance') => {
-    const thresholds = type === 'punctuality' ? ATTENDANCE_THRESHOLDS.punctuality : ATTENDANCE_THRESHOLDS
-    if (rate >= thresholds.excellent) return 'text-emerald-400'
-    if (rate >= thresholds.good) return 'text-orange-400'
+  const getAttendanceColor = useCallback((rate: number) => {
+    if (rate >= 90) return 'text-emerald-400'
+    if (rate >= 75) return 'text-orange-400'
     return 'text-red-400'
   }, [])
 
@@ -336,11 +200,48 @@ export default function ReportsAndAnalytics() {
     setDateRange(prev => ({ ...prev, [field]: value }))
   }, [])
 
-  const recentTrends = useMemo(() => 
-    attendanceTrends.slice(-10),
-    [attendanceTrends]
-  )
+  const clearError = useCallback(() => {
+    setError(null)
+  }, [])
 
+  // Datos para mostrar (usar stats del backend o valores por defecto)
+  const currentStats = stats || {
+    totalEmployees: 0,
+    activeEmployees: 0,
+    totalAttendance: 0,
+    presentDays: 0,
+    lateDays: 0,
+    absentDays: 0,
+    attendanceRate: 0,
+    punctualityRate: 0,
+    pendingPayrolls: 0,
+    thisPeriodLeaves: 0,
+    period: { startDate: '', endDate: '' }
+  }
+
+  // Tendencias recientes (últimas 10)
+  // Tendencias removidas de este módulo
+
+  // Mostrar error si existe
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <span className="text-red-400">⚠️ Error:</span>
+              <span className="text-red-300">{error}</span>
+            </div>
+            <Button onClick={clearError} variant="outline" size="sm" className="text-red-400 border-red-400/20">
+              Cerrar
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Mostrar loading
   if (loading) {
     return (
       <div className="flex justify-center py-8">
@@ -351,6 +252,7 @@ export default function ReportsAndAnalytics() {
 
   return (
     <div className="space-y-6">
+      {/* Header con título y selector de fechas */}
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-xl font-semibold text-white">Reportes y Analítica</h2>
@@ -373,7 +275,7 @@ export default function ReportsAndAnalytics() {
         </div>
       </div>
 
-      {/* Key Metrics */}
+      {/* Métricas clave */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card variant="glass" className="p-6">
           <div className="flex items-center">
@@ -381,9 +283,9 @@ export default function ReportsAndAnalytics() {
               <UsersIcon className="h-8 w-8 text-brand-400" />
             </div>
             <div className="ml-4">
-              <h3 className="text-lg font-semibold text-white">{stats.activeEmployees}</h3>
+              <h3 className="text-lg font-semibold text-white">{currentStats.activeEmployees}</h3>
               <p className="text-sm text-gray-300">Empleados Activos</p>
-              <p className="text-xs text-gray-400">de {stats.totalEmployees} total</p>
+              <p className="text-xs text-gray-400">de {currentStats.totalEmployees} total</p>
             </div>
           </div>
         </Card>
@@ -394,10 +296,10 @@ export default function ReportsAndAnalytics() {
               <ClockIcon className="h-8 w-8 text-emerald-400" />
             </div>
             <div className="ml-4">
-              <h3 className="text-lg font-semibold text-white">{stats.todayAttendance}</h3>
-              <p className="text-sm text-gray-300">Asistencias Hoy</p>
+              <h3 className="text-lg font-semibold text-white">{currentStats.presentDays}</h3>
+              <p className="text-sm text-gray-300">Asistencias del Período</p>
               <p className="text-xs text-gray-400">
-                {formatPercentage(stats.todayAttendance, stats.activeEmployees)} del total
+                {formatPercentage(currentStats.presentDays, currentStats.totalAttendance)} del total
               </p>
             </div>
           </div>
@@ -409,7 +311,7 @@ export default function ReportsAndAnalytics() {
               <CurrencyDollarIcon className="h-8 w-8 text-orange-400" />
             </div>
             <div className="ml-4">
-              <h3 className="text-lg font-semibold text-white">{stats.pendingPayrolls}</h3>
+              <h3 className="text-lg font-semibold text-white">{currentStats.pendingPayrolls}</h3>
               <p className="text-sm text-gray-300">Nóminas Pendientes</p>
               <p className="text-xs text-gray-400">Por procesar</p>
             </div>
@@ -422,63 +324,17 @@ export default function ReportsAndAnalytics() {
               <CalendarDaysIcon className="h-8 w-8 text-purple-400" />
             </div>
             <div className="ml-4">
-              <h3 className="text-lg font-semibold text-white">{stats.thisMonthLeaves}</h3>
-              <p className="text-sm text-gray-300">Permisos Este Mes</p>
+              <h3 className="text-lg font-semibold text-white">{currentStats.thisPeriodLeaves}</h3>
+              <p className="text-sm text-gray-300">Permisos del Período</p>
               <p className="text-xs text-gray-400">Aprobados</p>
             </div>
           </div>
         </Card>
       </div>
 
-      {/* Attendance Trends */}
-      <Card variant="glass" className="p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-white">Tendencias de Asistencia</h3>
-          <ChartBarIcon className="h-6 w-6 text-gray-400" />
-        </div>
-        
-        {recentTrends.length > 0 ? (
-          <div className="space-y-4">
-            <div className="grid grid-cols-7 gap-2 text-sm font-medium text-gray-300">
-              <div>Fecha</div>
-              <div>Presentes</div>
-              <div>Ausentes</div>
-              <div>Tardanzas</div>
-              <div>Total</div>
-              <div>% Asistencia</div>
-              <div>% Puntualidad</div>
-            </div>
-            
-            {recentTrends.map((trend) => {
-              const total = trend.present + trend.absent + trend.late
-              const attendanceRate = total > 0 ? ((trend.present + trend.late) / total * 100) : 0
-              const punctualityRate = total > 0 ? (trend.present / total * 100) : 0
-              
-              return (
-                <div key={trend.date} className="grid grid-cols-7 gap-2 text-sm py-2 border-b border-white/10">
-                  <div className="text-gray-300">{new Date(trend.date).toLocaleDateString('es-HN')}</div>
-                  <div className="text-emerald-400 font-medium">{trend.present}</div>
-                  <div className="text-red-400 font-medium">{trend.absent}</div>
-                  <div className="text-orange-400 font-medium">{trend.late}</div>
-                  <div className="font-medium text-white">{total}</div>
-                  <div className={`font-medium ${getAttendanceColor(attendanceRate)}`}>
-                    {attendanceRate.toFixed(1)}%
-                  </div>
-                  <div className={`font-medium ${getAttendanceColor(punctualityRate, 'punctuality')}`}>
-                    {punctualityRate.toFixed(1)}%
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        ) : (
-          <div className="text-center py-8 text-gray-400">
-            No hay datos de asistencia para el período seleccionado
-          </div>
-        )}
-      </Card>
+      {/* Tendencias movidas al dashboard de asistencia */}
 
-      {/* Export Reports */}
+      {/* Exportar reportes */}
       <Card variant="glass" className="p-6">
         <div className="flex items-center justify-between mb-4">
           <div>

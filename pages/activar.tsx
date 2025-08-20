@@ -510,7 +510,7 @@ export default function ActivarPage() {
                 {/* Email */}
                 <div>
                   <label className="block text-white font-medium mb-2">
-                    Email (credenciales + facturación) *
+                    Email (credenciales de acceso) *
                   </label>
                   <input
                     type="email"
@@ -528,7 +528,7 @@ export default function ActivarPage() {
                     </p>
                   )}
                   <p className="text-brand-400 text-sm mt-2">
-                    Recibirás credenciales y facturación aquí
+                    Recibirás credenciales de acceso aquí
                   </p>
                 </div>
 

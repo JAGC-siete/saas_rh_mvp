@@ -39,8 +39,19 @@ const PROTECTED_APP_ROUTES = new Set([
   '/app/settings',
   '/app/departments',
   '/app/leave',
+  '/app/gamification',
   // Legacy attendance dashboard outside /app
   '/attendance/dashboard',
+])
+
+// API routes that require authentication and specific permissions
+const PROTECTED_API_ROUTES = new Set([
+  '/api/employees',
+  '/api/payroll',
+  '/api/reports',
+  '/api/departments',
+  '/api/leave',
+  '/api/gamification',
 ])
 
 // Helper function to check if route is protected app route
@@ -53,10 +64,18 @@ function isProtectedAppRoute(pathname: string): boolean {
     if (pathname.startsWith(route + '/')) return true
   }
   
-  // Check for general app routes (except login and attendance/register)
-  if (pathname.startsWith('/app/') && 
-      pathname !== '/app/login' && 
-      pathname !== '/app/attendance/register') return true
+  return false
+}
+
+// Helper function to check if API route is protected
+function isProtectedApiRoute(pathname: string): boolean {
+  // Check exact match first
+  if (PROTECTED_API_ROUTES.has(pathname)) return true
+  
+  // Check for routes starting with protected API paths
+  for (const route of Array.from(PROTECTED_API_ROUTES)) {
+    if (pathname.startsWith(route + '/')) return true
+  }
   
   return false
 }
@@ -100,7 +119,30 @@ export async function middleware(request: NextRequest) {
       return response
     }
     
-    // For API routes, let them handle their own authentication
+    // 🔒 PROTECCIÓN ESPECÍFICA PARA ENDPOINTS CRÍTICOS
+    if (isProtectedApiRoute(pathname)) {
+      logger.debug('Protected API route accessed', { path: pathname })
+      
+      // Verificar autenticación básica (las APIs manejan su propia autorización)
+      const authHeader = request.headers.get('authorization')
+      const cookieHeader = request.headers.get('cookie')
+      
+      if (!authHeader && !cookieHeader) {
+        logger.warn('Unauthorized API access attempt', { path: pathname, ip: request.headers.get('x-forwarded-for') || 'unknown' })
+        return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+      }
+      
+      // Permitir que la API maneje la validación detallada
+      const response = NextResponse.next()
+      
+      // Log response time para APIs protegidas
+      const duration = Date.now() - startTime
+      logger.api(request.method, pathname, 200, duration, { type: 'protected_api' })
+      
+      return response
+    }
+    
+    // For other API routes, let them handle their own authentication
     return NextResponse.next()
   }
 

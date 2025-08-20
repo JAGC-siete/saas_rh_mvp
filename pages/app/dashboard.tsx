@@ -4,6 +4,9 @@ import ProtectedRoute from '../../components/ProtectedRoute'
 import DashboardLayout from '../../components/DashboardLayout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
+import GamificationLeaderboard from '../../components/GamificationLeaderboard'
+import EmployeeAchievements from '../../components/EmployeeAchievements'
+import { useCompanyContext } from '../../lib/useCompanyContext'
 
 interface DashboardStats {
   totalEmployees: number
@@ -29,6 +32,7 @@ type RecentPayroll = {
 }
 
 export default function Dashboard() {
+  const { companyId, loading: companyLoading } = useCompanyContext()
   const [stats, setStats] = useState<DashboardStats>({
     totalEmployees: 0,
     activeEmployees: 0,
@@ -96,12 +100,24 @@ export default function Dashboard() {
     }
   }, [fetchDashboardData])
 
-  if (loading) {
+  if (companyLoading || loading) {
     return (
       <ProtectedRoute>
         <DashboardLayout>
           <div className="flex items-center justify-center h-64">
             <div className="text-lg text-white font-medium">Cargando dashboard...</div>
+          </div>
+        </DashboardLayout>
+      </ProtectedRoute>
+    )
+  }
+
+  if (!companyId) {
+    return (
+      <ProtectedRoute>
+        <DashboardLayout>
+          <div className="flex items-center justify-center h-64">
+            <div className="text-lg text-white font-medium">Error: No se pudo cargar la información de la empresa</div>
           </div>
         </DashboardLayout>
       </ProtectedRoute>
@@ -195,44 +211,14 @@ export default function Dashboard() {
           {/* Gamification Section */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Employee Leaderboard */}
-            <Card variant="glass">
-              <CardHeader>
-                <CardTitle className="text-white">🏆 Leaderboard de Empleados</CardTitle>
-                <CardDescription className="text-gray-300">
-                  Top performers del mes
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {/* Placeholder for leaderboard - will be replaced with actual component */}
-                  <div className="text-center py-8 text-gray-300">
-                    <div className="text-4xl mb-2">🏆</div>
-                    <p>Leaderboard de gamificación</p>
-                    <p className="text-sm">Se mostrará cuando los empleados empiecen a ganar puntos</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            {companyId && (
+              <GamificationLeaderboard companyId={companyId} limit={5} />
+            )}
 
             {/* Employee Achievements */}
-            <Card variant="glass">
-              <CardHeader>
-                <CardTitle className="text-white">🎖️ Logros Recientes</CardTitle>
-                <CardDescription className="text-gray-300">
-                  Últimos logros obtenidos
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {/* Placeholder for achievements - will be replaced with actual component */}
-                  <div className="text-center py-8 text-gray-300">
-                    <div className="text-4xl mb-2">🎖️</div>
-                    <p>Logros de empleados</p>
-                    <p className="text-sm">Se mostrarán cuando se obtengan logros</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            {companyId && (
+              <EmployeeAchievements companyId={companyId} limit={3} />
+            )}
           </div>
 
           {/* Quick Actions */}

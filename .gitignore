@@ -1,128 +1,119 @@
-# Dependencies
-node_modules/
-node_modules/**/*
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Next.js
-.next/
-out/
-build/
-dist/
-tsconfig.tsbuildinfo
-
-# Railway
-railway.json
-
-# Environment variables
-.env
-.env.*
-!.env.example
+# local env files
+.env*.local
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
 .env.production
+.env.development
+.env.test
 
-# Secrets and credentials
-secrets/
-.secrets
-*.pem
-*.key
-*.p12
-*.pfx
+# Environment backups and old files (SECURITY CRITICAL)
+.env*.backup
+.env*.old
+.env.backup
+.env.old
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# uploads
+/public/uploads/*
+!/public/uploads/.gitkeep
 
 # IDE
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
 
-# OS
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
+# SECURITY: SQL Scripts with credentials (DO NOT COMMIT)
+# Only allow Supabase migrations and seed files
+*.sql
+!supabase/migrations/*.sql
+!supabase/seed.sql
+!supabase/config.toml
 
-# Logs
-logs/
+# SECURITY: Backup and temporary files
+*.backup
+*.old
+*.tmp
+*.temp
+backup-*/
+temp/
+tmp/
+
+# SECURITY: Log files that might contain sensitive data
 *.log
+logs/
+dev.log
 
-# Database
-*.db
-*.sqlite
+# SECURITY: Test files that might contain credentials
+test-*.js
+test-*.sql
+check-*.js
+check-*.sql
+verify-*.js
+verify-*.sql
+fix-*.js
+fix-*.sql
+debug-*.js
+debug-*.sql
 
-# Cache
-.cache/
+# SECURITY: Terraform state files
+terraform/
+.terraform/
+*.tfstate
+*.tfstate.*
 
-# Sensitive configuration files
+# SECURITY: GitHub Copilot instructions (might contain sensitive info)
 .github/copilot-instructions.md
 
-# Temporary or auto-generated files
-*.tsbuildinfo
-tsconfig.tsbuildinfo
-.parcel-cache/
+# SECURITY: Railway and deployment configs
+railway.json
+railway.toml
+vercel.json
 
-# Runtime data
-pids/
-*.pid
-*.seed
-*.pid.lock
+# SECURITY: Local development files
+dev.log
+local-*.js
+local-*.sql
 
-# Archives
-*.tar.gz
-*.zip
-
-# Temporary files
-tmp/
-temp/
-
-# Build artifacts
-archived_versions/
-nuevo-clon/
-terraform/
-
-# Exclude problematic directories from build
-SAAS 2.0/
-
-# SQL Scripts and Reports (Local only - DO NOT COMMIT)
+# SECURITY: Specific sensitive files (DO NOT COMMIT)
 create-*-user.sql
-create-*-*.sql
-update-*-password*.sql
-*-report.json
-*-report.md
-audit-*.json
-audit-*.md
-test-*.sql
-test-*.js
-test-*.md
-debug-*.js
-check-*.js
-verify-*.js
-fix-*.sql
-fix-*.js
-
-# Diagnostic scripts (contain credentials)
-diagnose-dashboard-issue.js
-check-late-minutes.js
-fix-late-minutes.js
-test-dashboard-api.js
-restore-correct-attendance.js
-generate-today-attendance.js
-restore-real-employees.js
-check-employee-ids.js
-check-companies.js
-verify-restoration.js
-diagnose-attendance-dashboard.js
-fix-employee-codes.js
-test-complete-flow.js
-generate-attendance-data.js
-
-# Backup files and directories
-backups/
-*.backup*
+create-*-admin.sql
+create-*-step-by-step.sql
+create-*-direct.sql
+fix-*-*.sql
+check-*-*.sql
+debug-*.sql
+get-*-password.sql
+insert_*.sql
+migrations-*.sql
+complete-*.sql
+copy-*.sql

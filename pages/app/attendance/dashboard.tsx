@@ -4,6 +4,8 @@ import DashboardLayout from '../../../components/DashboardLayout'
 import FiltersBar from '../../../components/attendance/FiltersBar'
 import KpiCards from '../../../components/attendance/KpiCards'
 import AbsenceTable from '../../../components/attendance/AbsenceTable'
+import { Card } from '../../../components/ui/card'
+import { useCompanyContext } from '../../../lib/useCompanyContext'
 import PunctualityTable from '../../../components/attendance/PunctualityTable'
 import EmployeeDrawer from '../../../components/attendance/EmployeeDrawer'
 import ExportButton from '../../../components/attendance/ExportButton'
@@ -17,6 +19,8 @@ export default function AttendanceDashboardApp() {
   const [early, setEarly] = useState<any[]>([])
   const [late, setLate] = useState<any[]>([])
   const [drawer, setDrawer] = useState<{open:boolean; name:string; events:any[]}>({open:false,name:'',events:[]})
+  const { companyId } = useCompanyContext()
+  const [trends, setTrends] = useState<{ date: string; present: number; absent: number; late: number }[]>([])
 
   useEffect(() => {
     const load = async () => {
@@ -43,6 +47,22 @@ export default function AttendanceDashboardApp() {
     load()
   }, [preset])
 
+  // Cargar tendencias de asistencia al final, con el rango de hoy (para coherencia con KPIs)
+  useEffect(() => {
+    const loadTrends = async () => {
+      try {
+        if (!companyId) return
+        const today = new Date().toISOString().split('T')[0]
+        const res = await fetch(`/api/reports/attendance-trends?startDate=${today}&endDate=${today}`)
+        const json = await res.json()
+        if (json?.success) setTrends(json.data)
+      } catch {
+        setTrends([])
+      }
+    }
+    loadTrends()
+  }, [companyId])
+
   const handlePresetChange = (p: string) => setPreset(p)
 
   const handleExport = async (format: string) => {
@@ -67,6 +87,34 @@ export default function AttendanceDashboardApp() {
             <PunctualityTable data={late} type='late' onSelect={handleEmployeeClick} />
           </div>
           <ExportButton onExport={handleExport} />
+          {/* Tendencias de asistencia al final */}
+          <Card variant="glass" className="p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-white">Tendencias de Asistencia (Hoy)</h3>
+            </div>
+            {trends.length > 0 ? (
+              <div className="space-y-2">
+                {trends.map((t) => {
+                  const total = t.present + t.late + t.absent
+                  const attendanceRate = total > 0 ? ((t.present + t.late) / total) * 100 : 0
+                  const punctualityRate = total > 0 ? (t.present / total) * 100 : 0
+                  return (
+                    <div key={t.date} className="grid grid-cols-7 gap-2 text-sm py-2 border-b border-gray-700">
+                      <div className="text-gray-300">{new Date(t.date).toLocaleDateString('es-HN')}</div>
+                      <div className="text-emerald-400 font-medium">{t.present}</div>
+                      <div className="text-red-400 font-medium">{t.absent}</div>
+                      <div className="text-orange-400 font-medium">{t.late}</div>
+                      <div className="font-medium text-white">{total}</div>
+                      <div className="font-medium text-gray-200">{attendanceRate.toFixed(1)}%</div>
+                      <div className="font-medium text-gray-200">{punctualityRate.toFixed(1)}%</div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-4 text-gray-400">Sin datos</div>
+            )}
+          </Card>
         </div>
         <EmployeeDrawer open={drawer.open} onClose={() => setDrawer({open:false,name:'',events:[]})} name={drawer.name} events={drawer.events} />
       </DashboardLayout>
