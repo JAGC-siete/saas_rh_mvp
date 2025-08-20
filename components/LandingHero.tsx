@@ -46,7 +46,7 @@ export default function LandingHero() {
                   className="inline-flex items-center justify-center rounded-2xl px-8 py-4 text-lg font-semibold shadow-sm bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all duration-300 hover:-translate-y-1"
                   data-analytics="cta_hero_click"
                 >
-                  🎯 Activar mi robot RH hoy
+                  🎯 Activar GRATIS hoy
                 </button>
               </div>
 
@@ -105,7 +105,7 @@ export default function LandingHero() {
           {/* Frase de urgencia al final del componente */}
           <div className="text-center mt-12">
             <p className="text-xl font-semibold text-brand-200/90">
-              Próxima quincena: {nextPayday.toLocaleDateString()}. ¿Vas a seguir peleándote con Excel?
+              Próxima planilla: {nextPayday.toLocaleDateString()}. Dejala lista hoy en 5 minutos.
             </p>
           </div>
         </div>
