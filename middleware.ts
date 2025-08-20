@@ -30,6 +30,15 @@ const PUBLIC_ROUTES = new Set([
   '/api/health'
 ])
 
+// Static assets that should be publicly accessible
+const PUBLIC_ASSETS = new Set([
+  '/voucher-sample.png',  // Imagen del voucher para la landing
+  '/logo-humano-sisu.png', // Logo de la empresa
+  '/favicon.ico',         // Favicon
+  '/robots.txt',          // Robots.txt
+  '/sitemap.xml'          // Sitemap
+])
+
 // App routes that require authentication (rutas internas /app/*)
 const PROTECTED_APP_ROUTES = new Set([
   '/app/dashboard',
@@ -89,6 +98,9 @@ function isPublicRoute(pathname: string): boolean {
   for (const route of Array.from(PUBLIC_ROUTES)) {
     if (pathname.startsWith(route + '/')) return true
   }
+  
+  // Check if it's a public static asset
+  if (PUBLIC_ASSETS.has(pathname)) return true
   
   return false
 }
