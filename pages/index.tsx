@@ -191,7 +191,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-4 py-12">
           <div className="text-center">
             <p className="text-slate-400 mb-4">
-              Protegemos tu información. Sin spam, sin venta de datos. <strong>Solo para contactarte</strong>.
+              Protegemos tu información. <strong>Solo para contactarte</strong>.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center text-sm">
               <Link 
