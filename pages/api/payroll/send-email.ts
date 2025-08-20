@@ -13,10 +13,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let downloadPath = ''
     if (type === 'recibo') {
       if (!employeeId || !quincena) return res.status(400).json({ error: 'Missing employeeId or quincena for recibo' })
-      downloadPath = `/api/payroll/export?periodo=${encodeURIComponent(periodo)}&formato=recibo-individual&employeeId=${encodeURIComponent(employeeId)}&quincena=${encodeURIComponent(quincena)}`
+      downloadPath = `/api/payroll/receipt?periodo=${encodeURIComponent(periodo)}&quincena=${encodeURIComponent(quincena)}&employeeId=${encodeURIComponent(employeeId)}`
     } else {
       if (!quincena) return res.status(400).json({ error: 'Missing quincena for planilla' })
-      downloadPath = `/api/payroll/calculate?periodo=${encodeURIComponent(periodo)}&quincena=${encodeURIComponent(quincena)}`
+      downloadPath = `/api/payroll/report?periodo=${encodeURIComponent(periodo)}&quincena=${encodeURIComponent(quincena)}`
     }
 
     const downloadUrl = origin ? `${origin}${downloadPath}` : downloadPath

@@ -10,9 +10,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let downloadPath = ''
     if (type === 'recibo') {
       if (!employeeId) return res.status(400).json({ error: 'Missing employeeId for recibo' })
-      downloadPath = `/api/payroll/export?periodo=${encodeURIComponent(periodo)}&formato=recibo-individual&employeeId=${encodeURIComponent(employeeId)}&quincena=${encodeURIComponent(quincena)}`
+      downloadPath = `/api/payroll/receipt?periodo=${encodeURIComponent(periodo)}&quincena=${encodeURIComponent(quincena)}&employeeId=${encodeURIComponent(employeeId)}`
     } else {
-      downloadPath = `/api/payroll/calculate?periodo=${encodeURIComponent(periodo)}&quincena=${encodeURIComponent(quincena)}`
+      downloadPath = `/api/payroll/report?periodo=${encodeURIComponent(periodo)}&quincena=${encodeURIComponent(quincena)}`
     }
     const url = origin ? `${origin}${downloadPath}` : downloadPath
 

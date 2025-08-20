@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { createClient } from '../lib/supabase/client'
+import { usePayrollReports } from '../lib/hooks/usePayrollReports'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
@@ -348,32 +349,7 @@ export default function PayrollManager() {
     setGenerateForm(INITIAL_GENERATE_FORM)
   }, [])
 
-  const downloadFile = useCallback(async (url: string, filename: string, options: RequestInit = {}) => {
-    try {
-      const response = await fetch(url, {
-        credentials: 'include',
-        ...options
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || `HTTP ${response.status}`)
-      }
-
-      const blob = await response.blob()
-      const downloadUrl = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = downloadUrl
-      link.download = filename
-      document.body.appendChild(link)
-      link.click()
-      window.URL.revokeObjectURL(downloadUrl)
-      document.body.removeChild(link)
-    } catch (error: any) {
-      console.error('Error downloading file:', error)
-      alert(`❌ Error descargando archivo: ${error.message}`)
-    }
-  }, [])
+  const { downloadConsolidatedReport, downloadEmployeeReceipt } = usePayrollReports()
 
   const loadDepartments = useCallback(async () => {
     if (!supabase) return
@@ -706,21 +682,13 @@ export default function PayrollManager() {
         return
       }
 
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      if (!session?.access_token) {
-        alert('❌ No se encontró token de sesión. Por favor, inicia sesión nuevamente.')
-        return
-      }
-
       console.log('✅ Generating payroll with authenticated user:', user.email)
 
       const response = await fetch('/api/payroll/calculate', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'Accept': 'application/pdf',
-          'Authorization': `Bearer ${session.access_token}`
+          'Accept': 'application/json'
         },
         credentials: 'include',
         body: JSON.stringify(generateForm),
@@ -731,20 +699,7 @@ export default function PayrollManager() {
         throw new Error(errorData.error || 'Failed to generate payroll')
       }
 
-      if (response.headers.get('content-type')?.includes('application/pdf')) {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `planilla_paragon_${generateForm.periodo}_q${generateForm.quincena}.pdf`
-        document.body.appendChild(a)
-        a.click()
-        window.URL.revokeObjectURL(url)
-        document.body.removeChild(a)
-        alert('✅ Nómina generada y PDF descargado exitosamente!')
-      } else {
-        alert('✅ Nómina generada exitosamente!')
-      }
+      alert('✅ Nómina generada exitosamente!')
       
       resetGenerateForm()
       fetchData()
@@ -817,49 +772,23 @@ export default function PayrollManager() {
     const period = record.period_start.slice(0, 7)
     const day = Number(record.period_start.slice(8, 10))
     const quincena = day <= 15 ? 1 : 2
-    
-    await downloadFile('/api/payroll/calculate', `planilla_paragon_${period}_q${quincena}.pdf`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/pdf'
-      },
-      body: JSON.stringify({
-        periodo: period,
-        quincena: quincena,
-        incluirDeducciones: true
-      })
-    })
-  }, [downloadFile])
+    try {
+      await downloadConsolidatedReport(period, quincena)
+    } catch (e: any) {
+      alert(`❌ Error: ${e?.message || 'No se pudo descargar el reporte'}`)
+    }
+  }, [downloadConsolidatedReport])
 
   const downloadIndividualReceipt = useCallback(async (record: PayrollRecord | PreviewPayrollRecord) => {
-    const { data: { session } } = await supabase.auth.getSession()
-    
-    if (!session?.access_token) {
-      alert('❌ No se encontró token de sesión. Por favor, inicia sesión nuevamente.')
-      return
-    }
-
     const period = record.period_start.slice(0, 7)
     const day = Number(record.period_start.slice(8, 10))
     const quincena = day <= 15 ? 1 : 2
-    const employeeCode = record.employees?.employee_code || 'unknown'
-
-    await downloadFile('/api/payroll/export', `recibo_${employeeCode}_${period}_q${quincena}.pdf`, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
-        'Accept': 'application/pdf'
-      },
-      body: JSON.stringify({
-        periodo: period,
-        formato: 'recibo-individual',
-        employeeId: record.employee_id,
-        quincena
-      })
-    })
-  }, [supabase, downloadFile])
+    try {
+      await downloadEmployeeReceipt(record.employee_id, period, quincena)
+    } catch (e: any) {
+      alert(`❌ Error: ${e?.message || 'No se pudo descargar el recibo'}`)
+    }
+  }, [downloadEmployeeReceipt])
 
   const sendPayrollEmail = useCallback(async (record?: PayrollRecord | PreviewPayrollRecord) => {
     const to = prompt('Correo de destino:')
