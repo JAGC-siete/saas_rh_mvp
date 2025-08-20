@@ -56,8 +56,8 @@ export default function LandingPage() {
             <div className="flex items-center justify-between h-16">
               <div className="flex items-center space-x-3">
                 <h1 className="text-xl font-bold text-white">
-                  <span className="text-white">Humano SISU</span>{' '}
-                  <span className="text-brand-300">presenta Los Robots de RRHH</span>
+                  <span className="text-white">🚀 IHSS, RAP e ISR en automático</span>{' '}
+                  <span className="text-brand-300">activa, cumplí y ahorrá horas cada quincena</span>
                 </h1>
               </div>
 
