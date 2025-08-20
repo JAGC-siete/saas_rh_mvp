@@ -9,7 +9,7 @@ export default function CountdownTimer() {
     return () => clearInterval(t);
   }, []);
 
-  const { daysLeft, hoursLeft, minutesLeft, secondsLeft, nextPayday } = useMemo(() => {
+  const { daysLeft, hoursLeft, minutesLeft, secondsLeft } = useMemo(() => {
     const d = new Date(now);
     const y = d.getFullYear();
     const m = d.getMonth(); // 0-11

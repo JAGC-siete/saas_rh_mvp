@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React from "react";
 
 export default function LandingHero() {
   // Función simple para obtener la próxima quincena
