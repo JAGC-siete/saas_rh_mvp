@@ -612,7 +612,7 @@ export default function ActivarPage() {
                 )}
                 
                 <p className="text-brand-400 text-xs text-center">
-                  Entorno de prueba por 7 días. Sin costo, sin compromiso.
+                  Entorno de prueba por 30 días. Sin costo, sin compromiso.
                 </p>
               </div>
             </CardContent>
