@@ -57,7 +57,7 @@ export default function LandingPage() {
             <div className="flex items-center justify-between h-16">
               <div className="flex items-center space-x-3">
                 <h1 className="text-xl font-bold text-white">
-                  <span className="text-white">IHSS, RAP e ISR en automático</span>{' '}
+                  <span className="text-white">I.H.S.S., R.A.P. e I.S.R. en automático</span>{' '}
                   <span className="text-brand-300">activa, cumplí y ahorrá horas cada quincena</span>
                 </h1>
               </div>
@@ -191,7 +191,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-4 py-12">
           <div className="text-center">
             <p className="text-slate-400 mb-4">
-              Protegemos tu información. <strong>Solo para contactarte</strong>.
+              Protegemos tu información. <strong>Solo será utilizadapara contactarte</strong>.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center text-sm">
               <Link 

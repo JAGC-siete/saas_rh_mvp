@@ -638,7 +638,7 @@ export default function ActivarPage() {
                   <ShieldCheckIcon className="h-6 w-6 text-brand-400" />
                 </div>
                 <p className="font-medium text-white">Sin compromiso</p>
-                <p className="text-sm text-brand-300">Prueba gratis por 7 días</p>
+                <p className="text-sm text-brand-300">Prueba gratis por 30 días</p>
               </CardContent>
             </Card>
             
