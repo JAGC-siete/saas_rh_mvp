@@ -11,10 +11,11 @@ export const MIDDLEWARE_CONFIG = {
     // CORS settings
     cors: {
       allowedOrigins: [
-        'https://humanosisu.net',
-        'https://humano-sisu.com',
+        process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net',
+        process.env.RAILWAY_PUBLIC_DOMAIN || 'https://hr-saas.railway.app',
         'https://staging.humanosisu.net',
-        'http://localhost:3000' // Development only
+        'http://localhost:3000',
+        'http://localhost:3001'
       ],
       allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
       allowedHeaders: [

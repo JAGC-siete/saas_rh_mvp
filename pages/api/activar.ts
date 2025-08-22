@@ -87,7 +87,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     trial_expires_at.setDate(trial_expires_at.getDate() + 7)
 
     // Generar magic link para acceso inmediato
-    const magic_link = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net'}/dashboard?tenant=${tenant_id}&trial=true`
+    const magic_link = `${process.env.NEXT_PUBLIC_SITE_URL || process.env.RAILWAY_PUBLIC_DOMAIN || 'https://humanosisu.net'}/dashboard?tenant=${tenant_id}&trial=true`
 
     console.log('🔑 Datos generados:', { tenant_id, magic_link, trial_expires_at })
 
