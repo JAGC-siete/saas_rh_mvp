@@ -83,8 +83,9 @@ export default function LandingPage() {
               </div>
               
               {/* Título */}
-              <h1 className="text-4xl font-bold text-white max-w-none leading-tight ml-2 flex-shrink-0 text-left whitespace-nowrap">
-                <span className="text-white">I.H.S.S., R.A.P. e I.S.R. en automático</span>{' '}
+              <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold text-white leading-tight ml-2 flex-shrink-0 text-left">
+                <span className="text-white">I.H.S.S., R.A.P. e I.S.R. en automático</span>
+                <span className="hidden sm:inline"> </span>
                 <span className="text-brand-300">activa, cumplí y ahorrá horas cada quincena</span>
               </h1>
 
