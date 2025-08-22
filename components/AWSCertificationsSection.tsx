@@ -6,19 +6,19 @@ export default function AWSCertificationsSection() {
     {
       name: 'AWS Solutions Architect',
       level: 'ASSOCIATE',
-      icon: '/icons/aws-solutions-architect.svg',
+      icon: '/image-aws-solutions-architect.png',
       badgeColor: 'bg-blue-500/10 text-blue-400 border-blue-500/20'
     },
     {
       name: 'AWS Developer',
       level: 'ASSOCIATE',
-      icon: '/icons/aws-developer.svg',
+      icon: '/image-aws-developer.png',
       badgeColor: 'bg-blue-500/10 text-blue-400 border-blue-500/20'
     },
     {
       name: 'AWS Cloud Practitioner',
       level: 'FOUNDATIONAL',
-      icon: '/icons/aws-cloud-practitioner.svg',
+      icon: '/image-aws-cloud-practitioner.png',
       badgeColor: 'bg-gray-400/10 text-gray-300 border-gray-400/20'
     }
   ]
@@ -29,16 +29,19 @@ export default function AWSCertificationsSection() {
         {/* Header */}
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-white mb-6">
-            Construido con{' '}
-            <span className="bg-gradient-to-r from-orange-400 via-red-500 to-purple-600 bg-clip-text text-transparent">
-              Tecnología Enterprise
-            </span>
+            Desarrollado por ingenieros certificados en AWS
           </h2>
           
-          <p className="text-brand-200/90 max-w-3xl mx-auto mb-8">
-            Nuestro equipo cuenta con certificaciones oficiales de Amazon Web Services, 
-            garantizando que tu sistema de RH esté construido con las mejores prácticas 
-            de la industria cloud.
+          <p className="text-brand-200/90 max-w-4xl mx-auto mb-8 text-lg">
+            Hecho sobre la misma nube que impulsa a Netflix, Airbnb y el 90% del internet.
+            <br />
+            <span className="text-brand-400 font-medium">
+              Optimizado para que tu empresa en Honduras tenga la seguridad y escalabilidad de un gigante, sin pagar como uno.
+            </span>
+            <br />
+            <span className="text-white font-semibold">
+              Tecnología global. Precio local.
+            </span>
           </p>
 
           {/* AWS Certification Badges - EXACTAMENTE como en la barra superior */}
