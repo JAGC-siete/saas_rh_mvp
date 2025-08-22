@@ -27,7 +27,8 @@ const PUBLIC_ROUTES = new Set([
   '/api/attendance/update-schedule',
   '/api/activar',      // API para formulario de activación - PÚBLICO
   '/api/demo/verify-pin', // API para verificar PIN demo - PÚBLICO
-  '/api/health'
+  '/api/health',
+  '/api/cron/*'        // Cron jobs para mantenimiento del sistema
 ])
 
 // Static assets that should be publicly accessible
@@ -37,6 +38,9 @@ const PUBLIC_ASSETS = new Set([
   '/image-aws-solutions-architect.png', // Certificado AWS Solutions Architect
   '/image-aws-developer.png', // Certificado AWS Developer
   '/image-aws-cloud-practitioner.png', // Certificado AWS Cloud Practitioner
+  '/icons/aws-solutions-architect.svg', // Icono SVG AWS Solutions Architect
+  '/icons/aws-developer.svg', // Icono SVG AWS Developer
+  '/icons/aws-cloud-practitioner.svg', // Icono SVG AWS Cloud Practitioner
   '/favicon.ico',         // Favicon
   '/robots.txt',          // Robots.txt
   '/sitemap.xml'          // Sitemap
@@ -52,6 +56,10 @@ const PROTECTED_APP_ROUTES = new Set([
   '/app/departments',
   '/app/leave',
   '/app/gamification',
+  '/app/admin',           // Panel de administración
+  '/app/admin/*',         // Subrutas de administración
+  '/app/profile',         // Perfil del usuario
+  '/app/notifications',   // Notificaciones
   // Legacy attendance dashboard outside /app
   '/attendance/dashboard',
 ])
@@ -64,6 +72,18 @@ const PROTECTED_API_ROUTES = new Set([
   '/api/departments',
   '/api/leave',
   '/api/gamification',
+  '/api/admin',           // APIs de administración
+  '/api/admin/*',         // Sub-APIs de administración
+  '/api/profile',         // APIs de perfil
+  '/api/notifications',   // APIs de notificaciones
+])
+
+// Admin-only routes that require elevated permissions
+const ADMIN_ONLY_ROUTES = new Set([
+  '/app/admin',
+  '/app/admin/*',
+  '/api/admin',
+  '/api/admin/*'
 ])
 
 // Helper function to check if route is protected app route
@@ -86,6 +106,19 @@ function isProtectedApiRoute(pathname: string): boolean {
   
   // Check for routes starting with protected API paths
   for (const route of Array.from(PROTECTED_API_ROUTES)) {
+    if (pathname.startsWith(route + '/')) return true
+  }
+  
+  return false
+}
+
+// Helper function to check if route requires admin privileges
+function isAdminRoute(pathname: string): boolean {
+  // Check exact match first
+  if (ADMIN_ONLY_ROUTES.has(pathname)) return true
+  
+  // Check for routes starting with admin paths
+  for (const route of Array.from(ADMIN_ONLY_ROUTES)) {
     if (pathname.startsWith(route + '/')) return true
   }
   
@@ -117,7 +150,8 @@ export async function middleware(request: NextRequest) {
     method: request.method,
     path: pathname,
     userAgent: request.headers.get('user-agent'),
-    referer: request.headers.get('referer')
+    referer: request.headers.get('referer'),
+    ip: request.headers.get('x-forwarded-for') || request.ip || 'unknown'
   })
 
   // Handle API routes
@@ -143,7 +177,11 @@ export async function middleware(request: NextRequest) {
       const cookieHeader = request.headers.get('cookie')
       
       if (!authHeader && !cookieHeader) {
-        logger.warn('Unauthorized API access attempt', { path: pathname, ip: request.headers.get('x-forwarded-for') || 'unknown' })
+        logger.warn('Unauthorized API access attempt', { 
+          path: pathname, 
+          ip: request.headers.get('x-forwarded-for') || 'unknown',
+          userAgent: request.headers.get('user-agent')
+        })
         return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
       }
       
@@ -263,6 +301,36 @@ export async function middleware(request: NextRequest) {
         logger.info('No user found for protected app route', { path: pathname })
         return NextResponse.redirect(new URL('/app/login', request.url))
       }
+
+      // Check admin privileges for admin routes
+      if (isAdminRoute(pathname)) {
+        logger.debug('Admin route accessed, checking privileges', { 
+          path: pathname, 
+          userId: user?.id 
+        })
+        
+        // Get user profile to check role
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single()
+        
+        if (profileError || !profile || !['admin', 'super_admin'].includes(profile.role)) {
+          logger.warn('Unauthorized admin access attempt', { 
+            path: pathname, 
+            userId: user?.id,
+            userRole: profile?.role 
+          })
+          return NextResponse.redirect(new URL('/app/dashboard', request.url))
+        }
+        
+        logger.debug('Admin access granted', { 
+          path: pathname, 
+          userId: user?.id,
+          userRole: profile.role 
+        })
+      }
       
       logger.debug('Valid user found for protected app route', { 
         path: pathname, 
@@ -295,8 +363,8 @@ export async function middleware(request: NextRequest) {
     
     if (!supabaseUrl || !anon) {
       logger.error('Missing Supabase environment variables', undefined, {
-      hasUrl: !!supabaseUrl,
-      hasAnon: !!anon
+        hasUrl: !!supabaseUrl,
+        hasAnon: !!anon
       })
       return NextResponse.redirect(new URL('/app/login', request.url))
     }

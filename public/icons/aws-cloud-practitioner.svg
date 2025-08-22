@@ -1,0 +1,13 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="64" height="64" rx="8" fill="url(#gradient3)"/>
+  <circle cx="32" cy="32" r="16" fill="white" fill-opacity="0.9"/>
+  <circle cx="32" cy="32" r="12" fill="white" fill-opacity="0.7"/>
+  <circle cx="32" cy="32" r="8" fill="white" fill-opacity="0.5"/>
+  <text x="32" y="36" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="8" font-weight="bold">CP</text>
+  <defs>
+    <linearGradient id="gradient3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10B981"/>
+      <stop offset="100%" stop-color="#3B82F6"/>
+    </linearGradient>
+  </defs>
+</svg>

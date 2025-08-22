@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import DemoFooter from '../components/DemoFooter'
 import ServicesSection from '../components/ServicesSection'
+import AWSCertificationsSection from '../components/AWSCertificationsSection'
 import LandingHero from '../components/LandingHero'
 import CountdownTimer from '../components/CountdownTimer'
 import dynamic from 'next/dynamic'
@@ -288,6 +289,9 @@ export default function LandingPage() {
       <div className="mt-4">
         <ServicesSection />
       </div>
+
+      {/* AWS Certifications Section */}
+      <AWSCertificationsSection />
 
       {/* Social Proof Section - Simplificada */}
       <section id="servicios" className="py-16 bg-white/5">
