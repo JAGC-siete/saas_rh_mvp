@@ -565,6 +565,7 @@ export default function PayrollManager() {
         const adjustedBaseSalary = emp.base_salary + previewScenario.baseSalaryAdjustment
         
         // Calcular deducciones usando fórmulas oficiales de Honduras
+        // IMPORTANTE: Para planillas quincenales, el salario bruto es mensual ÷ 2
         const deductions = calculateHondurasDeductions(
           adjustedBaseSalary,
           previewScenario.daysWorked,
@@ -579,7 +580,7 @@ export default function PayrollManager() {
           period_end: `${period}-${endDay.toString().padStart(2, '0')}`,
           period_type: 'quincenal',
           base_salary: adjustedBaseSalary,
-          gross_salary: deductions.grossSalary,
+          gross_salary: adjustedBaseSalary / 2, // Salario quincenal (mensual ÷ 2)
           income_tax: deductions.isr,
           professional_tax: deductions.rap,
           social_security: deductions.ihss,
@@ -1007,9 +1008,8 @@ export default function PayrollManager() {
       const daysInQuincena = quincena === 1 ? 15 : (lastDay - 15)
       
       const draftRows: DraftRow[] = activeEmployees.map((emp: any) => {
-        // Calcular salario bruto
-        const dailyRate = emp.base_salary / 30
-        const grossSalary = dailyRate * daysInQuincena
+        // Calcular salario bruto QUINCENAL (salario mensual ÷ 2)
+        const grossSalary = emp.base_salary / 2
         
         // Calcular deducciones usando las fórmulas existentes
         let deductions
