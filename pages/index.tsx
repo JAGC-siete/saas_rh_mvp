@@ -40,7 +40,7 @@ export default function LandingPage() {
           name="description"
           content="Generá planilla en 5 minutos con IHSS, RAP e ISR listos y vouchers enviados por WhatsApp. Cumplimiento STSS, de Excel caótico a PDF impecable."
         />
-        <meta name="keywords" content="planilla Honduras, IHSS, RAP, ISR, automatización RH, STSS, Humano SISU, certificados AWS" />
+        <meta name="keywords" content="planilla Honduras, IHSS, RAP, ISR, automatización RH, STSS, Humano SISU, tecnología" />
         <meta name="author" content="Humano SISU" />
         <meta name="robots" content="index, follow" />
         <meta property="og:title" content="Humano SISU - Automatización de Planilla en Honduras" />
@@ -74,7 +74,7 @@ export default function LandingPage() {
                     "@type": "Organization",
                     "name": "Amazon Web Services"
                   },
-                  "image": "https://humano-sisu.com/image.png"
+                  "image": "https://humano-sisu.com/image-aws-solutions-architect.png"
                 },
                 {
                   "@type": "EducationalOccupationalCredential",
@@ -83,7 +83,7 @@ export default function LandingPage() {
                     "@type": "Organization",
                     "name": "Amazon Web Services"
                   },
-                  "image": "https://humano-sisu.com/image (1).png"
+                  "image": "https://humano-sisu.com/image-aws-developer.png"
                 }
               ]
             })
@@ -124,20 +124,20 @@ export default function LandingPage() {
                 <div className="hidden lg:flex items-center space-x-3">
                   <div className="flex items-center space-x-2 bg-white/10 px-3 py-1 rounded-lg border border-white/20">
                     <Image
-                      src="/image.png"
+                      src="/image-aws-solutions-architect.png"
                       alt="AWS Solutions Architect Associate"
-                      width={24}
-                      height={24}
+                      width={32}
+                      height={32}
                       className="rounded"
                     />
                     <span className="text-xs text-white/80">AWS Solutions Architect</span>
                   </div>
                   <div className="flex items-center space-x-2 bg-white/10 px-3 py-1 rounded-lg border border-white/20">
                     <Image
-                      src="/image (1).png"
+                      src="/image-aws-developer.png"
                       alt="AWS Developer Associate"
-                      width={24}
-                      height={24}
+                      width={32}
+                      height={32}
                       className="rounded"
                     />
                     <span className="text-xs text-white/80">AWS Developer</span>
@@ -193,23 +193,23 @@ export default function LandingPage() {
                 {/* Certificados en mobile */}
                 <div className="flex items-center justify-center space-x-3 mb-3">
                   <div className="flex items-center space-x-2 bg-white/10 px-3 py-1 rounded-lg border border-white/20">
-                    <Image
-                      src="/image.png"
-                      alt="AWS Solutions Architect Associate"
-                      width={20}
-                      height={20}
-                      className="rounded"
-                    />
+                                      <Image
+                    src="/image-aws-solutions-architect.png"
+                    alt="AWS Solutions Architect Associate"
+                    width={24}
+                    height={24}
+                    className="rounded"
+                  />
                     <span className="text-xs text-white/80">AWS Solutions Architect</span>
                   </div>
                   <div className="flex items-center space-x-2 bg-white/10 px-3 py-1 rounded-lg border border-white/20">
-                    <Image
-                      src="/image (1).png"
-                      alt="AWS Developer Associate"
-                      width={20}
-                      height={20}
-                      className="rounded"
-                    />
+                                      <Image
+                    src="/image-aws-developer.png"
+                    alt="AWS Developer Associate"
+                    width={24}
+                    height={24}
+                    className="rounded"
+                  />
                     <span className="text-xs text-white/80">AWS Developer</span>
                   </div>
                 </div>
