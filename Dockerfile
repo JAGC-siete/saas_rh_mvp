@@ -24,6 +24,7 @@ COPY . .
 
 # Set build-time environment variables
 ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
 # Build the application with standalone output
 RUN npm run build
@@ -32,9 +33,11 @@ RUN npm run build
 FROM base AS runner
 WORKDIR /app
 
+# Production environment variables
 ENV NODE_ENV=production
 ENV PORT=8080
 ENV HOSTNAME="0.0.0.0"
+ENV NEXT_TELEMETRY_DISABLED=1
 
 # Create system user for security
 RUN addgroup --system --gid 1001 nodejs && \

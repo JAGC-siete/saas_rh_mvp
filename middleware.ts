@@ -161,7 +161,7 @@ export async function middleware(request: NextRequest) {
     // Handle CORS preflight requests
     if (request.method === 'OPTIONS') {
       const response = new NextResponse(null, { status: 200 })
-      response.headers.set('Access-Control-Allow-Origin', process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net')
+      response.headers.set('Access-Control-Allow-Origin', process.env.NEXT_PUBLIC_SITE_URL || process.env.RAILWAY_PUBLIC_DOMAIN || '*')
       response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
       response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-nextjs-data')
       response.headers.set('Access-Control-Allow-Credentials', 'true')

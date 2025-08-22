@@ -11,10 +11,33 @@ numReplicas = 1
 
 # Environment variables for Railway
 [variables]
+# Timezone and locale
 TZ = "America/Tegucigalpa"
+
+# Node.js configuration
 NODE_ENV = "production"
 PORT = "8080"
 HOSTNAME = "0.0.0.0"
+
+# Supabase configuration (these are set in Railway dashboard)
+# NEXT_PUBLIC_SUPABASE_URL = "https://fwyxmovfrzauebiqxchz.supabase.co"
+# NEXT_PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_K5XwWr0RPK7mq2L2z0TZfA_u6ZreOF7"
+# SUPABASE_SERVICE_ROLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ3eXhtb3ZmcnphdWViaXF4Y2h6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MjE4OTkyMSwiZXhwIjoyMDY3NzY1OTIxfQ.7tCj7HGw9MevF1Q9EEoOvD6CXf4M6f0iu37U-vjE76I"
+
+# Database configuration
+# DATABASE_URL = "postgresql://postgres:p5duKqOflWx7bBmJ@aws-0-us-east-2.pooler.supabase.com:6543/postgres"
+
+# Security and authentication
+# JWT_SECRET = "/15iXueZ210eRrXhvZMzjeuBULAujPNXcOwzCJ2MUKc="
+# SUPABASE_JWT_SECRET = "/15iXueZ210eRrXhvZMzjeuBULAujPNXcOwzCJ2MUKc="
+# SESSION_SECRET = "super-secret-session-key-change-this-in-production"
+
+# Application configuration
+# NEXT_TELEMETRY_DISABLED = "1"
+# SKIP_ENV_VALIDATION = "false"
+# BASES_DE_DATOS_URL = "https://humanosisu.net"
+# DEFAULT_CURRENCY = "HNL"
+# DEFAULT_TIMEZONE = "America/Tegucigalpa"
 
 # Railway-specific configurations
 [railway]

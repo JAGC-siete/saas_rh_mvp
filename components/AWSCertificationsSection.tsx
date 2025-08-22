@@ -76,7 +76,7 @@ export default function AWSCertificationsSection() {
           <div className="inline-flex items-center gap-3 bg-green-500/10 text-green-400 px-4 py-2 rounded-full border border-green-500/20 hover:bg-green-500/20 transition-all duration-300 hover:-translate-y-0.5">
             <CheckBadgeIcon className="h-5 w-5" />
             <span className="font-medium">
-              Garantía de calidad y seguridad respaldada por AWS
+              Garantía de calidad y seguridad certificada por AWS
             </span>
           </div>
         </div>
