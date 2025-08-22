@@ -36,6 +36,7 @@ const PUBLIC_ASSETS = new Set([
   '/logo-humano-sisu.png', // Logo de la empresa
   '/image-aws-solutions-architect.png', // Certificado AWS Solutions Architect
   '/image-aws-developer.png', // Certificado AWS Developer
+  '/image-aws-cloud-practitioner.png', // Certificado AWS Cloud Practitioner
   '/favicon.ico',         // Favicon
   '/robots.txt',          // Robots.txt
   '/sitemap.xml'          // Sitemap

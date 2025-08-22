@@ -40,7 +40,7 @@ export default function LandingPage() {
           name="description"
           content="Generá planilla en 5 minutos con IHSS, RAP e ISR listos y vouchers enviados por WhatsApp. Cumplimiento STSS, de Excel caótico a PDF impecable."
         />
-        <meta name="keywords" content="planilla Honduras, IHSS, RAP, ISR, automatización RH, STSS, Humano SISU, tecnología" />
+        <meta name="keywords" content="planilla Honduras, IHSS, RAP, ISR, automatización RH, STSS, Humano SISU, innovación" />
         <meta name="author" content="Humano SISU" />
         <meta name="robots" content="index, follow" />
         <meta property="og:title" content="Humano SISU - Automatización de Planilla en Honduras" />
@@ -84,6 +84,15 @@ export default function LandingPage() {
                     "name": "Amazon Web Services"
                   },
                   "image": "https://humano-sisu.com/image-aws-developer.png"
+                },
+                {
+                  "@type": "EducationalOccupationalCredential",
+                  "credentialCategory": "AWS Cloud Practitioner",
+                  "recognizedBy": {
+                    "@type": "Organization",
+                    "name": "Amazon Web Services"
+                  },
+                  "image": "https://humano-sisu.com/image-aws-cloud-practitioner.png"
                 }
               ]
             })
@@ -142,6 +151,16 @@ export default function LandingPage() {
                     />
                     <span className="text-xs text-white/80">AWS Developer</span>
                   </div>
+                  <div className="flex items-center space-x-2 bg-white/10 px-3 py-1 rounded-lg border border-white/20">
+                    <Image
+                      src="/image-aws-cloud-practitioner.png"
+                      alt="AWS Cloud Practitioner"
+                      width={32}
+                      height={32}
+                      className="rounded"
+                    />
+                    <span className="text-xs text-white/80">AWS Cloud Practitioner</span>
+                  </div>
                 </div>
               </div>
 
@@ -190,27 +209,37 @@ export default function LandingPage() {
           {isMobileMenuOpen && (
             <div className="md:hidden">
               <div className="px-2 pt-2 pb-3 space-y-1 glass-strong rounded-lg shadow-lg mt-2">
-                {/* Certificados en mobile */}
+                                {/* Certificados en mobile */}
                 <div className="flex items-center justify-center space-x-3 mb-3">
                   <div className="flex items-center space-x-2 bg-white/10 px-3 py-1 rounded-lg border border-white/20">
-                                      <Image
-                    src="/image-aws-solutions-architect.png"
-                    alt="AWS Solutions Architect Associate"
-                    width={24}
-                    height={24}
-                    className="rounded"
-                  />
+                    <Image
+                      src="/image-aws-solutions-architect.png"
+                      alt="AWS Solutions Architect Associate"
+                      width={24}
+                      height={24}
+                      className="rounded"
+                    />
                     <span className="text-xs text-white/80">AWS Solutions Architect</span>
                   </div>
                   <div className="flex items-center space-x-2 bg-white/10 px-3 py-1 rounded-lg border border-white/20">
-                                      <Image
-                    src="/image-aws-developer.png"
-                    alt="AWS Developer Associate"
-                    width={24}
-                    height={24}
-                    className="rounded"
-                  />
+                    <Image
+                      src="/image-aws-developer.png"
+                      alt="AWS Developer Associate"
+                      width={24}
+                      height={24}
+                      className="rounded"
+                    />
                     <span className="text-xs text-white/80">AWS Developer</span>
+                  </div>
+                  <div className="flex items-center space-x-2 bg-white/10 px-3 py-1 rounded-lg border border-white/20">
+                    <Image
+                      src="/image-aws-cloud-practitioner.png"
+                      alt="AWS Cloud Practitioner"
+                      width={24}
+                      height={24}
+                      className="rounded"
+                    />
+                    <span className="text-xs text-white/80">AWS Cloud Practitioner</span>
                   </div>
                 </div>
                 
