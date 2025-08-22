@@ -103,7 +103,7 @@ export default function LandingHero() {
           {/* Frase de urgencia al final del componente */}
           <div className="text-center mt-12">
             <p className="text-xl font-semibold text-brand-200/90">
-              Próxima planilla: {nextPayday.toLocaleDateString()}. Déjala lista hoy en 5 minutos.
+              Próxima planilla: {nextPayday.toLocaleDateString()}. ¿Otra vez la vas a hacer desde cero?
             </p>
           </div>
         </div>
