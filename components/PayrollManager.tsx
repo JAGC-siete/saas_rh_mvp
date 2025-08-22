@@ -1937,9 +1937,6 @@ export default function PayrollManager() {
                 <Icon name="users" className="w-5 h-5" />
                 Empleados Activos ({employees.length})
               </CardTitle>
-              <CardDescription className="text-gray-300">
-                Lista de empleados que serán incluidos en la nómina
-              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
