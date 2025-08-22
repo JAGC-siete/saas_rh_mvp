@@ -34,6 +34,8 @@ const PUBLIC_ROUTES = new Set([
 const PUBLIC_ASSETS = new Set([
   '/voucher-sample.png',  // Imagen del voucher para la landing
   '/logo-humano-sisu.png', // Logo de la empresa
+  '/image-aws-solutions-architect.png', // Certificado AWS Solutions Architect
+  '/image-aws-developer.png', // Certificado AWS Developer
   '/favicon.ico',         // Favicon
   '/robots.txt',          // Robots.txt
   '/sitemap.xml'          // Sitemap
