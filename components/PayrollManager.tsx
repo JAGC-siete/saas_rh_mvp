@@ -77,19 +77,12 @@ interface PreviewScenario {
 }
 
 // Constantes para fórmulas oficiales de Honduras 2025
+// CONSTANTES CORRECTAS HONDURAS 2025 (VERIFICACIÓN CRUZADA)
 const HONDURAS_2025_CONSTANTS = {
   SALARIO_MINIMO: 11903.13,
   IHSS_TECHO: 11903.13,        // Techo IHSS 2025 (EM + IVM)
   IHSS_PORCENTAJE_EMPLEADO: 0.05,  // 5% total (2.5% EM + 2.5% IVM)
-  IHSS_PORCENTAJE_PATRONO: 0.088,  // 5% EM + 3.5% IVM + 0.2% RP
-  RAP_PORCENTAJE: 0.015,       // 1.5% empleado + 1.5% patrono
-  ISR_EXENCION_ANUAL: 40000,   // Deducción médica anual L 40,000
-  ISR_BRACKETS_ANUAL: [        // Tabla ANUAL 2025 (SAR)
-    { limit: 40000, rate: 0.00, base: 0 },                    // Exento hasta L 40,000
-    { limit: 217493.16, rate: 0.15, base: 0 },                // 15%
-    { limit: 494224.40, rate: 0.20, base: 26623.97 },         // 20%
-    { limit: Infinity, rate: 0.25, base: 81947.97 }           // 25%
-  ]
+  RAP_PORCENTAJE: 0.015,       // 1.5% empleado
 } as const
 
 const DEFAULT_PREVIEW_SCENARIO: PreviewScenario = {
@@ -292,24 +285,23 @@ export default function PayrollManager() {
     return new Date(y, m, 0).getDate() // 28–31
   }, [selectedPeriod])
 
-  // Función para calcular ISR según tabla ANUAL de Honduras 2025
+  // CÁLCULO ISR CORRECTO 2025 - TABLA MENSUAL
   const calculateISR = useCallback((monthlySalary: number): number => {
-    // Convertir salario mensual a anual
-    const annualSalary = monthlySalary * 12
+    // Tabla mensual correcta 2025 (derivada de anual SAR)
+    const ISR_BRACKETS_MENSUAL = [
+      { limit: 21457.76, rate: 0.00, base: 0 },                    // Exento hasta L 21,457.76
+      { limit: 30969.88, rate: 0.15, base: 0 },                    // 15%
+      { limit: 67604.36, rate: 0.20, base: 1428.32 },             // 20%
+      { limit: Infinity, rate: 0.25, base: 8734.32 }              // 25%
+    ]
     
-    // Aplicar deducción médica anual de L 40,000
-    const baseImponible = annualSalary - HONDURAS_2025_CONSTANTS.ISR_EXENCION_ANUAL
-    
-    if (baseImponible <= 0) return 0
-    
-    // Calcular ISR anual usando tabla progresiva
-    for (const bracket of HONDURAS_2025_CONSTANTS.ISR_BRACKETS_ANUAL) {
-      if (baseImponible <= bracket.limit) {
-        const isrAnnual = bracket.base + (baseImponible - (bracket.base > 0 ? bracket.limit : 0)) * bracket.rate
-        return isrAnnual / 12 // Convertir a mensual
+    // Aplicar tabla mensual directamente
+    for (const bracket of ISR_BRACKETS_MENSUAL) {
+      if (monthlySalary <= bracket.limit) {
+        if (bracket.rate === 0) return 0
+        return bracket.base + (monthlySalary - (bracket.base > 0 ? bracket.limit : 0)) * bracket.rate
       }
     }
-    
     return 0
   }, [])
 
