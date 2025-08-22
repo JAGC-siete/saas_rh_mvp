@@ -7,9 +7,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // 🔒 AUTENTICACIÓN REQUERIDA
+    // AUTENTICACIÓN REQUERIDA
     const supabase = createClient(req, res)
-    // ✅ Get user with getUser() to validate token with Supabase server
+    // Get user with getUser() to validate token with Supabase server
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
     if (authError || !user) {
@@ -83,7 +83,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    console.log(`📊 Exportando ${payrollRecords.length} registros de nómina para ${periodo}`)
+    console.log(`Exportando ${payrollRecords.length} registros de nómina para ${periodo}`)
 
     if (formato === 'excel') {
       return exportToExcel(payrollRecords, periodo, res)

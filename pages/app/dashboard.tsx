@@ -131,7 +131,7 @@ export default function Dashboard() {
           {/* Header */}
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold text-white">🏢 Dashboard Ejecutivo - Paragon Honduras</h1>
+              <h1 className="text-3xl font-bold text-white">Dashboard Ejecutivo - Paragon Honduras</h1>
               <p className="text-gray-300">Vista general del sistema de recursos humanos</p>
             </div>
             <div className="flex gap-2">
@@ -139,14 +139,14 @@ export default function Dashboard() {
                 onClick={() => router.push('/payroll')}
                 className="bg-brand-900 hover:bg-brand-800 text-white font-medium"
               >
-                📊 Gestión de Nómina
+                Gestión de Nómina
               </Button>
               <Button 
                 variant="outline" 
                 onClick={() => router.push('/employees')}
                 className="border-brand-600 bg-white/10 text-white hover:bg-brand-800 hover:text-white font-medium"
               >
-                👥 Empleados
+                Empleados
               </Button>
             </div>
           </div>
@@ -156,7 +156,7 @@ export default function Dashboard() {
             <Card variant="glass">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-200">Total Empleados</CardTitle>
-                <span className="text-2xl">👥</span>
+                <span className="text-2xl"></span>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-white">{stats.totalEmployees}</div>
@@ -169,7 +169,7 @@ export default function Dashboard() {
             <Card variant="glass">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-200">Asistencia Hoy</CardTitle>
-                <span className="text-2xl">📅</span>
+                <span className="text-2xl"></span>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-green-400">{stats.presentToday}</div>
@@ -182,7 +182,7 @@ export default function Dashboard() {
             <Card variant="glass">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-200">Nómina Total</CardTitle>
-                <span className="text-2xl">💰</span>
+                <span className="text-2xl"></span>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-white">{formatCurrency(stats.totalPayroll)}</div>
@@ -195,7 +195,7 @@ export default function Dashboard() {
             <Card variant="glass">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-200">Tasa Asistencia</CardTitle>
-                <span className="text-2xl">📈</span>
+                <span className="text-2xl"></span>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-white">
@@ -226,7 +226,7 @@ export default function Dashboard() {
             {/* Quick Actions */}
             <Card variant="glass" className="lg:col-span-3">
               <CardHeader>
-                <CardTitle className="text-white">⚡ Acciones Rápidas</CardTitle>
+                <CardTitle className="text-white">Acciones Rápidas</CardTitle>
                 <CardDescription className="text-gray-300">
                   Acceso directo a funciones principales
                 </CardDescription>
@@ -237,42 +237,42 @@ export default function Dashboard() {
                     className="w-full bg-brand-900 hover:bg-brand-800 text-white font-medium" 
                     onClick={() => router.push('/payroll')}
                   >
-                    📊 Generar Nómina
+                    Generar Nómina
                   </Button>
                   <Button 
                     variant="outline" 
                     className="w-full border-brand-600 bg-white/10 text-white hover:bg-brand-800 hover:text-white font-medium"
                     onClick={() => router.push('/employees')}
                   >
-                    👥 Gestionar Empleados
+                    Gestionar Empleados
                   </Button>
                   <Button 
                     variant="outline" 
                     className="w-full border-brand-600 bg-white/10 text-white hover:bg-brand-800 hover:text-white font-medium"
                     onClick={() => router.push('/departments')}
                   >
-                    🏢 Gestión de Departamentos
+                    Gestión de Departamentos
                   </Button>
                   <Button 
                     variant="outline" 
                     className="w-full border-brand-600 bg-white/10 text-white hover:bg-brand-800 hover:text-white font-medium"
                     onClick={() => router.push('/attendance')}
                   >
-                    📅 Ver Asistencia
+                    Ver Asistencia
                   </Button>
                   <Button 
                     variant="outline" 
                     className="w-full border-brand-600 bg-white/10 text-white hover:bg-brand-800 hover:text-white font-medium"
                     onClick={() => router.push('/reports')}
                   >
-                    📋 Reportes
+                    Reportes
                   </Button>
                   <Button 
                     variant="outline" 
                     className="w-full border-brand-600 bg-white/10 text-white hover:bg-brand-800 hover:text-white font-medium"
                     onClick={() => router.push('/gamification')}
                   >
-                    🎮 Gamificación
+                    Gamificación
                   </Button>
                 </div>
               </CardContent>
@@ -282,7 +282,7 @@ export default function Dashboard() {
           {/* Recent Payrolls */}
           <Card variant="glass">
             <CardHeader>
-              <CardTitle className="text-white">📋 Nóminas Recientes</CardTitle>
+              <CardTitle className="text-white">Nóminas Recientes</CardTitle>
               <CardDescription className="text-gray-300">
                 Últimas nóminas generadas
               </CardDescription>
@@ -318,7 +318,7 @@ export default function Dashboard() {
           {/* System Status */}
           <Card variant="glass">
             <CardHeader>
-              <CardTitle className="text-white">🔧 Estado del Sistema</CardTitle>
+              <CardTitle className="text-white">Estado del Sistema</CardTitle>
               <CardDescription className="text-gray-300">
                 Información del sistema y conexiones
               </CardDescription>

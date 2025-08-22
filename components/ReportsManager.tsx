@@ -6,7 +6,7 @@ export default function ReportsManager() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-white mb-2">📊 Reportes y Análisis</h2>
+        <h2 className="text-xl font-semibold text-white mb-2">Reportes y Análisis</h2>
         <p className="text-gray-300">Genera reportes de asistencia, nómina y empleados</p>
       </div>
 
@@ -83,7 +83,7 @@ export default function ReportsManager() {
 
       <Card variant="glass">
         <CardHeader>
-          <CardTitle className="text-white">📈 Demo - Vista de Reportes</CardTitle>
+          <CardTitle className="text-white">Demo - Vista de Reportes</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-gray-300 mb-4">
@@ -98,7 +98,7 @@ export default function ReportsManager() {
           </ul>
           <div className="bg-brand-500/20 border border-brand-500/30 rounded-lg p-4">
             <p className="text-brand-200 text-sm">
-              💡 <strong>Funcionalidad completa disponible en la versión de producción</strong>
+              <strong>Funcionalidad completa disponible en la versión de producción</strong>
             </p>
           </div>
         </CardContent>

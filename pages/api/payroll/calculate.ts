@@ -99,7 +99,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // 🔒 AUTENTICACIÓN REQUERIDA
+    // AUTENTICACIÓN REQUERIDA
     const authResult = await authenticateUser(req, res, ['can_generate_payroll'])
     
     if (!authResult.success) {
@@ -112,7 +112,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { user, userProfile } = authResult
     const supabase = createClient(req, res)
 
-    console.log('🔐 Usuario autenticado para nómina:', { 
+    console.log('Usuario autenticado para nómina:', { 
       userId: user.id, 
       role: userProfile?.role,
       companyId: userProfile?.company_id 
@@ -155,7 +155,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Q2: salario bruto proporcional + deducciones mensuales completas
     const aplicarDeducciones = quincena === 2
 
-    console.log('📅 Generando nómina para:', {
+    console.log('Generando nómina para:', {
       periodo,
       quincena,
       fechaInicio,
@@ -221,7 +221,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    console.log(`👥 Procesando nómina para ${empleadosParaNomina.length} empleados`)
+    console.log(`Procesando nómina para ${empleadosParaNomina.length} empleados`)
 
     // Calcular planilla con CÁLCULOS CORRECTOS 2025
     const planilla: PlanillaItem[] = empleadosParaNomina.map((emp: any) => {
@@ -327,7 +327,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: 'Error guardando nómina en la base de datos' })
     }
 
-    console.log(`✅ Nómina generada exitosamente para ${planilla.length} empleados`)
+    console.log(`Nómina generada exitosamente para ${planilla.length} empleados`)
 
     return res.status(200).json({
       message: 'Nómina calculada exitosamente',

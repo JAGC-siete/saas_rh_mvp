@@ -414,7 +414,7 @@ export default function PayrollManager() {
       deptData?.forEach((dept: any) => { deptMap[dept.id] = dept.name })
       setDepartments(deptMap)
       if (!isMountedRef.current) return
-      console.log('✅ Departments loaded:', Object.keys(deptMap).length)
+      console.log('Departments loaded:', Object.keys(deptMap).length)
     } catch (error) {
       console.error('Error loading departments:', error)
     }
@@ -661,11 +661,11 @@ export default function PayrollManager() {
       const { data: { user }, error: userError } = await supabase.auth.getUser()
       
       if (userError || !user) {
-        alert('❌ Error de autenticación. Por favor, inicia sesión nuevamente.')
+        alert('Error de autenticación. Por favor, inicia sesión nuevamente.')
         return
       }
 
-      console.log('✅ User authenticated:', user.email)
+      console.log('User authenticated:', user.email)
 
       let { data: profile, error: profileError } = await supabase
         .from('user_profiles')
@@ -677,7 +677,7 @@ export default function PayrollManager() {
         console.error('Error fetching user profile:', profileError)
         
         if (profileError.code === 'PGRST116') {
-          console.log('🔧 Perfil no encontrado, intentando crear...')
+          console.log('Perfil no encontrado, intentando crear...')
           const { data: newProfile, error: createError } = await supabase
             .from('user_profiles')
             .insert({
@@ -693,26 +693,26 @@ export default function PayrollManager() {
 
           if (createError) {
             console.error('Error creando perfil:', createError)
-            alert('❌ Error creando perfil de usuario. Contacte al administrador.')
+            alert('Error creando perfil de usuario. Contacte al administrador.')
             return
           }
 
-          console.log('✅ Perfil creado exitosamente:', newProfile)
+          console.log('Perfil creado exitosamente:', newProfile)
           setUserProfile(newProfile)
           profile = newProfile
         } else {
           console.error('Error obteniendo perfil:', profileError)
-          alert('❌ Error obteniendo perfil de usuario')
+          alert('Error obteniendo perfil de usuario')
           return
         }
       } else {
-        console.log('✅ User profile loaded:', profile)
+        console.log('User profile loaded:', profile)
         setUserProfile(profile)
       }
 
       if (!profile || !profile.is_active) {
         if (!profile.is_active) {
-          alert('❌ Su cuenta ha sido desactivada')
+          alert('Su cuenta ha sido desactivada')
         }
         setPayrollRecords([])
         setEmployees([])
@@ -744,7 +744,7 @@ export default function PayrollManager() {
         throw payrollError
       }
       
-      console.log('✅ Payroll records loaded:', payrollData?.length || 0)
+      console.log('Payroll records loaded:', payrollData?.length || 0)
       if (!isMountedRef.current) return
       setPayrollRecords(payrollData || [])
 
@@ -766,7 +766,7 @@ export default function PayrollManager() {
         throw empError
       }
       
-      console.log('✅ Employees loaded:', employeesData?.length || 0)
+      console.log('Employees loaded:', employeesData?.length || 0)
       if (!isMountedRef.current) return
       setEmployees(employeesData || [])
       const suspended = (employeesData || []).filter((e: any) => e.status === 'suspended').length
@@ -784,7 +784,7 @@ export default function PayrollManager() {
     } catch (error) {
       console.error('Error fetching data:', error)
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
-      alert(`❌ Error cargando datos: ${errorMessage}`)
+      alert(`Error cargando datos: ${errorMessage}`)
     } finally {
       if (isMountedRef.current) setLoading(false)
     }
@@ -802,7 +802,7 @@ export default function PayrollManager() {
         return
       }
 
-      console.log('✅ Generating payroll with authenticated user:', user.email)
+      console.log('Generating payroll with authenticated user:', user.email)
 
       const response = await fetch('/api/payroll/calculate', {
         method: 'POST',
@@ -819,7 +819,7 @@ export default function PayrollManager() {
         throw new Error(errorData.error || 'Failed to generate payroll')
       }
 
-      alert('✅ Nómina generada exitosamente!')
+      alert('Nómina generada exitosamente!')
       
       resetGenerateForm()
       fetchData()
@@ -827,7 +827,7 @@ export default function PayrollManager() {
     } catch (error: any) {
       console.error('Error generating payroll:', error)
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
-      alert(`❌ Error: ${errorMessage}`)
+      alert(`Error: ${errorMessage}`)
     } finally {
       setLoading(false)
     }
@@ -845,10 +845,10 @@ export default function PayrollManager() {
         .eq('id', payrollId)
 
       if (error) throw error
-      alert('✅ Nómina aprobada exitosamente!')
+      alert('Nómina aprobada exitosamente!')
       fetchData()
     } catch (error: any) {
-      alert(`❌ Error: ${error.message}`)
+      alert(`Error: ${error.message}`)
     }
   }, [supabase, userProfile?.employee_id, fetchData])
 
@@ -863,10 +863,10 @@ export default function PayrollManager() {
         .eq('id', payrollId)
 
       if (error) throw error
-      alert('✅ Nómina marcada como pagada!')
+      alert('Nómina marcada como pagada!')
       fetchData()
     } catch (error: any) {
-      alert(`❌ Error: ${error.message}`)
+      alert(`Error: ${error.message}`)
     }
   }, [supabase, fetchData])
 
@@ -895,7 +895,7 @@ export default function PayrollManager() {
     try {
       await downloadConsolidatedReport(period, quincena)
     } catch (e: any) {
-      alert(`❌ Error: ${e?.message || 'No se pudo descargar el reporte'}`)
+      alert(`Error: ${e?.message || 'No se pudo descargar el reporte'}`)
     }
   }, [downloadConsolidatedReport])
 
@@ -906,7 +906,7 @@ export default function PayrollManager() {
     try {
       await downloadEmployeeReceipt(record.employee_id, period, quincena)
     } catch (e: any) {
-      alert(`❌ Error: ${e?.message || 'No se pudo descargar el recibo'}`)
+      alert(`Error: ${e?.message || 'No se pudo descargar el recibo'}`)
     }
   }, [downloadEmployeeReceipt])
 
@@ -925,8 +925,8 @@ export default function PayrollManager() {
     }
     const res = await fetch('/api/payroll/send-email', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
     const json = await res.json().catch(()=>({}))
-    if (!res.ok) return alert(`❌ Error: ${json.error || res.status}`)
-    alert(json.sent ? '✅ Enviado' : `⚠️ Enlace listo: ${json.downloadUrl}`)
+    if (!res.ok) return alert(`Error: ${json.error || res.status}`)
+    alert(json.sent ? 'Enviado' : `Enlace listo: ${json.downloadUrl}`)
   }, [])
 
   const sendPayrollWhatsApp = useCallback(async (record?: PayrollRecord | PreviewPayrollRecord) => {
@@ -944,7 +944,7 @@ export default function PayrollManager() {
     }
     const res = await fetch('/api/payroll/send-whatsapp', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
     const json = await res.json().catch(()=>({}))
-    if (!res.ok) return alert(`❌ Error: ${json.error || res.status}`)
+    if (!res.ok) return alert(`Error: ${json.error || res.status}`)
     if (json.url) window.open(json.url, '_blank')
   }, [])
 
@@ -1071,10 +1071,10 @@ export default function PayrollManager() {
       // Cerrar el formulario después de generar
       setShowPreviewForm(false)
       
-      alert(`✅ Preview generado para ${draftRows.length} empleados activos`)
+      alert(`Preview generado para ${draftRows.length} empleados activos`)
     } catch (error: any) {
       console.error('Error generando preview:', error)
-      alert(`❌ Error: ${error.message}`)
+      alert(`Error: ${error.message}`)
     } finally {
       setIsWorking(false)
     }
@@ -1158,14 +1158,14 @@ export default function PayrollManager() {
         link.click()
         window.URL.revokeObjectURL(url)
         document.body.removeChild(link)
-        alert('✅ PDF generado y descargado exitosamente')
+        alert('PDF generado y descargado exitosamente')
       } else {
         const data = await response.json()
         throw new Error(data.error || 'Respuesta inesperada del servidor')
       }
     } catch (error: any) {
       console.error('Error generando PDF:', error)
-      alert(`❌ Error: ${error.message}`)
+      alert(`Error: ${error.message}`)
     } finally {
       setIsWorking(false)
     }
@@ -1212,10 +1212,10 @@ export default function PayrollManager() {
       const result = await response.json()
       if (result.sent) {
         const summary = result.summary
-        let message = `✅ Vouchers enviados: ${summary.ok}/${summary.total}`
+        let message = `Vouchers enviados: ${summary.ok}/${summary.total}`
         
         if (summary.failed > 0) {
-          message += `\n❌ Fallidos: ${summary.failed}`
+          message += `\nFallidos: ${summary.failed}`
           if (result.failed && result.failed.length > 0) {
             message += '\n\nEmpleados con error:'
             result.failed.forEach((f: any) => {
@@ -1230,7 +1230,7 @@ export default function PayrollManager() {
       }
     } catch (error: any) {
       console.error('Error enviando vouchers:', error)
-      alert(`❌ Error: ${error.message}`)
+      alert(`Error: ${error.message}`)
     } finally {
       setIsWorking(false)
     }

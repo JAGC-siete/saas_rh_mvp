@@ -172,7 +172,7 @@ export default function ActivarPage() {
                 <div className="grid md:grid-cols-2 gap-4 mb-6 max-w-md mx-auto">
                   <div className="text-center">
                     <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                      <span className="text-2xl">📱</span>
+                      <span className="text-2xl"></span>
                     </div>
                     <p className="text-sm text-brand-300">WhatsApp</p>
                     <p className="text-xs text-brand-400">+504 9470-7007</p>
@@ -180,7 +180,7 @@ export default function ActivarPage() {
                   
                   <div className="text-center">
                     <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                      <span className="text-2xl">📧</span>
+                      <span className="text-2xl"></span>
                     </div>
                     <p className="text-sm text-brand-300">Email</p>
                     <p className="text-xs text-brand-400">jorge7gomez@gmail.com</p>
@@ -358,7 +358,7 @@ export default function ActivarPage() {
           <Card variant="glass" className="border-yellow-500/30 bg-yellow-500/5">
             <CardContent className="p-8">
               <h3 className="text-2xl font-bold text-yellow-400 mb-4">
-                🛡️ Garantía de implementación
+                Garantía de implementación
               </h3>
               <p className="text-xl text-white">
                 Si no te lo dejamos funcionando, lo cerramos y listo. Cero costo.
@@ -449,7 +449,7 @@ export default function ActivarPage() {
                   />
                   {errors.empresa && (
                     <p className="text-red-400 text-sm mt-2 flex items-center">
-                      ⚠️ {errors.empresa}
+                      {errors.empresa}
                     </p>
                   )}
                   <p className="text-brand-400 text-sm mt-2">
@@ -474,7 +474,7 @@ export default function ActivarPage() {
                   />
                   {errors.nombre && (
                     <p className="text-red-400 text-sm mt-2 flex items-center">
-                      ⚠️ {errors.nombre}
+                      {errors.nombre}
                     </p>
                   )}
                   <p className="text-brand-400 text-sm mt-2">
@@ -499,7 +499,7 @@ export default function ActivarPage() {
                   />
                   {errors.contactoWhatsApp && (
                     <p className="text-red-400 text-sm mt-2 flex items-center">
-                      ⚠️ {errors.contactoWhatsApp}
+                      {errors.contactoWhatsApp}
                     </p>
                   )}
                   <p className="text-brand-400 text-sm mt-2">
@@ -524,7 +524,7 @@ export default function ActivarPage() {
                   />
                   {errors.contactoEmail && (
                     <p className="text-red-400 text-sm mt-2 flex items-center">
-                      ⚠️ {errors.contactoEmail}
+                      {errors.contactoEmail}
                     </p>
                   )}
                   <p className="text-brand-400 text-sm mt-2">
@@ -580,7 +580,7 @@ export default function ActivarPage() {
                     required
                   />
                   <label htmlFor="acepta-trial" className="text-white text-sm leading-relaxed">
-                    ✅ Deseo activar un entorno de prueba por 30 días. Sin costo.
+                    Deseo activar un entorno de prueba por 30 días. Sin costo.
                   </label>
                   <p className="text-brand-400 text-xs mt-2 ml-8">
                     Acceso completo al sistema por 30 días gratis
@@ -600,14 +600,14 @@ export default function ActivarPage() {
                     </>
                   ) : (
                     <>
-                      🚀 Activar mi sistema ahora
+                      Activar mi sistema ahora
                     </>
                   )}
                 </button>
 
                 {Object.keys(errors).length > 0 && (
                   <p className="text-red-400 text-sm text-center mt-4 flex items-center justify-center">
-                    ⚠️ Por favor, corrige los errores antes de continuar
+                    Por favor, corrige los errores antes de continuar
                   </p>
                 )}
                 

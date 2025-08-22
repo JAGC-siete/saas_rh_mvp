@@ -35,9 +35,9 @@ export default function LandingHero() {
               </p>
 
               <ul className="text-brand-200/80 space-y-2">
-                <li className="flex items-start gap-2"><span>✅</span> Cumplimiento STSS desde el día uno.</li>
-                <li className="flex items-start gap-2"><span>✅</span> De Excel caótico a PDF impecable en minutos.</li>
-                <li className="flex items-start gap-2"><span>✅</span> Ahorro de 6 horas por quincena.</li>
+                <li className="flex items-start gap-2"><span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 mt-2" /> Cumplimiento STSS desde el día uno.</li>
+                <li className="flex items-start gap-2"><span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 mt-2" /> De Excel caótico a PDF impecable en minutos.</li>
+                <li className="flex items-start gap-2"><span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 mt-2" /> Ahorro de 6 horas por quincena.</li>
               </ul>
 
               <div className="flex justify-center">
@@ -46,19 +46,19 @@ export default function LandingHero() {
                   className="inline-flex items-center justify-center rounded-2xl px-8 py-4 text-lg font-semibold shadow-sm bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all duration-300 hover:-translate-y-1"
                   data-analytics="cta_hero_click"
                 >
-                  🎯 Activar GRATIS hoy
+                  Activar GRATIS hoy
                 </button>
               </div>
 
               <div className="flex justify-center items-center gap-4 text-sm text-brand-200/80">
                 <div className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-sm px-3 py-1 border border-white/20">
-                  <span>🧾 Vouchers por WhatsApp</span>
+                  <span>Vouchers por WhatsApp</span>
                 </div>
                 <div className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-sm px-3 py-1 border border-white/20">
-                  <span>🧮 I.H.S.S. • R.A.P. • I.S.R</span>
+                  <span>I.H.S.S. • R.A.P. • I.S.R</span>
                 </div>
                 <div className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-sm px-3 py-1 border border-white/20">
-                  <span>🛡️ Cumplimiento desde el día 1 con S.T.S.S</span>
+                  <span>Cumplimiento desde el día 1 con S.T.S.S</span>
                 </div>
               </div>
             </div>

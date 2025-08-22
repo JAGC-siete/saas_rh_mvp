@@ -96,7 +96,7 @@ export default function ReportsAndAnalytics() {
       setLoading(true)
       setError(null)
 
-      console.log('🔄 Fetching dashboard stats for company:', companyId, 'period:', { monthStart, monthEnd })
+      console.log('Fetching dashboard stats for company:', companyId, 'period:', { monthStart, monthEnd })
 
       const response = await fetch(`/api/reports/dashboard-stats?startDate=${monthStart}&endDate=${monthEnd}`)
       
@@ -107,11 +107,11 @@ export default function ReportsAndAnalytics() {
       
       const result = await response.json()
       
-      console.log('📊 Dashboard stats response:', result)
+      console.log('Dashboard stats response:', result)
       
       if (result.success) {
         setStats(result.data)
-        console.log('✅ Dashboard stats loaded successfully:', result.data)
+        console.log('Dashboard stats loaded successfully:', result.data)
       } else {
         throw new Error(result.error || 'Error en la respuesta del servidor')
       }
@@ -119,7 +119,7 @@ export default function ReportsAndAnalytics() {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error desconocido'
       setError(errorMessage)
-      console.error('❌ Error fetching dashboard stats:', err)
+      console.error('Error fetching dashboard stats:', err)
     } finally {
       setLoading(false)
     }
@@ -176,7 +176,7 @@ export default function ReportsAndAnalytics() {
   // Cargar datos iniciales
   useEffect(() => {
     if (session?.user && companyId && !companyLoading) {
-      console.log('🔄 Refreshing dashboard for company:', companyId)
+      console.log('Refreshing dashboard for company:', companyId)
       fetchDashboardStats()
     }
   }, [session, companyId, companyLoading, monthStart, monthEnd, fetchDashboardStats])
@@ -229,7 +229,7 @@ export default function ReportsAndAnalytics() {
         <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <span className="text-red-400">⚠️ Error:</span>
+              <span className="text-red-400">Error:</span>
               <span className="text-red-300">{error}</span>
             </div>
             <Button onClick={clearError} variant="outline" size="sm" className="text-red-400 border-red-400/20">

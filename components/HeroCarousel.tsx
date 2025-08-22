@@ -13,35 +13,35 @@ const SLIDES: Slide[] = [
     id: "cero-errores",
     title: "0 errores. 0 dramas. 0 pasivo laboral.",
     subtitle: "Haz la planilla como un robot: precisa, puntual y sin estrés.",
-    ctaText: "🚀 Actívalo hoy",
+    ctaText: "Actívalo hoy",
     ctaHref: "/activar",
   },
   {
     id: "cumplimiento",
     title: "IHSS, RAP e ISR calculados al centavo.",
     subtitle: "Evita multas, reclamos y auditorías. Tu planilla, siempre en regla.",
-    ctaText: "⚡ Activar ahora",
+    ctaText: "Activar ahora",
     ctaHref: "/activar",
   },
   {
     id: "tranquilidad",
     title: "Adiós a las madrugadas corrigiendo planillas.",
     subtitle: "Todo correcto y a tiempo, cada quincena.",
-    ctaText: "🎯 Automatízalo ya",
+    ctaText: "Automatízalo ya",
     ctaHref: "/activar",
   },
   {
     id: "transparencia",
     title: "Historial claro y vouchers individuales por empleado.",
     subtitle: "Cero discusiones.",
-    ctaText: "🎯 Solicitar Demo",
+    ctaText: "Solicitar Demo",
     ctaHref: "/activar",
   },
   {
     id: "un-clic",
     title: "Genera planilla y vouchers en segundos.",
     subtitle: "Sin plantillas, sin copiar y pegar, sin margen de error.",
-    ctaText: "🔥 Pruébalo gratis",
+    ctaText: "Pruébalo gratis",
     ctaHref: "/activar",
   },
 ]
@@ -153,7 +153,7 @@ export default function HeroCarousel() {
                               className="btn btn-ghost h-12 px-8"
                               aria-label="Solicitar demo de 15 minutos"
                             >
-                              🎯 Solicitar Demo
+                              Solicitar Demo
                             </a>
               </div>
             </div>

@@ -59,7 +59,7 @@ export default function OnboardingModal({
   const renderWelcomeStep = () => (
     <div className="space-y-6">
       <div className="text-center">
-        <div className="text-6xl mb-4">🎉</div>
+        <div className="text-6xl mb-4"></div>
         <h2 className="text-2xl font-bold text-gray-900 mb-2">
           ¡Bienvenido al Sistema!
         </h2>
@@ -184,7 +184,7 @@ export default function OnboardingModal({
   const renderGamificationStep = () => (
     <div className="space-y-6">
       <div className="text-center">
-        <div className="text-4xl mb-4">🏆</div>
+        <div className="text-4xl mb-4"></div>
         <h2 className="text-xl font-bold text-gray-900 mb-2">
           Sistema de Gamificación
         </h2>
@@ -195,10 +195,10 @@ export default function OnboardingModal({
 
       <div className="space-y-4">
         <div className="bg-green-50 p-4 rounded-lg">
-          <h3 className="font-semibold text-green-900 mb-3">🎯 Cómo Ganar Puntos</h3>
+          <h3 className="font-semibold text-green-900 mb-3">Cómo Ganar Puntos</h3>
           <div className="space-y-2 text-sm">
             <div className="flex items-center gap-2">
-              <span className="text-green-600">✅</span>
+              <span className="text-green-600"></span>
               <span><strong>+5 puntos</strong> por registrar asistencia</span>
             </div>
             <div className="flex items-center gap-2">
@@ -206,7 +206,7 @@ export default function OnboardingModal({
               <span><strong>+3 puntos</strong> por llegar temprano (5+ min antes)</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-green-600">🎯</span>
+              <span className="text-green-600"></span>
               <span><strong>+2 puntos</strong> por puntualidad (máximo 5 min tarde)</span>
             </div>
             <div className="flex items-center gap-2">
@@ -217,50 +217,50 @@ export default function OnboardingModal({
         </div>
 
         <div className="bg-purple-50 p-4 rounded-lg">
-          <h3 className="font-semibold text-purple-900 mb-3">🏅 Logros Especiales</h3>
+          <h3 className="font-semibold text-purple-900 mb-3">Logros Especiales</h3>
           <div className="space-y-2 text-sm">
             <div className="flex items-center gap-2">
-              <span className="text-purple-600">📅</span>
+              <span className="text-purple-600"></span>
               <span><strong>Semana Perfecta:</strong> 5 días puntuales = +50 puntos</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-purple-600">🌅</span>
+              <span className="text-purple-600"></span>
               <span><strong>Early Bird:</strong> Llegar temprano 3 días seguidos = +30 puntos</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-purple-600">📊</span>
+              <span className="text-purple-600"></span>
               <span><strong>Consistencia:</strong> 30 días sin tardanzas = +100 puntos</span>
             </div>
           </div>
         </div>
 
         <div className="bg-orange-50 p-4 rounded-lg">
-          <h3 className="font-semibold text-orange-900 mb-3">⚠️ Penalizaciones</h3>
+          <h3 className="font-semibold text-orange-900 mb-3">Penalizaciones</h3>
           <div className="space-y-2 text-sm">
             <div className="flex items-center gap-2">
               <span className="text-orange-600">⏰</span>
               <span><strong>-1 punto</strong> por cada 5 minutos de tardanza</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-orange-600">🚫</span>
+              <span className="text-orange-600"></span>
               <span><strong>-10 puntos</strong> por ausencia sin justificación</span>
             </div>
           </div>
         </div>
 
         <div className="bg-blue-50 p-4 rounded-lg">
-          <h3 className="font-semibold text-blue-900 mb-3">📈 Beneficios</h3>
+          <h3 className="font-semibold text-blue-900 mb-3">Beneficios</h3>
           <div className="space-y-2 text-sm">
             <div className="flex items-center gap-2">
-              <span className="text-blue-600">🏆</span>
+              <span className="text-blue-600"></span>
               <span>Acceso a <strong>leaderboards</strong> de empleados destacados</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-blue-600">🎁</span>
+              <span className="text-blue-600"></span>
               <span>Posibilidad de <strong>reconocimientos</strong> y premios</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-blue-600">📊</span>
+              <span className="text-blue-600"></span>
               <span>Seguimiento de tu <strong>progreso personal</strong></span>
             </div>
           </div>

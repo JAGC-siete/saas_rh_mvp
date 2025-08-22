@@ -171,7 +171,7 @@ export default function GamificationLeaderboard({ companyId, limit = 20 }: Gamif
                 </div>
                 {entry.punctuality_streak > 0 && (
                   <div className="text-xs text-green-400">
-                    🔥 {entry.punctuality_streak} day streak
+                    {entry.punctuality_streak} day streak
                   </div>
                 )}
               </div>

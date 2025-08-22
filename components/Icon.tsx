@@ -28,7 +28,11 @@ const ICONS = {
   document: L.FileText,
   calculator: L.Calculator,
   database: L.Database,
-  shield: L.ShieldCheck
+  shield: L.ShieldCheck,
+  trophy: L.Trophy,
+  lightbulb: L.Lightbulb,
+  party: L.PartyPopper,
+  phone: L.Phone
 } as const
 
 export type IconName = keyof typeof ICONS

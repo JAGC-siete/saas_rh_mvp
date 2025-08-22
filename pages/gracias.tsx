@@ -23,7 +23,7 @@ export default function GraciasPage() {
           </div>
           
           <h1 className="text-4xl font-bold text-white mb-4">
-            🎉 ¡Listo! Tu sistema está en camino
+            ¡Listo! Tu sistema está en camino
           </h1>
           
           <p className="text-xl text-brand-200 mb-8">
@@ -96,9 +96,9 @@ export default function GraciasPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm text-brand-200">
-            <p>📧 Email: jorge7gomez@gmail.com</p>
-            <p>📱 WhatsApp: +504 9470-7007</p>
-            <p>📞 Llamadas: +504 3214-8010</p>
+            <p>Email: jorge7gomez@gmail.com</p>
+            <p>WhatsApp: +504 9470-7007</p>
+            <p>Llamadas: +504 3214-8010</p>
             <p>⏰ Horario: Lunes a Viernes, 8:00 AM - 6:00 PM</p>
           </CardContent>
         </Card>
@@ -118,7 +118,7 @@ export default function GraciasPage() {
             rel="noopener noreferrer"
             className="bg-brand-600 hover:bg-brand-700 text-white px-6 py-3 rounded-lg font-medium transition-colors inline-flex items-center justify-center gap-2"
           >
-            📱 Escribir por WhatsApp
+            Escribir por WhatsApp
             <ArrowRight className="w-4 h-4" />
           </a>
         </div>
@@ -130,8 +130,8 @@ export default function GraciasPage() {
           </p>
           <div className="flex justify-center space-x-8 opacity-60">
             <div className="text-xs text-brand-300">⭐⭐⭐⭐⭐ 4.9/5</div>
-            <div className="text-xs text-brand-300">🚀 24h promedio</div>
-            <div className="text-xs text-brand-300">💪 99% uptime</div>
+            <div className="text-xs text-brand-300">24h promedio</div>
+            <div className="text-xs text-brand-300">99% uptime</div>
           </div>
         </div>
       </div>

@@ -75,7 +75,7 @@ export default function EmployeeAchievements({ companyId, employeeId, limit = 10
     return (
       <Card variant="glass">
         <CardHeader>
-          <CardTitle className="text-white">🏆 Employee Achievements</CardTitle>
+          <CardTitle className="text-white">Employee Achievements</CardTitle>
           <CardDescription className="text-gray-300">Loading achievements...</CardDescription>
         </CardHeader>
         <CardContent>
@@ -91,7 +91,7 @@ export default function EmployeeAchievements({ companyId, employeeId, limit = 10
     return (
       <Card variant="glass">
         <CardHeader>
-          <CardTitle className="text-white">🏆 Employee Achievements</CardTitle>
+          <CardTitle className="text-white">Employee Achievements</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
@@ -112,7 +112,7 @@ export default function EmployeeAchievements({ companyId, employeeId, limit = 10
     return (
       <Card variant="glass">
         <CardHeader>
-          <CardTitle className="text-white">🏆 Employee Achievements</CardTitle>
+          <CardTitle className="text-white">Employee Achievements</CardTitle>
           <CardDescription className="text-gray-300">No achievements earned yet</CardDescription>
         </CardHeader>
         <CardContent>
@@ -127,7 +127,7 @@ export default function EmployeeAchievements({ companyId, employeeId, limit = 10
   return (
     <Card variant="glass">
       <CardHeader>
-        <CardTitle className="text-white">🏆 Employee Achievements</CardTitle>
+        <CardTitle className="text-white">Employee Achievements</CardTitle>
         <CardDescription className="text-gray-300">
           {employeeId ? 'Individual achievements' : 'Company achievements'}
         </CardDescription>
