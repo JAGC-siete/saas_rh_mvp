@@ -1700,7 +1700,7 @@ export default function PayrollManager() {
                   }
                 }}
                 disabled={isWorking || employees.length === 0}
-                className="bg-green-600 hover:bg-green-700 text-white h-20 flex flex-col items-center justify-center gap-2"
+                className="bg-green-600/20 border border-green-500/30 hover:bg-green-600/30 text-white h-20 flex flex-col items-center justify-center gap-2 transition-all duration-200"
                 title={employees.length === 0 ? 'No hay empleados activos' : 'Generar preview de nómina'}
               >
                     <Icon name="document" className="w-6 h-6" />
@@ -1713,10 +1713,10 @@ export default function PayrollManager() {
                     type="button"
                 onClick={toggleEditDraft}
                 disabled={!draft || isWorking}
-                className={`h-20 flex flex-col items-center justify-center gap-2 ${
+                className={`h-20 flex flex-col items-center justify-center gap-2 transition-all duration-200 ${
                   isEditingDraft 
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white' 
-                    : 'bg-gray-600 hover:bg-gray-700 text-white'
+                    ? 'bg-blue-600/20 border border-blue-500/30 hover:bg-blue-600/30 text-white' 
+                    : 'bg-gray-600/20 border border-gray-500/30 hover:bg-gray-600/30 text-white'
                 }`}
                 title={!draft ? 'Primero genera un preview' : 'Editar draft de nómina'}
               >
@@ -1732,7 +1732,7 @@ export default function PayrollManager() {
                     type="button"
                 onClick={generatePDF}
                 disabled={!draft || isWorking}
-                className="bg-purple-600 hover:bg-purple-700 text-white h-20 flex flex-col items-center justify-center gap-2"
+                className="bg-purple-600/20 border border-purple-500/30 hover:bg-purple-600/30 text-white h-20 flex flex-col items-center justify-center gap-2 transition-all duration-200"
                 title={!draft ? 'Primero genera un preview' : 'Generar PDF de planilla general'}
               >
                     <Icon name="download" className="w-6 h-6" />
@@ -1745,10 +1745,10 @@ export default function PayrollManager() {
                     type="button"
                 onClick={generateAndSendVouchers}
                 disabled={!draft || isWorking}
-                className="bg-orange-600 hover:bg-orange-700 text-white h-20 flex flex-col items-center justify-center gap-2"
+                className="bg-orange-600/20 border border-orange-500/30 hover:bg-orange-600/30 text-white h-20 flex flex-col items-center justify-center gap-2 transition-all duration-200"
                 title={!draft ? 'Primero genera un preview' : 'Generar y enviar vouchers por email'}
               >
-                    <Icon name="send" className="w-6 h-6" />
+                    <Icon name="edit" className="w-6 h-6" />
                 <span className="text-sm font-medium">Generar y Enviar</span>
                 <span className="text-xs opacity-80">Vouchers (Email)</span>
               </Button>
