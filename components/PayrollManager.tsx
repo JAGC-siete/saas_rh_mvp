@@ -501,7 +501,9 @@ export default function PayrollManager() {
     records.forEach((record) => {
       stats.totalGrossSalary += record.gross_salary
       stats.totalDeductions += record.total_deductions
-      stats.totalNetSalary += record.net_salary
+      // RECALCULAR salario neto para asegurar consistencia: Bruto - Deducciones
+      const recalculatedNetSalary = record.gross_salary - record.total_deductions
+      stats.totalNetSalary += recalculatedNetSalary
       stats.totalIHSS += record.social_security
       stats.totalRAP += record.professional_tax
       stats.totalISR += record.income_tax
