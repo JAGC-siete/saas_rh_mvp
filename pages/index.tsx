@@ -113,7 +113,7 @@ export default function LandingPage() {
           <nav className="px-6 lg:px-8">
             <div className="flex items-center justify-between h-16">
               {/* Logo Sisu */}
-              <div className="flex items-center space-x-6">
+              <div className="flex items-center space-x-6 flex-1 min-w-0">
                 <div className="bg-white/10 px-3 py-2 rounded-lg border border-white/20 backdrop-blur-sm">
                   <Image
                     src="/logo-humano-sisu.png"
@@ -159,24 +159,24 @@ export default function LandingPage() {
                 </div>
                 
                 {/* Título */}
-                <h1 className="text-lg font-bold text-white max-w-lg lg:max-w-2xl xl:max-w-3xl leading-tight ml-4">
+                <h1 className="text-lg font-bold text-white max-w-md lg:max-w-lg xl:max-w-xl leading-tight ml-4 flex-shrink-0">
                   <span className="text-white">I.H.S.S., R.A.P. e I.S.R. en automático</span>{' '}
                   <span className="text-brand-300">activa, cumplí y ahorrá horas cada quincena</span>
                 </h1>
               </div>
 
               <div className="hidden md:block">
-                <div className="ml-10 flex items-baseline space-x-4">
+                <div className="ml-6 flex items-center space-x-4">
                   <a
                     href="#servicios"
-                    className="text-brand-200 hover:text-white px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0"
+                    className="text-brand-200 hover:text-white px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap"
                     onClick={scrollToSection}
                   >
                     Servicios
                   </a>
                   <Link
                     href="/app/login"
-                    className="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 shadow-lg shadow-black/20 hover:-translate-y-0.5 active:translate-y-0"
+                    className="bg-brand-600 hover:bg-brand-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 shadow-lg shadow-black/20 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap min-w-[140px] text-center"
                   >
                     Iniciar sesión
                   </Link>
