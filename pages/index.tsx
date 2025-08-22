@@ -71,17 +71,19 @@ export default function LandingPage() {
             <div className="flex items-center justify-between h-16">
               {/* Logo SISU */}
               <div className="flex items-center">
-                <Image
-                  src="/logo-humano-sisu.png"
-                  alt="Humano SISU Logo"
-                  width={48}
-                  height={48}
-                  className="rounded-lg"
-                />
+                <div className="bg-white/10 px-3 py-2 rounded-lg border border-white/20 backdrop-blur-sm">
+                  <Image
+                    src="/logo-humano-sisu.png"
+                    alt="Humano SISU Logo"
+                    width={64}
+                    height={64}
+                    className="rounded-lg"
+                  />
+                </div>
               </div>
               
               {/* Título */}
-              <h1 className="text-lg font-bold text-white max-w-md lg:max-w-lg xl:max-w-xl leading-tight ml-4 flex-shrink-0">
+              <h1 className="text-lg font-bold text-white max-w-md lg:max-w-lg xl:max-w-xl leading-tight ml-4 flex-shrink-0 text-left">
                 <span className="text-white">I.H.S.S., R.A.P. e I.S.R. en automático</span>{' '}
                 <span className="text-brand-300">activa, cumplí y ahorrá horas cada quincena</span>
               </h1>
