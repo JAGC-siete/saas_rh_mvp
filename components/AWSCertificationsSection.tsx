@@ -33,7 +33,7 @@ export default function AWSCertificationsSection() {
           </h2>
           
           <p className="text-brand-200/90 max-w-4xl mx-auto mb-8 text-lg">
-            Hecho sobre la misma nube que impulsa a Netflix, Airbnb y el 90% del internet.
+            Hecho con la misma tecnología que usan Netflix y Airbnb, ahora para tu MIPYMES en Honduras
             <br />
             <span className="text-brand-400 font-medium">
               Optimizado para que tu empresa en Honduras tenga la seguridad y escalabilidad de un gigante, sin pagar como uno.
@@ -51,14 +51,14 @@ export default function AWSCertificationsSection() {
                 key={cert.name}
                 className={`inline-flex items-center gap-3 ${cert.badgeColor} px-4 py-2 rounded-full border transition-all duration-300 hover:-translate-y-0.5`}
               >
-                {/* AWS Logo */}
-                <div className="w-8 h-8 flex items-center justify-center">
+                {/* AWS Logo - 3x más grande */}
+                <div className="w-24 h-24 flex items-center justify-center">
                   <Image
                     src={cert.icon}
                     alt={`${cert.name} logo`}
-                    width={32}
-                    height={32}
-                    className="w-8 h-8"
+                    width={96}
+                    height={96}
+                    className="w-24 h-24"
                   />
                 </div>
                 
