@@ -1,6 +1,9 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../lib/supabase/server'
 
+// Usar exceljs para generar Excel (más seguro que xlsx)
+import ExcelJS from 'exceljs'
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
@@ -106,9 +109,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
 async function exportToExcel(payrollRecords: any[], periodo: string, res: NextApiResponse) {
   try {
-    // Usar xlsx para generar Excel
-    const XLSX = require('xlsx')
-    
     // Preparar datos para Excel
     const excelData = payrollRecords.map(record => ({
       'Código': record.employees?.employee_code || '',
@@ -135,43 +135,7 @@ async function exportToExcel(payrollRecords: any[], periodo: string, res: NextAp
       'Generado': new Date(record.created_at).toLocaleDateString('es-HN')
     }))
 
-    // Crear workbook
-    const workbook = XLSX.utils.book_new()
-    
-    // Hoja principal de nómina
-    const worksheet = XLSX.utils.json_to_sheet(excelData)
-    
-    // Configurar anchos de columna
-    const colWidths = [
-      { wch: 12 }, // Código
-      { wch: 25 }, // Nombre
-      { wch: 15 }, // Departamento
-      { wch: 20 }, // Posición
-      { wch: 15 }, // Banco
-      { wch: 20 }, // Cuenta
-      { wch: 12 }, // Período Inicio
-      { wch: 12 }, // Período Fin
-      { wch: 12 }, // Salario Base
-      { wch: 12 }, // Días Trabajados
-      { wch: 12 }, // Días Ausente
-      { wch: 12 }, // Días Tardanza
-      { wch: 12 }, // Salario Bruto
-      { wch: 10 }, // ISR
-      { wch: 10 }, // IHSS
-      { wch: 10 }, // RAP
-      { wch: 15 }, // Total Deducciones
-      { wch: 12 }, // Salario Neto
-      { wch: 10 }, // Estado
-      { wch: 30 }, // Notas Ingresos
-      { wch: 30 }, // Notas Deducciones
-      { wch: 12 }  // Generado
-    ]
-    worksheet['!cols'] = colWidths
-
-    // Agregar hoja al workbook
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Nómina')
-
-    // Hoja de resumen
+    // Preparar datos de resumen
     const totalBruto = payrollRecords.reduce((sum, r) => sum + r.gross_salary, 0)
     const totalDeducciones = payrollRecords.reduce((sum, r) => sum + r.total_deductions, 0)
     const totalNeto = payrollRecords.reduce((sum, r) => sum + r.net_salary, 0)
@@ -185,11 +149,7 @@ async function exportToExcel(payrollRecords: any[], periodo: string, res: NextAp
       { 'Concepto': 'Promedio Salario Neto', 'Valor': totalNeto / totalEmpleados }
     ]
 
-    const resumenSheet = XLSX.utils.json_to_sheet(resumenData)
-    resumenSheet['!cols'] = [{ wch: 25 }, { wch: 15 }]
-    XLSX.utils.book_append_sheet(workbook, resumenSheet, 'Resumen')
-
-    // Hoja por departamento
+    // Preparar datos por departamento
     const deptData: { [key: string]: any } = {}
     payrollRecords.forEach(record => {
       const dept = record.employees?.department || 'Sin Departamento'
@@ -216,19 +176,93 @@ async function exportToExcel(payrollRecords: any[], periodo: string, res: NextAp
       'Promedio Neto': data.totalNeto / data.empleados
     }))
 
-    const deptSheet = XLSX.utils.json_to_sheet(deptSheetData)
-    deptSheet['!cols'] = [
-      { wch: 20 }, // Departamento
-      { wch: 12 }, // Empleados
-      { wch: 15 }, // Total Bruto
-      { wch: 15 }, // Total Deducciones
-      { wch: 15 }, // Total Neto
-      { wch: 15 }  // Promedio Neto
+    // Crear workbook
+    const workbook = new ExcelJS.Workbook()
+    const worksheet = workbook.addWorksheet('Nómina')
+    
+    // Agregar datos a la hoja principal
+    worksheet.columns = [
+      { header: 'Código', key: 'Código', width: 12 },
+      { header: 'Nombre', key: 'Nombre', width: 25 },
+      { header: 'Departamento', key: 'Departamento', width: 15 },
+      { header: 'Posición', key: 'Posición', width: 20 },
+      { header: 'Banco', key: 'Banco', width: 15 },
+      { header: 'Cuenta', key: 'Cuenta', width: 20 },
+      { header: 'Período Inicio', key: 'Período Inicio', width: 12 },
+      { header: 'Período Fin', key: 'Período Fin', width: 12 },
+      { header: 'Salario Base', key: 'Salario Base', width: 12 },
+      { header: 'Días Trabajados', key: 'Días Trabajados', width: 12 },
+      { header: 'Días Ausente', key: 'Días Ausente', width: 12 },
+      { header: 'Días Tardanza', key: 'Días Tardanza', width: 12 },
+      { header: 'Salario Bruto', key: 'Salario Bruto', width: 12 },
+      { header: 'ISR', key: 'ISR', width: 10 },
+      { header: 'IHSS', key: 'IHSS', width: 10 },
+      { header: 'RAP', key: 'RAP', width: 10 },
+      { header: 'Total Deducciones', key: 'Total Deducciones', width: 15 },
+      { header: 'Salario Neto', key: 'Salario Neto', width: 12 },
+      { header: 'Estado', key: 'Estado', width: 10 },
+      { header: 'Notas Ingresos', key: 'Notas Ingresos', width: 30 },
+      { header: 'Notas Deducciones', key: 'Notas Deducciones', width: 30 },
+      { header: 'Generado', key: 'Generado', width: 12 }
     ]
-    XLSX.utils.book_append_sheet(workbook, deptSheet, 'Por Departamento')
+
+    // Agregar datos
+    excelData.forEach(row => {
+      worksheet.addRow(row)
+    })
+
+    // Estilo para el encabezado
+    worksheet.getRow(1).font = { bold: true }
+    worksheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE0E0E0' }
+    }
+
+    // Agregar hoja de resumen
+    const resumenSheet = workbook.addWorksheet('Resumen')
+    resumenSheet.columns = [
+      { header: 'Concepto', key: 'Concepto', width: 25 },
+      { header: 'Valor', key: 'Valor', width: 15 }
+    ]
+
+    resumenData.forEach(row => {
+      resumenSheet.addRow(row)
+    })
+
+    // Estilo para el resumen
+    resumenSheet.getRow(1).font = { bold: true }
+    resumenSheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE0E0E0' }
+    }
+
+    // Agregar hoja por departamento
+    const deptSheet = workbook.addWorksheet('Por Departamento')
+    deptSheet.columns = [
+      { header: 'Departamento', key: 'Departamento', width: 20 },
+      { header: 'Empleados', key: 'Empleados', width: 12 },
+      { header: 'Total Bruto', key: 'Total Bruto', width: 15 },
+      { header: 'Total Deducciones', key: 'Total Deducciones', width: 15 },
+      { header: 'Total Neto', key: 'Total Neto', width: 15 },
+      { header: 'Promedio Neto', key: 'Promedio Neto', width: 15 }
+    ]
+
+    deptSheetData.forEach(row => {
+      deptSheet.addRow(row)
+    })
+
+    // Estilo para departamentos
+    deptSheet.getRow(1).font = { bold: true }
+    deptSheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE0E0E0' }
+    }
 
     // Generar buffer
-    const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' })
+    const excelBuffer = await workbook.xlsx.writeBuffer()
 
     // Enviar respuesta
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
