@@ -12,6 +12,7 @@ const ICONS = {
   money: L.BadgeDollarSign,
   check: L.Check,
   warning: L.AlertTriangle,
+  gear: L.Settings,
   edit: L.Pencil,
   send: L.Send,
   rocket: L.Rocket,
