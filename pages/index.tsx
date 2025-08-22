@@ -68,7 +68,7 @@ export default function LandingPage() {
           }`}
         >
           <nav className="px-6 lg:px-8">
-            <div className="flex items-center justify-between h-16">
+            <div className="flex items-center h-16">
               {/* Logo SISU */}
               <div className="flex items-center">
                 <div className="bg-white/10 px-3 py-2 rounded-lg border border-white/20 backdrop-blur-sm">
@@ -88,7 +88,7 @@ export default function LandingPage() {
                 <span className="text-brand-300">activa, cumplí y ahorrá horas cada quincena</span>
               </h1>
 
-              <div className="hidden md:block">
+              <div className="hidden md:block ml-auto">
                 <div className="ml-6 flex items-center space-x-4">
                   <a
                     href="#servicios"
