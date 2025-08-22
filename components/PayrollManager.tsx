@@ -299,7 +299,16 @@ export default function PayrollManager() {
     for (const bracket of ISR_BRACKETS_MENSUAL) {
       if (monthlySalary <= bracket.limit) {
         if (bracket.rate === 0) return 0
-        return bracket.base + (monthlySalary - (bracket.base > 0 ? bracket.limit : 0)) * bracket.rate
+        
+        // Calcular correctamente el excedente del tramo
+        if (bracket.base === 0) {
+          // Primer tramo: aplicar tasa desde el inicio
+          return (monthlySalary - 21457.76) * bracket.rate
+        } else {
+          // Tramo con base: aplicar base + tasa sobre excedente
+          const limiteInferior = bracket.limit === 67604.36 ? 30969.88 : 67604.36
+          return bracket.base + (monthlySalary - limiteInferior) * bracket.rate
+        }
       }
     }
     return 0
@@ -315,7 +324,7 @@ export default function PayrollManager() {
     netSalary: number
   } => {
     // IMPORTANTE: Para el dashboard, usamos salarios COMPLETOS mensuales
-    // NO proporcionales por días trabajados
+    // Las deducciones se aplican UNA SOLA VEZ al mes (no por quincena)
     const grossSalary = baseSalary // Salario completo mensual
     
     // Calcular horas extra si se incluyen
@@ -334,7 +343,7 @@ export default function PayrollManager() {
     // RAP: 1.5% sobre el excedente del salario mínimo
     const rap = Math.max(0, baseSalary - HONDURAS_2025_CONSTANTS.SALARIO_MINIMO) * HONDURAS_2025_CONSTANTS.RAP_PORCENTAJE
     
-    // ISR según tabla ANUAL de Honduras 2025
+    // ISR según tabla MENSUAL de Honduras 2025
     const isr = calculateISR(baseSalary) // Ya es mensual
     
     const totalDeductions = ihss + rap + isr

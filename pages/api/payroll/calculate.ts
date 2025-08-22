@@ -39,11 +39,20 @@ interface PlanillaItem {
 
 // CÁLCULO ISR CORRECTO 2025 - TABLA MENSUAL
 function calcularISR(salarioMensual: number): number {
-  // Aplicar tabla mensual directamente (NO convertir a anual)
+  // Aplicar tabla mensual directamente
   for (const bracket of HONDURAS_2025_CONSTANTS.ISR_BRACKETS_MENSUAL) {
     if (salarioMensual <= bracket.limit) {
       if (bracket.rate === 0) return 0
-      return bracket.base + (salarioMensual - (bracket.base > 0 ? bracket.limit : 0)) * bracket.rate
+      
+      // Calcular correctamente el excedente del tramo
+      if (bracket.base === 0) {
+        // Primer tramo: aplicar tasa desde el inicio
+        return (salarioMensual - 21457.76) * bracket.rate
+      } else {
+        // Tramo con base: aplicar base + tasa sobre excedente
+        const limiteInferior = bracket.limit === 67604.36 ? 30969.88 : 67604.36
+        return bracket.base + (salarioMensual - limiteInferior) * bracket.rate
+      }
     }
   }
   return 0
@@ -141,7 +150,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const fechaInicio = quincena === 1 ? `${periodo}-01` : `${periodo}-16`
     const fechaFin = quincena === 1 ? `${periodo}-15` : `${periodo}-${ultimoDia}`
     
-    // Solo aplicar deducciones en Q2
+    // IMPORTANTE: Las deducciones se aplican SOLO UNA VEZ al mes (en Q2)
+    // Q1: solo salario bruto proporcional por días trabajados
+    // Q2: salario bruto proporcional + deducciones mensuales completas
     const aplicarDeducciones = quincena === 2
 
     console.log('📅 Generando nómina para:', {
@@ -219,31 +230,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         record.check_in && 
         record.check_out)
       
+      // CALCULAR DÍAS TRABAJADOS EN LA QUINCENA ACTUAL
+      const diasQuincena = quincena === 1 ? 15 : ultimoDia - 15
       const days_worked = registros.length
-      const days_absent = (quincena === 1 ? 15 : ultimoDia - 15) - days_worked
+      const days_absent = diasQuincena - days_worked
       const late_days = calcularTardanzas(registros)
       
       const base_salary = Number(emp.base_salary) || 0
-      const total_earnings = base_salary // Salario COMPLETO mensual
+      
+      // CALCULAR SALARIO PROPORCIONAL POR DÍAS TRABAJADOS EN LA QUINCENA
+      const salarioProporcional = (base_salary / 30) * days_worked
+      const total_earnings = salarioProporcional
       
       let IHSS = 0, RAP = 0, ISR = 0, total_deductions = 0, total = 0
       let notes_on_ingress = ''
       let notes_on_deductions = ''
 
-      // APLICAR DEDUCCIONES SOLO EN Q2 (segunda quincena)
+      // APLICAR DEDUCCIONES SOLO UNA VEZ AL MES (en Q2)
       if (aplicarDeducciones) {
-        // CÁLCULOS CORRECTOS 2025
-        IHSS = calcularIHSS(base_salary)
-        RAP = calcularRAP(base_salary)
-        ISR = calcularISR(base_salary)
+        // CÁLCULOS CORRECTOS 2025 - DEDUCCIONES MENSUALES COMPLETAS
+        IHSS = calcularIHSS(base_salary)  // Deducción mensual completa
+        RAP = calcularRAP(base_salary)    // Deducción mensual completa
+        ISR = calcularISR(base_salary)    // Deducción mensual completa
         total_deductions = IHSS + RAP + ISR
         total = total_earnings - total_deductions
         
-        notes_on_deductions = `Deducciones Q2: IHSS L.${IHSS.toFixed(2)}, RAP L.${RAP.toFixed(2)}, ISR L.${ISR.toFixed(2)}`
+        notes_on_deductions = `Deducciones mensuales completas aplicadas en Q2: IHSS L.${IHSS.toFixed(2)}, RAP L.${RAP.toFixed(2)}, ISR L.${ISR.toFixed(2)}`
       } else {
-        // Q1: sin deducciones
+        // Q1: solo salario proporcional, sin deducciones
         total = total_earnings
-        notes_on_deductions = 'Primera quincena: sin deducciones (se aplican en Q2)'
+        notes_on_deductions = 'Primera quincena: solo salario proporcional (deducciones se aplican en Q2)'
       }
 
       // Notas automáticas
