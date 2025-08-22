@@ -55,50 +55,6 @@ export default function LandingPage() {
         <link rel="canonical" href="https://humano-sisu.com" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        
-        {/* JSON-LD para certificados AWS */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "Organization",
-              "name": "Humano SISU",
-              "description": "Sistema de automatización de planilla para empresas en Honduras",
-              "url": "https://humano-sisu.com",
-              "logo": "https://humano-sisu.com/logo-humano-sisu.png",
-              "hasCredential": [
-                {
-                  "@type": "EducationalOccupationalCredential",
-                  "credentialCategory": "AWS Solutions Architect Associate",
-                  "recognizedBy": {
-                    "@type": "Organization",
-                    "name": "Amazon Web Services"
-                  },
-                  "image": "https://humano-sisu.com/image-aws-solutions-architect.png"
-                },
-                {
-                  "@type": "EducationalOccupationalCredential",
-                  "credentialCategory": "AWS Developer Associate",
-                  "recognizedBy": {
-                    "@type": "Organization",
-                    "name": "Amazon Web Services"
-                  },
-                  "image": "https://humano-sisu.com/image-aws-developer.png"
-                },
-                {
-                  "@type": "EducationalOccupationalCredential",
-                  "credentialCategory": "AWS Cloud Practitioner",
-                  "recognizedBy": {
-                    "@type": "Organization",
-                    "name": "Amazon Web Services"
-                  },
-                  "image": "https://humano-sisu.com/image-aws-cloud-practitioner.png"
-                }
-              ]
-            })
-          }}
-        />
       </Head>
 
       {/* Header */}
@@ -113,58 +69,22 @@ export default function LandingPage() {
         >
           <nav className="px-6 lg:px-8">
             <div className="flex items-center justify-between h-16">
-              {/* Logo Sisu */}
-              <div className="flex items-center space-x-6 flex-1 min-w-0">
-                <div className="bg-white/10 px-3 py-2 rounded-lg border border-white/20 backdrop-blur-sm">
-                  <Image
-                    src="/logo-humano-sisu.png"
-                    alt="Humano SISU Logo"
-                    width={48}
-                    height={48}
-                    className="rounded-lg"
-                  />
-                </div>
-                
-                {/* Certificados AWS */}
-                <div className="hidden lg:flex items-center space-x-3">
-                  <div className="flex items-center space-x-2 bg-white/10 px-2 py-1 rounded-lg border border-white/20">
-                    <Image
-                      src="/image-aws-solutions-architect.png"
-                      alt="AWS Solutions Architect Associate"
-                      width={28}
-                      height={28}
-                      className="rounded"
-                    />
-                    <span className="text-xs text-white/80">AWS Solutions Architect</span>
-                  </div>
-                  <div className="flex items-center space-x-2 bg-white/10 px-2 py-1 rounded-lg border border-white/20">
-                    <Image
-                      src="/image-aws-developer.png"
-                      alt="AWS Developer Associate"
-                      width={28}
-                      height={28}
-                      className="rounded"
-                    />
-                    <span className="text-xs text-white/80">AWS Developer</span>
-                  </div>
-                  <div className="flex items-center space-x-2 bg-white/10 px-2 py-1 rounded-lg border border-white/20">
-                    <Image
-                      src="/image-aws-cloud-practitioner.png"
-                      alt="AWS Cloud Practitioner"
-                      width={28}
-                      height={28}
-                      className="rounded"
-                    />
-                    <span className="text-xs text-white/80">AWS Cloud Practitioner</span>
-                  </div>
-                </div>
-                
-                {/* Título */}
-                <h1 className="text-lg font-bold text-white max-w-md lg:max-w-lg xl:max-w-xl leading-tight ml-4 flex-shrink-0">
-                  <span className="text-white">I.H.S.S., R.A.P. e I.S.R. en automático</span>{' '}
-                  <span className="text-brand-300">activa, cumplí y ahorrá horas cada quincena</span>
-                </h1>
+              {/* Logo SISU */}
+              <div className="flex items-center">
+                <Image
+                  src="/logo-humano-sisu.png"
+                  alt="Humano SISU Logo"
+                  width={48}
+                  height={48}
+                  className="rounded-lg"
+                />
               </div>
+              
+              {/* Título */}
+              <h1 className="text-lg font-bold text-white max-w-md lg:max-w-lg xl:max-w-xl leading-tight ml-4 flex-shrink-0">
+                <span className="text-white">I.H.S.S., R.A.P. e I.S.R. en automático</span>{' '}
+                <span className="text-brand-300">activa, cumplí y ahorrá horas cada quincena</span>
+              </h1>
 
               <div className="hidden md:block">
                 <div className="ml-6 flex items-center space-x-4">
@@ -211,39 +131,6 @@ export default function LandingPage() {
           {isMobileMenuOpen && (
             <div className="md:hidden">
               <div className="px-2 pt-2 pb-3 space-y-1 glass-strong rounded-lg shadow-lg mt-2">
-                                {/* Certificados en mobile */}
-                <div className="flex items-center justify-center space-x-2 mb-3">
-                  <div className="flex items-center space-x-1 bg-white/10 px-2 py-1 rounded-lg border border-white/20">
-                    <Image
-                      src="/image-aws-solutions-architect.png"
-                      alt="AWS Solutions Architect Associate"
-                      width={20}
-                      height={20}
-                      className="rounded"
-                    />
-                    <span className="text-xs text-white/80">Solutions Architect</span>
-                  </div>
-                  <div className="flex items-center space-x-1 bg-white/10 px-2 py-1 rounded-lg border border-white/20">
-                    <Image
-                      src="/image-aws-developer.png"
-                      alt="AWS Developer Associate"
-                      width={20}
-                      height={20}
-                      className="rounded"
-                    />
-                    <span className="text-xs text-white/80">Developer</span>
-                  </div>
-                  <div className="flex items-center space-x-1 bg-white/10 px-2 py-1 rounded-lg border border-white/20">
-                    <Image
-                      src="/image-aws-cloud-practitioner.png"
-                      alt="AWS Cloud Practitioner"
-                      width={20}
-                      height={20}
-                      className="rounded"
-                    />
-                    <span className="text-xs text-white/80">Cloud Practitioner</span>
-                  </div>
-                </div>
                 
                 <a
                   href="#servicios"
