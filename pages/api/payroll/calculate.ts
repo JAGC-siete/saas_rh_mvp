@@ -6,6 +6,21 @@ import { authenticateUser } from '../../../lib/auth-helpers'
 const SALARIO_MINIMO = 11903.13 // Salario mínimo en Honduras
 const TOLERANCIA_TARDANZA = 15 // Minutos de tolerancia para tardanza
 
+// Constantes actualizadas para Honduras 2025
+const HONDURAS_2025_CONSTANTS = {
+  SALARIO_MINIMO: 11903.13,
+  IHSS_TECHO: 11903.13,        // Techo IHSS 2025 (EM + IVM)
+  IHSS_PORCENTAJE_EMPLEADO: 0.05,  // 5% total (2.5% EM + 2.5% IVM)
+  ISR_EXENCION_MENSUAL: 21457.76,  // Exención mensual 2025
+  ISR_EXENCION_ANUAL: 40000,   // Deducción médica anual
+  ISR_BRACKETS_MENSUAL: [
+    { limit: 21457.76, rate: 0.00, base: 0 },           // Exento
+    { limit: 30969.88, rate: 0.15, base: 0 },           // 15%
+    { limit: 67604.36, rate: 0.20, base: 1426.82 },     // 20%
+    { limit: Infinity, rate: 0.25, base: 9120.37 }      // 25%
+  ]
+}
+
 interface PlanillaItem {
   id: string
   name: string
@@ -26,28 +41,30 @@ interface PlanillaItem {
   notes_on_deductions: string
 }
 
-// Cálculo de ISR según tabla progresiva de Honduras
+// Cálculo de ISR según tabla mensual de Honduras 2025
 function calcularISR(salarioBase: number): number {
-  // Tabla progresiva simplificada para Honduras
-  if (salarioBase <= 200000) {
-    return 0
-  } else if (salarioBase <= 350000) {
-    return (salarioBase - 200000) * 0.15
-  } else if (salarioBase <= 500000) {
-    return 22500 + (salarioBase - 350000) * 0.20
-  } else {
-    return 52500 + (salarioBase - 500000) * 0.25
+  const baseImponible = salarioBase - HONDURAS_2025_CONSTANTS.ISR_EXENCION_MENSUAL
+  
+  if (baseImponible <= 0) return 0
+  
+  for (const bracket of HONDURAS_2025_CONSTANTS.ISR_BRACKETS_MENSUAL) {
+    if (baseImponible <= bracket.limit) {
+      return bracket.base + (baseImponible - (bracket.base > 0 ? bracket.limit : 0)) * bracket.rate
+    }
   }
+  
+  return 0
 }
 
 function calcularIHSS(salarioBase: number): number {
-  // IHSS: 2.5% del empleado + 2.5% del empleador (solo mostramos la parte del empleado)
-  return Math.min(salarioBase * 0.025, 595.16) // IHSS_FIJO es 595.16
+  // IHSS: 5% del empleado (2.5% EM + 2.5% IVM) con techo L 11,903.13
+  const ihssBase = Math.min(salarioBase, HONDURAS_2025_CONSTANTS.IHSS_TECHO)
+  return ihssBase * HONDURAS_2025_CONSTANTS.IHSS_PORCENTAJE_EMPLEADO
 }
 
 function calcularRAP(salarioBase: number): number {
   // RAP: 1.5% sobre el excedente del salario mínimo
-  return Math.max(0, salarioBase - SALARIO_MINIMO) * 0.015
+  return Math.max(0, salarioBase - HONDURAS_2025_CONSTANTS.SALARIO_MINIMO) * 0.015
 }
 
 // Función para calcular tardanzas basada en horario de Paragon
@@ -219,14 +236,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       let notes_on_ingress = ''
       let notes_on_deductions = ''
 
-      if (aplicarDeducciones) {
-        IHSS = calcularIHSS(base_salary) / 2 // Dividir por 2 para quincena
-        RAP = calcularRAP(base_salary) / 2
-        ISR = calcularISR(base_salary) / 2
+      // IMPORTANTE: Las deducciones (IHSS, RAP, ISR) se aplican SOLO en la segunda quincena del mes
+      // Primera quincena: solo salario bruto, sin deducciones
+      // Segunda quincena: salario bruto - deducciones mensuales
+      if (aplicarDeducciones && quincena === 2) {
+        // Calcular deducciones mensuales completas
+        IHSS = calcularIHSS(base_salary) // Ya es mensual
+        RAP = calcularRAP(base_salary)   // Ya es mensual
+        ISR = calcularISR(base_salary)   // Ya es mensual
         total_deductions = IHSS + RAP + ISR
         total = total_earnings - total_deductions
-      } else {
+        
+        notes_on_deductions = `Deducciones aplicadas en Q2: IHSS L.${IHSS.toFixed(2)}, RAP L.${RAP.toFixed(2)}, ISR L.${ISR.toFixed(2)}`
+      } else if (quincena === 1) {
+        // Primera quincena: sin deducciones
         total = total_earnings
+        notes_on_deductions = 'Primera quincena: sin deducciones (se aplican en Q2)'
+      } else {
+        // Si no se aplican deducciones por configuración
+        total = total_earnings
+        notes_on_deductions = 'Deducciones no aplicadas por configuración'
       }
 
       // Notas automáticas mejoradas
