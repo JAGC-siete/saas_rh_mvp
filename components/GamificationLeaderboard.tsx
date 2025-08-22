@@ -64,10 +64,10 @@ export default function GamificationLeaderboard({ companyId, limit = 20 }: Gamif
   }
 
   const getRankColor = (rank: number) => {
-    if (rank === 1) return 'bg-gradient-to-r from-yellow-400 to-yellow-600'
-    if (rank === 2) return 'bg-gradient-to-r from-gray-300 to-gray-500'
-    if (rank === 3) return 'bg-gradient-to-r from-orange-400 to-orange-600'
-    return 'bg-gray-700 hover:bg-gray-600'
+    if (rank === 1) return 'bg-yellow-500/20 border border-yellow-400/30 hover:bg-yellow-500/30'
+    if (rank === 2) return 'bg-gray-400/20 border border-gray-300/30 hover:bg-gray-400/30'
+    if (rank === 3) return 'bg-orange-500/20 border border-orange-400/30 hover:bg-orange-500/30'
+    return 'bg-white/5 border border-white/20 hover:bg-white/10'
   }
 
   if (loading) {
@@ -103,7 +103,7 @@ export default function GamificationLeaderboard({ companyId, limit = 20 }: Gamif
             <p className="text-red-400 mb-4">{error}</p>
             <button 
               onClick={fetchLeaderboard}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md text-white"
+              className="px-4 py-2 bg-blue-600/20 border border-blue-500/30 hover:bg-blue-600/30 rounded-md text-white transition-all duration-200"
             >
               Retry
             </button>
@@ -183,7 +183,7 @@ export default function GamificationLeaderboard({ companyId, limit = 20 }: Gamif
           <div className="mt-6 text-center">
             <button 
               onClick={fetchLeaderboard}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md text-white text-sm"
+              className="px-4 py-2 bg-blue-600/20 border border-blue-500/30 hover:bg-blue-600/30 rounded-md text-white text-sm transition-all duration-200"
             >
               Refresh Leaderboard
             </button>

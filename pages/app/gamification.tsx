@@ -225,25 +225,25 @@ export default function GamificationDashboard() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="p-4 bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-lg text-white">
+                <div className="p-4 bg-yellow-500/20 border border-yellow-400/30 rounded-lg text-white hover:bg-yellow-500/30 transition-all duration-200">
                   <div className="text-2xl mb-2"></div>
                   <h4 className="font-semibold">Perfect Week</h4>
                   <p className="text-sm opacity-90">5 días puntual en una semana</p>
                   <div className="text-lg font-bold mt-2">+50 pts</div>
                 </div>
-                <div className="p-4 bg-gradient-to-r from-blue-400 to-blue-600 rounded-lg text-white">
+                <div className="p-4 bg-blue-500/20 border border-blue-400/30 rounded-lg text-white hover:bg-blue-500/30 transition-all duration-200">
                   <div className="text-2xl mb-2"></div>
                   <h4 className="font-semibold">Early Bird</h4>
                   <p className="text-sm opacity-90">Llegar temprano 3 veces</p>
                   <div className="text-lg font-bold mt-2">+30 pts</div>
                 </div>
-                <div className="p-4 bg-gradient-to-r from-purple-400 to-purple-600 rounded-lg text-white">
+                <div className="p-4 bg-purple-500/20 border border-purple-400/30 rounded-lg text-white hover:bg-purple-500/30 transition-all duration-200">
                   <div className="text-2xl mb-2"></div>
                   <h4 className="font-semibold">Streak Master</h4>
                   <p className="text-sm opacity-90">10 días consecutivos puntual</p>
                   <div className="text-lg font-bold mt-2">+100 pts</div>
                 </div>
-                <div className="p-4 bg-gradient-to-r from-cyan-400 to-cyan-600 rounded-lg text-white">
+                <div className="p-4 bg-cyan-500/20 border border-cyan-400/30 rounded-lg text-white hover:bg-cyan-500/30 transition-all duration-200">
                   <div className="text-2xl mb-2"></div>
                   <h4 className="font-semibold">Perfect Month</h4>
                   <p className="text-sm opacity-90">Mes completo sin tardanzas</p>

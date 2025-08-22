@@ -60,15 +60,15 @@ export default function EmployeeAchievements({ companyId, employeeId, limit = 10
 
   const getBadgeColor = (color: string) => {
     const colorMap: { [key: string]: string } = {
-      'gold': 'bg-gradient-to-r from-yellow-400 to-yellow-600',
-      'blue': 'bg-gradient-to-r from-blue-400 to-blue-600',
-      'purple': 'bg-gradient-to-r from-purple-400 to-purple-600',
-      'diamond': 'bg-gradient-to-r from-cyan-400 to-cyan-600',
-      'green': 'bg-gradient-to-r from-green-400 to-green-600',
-      'orange': 'bg-gradient-to-r from-orange-400 to-orange-600',
-      'red': 'bg-gradient-to-r from-red-400 to-red-600'
+      'gold': 'bg-yellow-500/20 border border-yellow-400/30 hover:bg-yellow-500/30',
+      'blue': 'bg-blue-500/20 border border-blue-400/30 hover:bg-blue-500/30',
+      'purple': 'bg-purple-500/20 border border-purple-400/30 hover:bg-purple-500/30',
+      'diamond': 'bg-cyan-500/20 border border-cyan-400/30 hover:bg-cyan-500/30',
+      'green': 'bg-green-500/20 border border-green-400/30 hover:bg-green-500/30',
+      'orange': 'bg-orange-500/20 border border-orange-400/30 hover:bg-orange-500/30',
+      'red': 'bg-red-500/20 border border-red-400/30 hover:bg-red-500/30'
     }
-    return colorMap[color] || 'bg-gray-600'
+    return colorMap[color] || 'bg-white/5 border border-white/20 hover:bg-white/10'
   }
 
   if (loading) {
@@ -98,7 +98,7 @@ export default function EmployeeAchievements({ companyId, employeeId, limit = 10
             <p className="text-red-400 mb-4">{error}</p>
             <button 
               onClick={fetchAchievements}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md text-white"
+              className="px-4 py-2 bg-blue-600/20 border border-blue-500/30 hover:bg-blue-600/30 rounded-md text-white transition-all duration-200"
             >
               Retry
             </button>
@@ -170,7 +170,7 @@ export default function EmployeeAchievements({ companyId, employeeId, limit = 10
           <div className="mt-6 text-center">
             <button 
               onClick={fetchAchievements}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md text-white text-sm"
+              className="px-4 py-2 bg-blue-600/20 border border-blue-500/30 hover:bg-blue-600/30 rounded-md text-white text-sm transition-all duration-200"
             >
               Refresh Achievements
             </button>
