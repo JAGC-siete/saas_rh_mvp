@@ -1,0 +1,1 @@
+LINT_STAGED="$\{staged\}" node -e 'process.exit(0)'

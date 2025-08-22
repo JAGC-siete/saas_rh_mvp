@@ -4,6 +4,9 @@
 
 @layer base {
   :root {
+    /* Icon tokens */
+    --icon-size: 24px;
+    --icon-stroke: 1.75;
     /* Gradiente con tus colores */
     --bg-start: #0f172a;  /* slate-900 */
     --bg-mid:   #1e3a8a;  /* blue-900  ⭐ */
@@ -78,6 +81,7 @@
   body {
     @apply bg-background text-foreground;
   }
+  svg { width: var(--icon-size); height: var(--icon-size); stroke-width: var(--icon-stroke); }
 }
 
 /* Custom scrollbar */
