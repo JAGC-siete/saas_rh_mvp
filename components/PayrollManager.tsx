@@ -6,6 +6,49 @@ import { Input } from './ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
 
+// Professional Icons Component
+const Icon = ({ name, className = "w-5 h-5" }: { name: string; className?: string }) => {
+  const icons: { [key: string]: string } = {
+    // Navigation & Layout
+    'building': '🏢',
+    'dashboard': '📊',
+    'settings': '⚙️',
+    'users': '👥',
+    'calendar': '📅',
+    'clock': '⏰',
+    'money': '💰',
+    'check': '✅',
+    'warning': '⚠️',
+    'edit': '✏️',
+    'download': '📄',
+    'send': '📤',
+    'rocket': '🚀',
+    'refresh': '🔄',
+    'close': '✕',
+    'search': '🔍',
+    'filter': '🔧',
+    'chart': '📈',
+    'receipt': '🧾',
+    'envelope': '✉️',
+    'whatsapp': '💬',
+    'target': '🎯',
+    'document': '📋',
+    'calculator': '🧮',
+    'database': '🗄️',
+    'shield': '🛡️',
+    'gear': '⚙️',
+    'arrow-right': '→',
+    'arrow-down': '↓',
+    'plus': '+',
+    'minus': '-',
+    'info': 'ℹ️',
+    'success': '✅',
+    'error': '❌'
+  }
+  
+  return <span className={className}>{icons[name] || '•'}</span>
+}
+
 // MODE: por días (cálculo basado en días trabajados)
 interface PayrollRecord {
   id: string
@@ -1276,7 +1319,10 @@ export default function PayrollManager() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-white">🏢 Gestión de Nómina - Paragon Honduras</h1>
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <Icon name="building" className="w-6 h-6" />
+            Gestión de Nómina - Paragon Honduras
+          </h1>
           <p className="text-gray-300">Sistema integral de procesamiento y administración de nóminas</p>
       </div>
 
@@ -1288,7 +1334,7 @@ export default function PayrollManager() {
         {previewRecords.length > 0 && (
           <div className="bg-yellow-500/20 border border-yellow-500/30 rounded-lg p-4">
             <div className="flex items-center gap-2">
-              <span className="text-yellow-400">⚠️</span>
+              <Icon name="warning" className="w-5 h-5 text-yellow-400" />
               <span className="text-yellow-200 font-medium">Modo Preview</span>
               <span className="text-yellow-300 text-sm">
                 Mostrando estimado en vivo (no persistido) para {selectedPeriod} Q{selectedQuincena}
@@ -1301,7 +1347,10 @@ export default function PayrollManager() {
         {previewRecords.length > 0 && (
           <Card variant="glass">
             <CardHeader>
-              <CardTitle className="text-white">🔧 Configuración de Escenario Preview</CardTitle>
+              <CardTitle className="text-white flex items-center gap-2">
+                <Icon name="gear" className="w-5 h-5" />
+                Configuración de Escenario Preview
+              </CardTitle>
               <CardDescription className="text-gray-300">
                 Ajusta parámetros para simular diferentes escenarios de nómina
               </CardDescription>
@@ -1310,8 +1359,9 @@ export default function PayrollManager() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {/* Días Trabajados */}
                 <div>
-                  <label className="block text-sm font-medium text-white mb-2">
-                    📅 Días Trabajados
+                  <label className="block text-sm font-medium text-white mb-2 flex items-center gap-2">
+                    <Icon name="calendar" className="w-4 h-4" />
+                    Días Trabajados
                   </label>
                   <Input
                     type="number"
@@ -1338,16 +1388,18 @@ export default function PayrollManager() {
                     className="w-4 h-4 accent-brand-500"
                     id="includeOvertime"
                   />
-                  <label htmlFor="includeOvertime" className="text-sm font-medium text-white">
-                    ⏰ Incluir Horas Extra
+                  <label htmlFor="includeOvertime" className="text-sm font-medium text-white flex items-center gap-2">
+                    <Icon name="clock" className="w-4 h-4" />
+                    Incluir Horas Extra
                   </label>
                 </div>
 
                 {/* Horas Extra */}
                 {previewScenario.includeOvertime && (
                   <div>
-                    <label className="block text-sm font-medium text-white mb-2">
-                      🔥 Horas Extra
+                    <label className="block text-sm font-medium text-white mb-2 flex items-center gap-2">
+                      <Icon name="clock" className="w-4 h-4" />
+                      Horas Extra
                     </label>
                     <Input
                       type="number"
@@ -1365,8 +1417,9 @@ export default function PayrollManager() {
                 {/* Tasa de Horas Extra */}
                 {previewScenario.includeOvertime && (
                   <div>
-                    <label className="block text-sm font-medium text-white mb-2">
-                      💰 Tasa Hora Extra
+                    <label className="block text-sm font-medium text-white mb-2 flex items-center gap-2">
+                      <Icon name="money" className="w-4 h-4" />
+                      Tasa Hora Extra
                     </label>
                     <Input
                       type="number"
@@ -1384,8 +1437,9 @@ export default function PayrollManager() {
 
                 {/* Ajuste de Salario Base */}
                 <div>
-                  <label className="block text-sm font-medium text-white mb-2">
-                    💵 Ajuste Salario Base
+                  <label className="block text-sm font-medium text-white mb-2 flex items-center gap-2">
+                    <Icon name="money" className="w-4 h-4" />
+                    Ajuste Salario Base
                   </label>
                   <Input
                     type="number"
@@ -1410,14 +1464,18 @@ export default function PayrollManager() {
                     }}
                     className="bg-brand-800 hover:bg-brand-700 text-white w-full"
                   >
-                    🔄 Actualizar Preview
+                    <Icon name="refresh" className="w-4 h-4 mr-2" />
+                    Actualizar Preview
                   </Button>
                 </div>
               </div>
 
               {/* Información de Fórmulas */}
               <div className="mt-4 p-3 bg-brand-800/20 border border-brand-500/30 rounded-lg">
-                <div className="text-sm text-brand-300 font-medium mb-2">📊 Fórmulas Oficiales de Honduras 2025:</div>
+                <div className="text-sm text-brand-300 font-medium mb-2 flex items-center gap-2">
+                  <Icon name="chart" className="w-4 h-4" />
+                  Fórmulas Oficiales de Honduras 2025:
+                </div>
                 <div className="text-xs text-gray-400 space-y-1">
                   <div>• <strong>IHSS:</strong> 5% del salario base (máx. L.11,903.13)</div>
                   <div>• <strong>RAP:</strong> 1.5% sobre excedente del mínimo</div>
@@ -1556,25 +1614,30 @@ export default function PayrollManager() {
 
         {/* Chips de Contexto */}
         <div className="flex flex-wrap gap-2 items-center">
-          <div className="px-3 py-1 bg-brand-800/20 border border-brand-500/30 rounded-full text-sm text-brand-300">
-            📅 {selectedPeriod ? new Date(selectedPeriod + '-01').toLocaleDateString('es-HN', { year: 'numeric', month: 'long' }) : 'Período actual'}
+          <div className="px-3 py-1 bg-brand-800/20 border border-brand-500/30 rounded-full text-sm text-brand-300 flex items-center gap-2">
+            <Icon name="calendar" className="w-4 h-4" />
+            {selectedPeriod ? new Date(selectedPeriod + '-01').toLocaleDateString('es-HN', { year: 'numeric', month: 'long' }) : 'Período actual'}
           </div>
-          <div className="px-3 py-1 bg-brand-800/20 border border-brand-500/30 rounded-full text-sm text-brand-300">
-            ⏰ Quincena {selectedQuincena}: {selectedQuincena === 1 ? '1-15' : `16-${lastDayOfSelectedMonth}`}
+          <div className="px-3 py-1 bg-brand-800/20 border border-brand-500/30 rounded-full text-sm text-brand-300 flex items-center gap-2">
+            <Icon name="clock" className="w-4 h-4" />
+            Quincena {selectedQuincena}: {selectedQuincena === 1 ? '1-15' : `16-${lastDayOfSelectedMonth}`}
           </div>
           {filterDept && (
-            <div className="px-3 py-1 bg-brand-800/20 border border-brand-500/30 rounded-full text-sm text-brand-300">
-              🏢 {departments[filterDept] || filterDept}
+            <div className="px-3 py-1 bg-brand-800/20 border border-brand-500/30 rounded-full text-sm text-brand-300 flex items-center gap-2">
+              <Icon name="building" className="w-4 h-4" />
+              {departments[filterDept] || filterDept}
             </div>
           )}
           {filterEmployee && (
-            <div className="px-3 py-1 bg-brand-800/20 border border-brand-500/30 rounded-full text-sm text-brand-300">
-              👤 {filterEmployee}
+            <div className="px-3 py-1 bg-brand-800/20 border border-brand-500/30 rounded-full text-sm text-brand-300 flex items-center gap-2">
+              <Icon name="users" className="w-4 h-4" />
+              {filterEmployee}
             </div>
           )}
           {previewRecords.length > 0 && (
-            <div className="px-3 py-1 bg-yellow-500/20 border border-yellow-500/30 rounded-full text-sm text-yellow-300">
-              🔍 Modo Preview
+            <div className="px-3 py-1 bg-yellow-500/20 border border-yellow-500/30 rounded-full text-sm text-yellow-300 flex items-center gap-2">
+              <Icon name="search" className="w-4 h-4" />
+              Modo Preview
             </div>
           )}
         </div>
@@ -1663,7 +1726,10 @@ export default function PayrollManager() {
 
               {/* Acciones de Nómina Integradas */}
               <div className="pt-4 border-t border-white/10">
-                <h4 className="text-lg font-semibold text-white mb-4">🎯 Acciones de Nómina</h4>
+                <h4 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                  <Icon name="target" className="w-5 h-5" />
+                  Acciones de Nómina
+                </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                   {/* Botón 1: Generar Preview */}
                   <Button
@@ -1679,7 +1745,7 @@ export default function PayrollManager() {
                     className="bg-green-600 hover:bg-green-700 text-white h-20 flex flex-col items-center justify-center gap-2"
                     title={employees.length === 0 ? 'No hay empleados activos' : 'Generar preview de nómina'}
                   >
-                    <span className="text-2xl">📝</span>
+                    <Icon name="document" className="w-6 h-6" />
                     <span className="text-sm font-medium">Generar Preview</span>
                     <span className="text-xs opacity-80">(Draft)</span>
                   </Button>
@@ -1696,7 +1762,7 @@ export default function PayrollManager() {
                     }`}
                     title={!draft ? 'Primero genera un preview' : 'Editar draft de nómina'}
                   >
-                    <span className="text-2xl">✏️</span>
+                    <Icon name="edit" className="w-6 h-6" />
                     <span className="text-sm font-medium">Editar Draft</span>
                     <span className="text-xs opacity-80">
                       {isEditingDraft ? 'Activado' : 'Toggle'}
@@ -1711,7 +1777,7 @@ export default function PayrollManager() {
                     className="bg-purple-600 hover:bg-purple-700 text-white h-20 flex flex-col items-center justify-center gap-2"
                     title={!draft ? 'Primero genera un preview' : 'Generar PDF de planilla general'}
                   >
-                    <span className="text-2xl">📄</span>
+                    <Icon name="download" className="w-6 h-6" />
                     <span className="text-sm font-medium">Generar PDF</span>
                     <span className="text-xs opacity-80">(Planilla General)</span>
                   </Button>
@@ -1724,7 +1790,7 @@ export default function PayrollManager() {
                     className="bg-orange-600 hover:bg-orange-700 text-white h-20 flex flex-col items-center justify-center gap-2"
                     title={!draft ? 'Primero genera un preview' : 'Generar y enviar vouchers por email'}
                   >
-                    <span className="text-2xl">📤</span>
+                    <Icon name="send" className="w-6 h-6" />
                     <span className="text-sm font-medium">Generar y Enviar</span>
                     <span className="text-xs opacity-80">Vouchers (Email)</span>
                   </Button>
@@ -1734,7 +1800,7 @@ export default function PayrollManager() {
                 {draft && (
                   <div className="mb-6 bg-yellow-500/20 border border-yellow-500/30 rounded-lg p-4">
                     <div className="flex items-center gap-2">
-                      <span className="text-yellow-400">⚠️</span>
+                      <Icon name="warning" className="w-5 h-5 text-yellow-400" />
                       <span className="text-yellow-200 font-medium">Preview (no persistido)</span>
                       <span className="text-yellow-300 text-sm">
                         — Periodo {draft.meta.periodo} Q{draft.meta.quincena} • {draft.rows.length} empleados
@@ -1752,14 +1818,18 @@ export default function PayrollManager() {
                 {draft && isEditingDraft && (
                   <div className="mb-6">
                     <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-lg font-semibold text-white">📋 Editar Draft de Nómina</h3>
+                      <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                        <Icon name="document" className="w-5 h-5" />
+                        Editar Draft de Nómina
+                      </h3>
                       <Button
                         onClick={() => setIsEditingDraft(false)}
                         variant="outline"
                         size="sm"
                         className="border-white/20 text-white hover:bg-white/10"
                       >
-                        ✕ Cerrar
+                        <Icon name="close" className="w-4 h-4 mr-1" />
+                        Cerrar
                       </Button>
                     </div>
                     
@@ -1850,7 +1920,10 @@ export default function PayrollManager() {
                     </div>
                     
                     <div className="mt-4 p-3 bg-brand-800/20 border border-brand-500/30 rounded-lg">
-                      <div className="text-sm text-brand-300 font-medium mb-2">📊 Totales Actualizados:</div>
+                      <div className="text-sm text-brand-300 font-medium mb-2 flex items-center gap-2">
+                        <Icon name="chart" className="w-4 h-4" />
+                        Totales Actualizados:
+                      </div>
                       <div className="grid grid-cols-3 gap-4 text-xs text-gray-300">
                         <div>Bruto: <span className="text-white font-mono">{formatCurrency(draft.totals.gross)}</span></div>
                         <div>Deducciones: <span className="text-white font-mono">{formatCurrency(draft.totals.deductions)}</span></div>
@@ -1863,7 +1936,17 @@ export default function PayrollManager() {
               
               <div className="flex flex-wrap gap-4 pt-4 border-t border-white/10">
                 <Button type="submit" disabled={loading} className="bg-brand-800 hover:bg-brand-700 text-white px-8 py-3">
-                  {loading ? '🔄 Generando...' : '🚀 Generar Nómina'}
+                  {loading ? (
+                    <>
+                      <Icon name="refresh" className="w-4 h-4 mr-2 animate-spin" />
+                      Generando...
+                    </>
+                  ) : (
+                    <>
+                      <Icon name="rocket" className="w-4 h-4 mr-2" />
+                      Generar Nómina
+                    </>
+                  )}
                 </Button>
                 <Button 
                   type="button" 
@@ -1871,7 +1954,8 @@ export default function PayrollManager() {
                   onClick={()=>sendPayrollEmail()} 
                   className="border-white/20 text-white hover:bg-white/10 px-6 py-3"
                 >
-                  ✉️ Enviar Planilla por Email
+                  <Icon name="envelope" className="w-4 h-4 mr-2" />
+                  Enviar Planilla por Email
                 </Button>
                 <Button 
                   type="button" 
@@ -1879,7 +1963,8 @@ export default function PayrollManager() {
                   onClick={()=>sendPayrollWhatsApp()} 
                   className="border-white/20 text-white hover:bg-white/10 px-6 py-3"
                 >
-                  💬 Enviar por WhatsApp
+                  <Icon name="whatsapp" className="w-4 h-4 mr-2" />
+                  Enviar por WhatsApp
                 </Button>
               </div>
             </form>
@@ -1890,7 +1975,10 @@ export default function PayrollManager() {
         {employees.length > 0 && (
           <Card variant="glass">
             <CardHeader>
-              <CardTitle className="text-white">👥 Empleados Activos ({employees.length})</CardTitle>
+              <CardTitle className="text-white flex items-center gap-2">
+                <Icon name="users" className="w-5 h-5" />
+                Empleados Activos ({employees.length})
+              </CardTitle>
               <CardDescription className="text-gray-300">
                 Lista de empleados que serán incluidos en la nómina
               </CardDescription>
@@ -1925,7 +2013,10 @@ export default function PayrollManager() {
       <div className="space-y-6">
         <Card variant="glass">
           <CardHeader>
-            <CardTitle className="text-white">📋 Registros de Nómina</CardTitle>
+            <CardTitle className="text-white flex items-center gap-2">
+              <Icon name="document" className="w-5 h-5" />
+              Registros de Nómina
+            </CardTitle>
             <CardDescription className="text-gray-300">
               {getFilterDescription}
             </CardDescription>
@@ -2002,7 +2093,8 @@ export default function PayrollManager() {
                               onClick={() => editPayrollRecord(record)}
                               className="border-white/20 text-white hover:bg-white/10"
                             >
-                              ✏️ Editar
+                              <Icon name="edit" className="w-4 h-4 mr-1" />
+                              Editar
                             </Button>
                           )}
                           
@@ -2014,7 +2106,8 @@ export default function PayrollManager() {
                               onClick={() => recalculatePayroll(record.id || '')}
                               className="border-white/20 text-white hover:bg-white/10"
                             >
-                              🔄 Recalcular
+                              <Icon name="refresh" className="w-4 h-4 mr-1" />
+                              Recalcular
                             </Button>
                           )}
                           
@@ -2026,7 +2119,8 @@ export default function PayrollManager() {
                               onClick={() => approvePayroll(record.id || '')}
                               className="border-white/20 text-white hover:bg-white/10"
                             >
-                              ✅ Aprobar
+                              <Icon name="check" className="w-4 h-4 mr-1" />
+                              Aprobar
                             </Button>
                           )}
                           
@@ -2037,7 +2131,8 @@ export default function PayrollManager() {
                               onClick={() => markAsPaid(record.id || '')}
                               className="bg-brand-800 hover:bg-brand-700 text-white"
                             >
-                              💰 Marcar Pagado
+                              <Icon name="money" className="w-4 h-4 mr-1" />
+                              Marcar Pagado
                             </Button>
                           )}
                           
@@ -2050,7 +2145,8 @@ export default function PayrollManager() {
                             disabled={'isPreview' in record && record.isPreview}
                             title={'isPreview' in record && record.isPreview ? 'Generá primero la nómina' : 'Descargar PDF'}
                           >
-                            📄 Descargar PDF
+                            <Icon name="download" className="w-4 h-4 mr-1" />
+                            Descargar PDF
                           </Button>
                           <Button
                             size="sm"
@@ -2060,7 +2156,8 @@ export default function PayrollManager() {
                             disabled={'isPreview' in record && record.isPreview}
                             title={'isPreview' in record && record.isPreview ? 'Generá primero la nómina' : 'Descargar recibo individual'}
                           >
-                            📄 Descargar Recibo
+                            <Icon name="receipt" className="w-4 h-4 mr-1" />
+                            Descargar Recibo
                           </Button>
                         </div>
                       </td>
@@ -2083,22 +2180,27 @@ export default function PayrollManager() {
       {showPreviewForm && (
         <div className="mt-6 p-6 bg-brand-800/20 border border-brand-500/30 rounded-lg">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold text-white">⚙️ Configurar Preview de Nómina</h3>
+            <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+              <Icon name="gear" className="w-5 h-5" />
+              Configurar Preview de Nómina
+            </h3>
             <Button
               onClick={() => setShowPreviewForm(false)}
               variant="outline"
               size="sm"
               className="border-white/20 text-white hover:bg-white/10"
             >
-              ✕ Cerrar
+              <Icon name="close" className="w-4 h-4 mr-1" />
+              Cerrar
             </Button>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Mes */}
             <div>
-              <label className="block text-sm font-medium text-white mb-2">
-                📅 Mes
+              <label className="block text-sm font-medium text-white mb-2 flex items-center gap-2">
+                <Icon name="calendar" className="w-4 h-4" />
+                Mes
               </label>
               <Input
                 type="month"
@@ -2111,8 +2213,9 @@ export default function PayrollManager() {
             
             {/* Rango de Quincena */}
             <div>
-              <label className="block text-sm font-medium text-white mb-2">
-                ⏰ Rango de Quincena
+              <label className="block text-sm font-medium text-white mb-2 flex items-center gap-2">
+                <Icon name="clock" className="w-4 h-4" />
+                Rango de Quincena
               </label>
               <div className="flex gap-3">
                 <Button 
@@ -2146,8 +2249,9 @@ export default function PayrollManager() {
                 className="w-4 h-4 accent-brand-500"
                 id="preview-deducciones"
               />
-              <label htmlFor="preview-deducciones" className="text-sm font-medium text-white">
-                💰 Incluir deducciones (ISR, IHSS, RAP)
+              <label htmlFor="preview-deducciones" className="text-sm font-medium text-white flex items-center gap-2">
+                <Icon name="money" className="w-4 h-4" />
+                Incluir deducciones (ISR, IHSS, RAP)
               </label>
             </div>
             
@@ -2160,8 +2264,9 @@ export default function PayrollManager() {
                 className="w-4 h-4 accent-brand-500"
                 id="preview-asistencia"
               />
-              <label htmlFor="preview-asistencia" className="text-sm font-medium text-white">
-                ✅ Solo empleados con asistencia completa
+              <label htmlFor="preview-asistencia" className="text-sm font-medium text-white flex items-center gap-2">
+                <Icon name="check" className="w-4 h-4" />
+                Solo empleados con asistencia completa
               </label>
             </div>
           </div>
@@ -2173,7 +2278,17 @@ export default function PayrollManager() {
               disabled={isWorking}
               className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 w-full md:w-auto"
             >
-              {isWorking ? '🔄 Generando...' : '🚀 Generar Preview'}
+              {isWorking ? (
+                <>
+                  <Icon name="refresh" className="w-4 h-4 mr-2 animate-spin" />
+                  Generando...
+                </>
+              ) : (
+                <>
+                  <Icon name="rocket" className="w-4 h-4 mr-2" />
+                  Generar Preview
+                </>
+              )}
             </Button>
           </div>
         </div>
