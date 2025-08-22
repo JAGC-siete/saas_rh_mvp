@@ -112,56 +112,55 @@ export default function LandingPage() {
         >
           <nav className="px-6 lg:px-8">
             <div className="flex items-center justify-between h-16">
-              {/* Logo y Certificados */}
+              {/* Logo Sisu */}
               <div className="flex items-center space-x-4">
-                {/* Logo Sisu */}
-                <div className="flex items-center space-x-3">
-                  <Image
-                    src="/logo-humano-sisu.png"
-                    alt="Humano SISU Logo"
-                    width={40}
-                    height={40}
-                    className="rounded-lg"
-                  />
-                  <h1 className="text-xl font-bold text-white">
-                    <span className="text-white">I.H.S.S., R.A.P. e I.S.R. en automático</span>{' '}
-                    <span className="text-brand-300">activa, cumplí y ahorrá horas cada quincena</span>
-                  </h1>
-                </div>
+                <Image
+                  src="/logo-humano-sisu.png"
+                  alt="Humano SISU Logo"
+                  width={48}
+                  height={48}
+                  className="rounded-lg"
+                />
                 
                 {/* Certificados AWS */}
-                <div className="hidden lg:flex items-center space-x-3">
-                  <div className="flex items-center space-x-2 bg-white/10 px-3 py-1 rounded-lg border border-white/20">
+                <div className="hidden lg:flex items-center space-x-2">
+                  <div className="flex items-center space-x-2 bg-white/10 px-2 py-1 rounded-lg border border-white/20">
                     <Image
                       src="/image-aws-solutions-architect.png"
                       alt="AWS Solutions Architect Associate"
-                      width={32}
-                      height={32}
+                      width={28}
+                      height={28}
                       className="rounded"
                     />
                     <span className="text-xs text-white/80">AWS Solutions Architect</span>
                   </div>
-                  <div className="flex items-center space-x-2 bg-white/10 px-3 py-1 rounded-lg border border-white/20">
+                  <div className="flex items-center space-x-2 bg-white/10 px-2 py-1 rounded-lg border border-white/20">
                     <Image
                       src="/image-aws-developer.png"
                       alt="AWS Developer Associate"
-                      width={32}
-                      height={32}
+                      width={28}
+                      height={28}
                       className="rounded"
                     />
                     <span className="text-xs text-white/80">AWS Developer</span>
                   </div>
-                  <div className="flex items-center space-x-2 bg-white/10 px-3 py-1 rounded-lg border border-white/20">
+                  <div className="flex items-center space-x-2 bg-white/10 px-2 py-1 rounded-lg border border-white/20">
                     <Image
                       src="/image-aws-cloud-practitioner.png"
                       alt="AWS Cloud Practitioner"
-                      width={32}
-                      height={32}
+                      width={28}
+                      height={28}
                       className="rounded"
                     />
                     <span className="text-xs text-white/80">AWS Cloud Practitioner</span>
                   </div>
                 </div>
+                
+                {/* Título */}
+                <h1 className="text-lg font-bold text-white max-w-md">
+                  <span className="text-white">I.H.S.S., R.A.P. e I.S.R. en automático</span>{' '}
+                  <span className="text-brand-300">activa, cumplí y ahorrá horas cada quincena</span>
+                </h1>
               </div>
 
               <div className="hidden md:block">
@@ -210,36 +209,36 @@ export default function LandingPage() {
             <div className="md:hidden">
               <div className="px-2 pt-2 pb-3 space-y-1 glass-strong rounded-lg shadow-lg mt-2">
                                 {/* Certificados en mobile */}
-                <div className="flex items-center justify-center space-x-3 mb-3">
-                  <div className="flex items-center space-x-2 bg-white/10 px-3 py-1 rounded-lg border border-white/20">
+                <div className="flex items-center justify-center space-x-2 mb-3">
+                  <div className="flex items-center space-x-1 bg-white/10 px-2 py-1 rounded-lg border border-white/20">
                     <Image
                       src="/image-aws-solutions-architect.png"
                       alt="AWS Solutions Architect Associate"
-                      width={24}
-                      height={24}
+                      width={20}
+                      height={20}
                       className="rounded"
                     />
-                    <span className="text-xs text-white/80">AWS Solutions Architect</span>
+                    <span className="text-xs text-white/80">Solutions Architect</span>
                   </div>
-                  <div className="flex items-center space-x-2 bg-white/10 px-3 py-1 rounded-lg border border-white/20">
+                  <div className="flex items-center space-x-1 bg-white/10 px-2 py-1 rounded-lg border border-white/20">
                     <Image
                       src="/image-aws-developer.png"
                       alt="AWS Developer Associate"
-                      width={24}
-                      height={24}
+                      width={20}
+                      height={20}
                       className="rounded"
                     />
-                    <span className="text-xs text-white/80">AWS Developer</span>
+                    <span className="text-xs text-white/80">Developer</span>
                   </div>
-                  <div className="flex items-center space-x-2 bg-white/10 px-3 py-1 rounded-lg border border-white/20">
+                  <div className="flex items-center space-x-1 bg-white/10 px-2 py-1 rounded-lg border border-white/20">
                     <Image
                       src="/image-aws-cloud-practitioner.png"
                       alt="AWS Cloud Practitioner"
-                      width={24}
-                      height={24}
+                      width={20}
+                      height={20}
                       className="rounded"
                     />
-                    <span className="text-xs text-white/80">AWS Cloud Practitioner</span>
+                    <span className="text-xs text-white/80">Cloud Practitioner</span>
                   </div>
                 </div>
                 
