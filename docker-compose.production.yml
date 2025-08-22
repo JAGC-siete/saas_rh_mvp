@@ -32,6 +32,10 @@ services:
         reservations:
           memory: 512M
           cpus: '0.25'
+    # Optimized for Railway deployment
+    labels:
+      - "railway.app.name=humano-sisu"
+      - "railway.service.type=web"
 
   # Redis for production caching
   redis:
@@ -45,7 +49,7 @@ services:
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 30s
-      timeout: 10s
+      timeout: 3s
       retries: 3
     networks:
       - production-network
@@ -54,8 +58,12 @@ services:
         limits:
           memory: 256M
           cpus: '0.25'
+    # Optimized for Railway deployment
+    labels:
+      - "railway.app.name=humano-sisu"
+      - "railway.service.type=redis"
 
-  # Nginx reverse proxy for production
+  # Nginx reverse proxy for production (optional for Railway)
   nginx:
     image: nginx:alpine
     ports:
@@ -75,6 +83,9 @@ services:
         limits:
           memory: 128M
           cpus: '0.1'
+    # Railway handles SSL, so nginx is optional
+    profiles:
+      - with-nginx
 
 networks:
   production-network:

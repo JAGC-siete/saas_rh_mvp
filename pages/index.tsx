@@ -6,6 +6,7 @@ import ServicesSection from '../components/ServicesSection'
 import LandingHero from '../components/LandingHero'
 import CountdownTimer from '../components/CountdownTimer'
 import dynamic from 'next/dynamic'
+import Image from 'next/image'
 
 const CloudBackground = dynamic(() => import('../components/CloudBackground'), { ssr: false })
 
@@ -39,8 +40,55 @@ export default function LandingPage() {
           name="description"
           content="Generá planilla en 5 minutos con IHSS, RAP e ISR listos y vouchers enviados por WhatsApp. Cumplimiento STSS, de Excel caótico a PDF impecable."
         />
+        <meta name="keywords" content="planilla Honduras, IHSS, RAP, ISR, automatización RH, STSS, Humano SISU, certificados AWS" />
+        <meta name="author" content="Humano SISU" />
+        <meta name="robots" content="index, follow" />
+        <meta property="og:title" content="Humano SISU - Automatización de Planilla en Honduras" />
+        <meta property="og:description" content="Generá planilla en 5 minutos con IHSS, RAP e ISR listos. Cumplimiento STSS garantizado." />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://humano-sisu.com" />
+        <meta property="og:image" content="/logo-humano-sisu.png" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Humano SISU - Automatización de Planilla" />
+        <meta name="twitter:description" content="Generá planilla en 5 minutos con IHSS, RAP e ISR listos." />
+        <link rel="canonical" href="https://humano-sisu.com" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        
+        {/* JSON-LD para certificados AWS */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              "name": "Humano SISU",
+              "description": "Sistema de automatización de planilla para empresas en Honduras",
+              "url": "https://humano-sisu.com",
+              "logo": "https://humano-sisu.com/logo-humano-sisu.png",
+              "hasCredential": [
+                {
+                  "@type": "EducationalOccupationalCredential",
+                  "credentialCategory": "AWS Solutions Architect Associate",
+                  "recognizedBy": {
+                    "@type": "Organization",
+                    "name": "Amazon Web Services"
+                  },
+                  "image": "https://humano-sisu.com/image.png"
+                },
+                {
+                  "@type": "EducationalOccupationalCredential",
+                  "credentialCategory": "AWS Developer Associate",
+                  "recognizedBy": {
+                    "@type": "Organization",
+                    "name": "Amazon Web Services"
+                  },
+                  "image": "https://humano-sisu.com/image (1).png"
+                }
+              ]
+            })
+          }}
+        />
       </Head>
 
       {/* Header */}
@@ -55,11 +103,46 @@ export default function LandingPage() {
         >
           <nav className="px-6 lg:px-8">
             <div className="flex items-center justify-between h-16">
-              <div className="flex items-center space-x-3">
-                <h1 className="text-xl font-bold text-white">
-                  <span className="text-white">I.H.S.S., R.A.P. e I.S.R. en automático</span>{' '}
-                  <span className="text-brand-300">activa, cumplí y ahorrá horas cada quincena</span>
-                </h1>
+              {/* Logo y Certificados */}
+              <div className="flex items-center space-x-4">
+                {/* Logo Sisu */}
+                <div className="flex items-center space-x-3">
+                  <Image
+                    src="/logo-humano-sisu.png"
+                    alt="Humano SISU Logo"
+                    width={40}
+                    height={40}
+                    className="rounded-lg"
+                  />
+                  <h1 className="text-xl font-bold text-white">
+                    <span className="text-white">I.H.S.S., R.A.P. e I.S.R. en automático</span>{' '}
+                    <span className="text-brand-300">activa, cumplí y ahorrá horas cada quincena</span>
+                  </h1>
+                </div>
+                
+                {/* Certificados AWS */}
+                <div className="hidden lg:flex items-center space-x-3">
+                  <div className="flex items-center space-x-2 bg-white/10 px-3 py-1 rounded-lg border border-white/20">
+                    <Image
+                      src="/image.png"
+                      alt="AWS Solutions Architect Associate"
+                      width={24}
+                      height={24}
+                      className="rounded"
+                    />
+                    <span className="text-xs text-white/80">AWS Solutions Architect</span>
+                  </div>
+                  <div className="flex items-center space-x-2 bg-white/10 px-3 py-1 rounded-lg border border-white/20">
+                    <Image
+                      src="/image (1).png"
+                      alt="AWS Developer Associate"
+                      width={24}
+                      height={24}
+                      className="rounded"
+                    />
+                    <span className="text-xs text-white/80">AWS Developer</span>
+                  </div>
+                </div>
               </div>
 
               <div className="hidden md:block">
@@ -107,6 +190,30 @@ export default function LandingPage() {
           {isMobileMenuOpen && (
             <div className="md:hidden">
               <div className="px-2 pt-2 pb-3 space-y-1 glass-strong rounded-lg shadow-lg mt-2">
+                {/* Certificados en mobile */}
+                <div className="flex items-center justify-center space-x-3 mb-3">
+                  <div className="flex items-center space-x-2 bg-white/10 px-3 py-1 rounded-lg border border-white/20">
+                    <Image
+                      src="/image.png"
+                      alt="AWS Solutions Architect Associate"
+                      width={20}
+                      height={20}
+                      className="rounded"
+                    />
+                    <span className="text-xs text-white/80">AWS Solutions Architect</span>
+                  </div>
+                  <div className="flex items-center space-x-2 bg-white/10 px-3 py-1 rounded-lg border border-white/20">
+                    <Image
+                      src="/image (1).png"
+                      alt="AWS Developer Associate"
+                      width={20}
+                      height={20}
+                      className="rounded"
+                    />
+                    <span className="text-xs text-white/80">AWS Developer</span>
+                  </div>
+                </div>
+                
                 <a
                   href="#servicios"
                   className="block px-3 py-2 text-base font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"

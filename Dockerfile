@@ -33,7 +33,7 @@ ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
 ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
 ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-# Build the application
+# Build the application with standalone output
 RUN npm run build
 
 # Production image, copy all the files and run next
@@ -52,11 +52,11 @@ RUN addgroup --system --gid 1001 nodejs && \
 RUN mkdir -p ./public ./.next && \
     chown nextjs:nodejs ./public ./.next
 
-# Install only production dependencies
+# Install only production dependencies and curl for health checks
 RUN apk add --no-cache --virtual .build-deps curl && \
     rm -rf /var/cache/apk/*
 
-# Automatically leverage output traces to reduce image size
+# Copy standalone build and static files
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
@@ -66,7 +66,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 # Switch to non-root user
 USER nextjs
 
-# Health check
+# Health check optimized for Railway
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD curl -f http://localhost:8080/api/health || exit 1
 
