@@ -1929,39 +1929,7 @@ export default function PayrollManager() {
           </CardContent>
         </Card>
 
-        {/* Employee Preview */}
-        {employees.length > 0 && (
-          <Card variant="glass">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <Icon name="users" className="w-5 h-5" />
-                Empleados Activos ({employees.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {employees.slice(0, 9).map((emp) => (
-                  <div key={emp.id} className="p-3 border border-white/20 rounded-lg bg-white/5">
-                    <div className="font-medium text-white">{emp.name}</div>
-                    <div className="text-sm text-gray-300">
-                      {emp.employee_code} • {emp.department_id || 'Sin departamento'}
-                  </div>
-                    <div className="text-sm font-mono text-green-400">
-                      {formatCurrency(emp.base_salary)}
-                  </div>
-                  </div>
-                ))}
-                {employees.length > 9 && (
-                  <div className="p-3 border border-white/20 rounded-lg bg-white/5 text-center">
-                    <div className="text-sm text-gray-300">
-                      +{employees.length - 9} empleados más
-                </div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-      )}
+
       </div>
 
       {/* 4. 📋 Tabla de Registros de Nómina */}
