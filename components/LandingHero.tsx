@@ -22,7 +22,7 @@ export default function LandingHero() {
         <div className="glass-strong rounded-3xl p-8 lg:p-12 backdrop-blur-sm border border-white/20 shadow-2xl">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
             {/* Copy */}
-            <div className="space-y-6">
+            <div className="space-y-6 text-left">
 
 
               <h1 className="text-4xl sm:text-5xl font-extrabold leading-tight text-white">
@@ -40,7 +40,7 @@ export default function LandingHero() {
                 <li className="flex items-start gap-2"><span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 mt-2" /> Ahorro de 6 horas por quincena.</li>
               </ul>
 
-              <div className="flex justify-center">
+              <div className="flex justify-start">
                 <button
                   onClick={() => window.location.href = '/activar'}
                   className="inline-flex items-center justify-center rounded-2xl px-8 py-4 text-lg font-semibold shadow-sm bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all duration-300 hover:-translate-y-1"
@@ -50,7 +50,7 @@ export default function LandingHero() {
                 </button>
               </div>
 
-              <div className="flex justify-center items-center gap-4 text-sm text-brand-200/80">
+              <div className="flex justify-start items-center gap-4 text-sm text-brand-200/80">
                 <div className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-sm px-3 py-1 border border-white/20">
                   <span>Vouchers por WhatsApp</span>
                 </div>
