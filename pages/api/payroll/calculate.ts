@@ -235,7 +235,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const late_days = calcularTardanzas(registros)
       
       const base_salary = Number(emp.base_salary) || 0
-      const total_earnings = base_salary / 2 // Salario quincenal
+      const total_earnings = base_salary // Salario COMPLETO mensual (no dividir por 2)
       
       let IHSS = 0, RAP = 0, ISR = 0, total_deductions = 0, total = 0
       let notes_on_ingress = ''
@@ -243,7 +243,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // IMPORTANTE: Las deducciones (IHSS, RAP, ISR) se aplican SOLO en la segunda quincena del mes
       // Primera quincena: solo salario bruto, sin deducciones
-      // Segunda quincena: salario bruto - deducciones mensuales
+      // Segunda quincena: salario bruto - deducciones mensuales completas
       if (aplicarDeducciones && quincena === 2) {
         // Calcular deducciones mensuales completas
         IHSS = calcularIHSS(base_salary) // Ya es mensual

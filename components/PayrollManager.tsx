@@ -322,9 +322,9 @@ export default function PayrollManager() {
     totalDeductions: number
     netSalary: number
   } => {
-    // MODE: por días (cálculo basado en días trabajados)
-    const dailyRate = baseSalary / 30
-    const baseGrossSalary = dailyRate * daysWorked
+    // IMPORTANTE: Para el dashboard, usamos salarios COMPLETOS mensuales
+    // NO proporcionales por días trabajados
+    const grossSalary = baseSalary // Salario completo mensual
     
     // Calcular horas extra si se incluyen
     let overtimeAmount = 0
@@ -333,7 +333,7 @@ export default function PayrollManager() {
       overtimeAmount = hourlyRate * overtimeHours * overtimeRate
     }
     
-    const grossSalary = baseGrossSalary + overtimeAmount
+    const totalGrossSalary = grossSalary + overtimeAmount
     
     // IHSS: 5% del salario base (2.5% EM + 2.5% IVM) con techo L 11,903.13
     const ihssBase = Math.min(baseSalary, HONDURAS_2025_CONSTANTS.IHSS_TECHO)
@@ -342,14 +342,14 @@ export default function PayrollManager() {
     // RAP: 1.5% sobre el excedente del salario mínimo
     const rap = Math.max(0, baseSalary - HONDURAS_2025_CONSTANTS.SALARIO_MINIMO) * HONDURAS_2025_CONSTANTS.RAP_PORCENTAJE
     
-    // ISR según tabla mensual de Honduras 2025
+    // ISR según tabla ANUAL de Honduras 2025
     const isr = calculateISR(baseSalary) // Ya es mensual
     
     const totalDeductions = ihss + rap + isr
-    const netSalary = grossSalary - totalDeductions
+    const netSalary = totalGrossSalary - totalDeductions
     
     return {
-      grossSalary,
+      grossSalary: totalGrossSalary,
       ihss,
       rap,
       isr,
@@ -410,6 +410,75 @@ export default function PayrollManager() {
       console.error('Error loading departments:', error)
     }
   }, [supabase])
+
+  // Función para calcular métricas del dashboard basándose en empleados activos (salarios COMPLETOS)
+  const calculateDashboardMetrics = useCallback((emps: Employee[]) => {
+    const stats: PayrollMetrics = {
+      activeEmployees: emps.length,
+      totalGrossSalary: 0,
+      totalDeductions: 0,
+      totalNetSalary: 0,
+      totalIHSS: 0,
+      totalRAP: 0,
+      totalISR: 0,
+      totalDaysWorked: 0,
+      payrollCoverage: 0,
+      attendanceRate: 0,
+      averageSalary: 0,
+      departmentBreakdown: {}
+    }
+
+    if (emps.length === 0) return stats
+
+    // Calcular métricas basándose en empleados activos con salarios COMPLETOS
+    emps.forEach((emp) => {
+      const baseSalary = emp.base_salary || 0
+      
+      // Salario bruto COMPLETO mensual
+      stats.totalGrossSalary += baseSalary
+      
+      // Calcular deducciones COMPLETAS mensuales
+      const ihss = Math.min(baseSalary, HONDURAS_2025_CONSTANTS.IHSS_TECHO) * HONDURAS_2025_CONSTANTS.IHSS_PORCENTAJE_EMPLEADO
+      const rap = Math.max(0, baseSalary - HONDURAS_2025_CONSTANTS.SALARIO_MINIMO) * HONDURAS_2025_CONSTANTS.RAP_PORCENTAJE
+      const isr = calculateISR(baseSalary)
+      
+      stats.totalIHSS += ihss
+      stats.totalRAP += rap
+      stats.totalISR += isr
+      stats.totalDeductions += ihss + rap + isr
+      
+      // Salario neto COMPLETO mensual
+      stats.totalNetSalary += baseSalary - (ihss + rap + isr)
+      
+      // Agrupar por departamento
+      const deptId = emp.department_id || 'sin-departamento'
+      const deptName = departments[deptId] || 'Sin Departamento'
+      if (!stats.departmentBreakdown[deptId]) {
+        stats.departmentBreakdown[deptId] = { count: 0, name: deptName, avgSalary: 0 }
+      }
+      stats.departmentBreakdown[deptId].count += 1
+      stats.departmentBreakdown[deptId].avgSalary += baseSalary - (ihss + rap + isr)
+    })
+
+    // Calcular promedios por departamento
+    Object.keys(stats.departmentBreakdown).forEach((deptId) => {
+      const count = stats.departmentBreakdown[deptId].count
+      if (count > 0) {
+        stats.departmentBreakdown[deptId].avgSalary = stats.departmentBreakdown[deptId].avgSalary / count
+      }
+    })
+
+    // Calcular promedio general
+    stats.averageSalary = stats.totalNetSalary / emps.length
+
+    // Cobertura de planilla (100% si todos los empleados activos están en planilla)
+    stats.payrollCoverage = 100
+
+    // Guardar métricas del dashboard
+    if (isMountedRef.current) setPayrollMetrics(stats)
+    
+    return stats
+  }, [departments, calculateISR])
 
   const calculatePayrollStats = useCallback((records: (PayrollRecord | PreviewPayrollRecord)[], emps: Employee[]) => {
     const stats: PayrollMetrics = {
@@ -698,7 +767,7 @@ export default function PayrollManager() {
       
       // Calcular métricas con los registros actuales
       const activeEmployees = (employeesData || []).filter((e: any) => e.status === 'active')
-      calculatePayrollStats(currentRecords, activeEmployees)
+      calculateDashboardMetrics(activeEmployees)
 
     } catch (error) {
       console.error('Error fetching data:', error)
@@ -707,7 +776,7 @@ export default function PayrollManager() {
     } finally {
       if (isMountedRef.current) setLoading(false)
     }
-  }, [supabase, loadDepartments, calculatePayrollStats, getCurrentPeriodRecords])
+  }, [supabase, loadDepartments, calculateDashboardMetrics, getCurrentPeriodRecords])
 
   const generatePayroll = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
@@ -1185,10 +1254,10 @@ export default function PayrollManager() {
     if (userProfile && supabase) {
       getCurrentPeriodRecords().then(currentRecords => {
         const activeEmployees = employees.filter(e => e.status === 'active')
-        calculatePayrollStats(currentRecords, activeEmployees)
+        calculateDashboardMetrics(activeEmployees)
       })
     }
-  }, [selectedPeriod, selectedQuincena, userProfile, supabase, employees, getCurrentPeriodRecords, calculatePayrollStats])
+  }, [selectedPeriod, selectedQuincena, userProfile, supabase, employees, getCurrentPeriodRecords, calculateDashboardMetrics])
 
   // % Ausentismo (periodo actual)
   const absenteeismPercent = useMemo(() => {
@@ -1331,7 +1400,7 @@ export default function PayrollManager() {
                     onClick={() => {
                       getCurrentPeriodRecords().then(currentRecords => {
                         const activeEmployees = employees.filter(e => e.status === 'active')
-                        calculatePayrollStats(currentRecords, activeEmployees)
+                        calculateDashboardMetrics(activeEmployees)
                       })
                     }}
                     className="bg-brand-800 hover:bg-brand-700 text-white w-full"
