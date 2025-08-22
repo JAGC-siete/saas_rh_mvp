@@ -65,7 +65,7 @@ export default function CountdownTimer() {
           </div>
         </div>
         <p className="text-center text-red-100 text-sm font-medium">
-          De horas a minutos: tu planilla lista hoy.
+          De horas a minutos: dejala lista desde hoy, y olvidate de ella para siempre.
         </p>
       </div>
     </div>
