@@ -2,17 +2,20 @@
 builder = "dockerfile"
 dockerfilePath = "Dockerfile"
 
-[build.args]
-# These will be replaced by Railway environment variables during build
-NEXT_PUBLIC_SUPABASE_URL = "${NEXT_PUBLIC_SUPABASE_URL}"
-NEXT_PUBLIC_SUPABASE_ANON_KEY = "${NEXT_PUBLIC_SUPABASE_ANON_KEY}"
-
 [deploy]
 startCommand = "node server.js"
 healthcheckPath = "/"
 healthcheckTimeout = 300
 restartPolicyType = "on_failure"
+numReplicas = 1
 
 # Environment variables for Railway
 [variables]
 TZ = "America/Tegucigalpa"
+NODE_ENV = "production"
+PORT = "8080"
+HOSTNAME = "0.0.0.0"
+
+# Railway-specific configurations
+[railway]
+serviceType = "web"
