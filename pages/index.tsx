@@ -3,23 +3,16 @@ import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import DemoFooter from '../components/DemoFooter'
 import ServicesSection from '../components/ServicesSection'
+import LandingHero from '../components/LandingHero'
+import CountdownTimer from '../components/CountdownTimer'
 import dynamic from 'next/dynamic'
+import Image from 'next/image'
 
 const CloudBackground = dynamic(() => import('../components/CloudBackground'), { ssr: false })
-const HeroCarousel = dynamic(() => import('../components/HeroCarousel'), { ssr: false })
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
-import {
-  Bars3Icon,
-  XMarkIcon,
-  ArrowRightIcon
-} from '@heroicons/react/24/outline'
-
-
 
 export default function LandingPage() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-
 
   useEffect(() => {
     const handleScroll = () => {
@@ -42,13 +35,69 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-app pt-20 relative">
       <Head>
-        <title>Humano SISU - Automatiza tu RH</title>
+        <title>¿Otra quincena corriendo detrás de la planilla? | Humano SISU</title>
         <meta
           name="description"
-          content="Automatiza HOY el 80% de RH en 24 horas: Asistencia, Nómina y Vouchers de pago en 1 solo clic. Paga por empleados. Sin pasivo laboral, sin errores."
+          content="Generá planilla en 5 minutos con IHSS, RAP e ISR listos y vouchers enviados por WhatsApp. Cumplimiento STSS, de Excel caótico a PDF impecable."
         />
+        <meta name="keywords" content="planilla Honduras, IHSS, RAP, ISR, automatización RH, STSS, Humano SISU, innovación" />
+        <meta name="author" content="Humano SISU" />
+        <meta name="robots" content="index, follow" />
+        <meta property="og:title" content="Humano SISU - Automatización de Planilla en Honduras" />
+        <meta property="og:description" content="Generá planilla en 5 minutos con IHSS, RAP e ISR listos. Cumplimiento STSS garantizado." />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://humano-sisu.com" />
+        <meta property="og:image" content="/logo-humano-sisu.png" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Humano SISU - Automatización de Planilla" />
+        <meta name="twitter:description" content="Generá planilla en 5 minutos con IHSS, RAP e ISR listos." />
+        <link rel="canonical" href="https://humano-sisu.com" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        
+        {/* JSON-LD para certificados AWS */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              "name": "Humano SISU",
+              "description": "Sistema de automatización de planilla para empresas en Honduras",
+              "url": "https://humano-sisu.com",
+              "logo": "https://humano-sisu.com/logo-humano-sisu.png",
+              "hasCredential": [
+                {
+                  "@type": "EducationalOccupationalCredential",
+                  "credentialCategory": "AWS Solutions Architect Associate",
+                  "recognizedBy": {
+                    "@type": "Organization",
+                    "name": "Amazon Web Services"
+                  },
+                  "image": "https://humano-sisu.com/image-aws-solutions-architect.png"
+                },
+                {
+                  "@type": "EducationalOccupationalCredential",
+                  "credentialCategory": "AWS Developer Associate",
+                  "recognizedBy": {
+                    "@type": "Organization",
+                    "name": "Amazon Web Services"
+                  },
+                  "image": "https://humano-sisu.com/image-aws-developer.png"
+                },
+                {
+                  "@type": "EducationalOccupationalCredential",
+                  "credentialCategory": "AWS Cloud Practitioner",
+                  "recognizedBy": {
+                    "@type": "Organization",
+                    "name": "Amazon Web Services"
+                  },
+                  "image": "https://humano-sisu.com/image-aws-cloud-practitioner.png"
+                }
+              ]
+            })
+          }}
+        />
       </Head>
 
       {/* Header */}
@@ -63,32 +112,71 @@ export default function LandingPage() {
         >
           <nav className="px-6 lg:px-8">
             <div className="flex items-center justify-between h-16">
-              <div className="flex items-center space-x-3">
-                <h1 className="text-xl font-bold text-white">
-                  <span className="text-white">Humano SISU</span>{' '}
-                  <span className="text-brand-300">presenta Los Robots de RRHH</span>
+              {/* Logo Sisu */}
+              <div className="flex items-center space-x-6 flex-1 min-w-0">
+                <div className="bg-white/10 px-3 py-2 rounded-lg border border-white/20 backdrop-blur-sm">
+                  <Image
+                    src="/logo-humano-sisu.png"
+                    alt="Humano SISU Logo"
+                    width={48}
+                    height={48}
+                    className="rounded-lg"
+                  />
+                </div>
+                
+                {/* Certificados AWS */}
+                <div className="hidden lg:flex items-center space-x-3">
+                  <div className="flex items-center space-x-2 bg-white/10 px-2 py-1 rounded-lg border border-white/20">
+                    <Image
+                      src="/image-aws-solutions-architect.png"
+                      alt="AWS Solutions Architect Associate"
+                      width={28}
+                      height={28}
+                      className="rounded"
+                    />
+                    <span className="text-xs text-white/80">AWS Solutions Architect</span>
+                  </div>
+                  <div className="flex items-center space-x-2 bg-white/10 px-2 py-1 rounded-lg border border-white/20">
+                    <Image
+                      src="/image-aws-developer.png"
+                      alt="AWS Developer Associate"
+                      width={28}
+                      height={28}
+                      className="rounded"
+                    />
+                    <span className="text-xs text-white/80">AWS Developer</span>
+                  </div>
+                  <div className="flex items-center space-x-2 bg-white/10 px-2 py-1 rounded-lg border border-white/20">
+                    <Image
+                      src="/image-aws-cloud-practitioner.png"
+                      alt="AWS Cloud Practitioner"
+                      width={28}
+                      height={28}
+                      className="rounded"
+                    />
+                    <span className="text-xs text-white/80">AWS Cloud Practitioner</span>
+                  </div>
+                </div>
+                
+                {/* Título */}
+                <h1 className="text-lg font-bold text-white max-w-md lg:max-w-lg xl:max-w-xl leading-tight ml-4 flex-shrink-0">
+                  <span className="text-white">I.H.S.S., R.A.P. e I.S.R. en automático</span>{' '}
+                  <span className="text-brand-300">activa, cumplí y ahorrá horas cada quincena</span>
                 </h1>
               </div>
 
               <div className="hidden md:block">
-                <div className="ml-10 flex items-baseline space-x-4">
+                <div className="ml-6 flex items-center space-x-4">
                   <a
-                    href="#libro-rojo"
-                    className="text-brand-200 hover:text-white px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0"
+                    href="#servicios"
+                    className="text-brand-200 hover:text-white px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap"
                     onClick={scrollToSection}
                   >
-                    El Libro Rojo
-                  </a>
-                  <a
-                    href="#planillero"
-                    className="text-brand-200 hover:text-white px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0"
-                    onClick={scrollToSection}
-                  >
-                    El Planillero
+                    Servicios
                   </a>
                   <Link
                     href="/app/login"
-                    className="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 shadow-lg shadow-black/20 hover:-translate-y-0.5 active:translate-y-0"
+                    className="bg-brand-600 hover:bg-brand-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 shadow-lg shadow-black/20 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap min-w-[140px] text-center"
                   >
                     Iniciar sesión
                   </Link>
@@ -102,7 +190,15 @@ export default function LandingPage() {
                   className="glass inline-flex items-center justify-center p-2 rounded-md text-brand-200 hover:text-white hover:bg-brand-700/20 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
                 >
                   <span className="sr-only">Open main menu</span>
-                  {isMobileMenuOpen ? <XMarkIcon className="block h-6 w-6" /> : <Bars3Icon className="block h-6 w-6" />}
+                  {isMobileMenuOpen ? (
+                    <svg className="block h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  ) : (
+                    <svg className="block h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                  )}
                 </button>
               </div>
             </div>
@@ -114,69 +210,85 @@ export default function LandingPage() {
           {isMobileMenuOpen && (
             <div className="md:hidden">
               <div className="px-2 pt-2 pb-3 space-y-1 glass-strong rounded-lg shadow-lg mt-2">
-
-                <a
-                  href="#libro-rojo"
-                  className="block px-3 py-2 text-base font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"
-                  onClick={() => setIsMobileMenuOpen(false)}
-
-                >
-                  Asistencia
-                </a>
-                <a
-                  href="#planillero"
-                  className="block px-3 py-2 text-base font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"
-                  onClick={() => setIsMobileMenuOpen(false)}
-
-                >
-                  Nómina
-                </a>
-                <div className="px-3 py-2 space-y-2">
-                  <Link
-                    href="/activar"
-                    className="text-brand-200/90 hover:text-white block w-full text-center py-2 px-4 font-medium"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    Ver demo
-                  </Link>
-                  <Link
-                    href="/app/login"
-                    className="bg-brand-900 hover:bg-brand-800 text-white w-full text-center block py-2 px-4 rounded-lg transition-colors"
-                    onClick={() => setIsMobileMenuOpen(false)}
-
-                  >
-                    Iniciar sesión
-                  </Link>
+                                {/* Certificados en mobile */}
+                <div className="flex items-center justify-center space-x-2 mb-3">
+                  <div className="flex items-center space-x-1 bg-white/10 px-2 py-1 rounded-lg border border-white/20">
+                    <Image
+                      src="/image-aws-solutions-architect.png"
+                      alt="AWS Solutions Architect Associate"
+                      width={20}
+                      height={20}
+                      className="rounded"
+                    />
+                    <span className="text-xs text-white/80">Solutions Architect</span>
+                  </div>
+                  <div className="flex items-center space-x-1 bg-white/10 px-2 py-1 rounded-lg border border-white/20">
+                    <Image
+                      src="/image-aws-developer.png"
+                      alt="AWS Developer Associate"
+                      width={20}
+                      height={20}
+                      className="rounded"
+                    />
+                    <span className="text-xs text-white/80">Developer</span>
+                  </div>
+                  <div className="flex items-center space-x-1 bg-white/10 px-2 py-1 rounded-lg border border-white/20">
+                    <Image
+                      src="/image-aws-cloud-practitioner.png"
+                      alt="AWS Cloud Practitioner"
+                      width={20}
+                      height={20}
+                      className="rounded"
+                    />
+                    <span className="text-xs text-white/80">Cloud Practitioner</span>
+                  </div>
                 </div>
+                
+                <a
+                  href="#servicios"
+                  className="block px-3 py-2 text-base font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Servicios
+                </a>
+                <Link
+                  href="/app/login"
+                  className="bg-brand-900 hover:bg-brand-800 text-white w-full text-center block py-2 px-4 rounded-lg transition-colors"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Iniciar sesión
+                </Link>
               </div>
             </div>
           )}
         </div>
       </header>
 
-      {/* Main Hero - Results-Focused */}
+      {/* Main Hero - LandingHero enfocado en conversión */}
       <section className="py-16 relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Trust badges */}
           <div className="flex flex-wrap justify-center gap-3 md:gap-6 mb-8 animate-fade-up-subtle">
-            <span className="text-sm bg-green-500/10 text-green-400 px-3 py-1 rounded-full border border-green-500/20 hover:bg-green-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-100">✓ Cumple STSS Honduras</span>
-            <span className="text-sm bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full border border-blue-500/20 hover:bg-blue-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-200">⚡ Setup en 24 horas</span>
-            <span className="text-sm bg-orange-500/10 text-orange-400 px-3 py-1 rounded-full border border-orange-500/20 hover:bg-orange-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-300">🔥 02 empresas activas</span>
+            <span className="text-sm bg-green-500/10 text-green-400 px-3 py-1 rounded-full border border-green-500/20 hover:bg-green-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-100">Cumple STSS Honduras</span>
+            <span className="text-sm bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full border border-blue-500/20 hover:bg-blue-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-200">Setup en 24 horas</span>
+            <span className="text-sm bg-orange-500/10 text-orange-400 px-3 py-1 rounded-full border border-orange-500/20 hover:bg-orange-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-300">02 empresas activas</span>
           </div>
 
-          {/* Hero Carousel Section */}
+          {/* Countdown Timer - Centrado debajo de los trust badges */}
+          <CountdownTimer />
+
+          {/* LandingHero Section - Reemplaza completamente al carrusel */}
           <div className="text-center max-w-6xl mx-auto mb-12">
-            <HeroCarousel />
+            <LandingHero />
           </div>
-
         </div>
       </section>
 
       {/* Services Section - Rediseñada */}
       <ServicesSection />
 
-      {/* Social Proof Section */}
-      <section className="py-16 bg-white/5">
+      {/* Social Proof Section - Simplificada */}
+      <section id="servicios" className="py-16 bg-white/5">
         <div className="max-w-6xl mx-auto px-4">
           <h2 className="text-3xl font-bold text-center text-white mb-12">
             Empresas que ya automatizaron su RH
@@ -216,7 +328,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-4 py-12">
           <div className="text-center">
             <p className="text-slate-400 mb-4">
-              Protegemos tu información. Sin spam, sin venta de datos. <strong>Solo para contactarte</strong>.
+              Protegemos tu información. <strong>Solo será utilizadapara contactarte</strong>.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center text-sm">
               <Link 

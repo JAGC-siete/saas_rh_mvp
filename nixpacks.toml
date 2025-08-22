@@ -15,19 +15,7 @@ cmds = [
 ]
 
 [start]
-cmd = "npm start"]
-nixpkgs = ["nodejs_20"]
-
-[phases.install]
-cmds = ["npm install"]
-
-[phases.build]  
-cmds = [
-  "export NEXT_CACHE=/tmp/next-cache && npm run build"
-]
-
-[start]
-cmd = "npm run start"
+cmd = "npm start"
 
 # Prevent Railway from auto-mounting .next/cache
 [variables]

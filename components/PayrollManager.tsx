@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { createClient } from '../lib/supabase/client'
+import { usePayrollReports } from '../lib/hooks/usePayrollReports'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
@@ -43,6 +44,27 @@ interface PreviewPayrollRecord extends Omit<PayrollRecord, 'id' | 'created_at'> 
     overtimeHours?: number
     overtimeRate?: number
   }
+}
+
+// Nuevo tipo para filas del draft editable
+type DraftRow = {
+  employee_id: string
+  employee_code: string
+  name: string
+  base_salary: number
+  days_worked: number
+  days_absent: number
+  late_days: number
+  gross_salary: number
+  ihss: number
+  rap: number
+  isr: number
+  total_deductions: number
+  net_salary: number
+  // campos editables:
+  adj_bonus?: number
+  adj_discount?: number
+  note?: string
 }
 
 // Configuración de escenarios para Preview
@@ -176,6 +198,20 @@ export default function PayrollManager() {
   // Estado para modo Preview mejorado
   const [previewScenario, setPreviewScenario] = useState<PreviewScenario>(DEFAULT_PREVIEW_SCENARIO)
   // UI colors (computed to avoid static strings triggering secret scanner)
+
+  // Nuevos estados para el sistema de draft
+  const [draft, setDraft] = useState<{rows: DraftRow[], totals: any, meta: {periodo:string, quincena:1|2}}|null>(null)
+  const [isEditingDraft, setIsEditingDraft] = useState(false)
+  const [isWorking, setIsWorking] = useState(false)
+  const [showPreviewForm, setShowPreviewForm] = useState(false)
+
+  // Estado para el formulario de preview
+  const [previewForm, setPreviewForm] = useState({
+    periodo: new Date().toISOString().slice(0, 7),
+    quincena: 1,
+    incluirDeducciones: true,
+    soloEmpleadosConAsistencia: false
+  })
 
   
 
@@ -348,32 +384,7 @@ export default function PayrollManager() {
     setGenerateForm(INITIAL_GENERATE_FORM)
   }, [])
 
-  const downloadFile = useCallback(async (url: string, filename: string, options: RequestInit = {}) => {
-    try {
-      const response = await fetch(url, {
-        credentials: 'include',
-        ...options
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || `HTTP ${response.status}`)
-      }
-
-      const blob = await response.blob()
-      const downloadUrl = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = downloadUrl
-      link.download = filename
-      document.body.appendChild(link)
-      link.click()
-      window.URL.revokeObjectURL(downloadUrl)
-      document.body.removeChild(link)
-    } catch (error: any) {
-      console.error('Error downloading file:', error)
-      alert(`❌ Error descargando archivo: ${error.message}`)
-    }
-  }, [])
+  const { downloadConsolidatedReport, downloadEmployeeReceipt } = usePayrollReports()
 
   const loadDepartments = useCallback(async () => {
     if (!supabase) return
@@ -459,7 +470,6 @@ export default function PayrollManager() {
         .from('employees')
         .select('id, name, employee_code, base_salary, department_id, status')
         .eq('status', 'active')
-        .order('name')
 
       if (userProfile.company_id) {
         employeesQuery = employeesQuery.eq('company_id', userProfile.company_id)
@@ -706,21 +716,13 @@ export default function PayrollManager() {
         return
       }
 
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      if (!session?.access_token) {
-        alert('❌ No se encontró token de sesión. Por favor, inicia sesión nuevamente.')
-        return
-      }
-
       console.log('✅ Generating payroll with authenticated user:', user.email)
 
       const response = await fetch('/api/payroll/calculate', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'Accept': 'application/pdf',
-          'Authorization': `Bearer ${session.access_token}`
+          'Accept': 'application/json'
         },
         credentials: 'include',
         body: JSON.stringify(generateForm),
@@ -731,20 +733,7 @@ export default function PayrollManager() {
         throw new Error(errorData.error || 'Failed to generate payroll')
       }
 
-      if (response.headers.get('content-type')?.includes('application/pdf')) {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `planilla_paragon_${generateForm.periodo}_q${generateForm.quincena}.pdf`
-        document.body.appendChild(a)
-        a.click()
-        window.URL.revokeObjectURL(url)
-        document.body.removeChild(a)
-        alert('✅ Nómina generada y PDF descargado exitosamente!')
-      } else {
-        alert('✅ Nómina generada exitosamente!')
-      }
+      alert('✅ Nómina generada exitosamente!')
       
       resetGenerateForm()
       fetchData()
@@ -817,49 +806,23 @@ export default function PayrollManager() {
     const period = record.period_start.slice(0, 7)
     const day = Number(record.period_start.slice(8, 10))
     const quincena = day <= 15 ? 1 : 2
-    
-    await downloadFile('/api/payroll/calculate', `planilla_paragon_${period}_q${quincena}.pdf`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/pdf'
-      },
-      body: JSON.stringify({
-        periodo: period,
-        quincena: quincena,
-        incluirDeducciones: true
-      })
-    })
-  }, [downloadFile])
+    try {
+      await downloadConsolidatedReport(period, quincena)
+    } catch (e: any) {
+      alert(`❌ Error: ${e?.message || 'No se pudo descargar el reporte'}`)
+    }
+  }, [downloadConsolidatedReport])
 
   const downloadIndividualReceipt = useCallback(async (record: PayrollRecord | PreviewPayrollRecord) => {
-    const { data: { session } } = await supabase.auth.getSession()
-    
-    if (!session?.access_token) {
-      alert('❌ No se encontró token de sesión. Por favor, inicia sesión nuevamente.')
-      return
-    }
-
     const period = record.period_start.slice(0, 7)
     const day = Number(record.period_start.slice(8, 10))
     const quincena = day <= 15 ? 1 : 2
-    const employeeCode = record.employees?.employee_code || 'unknown'
-
-    await downloadFile('/api/payroll/export', `recibo_${employeeCode}_${period}_q${quincena}.pdf`, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
-        'Accept': 'application/pdf'
-      },
-      body: JSON.stringify({
-        periodo: period,
-        formato: 'recibo-individual',
-        employeeId: record.employee_id,
-        quincena
-      })
-    })
-  }, [supabase, downloadFile])
+    try {
+      await downloadEmployeeReceipt(record.employee_id, period, quincena)
+    } catch (e: any) {
+      alert(`❌ Error: ${e?.message || 'No se pudo descargar el recibo'}`)
+    }
+  }, [downloadEmployeeReceipt])
 
   const sendPayrollEmail = useCallback(async (record?: PayrollRecord | PreviewPayrollRecord) => {
     const to = prompt('Correo de destino:')
@@ -939,6 +902,254 @@ export default function PayrollManager() {
       alert('Error al recalcular nómina')
     }
   }, [])
+
+  // Nuevas funciones para el sistema de draft
+  const generatePreview = useCallback(async () => {
+    if (!supabase) return
+    
+    setIsWorking(true)
+    try {
+      // Obtener empleados activos
+      const { data: activeEmployees, error: empError } = await supabase
+        .from('employees')
+        .select('id, name, employee_code, base_salary, department_id, status')
+        .eq('status', 'active')
+      
+      if (empError) throw new Error(`Error cargando empleados: ${empError.message}`)
+      if (!activeEmployees || activeEmployees.length === 0) {
+        alert('No hay empleados activos para generar preview')
+        return
+      }
+
+      const periodo = previewForm.periodo
+      const quincena = previewForm.quincena as 1 | 2
+      const [year, month] = periodo.split('-').map(Number)
+      const lastDay = new Date(year, month, 0).getDate()
+      
+      // Calcular días trabajados por quincena
+      const daysInQuincena = quincena === 1 ? 15 : (lastDay - 15)
+      
+      const draftRows: DraftRow[] = activeEmployees.map((emp: any) => {
+        // Calcular salario bruto
+        const dailyRate = emp.base_salary / 30
+        const grossSalary = dailyRate * daysInQuincena
+        
+        // Calcular deducciones usando las fórmulas existentes
+        let deductions
+        if (previewForm.incluirDeducciones) {
+          deductions = calculateHondurasDeductions(emp.base_salary, daysInQuincena)
+        } else {
+          // Sin deducciones
+          deductions = {
+            grossSalary,
+            ihss: 0,
+            rap: 0,
+            isr: 0,
+            totalDeductions: 0,
+            netSalary: grossSalary
+          }
+        }
+        
+        return {
+          employee_id: emp.id,
+          employee_code: emp.employee_code,
+          name: emp.name,
+          base_salary: emp.base_salary,
+          days_worked: daysInQuincena,
+          days_absent: 0, // Por defecto
+          late_days: 0, // Por defecto
+          gross_salary: deductions.grossSalary,
+          ihss: deductions.ihss,
+          rap: deductions.rap,
+          isr: deductions.isr,
+          total_deductions: deductions.totalDeductions,
+          net_salary: deductions.netSalary,
+          adj_bonus: 0,
+          adj_discount: 0,
+          note: 'estimado'
+        }
+      })
+
+      const totals = {
+        gross: draftRows.reduce((sum, row) => sum + row.gross_salary, 0),
+        deductions: draftRows.reduce((sum, row) => sum + row.total_deductions, 0),
+        net: draftRows.reduce((sum, row) => sum + row.net_salary, 0),
+        employees: draftRows.length
+      }
+
+      setDraft({
+        rows: draftRows,
+        totals,
+        meta: { periodo, quincena }
+      })
+
+      // Cerrar el formulario después de generar
+      setShowPreviewForm(false)
+      
+      alert(`✅ Preview generado para ${draftRows.length} empleados activos`)
+    } catch (error: any) {
+      console.error('Error generando preview:', error)
+      alert(`❌ Error: ${error.message}`)
+    } finally {
+      setIsWorking(false)
+    }
+  }, [supabase, previewForm, calculateHondurasDeductions])
+
+  const toggleEditDraft = useCallback(() => {
+    setIsEditingDraft(prev => !prev)
+  }, [])
+
+  const updateDraftRow = useCallback((employeeId: string, field: keyof DraftRow, value: any) => {
+    if (!draft) return
+    
+    setDraft(prev => {
+      if (!prev) return prev
+      
+      const updatedRows = prev.rows.map(row => {
+        if (row.employee_id === employeeId) {
+          const updatedRow = { ...row, [field]: value }
+          
+          // Recalcular totales de la fila
+          const newGross = updatedRow.gross_salary + (updatedRow.adj_bonus || 0)
+          const newDeductions = updatedRow.total_deductions + (updatedRow.adj_discount || 0)
+          updatedRow.net_salary = newGross - newDeductions
+          
+          return updatedRow
+        }
+        return row
+      })
+      
+      // Recalcular totales generales
+      const newTotals = {
+        gross: updatedRows.reduce((sum, row) => sum + row.gross_salary + (row.adj_bonus || 0), 0),
+        deductions: updatedRows.reduce((sum, row) => sum + row.total_deductions + (row.adj_discount || 0), 0),
+        net: updatedRows.reduce((sum, row) => sum + row.net_salary, 0),
+        employees: updatedRows.length
+      }
+      
+      return {
+        ...prev,
+        rows: updatedRows,
+        totals: newTotals
+      }
+    })
+  }, [draft])
+
+  const generatePDF = useCallback(async () => {
+    if (!draft || !supabase) return
+    
+    setIsWorking(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        throw new Error('No hay sesión activa')
+      }
+
+      const response = await fetch('/api/payroll/report', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'Accept': 'application/pdf'
+        },
+        body: JSON.stringify({
+          periodo: draft.meta.periodo,
+          quincena: draft.meta.quincena
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `HTTP ${response.status}`)
+      }
+
+      if (response.headers.get('content-type')?.includes('application/pdf')) {
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `planilla_paragon_${draft.meta.periodo}_q${draft.meta.quincena}.pdf`
+        document.body.appendChild(link)
+        link.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(link)
+        alert('✅ PDF generado y descargado exitosamente')
+      } else {
+        const data = await response.json()
+        throw new Error(data.error || 'Respuesta inesperada del servidor')
+      }
+    } catch (error: any) {
+      console.error('Error generando PDF:', error)
+      alert(`❌ Error: ${error.message}`)
+    } finally {
+      setIsWorking(false)
+    }
+  }, [draft, supabase])
+
+  const generateAndSendVouchers = useCallback(async () => {
+    if (!draft || !supabase) return
+    
+    if (!confirm('¿Generar y enviar vouchers individuales por email?')) return
+    
+    setIsWorking(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        throw new Error('No hay sesión activa')
+      }
+
+      const response = await fetch('/api/payroll/send-vouchers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'Idempotency-Key': `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+        },
+        body: JSON.stringify({
+          periodo: draft.meta.periodo,
+          quincena: draft.meta.quincena,
+          delivery: 'email',
+          draft_overrides: draft.rows.map(row => ({
+            employee_id: row.employee_id,
+            adj_bonus: row.adj_bonus || 0,
+            adj_discount: row.adj_discount || 0,
+            note: row.note || ''
+          })),
+          options: { attach_pdf: true }
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `HTTP ${response.status}`)
+      }
+
+      const result = await response.json()
+      if (result.sent) {
+        const summary = result.summary
+        let message = `✅ Vouchers enviados: ${summary.ok}/${summary.total}`
+        
+        if (summary.failed > 0) {
+          message += `\n❌ Fallidos: ${summary.failed}`
+          if (result.failed && result.failed.length > 0) {
+            message += '\n\nEmpleados con error:'
+            result.failed.forEach((f: any) => {
+              message += `\n• ${f.employee_id}: ${f.reason}`
+            })
+          }
+        }
+        
+        alert(message)
+      } else {
+        throw new Error('No se pudieron enviar los vouchers')
+      }
+    } catch (error: any) {
+      console.error('Error enviando vouchers:', error)
+      alert(`❌ Error: ${error.message}`)
+    } finally {
+      setIsWorking(false)
+    }
+  }, [draft, supabase])
 
   
 
@@ -1282,7 +1493,208 @@ export default function PayrollManager() {
           )}
         </div>
 
+        {/* Acciones de Nómina */}
+        <Card variant="glass">
+          <CardHeader>
+            <CardTitle className="text-white">🎯 Acciones de Nómina</CardTitle>
+            <CardDescription className="text-gray-300">
+              Genera preview, edita draft y genera documentos finales
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Botón 1: Generar Preview */}
+              <Button
+                onClick={async () => {
+                  setShowPreviewForm(!showPreviewForm)
+                  // Si no hay draft, generar uno automáticamente
+                  if (!draft) {
+                    await generatePreview()
+                  }
+                }}
+                disabled={isWorking || employees.length === 0}
+                className="bg-green-600 hover:bg-green-700 text-white h-20 flex flex-col items-center justify-center gap-2"
+                title={employees.length === 0 ? 'No hay empleados activos' : 'Generar preview de nómina'}
+              >
+                <span className="text-2xl">📝</span>
+                <span className="text-sm font-medium">Generar Preview</span>
+                <span className="text-xs opacity-80">(Draft)</span>
+              </Button>
 
+              {/* Botón 2: Editar Draft */}
+              <Button
+                onClick={toggleEditDraft}
+                disabled={!draft || isWorking}
+                className={`h-20 flex flex-col items-center justify-center gap-2 ${
+                  isEditingDraft 
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                    : 'bg-gray-600 hover:bg-gray-700 text-white'
+                }`}
+                title={!draft ? 'Primero genera un preview' : 'Editar draft de nómina'}
+              >
+                <span className="text-2xl">✏️</span>
+                <span className="text-sm font-medium">Editar Draft</span>
+                <span className="text-xs opacity-80">
+                  {isEditingDraft ? 'Activado' : 'Toggle'}
+                </span>
+              </Button>
+
+              {/* Botón 3: Generar PDF */}
+              <Button
+                onClick={generatePDF}
+                disabled={!draft || isWorking}
+                className="bg-purple-600 hover:bg-purple-700 text-white h-20 flex flex-col items-center justify-center gap-2"
+                title={!draft ? 'Primero genera un preview' : 'Generar PDF de planilla general'}
+              >
+                <span className="text-2xl">📄</span>
+                <span className="text-sm font-medium">Generar PDF</span>
+                <span className="text-xs opacity-80">(Planilla General)</span>
+              </Button>
+
+              {/* Botón 4: Generar y Enviar Vouchers */}
+              <Button
+                onClick={generateAndSendVouchers}
+                disabled={!draft || isWorking}
+                className="bg-orange-600 hover:bg-orange-700 text-white h-20 flex flex-col items-center justify-center gap-2"
+                title={!draft ? 'Primero genera un preview' : 'Generar y enviar vouchers por email'}
+              >
+                <span className="text-2xl">📤</span>
+                <span className="text-sm font-medium">Generar y Enviar</span>
+                <span className="text-xs opacity-80">Vouchers (Email)</span>
+              </Button>
+            </div>
+
+            {/* Banner de Preview */}
+            {draft && (
+              <div className="mt-6 bg-yellow-500/20 border border-yellow-500/30 rounded-lg p-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-yellow-400">⚠️</span>
+                  <span className="text-yellow-200 font-medium">Preview (no persistido)</span>
+                  <span className="text-yellow-300 text-sm">
+                    — Periodo {draft.meta.periodo} Q{draft.meta.quincena} • {draft.rows.length} empleados
+                  </span>
+                </div>
+                <div className="mt-2 text-xs text-yellow-300">
+                  Totales: Bruto {formatCurrency(draft.totals.gross)} • 
+                  Deducciones {formatCurrency(draft.totals.deductions)} • 
+                  Neto {formatCurrency(draft.totals.net)}
+                </div>
+              </div>
+            )}
+
+            {/* Tabla editable del draft */}
+            {draft && isEditingDraft && (
+              <div className="mt-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold text-white">📋 Editar Draft de Nómina</h3>
+                  <Button
+                    onClick={() => setIsEditingDraft(false)}
+                    variant="outline"
+                    size="sm"
+                    className="border-white/20 text-white hover:bg-white/10"
+                  >
+                    ✕ Cerrar
+                  </Button>
+                </div>
+                
+                <div className="overflow-x-auto">
+                  <table className="w-full table-auto text-sm">
+                    <thead>
+                      <tr className="border-b border-white/20">
+                        <th className="text-left py-2 px-2 text-white">Empleado</th>
+                        <th className="text-left py-2 px-2 text-white">Bruto</th>
+                        <th className="text-left py-2 px-2 text-white">IHSS</th>
+                        <th className="text-left py-2 px-2 text-white">RAP</th>
+                        <th className="text-left py-2 px-2 text-white">ISR</th>
+                        <th className="text-left py-2 px-2 text-white">Adj. Bono</th>
+                        <th className="text-left py-2 px-2 text-white">Adj. Descuento</th>
+                        <th className="text-left py-2 px-2 text-white">Neto</th>
+                        <th className="text-left py-2 px-2 text-white">Nota</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {draft.rows.map((row) => (
+                        <tr key={row.employee_id} className="border-b border-white/10 hover:bg-white/5">
+                          <td className="py-2 px-2">
+                            <div className="text-white font-medium">{row.name}</div>
+                            <div className="text-xs text-gray-300">{row.employee_code}</div>
+                          </td>
+                          <td className="py-2 px-2 text-white font-mono">
+                            {formatCurrency(row.gross_salary)}
+                          </td>
+                          <td className="py-2 px-2 text-white font-mono">
+                            {formatCurrency(row.ihss)}
+                          </td>
+                          <td className="py-2 px-2 text-white font-mono">
+                            {formatCurrency(row.rap)}
+                          </td>
+                          <td className="py-2 px-2 text-white font-mono">
+                            {formatCurrency(row.isr)}
+                          </td>
+                          <td className="py-2 px-2">
+                            <Input
+                              type="number"
+                              value={row.adj_bonus || 0}
+                              onChange={(e) => {
+                                const value = Number(e.target.value) || 0
+                                const limit = row.base_salary * 2 // ±2 salarios mensuales
+                                if (Math.abs(value) <= limit) {
+                                  updateDraftRow(row.employee_id, 'adj_bonus', value)
+                                }
+                              }}
+                              className="w-20 h-8 bg-white/10 border-white/20 text-white text-xs"
+                              placeholder="0"
+                              min={-row.base_salary * 2}
+                              max={row.base_salary * 2}
+                            />
+                          </td>
+                          <td className="py-2 px-2">
+                            <Input
+                              type="number"
+                              value={row.adj_discount || 0}
+                              onChange={(e) => {
+                                const value = Number(e.target.value) || 0
+                                const limit = row.base_salary * 2 // ±2 salarios mensuales
+                                if (Math.abs(value) <= limit) {
+                                  updateDraftRow(row.employee_id, 'adj_discount', value)
+                                }
+                              }}
+                              className="w-20 h-8 bg-white/10 border-white/20 text-white text-xs"
+                              placeholder="0"
+                              min={0}
+                              max={row.base_salary * 2}
+                            />
+                          </td>
+                          <td className="py-2 px-2 text-white font-mono font-semibold">
+                            {formatCurrency(row.net_salary)}
+                          </td>
+                          <td className="py-2 px-2">
+                            <Input
+                              type="text"
+                              value={row.note || ''}
+                              onChange={(e) => updateDraftRow(row.employee_id, 'note', e.target.value)}
+                              className="w-24 h-8 bg-white/10 border-white/20 text-white text-xs"
+                              placeholder="Nota"
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                
+                <div className="mt-4 p-3 bg-brand-800/20 border border-brand-500/30 rounded-lg">
+                  <div className="text-sm text-brand-300 font-medium mb-2">📊 Totales Actualizados:</div>
+                  <div className="grid grid-cols-3 gap-4 text-xs text-gray-300">
+                    <div>Bruto: <span className="text-white font-mono">{formatCurrency(draft.totals.gross)}</span></div>
+                    <div>Deducciones: <span className="text-white font-mono">{formatCurrency(draft.totals.deductions)}</span></div>
+                    <div>Neto: <span className="text-white font-mono">{formatCurrency(draft.totals.net)}</span></div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Gráfico de Tendencia */}
         <div className="grid grid-cols-1 gap-6">
@@ -1311,8 +1723,6 @@ export default function PayrollManager() {
           </Card>
         </div>
       </div>
-
-
 
       {/* 3. 📊 Generar Nómina */}
       <div className="space-y-6">
@@ -1355,7 +1765,10 @@ export default function PayrollManager() {
                       onClick={() => handleFormChange('quincena', 2)}
                       className={`flex-1 ${generateForm.quincena === 2 ? 'bg-brand-800 hover:bg-brand-700 text-white' : 'border border-white/20 text-white hover:bg-white/10 bg-transparent'}`}
                     >
-                      16 - {lastDayOfSelectedMonth}
+                      16 - {(() => {
+                        const [year, month] = generateForm.periodo.split('-').map(Number)
+                        return new Date(year, month, 0).getDate()
+                      })()}
                     </Button>
                   </div>
                 </div>
@@ -1606,9 +2019,105 @@ export default function PayrollManager() {
         </Card>
       </div>
 
-      
-
-      
+      {/* Formulario de Preview */}
+      {showPreviewForm && (
+        <div className="mt-6 p-6 bg-brand-800/20 border border-brand-500/30 rounded-lg">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold text-white">⚙️ Configurar Preview de Nómina</h3>
+            <Button
+              onClick={() => setShowPreviewForm(false)}
+              variant="outline"
+              size="sm"
+              className="border-white/20 text-white hover:bg-white/10"
+            >
+              ✕ Cerrar
+            </Button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Mes */}
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">
+                📅 Mes
+              </label>
+              <Input
+                type="month"
+                value={previewForm.periodo}
+                onChange={(e) => setPreviewForm(prev => ({ ...prev, periodo: e.target.value }))}
+                required
+                className="w-full bg-white/10 border-white/20 text-white placeholder-gray-400"
+              />
+            </div>
+            
+            {/* Rango de Quincena */}
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">
+                ⏰ Rango de Quincena
+              </label>
+              <div className="flex gap-3">
+                <Button 
+                  type="button"
+                  onClick={() => setPreviewForm(prev => ({ ...prev, quincena: 1 }))}
+                  className={`flex-1 ${previewForm.quincena === 1 ? 'bg-brand-800 hover:bg-brand-700 text-white' : 'border border-white/20 text-white hover:bg-white/10 bg-transparent'}`}
+                >
+                  1 - 15
+                </Button>
+                <Button 
+                  type="button"
+                  onClick={() => setPreviewForm(prev => ({ ...prev, quincena: 2 }))}
+                  className={`flex-1 ${previewForm.quincena === 2 ? 'bg-brand-800 hover:bg-brand-700 text-white' : 'border border-white/20 text-white hover:bg-white/10 bg-transparent'}`}
+                >
+                  16 - {(() => {
+                    const [year, month] = previewForm.periodo.split('-').map(Number)
+                    return new Date(year, month, 0).getDate()
+                  })()}
+                </Button>
+              </div>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            {/* Incluir Deducciones */}
+            <div className="flex items-center space-x-3">
+              <input
+                type="checkbox"
+                checked={previewForm.incluirDeducciones}
+                onChange={(e) => setPreviewForm(prev => ({ ...prev, incluirDeducciones: e.target.checked }))}
+                className="w-4 h-4 accent-brand-500"
+                id="preview-deducciones"
+              />
+              <label htmlFor="preview-deducciones" className="text-sm font-medium text-white">
+                💰 Incluir deducciones (ISR, IHSS, RAP)
+              </label>
+            </div>
+            
+            {/* Solo Empleados con Asistencia */}
+            <div className="flex items-center space-x-3">
+              <input
+                type="checkbox"
+                checked={previewForm.soloEmpleadosConAsistencia}
+                onChange={(e) => setPreviewForm(prev => ({ ...prev, soloEmpleadosConAsistencia: e.target.checked }))}
+                className="w-4 h-4 accent-brand-500"
+                id="preview-asistencia"
+              />
+              <label htmlFor="preview-asistencia" className="text-sm font-medium text-white">
+                ✅ Solo empleados con asistencia completa
+              </label>
+            </div>
+          </div>
+          
+          {/* Botón Generar Preview */}
+          <div className="mt-6 pt-4 border-t border-white/10">
+            <Button 
+              onClick={generatePreview}
+              disabled={isWorking}
+              className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 w-full md:w-auto"
+            >
+              {isWorking ? '🔄 Generando...' : '🚀 Generar Preview'}
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

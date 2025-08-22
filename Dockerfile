@@ -14,7 +14,7 @@ WORKDIR /app
 
 # Install dependencies based on the preferred package manager
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN npm ci --only=production && npm cache clean --force
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -33,7 +33,7 @@ ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
 ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
 ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-# Build the application
+# Build the application with standalone output
 RUN npm run build
 
 # Production image, copy all the files and run next
@@ -44,23 +44,34 @@ ENV NODE_ENV=production
 ENV PORT=8080
 ENV HOSTNAME="0.0.0.0"
 
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+# Create system user for security
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
 
-# Create public directory (standalone mode doesn't include public)
-RUN mkdir -p ./public
+# Create necessary directories with proper permissions
+RUN mkdir -p ./public ./.next && \
+    chown nextjs:nodejs ./public ./.next
 
-# Set the correct permission for prerender cache
-RUN mkdir .next
-RUN chown nextjs:nodejs .next
+# Install only production dependencies and curl for health checks
+RUN apk add --no-cache --virtual .build-deps curl && \
+    rm -rf /var/cache/apk/*
 
-# Automatically leverage output traces to reduce image size
+# Copy standalone build and static files
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# Copy public assets (images, favicon, etc.)
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+
+# Switch to non-root user
 USER nextjs
 
-# Usar puerto 8080 para Railway
+# Health check optimized for Railway
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:8080/api/health || exit 1
+
+# Expose port 8080 for Railway
 EXPOSE 8080
 
+# Start the application
 CMD ["node", "server.js"]

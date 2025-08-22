@@ -34,7 +34,7 @@ export default function PoliticaPrivacidad() {
               <p className="text-slate-300">
                 <strong>Humano SISU</strong> ("nosotros"), <strong>Honduras</strong>.
                 <br />
-                Contacto: <strong>jorge@humanosisu.net</strong> | <strong>+504 9999-9999</strong>
+                Contacto: <strong>jorge7gomez@gmail.comt</strong> | <strong>+504 9470-7007</strong>
               </p>
             </section>
 
@@ -142,7 +142,7 @@ export default function PoliticaPrivacidad() {
               <h2 className="text-2xl font-semibold text-white mb-4">Footer ultra breve (para landing)</h2>
               <div className="p-4 bg-slate-800/50 rounded-lg">
                 <p className="text-slate-300">
-                  "Protegemos tu información. Sin spam, sin venta de datos. <strong>Solo para contactarte</strong>. Más info en la <strong>Política de Privacidad</strong>."
+                  "Protegemos tu información. Solo la utilizamos <strong> para contactarte</strong>. Más info en la <strong>Política de Privacidad</strong>."
                 </p>
               </div>
             </section>
@@ -157,7 +157,7 @@ export default function PoliticaPrivacidad() {
               © 2025 Humano SISU. Todos los derechos reservados.
             </p>
             <p className="text-slate-500 text-sm mt-2">
-              Protegemos tu información. Sin spam, sin venta de datos.
+              Protegemos tu información. Solo será utilizada para contactarte.
             </p>
           </div>
         </footer>

@@ -188,7 +188,7 @@ export default function ActivarPage() {
                 </div>
                 
                 <p className="text-sm text-brand-400 text-center mb-6">
-                  Comparte SISU con otros empresarios y ayúdanos a crecer la comunidad de RH en Honduras 🇭🇳
+                  Comparte con otros empresarios y ayúdanos a crecer la comunidad de RH en Honduras 🇭🇳
                 </p>
                 
                 {/* Redes Sociales */}
@@ -485,7 +485,7 @@ export default function ActivarPage() {
                 {/* WhatsApp */}
                 <div>
                   <label className="block text-white font-medium mb-2">
-                    WhatsApp (para login mágico) *
+                    WhatsApp (para login y soporte) *
                   </label>
                   <input
                     type="tel"
@@ -580,10 +580,10 @@ export default function ActivarPage() {
                     required
                   />
                   <label htmlFor="acepta-trial" className="text-white text-sm leading-relaxed">
-                    ✅ Deseo activar un entorno de prueba por 7 días. Sin costo.
+                    ✅ Deseo activar un entorno de prueba por 30 días. Sin costo.
                   </label>
                   <p className="text-brand-400 text-xs mt-2 ml-8">
-                    Acceso completo al sistema por 7 días gratis
+                    Acceso completo al sistema por 30 días gratis
                   </p>
                 </div>
 
@@ -612,7 +612,7 @@ export default function ActivarPage() {
                 )}
                 
                 <p className="text-brand-400 text-xs text-center">
-                  Entorno de prueba por 7 días. Sin costo, sin compromiso.
+                  Entorno de prueba por 30 días. Sin costo, sin compromiso.
                 </p>
               </div>
             </CardContent>
@@ -638,7 +638,7 @@ export default function ActivarPage() {
                   <ShieldCheckIcon className="h-6 w-6 text-brand-400" />
                 </div>
                 <p className="font-medium text-white">Sin compromiso</p>
-                <p className="text-sm text-brand-300">Prueba gratis por 7 días</p>
+                <p className="text-sm text-brand-300">Prueba gratis por 30 días</p>
               </CardContent>
             </Card>
             

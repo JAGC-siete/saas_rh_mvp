@@ -250,7 +250,7 @@ const downloadPayrollPDF = (record: PayrollRecord) => {
   const period = record.period_start.slice(0, 7)
   const day = Number(record.period_start.slice(8, 10))
   const quincena = day === 1 ? 1 : 2
-  const url = `/api/payroll/export?periodo=${period}&quincena=${quincena}`
+  const url = `/api/payroll/report?periodo=${period}&quincena=${quincena}`
   window.open(url, '_blank')
 }
 ```
