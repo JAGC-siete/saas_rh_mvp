@@ -1445,7 +1445,7 @@ export default function PayrollManager() {
             <CardContent className="pt-6">
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-400">
-                  {formatCurrency(payrollMetrics.totalGrossSalary)}
+                  {formatCurrency(payrollMetrics.totalGrossSalary / 2)}
                 </div>
                 <div className="text-sm text-gray-300">Salario Bruto (Q)</div>
                 <div className="text-xs text-gray-400 mt-1">
@@ -1472,8 +1472,8 @@ export default function PayrollManager() {
           <Card variant="glass">
             <CardContent className="pt-6">
               <div className="text-center">
-                <div className="text-2xl font-bold text-purple-400">
-                  {formatCurrency(payrollMetrics.totalNetSalary)}
+                <div className="text-1xl font-bold text-purple-400">
+                  {formatCurrency(payrollMetrics.totalNetSalary / 2)}
                 </div>
                 <div className="text-sm text-gray-300">Salario Neto (Q)</div>
                 <div className="text-xs text-gray-400 mt-1">
@@ -1532,11 +1532,11 @@ export default function PayrollManager() {
             <CardContent className="pt-6">
               <div className="text-center">
                 <div className="text-2xl font-bold text-teal-400">
-                  {payrollMetrics.totalDaysWorked}
+                  {formatCurrency(payrollMetrics.totalGrossSalary)}
                 </div>
-                <div className="text-sm text-gray-300">Días Trabajados (Q)</div>
+                <div className="text-sm text-gray-300">Salario Bruto (M)</div>
                 <div className="text-xs text-gray-400 mt-1">
-                  {payrollMetrics.attendanceRate.toFixed(1)}% cumplimiento
+                  Total mensual completo
                 </div>
               </div>
             </CardContent>
