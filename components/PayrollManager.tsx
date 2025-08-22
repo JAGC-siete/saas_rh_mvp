@@ -1475,11 +1475,18 @@ export default function PayrollManager() {
             <CardContent className="pt-6">
               <div className="text-center">
                 <div className="text-1xl font-bold text-purple-400">
-                  {formatCurrency(payrollMetrics.totalNetSalary / 2)}
+                  {formatCurrency(
+                    selectedQuincena === 1 
+                      ? payrollMetrics.totalGrossSalary / 2  // Q1: solo salario bruto ÷ 2
+                      : (payrollMetrics.totalGrossSalary / 2) - payrollMetrics.totalDeductions  // Q2: bruto ÷ 2 - deducciones
+                  )}
                 </div>
                 <div className="text-sm text-gray-300">Salario Neto (Q)</div>
                 <div className="text-xs text-gray-400 mt-1">
-                  Bruto - Deducciones
+                  {selectedQuincena === 1 
+                    ? 'Q1: Solo salario bruto (sin deducciones)'
+                    : 'Q2: Bruto ÷ 2 - Deducciones mensuales'
+                  }
                 </div>
               </div>
             </CardContent>
