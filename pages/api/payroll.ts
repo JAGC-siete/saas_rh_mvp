@@ -77,9 +77,9 @@ async function generatePayroll(req: NextApiRequest, res: NextApiResponse) {
 
     // Honduras tax calculations
     const grossSalary = earnedSalary
-    const incomeTax = calculateISR(grossSalary * 12) / 12 // Annual to monthly
+    const incomeTax = calculateISR(grossSalary) // Ya es mensual
     const professionalTax = grossSalary * 0.015 // 1.5% RAP
-    const socialSecurity = grossSalary * 0.035 // 3.5% social security (employee portion)
+    const socialSecurity = grossSalary * 0.05 // 5% IHSS (2.5% EM + 2.5% IVM)
     
     const totalDeductions = incomeTax + professionalTax + socialSecurity
     const netSalary = grossSalary - totalDeductions
@@ -217,16 +217,16 @@ async function getPayrollRecords(req: NextApiRequest, res: NextApiResponse) {
 }
 
 // Honduras ISR calculation function
-function calculateISR(annualSalary: number): number {
+function calculateISR(monthlySalary: number): number {
   const taxBrackets = [
-    { min: 0, max: 217493.16, rate: 0 },
-    { min: 217493.16, max: 494224.40, rate: 0.15 },
-    { min: 494224.40, max: 771252.37, rate: 0.20 },
-    { min: 771252.37, max: Infinity, rate: 0.25 }
+    { min: 0, max: 21457.76, rate: 0 },           // Exento
+    { min: 21457.76, max: 30969.88, rate: 0.15 }, // 15%
+    { min: 30969.88, max: 67604.36, rate: 0.20 }, // 20%
+    { min: 67604.36, max: Infinity, rate: 0.25 }  // 25%
   ]
 
-  const exemption = 40000 // Annual exemption
-  const taxableIncome = Math.max(0, annualSalary - exemption)
+  const exemption = 21457.76 // Exención mensual 2025
+  const taxableIncome = Math.max(0, monthlySalary - exemption)
   
   let tax = 0
   let remainingIncome = taxableIncome
@@ -238,6 +238,6 @@ function calculateISR(annualSalary: number): number {
     tax += taxableInThisBracket * bracket.rate
     remainingIncome -= taxableInThisBracket
   }
-
+  
   return tax
 }

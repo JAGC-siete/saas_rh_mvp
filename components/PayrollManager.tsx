@@ -79,15 +79,17 @@ interface PreviewScenario {
 // Constantes para fórmulas oficiales de Honduras 2025
 const HONDURAS_2025_CONSTANTS = {
   SALARIO_MINIMO: 11903.13,
-  IHSS_TECHO: 11903.13,
-  IHSS_PORCENTAJE: 0.05,
-  RAP_PORCENTAJE: 0.015,
-  ISR_EXENCION_ANUAL: 40000,
-  ISR_BRACKETS: [
-    { limit: 217493.16, rate: 0.00, base: 0 },
-    { limit: 331638.50, rate: 0.15, base: 0 },
-    { limit: 771252.38, rate: 0.20, base: 17121.80 },
-    { limit: Infinity, rate: 0.25, base: 105044.58 }
+  IHSS_TECHO: 11903.13,        // Techo IHSS 2025 (EM + IVM)
+  IHSS_PORCENTAJE_EMPLEADO: 0.05,  // 5% total (2.5% EM + 2.5% IVM)
+  IHSS_PORCENTAJE_PATRONO: 0.088,  // 5% EM + 3.5% IVM + 0.2% RP
+  RAP_PORCENTAJE: 0.015,       // 1.5% empleado + 1.5% patrono
+  ISR_EXENCION_MENSUAL: 21457.76,  // Exención mensual 2025
+  ISR_EXENCION_ANUAL: 40000,   // Deducción médica anual
+  ISR_BRACKETS_MENSUAL: [
+    { limit: 21457.76, rate: 0.00, base: 0 },           // Exento
+    { limit: 30969.88, rate: 0.15, base: 0 },           // 15%
+    { limit: 67604.36, rate: 0.20, base: 1426.82 },     // 20%
+    { limit: Infinity, rate: 0.25, base: 9120.37 }      // 25%
   ]
 } as const
 
@@ -291,13 +293,13 @@ export default function PayrollManager() {
     return new Date(y, m, 0).getDate() // 28–31
   }, [selectedPeriod])
 
-  // Función para calcular ISR según tabla progresiva de Honduras 2025
-  const calculateISR = useCallback((annualSalary: number): number => {
-    const baseImponible = annualSalary - HONDURAS_2025_CONSTANTS.ISR_EXENCION_ANUAL
+  // Función para calcular ISR según tabla mensual de Honduras 2025
+  const calculateISR = useCallback((monthlySalary: number): number => {
+    const baseImponible = monthlySalary - HONDURAS_2025_CONSTANTS.ISR_EXENCION_MENSUAL
     
     if (baseImponible <= 0) return 0
     
-    for (const bracket of HONDURAS_2025_CONSTANTS.ISR_BRACKETS) {
+    for (const bracket of HONDURAS_2025_CONSTANTS.ISR_BRACKETS_MENSUAL) {
       if (baseImponible <= bracket.limit) {
         return bracket.base + (baseImponible - (bracket.base > 0 ? bracket.limit : 0)) * bracket.rate
       }
@@ -306,7 +308,7 @@ export default function PayrollManager() {
     return 0
   }, [])
 
-  // Función para calcular deducciones según fórmulas oficiales de Honduras
+  // Función para calcular deducciones según fórmulas oficiales de Honduras 2025
   const calculateHondurasDeductions = useCallback((baseSalary: number, daysWorked: number, includeOvertime: boolean = false, overtimeHours: number = 0, overtimeRate: number = 1.5): {
     grossSalary: number
     ihss: number
@@ -328,17 +330,15 @@ export default function PayrollManager() {
     
     const grossSalary = baseGrossSalary + overtimeAmount
     
-    // IHSS: 5% del salario base (máximo L.11,903.13)
+    // IHSS: 5% del salario base (2.5% EM + 2.5% IVM) con techo L 11,903.13
     const ihssBase = Math.min(baseSalary, HONDURAS_2025_CONSTANTS.IHSS_TECHO)
-    const ihss = (ihssBase * HONDURAS_2025_CONSTANTS.IHSS_PORCENTAJE) / 2 // Dividir por 2 para quincena
+    const ihss = ihssBase * HONDURAS_2025_CONSTANTS.IHSS_PORCENTAJE_EMPLEADO // 5% mensual
     
     // RAP: 1.5% sobre el excedente del salario mínimo
-    const rap = Math.max(0, baseSalary - HONDURAS_2025_CONSTANTS.SALARIO_MINIMO) * HONDURAS_2025_CONSTANTS.RAP_PORCENTAJE / 2
+    const rap = Math.max(0, baseSalary - HONDURAS_2025_CONSTANTS.SALARIO_MINIMO) * HONDURAS_2025_CONSTANTS.RAP_PORCENTAJE
     
-    // ISR según tabla progresiva de Honduras 2025
-    const annualSalary = baseSalary * 12
-    const isrAnnual = calculateISR(annualSalary)
-    const isr = (isrAnnual / 12) / 2 // Convertir a quincenal
+    // ISR según tabla mensual de Honduras 2025
+    const isr = calculateISR(baseSalary) // Ya es mensual
     
     const totalDeductions = ihss + rap + isr
     const netSalary = grossSalary - totalDeductions
