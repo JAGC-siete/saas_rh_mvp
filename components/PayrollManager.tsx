@@ -139,8 +139,12 @@ const INITIAL_PAYROLL_METRICS: PayrollMetrics = {
 
 const INITIAL_GENERATE_FORM = {
   periodo: new Date().toISOString().slice(0, 7),
-  quincena: 1,
-  incluirDeducciones: false,
+  quincena: (() => {
+    const today = new Date()
+    const day = today.getDate()
+    return day <= 15 ? 1 : 2
+  })(),
+  incluirDeducciones: false, // Default: no deductions for first fortnight
   soloEmpleadosConAsistencia: true
 }
 
@@ -188,7 +192,6 @@ export default function PayrollManager() {
   const [filterEmployee, setFilterEmployee] = useState<string>('')
   const [suspendedCount, setSuspendedCount] = useState<number>(0)
   const [compareData, setCompareData] = useState<any>(null)
-  const [trendSeries, setTrendSeries] = useState<any[]>([])
   // Estado para modo Preview mejorado
   const [previewScenario, setPreviewScenario] = useState<PreviewScenario>(DEFAULT_PREVIEW_SCENARIO)
   // UI colors (computed to avoid static strings triggering secret scanner)
@@ -202,9 +205,13 @@ export default function PayrollManager() {
   // Estado para el formulario de preview
   const [previewForm, setPreviewForm] = useState({
     periodo: new Date().toISOString().slice(0, 7),
-    quincena: 1,
-    incluirDeducciones: true,
-    soloEmpleadosConAsistencia: false
+    quincena: (() => {
+      const today = new Date()
+      const day = today.getDate()
+      return day <= 15 ? 1 : 2
+    })(),
+    incluirDeducciones: false, // Default: no deductions for first fortnight
+    soloEmpleadosConAsistencia: true
   })
 
   
@@ -1234,7 +1241,7 @@ export default function PayrollManager() {
 
   // (Distribución por departamento fue reemplazada por tendencia; pre-cálculos removidos)
 
-  // Cargar comparativa y tendencia
+  // Cargar comparativa
   useEffect(() => {
     const ym = (selectedPeriod || new Date().toISOString().slice(0,7))
     const q = (filterQuincena || 1) as number
@@ -1243,11 +1250,6 @@ export default function PayrollManager() {
         const cmpRes = await fetch(`/api/payroll/compare?periodo=${encodeURIComponent(ym)}&quincena=${q}`)
         const cmpJson = await cmpRes.json().catch(()=>null)
         if (cmpRes.ok) setCompareData(cmpJson)
-      } catch {}
-      try {
-        const trRes = await fetch(`/api/payroll/trend?months=6`)
-        const trJson = await trRes.json().catch(()=>null)
-        if (trRes.ok) setTrendSeries(trJson?.series || [])
       } catch {}
     })()
   }, [selectedPeriod, filterQuincena])
@@ -1577,235 +1579,9 @@ export default function PayrollManager() {
           )}
         </div>
 
-        {/* Acciones de Nómina */}
-        <Card variant="glass">
-          <CardHeader>
-            <CardTitle className="text-white">🎯 Acciones de Nómina</CardTitle>
-            <CardDescription className="text-gray-300">
-              Genera preview, edita draft y genera documentos finales
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Botón 1: Generar Preview */}
-              <Button
-                onClick={async () => {
-                  setShowPreviewForm(!showPreviewForm)
-                  // Si no hay draft, generar uno automáticamente
-                  if (!draft) {
-                    await generatePreview()
-                  }
-                }}
-                disabled={isWorking || employees.length === 0}
-                className="bg-green-600 hover:bg-green-700 text-white h-20 flex flex-col items-center justify-center gap-2"
-                title={employees.length === 0 ? 'No hay empleados activos' : 'Generar preview de nómina'}
-              >
-                <span className="text-2xl">📝</span>
-                <span className="text-sm font-medium">Generar Preview</span>
-                <span className="text-xs opacity-80">(Draft)</span>
-              </Button>
+        
 
-              {/* Botón 2: Editar Draft */}
-              <Button
-                onClick={toggleEditDraft}
-                disabled={!draft || isWorking}
-                className={`h-20 flex flex-col items-center justify-center gap-2 ${
-                  isEditingDraft 
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white' 
-                    : 'bg-gray-600 hover:bg-gray-700 text-white'
-                }`}
-                title={!draft ? 'Primero genera un preview' : 'Editar draft de nómina'}
-              >
-                <span className="text-2xl">✏️</span>
-                <span className="text-sm font-medium">Editar Draft</span>
-                <span className="text-xs opacity-80">
-                  {isEditingDraft ? 'Activado' : 'Toggle'}
-                </span>
-              </Button>
 
-              {/* Botón 3: Generar PDF */}
-              <Button
-                onClick={generatePDF}
-                disabled={!draft || isWorking}
-                className="bg-purple-600 hover:bg-purple-700 text-white h-20 flex flex-col items-center justify-center gap-2"
-                title={!draft ? 'Primero genera un preview' : 'Generar PDF de planilla general'}
-              >
-                <span className="text-2xl">📄</span>
-                <span className="text-sm font-medium">Generar PDF</span>
-                <span className="text-xs opacity-80">(Planilla General)</span>
-              </Button>
-
-              {/* Botón 4: Generar y Enviar Vouchers */}
-              <Button
-                onClick={generateAndSendVouchers}
-                disabled={!draft || isWorking}
-                className="bg-orange-600 hover:bg-orange-700 text-white h-20 flex flex-col items-center justify-center gap-2"
-                title={!draft ? 'Primero genera un preview' : 'Generar y enviar vouchers por email'}
-              >
-                <span className="text-2xl">📤</span>
-                <span className="text-sm font-medium">Generar y Enviar</span>
-                <span className="text-xs opacity-80">Vouchers (Email)</span>
-              </Button>
-            </div>
-
-            {/* Banner de Preview */}
-            {draft && (
-              <div className="mt-6 bg-yellow-500/20 border border-yellow-500/30 rounded-lg p-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-yellow-400">⚠️</span>
-                  <span className="text-yellow-200 font-medium">Preview (no persistido)</span>
-                  <span className="text-yellow-300 text-sm">
-                    — Periodo {draft.meta.periodo} Q{draft.meta.quincena} • {draft.rows.length} empleados
-                  </span>
-                </div>
-                <div className="mt-2 text-xs text-yellow-300">
-                  Totales: Bruto {formatCurrency(draft.totals.gross)} • 
-                  Deducciones {formatCurrency(draft.totals.deductions)} • 
-                  Neto {formatCurrency(draft.totals.net)}
-                </div>
-              </div>
-            )}
-
-            {/* Tabla editable del draft */}
-            {draft && isEditingDraft && (
-              <div className="mt-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold text-white">📋 Editar Draft de Nómina</h3>
-                  <Button
-                    onClick={() => setIsEditingDraft(false)}
-                    variant="outline"
-                    size="sm"
-                    className="border-white/20 text-white hover:bg-white/10"
-                  >
-                    ✕ Cerrar
-                  </Button>
-                </div>
-                
-                <div className="overflow-x-auto">
-                  <table className="w-full table-auto text-sm">
-                    <thead>
-                      <tr className="border-b border-white/20">
-                        <th className="text-left py-2 px-2 text-white">Empleado</th>
-                        <th className="text-left py-2 px-2 text-white">Bruto</th>
-                        <th className="text-left py-2 px-2 text-white">IHSS</th>
-                        <th className="text-left py-2 px-2 text-white">RAP</th>
-                        <th className="text-left py-2 px-2 text-white">ISR</th>
-                        <th className="text-left py-2 px-2 text-white">Adj. Bono</th>
-                        <th className="text-left py-2 px-2 text-white">Adj. Descuento</th>
-                        <th className="text-left py-2 px-2 text-white">Neto</th>
-                        <th className="text-left py-2 px-2 text-white">Nota</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {draft.rows.map((row) => (
-                        <tr key={row.employee_id} className="border-b border-white/10 hover:bg-white/5">
-                          <td className="py-2 px-2">
-                            <div className="text-white font-medium">{row.name}</div>
-                            <div className="text-xs text-gray-300">{row.employee_code}</div>
-                          </td>
-                          <td className="py-2 px-2 text-white font-mono">
-                            {formatCurrency(row.gross_salary)}
-                          </td>
-                          <td className="py-2 px-2 text-white font-mono">
-                            {formatCurrency(row.ihss)}
-                          </td>
-                          <td className="py-2 px-2 text-white font-mono">
-                            {formatCurrency(row.rap)}
-                          </td>
-                          <td className="py-2 px-2 text-white font-mono">
-                            {formatCurrency(row.isr)}
-                          </td>
-                          <td className="py-2 px-2">
-                            <Input
-                              type="number"
-                              value={row.adj_bonus || 0}
-                              onChange={(e) => {
-                                const value = Number(e.target.value) || 0
-                                const limit = row.base_salary * 2 // ±2 salarios mensuales
-                                if (Math.abs(value) <= limit) {
-                                  updateDraftRow(row.employee_id, 'adj_bonus', value)
-                                }
-                              }}
-                              className="w-20 h-8 bg-white/10 border-white/20 text-white text-xs"
-                              placeholder="0"
-                              min={-row.base_salary * 2}
-                              max={row.base_salary * 2}
-                            />
-                          </td>
-                          <td className="py-2 px-2">
-                            <Input
-                              type="number"
-                              value={row.adj_discount || 0}
-                              onChange={(e) => {
-                                const value = Number(e.target.value) || 0
-                                const limit = row.base_salary * 2 // ±2 salarios mensuales
-                                if (Math.abs(value) <= limit) {
-                                  updateDraftRow(row.employee_id, 'adj_discount', value)
-                                }
-                              }}
-                              className="w-20 h-8 bg-white/10 border-white/20 text-white text-xs"
-                              placeholder="0"
-                              min={0}
-                              max={row.base_salary * 2}
-                            />
-                          </td>
-                          <td className="py-2 px-2 text-white font-mono font-semibold">
-                            {formatCurrency(row.net_salary)}
-                          </td>
-                          <td className="py-2 px-2">
-                            <Input
-                              type="text"
-                              value={row.note || ''}
-                              onChange={(e) => updateDraftRow(row.employee_id, 'note', e.target.value)}
-                              className="w-24 h-8 bg-white/10 border-white/20 text-white text-xs"
-                              placeholder="Nota"
-                            />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                
-                <div className="mt-4 p-3 bg-brand-800/20 border border-brand-500/30 rounded-lg">
-                  <div className="text-sm text-brand-300 font-medium mb-2">📊 Totales Actualizados:</div>
-                  <div className="grid grid-cols-3 gap-4 text-xs text-gray-300">
-                    <div>Bruto: <span className="text-white font-mono">{formatCurrency(draft.totals.gross)}</span></div>
-                    <div>Deducciones: <span className="text-white font-mono">{formatCurrency(draft.totals.deductions)}</span></div>
-                    <div>Neto: <span className="text-white font-mono">{formatCurrency(draft.totals.net)}</span></div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Gráfico de Tendencia */}
-        <div className="grid grid-cols-1 gap-6">
-          <Card variant="glass">
-            <CardHeader>
-              <CardTitle className="text-white">📈 Tendencia 6 meses (Neto)</CardTitle>
-              <CardDescription className="text-gray-300">Costo neto mensual</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-56">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={trendSeries} margin={{ top: 5, right: 10, bottom: 5, left: 0 }}>
-                    <CartesianGrid strokeDasharray="2 2" stroke="rgba(255,255,255,0.13)" />
-                    <XAxis dataKey="month" stroke="#9ca3af" />
-                    <YAxis stroke="#9ca3af" tickFormatter={(v)=>formatCurrency(v as any)} />
-                    <Tooltip 
-                      formatter={(v: any)=>formatCurrency(Number(v))} 
-                      labelStyle={{ color: 'rgb(255,255,255)' }} 
-                                              contentStyle={{ background: 'rgb(17,24,39)', border: '1px solid rgb(55,65,81)' }} 
-                    />
-                    <Line type="monotone" dataKey="netSalary" stroke="blue" strokeWidth={1} dot={false} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
       </div>
 
       {/* 3. 📊 Generar Nómina */}
@@ -1883,6 +1659,206 @@ export default function PayrollManager() {
                     ✅ Solo empleados con asistencia completa
                   </label>
                 </div>
+              </div>
+
+              {/* Acciones de Nómina Integradas */}
+              <div className="pt-4 border-t border-white/10">
+                <h4 className="text-lg font-semibold text-white mb-4">🎯 Acciones de Nómina</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                  {/* Botón 1: Generar Preview */}
+                  <Button
+                    type="button"
+                    onClick={async () => {
+                      setShowPreviewForm(!showPreviewForm)
+                      // Si no hay draft, generar uno automáticamente
+                      if (!draft) {
+                        await generatePreview()
+                      }
+                    }}
+                    disabled={isWorking || employees.length === 0}
+                    className="bg-green-600 hover:bg-green-700 text-white h-20 flex flex-col items-center justify-center gap-2"
+                    title={employees.length === 0 ? 'No hay empleados activos' : 'Generar preview de nómina'}
+                  >
+                    <span className="text-2xl">📝</span>
+                    <span className="text-sm font-medium">Generar Preview</span>
+                    <span className="text-xs opacity-80">(Draft)</span>
+                  </Button>
+
+                  {/* Botón 2: Editar Draft */}
+                  <Button
+                    type="button"
+                    onClick={toggleEditDraft}
+                    disabled={!draft || isWorking}
+                    className={`h-20 flex flex-col items-center justify-center gap-2 ${
+                      isEditingDraft 
+                        ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                        : 'bg-gray-600 hover:bg-gray-700 text-white'
+                    }`}
+                    title={!draft ? 'Primero genera un preview' : 'Editar draft de nómina'}
+                  >
+                    <span className="text-2xl">✏️</span>
+                    <span className="text-sm font-medium">Editar Draft</span>
+                    <span className="text-xs opacity-80">
+                      {isEditingDraft ? 'Activado' : 'Toggle'}
+                    </span>
+                  </Button>
+
+                  {/* Botón 3: Generar PDF */}
+                  <Button
+                    type="button"
+                    onClick={generatePDF}
+                    disabled={!draft || isWorking}
+                    className="bg-purple-600 hover:bg-purple-700 text-white h-20 flex flex-col items-center justify-center gap-2"
+                    title={!draft ? 'Primero genera un preview' : 'Generar PDF de planilla general'}
+                  >
+                    <span className="text-2xl">📄</span>
+                    <span className="text-sm font-medium">Generar PDF</span>
+                    <span className="text-xs opacity-80">(Planilla General)</span>
+                  </Button>
+
+                  {/* Botón 4: Generar y Enviar Vouchers */}
+                  <Button
+                    type="button"
+                    onClick={generateAndSendVouchers}
+                    disabled={!draft || isWorking}
+                    className="bg-orange-600 hover:bg-orange-700 text-white h-20 flex flex-col items-center justify-center gap-2"
+                    title={!draft ? 'Primero genera un preview' : 'Generar y enviar vouchers por email'}
+                  >
+                    <span className="text-2xl">📤</span>
+                    <span className="text-sm font-medium">Generar y Enviar</span>
+                    <span className="text-xs opacity-80">Vouchers (Email)</span>
+                  </Button>
+                </div>
+
+                {/* Banner de Preview */}
+                {draft && (
+                  <div className="mb-6 bg-yellow-500/20 border border-yellow-500/30 rounded-lg p-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-yellow-400">⚠️</span>
+                      <span className="text-yellow-200 font-medium">Preview (no persistido)</span>
+                      <span className="text-yellow-300 text-sm">
+                        — Periodo {draft.meta.periodo} Q{draft.meta.quincena} • {draft.rows.length} empleados
+                      </span>
+                    </div>
+                    <div className="mt-2 text-xs text-yellow-300">
+                      Totales: Bruto {formatCurrency(draft.totals.gross)} • 
+                      Deducciones {formatCurrency(draft.totals.deductions)} • 
+                      Neto {formatCurrency(draft.totals.net)}
+                    </div>
+                  </div>
+                )}
+
+                {/* Tabla editable del draft */}
+                {draft && isEditingDraft && (
+                  <div className="mb-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-semibold text-white">📋 Editar Draft de Nómina</h3>
+                      <Button
+                        onClick={() => setIsEditingDraft(false)}
+                        variant="outline"
+                        size="sm"
+                        className="border-white/20 text-white hover:bg-white/10"
+                      >
+                        ✕ Cerrar
+                      </Button>
+                    </div>
+                    
+                    <div className="overflow-x-auto">
+                      <table className="w-full table-auto text-sm">
+                        <thead>
+                          <tr className="border-b border-white/20">
+                            <th className="text-left py-2 px-2 text-white">Empleado</th>
+                            <th className="text-left py-2 px-2 text-white">Bruto</th>
+                            <th className="text-left py-2 px-2 text-white">IHSS</th>
+                            <th className="text-left py-2 px-2 text-white">RAP</th>
+                            <th className="text-left py-2 px-2 text-white">ISR</th>
+                            <th className="text-left py-2 px-2 text-white">Adj. Bono</th>
+                            <th className="text-left py-2 px-2 text-white">Adj. Descuento</th>
+                            <th className="text-left py-2 px-2 text-white">Neto</th>
+                            <th className="text-left py-2 px-2 text-white">Nota</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {draft.rows.map((row) => (
+                            <tr key={row.employee_id} className="border-b border-white/10 hover:bg-white/5">
+                              <td className="py-2 px-2">
+                                <div className="text-white font-medium">{row.name}</div>
+                                <div className="text-xs text-gray-300">{row.employee_code}</div>
+                              </td>
+                              <td className="py-2 px-2 text-white font-mono">
+                                {formatCurrency(row.gross_salary)}
+                              </td>
+                              <td className="py-2 px-2 text-white font-mono">
+                                {formatCurrency(row.ihss)}
+                              </td>
+                              <td className="py-2 px-2 text-white font-mono">
+                                {formatCurrency(row.rap)}
+                              </td>
+                              <td className="py-2 px-2 text-white font-mono">
+                                {formatCurrency(row.isr)}
+                              </td>
+                              <td className="py-2 px-2">
+                                <Input
+                                  type="number"
+                                  value={row.adj_bonus || 0}
+                                  onChange={(e) => {
+                                    const value = Number(e.target.value) || 0
+                                    const limit = row.base_salary * 2 // ±2 salarios mensuales
+                                    if (Math.abs(value) <= limit) {
+                                      updateDraftRow(row.employee_id, 'adj_bonus', value)
+                                    }
+                                  }}
+                                  className="w-20 h-8 bg-white/10 border-white/20 text-white text-xs"
+                                  placeholder="0"
+                                  min={-row.base_salary * 2}
+                                  max={row.base_salary * 2}
+                                />
+                              </td>
+                              <td className="py-2 px-2">
+                                <Input
+                                  type="number"
+                                  value={row.adj_discount || 0}
+                                  onChange={(e) => {
+                                    const value = Number(e.target.value) || 0
+                                    const limit = row.base_salary * 2 // ±2 salarios mensuales
+                                    if (Math.abs(value) <= limit) {
+                                      updateDraftRow(row.employee_id, 'adj_discount', value)
+                                    }
+                                  }}
+                                  className="w-20 h-8 bg-white/10 border-white/20 text-white text-xs"
+                                  placeholder="0"
+                                  min={0}
+                                  max={row.base_salary * 2}
+                                />
+                              </td>
+                              <td className="py-2 px-2 text-white font-mono font-semibold">
+                                {formatCurrency(row.net_salary)}
+                              </td>
+                              <td className="py-2 px-2">
+                                <Input
+                                  type="text"
+                                  value={row.note || ''}
+                                  onChange={(e) => updateDraftRow(row.employee_id, 'note', e.target.value)}
+                                  className="w-24 h-8 bg-white/10 border-white/20 text-white text-xs"
+                                  placeholder="Nota"
+                                />
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    
+                    <div className="mt-4 p-3 bg-brand-800/20 border border-brand-500/30 rounded-lg">
+                      <div className="text-sm text-brand-300 font-medium mb-2">📊 Totales Actualizados:</div>
+                      <div className="grid grid-cols-3 gap-4 text-xs text-gray-300">
+                        <div>Bruto: <span className="text-white font-mono">{formatCurrency(draft.totals.gross)}</span></div>
+                        <div>Deducciones: <span className="text-white font-mono">{formatCurrency(draft.totals.deductions)}</span></div>
+                        <div>Neto: <span className="text-white font-mono">{formatCurrency(draft.totals.net)}</span></div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
               
               <div className="flex flex-wrap gap-4 pt-4 border-t border-white/10">
