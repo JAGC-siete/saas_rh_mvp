@@ -20,7 +20,7 @@
     "audit:analyze": "node scripts/analyze-audit-report.js",
     "logs:dev": "node scripts/logs-dev.js",
     "logs:prod": "node scripts/logs-prod.js",
-    "prepare": "husky",
+    "prepare": "husky || true",
     "svgo": "svgo -f public -r"
   },
   "dependencies": {
