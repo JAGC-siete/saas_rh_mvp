@@ -219,14 +219,15 @@ async function getPayrollRecords(req: NextApiRequest, res: NextApiResponse) {
 // Honduras ISR calculation function
 function calculateISR(monthlySalary: number): number {
   const taxBrackets = [
-    { min: 0, max: 21457.76, rate: 0 },           // Exento
-    { min: 21457.76, max: 30969.88, rate: 0.15 }, // 15%
-    { min: 30969.88, max: 67604.36, rate: 0.20 }, // 20%
-    { min: 67604.36, max: Infinity, rate: 0.25 }  // 25%
+    { min: 0, max: 40000, rate: 0 },                    // Exento hasta L 40,000
+    { min: 40000, max: 217493.16, rate: 0.15 },         // 15%
+    { min: 217493.16, max: 494224.40, rate: 0.20 },     // 20%
+    { min: 494224.40, max: Infinity, rate: 0.25 }       // 25%
   ]
 
-  const exemption = 21457.76 // Exención mensual 2025
-  const taxableIncome = Math.max(0, monthlySalary - exemption)
+  const exemption = 40000 // Deducción médica anual L 40,000
+  const annualSalary = monthlySalary * 12
+  const taxableIncome = Math.max(0, annualSalary - exemption)
   
   let tax = 0
   let remainingIncome = taxableIncome
@@ -239,5 +240,5 @@ function calculateISR(monthlySalary: number): number {
     remainingIncome -= taxableInThisBracket
   }
   
-  return tax
+  return tax / 12 // Convertir a mensual
 }

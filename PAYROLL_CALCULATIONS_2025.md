@@ -10,7 +10,7 @@
 
 ---
 
-## 🔢 **Constantes del Sistema (HONDURAS_2025_CONSTANTS)**
+## 🔢 **Constantes del Sistema (HONDURAS_2025_CONSTANTS):**
 
 ```typescript
 const HONDURAS_2025_CONSTANTS = {
@@ -19,13 +19,12 @@ const HONDURAS_2025_CONSTANTS = {
   IHSS_PORCENTAJE_EMPLEADO: 0.05,              // 5% total (2.5% EM + 2.5% IVM)
   IHSS_PORCENTAJE_PATRONO: 0.088,              // 5% EM + 3.5% IVM + 0.2% RP
   RAP_PORCENTAJE: 0.015,                       // 1.5% empleado + 1.5% patrono
-  ISR_EXENCION_MENSUAL: 21457.76,              // Exención mensual 2025
-  ISR_EXENCION_ANUAL: 40000,                   // Deducción médica anual
-  ISR_BRACKETS_MENSUAL: [                      // Tabla mensual 2025
-    { limit: 21457.76, rate: 0.00, base: 0 },           // Exento
-    { limit: 30969.88, rate: 0.15, base: 0 },           // 15%
-    { limit: 67604.36, rate: 0.20, base: 1426.82 },     // 20%
-    { limit: Infinity, rate: 0.25, base: 9120.37 }      // 25%
+  ISR_EXENCION_ANUAL: 40000,                   // Deducción médica anual L 40,000
+  ISR_BRACKETS_ANUAL: [                        // Tabla ANUAL 2025 (SAR)
+    { limit: 40000, rate: 0.00, base: 0 },                    // Exento hasta L 40,000
+    { limit: 217493.16, rate: 0.15, base: 0 },                // 15%
+    { limit: 494224.40, rate: 0.20, base: 26623.97 },         // 20%
+    { limit: Infinity, rate: 0.25, base: 81947.97 }           // 25%
   ]
 }
 ```
@@ -60,15 +59,17 @@ const rap = Math.max(0, baseSalary - 11903.13) * 0.015
 
 ### **4. ISR (Impuesto Sobre la Renta)**
 ```typescript
-// Tabla mensual 2025 con exención hasta L 21,457.76
-const baseImponible = monthlySalary - 21457.76
+// Tabla ANUAL 2025 con deducción médica de L 40,000
+const annualSalary = baseSalary * 12
+const baseImponible = annualSalary - 40000  // Deducción médica anual
 
 if (baseImponible <= 0) return 0
 
-// Aplicar tramos progresivos
-for (const bracket of ISR_BRACKETS_MENSUAL) {
+// Aplicar tramos progresivos ANUALES
+for (const bracket of ISR_BRACKETS_ANUAL) {
   if (baseImponible <= bracket.limit) {
-    return bracket.base + (baseImponible - bracket.limit) * bracket.rate
+    const isrAnnual = bracket.base + (baseImponible - bracket.limit) * bracket.rate
+    return isrAnnual / 12 // Convertir a mensual
   }
 }
 ```
@@ -91,14 +92,16 @@ for (const bracket of ISR_BRACKETS_MENSUAL) {
 
 ---
 
-## 🎯 **Tabla ISR Mensual 2025 (SAR)**
+## 🎯 **Tabla ISR ANUAL 2025 (SAR)**
 
-| Rango Mensual | Tasa | Base | Cálculo |
-|---------------|------|------|---------|
-| Hasta L 21,457.76 | 0% | 0 | **Exento** |
-| L 21,457.77 - L 30,969.88 | 15% | 0 | (Salario - 21,457.76) × 15% |
-| L 30,969.89 - L 67,604.36 | 20% | L 1,426.82 | L 1,426.82 + (Salario - 30,969.88) × 20% |
-| L 67,604.37+ | 25% | L 9,120.37 | L 9,120.37 + (Salario - 67,604.36) × 25% |
+| Rango Anual | Tasa | Base | Cálculo |
+|-------------|------|------|---------|
+| Hasta L 40,000 | 0% | 0 | **Exento** (deducción médica) |
+| L 40,000.01 - L 217,493.16 | 15% | 0 | (Salario Anual - 40,000) × 15% |
+| L 217,493.17 - L 494,224.40 | 20% | L 26,623.97 | L 26,623.97 + (Salario Anual - 217,493.16) × 20% |
+| L 494,224.41+ | 25% | L 81,947.97 | L 81,947.97 + (Salario Anual - 494,224.40) × 25% |
+
+**Nota**: El ISR se calcula anualmente y se divide entre 12 para obtener el mensual.
 
 ---
 
@@ -106,12 +109,14 @@ for (const bracket of ISR_BRACKETS_MENSUAL) {
 
 ### **Ejemplo: Empleado con L 25,000 mensual**
 
-1. **Base Imponible ISR**: L 25,000 - L 21,457.76 = L 3,542.24
-2. **ISR**: L 3,542.24 × 15% = L 531.34
-3. **IHSS**: L 11,903.13 × 5% = L 595.16 (topeado)
-4. **RAP**: (L 25,000 - L 11,903.13) × 1.5% = L 196.45
+1. **Salario Anual**: L 25,000 × 12 = L 300,000
+2. **Base Imponible ISR**: L 300,000 - L 40,000 = L 260,000
+3. **ISR Anual**: L 26,623.97 + (L 260,000 - L 217,493.16) × 20% = L 34,923.97
+4. **ISR Mensual**: L 34,923.97 ÷ 12 = L 2,910.33
+5. **IHSS**: L 11,903.13 × 5% = L 595.16 (topeado)
+6. **RAP**: (L 25,000 - L 11,903.13) × 1.5% = L 196.45
 
-**Total Deducciones**: L 531.34 + L 595.16 + L 196.45 = L 1,322.95
+**Total Deducciones**: L 2,910.33 + L 595.16 + L 196.45 = L 3,701.94
 
 ---
 

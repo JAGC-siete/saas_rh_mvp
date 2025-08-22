@@ -83,13 +83,12 @@ const HONDURAS_2025_CONSTANTS = {
   IHSS_PORCENTAJE_EMPLEADO: 0.05,  // 5% total (2.5% EM + 2.5% IVM)
   IHSS_PORCENTAJE_PATRONO: 0.088,  // 5% EM + 3.5% IVM + 0.2% RP
   RAP_PORCENTAJE: 0.015,       // 1.5% empleado + 1.5% patrono
-  ISR_EXENCION_MENSUAL: 21457.76,  // Exención mensual 2025
-  ISR_EXENCION_ANUAL: 40000,   // Deducción médica anual
-  ISR_BRACKETS_MENSUAL: [
-    { limit: 21457.76, rate: 0.00, base: 0 },           // Exento
-    { limit: 30969.88, rate: 0.15, base: 0 },           // 15%
-    { limit: 67604.36, rate: 0.20, base: 1426.82 },     // 20%
-    { limit: Infinity, rate: 0.25, base: 9120.37 }      // 25%
+  ISR_EXENCION_ANUAL: 40000,   // Deducción médica anual L 40,000
+  ISR_BRACKETS_ANUAL: [        // Tabla ANUAL 2025 (SAR)
+    { limit: 40000, rate: 0.00, base: 0 },                    // Exento hasta L 40,000
+    { limit: 217493.16, rate: 0.15, base: 0 },                // 15%
+    { limit: 494224.40, rate: 0.20, base: 26623.97 },         // 20%
+    { limit: Infinity, rate: 0.25, base: 81947.97 }           // 25%
   ]
 } as const
 
@@ -293,15 +292,21 @@ export default function PayrollManager() {
     return new Date(y, m, 0).getDate() // 28–31
   }, [selectedPeriod])
 
-  // Función para calcular ISR según tabla mensual de Honduras 2025
+  // Función para calcular ISR según tabla ANUAL de Honduras 2025
   const calculateISR = useCallback((monthlySalary: number): number => {
-    const baseImponible = monthlySalary - HONDURAS_2025_CONSTANTS.ISR_EXENCION_MENSUAL
+    // Convertir salario mensual a anual
+    const annualSalary = monthlySalary * 12
+    
+    // Aplicar deducción médica anual de L 40,000
+    const baseImponible = annualSalary - HONDURAS_2025_CONSTANTS.ISR_EXENCION_ANUAL
     
     if (baseImponible <= 0) return 0
     
-    for (const bracket of HONDURAS_2025_CONSTANTS.ISR_BRACKETS_MENSUAL) {
+    // Calcular ISR anual usando tabla progresiva
+    for (const bracket of HONDURAS_2025_CONSTANTS.ISR_BRACKETS_ANUAL) {
       if (baseImponible <= bracket.limit) {
-        return bracket.base + (baseImponible - (bracket.base > 0 ? bracket.limit : 0)) * bracket.rate
+        const isrAnnual = bracket.base + (baseImponible - (bracket.base > 0 ? bracket.limit : 0)) * bracket.rate
+        return isrAnnual / 12 // Convertir a mensual
       }
     }
     

@@ -11,13 +11,12 @@ const HONDURAS_2025_CONSTANTS = {
   SALARIO_MINIMO: 11903.13,
   IHSS_TECHO: 11903.13,        // Techo IHSS 2025 (EM + IVM)
   IHSS_PORCENTAJE_EMPLEADO: 0.05,  // 5% total (2.5% EM + 2.5% IVM)
-  ISR_EXENCION_MENSUAL: 21457.76,  // Exención mensual 2025
-  ISR_EXENCION_ANUAL: 40000,   // Deducción médica anual
-  ISR_BRACKETS_MENSUAL: [
-    { limit: 21457.76, rate: 0.00, base: 0 },           // Exento
-    { limit: 30969.88, rate: 0.15, base: 0 },           // 15%
-    { limit: 67604.36, rate: 0.20, base: 1426.82 },     // 20%
-    { limit: Infinity, rate: 0.25, base: 9120.37 }      // 25%
+  ISR_EXENCION_ANUAL: 40000,   // Deducción médica anual L 40,000
+  ISR_BRACKETS_ANUAL: [        // Tabla ANUAL 2025 (SAR)
+    { limit: 40000, rate: 0.00, base: 0 },                    // Exento hasta L 40,000
+    { limit: 217493.16, rate: 0.15, base: 0 },                // 15%
+    { limit: 494224.40, rate: 0.20, base: 26623.97 },         // 20%
+    { limit: Infinity, rate: 0.25, base: 81947.97 }           // 25%
   ]
 }
 
@@ -41,15 +40,21 @@ interface PlanillaItem {
   notes_on_deductions: string
 }
 
-// Cálculo de ISR según tabla mensual de Honduras 2025
+// Cálculo de ISR según tabla ANUAL de Honduras 2025
 function calcularISR(salarioBase: number): number {
-  const baseImponible = salarioBase - HONDURAS_2025_CONSTANTS.ISR_EXENCION_MENSUAL
+  // Convertir salario mensual a anual
+  const salarioAnual = salarioBase * 12
+  
+  // Aplicar deducción médica anual de L 40,000
+  const baseImponible = salarioAnual - HONDURAS_2025_CONSTANTS.ISR_EXENCION_ANUAL
   
   if (baseImponible <= 0) return 0
   
-  for (const bracket of HONDURAS_2025_CONSTANTS.ISR_BRACKETS_MENSUAL) {
+  // Calcular ISR anual usando tabla progresiva
+  for (const bracket of HONDURAS_2025_CONSTANTS.ISR_BRACKETS_ANUAL) {
     if (baseImponible <= bracket.limit) {
-      return bracket.base + (baseImponible - (bracket.base > 0 ? bracket.limit : 0)) * bracket.rate
+      const isrAnual = bracket.base + (baseImponible - (bracket.base > 0 ? bracket.limit : 0)) * bracket.rate
+      return isrAnual / 12 // Convertir a mensual
     }
   }
   
