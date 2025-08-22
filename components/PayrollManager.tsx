@@ -1605,11 +1605,11 @@ export default function PayrollManager() {
 
       </div>
 
-      {/* 3. 📊 Generar Nómina */}
+      {/* 3.  Generar Nómina */}
       <div className="space-y-6">
         <Card variant="glass">
           <CardHeader>
-            <CardTitle className="text-white">📊 Generar Nómina</CardTitle>
+            <CardTitle className="text-white"> Generar Nómina</CardTitle>
             <CardDescription className="text-gray-300">
               Genera la nómina para todos los empleados activos para un período y quincena seleccionados
             </CardDescription>
@@ -1619,7 +1619,7 @@ export default function PayrollManager() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-white mb-2">
-                    📅 Mes
+                    Mes
                   </label>
                   <Input
                     type="month"
@@ -1631,7 +1631,7 @@ export default function PayrollManager() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-white mb-2">
-                    ⏰ Rango de Quincena
+                     Rango de Quincena
                   </label>
                   <div className="flex gap-3">
                     <Button 
@@ -1677,7 +1677,7 @@ export default function PayrollManager() {
                     id="asistencia"
                   />
                   <label htmlFor="asistencia" className="text-sm font-medium text-white">
-                    ✅ Solo empleados con asistencia completa
+                     Solo empleados con asistencia completa
                   </label>
                 </div>
               </div>
