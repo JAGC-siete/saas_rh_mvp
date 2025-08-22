@@ -113,17 +113,19 @@ export default function LandingPage() {
           <nav className="px-6 lg:px-8">
             <div className="flex items-center justify-between h-16">
               {/* Logo Sisu */}
-              <div className="flex items-center space-x-4">
-                <Image
-                  src="/logo-humano-sisu.png"
-                  alt="Humano SISU Logo"
-                  width={48}
-                  height={48}
-                  className="rounded-lg"
-                />
+              <div className="flex items-center space-x-6">
+                <div className="bg-white/10 px-3 py-2 rounded-lg border border-white/20 backdrop-blur-sm">
+                  <Image
+                    src="/logo-humano-sisu.png"
+                    alt="Humano SISU Logo"
+                    width={48}
+                    height={48}
+                    className="rounded-lg"
+                  />
+                </div>
                 
                 {/* Certificados AWS */}
-                <div className="hidden lg:flex items-center space-x-2">
+                <div className="hidden lg:flex items-center space-x-3">
                   <div className="flex items-center space-x-2 bg-white/10 px-2 py-1 rounded-lg border border-white/20">
                     <Image
                       src="/image-aws-solutions-architect.png"
@@ -157,7 +159,7 @@ export default function LandingPage() {
                 </div>
                 
                 {/* Título */}
-                <h1 className="text-lg font-bold text-white max-w-md">
+                <h1 className="text-lg font-bold text-white max-w-lg lg:max-w-2xl xl:max-w-3xl leading-tight ml-4">
                   <span className="text-white">I.H.S.S., R.A.P. e I.S.R. en automático</span>{' '}
                   <span className="text-brand-300">activa, cumplí y ahorrá horas cada quincena</span>
                 </h1>
