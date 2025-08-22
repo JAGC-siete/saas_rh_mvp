@@ -265,7 +265,7 @@ export default function LandingPage() {
       </header>
 
       {/* Main Hero - LandingHero enfocado en conversión */}
-      <section className="py-16 relative overflow-hidden">
+      <section className="py-8 relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Trust badges */}
           <div className="flex flex-wrap justify-center gap-3 md:gap-6 mb-8 animate-fade-up-subtle">
@@ -278,14 +278,16 @@ export default function LandingPage() {
           <CountdownTimer />
 
           {/* LandingHero Section - Reemplaza completamente al carrusel */}
-          <div className="text-center max-w-6xl mx-auto mb-12">
+          <div className="text-center max-w-6xl mx-auto mb-6">
             <LandingHero />
           </div>
         </div>
       </section>
 
       {/* Services Section - Rediseñada */}
-      <ServicesSection />
+      <div className="mt-4">
+        <ServicesSection />
+      </div>
 
       {/* Social Proof Section - Simplificada */}
       <section id="servicios" className="py-16 bg-white/5">
