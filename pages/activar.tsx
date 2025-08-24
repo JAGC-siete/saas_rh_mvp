@@ -180,8 +180,8 @@ export default function ActivarPage() {
               </h2>
 
               <div className="space-y-6">
-                {/* Company Name */}
-                <div>
+                {/* Company Name - Comentado para simplificar */}
+                {/* <div>
                   <label className="block text-white font-medium mb-2">Empresa </label>
                   <input
                     type="text"
@@ -191,10 +191,10 @@ export default function ActivarPage() {
                     placeholder="Mi Empresa S.A."
                   />
                   <p className="text-brand-400 text-sm mt-2">(opcional)</p>
-                </div>
+                </div> */}
 
-                {/* Contact Name */}
-                <div>
+                {/* Contact Name - Comentado para simplificar */}
+                {/* <div>
                   <label className="block text-white font-medium mb-2">Tu nombre</label>
                   <input
                     type="text"
@@ -204,10 +204,10 @@ export default function ActivarPage() {
                     placeholder="María González"
                   />
                   <p className="text-brand-400 text-sm mt-2">(opcional)</p>
-                </div>
+                </div> */}
 
-                {/* WhatsApp */}
-                <div>
+                {/* WhatsApp - Comentado para simplificar */}
+                {/* <div>
                   <label className="block text-white font-medium mb-2">WhatsApp</label>
                   <input
                     type="tel"
@@ -217,7 +217,7 @@ export default function ActivarPage() {
                     placeholder="+504 9999-9999"
                   />
                   <p className="text-brand-400 text-sm mt-2">Formato: +504 9999-9999 (opcional)</p>
-                </div>
+                </div> */}
 
                 {/* Email */}
                 <div>
