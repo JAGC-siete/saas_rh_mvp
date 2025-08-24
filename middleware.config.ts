@@ -145,6 +145,7 @@ export function getAllPublicRoutes(): string[] {
     '/api/activar',
     '/api/demo/verify-pin',
     '/api/health',
+    '/api/env',
     '/api/cron/*'
   ]
 }

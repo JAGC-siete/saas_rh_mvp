@@ -41,25 +41,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log('📝 Datos recibidos:', { empleados, empresa, nombre, contactoWhatsApp, contactoEmail, aceptaTrial })
 
-    // Validar campos requeridos
-    if (!empresa || !nombre || !contactoWhatsApp || !contactoEmail || !aceptaTrial) {
+    // Validar solo el campo requerido (email)
+    if (!contactoEmail) {
       return res.status(400).json({ 
-        error: 'Todos los campos son requeridos, incluyendo aceptación del trial' 
+        error: 'El email es requerido para continuar' 
       })
     }
 
-    if (!aceptaTrial) {
-      return res.status(400).json({ 
-        error: '✅ Debes aceptar el trial gratuito para continuar' 
-      })
-    }
-
-    // Validar formato de WhatsApp (formato hondureño)
-    const whatsappRegex = /^(\+504|504)?[0-9]{8}$/
-    if (!whatsappRegex.test(contactoWhatsApp.replace(/[-\s]/g, ''))) {
-      return res.status(400).json({ 
-        error: '📱 Formato de WhatsApp inválido. Usa formato hondureño: 9999-9999 o +50499999999' 
-      })
+    // Validar formato de WhatsApp solo si se proporciona
+    if (contactoWhatsApp && contactoWhatsApp.trim()) {
+      const whatsappRegex = /^(\+504|504)?[0-9]{8}$/
+      if (!whatsappRegex.test(contactoWhatsApp.replace(/[-\s]/g, ''))) {
+        return res.status(400).json({ 
+          error: '📱 Formato de WhatsApp inválido. Usa formato hondureño: 9999-9999 o +50499999999' 
+        })
+      }
     }
 
     // Validar email
@@ -98,11 +94,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .from('activaciones')
       .insert([{
         empleados,
-        empresa,
-        contacto_nombre: nombre,
-        contacto_whatsapp: contactoWhatsApp,
+        empresa: empresa || 'Empresa no especificada',
+        contacto_nombre: nombre || 'Contacto no especificado',
+        contacto_whatsapp: contactoWhatsApp || null,
         contacto_email: contactoEmail,
-        acepta_trial: aceptaTrial,
+        acepta_trial: aceptaTrial || false,
         tenant_id,
         magic_link,
         trial_expires_at: trial_expires_at.toISOString(),
@@ -125,8 +121,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('🏗️ Creando entorno de trial...')
     const trialEnvironment = await crearEntornoTrial(supabase, {
       tenant_id,
-      empresa,
-      nombre,
+      empresa: empresa || 'Empresa no especificada',
+      nombre: nombre || 'Contacto no especificado',
       contactoEmail,
       empleados
     })
@@ -141,9 +137,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Enviar notificaciones inmediatas
     console.log('📱 Enviando notificaciones...')
     await enviarNotificacionesTrial({
-      empresa,
-      nombre,
-      contactoWhatsApp,
+      empresa: empresa || 'Empresa no especificada',
+      nombre: nombre || 'Contacto no especificado',
+      contactoWhatsApp: contactoWhatsApp || 'No especificado',
       contactoEmail,
       empleados,
       magic_link,
@@ -153,9 +149,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Disparar webhook a canal #activaciones
     console.log('🔗 Disparando webhook...')
     await dispararWebhookActivaciones({
-      empresa,
-      nombre,
-      contactoWhatsApp,
+      empresa: empresa || 'Empresa no especificada',
+      nombre: nombre || 'Contacto no especificado',
+      contactoWhatsApp: contactoWhatsApp || 'No especificado',
       contactoEmail,
       empleados,
       tenant_id,
@@ -395,7 +391,7 @@ async function enviarNotificacionesTrial(data: {
                   
                   <div style="background: #e8f4fd; padding: 20px; border-radius: 5px; margin: 20px 0;">
                     <h4>📱 ¿Necesitas ayuda?</h4>
-                    <p>Responde a este email o escríbenos por WhatsApp al <strong>+504 ${data.contactoWhatsApp}</strong></p>
+                    <p>Responde a este email o ${data.contactoWhatsApp !== 'No especificado' ? `escríbenos por WhatsApp al <strong>+504 ${data.contactoWhatsApp}</strong>` : 'escríbenos por email'}</p>
                   </div>
                   
                   <div style="background: #fff3cd; padding: 20px; border-radius: 5px; margin: 20px 0;">
@@ -424,10 +420,14 @@ async function enviarNotificacionesTrial(data: {
 
     // TODO: Implementar envío real de WhatsApp con Twilio
     // Por ahora solo log
-    console.log('📱 WhatsApp notification (to be implemented):', {
-      to: `+504${data.contactoWhatsApp.replace(/[-\s]/g, '')}`,
-      message: `Hola ${data.nombre}, ya activamos SISU – ${data.empresa}. Entra aquí: ${data.magic_link}. Paso siguiente: sube tu plantilla (CSV/Excel) o respóndenos con ${data.empleados} empleados y te lo dejamos corriendo hoy. ¿Querés una demo de 15 min?`
-    })
+    if (data.contactoWhatsApp && data.contactoWhatsApp !== 'No especificado') {
+      console.log('📱 WhatsApp notification (to be implemented):', {
+        to: `+504${data.contactoWhatsApp.replace(/[-\s]/g, '')}`,
+        message: `Hola ${data.nombre}, ya activamos SISU – ${data.empresa}. Entra aquí: ${data.magic_link}. Paso siguiente: sube tu plantilla (CSV/Excel) o respóndenos con ${data.empleados} empleados y te lo dejamos corriendo hoy. ¿Querés una demo de 15 min?`
+      })
+    } else {
+      console.log('📱 WhatsApp no proporcionado, saltando notificación por WhatsApp')
+    }
 
   } catch (error) {
     console.error('❌ Error sending trial notifications:', error)

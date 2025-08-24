@@ -28,6 +28,7 @@ const PUBLIC_ROUTES = new Set([
   '/api/activar',      // API para formulario de activación - PÚBLICO
   '/api/demo/verify-pin', // API para verificar PIN demo - PÚBLICO
   '/api/health',
+  '/api/env',          // Environment variables endpoint - PÚBLICO
   '/api/cron/*'        // Cron jobs para mantenimiento del sistema
 ])
 

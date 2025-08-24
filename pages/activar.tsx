@@ -15,9 +15,6 @@ interface FormData {
 }
 
 interface ValidationErrors {
-  empresa?: string
-  nombre?: string
-  contactoWhatsApp?: string
   contactoEmail?: string
 }
 
@@ -31,7 +28,7 @@ export default function ActivarPage() {
     nombre: '',
     contactoWhatsApp: '',
     contactoEmail: '',
-    aceptaTrial: false
+    aceptaTrial: true
   })
 
   const handleEmpleadosChange = (value: number) => {
@@ -42,36 +39,6 @@ export default function ActivarPage() {
     const newErrors = { ...errors }
     
     switch (field) {
-      case 'empresa':
-        if (!value || typeof value !== 'string' || !value.trim()) {
-          newErrors.empresa = '¿Cuál es el nombre de tu empresa?'
-        } else if (value.trim().length < 2) {
-          newErrors.empresa = 'El nombre debe tener al menos 2 caracteres'
-        } else {
-          delete newErrors.empresa
-        }
-        break
-        
-      case 'nombre':
-        if (!value || typeof value !== 'string' || !value.trim()) {
-          newErrors.nombre = '¿Cuál es tu nombre completo?'
-        } else if (value.trim().length < 3) {
-          newErrors.nombre = 'El nombre debe tener al menos 3 caracteres'
-        } else {
-          delete newErrors.nombre
-        }
-        break
-        
-      case 'contactoWhatsApp':
-        if (!value || typeof value !== 'string' || !value.trim()) {
-          newErrors.contactoWhatsApp = '¿Cuál es tu número de WhatsApp?'
-        } else if (!/^\+504\s\d{4}-\d{4}$/.test(value.trim())) {
-          newErrors.contactoWhatsApp = 'Formato: +504 9999-9999 (código de área + números con guión)'
-        } else {
-          delete newErrors.contactoWhatsApp
-        }
-        break
-        
       case 'contactoEmail':
         if (!value || typeof value !== 'string' || !value.trim()) {
           newErrors.contactoEmail = '¿Cuál es tu correo electrónico?'
@@ -88,16 +55,13 @@ export default function ActivarPage() {
 
   const handleInputChange = (field: keyof FormData, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }))
-    if (field === 'empresa' || field === 'nombre' || field === 'contactoWhatsApp' || field === 'contactoEmail') {
+    if (field === 'contactoEmail') {
       validateField(field, value)
     }
   }
 
   const handleSubmit = async () => {
-    // Validar todos los campos antes de enviar
-    validateField('empresa', formData.empresa)
-    validateField('nombre', formData.nombre)
-    validateField('contactoWhatsApp', formData.contactoWhatsApp)
+    // Validar solo el campo requerido (email)
     validateField('contactoEmail', formData.contactoEmail)
     
     // Si hay errores, no enviar
@@ -110,11 +74,11 @@ export default function ActivarPage() {
     try {
       const submitData = {
         empleados: formData.empleados,
-        empresa: formData.empresa,
-        nombre: formData.nombre,
-        contactoWhatsApp: formData.contactoWhatsApp,
+        empresa: formData.empresa || '',
+        nombre: formData.nombre || '',
+        contactoWhatsApp: formData.contactoWhatsApp || '',
         contactoEmail: formData.contactoEmail,
-        aceptaTrial: formData.aceptaTrial
+        aceptaTrial: formData.aceptaTrial || false
       }
 
       // Aquí iría la llamada a tu API
@@ -153,11 +117,11 @@ export default function ActivarPage() {
                 <CheckCircleIcon className="h-12 w-12 text-green-400" />
               </div>
               <h1 className="text-4xl font-bold text-white mb-4">
-                ¡Listo, {formData.nombre}!
+                ¡Listo, {formData.nombre || 'Usuario'}!
               </h1>
-              <p className="text-xl text-brand-300 mb-8">
-                Estamos configurando tu entorno de Recursos Humanos. Te mandaremos el acceso por WhatsApp y mail.
-              </p>
+                              <p className="text-xl text-brand-300 mb-8">
+                  Estamos configurando tu entorno de Recursos Humanos. Te mandaremos el acceso por email{formData.contactoWhatsApp && formData.contactoWhatsApp.trim() ? ' y WhatsApp' : ''}. Los demás campos los puedes completar después.
+                </p>
             </div>
 
             <Card variant="glass" className="mb-8">
@@ -166,7 +130,7 @@ export default function ActivarPage() {
                   ¡Gracias por confiar en SISU!
                 </h2>
                 <p className="text-lg text-brand-300 mb-6">
-                  Tu sistema estará listo en las próximas horas. Mientras tanto, únete a nuestra comunidad.
+                  Tu sistema estará listo en las próximas horas. Mientras tanto, únete a nuestra comunidad. Puedes completar los demás campos después desde tu dashboard.
                 </p>
                 
                 <div className="grid md:grid-cols-2 gap-4 mb-6 max-w-md mx-auto">
@@ -188,7 +152,7 @@ export default function ActivarPage() {
                 </div>
                 
                 <p className="text-sm text-brand-400 text-center mb-6">
-                  Comparte con otros empresarios y ayúdanos a crecer la comunidad de RH en Honduras 🇭🇳
+                  Solo email requerido. Los demás campos son opcionales y puedes completarlos después cuando quieras, sin presión. Comparte con otros empresarios y ayúdanos a crecer la comunidad de RH en Honduras 🇭🇳
                 </p>
                 
                 {/* Redes Sociales */}
@@ -257,10 +221,10 @@ export default function ActivarPage() {
   return (
     <div className="min-h-screen bg-app relative">
       <Head>
-        <title>Activa tu RH automático - HUMANO SISU</title>
+        <title>Activa tu RH automático (solo email requerido) - HUMANO SISU</title>
         <meta
           name="description"
-          content="Asistencia y planilla funcionando en menos de 24 h. Sin tarjeta. Sin compromiso."
+          content="Solo email requerido. Los demás campos son opcionales y puedes completarlos después cuando quieras, sin presión. Asistencia y planilla funcionando en menos de 24 h. Sin tarjeta. Sin compromiso."
         />
       </Head>
 
@@ -274,10 +238,10 @@ export default function ActivarPage() {
           </Link>
           
           <h1 className="text-5xl font-bold text-white mb-6">
-            Activa tu RH automático hoy
+            Activa tu RH automático hoy (solo email requerido)
           </h1>
           <p className="text-2xl text-brand-300 mb-8">
-            Asistencia y planilla funcionando en menos de 24 h. Sin tarjeta. Sin compromiso.
+            Solo email requerido. Los demás campos son opcionales y puedes completarlos después cuando quieras, sin presión. Asistencia y planilla funcionando en menos de 24 h. Sin tarjeta. Sin compromiso.
           </p>
           
 
@@ -291,7 +255,7 @@ export default function ActivarPage() {
                 <span className="text-green-400 font-bold">&ldquo;Paragon Financial redujo 80% el tiempo de planilla con SISU.&rdquo;</span>
               </p>
               <p className="text-brand-300">
-                Seguridad: datos cifrados, roles y auditoría. Soporte por WhatsApp.
+                Solo email requerido. Los demás campos son opcionales y puedes completarlos después cuando quieras, sin presión. Seguridad: datos cifrados, roles y auditoría. Soporte por email y WhatsApp.
               </p>
             </CardContent>
           </Card>
@@ -300,57 +264,41 @@ export default function ActivarPage() {
         {/* How it works */}
         <div className="max-w-6xl mx-auto mb-16">
           <h2 className="text-3xl font-bold text-white text-center mb-12">
-            Cómo funciona (3 pasos)
+            Cómo funciona (solo email requerido)
           </h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            <Card variant="glass" className="text-center">
-              <CardHeader className="pb-4">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-500/10 border border-brand-500/20 mb-4 mx-auto">
-                  <span className="text-2xl font-bold text-brand-400">1</span>
-                </div>
-                <CardTitle className="text-xl font-bold text-white">
-                  Déjanos tus datos
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-brand-300">
-                  Empresa, WhatsApp y email. Solo eso necesitamos para empezar.
-                </p>
-              </CardContent>
-            </Card>
+                      <div className="grid md:grid-cols-2 gap-8">
+              <Card variant="glass" className="text-center">
+                <CardHeader className="pb-4">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-500/10 border border-brand-500/20 mb-4 mx-auto">
+                    <span className="text-2xl font-bold text-brand-400">1</span>
+                  </div>
+                  <CardTitle className="text-xl font-bold text-white">
+                    Solo tu email (requerido)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-brand-300">
+                    Solo necesitamos tu email para empezar. Los demás campos son opcionales y puedes completarlos después desde tu dashboard cuando quieras, sin presión.
+                  </p>
+                </CardContent>
+              </Card>
 
-            <Card variant="glass" className="text-center">
-              <CardHeader className="pb-4">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-500/10 border border-brand-500/20 mb-4 mx-auto">
-                  <span className="text-2xl font-bold text-brand-400">2</span>
-                </div>
-                <CardTitle className="text-xl font-bold text-white">
-                  Acceso inmediato
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-brand-300">
-                  A tu entorno de prueba con datos demo funcionando.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card variant="glass" className="text-center">
-              <CardHeader className="pb-4">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-500/10 border border-brand-500/20 mb-4 mx-auto">
-                  <span className="text-2xl font-bold text-brand-400">3</span>
-                </div>
-                <CardTitle className="text-xl font-bold text-white">
-                  Operativo en 24h
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-brand-300">
-                  Te lo dejamos corriendo con tus empleados reales.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+              <Card variant="glass" className="text-center">
+                <CardHeader className="pb-4">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-500/10 border border-brand-500/20 mb-4 mx-auto">
+                    <span className="text-2xl font-bold text-brand-400">2</span>
+                  </div>
+                  <CardTitle className="text-xl font-bold text-white">
+                    Acceso inmediato (automático)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-brand-300">
+                    A tu entorno de prueba con datos demo funcionando.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
         </div>
 
         {/* Guarantee */}
@@ -361,7 +309,7 @@ export default function ActivarPage() {
                 Garantía de implementación
               </h3>
               <p className="text-xl text-white">
-                Si no te lo dejamos funcionando, lo cerramos y listo. Cero costo.
+                Solo email requerido. Los demás campos son opcionales y puedes completarlos después cuando quieras, sin presión. Si no te lo dejamos funcionando, lo cerramos y listo. Cero costo.
               </p>
             </CardContent>
           </Card>
@@ -428,82 +376,58 @@ export default function ActivarPage() {
           <Card variant="glass">
             <CardContent className="p-8">
               <h2 className="text-2xl font-bold text-white mb-6 text-center">
-                Activa tu sistema (1 paso)
+                Activa tu sistema (solo email requerido)
               </h2>
 
               <div className="space-y-6">
                 {/* Company Name */}
                 <div>
                   <label className="block text-white font-medium mb-2">
-                    Empresa *
+                    Empresa (opcional)
                   </label>
                   <input
                     type="text"
                     value={formData.empresa}
                     onChange={(e) => handleInputChange('empresa', e.target.value)}
-                    className={`w-full p-3 rounded-lg glass border text-white placeholder-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all ${
-                      errors.empresa ? 'border-red-500/50' : 'border-brand-600/30'
-                    }`}
+                    className="w-full p-3 rounded-lg glass border text-white placeholder-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all border-brand-600/30"
                     placeholder="Mi Empresa S.A."
-                    required
                   />
-                  {errors.empresa && (
-                    <p className="text-red-400 text-sm mt-2 flex items-center">
-                      {errors.empresa}
-                    </p>
-                  )}
                   <p className="text-brand-400 text-sm mt-2">
-                    Nombre legal de tu empresa o negocio
+                    Nombre legal de tu empresa o negocio (opcional)
                   </p>
                 </div>
 
                 {/* Contact Name */}
                 <div>
                   <label className="block text-white font-medium mb-2">
-                    Tu nombre *
+                    Tu nombre (opcional)
                   </label>
                   <input
                     type="text"
                     value={formData.nombre}
                     onChange={(e) => handleInputChange('nombre', e.target.value)}
-                    className={`w-full p-3 rounded-lg glass border text-white placeholder-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all ${
-                      errors.nombre ? 'border-red-500/50' : 'border-brand-600/30'
-                    }`}
+                    className="w-full p-3 rounded-lg glass border text-white placeholder-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all border-brand-600/30"
                     placeholder="María González"
-                    required
                   />
-                  {errors.nombre && (
-                    <p className="text-red-400 text-sm mt-2 flex items-center">
-                      {errors.nombre}
-                    </p>
-                  )}
                   <p className="text-brand-400 text-sm mt-2">
-                    Tu nombre completo para el contacto
+                    Tu nombre completo para el contacto (opcional)
                   </p>
                 </div>
 
                 {/* WhatsApp */}
                 <div>
                   <label className="block text-white font-medium mb-2">
-                    WhatsApp (para login y soporte) *
+                    WhatsApp (para login y soporte) (opcional)
                   </label>
                   <input
                     type="tel"
                     value={formData.contactoWhatsApp}
                     onChange={(e) => handleInputChange('contactoWhatsApp', e.target.value)}
-                    className={`w-full p-3 rounded-lg glass border text-white placeholder-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all ${
-                      errors.contactoWhatsApp ? 'border-red-500/50' : 'border-brand-600/30'
-                    }`}
+                    className="w-full p-3 rounded-lg glass border text-white placeholder-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all border-brand-600/30"
                     placeholder="+504 9999-9999"
-                    required
                   />
-                  {errors.contactoWhatsApp && (
-                    <p className="text-red-400 text-sm mt-2 flex items-center">
-                      {errors.contactoWhatsApp}
-                    </p>
-                  )}
                   <p className="text-brand-400 text-sm mt-2">
-                    Formato: +504 9999-9999 (código de área + números con guión)
+                    Formato: +504 9999-9999 (código de área + números con guión) (opcional)
                   </p>
                 </div>
 
@@ -535,7 +459,7 @@ export default function ActivarPage() {
                 {/* Employee Count */}
                 <div>
                   <label className="block text-white font-medium mb-2 text-center">
-                    # empleados (para dimensionar carga)
+                    # empleados (para dimensionar carga) (opcional)
                   </label>
                   <div className="flex items-center justify-center space-x-4">
                     <button
@@ -556,7 +480,7 @@ export default function ActivarPage() {
                       />
                       <p className="text-brand-400 text-sm mt-2">empleados</p>
                       <p className="text-brand-400 text-xs mt-1">
-                        Para dimensionar la carga del sistema
+                        Para dimensionar la carga del sistema (opcional)
                       </p>
                     </div>
                     
@@ -577,20 +501,19 @@ export default function ActivarPage() {
                     checked={formData.aceptaTrial}
                     onChange={(e) => handleInputChange('aceptaTrial', e.target.checked)}
                     className="mt-1 w-5 h-5 text-brand-600 bg-brand-600/20 border-brand-500 rounded focus:ring-brand-500 focus:ring-2"
-                    required
                   />
                   <label htmlFor="acepta-trial" className="text-white text-sm leading-relaxed">
-                    Deseo activar un entorno de prueba por 30 días. Sin costo.
+                    Deseo activar un entorno de prueba por 30 días. Sin costo. (opcional)
                   </label>
                   <p className="text-brand-400 text-xs mt-2 ml-8">
-                    Acceso completo al sistema por 30 días gratis
+                    Acceso completo al sistema por 30 días gratis (opcional)
                   </p>
                 </div>
 
                 {/* Submit Button */}
                 <button
                   onClick={handleSubmit}
-                  disabled={!formData.empresa || !formData.nombre || !formData.contactoWhatsApp || !formData.contactoEmail || !formData.aceptaTrial || isLoading || Object.keys(errors).length > 0}
+                  disabled={!formData.contactoEmail || isLoading || Object.keys(errors).length > 0}
                   className="w-full bg-brand-600 hover:bg-brand-700 text-white px-8 py-4 rounded-lg font-semibold inline-flex items-center justify-center transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-lg"
                 >
                   {isLoading ? (
@@ -605,14 +528,14 @@ export default function ActivarPage() {
                   )}
                 </button>
 
-                {Object.keys(errors).length > 0 && (
+                {errors.contactoEmail && (
                   <p className="text-red-400 text-sm text-center mt-4 flex items-center justify-center">
-                    Por favor, corrige los errores antes de continuar
+                    Por favor, ingresa un email válido para continuar
                   </p>
                 )}
                 
                 <p className="text-brand-400 text-xs text-center">
-                  Entorno de prueba por 30 días. Sin costo, sin compromiso.
+                  Solo email requerido. Los demás campos son opcionales y puedes completarlos después cuando quieras, sin presión. Entorno de prueba por 30 días. Sin costo, sin compromiso.
                 </p>
               </div>
             </CardContent>
@@ -647,8 +570,8 @@ export default function ActivarPage() {
                 <div className="w-12 h-12 bg-purple-500/20 rounded-full flex items-center justify-center mb-3 mx-auto">
                   <UserGroupIcon className="h-6 w-6 text-purple-400" />
                 </div>
-                <p className="font-medium text-white">Soporte incluido</p>
-                <p className="text-sm text-brand-300">Te ayudamos a implementar</p>
+                <p className="font-medium text-white">Solo email requerido</p>
+                <p className="text-sm text-brand-300">Proceso ultra simplificado</p>
               </CardContent>
             </Card>
           </div>
