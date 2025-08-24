@@ -386,19 +386,7 @@ export default function ActivarPage() {
           </div>
         </div>
 
-        {/* Guarantee */}
-        <div className="max-w-4xl mx-auto mb-16 text-center">
-          <Card variant="glass" className="border-yellow-500/30 bg-yellow-500/5">
-            <CardContent className="p-8">
-              <h3 className="text-2xl font-bold text-yellow-400 mb-4">
-                Garantía 24h o Gratis
-              </h3>
-              <p className="text-xl text-white">
-                Alcance del arranque: registro de asistencia en tiempo real, cálculo de planilla con deducciones legales de Honduras y generación de vouchers en PDF. Si no queda funcionando, no pagas.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+
 
         {/* Trial modules */}
         <div className="max-w-6xl mx-auto mb-16">
