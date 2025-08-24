@@ -102,10 +102,10 @@ export default function ActivarPage() {
                 <CheckCircleIcon className="h-12 w-12 text-green-400" />
               </div>
               <h1 className="text-4xl font-bold text-white mb-4">
-                ¡Activación recibida, {formData.nombre || 'Equipo'}!
+                ¡Solicitud recibida, {formData.nombre || 'Equipo'}!
               </h1>
               <p className="text-xl text-brand-300 mb-8">
-                Estamos creando tu entorno de RH. Te enviaremos acceso por email{formData.contactoWhatsApp && formData.contactoWhatsApp.trim() ? ' y WhatsApp' : ''}. Empezamos con asistencia y planilla. Sin tarjeta. Sin compromiso.
+                Estamos creando tu entorno de RH con datos de prueba. Te enviaremos acceso por email{formData.contactoWhatsApp && formData.contactoWhatsApp.trim() ? ' y WhatsApp' : ''}. Empezamos con asistencia y planilla. Sin tarjeta. Sin compromiso.
               </p>
             </div>
 
@@ -115,7 +115,7 @@ export default function ActivarPage() {
                   Garantía: 24 horas o trabajo gratis hasta dejarlo andando
                 </h2>
                 <p className="text-lg text-brand-300 mb-6">
-                  Si en tu caso necesitamos más ajustes, seguimos trabajando sin costo adicional hasta que tu proceso quede funcionando. Tu riesgo es cero.
+                  Si en tu caso necesitamos más ajustes, seguimos trabajando sin costo adicional hasta que tu proceso quede funcionando.
                 </p>
                 <div className="grid md:grid-cols-2 gap-4 max-w-md mx-auto">
                   <div className="text-center">
@@ -128,7 +128,7 @@ export default function ActivarPage() {
                   </div>
                 </div>
                 <p className="text-sm text-brand-400 text-center mt-6">
-                  Solo email requerido. Puedes completar el resto luego desde tu dashboard.
+                  Solo email requerido. 
                 </p>
               </CardContent>
             </Card>
@@ -146,10 +146,10 @@ export default function ActivarPage() {
   return (
     <div className="min-h-screen bg-app relative">
       <Head>
-        <title>Automatizo tu planilla en 24 horas (o trabajo gratis) - HUMANO SISU</title>
+        <title>Automatizo tu planilla en 24 horas (o trabajo gratis hasta lograrlo) - HUMANO SISU</title>
         <meta
           name="description"
-          content="Automatizo tu asistencia y planilla en 24 horas o trabajo gratis hasta dejarlo funcionando. Solo email para empezar. Sin tarjeta. Infra tipo AWS, datos cifrados, roles y auditoría."
+          content="Automatizo tu asistencia y planilla en 24 horas o trabajo gratis hasta dejarlo funcionando. Solo email para empezar. Sin tarjeta."
         />
       </Head>
 
@@ -167,7 +167,7 @@ export default function ActivarPage() {
             <span className="text-brand-300">o trabajo gratis hasta lograrlo</span>
           </h1>
           <p className="text-2xl text-brand-300 mb-8">
-            Empieza con tu email. Recibes un entorno de prueba, datos demo y acompañamiento. Sin tarjeta. Sin compromiso.
+            Empieza con tu email. Recibes un entorno de prueba gratuito. Sin tarjeta. Sin compromiso.
           </p>
         </div>
 
@@ -176,13 +176,13 @@ export default function ActivarPage() {
           <Card variant="glass">
             <CardContent className="p-8">
               <h2 className="text-2xl font-bold text-white mb-6 text-center">
-                Activa tu sistema (solo email)
+                Activa tu sistema 
               </h2>
 
               <div className="space-y-6">
                 {/* Company Name */}
                 <div>
-                  <label className="block text-white font-medium mb-2">Empresa (opcional)</label>
+                  <label className="block text-white font-medium mb-2">Empresa </label>
                   <input
                     type="text"
                     value={formData.empresa}
@@ -190,12 +190,12 @@ export default function ActivarPage() {
                     className="w-full p-3 rounded-lg glass border text-white placeholder-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all border-brand-600/30"
                     placeholder="Mi Empresa S.A."
                   />
-                  <p className="text-brand-400 text-sm mt-2">Nombre legal de tu empresa (opcional)</p>
+                  <p className="text-brand-400 text-sm mt-2">(opcional)</p>
                 </div>
 
                 {/* Contact Name */}
                 <div>
-                  <label className="block text-white font-medium mb-2">Tu nombre (opcional)</label>
+                  <label className="block text-white font-medium mb-2">Tu nombre</label>
                   <input
                     type="text"
                     value={formData.nombre}
@@ -203,12 +203,12 @@ export default function ActivarPage() {
                     className="w-full p-3 rounded-lg glass border text-white placeholder-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all border-brand-600/30"
                     placeholder="María González"
                   />
-                  <p className="text-brand-400 text-sm mt-2">Para personalizar el contacto (opcional)</p>
+                  <p className="text-brand-400 text-sm mt-2">(opcional)</p>
                 </div>
 
                 {/* WhatsApp */}
                 <div>
-                  <label className="block text-white font-medium mb-2">WhatsApp (login y soporte) (opcional)</label>
+                  <label className="block text-white font-medium mb-2">WhatsApp</label>
                   <input
                     type="tel"
                     value={formData.contactoWhatsApp}
@@ -221,7 +221,7 @@ export default function ActivarPage() {
 
                 {/* Email */}
                 <div>
-                  <label className="block text-white font-medium mb-2">Email (credenciales) *</label>
+                  <label className="block text-white font-medium mb-2">Email  *</label>
                   <input
                     type="email"
                     value={formData.contactoEmail}
@@ -242,7 +242,7 @@ export default function ActivarPage() {
 
                 {/* Employee Count */}
                 <div>
-                  <label className="block text-white font-medium mb-2 text-center"># empleados (para dimensionar) (opcional)</label>
+                  <label className="block text-white font-medium mb-2 text-center"># empleados en planilla </label>
                   <div className="flex items-center justify-center space-x-4">
                     <button
                       onClick={() => handleEmpleadosChange(formData.empleados - 1)}
@@ -261,7 +261,7 @@ export default function ActivarPage() {
                         min="1"
                       />
                       <p className="text-brand-400 text-sm mt-2">empleados</p>
-                      <p className="text-brand-400 text-xs mt-1">Para dimensionar la carga (opcional)</p>
+                      <p className="text-brand-400 text-xs mt-1">(opcional)</p>
                     </div>
                     
                     <button
@@ -283,9 +283,9 @@ export default function ActivarPage() {
                     className="mt-1 w-5 h-5 text-brand-600 bg-brand-600/20 border-brand-500 rounded focus:ring-brand-500 focus:ring-2"
                   />
                   <label htmlFor="acepta-trial" className="text-white text-sm leading-relaxed">
-                    Deseo activar un entorno de prueba por 30 días. Sin costo.
+                    Deseo automatizar mi RRHH en 24 horas. Sin costo.
                   </label>
-                  <p className="text-brand-400 text-xs mt-2 ml-8">Acceso completo al sistema por 30 días</p>
+                  <p className="text-brand-400 text-xs mt-2 ml-8">Usalo por 30 días sin compromiso</p>
                 </div>
 
                 {/* Submit Button */}
@@ -297,11 +297,11 @@ export default function ActivarPage() {
                   {isLoading ? (
                     <>
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                      Creando tu entorno...
+                      Automatizando tu operación de RRHH...
                     </>
                   ) : (
                     <>
-                      <RocketLaunchIcon className="h-5 w-5 mr-2" /> Automatízame en 24 horas
+                      <RocketLaunchIcon className="h-5 w-5 mr-2" /> Automatíza mi operación en 24 horas
                     </>
                   )}
                 </button>
@@ -339,7 +339,7 @@ export default function ActivarPage() {
           <h2 className="text-3xl font-bold text-white text-center mb-12">
             ¿Cómo funciona?
           </h2>
-          <div className="grid md:grid-cols-4 gap-8">
+          <div className="grid md:grid-cols-3 gap-8">
             <Card variant="glass" className="text-center">
               <CardHeader className="pb-4">
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-500/10 border border-brand-500/20 mb-4 mx-auto">
@@ -354,24 +354,12 @@ export default function ActivarPage() {
               </CardContent>
             </Card>
 
-            <Card variant="glass" className="text-center">
-              <CardHeader className="pb-4">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-500/10 border border-brand-500/20 mb-4 mx-auto">
-                  <span className="text-2xl font-bold text-brand-400">2</span>
-                </div>
-                <CardTitle className="text-xl font-bold text-white">
-                  Llamada de 15 minutos
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-brand-300">Parametrizamos deducciones y horarios. Sin reuniones eternas.</p>
-              </CardContent>
-            </Card>
+            
 
             <Card variant="glass" className="text-center">
               <CardHeader className="pb-4">
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-500/10 border border-brand-500/20 mb-4 mx-auto">
-                  <span className="text-2xl font-bold text-brand-400">3</span>
+                  <span className="text-2xl font-bold text-brand-400">2</span>
                 </div>
                 <CardTitle className="text-xl font-bold text-white">
                   Entrega en 24 horas
@@ -385,7 +373,7 @@ export default function ActivarPage() {
             <Card variant="glass" className="text-center">
               <CardHeader className="pb-4">
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-500/10 border border-brand-500/20 mb-4 mx-auto">
-                  <span className="text-2xl font-bold text-brand-400">4</span>
+                  <span className="text-2xl font-bold text-brand-400">3</span>
                 </div>
                 <CardTitle className="text-xl font-bold text-white">
                   O trabajo gratis
