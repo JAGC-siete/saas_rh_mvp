@@ -171,6 +171,155 @@ export default function ActivarPage() {
           </p>
         </div>
 
+        {/* Main Form */}
+        <div className="max-w-2xl mx-auto mb-16">
+          <Card variant="glass">
+            <CardContent className="p-8">
+              <h2 className="text-2xl font-bold text-white mb-6 text-center">
+                Activa tu sistema (solo email)
+              </h2>
+
+              <div className="space-y-6">
+                {/* Company Name */}
+                <div>
+                  <label className="block text-white font-medium mb-2">Empresa (opcional)</label>
+                  <input
+                    type="text"
+                    value={formData.empresa}
+                    onChange={(e) => handleInputChange('empresa', e.target.value)}
+                    className="w-full p-3 rounded-lg glass border text-white placeholder-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all border-brand-600/30"
+                    placeholder="Mi Empresa S.A."
+                  />
+                  <p className="text-brand-400 text-sm mt-2">Nombre legal de tu empresa (opcional)</p>
+                </div>
+
+                {/* Contact Name */}
+                <div>
+                  <label className="block text-white font-medium mb-2">Tu nombre (opcional)</label>
+                  <input
+                    type="text"
+                    value={formData.nombre}
+                    onChange={(e) => handleInputChange('nombre', e.target.value)}
+                    className="w-full p-3 rounded-lg glass border text-white placeholder-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all border-brand-600/30"
+                    placeholder="María González"
+                  />
+                  <p className="text-brand-400 text-sm mt-2">Para personalizar el contacto (opcional)</p>
+                </div>
+
+                {/* WhatsApp */}
+                <div>
+                  <label className="block text-white font-medium mb-2">WhatsApp (login y soporte) (opcional)</label>
+                  <input
+                    type="tel"
+                    value={formData.contactoWhatsApp}
+                    onChange={(e) => handleInputChange('contactoWhatsApp', e.target.value)}
+                    className="w-full p-3 rounded-lg glass border text-white placeholder-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all border-brand-600/30"
+                    placeholder="+504 9999-9999"
+                  />
+                  <p className="text-brand-400 text-sm mt-2">Formato: +504 9999-9999 (opcional)</p>
+                </div>
+
+                {/* Email */}
+                <div>
+                  <label className="block text-white font-medium mb-2">Email (credenciales) *</label>
+                  <input
+                    type="email"
+                    value={formData.contactoEmail}
+                    onChange={(e) => handleInputChange('contactoEmail', e.target.value)}
+                    className={`w-full p-3 rounded-lg glass border text-white placeholder-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all ${
+                      errors.contactoEmail ? 'border-red-500/50' : 'border-brand-600/30'
+                    }`}
+                    placeholder="admin@miempresa.com"
+                    required
+                  />
+                  {errors.contactoEmail && (
+                    <p className="text-red-400 text-sm mt-2 flex items-center">
+                      {errors.contactoEmail}
+                    </p>
+                  )}
+                  <p className="text-brand-400 text-sm mt-2">Te enviaremos las credenciales aquí</p>
+                </div>
+
+                {/* Employee Count */}
+                <div>
+                  <label className="block text-white font-medium mb-2 text-center"># empleados (para dimensionar) (opcional)</label>
+                  <div className="flex items-center justify-center space-x-4">
+                    <button
+                      onClick={() => handleEmpleadosChange(formData.empleados - 1)}
+                      className="w-12 h-12 rounded-full glass border border-brand-600/30 hover:border-brand-500 flex items-center justify-center text-2xl font-bold transition-all text-white hover:text-brand-200"
+                      disabled={formData.empleados <= 1}
+                    >
+                      -
+                    </button>
+                    
+                    <div className="text-center">
+                      <input
+                        type="number"
+                        value={formData.empleados}
+                        onChange={(e) => handleEmpleadosChange(parseInt(e.target.value) || 1)}
+                        className="w-24 h-16 text-3xl font-bold text-center glass border-2 border-brand-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 transition-all"
+                        min="1"
+                      />
+                      <p className="text-brand-400 text-sm mt-2">empleados</p>
+                      <p className="text-brand-400 text-xs mt-1">Para dimensionar la carga (opcional)</p>
+                    </div>
+                    
+                    <button
+                      onClick={() => handleEmpleadosChange(formData.empleados + 1)}
+                      className="w-12 h-12 rounded-full glass border border-brand-600/30 hover:border-brand-500 flex items-center justify-center text-2xl font-bold transition-all text-white hover:text-brand-200"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                {/* Trial Checkbox */}
+                <div className="flex items-start space-x-3 p-4 glass rounded-lg border border-brand-500/30">
+                  <input
+                    type="checkbox"
+                    id="acepta-trial"
+                    checked={formData.aceptaTrial}
+                    onChange={(e) => handleInputChange('aceptaTrial', e.target.value)}
+                    className="mt-1 w-5 h-5 text-brand-600 bg-brand-600/20 border-brand-500 rounded focus:ring-brand-500 focus:ring-2"
+                  />
+                  <label htmlFor="acepta-trial" className="text-white text-sm leading-relaxed">
+                    Deseo activar un entorno de prueba por 30 días. Sin costo.
+                  </label>
+                  <p className="text-brand-400 text-xs mt-2 ml-8">Acceso completo al sistema por 30 días</p>
+                </div>
+
+                {/* Submit Button */}
+                <button
+                  onClick={handleSubmit}
+                  disabled={!formData.contactoEmail || isLoading || Object.keys(errors).length > 0}
+                  className="w-full bg-brand-600 hover:bg-brand-700 text-white px-8 py-4 rounded-lg font-semibold inline-flex items-center justify-center transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-lg"
+                >
+                  {isLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                      Creando tu entorno...
+                    </>
+                  ) : (
+                    <>
+                      <RocketLaunchIcon className="h-5 w-5 mr-2" /> Automatízame en 24 horas
+                    </>
+                  )}
+                </button>
+
+                {errors.contactoEmail && (
+                  <p className="text-red-400 text-sm text-center mt-4 flex items-center justify-center">
+                    Por favor, ingresa un email válido para continuar
+                  </p>
+                )}
+                
+                <p className="text-brand-400 text-xs text-center">
+                  Sin tarjeta. Puedes cancelar cuando quieras. Empezamos con asistencia y planilla; vouchers se habilitan al pasar a plan.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Sub-hero / Social proof */}
         <div className="max-w-4xl mx-auto mb-16 text-center">
           <Card variant="glass" className="border-green-500/30 bg-green-500/5">
@@ -179,7 +328,7 @@ export default function ActivarPage() {
                 <span className="text-green-400 font-bold">“Reducimos 80% el tiempo de planilla con SISU.”</span> — Paragon Financial Corp
               </p>
               <p className="text-brand-300">
-                Infraestructura estilo AWS, datos cifrados en tránsito y en reposo, control de roles y auditoría. Soporte por email y WhatsApp.
+                Infraestructura estilo AWS, datos cifrados en tránsito y en reposo, control de roles. Soporte por email o WhatsApp.
               </p>
             </CardContent>
           </Card>
@@ -188,7 +337,7 @@ export default function ActivarPage() {
         {/* How it works */}
         <div className="max-w-6xl mx-auto mb-16">
           <h2 className="text-3xl font-bold text-white text-center mb-12">
-            Cómo te lo dejo funcionando
+            ¿Cómo funciona?
           </h2>
           <div className="grid md:grid-cols-4 gap-8">
             <Card variant="glass" className="text-center">
@@ -313,154 +462,8 @@ export default function ActivarPage() {
           </div>
         </div>
 
-        {/* Main Form */}
-        <div className="max-w-2xl mx-auto">
-          <Card variant="glass">
-            <CardContent className="p-8">
-              <h2 className="text-2xl font-bold text-white mb-6 text-center">
-                Activa tu sistema (solo email)
-              </h2>
 
-              <div className="space-y-6">
-                {/* Company Name */}
-                <div>
-                  <label className="block text-white font-medium mb-2">Empresa (opcional)</label>
-                  <input
-                    type="text"
-                    value={formData.empresa}
-                    onChange={(e) => handleInputChange('empresa', e.target.value)}
-                    className="w-full p-3 rounded-lg glass border text-white placeholder-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all border-brand-600/30"
-                    placeholder="Mi Empresa S.A."
-                  />
-                  <p className="text-brand-400 text-sm mt-2">Nombre legal de tu empresa (opcional)</p>
-                </div>
 
-                {/* Contact Name */}
-                <div>
-                  <label className="block text-white font-medium mb-2">Tu nombre (opcional)</label>
-                  <input
-                    type="text"
-                    value={formData.nombre}
-                    onChange={(e) => handleInputChange('nombre', e.target.value)}
-                    className="w-full p-3 rounded-lg glass border text-white placeholder-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all border-brand-600/30"
-                    placeholder="María González"
-                  />
-                  <p className="text-brand-400 text-sm mt-2">Para personalizar el contacto (opcional)</p>
-                </div>
-
-                {/* WhatsApp */}
-                <div>
-                  <label className="block text-white font-medium mb-2">WhatsApp (login y soporte) (opcional)</label>
-                  <input
-                    type="tel"
-                    value={formData.contactoWhatsApp}
-                    onChange={(e) => handleInputChange('contactoWhatsApp', e.target.value)}
-                    className="w-full p-3 rounded-lg glass border text-white placeholder-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all border-brand-600/30"
-                    placeholder="+504 9999-9999"
-                  />
-                  <p className="text-brand-400 text-sm mt-2">Formato: +504 9999-9999 (opcional)</p>
-                </div>
-
-                {/* Email */}
-                <div>
-                  <label className="block text-white font-medium mb-2">Email (credenciales) *</label>
-                  <input
-                    type="email"
-                    value={formData.contactoEmail}
-                    onChange={(e) => handleInputChange('contactoEmail', e.target.value)}
-                    className={`w-full p-3 rounded-lg glass border text-white placeholder-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all ${
-                      errors.contactoEmail ? 'border-red-500/50' : 'border-brand-600/30'
-                    }`}
-                    placeholder="admin@miempresa.com"
-                    required
-                  />
-                  {errors.contactoEmail && (
-                    <p className="text-red-400 text-sm mt-2 flex items-center">
-                      {errors.contactoEmail}
-                    </p>
-                  )}
-                  <p className="text-brand-400 text-sm mt-2">Te enviaremos las credenciales aquí</p>
-                </div>
-
-                {/* Employee Count */}
-                <div>
-                  <label className="block text-white font-medium mb-2 text-center"># empleados (para dimensionar) (opcional)</label>
-                  <div className="flex items-center justify-center space-x-4">
-                    <button
-                      onClick={() => handleEmpleadosChange(formData.empleados - 1)}
-                      className="w-12 h-12 rounded-full glass border border-brand-600/30 hover:border-brand-500 flex items-center justify-center text-2xl font-bold transition-all text-white hover:text-brand-200"
-                      disabled={formData.empleados <= 1}
-                    >
-                      -
-                    </button>
-                    
-                    <div className="text-center">
-                      <input
-                        type="number"
-                        value={formData.empleados}
-                        onChange={(e) => handleEmpleadosChange(parseInt(e.target.value) || 1)}
-                        className="w-24 h-16 text-3xl font-bold text-center glass border-2 border-brand-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 transition-all"
-                        min="1"
-                      />
-                      <p className="text-brand-400 text-sm mt-2">empleados</p>
-                      <p className="text-brand-400 text-xs mt-1">Para dimensionar la carga (opcional)</p>
-                    </div>
-                    
-                    <button
-                      onClick={() => handleEmpleadosChange(formData.empleados + 1)}
-                      className="w-12 h-12 rounded-full glass border border-brand-600/30 hover:border-brand-500 flex items-center justify-center text-2xl font-bold transition-all text-white hover:text-brand-200"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-
-                {/* Trial Checkbox */}
-                <div className="flex items-start space-x-3 p-4 glass rounded-lg border border-brand-500/30">
-                  <input
-                    type="checkbox"
-                    id="acepta-trial"
-                    checked={formData.aceptaTrial}
-                    onChange={(e) => handleInputChange('aceptaTrial', e.target.checked)}
-                    className="mt-1 w-5 h-5 text-brand-600 bg-brand-600/20 border-brand-500 rounded focus:ring-brand-500 focus:ring-2"
-                  />
-                  <label htmlFor="acepta-trial" className="text-white text-sm leading-relaxed">
-                    Deseo activar un entorno de prueba por 30 días. Sin costo.
-                  </label>
-                  <p className="text-brand-400 text-xs mt-2 ml-8">Acceso completo al sistema por 30 días</p>
-                </div>
-
-                {/* Submit Button */}
-                <button
-                  onClick={handleSubmit}
-                  disabled={!formData.contactoEmail || isLoading || Object.keys(errors).length > 0}
-                  className="w-full bg-brand-600 hover:bg-brand-700 text-white px-8 py-4 rounded-lg font-semibold inline-flex items-center justify-center transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-lg"
-                >
-                  {isLoading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                      Creando tu entorno...
-                    </>
-                  ) : (
-                    <>
-                      <RocketLaunchIcon className="h-5 w-5 mr-2" /> Automatízame en 24 horas
-                    </>
-                  )}
-                </button>
-
-                {errors.contactoEmail && (
-                  <p className="text-red-400 text-sm text-center mt-4 flex items-center justify-center">
-                    Por favor, ingresa un email válido para continuar
-                  </p>
-                )}
-                
-                <p className="text-brand-400 text-xs text-center">
-                  Sin tarjeta. Puedes cancelar cuando quieras. Empezamos con asistencia y planilla; vouchers se habilitan al pasar a plan.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
 
         {/* Trust indicators */}
         <div className="max-w-4xl mx-auto mt-16">
