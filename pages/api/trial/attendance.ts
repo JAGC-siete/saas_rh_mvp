@@ -5,7 +5,7 @@ import { createAdminClient } from '../../../lib/supabase/server'
  * Trial Attendance API
  * - Filters data by tenant's company (companies.subdomain === tenant)
  * - Fixed period: August 1-31, 2025
- * - Returns KPIs, daily stats, and employee-level stats for demo purposes
+ * - Returns KPIs, daily stats, and employee-level stats for the TRIAL company
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -21,22 +21,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const supabase = createAdminClient()
 
-    // 1) Resolve company by tenant (subdomain)
+    // 1) Resolve company by tenant (subdomain) - ESTA ES LA CLAVE
     const { data: company, error: companyError } = await supabase
       .from('companies')
       .select('id, name, subdomain')
-      .eq('subdomain', tenant)
+      .eq('subdomain', tenant)  // Filtrar por el tenant del trial
       .single()
 
     if (companyError || !company) {
+      console.error('❌ Company not found for tenant:', tenant, companyError)
       return res.status(404).json({ error: 'Empresa (tenant) no encontrada' })
     }
 
-    // 2) Load active employees in this company
+    console.log('✅ Found company for trial:', company.name, 'ID:', company.id)
+
+    // 2) Load active employees in THIS company (not Paragon)
     const { data: employees, error: employeesError } = await supabase
       .from('employees')
       .select('id, name, employee_code, department_id, status, team, base_salary')
-      .eq('company_id', company.id)
+      .eq('company_id', company.id)  // Filtrar por la empresa del trial
       .eq('status', 'active')
 
     if (employeesError) {
@@ -44,12 +47,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const totalEmployees = employees?.length ?? 0
+    console.log('✅ Found', totalEmployees, 'employees for trial company')
 
     // 3) Fixed date window for trial: August 2025 (inclusive)
     const startDate = '2025-08-01'
     const endDate = '2025-08-31'
 
-    // 4) Attendance records for the month for these employees
+    // 4) Attendance records for the month for THESE employees
     let attendance: any[] = []
     if (totalEmployees > 0) {
       const employeeIds = (employees || []).map((e: any) => e.id)
@@ -64,6 +68,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(500).json({ error: 'Error obteniendo asistencia', details: attendanceError })
       }
       attendance = attendanceRows || []
+      console.log('✅ Found', attendance.length, 'attendance records for trial company')
     }
 
     // 5) Compute KPIs and stats

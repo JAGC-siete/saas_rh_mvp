@@ -14,22 +14,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const supabase = createAdminClient()
 
-    // Resolve company
+    // Resolve company by subdomain - ESTA ES LA CLAVE
     const { data: company, error: companyError } = await supabase
       .from('companies')
       .select('id, name, subdomain')
-      .eq('subdomain', tenant)
+      .eq('subdomain', tenant)  // Filtrar por el tenant del trial
       .single()
 
     if (companyError || !company) {
+      console.error('❌ Company not found for tenant:', tenant, companyError)
       return res.status(404).json({ error: 'Empresa (tenant) no encontrada' })
     }
 
-    // Fetch leaderboard-like data from employee_scores (if exists), else synthesize from attendance
+    console.log('✅ Found company for trial:', company.name, 'ID:', company.id)
+
+    // Fetch leaderboard-like data from employee_scores for THIS company (not Paragon)
     const { data: scores, error: scoresError } = await supabase
       .from('employee_scores')
       .select('employee_id, company_id, total_points')
-      .eq('company_id', company.id)
+      .eq('company_id', company.id)  // Filtrar por la empresa del trial
       .order('total_points', { ascending: false })
       .limit(Number(limit))
 
@@ -41,12 +44,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { data: employees, error: empError } = await supabase
       .from('employees')
       .select('id, name, employee_code, department_id')
-      .eq('company_id', company.id)
+      .eq('company_id', company.id)  // Filtrar por la empresa del trial
       .in('id', employeeIds.length > 0 ? employeeIds : ['00000000-0000-0000-0000-000000000000'])
 
     if (empError) {
       return res.status(500).json({ error: 'Error obteniendo empleados', details: empError })
     }
+
+    console.log('✅ Found', employees?.length || 0, 'employees for trial company')
 
     const employeeById = new Map((employees || []).map((e: any) => [e.id, e]))
     const leaderboard = (scores || []).map((s: any, index: number) => {

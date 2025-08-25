@@ -48,21 +48,36 @@ export default function TrialDashboard() {
   const fetchTrialData = async (tenantId: string) => {
     console.log('🚀 fetchTrialData called with tenantId:', tenantId)
     try {
-      // SOLO datos de prueba/demo - NO datos reales del cliente
-      const demoData = {
-        empresa: 'Empresa Demo',
-        nombre: 'Usuario de Prueba',
-        empleados: 25,
-        tenant_id: tenantId,
-        trial_expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 días
-        magic_link: '#'
-      }
+      // Obtener datos REALES de la empresa del trial
+      const url = `/api/trial/attendance?tenant=${tenantId}`
+      console.log('📡 Fetching from:', url)
       
-      console.log('✅ Demo data set for trial')
-      setTrialData(demoData)
+      const response = await fetch(url)
+      console.log('📥 Response status:', response.status)
+      
+      if (response.ok) {
+        const data = await response.json()
+        console.log('✅ Trial data received:', data)
+        
+        // Extraer información de la empresa del trial
+        const trialData = {
+          empresa: data.company.name,
+          nombre: 'Usuario Trial',
+          empleados: data.kpis.totalEmployees,
+          tenant_id: data.company.subdomain,
+          trial_expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 días
+          magic_link: '#'
+        }
+        
+        setTrialData(trialData)
+      } else {
+        const errorText = await response.text()
+        console.error('❌ API error:', response.status, errorText)
+        setError('No se pudo cargar la información del trial')
+      }
     } catch (err) {
-      console.error('💥 Error setting demo data:', err)
-      setError('Error configurando datos de prueba')
+      console.error('💥 Fetch error:', err)
+      setError('Error conectando con el servidor')
     } finally {
       console.log('🏁 Setting loading to false')
       setLoading(false)

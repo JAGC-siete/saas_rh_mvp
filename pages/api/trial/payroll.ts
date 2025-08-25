@@ -39,28 +39,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const supabase = createAdminClient()
 
-    // Resolve company by subdomain
+    // Resolve company by subdomain - ESTA ES LA CLAVE
     const { data: company, error: companyError } = await supabase
       .from('companies')
       .select('id, name, subdomain')
-      .eq('subdomain', tenant)
+      .eq('subdomain', tenant)  // Filtrar por el tenant del trial
       .single()
 
     if (companyError || !company) {
+      console.error('❌ Company not found for tenant:', tenant, companyError)
       return res.status(404).json({ error: 'Empresa (tenant) no encontrada' })
     }
 
-    // Active employees of company
+    console.log('✅ Found company for trial:', company.name, 'ID:', company.id)
+
+    // Active employees of THIS company (not Paragon)
     const { data: employees, error: employeesError } = await supabase
       .from('employees')
-      .select('id, name, dni, department_id, base_salary, status')
-      .eq('company_id', company.id)
+      .select('id, name, dni, base_salary, bank_name, bank_account, status, department_id')
+      .eq('company_id', company.id)  // Filtrar por la empresa del trial
       .eq('status', 'active')
       .order('name')
 
     if (employeesError) {
       return res.status(500).json({ error: 'Error obteniendo empleados', details: employeesError })
     }
+
+    console.log('✅ Found', employees?.length || 0, 'employees for trial company')
 
     const startDate = '2025-08-01'
     const endDate = '2025-08-31'
@@ -79,6 +84,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(500).json({ error: 'Error obteniendo asistencia', details: attError })
       }
       attendance = attRows || []
+      console.log('✅ Found', attendance.length, 'attendance records for trial company')
     }
 
     // Index attendance
