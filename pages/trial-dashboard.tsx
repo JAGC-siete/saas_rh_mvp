@@ -196,7 +196,15 @@ export default function TrialDashboard() {
                 <p className="text-sm text-gray-600 mb-4">
                   Registra entradas, salidas y genera reportes de asistencia automáticamente.
                 </p>
-                <Button variant="outline" className="w-full">
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    const params = new URLSearchParams(window.location.search)
+                    const tenant = params.get('tenant') || trialData.tenant_id
+                    window.location.href = `/trial/attendance?tenant=${encodeURIComponent(tenant)}`
+                  }}
+                >
                   Ver Asistencia
                 </Button>
               </CardContent>
@@ -215,8 +223,44 @@ export default function TrialDashboard() {
                 <p className="text-sm text-gray-600 mb-4">
                   Genera nóminas, calcula deducciones y mantén el control de los pagos.
                 </p>
-                <Button variant="outline" className="w-full">
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    const params = new URLSearchParams(window.location.search)
+                    const tenant = params.get('tenant') || trialData.tenant_id
+                    window.location.href = `/trial/payroll?tenant=${encodeURIComponent(tenant)}`
+                  }}
+                >
                   Gestionar Nómina
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Gamificación Card */}
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  🏆 Gamificación
+                </CardTitle>
+                <CardDescription>
+                  Puntos y logros de empleados
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-600 mb-4">
+                  Revisa el leaderboard y los puntos por departamentos.
+                </p>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    const params = new URLSearchParams(window.location.search)
+                    const tenant = params.get('tenant') || trialData.tenant_id
+                    window.location.href = `/trial/gamification?tenant=${encodeURIComponent(tenant)}`
+                  }}
+                >
+                  Ver Gamificación
                 </Button>
               </CardContent>
             </Card>
