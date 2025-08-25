@@ -1,31 +1,10 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createAdminClient } from '../../../lib/supabase/server'
 
-// Honduras 2025 constants (monthly)
-const HND_2025 = {
-  SALARIO_MINIMO: 11903.13,
-  IHSS_TECHO: 11903.13,
-  IHSS_PORC_E: 0.05, // 5%
-  RAP_PORC: 0.015,   // 1.5%
-}
-
-function calcularISRMensual(salarioMensual: number): number {
-  const BRACKETS = [
-    { limit: 21457.76, rate: 0.0, base: 0, lower: 0 },
-    { limit: 30969.88, rate: 0.15, base: 0, lower: 21457.76 },
-    { limit: 67604.36, rate: 0.20, base: 1428.32, lower: 30969.88 },
-    { limit: Infinity, rate: 0.25, base: 8734.32, lower: 67604.36 },
-  ]
-  for (const b of BRACKETS) {
-    if (salarioMensual <= b.limit) {
-      if (b.rate === 0) return 0
-      if (b.base === 0) return Math.max(0, (salarioMensual - b.lower)) * b.rate
-      return b.base + Math.max(0, (salarioMensual - b.lower)) * b.rate
-    }
-  }
-  return 0
-}
-
+/**
+ * Trial Payroll API - SOLO DATOS DE PRUEBA
+ * NO consulta la base de datos real
+ * NO expone información del cliente
+ */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' })
@@ -37,153 +16,79 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Tenant requerido' })
     }
 
-    const supabase = createAdminClient()
-
-    // Resolve company by subdomain
-    const { data: company, error: companyError } = await supabase
-      .from('companies')
-      .select('id, name, subdomain')
-      .eq('subdomain', tenant)
-      .single()
-
-    if (companyError || !company) {
-      return res.status(404).json({ error: 'Empresa (tenant) no encontrada' })
-    }
-
-    // Active employees of company
-    const { data: employees, error: employeesError } = await supabase
-      .from('employees')
-      .select('id, name, dni, department_id, base_salary, status')
-      .eq('company_id', company.id)
-      .eq('status', 'active')
-      .order('name')
-
-    if (employeesError) {
-      return res.status(500).json({ error: 'Error obteniendo empleados', details: employeesError })
-    }
-
-    const startDate = '2025-08-01'
-    const endDate = '2025-08-31'
-    const daysInMonth = 31
-
-    let attendance: any[] = []
-    if (employees && employees.length > 0) {
-      const employeeIds = employees.map((e: any) => e.id)
-      const { data: attRows, error: attError } = await supabase
-        .from('attendance_records')
-        .select('employee_id, date, check_in, check_out, late_minutes, status')
-        .in('employee_id', employeeIds)
-        .gte('date', startDate)
-        .lte('date', endDate)
-      if (attError) {
-        return res.status(500).json({ error: 'Error obteniendo asistencia', details: attError })
-      }
-      attendance = attRows || []
-    }
-
-    // Index attendance
-    const byEmployee = new Map<string, any[]>()
-    for (const row of attendance) {
-      const list = byEmployee.get(row.employee_id) || []
-      list.push(row)
-      byEmployee.set(row.employee_id, list)
-    }
-
-    // Compute per-employee payroll
-    type PayrollRow = {
-      employee_id: string
-      name: string
-      department_id: string | null
-      monthly_salary: number
-      days_worked: number
-      days_absent: number
-      late_days: number
-      gross_salary: number
-      ihss: number
-      rap: number
-      isr: number
-      total_deductions: number
-      net_salary: number
-    }
-
-    const rows: PayrollRow[] = (employees || []).map((e: any) => {
-      const empSalary = Number(e.base_salary) || 0
-      const records = (byEmployee.get(e.id) || [])
-      // Count unique days with presence (check_in present)
-      const presentDates = new Set<string>()
-      let lateDays = 0
-      for (const r of records) {
-        if (r.check_in) presentDates.add(r.date)
-        if ((r.late_minutes || 0) > 0) lateDays += 1
-      }
-      const daysWorked = presentDates.size
-      const daysAbsent = Math.max(0, daysInMonth - daysWorked)
-
-      // Proportional gross salary by days worked
-      const gross = (empSalary / 30) * daysWorked
-
-      // Monthly deductions, proportionally applied to attendance fraction for demo fairness
-      const ihssMonthly = Math.min(empSalary, HND_2025.IHSS_TECHO) * HND_2025.IHSS_PORC_E
-      const rapMonthly = Math.max(0, empSalary - HND_2025.SALARIO_MINIMO) * HND_2025.RAP_PORC
-      const isrMonthly = calcularISRMensual(empSalary)
-      const attendanceFactor = Math.min(1, daysWorked / 30)
-      const ihss = ihssMonthly * attendanceFactor
-      const rap = rapMonthly * attendanceFactor
-      const isr = isrMonthly * attendanceFactor
-      const totalDeductions = ihss + rap + isr
-      const net = Math.max(0, gross - totalDeductions)
-
-      return {
-        employee_id: e.id,
-        name: e.name,
-        department_id: e.department_id || null,
-        monthly_salary: Math.round(empSalary * 100) / 100,
-        days_worked: daysWorked,
-        days_absent: daysAbsent,
-        late_days: lateDays,
-        gross_salary: Math.round(gross * 100) / 100,
-        ihss: Math.round(ihss * 100) / 100,
-        rap: Math.round(rap * 100) / 100,
-        isr: Math.round(isr * 100) / 100,
-        total_deductions: Math.round(totalDeductions * 100) / 100,
-        net_salary: Math.round(net * 100) / 100,
-      }
-    })
-
-    const summary = rows.reduce(
-      (acc, r) => {
-        acc.employees += 1
-        acc.totalGross += r.gross_salary
-        acc.totalIHSS += r.ihss
-        acc.totalRAP += r.rap
-        acc.totalISR += r.isr
-        acc.totalDeductions += r.total_deductions
-        acc.totalNet += r.net_salary
-        acc.totalDaysWorked += r.days_worked
-        acc.totalDaysAbsent += r.days_absent
-        acc.totalLateDays += r.late_days
-        return acc
+    // SOLO DATOS DE PRUEBA - NO DATOS REALES
+    const demoData = {
+      company: { 
+        id: 'demo-company-id', 
+        name: 'Empresa Demo', 
+        subdomain: tenant 
       },
-      {
-        employees: 0,
-        totalGross: 0,
-        totalIHSS: 0,
-        totalRAP: 0,
-        totalISR: 0,
-        totalDeductions: 0,
-        totalNet: 0,
-        totalDaysWorked: 0,
-        totalDaysAbsent: 0,
-        totalLateDays: 0,
-      }
-    )
+      period: { 
+        startDate: '2025-08-01', 
+        endDate: '2025-08-31' 
+      },
+      summary: {
+        employees: 25,
+        totalGross: 1250000,
+        totalIHSS: 62500,
+        totalRAP: 18750,
+        totalISR: 125000,
+        totalDeductions: 206250,
+        totalNet: 1043750,
+        totalDaysWorked: 620,
+        totalDaysAbsent: 155,
+        totalLateDays: 45
+      },
+      records: [
+        {
+          employee_id: 'emp-1',
+          name: 'Juan Pérez',
+          department_id: 'dept-1',
+          monthly_salary: 50000,
+          days_worked: 28,
+          days_absent: 3,
+          late_days: 2,
+          gross_salary: 46667,
+          ihss: 2500,
+          rap: 750,
+          isr: 5000,
+          total_deductions: 8250,
+          net_salary: 38417
+        },
+        {
+          employee_id: 'emp-2',
+          name: 'María García',
+          department_id: 'dept-2',
+          monthly_salary: 45000,
+          days_worked: 29,
+          days_absent: 2,
+          late_days: 1,
+          gross_salary: 43500,
+          ihss: 2250,
+          rap: 675,
+          isr: 4500,
+          total_deductions: 7425,
+          net_salary: 36075
+        },
+        {
+          employee_id: 'emp-3',
+          name: 'Carlos López',
+          department_id: 'dept-3',
+          monthly_salary: 40000,
+          days_worked: 30,
+          days_absent: 1,
+          late_days: 0,
+          gross_salary: 40000,
+          ihss: 2000,
+          rap: 600,
+          isr: 4000,
+          total_deductions: 6600,
+          net_salary: 33400
+        }
+      ]
+    }
 
-    return res.status(200).json({
-      company: { id: company.id, name: company.name, subdomain: company.subdomain },
-      period: { startDate, endDate },
-      summary,
-      records: rows,
-    })
+    return res.status(200).json(demoData)
   } catch (error) {
     console.error('💥 Error en trial payroll:', error)
     return res.status(500).json({ error: 'Error interno del servidor' })

@@ -1,6 +1,10 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createAdminClient } from '../../../lib/supabase/server'
 
+/**
+ * Trial Gamification API - SOLO DATOS DE PRUEBA
+ * NO consulta la base de datos real
+ * NO expone información del cliente
+ */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' })
@@ -12,68 +16,65 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Tenant requerido' })
     }
 
-    const supabase = createAdminClient()
-
-    // Resolve company
-    const { data: company, error: companyError } = await supabase
-      .from('companies')
-      .select('id, name, subdomain')
-      .eq('subdomain', tenant)
-      .single()
-
-    if (companyError || !company) {
-      return res.status(404).json({ error: 'Empresa (tenant) no encontrada' })
+    // SOLO DATOS DE PRUEBA - NO DATOS REALES
+    const demoData = {
+      company: { 
+        id: 'demo-company-id', 
+        name: 'Empresa Demo', 
+        subdomain: tenant 
+      },
+      leaderboard: [
+        {
+          rank: 1,
+          employee_id: 'emp-1',
+          name: 'Juan Pérez',
+          employee_code: 'EMP001',
+          department_id: 'dept-1',
+          total_points: 1250
+        },
+        {
+          rank: 2,
+          employee_id: 'emp-2',
+          name: 'María García',
+          employee_code: 'EMP002',
+          department_id: 'dept-2',
+          total_points: 1180
+        },
+        {
+          rank: 3,
+          employee_id: 'emp-3',
+          name: 'Carlos López',
+          employee_code: 'EMP003',
+          department_id: 'dept-3',
+          total_points: 1120
+        },
+        {
+          rank: 4,
+          employee_id: 'emp-4',
+          name: 'Ana Rodríguez',
+          employee_code: 'EMP004',
+          department_id: 'dept-4',
+          total_points: 1050
+        },
+        {
+          rank: 5,
+          employee_id: 'emp-5',
+          name: 'Luis Martínez',
+          employee_code: 'EMP005',
+          department_id: 'dept-5',
+          total_points: 980
+        }
+      ],
+      departmentPoints: [
+        { department_id: 'Ventas', points: 2850 },
+        { department_id: 'Marketing', points: 2230 },
+        { department_id: 'IT', points: 1980 },
+        { department_id: 'RH', points: 1750 },
+        { department_id: 'Finanzas', points: 1620 }
+      ]
     }
 
-    // Fetch leaderboard-like data from employee_scores (if exists), else synthesize from attendance
-    const { data: scores, error: scoresError } = await supabase
-      .from('employee_scores')
-      .select('employee_id, company_id, total_points')
-      .eq('company_id', company.id)
-      .order('total_points', { ascending: false })
-      .limit(Number(limit))
-
-    if (scoresError && !String(scoresError.message || '').includes('does not exist')) {
-      return res.status(500).json({ error: 'Error obteniendo puntajes', details: scoresError })
-    }
-
-    const employeeIds = (scores || []).map((s: any) => s.employee_id)
-    const { data: employees, error: empError } = await supabase
-      .from('employees')
-      .select('id, name, employee_code, department_id')
-      .eq('company_id', company.id)
-      .in('id', employeeIds.length > 0 ? employeeIds : ['00000000-0000-0000-0000-000000000000'])
-
-    if (empError) {
-      return res.status(500).json({ error: 'Error obteniendo empleados', details: empError })
-    }
-
-    const employeeById = new Map((employees || []).map((e: any) => [e.id, e]))
-    const leaderboard = (scores || []).map((s: any, index: number) => {
-      const e = employeeById.get(s.employee_id)
-      return {
-        rank: index + 1,
-        employee_id: s.employee_id,
-        name: e?.name || 'N/A',
-        employee_code: e?.employee_code || '',
-        department_id: e?.department_id || null,
-        total_points: s.total_points || 0,
-      }
-    })
-
-    // Department points aggregation (simple sum)
-    const pointsByDept = new Map<string, number>()
-    for (const row of leaderboard) {
-      const dept = row.department_id || 'sin-departamento'
-      pointsByDept.set(dept, (pointsByDept.get(dept) || 0) + (row.total_points || 0))
-    }
-    const departmentPoints = Array.from(pointsByDept.entries()).map(([dept, points]) => ({ department_id: dept, points }))
-
-    return res.status(200).json({
-      company: { id: company.id, name: company.name, subdomain: company.subdomain },
-      leaderboard,
-      departmentPoints,
-    })
+    return res.status(200).json(demoData)
   } catch (error) {
     console.error('💥 Error en trial gamification:', error)
     return res.status(500).json({ error: 'Error interno del servidor' })
