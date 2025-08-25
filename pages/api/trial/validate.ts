@@ -22,21 +22,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: 'Error de conexión con la base de datos' })
     }
 
-    // Buscar la activación del trial
-    const { data: activacion, error: activacionError } = await supabase
-      .from('activaciones')
+    // Buscar el usuario de acceso al trial
+    const { data: trialUser, error: trialUserError } = await supabase
+      .from('trial_access_users')
       .select('*')
       .eq('tenant_id', tenant)
-      .eq('status', 'trial_pending_data')
+      .eq('is_active', true)
       .single()
 
-    if (activacionError || !activacion) {
-      console.error('❌ Error buscando activación:', activacionError)
+    if (trialUserError || !trialUser) {
+      console.error('❌ Error buscando usuario de trial:', trialUserError)
       return res.status(404).json({ error: 'Trial no encontrado o inválido' })
     }
 
-    // Verificar que el trial no haya expirado
-    const trialExpiresAt = new Date(activacion.trial_expires_at)
+    // Buscar la empresa demo
+    const { data: demoCompany, error: companyError } = await supabase
+      .from('companies')
+      .select('*')
+      .eq('id', trialUser.company_id)
+      .eq('is_active', true)
+      .single()
+
+    if (companyError || !demoCompany) {
+      console.error('❌ Error buscando empresa demo:', companyError)
+      return res.status(500).json({ error: 'Error interno del sistema' })
+    }
+
+    // Verificar que el trial no haya expirado (7 días desde creación)
+    const trialExpiresAt = new Date(trialUser.created_at)
+    trialExpiresAt.setDate(trialExpiresAt.getDate() + 7)
     const now = new Date()
 
     if (trialExpiresAt < now) {
@@ -44,14 +58,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(410).json({ error: 'Trial expirado' })
     }
 
+    // Actualizar estadísticas de acceso
+    await supabase
+      .from('trial_access_users')
+      .update({ 
+        last_access_at: new Date().toISOString(),
+        access_count: (trialUser.access_count || 0) + 1
+      })
+      .eq('id', trialUser.id)
+
+    // Contar empleados reales de la empresa demo
+    const { data: employees, error: employeesError } = await supabase
+      .from('employees')
+      .select('id', { count: 'exact' })
+      .eq('company_id', trialUser.company_id)
+      .eq('status', 'active')
+
+    if (employeesError) {
+      console.error('❌ Error contando empleados:', employeesError)
+      // Si hay error, usar el valor por defecto
+      var employeeCount = trialUser.empleados_solicitados || 0
+    } else {
+      var employeeCount = employees?.length || 0
+    }
+
     // Preparar datos para el dashboard
     const trialData = {
-      empresa: activacion.empresa,
-      nombre: activacion.contacto_nombre,
-      empleados: activacion.empleados,
-      tenant_id: activacion.tenant_id,
-      trial_expires_at: activacion.trial_expires_at,
-      magic_link: activacion.magic_link
+      empresa: trialUser.empresa_solicitante || 'Empresa Demo',
+      nombre: trialUser.nombre,
+      empleados: employeeCount,
+      tenant_id: trialUser.tenant_id,
+      trial_expires_at: trialExpiresAt.toISOString(),
+      magic_link: `${process.env.NEXT_PUBLIC_SITE_URL || process.env.RAILWAY_PUBLIC_DOMAIN || 'https://humanosisu.net'}/trial-dashboard?tenant=${trialUser.tenant_id}&trial=true`
     }
 
     console.log('✅ Trial validado exitosamente para:', tenant)
