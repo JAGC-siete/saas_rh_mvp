@@ -74,12 +74,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq('company_id', trialUser.company_id)
       .eq('status', 'active')
 
+    let employeeCount: number
     if (employeesError) {
       console.error('❌ Error contando empleados:', employeesError)
       // Si hay error, usar el valor por defecto
-      var employeeCount = trialUser.empleados_solicitados || 0
+      employeeCount = trialUser.empleados_solicitados || 0
     } else {
-      var employeeCount = employees?.length || 0
+      employeeCount = employees?.length || 0
     }
 
     // Preparar datos para el dashboard
