@@ -21,12 +21,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const supabase = createAdminClient()
 
-    // 1) Buscar empresa demo (NO por tenant - reutilizamos el mismo entorno)
+    // 1) Buscar empresa demo existente (NO por tenant - reutilizamos el mismo entorno)
     const { data: company, error: companyError } = await supabase
       .from('companies')
       .select('id, name, subdomain')
-      .eq('name', 'Empresa Demo Trial')  // Usar empresa demo fija
-      .eq('plan_type', 'trial')
+      .eq('name', 'DEMO - Empresa de Prueba')  // Usar empresa demo que SÍ existe
       .eq('is_active', true)
       .single()
 

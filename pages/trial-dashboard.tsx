@@ -61,7 +61,7 @@ export default function TrialDashboard() {
         
         // Extraer información de la empresa demo
         const trialData = {
-          empresa: 'Empresa Demo Trial',
+          empresa: 'DEMO - Empresa de Prueba',
           nombre: 'Usuario Trial',
           empleados: data.kpis.totalEmployees,
           tenant_id: tenantId,
