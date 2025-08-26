@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../lib/supabase/server'
+import { createAdminClient } from '../../../lib/supabase/server'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -13,9 +13,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Tenant requerido' })
     }
 
-    const supabase = createClient(req, res)
+    const supabase = createAdminClient()
 
-    // Buscar empresa demo
+    // Buscar empresa demo por NOMBRE (igual que attendance que sí funciona)
     const { data: company, error: companyError } = await supabase
       .from('companies')
       .select('id, name, subdomain')
