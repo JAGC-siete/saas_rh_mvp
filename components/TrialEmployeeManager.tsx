@@ -241,7 +241,7 @@ export default function TrialEmployeeManager({ tenant }: TrialEmployeeManagerPro
                 <div>
                   <label className="text-sm font-medium text-gray-400">Fecha de Contratación</label>
                   <div className="text-white font-medium">
-                    {formatDate(selectedEmployee.hire_date)}
+                    {formatDate(selectedEmployee.hire_date || '')}
                   </div>
                 </div>
                 <div>
