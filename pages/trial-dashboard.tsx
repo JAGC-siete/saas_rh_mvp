@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 import Head from 'next/head'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
+import TrialEmployeeManager from '../components/TrialEmployeeManager'
 
 interface TrialData {
   empresa: string
@@ -17,6 +18,7 @@ export default function TrialDashboard() {
   const [trialData, setTrialData] = useState<TrialData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [activeView, setActiveView] = useState<'dashboard' | 'employees'>('dashboard')
   const router = useRouter()
 
   console.log('🎯 TrialDashboard renderizado')
@@ -92,12 +94,17 @@ export default function TrialDashboard() {
     })
   }
 
+  const getTenantFromUrl = () => {
+    const urlParams = new URLSearchParams(window.location.search)
+    return urlParams.get('tenant') || trialData?.tenant_id || ''
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-white mx-auto"></div>
-          <p className="mt-4 text-white">Cargando tu trial...</p>
+          <p className="text-white">Cargando tu trial...</p>
         </div>
       </div>
     )
@@ -115,6 +122,45 @@ export default function TrialDashboard() {
           </Button>
         </div>
       </div>
+    )
+  }
+
+  // Si estamos en la vista de empleados, mostrar el componente
+  if (activeView === 'employees') {
+    return (
+      <>
+        <Head>
+          <title>Gestión de Empleados (Trial) - {trialData.empresa} | SISU</title>
+          <meta name="description" content="Gestión de empleados para entorno de prueba SISU" />
+        </Head>
+
+        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900">
+          {/* Header */}
+          <header className="glass-strong border-b border-white/10 shadow-lg">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h1 className="text-2xl font-bold text-white">👥 Gestión de Empleados (Trial)</h1>
+                  <p className="text-gray-300">Empresa: <strong>{trialData.empresa}</strong></p>
+                </div>
+                <div>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setActiveView('dashboard')}
+                  >
+                    ← Volver al Dashboard
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          {/* Main Content */}
+          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <TrialEmployeeManager tenant={getTenantFromUrl()} />
+          </main>
+        </div>
+      </>
     )
   }
 
@@ -187,7 +233,11 @@ export default function TrialDashboard() {
                 <p className="text-sm text-gray-300 mb-4">
                   Crea, edita y gestiona la información de tus empleados de manera eficiente.
                 </p>
-                <Button variant="outline" className="w-full">
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => setActiveView('employees')}
+                >
                   Explorar Empleados
                 </Button>
               </CardContent>
