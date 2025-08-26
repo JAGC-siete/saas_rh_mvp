@@ -15,17 +15,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const supabase = createClient(req, res)
 
-    // Buscar empresa demo
+    // Buscar empresa demo - hacer la búsqueda más flexible
     const { data: company, error: companyError } = await supabase
       .from('companies')
       .select('id, name, subdomain')
-      .eq('name', 'DEMO EMPRESARIAL  - Datos de  Prueba')
+      .ilike('name', '%DEMO%')
+      .ilike('name', '%EMPRE%')
       .eq('is_active', true)
       .single()
 
     if (companyError || !company) {
       console.error('❌ Empresa demo no encontrada:', companyError)
-      return res.status(404).json({ error: 'Entorno demo no configurado' })
+      
+      // Intentar búsqueda alternativa más amplia
+      const { data: allCompanies, error: allCompaniesError } = await supabase
+        .from('companies')
+        .select('id, name, subdomain, is_active')
+        .ilike('name', '%DEMO%')
+        .limit(5)
+      
+      if (allCompaniesError) {
+        console.error('❌ Error buscando empresas demo:', allCompaniesError)
+      } else {
+        console.log('🔍 Empresas encontradas con "DEMO":', allCompanies)
+      }
+      
+      return res.status(404).json({ 
+        error: 'Entorno demo no configurado',
+        debug: { 
+          searchedName: 'DEMO EMPRESARIAL - Datos de Prueba',
+          foundCompanies: allCompanies || []
+        }
+      })
     }
 
     console.log('✅ Usando empresa demo:', company.name, 'ID:', company.id)
