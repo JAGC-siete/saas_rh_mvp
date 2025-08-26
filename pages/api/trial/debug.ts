@@ -28,11 +28,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: 'Error obteniendo empresas', details: companiesError })
     }
 
-    // 2. Buscar la empresa específica del tenant
+    // 2. Buscar la empresa demo (NO por tenant - reutilizamos el mismo entorno)
     const { data: targetCompany, error: targetError } = await supabase
       .from('companies')
       .select('id, name, subdomain')
-      .eq('subdomain', tenant)
+      .eq('name', 'DEMO EMPRESARIAL  - Datos de  Prueba')
+      .eq('is_active', true)
       .single()
 
     // 3. Verificar empleados de TODAS las empresas (para debug)
@@ -46,7 +47,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: 'Error obteniendo empleados', details: employeesError })
     }
 
-    // 4. Si encontramos la empresa del trial, verificar sus empleados
+    // 4. Si encontramos la empresa demo, verificar sus empleados
     let trialEmployees: any[] = []
     if (targetCompany) {
       const { data: trialEmp, error: trialEmpError } = await supabase

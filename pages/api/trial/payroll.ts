@@ -43,7 +43,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { data: company, error: companyError } = await supabase
       .from('companies')
       .select('id, name, subdomain')
-      .eq('name', 'DEMO - Empresa de Prueba')
+      .eq('name', 'DEMO EMPRESARIAL  - Datos de  Prueba')
       .eq('is_active', true)
       .single()
 

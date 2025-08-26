@@ -190,8 +190,7 @@ async function crearEntornoTrial(supabase: any, data: {
     const { data: demoCompany, error: companyError } = await supabase
       .from('companies')
       .select('*')
-      .eq('name', 'Empresa Demo Trial')
-      .eq('plan_type', 'trial')
+      .eq('name', 'DEMO EMPRESARIAL  - Datos de  Prueba')
       .eq('is_active', true)
       .single()
 
@@ -202,7 +201,7 @@ async function crearEntornoTrial(supabase: any, data: {
       const { data: newDemoCompany, error: createError } = await supabase
         .from('companies')
         .insert([{
-          name: 'Empresa Demo Trial',
+          name: 'DEMO EMPRESARIAL  - Datos de  Prueba',
           subdomain: 'demo-trial',
           plan_type: 'trial',
           settings: {
