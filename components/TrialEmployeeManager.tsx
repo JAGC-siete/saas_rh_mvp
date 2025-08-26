@@ -9,7 +9,8 @@ interface TrialEmployee {
   employee_code: string
   email?: string
   phone?: string
-  position?: string
+  role?: string
+  team?: string
   base_salary: number
   hire_date?: string
   status: string
@@ -155,8 +156,8 @@ export default function TrialEmployeeManager({ tenant }: TrialEmployeeManagerPro
                       <div>
                         <div className="font-medium text-white">{employee.name}</div>
                         <div className="text-xs text-gray-400">{employee.employee_code}</div>
-                        {employee.position && (
-                          <div className="text-xs text-gray-400">{employee.position}</div>
+                        {employee.role && (
+                          <div className="text-xs text-gray-400">{employee.role}</div>
                         )}
                       </div>
                     </td>
@@ -230,7 +231,7 @@ export default function TrialEmployeeManager({ tenant }: TrialEmployeeManagerPro
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-400">Cargo</label>
-                  <div className="text-white font-medium">{selectedEmployee.position || 'N/A'}</div>
+                  <div className="text-white font-medium">{selectedEmployee.role || 'N/A'}</div>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-400">Salario Base</label>
