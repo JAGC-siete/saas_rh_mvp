@@ -78,10 +78,10 @@ export default function TrialPayrollPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Cargando nómina de agosto 2025...</p>
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-white mx-auto"></div>
+          <p className="mt-4 text-white">Cargando nómina de agosto 2025...</p>
         </div>
       </div>
     )
@@ -89,11 +89,11 @@ export default function TrialPayrollPage() {
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 to-pink-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-6">
-          <div className="text-red-500 text-6xl mb-4">⚠️</div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-4">Error cargando nómina</h1>
-          <p className="text-gray-600 mb-6">{error || 'No se pudo cargar la información de nómina'}</p>
+          <div className="text-red-400 text-6xl mb-4">⚠️</div>
+          <h1 className="text-2xl font-bold text-white mb-4">Error cargando nómina</h1>
+          <p className="text-gray-300 mb-6">{error || 'No se pudo cargar la información de nómina'}</p>
           <Button onClick={goBackToTrial}>Volver al Trial</Button>
         </div>
       </div>
@@ -110,14 +110,14 @@ export default function TrialPayrollPage() {
         <meta name="description" content="Nómina de agosto 2025 para entorno de prueba SISU" />
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900">
         {/* Header */}
-        <header className="bg-white shadow-sm border-b">
+        <header className="glass-strong border-b border-white/10 shadow-lg">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex justify-between items-center">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">💰 Nómina (Trial)</h1>
-                <p className="text-gray-600">Empresa: <strong>{empresa}</strong> • Periodo: {periodo}</p>
+                <h1 className="text-2xl font-bold text-white">💰 Nómina (Trial)</h1>
+                <p className="text-gray-300">Empresa: <strong>{empresa}</strong> • Periodo: {periodo}</p>
               </div>
               <div>
                 <Button variant="outline" onClick={goBackToTrial}>Volver al Trial</Button>
@@ -129,31 +129,31 @@ export default function TrialPayrollPage() {
         {/* Content */}
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
           {/* Summary */}
-          <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+          <Card variant="glass">
             <CardHeader>
-              <CardTitle className="text-green-800">Resumen de Agosto 2025</CardTitle>
-              <CardDescription className="text-green-700">Cifras agregadas del período</CardDescription>
+              <CardTitle className="text-white">Resumen de Agosto 2025</CardTitle>
+              <CardDescription className="text-gray-300">Cifras agregadas del período</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div><div className="text-gray-500">Empleados</div><div className="text-xl font-semibold text-gray-800">{data.summary.employees}</div></div>
-                <div><div className="text-gray-500">Bruto Total</div><div className="text-xl font-semibold text-emerald-700">L {data.summary.totalGross.toFixed(2)}</div></div>
-                <div><div className="text-gray-500">Deducciones</div><div className="text-xl font-semibold text-orange-700">L {data.summary.totalDeductions.toFixed(2)}</div></div>
-                <div><div className="text-gray-500">Neto Total</div><div className="text-xl font-semibold text-blue-700">L {data.summary.totalNet.toFixed(2)}</div></div>
+                <div><div className="text-gray-400">Empleados</div><div className="text-xl font-semibold text-white">{data.summary.employees}</div></div>
+                <div><div className="text-gray-400">Bruto Total</div><div className="text-xl font-semibold text-green-400">L {data.summary.totalGross.toFixed(2)}</div></div>
+                <div><div className="text-gray-400">Deducciones</div><div className="text-xl font-semibold text-orange-400">L {data.summary.totalDeductions.toFixed(2)}</div></div>
+                <div><div className="text-gray-400">Neto Total</div><div className="text-xl font-semibold text-blue-400">L {data.summary.totalNet.toFixed(2)}</div></div>
               </div>
             </CardContent>
           </Card>
 
           {/* Table */}
-          <Card className="bg-white">
+          <Card variant="glass">
             <CardHeader>
-              <CardTitle>Detalle por empleado</CardTitle>
-              <CardDescription>Base en datos de asistencia de agosto 2025</CardDescription>
+              <CardTitle className="text-white">Detalle por empleado</CardTitle>
+              <CardDescription className="text-gray-300">Base en datos de asistencia de agosto 2025</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
                 <table className="min-w-full text-sm">
-                  <thead className="text-left text-gray-600">
+                  <thead className="text-left text-gray-300">
                     <tr>
                       <th className="py-2 pr-4">Empleado</th>
                       <th className="py-2 pr-4">Salario</th>
@@ -168,9 +168,9 @@ export default function TrialPayrollPage() {
                       <th className="py-2 pr-4">Neto</th>
                     </tr>
                   </thead>
-                  <tbody className="text-gray-900">
+                  <tbody className="text-gray-200">
                     {data.records.map((r) => (
-                      <tr key={r.employee_id} className="border-t">
+                      <tr key={r.employee_id} className="border-t border-white/10">
                         <td className="py-2 pr-4">{r.name}</td>
                         <td className="py-2 pr-4">L {r.monthly_salary.toFixed(2)}</td>
                         <td className="py-2 pr-4">{r.days_worked}</td>
@@ -186,7 +186,7 @@ export default function TrialPayrollPage() {
                     ))}
                     {data.records.length === 0 && (
                       <tr>
-                        <td colSpan={11} className="py-6 text-center text-gray-500">Sin registros de nómina para el período</td>
+                        <td colSpan={11} className="py-6 text-center text-gray-400">Sin registros de nómina para el período</td>
                       </tr>
                     )}
                   </tbody>
@@ -196,10 +196,10 @@ export default function TrialPayrollPage() {
           </Card>
 
           {/* Note */}
-          <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+          <Card variant="glass">
             <CardHeader>
-              <CardTitle className="text-blue-800">Sobre este entorno</CardTitle>
-              <CardDescription className="text-blue-700">Cálculos basados en datos de asistencia de agosto 2025 del entorno demo.</CardDescription>
+              <CardTitle className="text-white">Sobre este entorno</CardTitle>
+              <CardDescription className="text-gray-300">Cálculos basados en datos de asistencia de agosto 2025 del entorno demo.</CardDescription>
             </CardHeader>
           </Card>
         </main>

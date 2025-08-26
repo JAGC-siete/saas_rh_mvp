@@ -13,8 +13,6 @@ interface TrialData {
   magic_link: string
 }
 
-
-
 export default function TrialDashboard() {
   const [trialData, setTrialData] = useState<TrialData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -96,10 +94,10 @@ export default function TrialDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Cargando tu trial...</p>
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-white mx-auto"></div>
+          <p className="mt-4 text-white">Cargando tu trial...</p>
         </div>
       </div>
     )
@@ -107,11 +105,11 @@ export default function TrialDashboard() {
 
   if (error || !trialData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 to-pink-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-6">
-          <div className="text-red-500 text-6xl mb-4">⚠️</div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-4">Error en el Trial</h1>
-          <p className="text-gray-600 mb-6">{error || 'No se pudo cargar la información del trial'}</p>
+          <div className="text-red-400 text-6xl mb-4">⚠️</div>
+          <h1 className="text-2xl font-bold text-white mb-4">Error en el Trial</h1>
+          <p className="text-gray-300 mb-6">{error || 'No se pudo cargar la información del trial'}</p>
           <Button onClick={() => router.push('/activar')}>
             Volver a activar
           </Button>
@@ -127,18 +125,18 @@ export default function TrialDashboard() {
         <meta name="description" content="Dashboard de prueba para SISU - Sistema de Gestión de Recursos Humanos" />
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900">
         {/* Header */}
-        <header className="bg-white shadow-sm border-b">
+        <header className="glass-strong border-b border-white/10 shadow-lg">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex justify-between items-center">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">🎉 ¡Bienvenido a SISU!</h1>
-                <p className="text-gray-600">Empresa: <strong>{trialData.empresa}</strong></p>
+                <h1 className="text-2xl font-bold text-white">🎉 ¡Bienvenido a SISU!</h1>
+                <p className="text-gray-300">Empresa: <strong>{trialData.empresa}</strong></p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-gray-500">Trial activado para</p>
-                <p className="font-semibold text-gray-900">{trialData.nombre}</p>
+                <p className="text-sm text-gray-400">Trial activado para</p>
+                <p className="font-semibold text-white">{trialData.nombre}</p>
               </div>
             </div>
           </div>
@@ -147,28 +145,28 @@ export default function TrialDashboard() {
         {/* Main Content */}
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Trial Status */}
-          <Card className="mb-8 bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+          <Card variant="glass" className="mb-8">
             <CardHeader>
-              <CardTitle className="text-green-800">🎯 Estado de tu Trial</CardTitle>
-              <CardDescription className="text-green-700">
+              <CardTitle className="text-white">🎯 Estado de tu Trial</CardTitle>
+              <CardDescription className="text-gray-300">
                 Tu período de prueba está activo y funcionando
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">{trialData.empleados}</div>
-                  <div className="text-sm text-green-700">Empleados configurados</div>
+                  <div className="text-2xl font-bold text-green-400">{trialData.empleados}</div>
+                  <div className="text-sm text-gray-300">Empleados configurados</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">{trialData.tenant_id}</div>
-                  <div className="text-sm text-blue-700">ID de Tenant</div>
+                  <div className="text-2xl font-bold text-blue-400">{trialData.tenant_id}</div>
+                  <div className="text-sm text-gray-300">ID de Tenant</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-orange-600">
+                  <div className="text-2xl font-bold text-orange-400">
                     {formatDate(trialData.trial_expires_at)}
                   </div>
-                  <div className="text-sm text-orange-700">Expira el</div>
+                  <div className="text-sm text-gray-300">Expira el</div>
                 </div>
               </div>
             </CardContent>
@@ -176,17 +174,17 @@ export default function TrialDashboard() {
 
           {/* Features Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            <Card className="hover:shadow-lg transition-shadow">
+            <Card variant="glass" className="hover:shadow-lg transition-shadow">
               <CardHeader>
-                <CardTitle className="flex items-center">
+                <CardTitle className="flex items-center text-white">
                   👥 Gestión de Empleados
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-gray-300">
                   Administra tu plantilla de personal
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-gray-600 mb-4">
+                <p className="text-sm text-gray-300 mb-4">
                   Crea, edita y gestiona la información de tus empleados de manera eficiente.
                 </p>
                 <Button variant="outline" className="w-full">
@@ -195,17 +193,17 @@ export default function TrialDashboard() {
               </CardContent>
             </Card>
 
-            <Card className="hover:shadow-lg transition-shadow">
+            <Card variant="glass" className="hover:shadow-lg transition-shadow">
               <CardHeader>
-                <CardTitle className="flex items-center">
+                <CardTitle className="flex items-center text-white">
                   ⏰ Control de Asistencia
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-gray-300">
                   Monitorea la asistencia en tiempo real
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-gray-600 mb-4">
+                <p className="text-sm text-gray-300 mb-4">
                   Registra entradas, salidas y genera reportes de asistencia automáticamente.
                 </p>
                 <Button
@@ -222,17 +220,17 @@ export default function TrialDashboard() {
               </CardContent>
             </Card>
 
-            <Card className="hover:shadow-lg transition-shadow">
+            <Card variant="glass" className="hover:shadow-lg transition-shadow">
               <CardHeader>
-                <CardTitle className="flex items-center">
+                <CardTitle className="flex items-center text-white">
                   💰 Gestión de Nómina
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-gray-300">
                   Calcula y administra salarios
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-gray-600 mb-4">
+                <p className="text-sm text-gray-300 mb-4">
                   Genera nóminas, calcula deducciones y mantén el control de los pagos.
                 </p>
                 <Button
@@ -250,17 +248,17 @@ export default function TrialDashboard() {
             </Card>
 
             {/* Gamificación Card */}
-            <Card className="hover:shadow-lg transition-shadow">
+            <Card variant="glass" className="hover:shadow-lg transition-shadow">
               <CardHeader>
-                <CardTitle className="flex items-center">
+                <CardTitle className="flex items-center text-white">
                   🏆 Gamificación
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-gray-300">
                   Puntos y logros de empleados
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-gray-600 mb-4">
+                <p className="text-sm text-gray-300 mb-4">
                   Revisa el leaderboard y los puntos por departamentos.
                 </p>
                 <Button
@@ -279,34 +277,34 @@ export default function TrialDashboard() {
           </div>
 
           {/* Next Steps */}
-          <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+          <Card variant="glass" className="mb-8">
             <CardHeader>
-              <CardTitle className="text-blue-800">🚀 Próximos Pasos</CardTitle>
-              <CardDescription className="text-blue-700">
+              <CardTitle className="text-white">🚀 Próximos Pasos</CardTitle>
+              <CardDescription className="text-gray-300">
                 Para aprovechar al máximo tu trial, te recomendamos:
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div className="flex items-start space-x-3">
-                  <div className="bg-blue-100 text-blue-600 rounded-full p-2 text-sm font-bold">1</div>
+                  <div className="bg-blue-500/20 text-blue-400 rounded-full p-2 text-sm font-bold">1</div>
                   <div>
-                    <h4 className="font-semibold text-blue-800">Explora las Funciones</h4>
-                    <p className="text-sm text-blue-700">Navega por todas las funcionalidades disponibles en tu trial.</p>
+                    <h4 className="font-semibold text-white">Explora las Funciones</h4>
+                    <p className="text-sm text-gray-300">Navega por todas las funcionalidades disponibles en tu trial.</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
-                  <div className="bg-blue-100 text-blue-600 rounded-full p-2 text-sm font-bold">2</div>
+                  <div className="bg-blue-500/20 text-blue-400 rounded-full p-2 text-sm font-bold">2</div>
                   <div>
-                    <h4 className="font-semibold text-blue-800">Importa tus Empleados</h4>
-                    <p className="text-sm text-blue-700">Sube tu plantilla de empleados o pide que te carguemos datos de ejemplo.</p>
+                    <h4 className="font-semibold text-white">Importa tus Empleados</h4>
+                    <p className="text-sm text-gray-300">Sube tu plantilla de empleados o pide que te carguemos datos de ejemplo.</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
-                  <div className="bg-blue-100 text-blue-600 rounded-full p-2 text-sm font-bold">3</div>
+                  <div className="bg-blue-500/20 text-blue-400 rounded-full p-2 text-sm font-bold">3</div>
                   <div>
-                    <h4 className="font-semibold text-blue-800">Agenda una Demo</h4>
-                    <p className="text-sm text-blue-700">Reserva 15 minutos para que te expliquemos todas las funcionalidades.</p>
+                    <h4 className="font-semibold text-white">Agenda una Demo</h4>
+                    <p className="text-sm text-gray-300">Reserva 15 minutos para que te expliquemos todas las funcionalidades.</p>
                   </div>
                 </div>
               </div>
@@ -314,22 +312,22 @@ export default function TrialDashboard() {
           </Card>
 
           {/* Contact Info */}
-          <Card className="mt-8 bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+          <Card variant="glass">
             <CardHeader>
-              <CardTitle className="text-green-800">📞 ¿Necesitas Ayuda?</CardTitle>
-              <CardDescription className="text-green-700">
+              <CardTitle className="text-white">📞 ¿Necesitas Ayuda?</CardTitle>
+              <CardDescription className="text-gray-300">
                 Estamos aquí para ayudarte a aprovechar al máximo SISU
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <h4 className="font-semibold text-green-800 mb-2">📧 Email de Soporte</h4>
-                  <p className="text-green-700">soporte@humanosisu.net</p>
+                  <h4 className="font-semibold text-white mb-2">📧 Email de Soporte</h4>
+                  <p className="text-gray-300">soporte@humanosisu.net</p>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-green-800 mb-2">📱 WhatsApp</h4>
-                  <p className="text-green-700">+504 9999-9999</p>
+                  <h4 className="font-semibold text-white mb-2">📱 WhatsApp</h4>
+                  <p className="text-gray-300">+504 9999-9999</p>
                 </div>
               </div>
             </CardContent>

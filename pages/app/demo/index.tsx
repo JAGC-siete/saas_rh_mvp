@@ -98,17 +98,17 @@ export default function Demo() {
 
   if (!mswReady) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Iniciando demo...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p className="text-white">Iniciando demo...</p>
         </div>
       </div>
     )
   }
 
   const DemoBanner = () => (
-    <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-4 text-center">
+    <div className="glass-strong border-b border-white/10 text-white p-4 text-center">
       <div className="flex items-center justify-center space-x-2">
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -125,63 +125,63 @@ export default function Demo() {
     <div className="space-y-6">
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
+        <Card variant="glass">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Empleados</CardTitle>
-            <svg className="h-4 w-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <CardTitle className="text-sm font-medium text-white">Total Empleados</CardTitle>
+            <svg className="h-4 w-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
             </svg>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{loading ? '...' : stats.totalEmployees}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-2xl font-bold text-white">{loading ? '...' : stats.totalEmployees}</div>
+            <p className="text-xs text-gray-300">
               {stats.activeEmployees} activos
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card variant="glass">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Presentes Hoy</CardTitle>
-            <svg className="h-4 w-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <CardTitle className="text-sm font-medium text-white">Presentes Hoy</CardTitle>
+            <svg className="h-4 w-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{loading ? '...' : stats.presentToday}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-2xl font-bold text-white">{loading ? '...' : stats.presentToday}</div>
+            <p className="text-xs text-gray-300">
               {stats.attendanceRate}% asistencia
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card variant="glass">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Llegadas Tarde</CardTitle>
-            <svg className="h-4 w-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <CardTitle className="text-sm font-medium text-white">Llegadas Tarde</CardTitle>
+            <svg className="h-4 w-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{loading ? '...' : stats.lateToday}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-2xl font-bold text-white">{loading ? '...' : stats.lateToday}</div>
+            <p className="text-xs text-gray-300">
               Empleados tarde hoy
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card variant="glass">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Nómina Actual</CardTitle>
-            <svg className="h-4 w-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <CardTitle className="text-sm font-medium text-white">Nómina Actual</CardTitle>
+            <svg className="h-4 w-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
             </svg>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-white">
               {loading ? '...' : `L ${stats.totalPayroll.toLocaleString()}`}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-gray-300">
               Quincenal actual
             </p>
           </CardContent>
@@ -236,12 +236,12 @@ export default function Demo() {
       </div>
 
       {/* Call to Action */}
-      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+      <Card variant="glass">
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">¿Te gusta lo que ves?</h3>
-              <p className="text-gray-600 mt-1">
+              <h3 className="text-lg font-semibold text-white">¿Te gusta lo que ves?</h3>
+              <p className="text-gray-300 mt-1">
                 Solicita tu demo personalizada con tus propios datos
               </p>
             </div>
@@ -280,12 +280,12 @@ export default function Demo() {
         <meta name="robots" content="noindex, nofollow" />
       </Head>
 
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900">
         <DemoBanner />
         
         <div className="flex">
           {/* Demo Sidebar */}
-          <div className="w-64 bg-white shadow-sm">
+          <div className="w-64 glass-strong border-r border-white/10">
             <nav className="mt-8 space-y-1">
               {[
                 { id: 'dashboard', name: 'Dashboard', icon: ChartBarIcon },
@@ -301,8 +301,8 @@ export default function Demo() {
                     onClick={() => setActiveTab(item.id)}
                     className={`w-full flex items-center px-4 py-2 text-left text-sm font-medium ${
                       activeTab === item.id
-                        ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                        ? 'bg-white/20 text-white border-r-2 border-white'
+                        : 'text-gray-300 hover:bg-white/10 hover:text-white'
                     }`}
                   >
                     <Icon className="mr-3 h-5 w-5" />
