@@ -15,11 +15,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const supabase = createAdminClient()
 
-    // Buscar empresa demo por NOMBRE (igual que attendance que sí funciona)
+    // Buscar empresa demo por UUID específico
     const { data: company, error: companyError } = await supabase
       .from('companies')
       .select('id, name, subdomain')
-      .eq('name', 'DEMO EMPRESARIAL  - Datos de  Prueba')
+      .eq('id', 'c0f49c93-f9a6-40df-b3bd-422963c50e28')
       .eq('is_active', true)
       .single()
 
