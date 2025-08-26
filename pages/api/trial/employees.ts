@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createAdminClient } from '../../../lib/supabase/server'
+import { createClient } from '../../../lib/supabase/server'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -13,7 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Tenant requerido' })
     }
 
-    const supabase = createAdminClient()
+    const supabase = createClient(req, res)
 
     // Buscar empresa demo
     const { data: company, error: companyError } = await supabase
@@ -50,6 +50,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .order('name')
 
     if (employeesError) {
+      console.error('❌ Error obteniendo empleados:', employeesError)
       return res.status(500).json({ error: 'Error obteniendo empleados', details: employeesError })
     }
 
@@ -107,9 +108,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
+    console.log('✅ Empleados del trial obtenidos:', enrichedEmployees.length)
     return res.status(200).json(result)
   } catch (error) {
     console.error('💥 Error en trial employees:', error)
-    return res.status(500).json({ error: 'Error interno del servidor' })
+    return res.status(500).json({ error: 'Error interno del servidor', details: error })
   }
 }
