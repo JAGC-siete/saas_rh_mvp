@@ -48,7 +48,8 @@ export default function TrialDashboard() {
   const fetchTrialData = async (tenantId: string) => {
     console.log('🚀 fetchTrialData called with tenantId:', tenantId)
     try {
-      const url = `/api/trial/validate?tenant=${tenantId}`
+      // Obtener datos REALES de la empresa del trial
+      const url = `/api/trial/attendance?tenant=${tenantId}`
       console.log('📡 Fetching from:', url)
       
       const response = await fetch(url)
@@ -57,11 +58,22 @@ export default function TrialDashboard() {
       if (response.ok) {
         const data = await response.json()
         console.log('✅ Trial data received:', data)
-        setTrialData(data)
+        
+        // Extraer información de la empresa del trial
+        const trialData = {
+          empresa: data.company.name,
+          nombre: 'Usuario Trial',
+          empleados: data.kpis.totalEmployees,
+          tenant_id: data.company.subdomain,
+          trial_expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 días
+          magic_link: '#'
+        }
+        
+        setTrialData(trialData)
       } else {
         const errorText = await response.text()
         console.error('❌ API error:', response.status, errorText)
-        setError('No se pudo validar el trial')
+        setError('No se pudo cargar la información del trial')
       }
     } catch (err) {
       console.error('💥 Fetch error:', err)
@@ -196,7 +208,15 @@ export default function TrialDashboard() {
                 <p className="text-sm text-gray-600 mb-4">
                   Registra entradas, salidas y genera reportes de asistencia automáticamente.
                 </p>
-                <Button variant="outline" className="w-full">
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    const params = new URLSearchParams(window.location.search)
+                    const tenant = params.get('tenant') || trialData.tenant_id
+                    window.location.href = `/trial/attendance?tenant=${encodeURIComponent(tenant)}`
+                  }}
+                >
                   Ver Asistencia
                 </Button>
               </CardContent>
@@ -215,8 +235,44 @@ export default function TrialDashboard() {
                 <p className="text-sm text-gray-600 mb-4">
                   Genera nóminas, calcula deducciones y mantén el control de los pagos.
                 </p>
-                <Button variant="outline" className="w-full">
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    const params = new URLSearchParams(window.location.search)
+                    const tenant = params.get('tenant') || trialData.tenant_id
+                    window.location.href = `/trial/payroll?tenant=${encodeURIComponent(tenant)}`
+                  }}
+                >
                   Gestionar Nómina
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Gamificación Card */}
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  🏆 Gamificación
+                </CardTitle>
+                <CardDescription>
+                  Puntos y logros de empleados
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-600 mb-4">
+                  Revisa el leaderboard y los puntos por departamentos.
+                </p>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    const params = new URLSearchParams(window.location.search)
+                    const tenant = params.get('tenant') || trialData.tenant_id
+                    window.location.href = `/trial/gamification?tenant=${encodeURIComponent(tenant)}`
+                  }}
+                >
+                  Ver Gamificación
                 </Button>
               </CardContent>
             </Card>
