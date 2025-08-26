@@ -14,6 +14,11 @@ const PUBLIC_ROUTES = new Set([
   '/about',            // Página acerca de - PÚBLICO
   '/trial-dashboard',  // Dashboard de trial - PÚBLICO
   '/trial-dashboard/*', // Dashboard de trial con parámetros - PÚBLICO
+  '/trial',            // Todas las rutas del trial - PÚBLICO
+  '/trial/*',          // Subrutas del trial - PÚBLICO
+  '/trial/attendance', // Asistencia del trial - PÚBLICO
+  '/trial/payroll',    // Nómina del trial - PÚBLICO
+  '/trial/gamification', // Gamificación del trial - PÚBLICO
   '/politicadeprivacidad', // Política de privacidad - PÚBLICO
   '/app/login',        // Login de la aplicación
   '/app/demo/pin',     // PIN de demo - PÚBLICO
@@ -27,6 +32,8 @@ const PUBLIC_ROUTES = new Set([
   '/api/attendance/update-schedule',
   '/api/activar',      // API para formulario de activación - PÚBLICO
   '/api/demo/verify-pin', // API para verificar PIN demo - PÚBLICO
+  '/api/trial',        // Todas las APIs del trial - PÚBLICO
+  '/api/trial/*',      // Sub-APIs del trial - PÚBLICO
   '/api/health',
   '/api/env',          // Environment variables endpoint - PÚBLICO
   '/api/cron/*'        // Cron jobs para mantenimiento del sistema
