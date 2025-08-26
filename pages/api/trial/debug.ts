@@ -28,11 +28,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: 'Error obteniendo empresas', details: companiesError })
     }
 
-    // 2. Buscar la empresa demo (NO por tenant - reutilizamos el mismo entorno)
-    const { data: targetCompany, error: targetError } = await supabase
+    // Buscar empresa demo por UUID específico
+    const { data: company, error: companyError } = await supabase
       .from('companies')
       .select('id, name, subdomain')
-      .eq('name', 'DEMO EMPRESARIAL  - Datos de  Prueba')
+      .eq('id', 'c0f49c93-f9a6-40df-b3bd-422963c50e28')
       .eq('is_active', true)
       .single()
 
@@ -49,11 +49,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // 4. Si encontramos la empresa demo, verificar sus empleados
     let trialEmployees: any[] = []
-    if (targetCompany) {
+    if (company) {
       const { data: trialEmp, error: trialEmpError } = await supabase
         .from('employees')
         .select('id, name, company_id, status, base_salary')
-        .eq('company_id', targetCompany.id)
+        .eq('company_id', company.id)
         .eq('status', 'active')
         .order('name')
 
@@ -71,13 +71,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const debugInfo = {
       requestedTenant: tenant,
       allCompanies: allCompanies || [],
-      targetCompany: targetCompany || null,
-      targetCompanyError: targetError,
+      targetCompany: company || null,
+      targetCompanyError: companyError,
       totalActiveEmployees: allEmployees?.length || 0,
       trialCompanyEmployees: trialEmployees,
       paragonEmployees: paragonEmployees,
-      debugMessage: targetCompany 
-        ? `✅ Encontrada empresa: ${targetCompany.name} (ID: ${targetCompany.id}) con ${trialEmployees.length} empleados`
+      debugMessage: company 
+        ? `✅ Encontrada empresa: ${company.name} (ID: ${company.id}) con ${trialEmployees.length} empleados`
         : `❌ NO se encontró empresa para tenant: ${tenant}`
     }
 
