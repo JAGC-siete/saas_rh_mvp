@@ -184,123 +184,80 @@ async function crearEntornoTrial(supabase: any, data: {
   empleados: number
 }) {
   try {
-    // 1. Crear Company
-    const { data: company, error: companyError } = await supabase
+    console.log('🔍 Buscando entorno demo existente para reutilizar...')
+    
+    // 1. Buscar empresa demo existente (NO crear nueva)
+    const { data: demoCompany, error: companyError } = await supabase
       .from('companies')
-      .insert([{
-        name: data.empresa,
-        subdomain: data.tenant_id,
-        plan_type: 'trial',
-        settings: {
-          trial_activated_at: new Date().toISOString(),
-          trial_employee_limit: data.empleados,
-          timezone: 'America/Tegucigalpa'
-        },
-        is_active: true
-      }])
-      .select()
+      .select('*')
+      .eq('name', 'Empresa Demo Trial')
+      .eq('plan_type', 'trial')
+      .eq('is_active', true)
+      .single()
 
-    if (companyError) {
-      throw new Error(`Error creando company: ${companyError.message}`)
-    }
+    if (companyError || !demoCompany) {
+      console.log('⚠️ No existe empresa demo, creando una sola vez...')
+      
+      // Crear SOLO UNA VEZ la empresa demo
+      const { data: newDemoCompany, error: createError } = await supabase
+        .from('companies')
+        .insert([{
+          name: 'Empresa Demo Trial',
+          subdomain: 'demo-trial',
+          plan_type: 'trial',
+          settings: {
+            trial_activated_at: new Date().toISOString(),
+            trial_employee_limit: 25,
+            timezone: 'America/Tegucigalpa'
+          },
+          is_active: true
+        }])
+        .select()
 
-    // 2. Crear Owner (usuario principal)
-    const { data: owner, error: ownerError } = await supabase
-      .from('user_profiles')
-      .insert([{
-        id: crypto.randomUUID(), // Generar UUID real para el usuario
-        company_id: company[0].id,
-        role: 'company_admin',
-        permissions: {
-          can_manage_employees: true,
-          can_view_attendance: true,
-          can_manage_payroll: true,
-          can_manage_settings: true
-        },
-        is_active: true
-      }])
-      .select()
-
-    if (ownerError) {
-      throw new Error(`Error creando owner: ${ownerError.message}`)
-    }
-
-    // 3. Crear horario estándar HN
-    const { data: schedule, error: scheduleError } = await supabase
-      .from('work_schedules')
-      .insert([{
-        company_id: company[0].id,
-        name: 'Horario Estándar HN',
-        monday_start: '08:00',
-        monday_end: '17:00',
-        tuesday_start: '08:00',
-        tuesday_end: '17:00',
-        wednesday_start: '08:00',
-        wednesday_end: '17:00',
-        thursday_start: '08:00',
-        thursday_end: '17:00',
-        friday_start: '08:00',
-        friday_end: '17:00',
-        saturday_start: '08:00',
-        saturday_end: '12:00',
-        sunday_start: null,
-        sunday_end: null,
-        break_duration: 60,
-        timezone: 'America/Tegucigalpa'
-      }])
-      .select()
-
-    if (scheduleError) {
-      throw new Error(`Error creando horario: ${scheduleError.message}`)
-    }
-
-    // 4. Crear 3 empleados demo
-    const demoEmployees = [
-      {
-        name: 'Juan Pérez Demo',
-        dni: '0001',
-        position: 'Desarrollador',
-        base_salary: 15000,
-        hire_date: new Date().toISOString().split('T')[0]
-      },
-      {
-        name: 'María González Demo',
-        dni: '0002',
-        position: 'Diseñadora',
-        base_salary: 12000,
-        hire_date: new Date().toISOString().split('T')[0]
-      },
-      {
-        name: 'Carlos López Demo',
-        dni: '0003',
-        position: 'Vendedor',
-        base_salary: 10000,
-        hire_date: new Date().toISOString().split('T')[0]
+      if (createError) {
+        throw new Error(`Error creando empresa demo: ${createError.message}`)
       }
-    ]
+      
+      // Crear empleados demo SOLO UNA VEZ
+      const demoEmployees = [
+        { name: 'Juan Pérez Demo', dni: '0001', position: 'Desarrollador', base_salary: 15000 },
+        { name: 'María González Demo', dni: '0002', position: 'Diseñadora', base_salary: 12000 },
+        { name: 'Carlos López Demo', dni: '0003', position: 'Vendedor', base_salary: 10000 },
+        { name: 'Ana Martínez Demo', dni: '0004', position: 'Contadora', base_salary: 14000 },
+        { name: 'Luis Rodríguez Demo', dni: '0005', position: 'Marketing', base_salary: 11000 }
+      ]
 
-    const { data: employees, error: employeesError } = await supabase
-      .from('employees')
-      .insert(demoEmployees.map(emp => ({
-        ...emp,
-        company_id: company[0].id,
-        work_schedule_id: schedule[0].id,
-        status: 'active',
-        employee_code: emp.dni
-      })))
-      .select()
+      const { data: newEmployees, error: employeesError } = await supabase
+        .from('employees')
+        .insert(demoEmployees.map(emp => ({
+          ...emp,
+          company_id: newDemoCompany[0].id,
+          status: 'active',
+          employee_code: emp.dni,
+          hire_date: '2025-01-01'
+        })))
+        .select()
 
-    if (employeesError) {
-      throw new Error(`Error creando empleados demo: ${employeesError.message}`)
+      if (employeesError) {
+        throw new Error(`Error creando empleados demo: ${employeesError.message}`)
+      }
+
+      console.log('✅ Entorno demo creado exitosamente')
+      return {
+        success: true,
+        data: {
+          company: newDemoCompany[0],
+          employees: newEmployees
+        }
+      }
     }
 
+    console.log('✅ Reutilizando entorno demo existente')
     return {
       success: true,
       data: {
-        company: company[0],
-        owner: owner[0],
-        schedule: schedule[0],
-        employees: employees
+        company: demoCompany,
+        employees: [] // Los empleados ya existen
       }
     }
 

@@ -59,12 +59,12 @@ export default function TrialDashboard() {
         const data = await response.json()
         console.log('✅ Trial data received:', data)
         
-        // Extraer información de la empresa del trial
+        // Extraer información de la empresa demo
         const trialData = {
-          empresa: data.company.name,
+          empresa: 'Empresa Demo Trial',
           nombre: 'Usuario Trial',
           empleados: data.kpis.totalEmployees,
-          tenant_id: data.company.subdomain,
+          tenant_id: tenantId,
           trial_expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 días
           magic_link: '#'
         }

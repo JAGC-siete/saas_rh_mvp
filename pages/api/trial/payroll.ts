@@ -43,12 +43,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { data: company, error: companyError } = await supabase
       .from('companies')
       .select('id, name, subdomain')
-      .eq('subdomain', tenant)  // Filtrar por el tenant del trial
+      .eq('name', 'Empresa Demo Trial')
+      .eq('plan_type', 'trial')
+      .eq('is_active', true)
       .single()
 
     if (companyError || !company) {
-      console.error('❌ Company not found for tenant:', tenant, companyError)
-      return res.status(404).json({ error: 'Empresa (tenant) no encontrada' })
+      console.error('❌ Empresa demo no encontrada:', companyError)
+      return res.status(404).json({ error: 'Entorno demo no configurado' })
     }
 
     console.log('✅ Found company for trial:', company.name, 'ID:', company.id)

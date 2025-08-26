@@ -21,19 +21,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const supabase = createAdminClient()
 
-    // 1) Resolve company by tenant (subdomain) - ESTA ES LA CLAVE
+    // 1) Buscar empresa demo (NO por tenant - reutilizamos el mismo entorno)
     const { data: company, error: companyError } = await supabase
       .from('companies')
       .select('id, name, subdomain')
-      .eq('subdomain', tenant)  // Filtrar por el tenant del trial
+      .eq('name', 'Empresa Demo Trial')  // Usar empresa demo fija
+      .eq('plan_type', 'trial')
+      .eq('is_active', true)
       .single()
 
     if (companyError || !company) {
-      console.error('❌ Company not found for tenant:', tenant, companyError)
-      return res.status(404).json({ error: 'Empresa (tenant) no encontrada' })
+      console.error('❌ Empresa demo no encontrada:', companyError)
+      return res.status(404).json({ error: 'Entorno demo no configurado' })
     }
 
-    console.log('✅ Found company for trial:', company.name, 'ID:', company.id)
+    console.log('✅ Usando empresa demo:', company.name, 'ID:', company.id)
 
     // 2) Load active employees in THIS company (not Paragon)
     const { data: employees, error: employeesError } = await supabase
