@@ -19,6 +19,8 @@ const PUBLIC_ROUTES = new Set([
   '/trial/attendance', // Asistencia del trial - PÚBLICO
   '/trial/payroll',    // Nómina del trial - PÚBLICO
   '/trial/gamification', // Gamificación del trial - PÚBLICO
+  '/auth/callback',     // OAuth callback - PÚBLICO
+  '/auth/auth-code-error', // OAuth error page - PÚBLICO
   '/politicadeprivacidad', // Política de privacidad - PÚBLICO
   '/app/login',        // Login de la aplicación
   '/app/demo/pin',     // PIN de demo - PÚBLICO

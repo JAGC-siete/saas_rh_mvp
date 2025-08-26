@@ -9,6 +9,7 @@ import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Shield, Lock, Eye, EyeOff, AlertCircle, Clock } from 'lucide-react'
 import { useAuth } from '../lib/auth'
+import { createClient as createSupabaseBrowserClient } from '../lib/supabase/client'
 
 export default function AdminLogin() {
   const [email, setEmail] = useState('')
@@ -20,6 +21,24 @@ export default function AdminLogin() {
   
   const { user, loading: authLoading, login, error: authError } = useAuth()
   const router = useRouter()
+
+  const handleFacebookLogin = async () => {
+    try {
+      const supabase = createSupabaseBrowserClient()
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
+      const redirectTo = `${siteUrl}/auth/callback?next=/app/dashboard`
+      const { data, error } = await (supabase as any).auth.signInWithOAuth({
+        provider: 'facebook',
+        options: { redirectTo }
+      })
+      if (error) {
+        setError(error.message || 'No se pudo iniciar sesión con Facebook')
+      }
+      // In browser this will redirect automatically
+    } catch (e: any) {
+      setError(e?.message || 'Error iniciando sesión con Facebook')
+    }
+  }
 
   // Redirect if already logged in - ONLY when auth is not loading
   useEffect(() => {
@@ -185,6 +204,26 @@ export default function AdminLogin() {
                   ) : (
                     'Ingresar al Sistema'
                   )}
+                </Button>
+
+                {/* Divider */}
+                <div className="relative my-4">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-gray-200"></span>
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="bg-white px-2 text-gray-500">o</span>
+                  </div>
+                </div>
+
+                {/* Facebook OAuth */}
+                <Button 
+                  type="button"
+                  variant="secondary"
+                  className="w-full h-12"
+                  onClick={handleFacebookLogin}
+                >
+                  Continuar con Facebook
                 </Button>
               </form>
             </CardContent>
