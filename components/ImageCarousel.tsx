@@ -26,6 +26,12 @@ const carouselImages: CarouselImage[] = [
     alt: 'Vista general del sistema de RH',
     title: 'Vista General del Sistema',
     description: 'Panel ejecutivo con métricas clave y reportes automáticos'
+  },
+  {
+    src: '/voucher-sample.png',
+    alt: 'Voucher de pago generado automáticamente',
+    title: 'Voucher Automático',
+    description: 'PDF perfecto con IHSS, RAP, ISR listos para envío'
   }
 ];
 
@@ -121,7 +127,7 @@ export default function ImageCarousel() {
       {/* Contador de tiempo */}
       <div className="text-center mt-2">
         <span className="text-xs text-brand-200/70">
-          Cambia automáticamente cada 5 segundos
+          Imágenes con fines ilustrativos
         </span>
       </div>
     </div>
