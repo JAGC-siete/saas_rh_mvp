@@ -11,33 +11,27 @@ interface CarouselImage {
 const carouselImages: CarouselImage[] = [
   {
     src: '/1.png',
-    alt: 'Sistema de Recursos Humanos - Vista 1',
-    title: 'Sistema de RH',
-    description: 'Gestión completa de empleados y asistencia'
+    alt: 'Registro Inteligente de Asistencia',
+    title: 'Registro Inteligente de Asistencia',
+    description: 'Control automático de checadas con antifraude y justificación inteligente'
   },
   {
     src: '/2.png',
-    alt: 'Sistema de Recursos Humanos - Vista 2',
-    title: 'Dashboard Principal',
-    description: 'Panel de control con métricas clave'
+    alt: 'Empleados ganan puntos por asistencia',
+    title: 'Gamificación de Asistencia',
+    description: 'Sistema de puntos y recompensas por cumplimiento y puntualidad'
   },
   {
     src: '/3.png',
-    alt: 'Sistema de Recursos Humanos - Vista 3',
-    title: 'Gestión de Asistencia',
-    description: 'Control de checadas y reportes en tiempo real'
+    alt: 'Las planillas hechas inmediatamente',
+    title: 'Planillas Automáticas',
+    description: 'Generación instantánea de planillas con IHSS, RAP, ISR calculados automáticamente'
   },
   {
     src: '/4.png',
-    alt: 'Sistema de Recursos Humanos - Vista 4',
-    title: 'Reportes y Analytics',
-    description: 'Análisis completo de datos de RH'
-  },
-  {
-    src: '/voucher-sample.png',
-    alt: 'Voucher de pago generado automáticamente',
-    title: 'Voucher Automático',
-    description: 'PDF perfecto con IHSS, RAP, ISR listos para envío'
+    alt: 'Vouchers de pago automáticos y personalizados',
+    title: 'Vouchers Automáticos',
+    description: 'PDFs personalizados con datos del empleado, enviados por email/WhatsApp'
   }
 ];
 
