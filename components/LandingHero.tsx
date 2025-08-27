@@ -1,4 +1,5 @@
 import React from "react";
+import ImageCarousel from "./ImageCarousel";
 
 export default function LandingHero() {
   // Función simple para obtener la próxima quincena
@@ -23,7 +24,6 @@ export default function LandingHero() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
             {/* Copy */}
             <div className="space-y-6 text-left">
-
 
               <h1 className="text-4xl sm:text-5xl font-extrabold leading-tight text-white">
                 ¿Otra quincena corriendo detrás de la planilla?
@@ -56,40 +56,9 @@ export default function LandingHero() {
               </div>
             </div>
 
-            {/* Proof */}
+            {/* Carrusel de imágenes del sistema */}
             <div className="relative">
-              <div className="rounded-3xl border bg-white/80 backdrop-blur shadow-xl p-4" data-proof="voucher-screenshot">
-                <div className="aspect-[4/3] w-full rounded-2xl bg-white border flex items-center justify-center overflow-hidden">
-                  {/* Placeholder para screenshot del voucher */}
-                  <img 
-                    src="/voucher-sample.png" 
-                    alt="Voucher de pago (ejemplo)" 
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      // Fallback si no existe la imagen
-                      const target = e.target as HTMLImageElement;
-                      target.style.display = 'none';
-                      target.nextElementSibling?.classList.remove('hidden');
-                    }}
-                  />
-                  <div className="hidden text-center p-6 text-gray-400">
-                    <div className="text-sm font-semibold text-gray-600 mb-2">Colocá aquí tu voucher real</div>
-                    <div className="text-xs text-gray-500">La prueba mata el speech: subí un PNG/JPG del PDF de pago real (datos sensibles ocultos).</div>
-                  </div>
-                </div>
-
-                {/* Testimonio */}
-                <div className="mt-4">
-                  <div className="rounded-2xl border bg-white p-4">
-                    <p className="text-gray-800 italic">
-                      &ldquo;Antes tardaba 6 horas cada quincena. Ahora son 15 minutos y cero reclamos el día de pago.&rdquo;
-                    </p>
-                    <div className="mt-2 text-sm text-gray-600">— Gerente de RRHH </div>
-                  </div>
-                </div>
-              </div>
-
-
+              <ImageCarousel />
             </div>
           </div>
           
