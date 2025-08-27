@@ -51,9 +51,10 @@ const PUBLIC_ASSETS = new Set([
   '/icons/aws-solutions-architect.svg', // Icono SVG AWS Solutions Architect
   '/icons/aws-developer.svg', // Icono SVG AWS Developer
   '/icons/aws-cloud-practitioner.svg', // Icono SVG AWS Cloud Practitioner
-  '/attendance-dashboard.png', // Imagen del carrusel - Dashboard de asistencia
-  '/attendance-register.png', // Imagen del carrusel - Registro de asistencia
-  '/dashboard-overview.png', // Imagen del carrusel - Vista general del sistema
+  '/1.png', // Nueva imagen del carrusel - Vista 1
+  '/2.png', // Nueva imagen del carrusel - Vista 2
+  '/3.png', // Nueva imagen del carrusel - Vista 3
+  '/4.png', // Nueva imagen del carrusel - Vista 4
   '/favicon.ico',         // Favicon
   '/robots.txt',          // Robots.txt
   '/sitemap.xml'          // Sitemap
