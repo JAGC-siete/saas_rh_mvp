@@ -32,6 +32,12 @@ const carouselImages: CarouselImage[] = [
     alt: 'Sistema de Recursos Humanos - Vista 4',
     title: 'Reportes y Analytics',
     description: 'Análisis completo de datos de RH'
+  },
+  {
+    src: '/voucher-sample.png',
+    alt: 'Voucher de pago generado automáticamente',
+    title: 'Voucher Automático',
+    description: 'PDF perfecto con IHSS, RAP, ISR listos para envío'
   }
 ];
 
