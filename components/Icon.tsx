@@ -32,7 +32,10 @@ const ICONS = {
   trophy: L.Trophy,
   lightbulb: L.Lightbulb,
   party: L.PartyPopper,
-  phone: L.Phone
+  phone: L.Phone,
+  plus: L.Plus,
+  minus: L.Minus,
+  eye: L.Eye
 } as const
 
 export type IconName = keyof typeof ICONS

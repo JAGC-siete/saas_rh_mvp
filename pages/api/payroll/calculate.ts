@@ -118,7 +118,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       companyId: userProfile?.company_id 
     })
 
-    const { periodo, quincena, incluirDeducciones, soloEmpleadosConAsistencia = true } = req.body
+    const { periodo, quincena, tipoCalculo } = req.body || {}
     
     // Validaciones
     if (!periodo || !quincena) {
@@ -155,13 +155,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Q2: salario bruto proporcional + deducciones mensuales completas
     const aplicarDeducciones = quincena === 2
 
-    console.log('Generando nómina para:', {
+    console.log('Generando nómina:', {
       periodo,
       quincena,
       fechaInicio,
       fechaFin,
       aplicarDeducciones,
-      soloEmpleadosConAsistencia
+      tipoCalculo
     })
 
     // Obtener empleados activos
@@ -204,13 +204,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Filtrar empleados según criterio de asistencia
     let empleadosParaNomina = employees
     
-    if (soloEmpleadosConAsistencia) {
+    if (tipoCalculo === 'con_asistencia') {
       empleadosParaNomina = employees.filter((emp: any) =>
         attendanceRecords.some((record: any) => 
           record.employee_id === emp.id && 
           record.check_in && 
           record.check_out &&
           record.status !== 'absent')
+      )
+    } else {
+      empleadosParaNomina = employees.filter((emp: any) =>
+        attendanceRecords.some((record: any) => 
+          record.employee_id === emp.id && 
+          record.check_in && 
+          record.check_out)
       )
     }
 

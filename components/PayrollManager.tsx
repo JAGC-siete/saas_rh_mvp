@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { createClient } from '../lib/supabase/client'
 import { usePayrollReports } from '../lib/hooks/usePayrollReports'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts'
 import { Icon } from './Icon'
+import { useAuth } from '../lib/auth'
+import { useCompanyContext } from '../lib/useCompanyContext'
+import VoucherGenerator from './VoucherGenerator'
 
 // MODE: por días (cálculo basado en días trabajados)
 interface PayrollRecord {
@@ -546,26 +548,37 @@ export default function PayrollManager() {
   }, [])
 
   // Función para generar registros Preview cuando no existen payroll_records
-  const generatePreviewRecords = useCallback(async (period: string, quincena: number) => {
-    if (!supabase || !userProfile) return []
+  const generatePreviewRecords = useCallback(async () => {
+    if (!userProfile?.company_id) {
+      console.warn('⚠️ Usuario sin company_id - no se pueden generar registros')
+      return []
+    }
 
     try {
-      // Obtener empleados activos de la empresa
+      // Obtener empleados activos - SOLO de la empresa del usuario
       let employeesQuery = supabase
         .from('employees')
-        .select('id, name, employee_code, base_salary, department_id, status')
+        .select('id, name, employee_code, base_salary, department_id, status, company_id')
         .eq('status', 'active')
+        .order('name')
 
+      // IMPORTANTE: Filtrar SOLO por company_id del usuario autenticado
       if (userProfile.company_id) {
         employeesQuery = employeesQuery.eq('company_id', userProfile.company_id)
+        console.log('🔒 Filtrando empleados por empresa:', userProfile.company_id)
+      } else {
+        console.warn('⚠️ Usuario sin company_id - no se pueden filtrar empleados')
+        return []
       }
 
       const { data: activeEmployees, error: empError } = await employeesQuery
       if (empError) throw empError
 
-      const lastDay = getLastDayOfMonth(period)
-      const startDay = quincena === 1 ? 1 : 16
-      const endDay = quincena === 1 ? 15 : lastDay
+      console.log(`📊 Empleados activos encontrados para empresa ${userProfile.company_id}:`, activeEmployees?.length || 0)
+
+      const lastDay = getLastDayOfMonth(previewForm.periodo)
+      const startDay = previewForm.quincena === 1 ? 1 : 16
+      const endDay = previewForm.quincena === 1 ? 15 : lastDay
 
       // Generar registros Preview para cada empleado activo usando fórmulas reales
       const previewRecords: PreviewPayrollRecord[] = activeEmployees.map((emp: any) => {
@@ -584,8 +597,8 @@ export default function PayrollManager() {
 
         return {
           employee_id: emp.id,
-          period_start: `${period}-${startDay.toString().padStart(2, '0')}`,
-          period_end: `${period}-${endDay.toString().padStart(2, '0')}`,
+          period_start: `${previewForm.periodo}-${startDay.toString().padStart(2, '0')}`,
+          period_end: `${previewForm.periodo}-${endDay.toString().padStart(2, '0')}`,
           period_type: 'quincenal',
           base_salary: adjustedBaseSalary,
           gross_salary: adjustedBaseSalary / 2, // Salario quincenal (mensual ÷ 2)
@@ -619,39 +632,52 @@ export default function PayrollManager() {
       console.error('Error generating preview records:', error)
       return []
     }
-  }, [supabase, userProfile, getLastDayOfMonth, previewScenario, calculateHondurasDeductions])
+  }, [supabase, userProfile, getLastDayOfMonth, previewForm, previewScenario, calculateHondurasDeductions])
 
   // Función para obtener registros del periodo actual (reales o preview)
   const getCurrentPeriodRecords = useCallback(async () => {
-    const currentPeriod = selectedPeriod || new Date().toISOString().slice(0, 7)
-    const currentQuincena = selectedQuincena
-
-    // Buscar registros reales del periodo
-    let realRecords = payrollRecords.filter(record => {
-      const recordPeriod = record.period_start.slice(0, 7)
-      const startDay = Number(record.period_start.slice(8, 10))
-      const endDay = Number(record.period_end.slice(8, 10))
-      
-      if (recordPeriod !== currentPeriod) return false
-      
-      if (currentQuincena === 1) {
-        return startDay <= 15 && endDay <= 15
-      } else {
-        const lastDay = getLastDayOfMonth(currentPeriod)
-        return startDay >= 16 && endDay >= 16 && endDay <= lastDay
-      }
-    })
-
-    // Si no hay registros reales, generar Preview
-    if (realRecords.length === 0) {
-      const previewRecords = await generatePreviewRecords(currentPeriod, currentQuincena)
-      setPreviewRecords(previewRecords)
-      return previewRecords
-    } else {
-      setPreviewRecords([])
-      return realRecords
+    if (!userProfile?.company_id) {
+      console.warn('⚠️ Usuario sin company_id - no se pueden obtener registros')
+      return []
     }
-  }, [payrollRecords, selectedPeriod, selectedQuincena, generatePreviewRecords, getLastDayOfMonth])
+
+    try {
+      // Obtener registros reales del periodo actual
+      const { data: realRecords, error } = await supabase
+        .from('payroll_records')
+        .select(`
+          *,
+          employees:employee_id (
+            name,
+            employee_code,
+            team,
+            department_id,
+            company_id
+          )
+        `)
+        .eq('employees.company_id', userProfile.company_id)
+        .eq('period_start', `${selectedPeriod}-01`)
+        .eq('period_end', `${selectedPeriod}-${getLastDayOfMonth(selectedPeriod)}`)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('Error obteniendo registros reales:', error)
+        return []
+      }
+
+      // Si no hay registros reales, generar Preview
+      if (realRecords.length === 0) {
+        const previewRecords = await generatePreviewRecords()
+        setPreviewRecords(previewRecords)
+        return previewRecords
+      }
+
+      return realRecords
+    } catch (error) {
+      console.error('Error en getCurrentPeriodRecords:', error)
+      return []
+    }
+  }, [userProfile?.company_id, selectedPeriod, getLastDayOfMonth, generatePreviewRecords])
 
   const fetchData = useCallback(async () => {
     if (!supabase) return
@@ -728,13 +754,21 @@ export default function PayrollManager() {
             name,
             employee_code,
             team,
-            department_id
+            department_id,
+            company_id
           )
         `)
         .order('created_at', { ascending: false })
 
+      // IMPORTANTE: Filtrar por company_id del usuario para evitar acceso a datos de otras empresas
       if (profile.company_id) {
         payrollQuery = payrollQuery.eq('employees.company_id', profile.company_id)
+        console.log('🔒 Filtrando registros de nómina por empresa:', profile.company_id)
+      } else {
+        console.warn('⚠️ Usuario sin company_id - no se pueden cargar registros de nómina')
+        setPayrollRecords([])
+        setEmployees([])
+        return
       }
 
       const { data: payrollData, error: payrollError } = await payrollQuery
@@ -748,15 +782,21 @@ export default function PayrollManager() {
       if (!isMountedRef.current) return
       setPayrollRecords(payrollData || [])
 
-      // Fetch employees (activos y suspendidos)
+      // Fetch employees (activos y suspendidos) - SOLO de la empresa del usuario
       let employeesQuery = supabase
         .from('employees')
-        .select('id, name, employee_code, base_salary, department_id, status')
+        .select('id, name, employee_code, base_salary, department_id, status, company_id')
         .in('status', ['active','suspended'])
         .order('name')
 
+      // IMPORTANTE: Filtrar SOLO por company_id del usuario autenticado
       if (profile.company_id) {
         employeesQuery = employeesQuery.eq('company_id', profile.company_id)
+        console.log('🔒 Filtrando empleados por empresa:', profile.company_id)
+      } else {
+        console.warn('⚠️ Usuario sin company_id - no se pueden cargar empleados')
+        setEmployees([])
+        return
       }
 
       const { data: employeesData, error: empError } = await employeesQuery
@@ -790,48 +830,50 @@ export default function PayrollManager() {
     }
   }, [supabase, loadDepartments, calculateDashboardMetrics, getCurrentPeriodRecords])
 
-  const generatePayroll = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault()
+  // Función para generar nómina definitiva
+  const generatePayroll = useCallback(async () => {
+    if (!userProfile?.company_id) {
+      alert('❌ Usuario sin empresa asignada')
+      return
+    }
+
+    if (!previewForm.periodo || !previewForm.quincena) {
+      alert('❌ Selecciona período y quincena')
+      return
+    }
+
     setLoading(true)
-
     try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser()
-      
-      if (userError || !user) {
-        alert('❌ Error de autenticación. Por favor, inicia sesión nuevamente.')
-        return
-      }
-
-      console.log('Generating payroll with authenticated user:', user.email)
-
       const response = await fetch('/api/payroll/calculate', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        credentials: 'include',
-        body: JSON.stringify(generateForm),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          periodo: previewForm.periodo,
+          quincena: previewForm.quincena,
+          incluirDeducciones: previewForm.incluirDeducciones
+        })
       })
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to generate payroll')
+        throw new Error(errorData.error || errorData.message || 'Error generando nómina')
       }
 
-      alert('Nómina generada exitosamente!')
+      const result = await response.json()
+      console.log('✅ Nómina generada exitosamente:', result)
       
-      resetGenerateForm()
-      fetchData()
-
+      alert(`✅ Nómina generada para ${result.employeeCount || 0} empleados de la empresa ${userProfile.company_id}`)
+      
+      // Recargar datos
+      await fetchData()
+      
     } catch (error: any) {
-      console.error('Error generating payroll:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
-      alert(`Error: ${errorMessage}`)
+      console.error('❌ Error generando nómina:', error)
+      alert(`❌ Error: ${error.message || 'Error desconocido'}`)
     } finally {
       setLoading(false)
     }
-  }, [supabase, generateForm, resetGenerateForm, fetchData])
+  }, [userProfile?.company_id, previewForm, fetchData])
 
   const approvePayroll = useCallback(async (payrollId: string) => {
     try {
@@ -911,42 +953,142 @@ export default function PayrollManager() {
   }, [downloadEmployeeReceipt])
 
   const sendPayrollEmail = useCallback(async (record?: PayrollRecord | PreviewPayrollRecord) => {
-    const to = prompt('Correo de destino:')
-    if (!to) return
-    const period = (record?.period_start || new Date().toISOString()).slice(0,7)
-    const day = record ? Number(record.period_start.slice(8,10)) : 1
-    const quincena = day <= 15 ? 1 : 2
-    const payload: any = { to, periodo: period, quincena }
-    if (record) { 
-      payload.type = 'recibo'; 
-      payload.employeeId = record.employee_id || 'unknown'
-    } else { 
-      payload.type = 'planilla' 
+    try {
+      // Validar que el usuario esté autenticado y tenga empresa
+      if (!userProfile?.company_id) {
+        alert('❌ Error: Usuario no tiene empresa asignada')
+        return
+      }
+
+      const to = prompt('Correo de destino:')
+      if (!to) return
+      
+      // Validar formato de email
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
+        alert('❌ Formato de email inválido')
+        return
+      }
+
+      const period = (record?.period_start || new Date().toISOString()).slice(0,7)
+      const day = record ? Number(record.period_start.slice(8,10)) : 1
+      const quincena = day <= 15 ? 1 : 2
+      
+      const payload: any = { 
+        to, 
+        periodo: period, 
+        quincena 
+      }
+      
+      if (record) { 
+        payload.type = 'recibo'; 
+        payload.employeeId = record.employee_id || 'unknown'
+      } else { 
+        payload.type = 'planilla' 
+      }
+
+      console.log('📧 Enviando email de nómina:', {
+        to,
+        type: payload.type,
+        periodo: period,
+        quincena,
+        companyId: userProfile.company_id
+      })
+
+      const res = await fetch('/api/payroll/send-email', { 
+        method:'POST', 
+        headers:{'Content-Type':'application/json'}, 
+        body: JSON.stringify(payload) 
+      })
+      
+      const json = await res.json().catch(()=>({}))
+      
+      if (!res.ok) {
+        console.error('❌ Error enviando email:', json)
+        alert(`❌ Error enviando email: ${json.error || json.message || res.status}`)
+        return
+      }
+
+      if (json.sent) {
+        alert(`✅ Email enviado exitosamente a ${to}`)
+      } else {
+        alert(`📥 ${json.message || 'Enlace listo'}: ${json.downloadUrl}`)
+      }
+    } catch (error: any) {
+      console.error('❌ Error en sendPayrollEmail:', error)
+      alert(`❌ Error: ${error.message || 'Error desconocido'}`)
     }
-    const res = await fetch('/api/payroll/send-email', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
-    const json = await res.json().catch(()=>({}))
-    if (!res.ok) return alert(`Error: ${json.error || res.status}`)
-    alert(json.sent ? 'Enviado' : `Enlace listo: ${json.downloadUrl}`)
-  }, [])
+  }, [userProfile])
 
   const sendPayrollWhatsApp = useCallback(async (record?: PayrollRecord | PreviewPayrollRecord) => {
-    const phone = prompt('Número WhatsApp (E.164, ej. 5049xxxxxxx):')
-    if (!phone) return
-    const period = (record?.period_start || new Date().toISOString()).slice(0,7)
-    const day = record ? Number(record.period_start.slice(8,10)) : 1
-    const quincena = day <= 15 ? 1 : 2
-    const payload: any = { phone, periodo: period, quincena }
-    if (record) { 
-      payload.type = 'recibo'; 
-      payload.employeeId = record.employee_id || 'unknown'
-    } else { 
-      payload.type = 'planilla' 
+    try {
+      // Validar que el usuario esté autenticado y tenga empresa
+      if (!userProfile?.company_id) {
+        alert('❌ Error: Usuario no tiene empresa asignada')
+        return
+      }
+
+      const phone = prompt('Número WhatsApp (E.164, ej. 5049xxxxxxx):')
+      if (!phone) return
+      
+      // Validar formato de teléfono
+      const cleanPhone = phone.replace(/\D/g, '')
+      if (cleanPhone.length < 10 || cleanPhone.length > 15) {
+        alert('❌ Formato de teléfono inválido. Use formato E.164 (ej: 5049xxxxxxx)')
+        return
+      }
+
+      const period = (record?.period_start || new Date().toISOString()).slice(0,7)
+      const day = record ? Number(record.period_start.slice(8,10)) : 1
+      const quincena = day <= 15 ? 1 : 2
+      
+      const payload: any = { 
+        phone: cleanPhone, 
+        periodo: period, 
+        quincena 
+      }
+      
+      if (record) { 
+        payload.type = 'recibo'; 
+        payload.employeeId = record.employee_id || 'unknown'
+      } else { 
+        payload.type = 'planilla' 
+      }
+
+      console.log('📱 Enviando WhatsApp de nómina:', {
+        phone: cleanPhone,
+        type: payload.type,
+        periodo: period,
+        quincena,
+        companyId: userProfile.company_id
+      })
+
+      const res = await fetch('/api/payroll/send-whatsapp', { 
+        method:'POST', 
+        headers:{'Content-Type':'application/json'}, 
+        body: JSON.stringify(payload) 
+      })
+      
+      const json = await res.json().catch(()=>({}))
+      
+      if (!res.ok) {
+        console.error('❌ Error enviando WhatsApp:', json)
+        alert(`❌ Error enviando WhatsApp: ${json.error || json.message || res.status}`)
+        return
+      }
+
+      if (json.url) {
+        const openWhatsApp = confirm(`📱 Enlace de WhatsApp generado para ${cleanPhone}.\n\n¿Abrir WhatsApp?`)
+        if (openWhatsApp) {
+          window.open(json.url, '_blank')
+        }
+      } else {
+        alert(`📱 ${json.message || 'Enlace generado'}`)
+      }
+    } catch (error: any) {
+      console.error('❌ Error en sendPayrollWhatsApp:', error)
+      alert(`❌ Error: ${error.message || 'Error desconocido'}`)
     }
-    const res = await fetch('/api/payroll/send-whatsapp', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
-    const json = await res.json().catch(()=>({}))
-    if (!res.ok) return alert(`Error: ${json.error || res.status}`)
-    if (json.url) window.open(json.url, '_blank')
-  }, [])
+  }, [userProfile])
 
   
 
@@ -991,21 +1133,42 @@ export default function PayrollManager() {
 
   // Nuevas funciones para el sistema de draft
   const generatePreview = useCallback(async () => {
-    if (!supabase) return
-    
+    if (!userProfile?.company_id) {
+      alert('❌ Usuario sin empresa asignada')
+      return
+    }
+
+    if (!previewForm.periodo || !previewForm.quincena) {
+      alert('❌ Selecciona período y quincena')
+      return
+    }
+
     setIsWorking(true)
     try {
-      // Obtener empleados activos
-      const { data: activeEmployees, error: empError } = await supabase
+      // Obtener empleados activos - SOLO de la empresa del usuario
+      let employeesQuery = supabase
         .from('employees')
-        .select('id, name, employee_code, base_salary, department_id, status')
+        .select('id, name, employee_code, base_salary, department_id, status, company_id')
         .eq('status', 'active')
+        .order('name')
+
+      // IMPORTANTE: Filtrar SOLO por company_id del usuario autenticado
+      if (userProfile.company_id) {
+        employeesQuery = employeesQuery.eq('company_id', userProfile.company_id)
+        console.log('🔒 Generando preview para empresa:', userProfile.company_id)
+      } else {
+        throw new Error('Usuario sin empresa asignada')
+      }
+      
+      const { data: activeEmployees, error: empError } = await employeesQuery
       
       if (empError) throw new Error(`Error cargando empleados: ${empError.message}`)
       if (!activeEmployees || activeEmployees.length === 0) {
         alert('No hay empleados activos para generar preview')
         return
       }
+
+      console.log(`📊 Generando preview para ${activeEmployees.length} empleados de la empresa ${userProfile.company_id}`)
 
       const periodo = previewForm.periodo
       const quincena = previewForm.quincena as 1 | 2
@@ -1071,14 +1234,14 @@ export default function PayrollManager() {
       // Cerrar el formulario después de generar
       setShowPreviewForm(false)
       
-      alert(`Preview generado para ${draftRows.length} empleados activos`)
+      alert(`Preview generado para ${draftRows.length} empleados activos de la empresa ${userProfile.company_id}`)
     } catch (error: any) {
       console.error('Error generando preview:', error)
       alert(`Error: ${error.message}`)
     } finally {
       setIsWorking(false)
     }
-  }, [supabase, previewForm, calculateHondurasDeductions])
+  }, [supabase, userProfile, previewForm, calculateHondurasDeductions])
 
   const toggleEditDraft = useCallback(() => {
     setIsEditingDraft(prev => !prev)
@@ -1282,8 +1445,27 @@ export default function PayrollManager() {
             Gestión de Nómina - Paragon Honduras
           </h1>
           <p className="text-gray-300">Sistema integral de procesamiento y administración de nóminas</p>
-      </div>
-
+          
+          {/* Información de la empresa */}
+          {userProfile?.company_id && (
+            <div className="mt-2 flex items-center gap-4 text-sm">
+              <div className="px-3 py-1 bg-brand-800/20 border border-brand-500/30 rounded-full text-brand-300 flex items-center gap-2">
+                <Icon name="building" className="w-4 h-4" />
+                Empresa: {userProfile.company_id}
+              </div>
+              <div className="px-3 py-1 bg-green-600/20 border border-green-500/30 rounded-full text-green-300 flex items-center gap-2">
+                <Icon name="users" className="w-4 h-4" />
+                {employees.filter(e => e.status === 'active').length} empleados activos
+              </div>
+              {suspendedCount > 0 && (
+                <div className="px-3 py-1 bg-yellow-600/20 border border-yellow-500/30 rounded-full text-yellow-300 flex items-center gap-2">
+                  <Icon name="warning" className="w-4 h-4" />
+                  {suspendedCount} suspendidos
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* 1. 📊 Dashboard Ejecutivo */}
@@ -1761,13 +1943,13 @@ export default function PayrollManager() {
                       <Icon name="warning" className="w-5 h-5 text-yellow-400" />
                   <span className="text-yellow-200 font-medium">Preview (no persistido)</span>
                   <span className="text-yellow-300 text-sm">
-                    — Periodo {draft.meta.periodo} Q{draft.meta.quincena} • {draft.rows.length} empleados
+                    — Periodo {draft?.meta?.periodo} Q{draft?.meta?.quincena} • {draft?.rows?.length || 0} empleados
                   </span>
                 </div>
                 <div className="mt-2 text-xs text-yellow-300">
-                  Totales: Bruto {formatCurrency(draft.totals.gross)} • 
-                  Deducciones {formatCurrency(draft.totals.deductions)} • 
-                  Neto {formatCurrency(draft.totals.net)}
+                  Totales: Bruto {formatCurrency(draft?.totals?.gross || 0)} • 
+                  Deducciones {formatCurrency(draft?.totals?.deductions || 0)} • 
+                  Neto {formatCurrency(draft?.totals?.net || 0)}
                 </div>
               </div>
             )}
@@ -1807,7 +1989,7 @@ export default function PayrollManager() {
                       </tr>
                     </thead>
                     <tbody>
-                      {draft.rows.map((row) => (
+                      {draft?.rows?.map((row) => (
                         <tr key={row.employee_id} className="border-b border-white/10 hover:bg-white/5">
                           <td className="py-2 px-2">
                             <div className="text-white font-medium">{row.name}</div>
@@ -1883,9 +2065,9 @@ export default function PayrollManager() {
                         Totales Actualizados:
                       </div>
                   <div className="grid grid-cols-3 gap-4 text-xs text-gray-300">
-                    <div>Bruto: <span className="text-white font-mono">{formatCurrency(draft.totals.gross)}</span></div>
-                    <div>Deducciones: <span className="text-white font-mono">{formatCurrency(draft.totals.deductions)}</span></div>
-                    <div>Neto: <span className="text-white font-mono">{formatCurrency(draft.totals.net)}</span></div>
+                    <div>Bruto: <span className="text-white font-mono">{formatCurrency(draft?.totals?.gross || 0)}</span></div>
+                    <div>Deducciones: <span className="text-white font-mono">{formatCurrency(draft?.totals?.deductions || 0)}</span></div>
+                    <div>Neto: <span className="text-white font-mono">{formatCurrency(draft?.totals?.net || 0)}</span></div>
                   </div>
                 </div>
               </div>
@@ -1928,8 +2110,27 @@ export default function PayrollManager() {
             </form>
           </CardContent>
         </Card>
+      </div>
 
-
+      {/* 4. 🎫 Generar Voucher Individual */}
+      <div className="space-y-6">
+        <Card variant="glass">
+          <CardHeader>
+            <CardTitle className="text-white flex items-center gap-2">
+              <Icon name="receipt" className="w-5 h-5" />
+              Generar Voucher Individual
+            </CardTitle>
+            <CardDescription className="text-gray-300">
+              Genera vouchers individuales para empleados específicos con ajustes personalizados
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <VoucherGenerator 
+              employees={employees.filter(e => e.status === 'active')}
+              onVoucherGenerated={fetchData}
+            />
+          </CardContent>
+        </Card>
       </div>
 
       {/* 4. 📋 Tabla de Registros de Nómina */}
