@@ -50,16 +50,9 @@ export default function LandingHero() {
                 </button>
               </div>
 
-              <div className="flex justify-start items-center gap-4 text-sm text-brand-200/80">
-                <div className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-sm px-3 py-1 border border-white/20">
-                  <span>Vouchers por WhatsApp</span>
-                </div>
-                <div className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-sm px-3 py-1 border border-white/20">
-                  <span>I.H.S.S. • R.A.P. • I.S.R</span>
-                </div>
-                <div className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-sm px-3 py-1 border border-white/20">
-                  <span>Cumplimiento desde el día 1 con S.T.S.S</span>
-                </div>
+              {/* Features como texto simple, no como badges confusos */}
+              <div className="text-sm text-brand-200/60 space-y-1">
+                <p>✓ Vouchers por WhatsApp • ✓ IHSS, RAP, ISR automáticos • ✓ Cumplimiento STSS desde el día 1</p>
               </div>
             </div>
 

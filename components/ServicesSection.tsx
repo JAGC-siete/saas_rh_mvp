@@ -41,13 +41,17 @@ export default function ServicesSection() {
               <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Pulso laboral: semáforo aleatorio (R/A/V)</li>
             </ul>
 
-            <div className="mt-5 flex gap-3">
-              <Button variant="outline" asChild className="h-10 px-4">
-                <Link href="/activar">Solicitar Demo</Link>
-              </Button>
-              <Link href="/activar" className="inline-flex items-center underline decoration-white/20 underline-offset-4 hover:decoration-brand-400 transition text-brand-300 hover:text-white">
-                Activar <ArrowRightIcon className="ml-1 h-4 w-4" />
-              </Link>
+            <div className="mt-5">
+              <button
+                onClick={() => window.location.href = '/activar'}
+                className="w-full inline-flex items-center justify-center rounded-xl px-6 py-3 text-base font-semibold shadow-lg bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all duration-300 hover:-translate-y-0.5"
+                data-analytics="cta_service_asistencia_click"
+              >
+                Activar GRATIS hoy
+              </button>
+              <p className="text-center text-xs text-brand-300/70 mt-2">
+                ¿Querés demo primero? <a href="/activar" className="underline hover:text-brand-200">Solicitar demo</a>
+              </p>
             </div>
           </article>
 
@@ -69,13 +73,17 @@ export default function ServicesSection() {
               <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Alertas inteligentes y notificaciones</li>
             </ul>
 
-            <div className="mt-5 flex gap-3">
-              <Button variant="outline" asChild className="h-10 px-4">
-                <Link href="/activar">Solicitar Demo</Link>
-              </Button>
-              <Link href="/activar" className="inline-flex items-center underline decoration-white/20 underline-offset-4 hover:decoration-brand-400 transition text-brand-300 hover:text-white">
-                Activar <ArrowRightIcon className="ml-1 h-4 w-4" />
-              </Link>
+            <div className="mt-5">
+              <button
+                onClick={() => window.location.href = '/activar'}
+                className="w-full inline-flex items-center justify-center rounded-xl px-6 py-3 text-base font-semibold shadow-lg bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all duration-300 hover:-translate-y-0.5"
+                data-analytics="cta_service_reportes_click"
+              >
+                Activar GRATIS hoy
+              </button>
+              <p className="text-center text-xs text-brand-300/70 mt-2">
+                ¿Querés demo primero? <a href="/activar" className="underline hover:text-brand-200">Solicitar demo</a>
+              </p>
             </div>
           </article>
         </div>
@@ -103,13 +111,17 @@ export default function ServicesSection() {
               <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> ZIP de vouchers + envío masivo</li>
             </ul>
 
-            <div className="mt-5 flex gap-3">
-              <Button variant="outline" asChild className="h-10 px-4">
-                <Link href="/activar">Solicitar Demo</Link>
-              </Button>
-              <Link href="/activar" className="inline-flex items-center underline decoration-white/20 underline-offset-4 hover:decoration-brand-400 transition text-brand-300 hover:text-white">
-                Activar <ArrowRightIcon className="ml-1 h-4 w-4" />
-              </Link>
+            <div className="mt-5">
+              <button
+                onClick={() => window.location.href = '/activar'}
+                className="w-full inline-flex items-center justify-center rounded-xl px-6 py-3 text-base font-semibold shadow-lg bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all duration-300 hover:-translate-y-0.5"
+                data-analytics="cta_service_nomina_click"
+              >
+                Activar GRATIS hoy
+              </button>
+              <p className="text-center text-xs text-brand-300/70 mt-2">
+                ¿Querés demo primero? <a href="/activar" className="underline hover:text-brand-200">Solicitar demo</a>
+              </p>
             </div>
           </article>
 
@@ -131,13 +143,17 @@ export default function ServicesSection() {
               <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Auditoría completa y trazabilidad</li>
             </ul>
 
-            <div className="mt-5 flex gap-3">
-              <Button variant="outline" asChild className="h-10 px-4">
-                <Link href="/activar">Solicitar Demo</Link>
-              </Button>
-              <Link href="/activar" className="inline-flex items-center underline decoration-white/20 underline-offset-4 hover:decoration-brand-400 transition text-brand-300 hover:text-white">
-                Activar <ArrowRightIcon className="ml-1 h-4 w-4" />
-              </Link>
+            <div className="mt-5">
+              <button
+                onClick={() => window.location.href = '/activar'}
+                className="w-full inline-flex items-center justify-center rounded-xl px-6 py-3 text-base font-semibold shadow-lg bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all duration-300 hover:-translate-y-0.5"
+                data-analytics="cta_service_calculo_click"
+              >
+                Activar GRATIS hoy
+              </button>
+              <p className="text-center text-xs text-brand-300/70 mt-2">
+                ¿Querés demo primero? <a href="/activar" className="underline hover:text-brand-200">Solicitar demo</a>
+              </p>
             </div>
           </article>
 
@@ -146,11 +162,21 @@ export default function ServicesSection() {
       </div>
 
       {/* Mini-proof bar */}
-      <div className="mt-8 rounded-xl glass border border-white/10 p-4 flex flex-col sm:flex-row sm:items-center gap-3 text-brand-200">
-        <span className="text-white/90 font-medium">Pruébalo:</span>
-        <span className="flex items-center gap-2"><CheckCircleIcon className="h-5 w-5 text-emerald-400" /> 99% menos tiempo corrigiendo errores</span>
-        <span className="flex items-center gap-2"><CheckCircleIcon className="h-5 w-5 text-emerald-400" /> IHSS, RAP, ISR, 2025 en 1 click</span>
-        <span className="flex items-center gap-2"><CheckCircleIcon className="h-5 w-5 text-emerald-400" /> Cumplimiento STSS desde implementación</span>
+      <div className="mt-8 rounded-xl glass border border-white/10 p-6 flex flex-col items-center gap-4 text-center">
+        <div className="text-brand-200">
+          <span className="text-white/90 font-medium">Prúebalo:</span>
+          <span className="flex items-center gap-2 mt-2"><CheckCircleIcon className="h-5 w-5 text-emerald-400" /> 99% menos tiempo corrigiendo errores</span>
+          <span className="flex items-center gap-2 mt-2"><CheckCircleIcon className="h-5 w-5 text-emerald-400" /> IHSS, RAP, ISR, 2025 en 1 click</span>
+          <span className="flex items-center gap-2 mt-2"><CheckCircleIcon className="h-5 w-5 text-emerald-400" /> Cumplimiento STSS desde implementación</span>
+        </div>
+        
+        <button
+          onClick={() => window.location.href = '/activar'}
+          className="inline-flex items-center justify-center rounded-xl px-8 py-4 text-lg font-semibold shadow-lg bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all duration-300 hover:-translate-y-0.5"
+          data-analytics="cta_footer_click"
+        >
+          Activar GRATIS hoy
+        </button>
       </div>
 
       {/* Animaciones clave globales, sin JS */}
