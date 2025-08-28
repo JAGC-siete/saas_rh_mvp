@@ -1057,16 +1057,7 @@ export default function PayrollManager() {
         throw new Error('Usuario sin empresa asignada')
       }
       
-      const { data: activeEmployees, error: empError } = await employeesQuery
-      
-      if (empError) throw new Error(`Error cargando empleados: ${empError.message}`)
-      if (!activeEmployees || activeEmployees.length === 0) {
-        alert('No hay empleados activos para generar preview')
-        return
-      }
-
-      console.log(`📊 Generando preview para ${activeEmployees.length} empleados de la empresa ${userProfile.company_id}`)
-
+      // Declarar variables al inicio para evitar errores de linter
       const periodo = previewForm.periodo
       const quincena = previewForm.quincena as 1 | 2
       const [year, month] = periodo.split('-').map(Number)
@@ -1075,6 +1066,56 @@ export default function PayrollManager() {
       // Calcular días trabajados por quincena
       const daysInQuincena = quincena === 1 ? 15 : (lastDay - 15)
       
+      let { data: activeEmployees, error: empError } = await employeesQuery
+      
+      if (empError) throw new Error(`Error cargando empleados: ${empError.message}`)
+      if (!activeEmployees || activeEmployees.length === 0) {
+        alert('No hay empleados activos para generar preview')
+        return
+      }
+
+      // Filtrar por asistencia si está habilitado
+      if (previewForm.soloEmpleadosConAsistencia) {
+        console.log('📊 Filtrando solo empleados con asistencia completa...')
+        
+        // Obtener registros de asistencia para el período
+        const startDate = `${periodo}-${quincena === 1 ? '01' : '16'}`
+        const endDate = `${periodo}-${quincena === 1 ? '15' : '31'}`
+        
+        const { data: attendanceRecords, error: attError } = await supabase
+          .from('attendance_records')
+          .select('employee_id, check_in, check_out, status')
+          .gte('date', startDate)
+          .lte('date', endDate)
+          .eq('company_id', userProfile.company_id)
+        
+        if (attError) {
+          console.warn('⚠️ Error obteniendo registros de asistencia, continuando sin filtro:', attError.message)
+        } else if (attendanceRecords && attendanceRecords.length > 0) {
+          // Contar días de asistencia por empleado
+          const employeeAttendance = new Map()
+          attendanceRecords.forEach((record: any) => {
+            if (record.status === 'present' || record.check_in) {
+              const current = employeeAttendance.get(record.employee_id) || 0
+              employeeAttendance.set(record.employee_id, current + 1)
+            }
+          })
+          
+          // Filtrar empleados con asistencia completa (al menos 80% de los días)
+          const minDaysRequired = Math.ceil(daysInQuincena * 0.8)
+          activeEmployees = activeEmployees.filter((emp: any) => {
+            const daysAttended = employeeAttendance.get(emp.id) || 0
+            const hasCompleteAttendance = daysAttended >= minDaysRequired
+            console.log(`👤 ${emp.name}: ${daysAttended}/${daysInQuincena} días (${hasCompleteAttendance ? '✅' : '❌'})`)
+            return hasCompleteAttendance
+          })
+          
+          console.log(`📊 Filtrado: ${activeEmployees.length} empleados con asistencia completa (mínimo ${minDaysRequired} días)`)
+        }
+      }
+
+      console.log(`📊 Generando preview para ${activeEmployees.length} empleados de la empresa ${userProfile.company_id}`)
+      
       const draftRows: DraftRow[] = activeEmployees.map((emp: any) => {
         // Calcular salario bruto QUINCENAL (salario mensual ÷ 2)
         const grossSalary = emp.base_salary / 2
@@ -1082,7 +1123,16 @@ export default function PayrollManager() {
         // Calcular deducciones usando las fórmulas existentes
         let deductions
         if (previewForm.incluirDeducciones) {
-          deductions = calculateHondurasDeductions(emp.base_salary, daysInQuincena)
+          // Calcular deducciones MENSUALES y luego dividir por 2 para quincena
+          const monthlyDeductions = calculateHondurasDeductions(emp.base_salary, daysInQuincena)
+          deductions = {
+            grossSalary,
+            ihss: monthlyDeductions.ihss / 2, // Dividir deducciones por 2
+            rap: monthlyDeductions.rap / 2,
+            isr: monthlyDeductions.isr / 2,
+            totalDeductions: monthlyDeductions.totalDeductions / 2,
+            netSalary: grossSalary - (monthlyDeductions.totalDeductions / 2)
+          }
         } else {
           // Sin deducciones
           deductions = {

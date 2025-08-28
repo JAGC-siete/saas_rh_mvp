@@ -31,14 +31,14 @@ export default function ServicesSection() {
               </div>
               <div>
                 <h3 className="text-xl font-bold text-white">Asistencia en tiempo real</h3>
-                <p className="text-sm text-brand-300/90">Cero errores de cálculo, cero multas STSS</p>
+                <p className="text-sm text-brand-300/90">Checadas, tolerancias, alertas y bienestar</p>
               </div>
             </div>
 
             <ul className="mt-4 space-y-3">
-              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Ahorro de 2 horas diarias en control de asistencia</li>
-              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Cumplimiento legal 100% automático (STSS Honduras)</li>
-              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Tranquilidad total: auditoría automática y trazabilidad</li>
+              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Tolerancia configurada + justificación inteligente</li>
+              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Antifraude: patrones de tardanza y ubicación</li>
+              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Pulso laboral: semáforo aleatorio (R/A/V)</li>
             </ul>
 
             <div className="mt-5">
@@ -63,14 +63,14 @@ export default function ServicesSection() {
               </div>
               <div>
                 <h3 className="text-xl font-bold text-white">Reportes ejecutivos</h3>
-                <p className="text-sm text-brand-300/90">Decisiones estratégicas basadas en datos reales</p>
+                <p className="text-sm text-brand-300/90">Dashboard interactivo y exportación automática</p>
               </div>
             </div>
 
             <ul className="mt-4 space-y-3">
-              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Ahorro de 3 horas semanales en reportes</li>
-              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Cumplimiento regulatorio automático (STSS, IHSS)</li>
-              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Tranquilidad: auditorías externas sin sorpresas</li>
+              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Métricas en tiempo real</li>
+              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Exportación Excel/PDF automática</li>
+              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Alertas inteligentes y notificaciones</li>
             </ul>
 
             <div className="mt-5">
@@ -101,14 +101,14 @@ export default function ServicesSection() {
               </div>
               <div>
                 <h3 className="text-xl font-bold text-white">Nómina sin errores</h3>
-                <p className="text-sm text-brand-300/90">Ahorro garantizado: 4 horas → 4 minutos por quincena</p>
+                <p className="text-sm text-brand-300/90">IHSS, RAP, ISR; PDF + vouchers por email/WhatsApp</p>
               </div>
             </div>
 
             <ul className="mt-4 space-y-3">
-              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Ahorro de 6 horas por quincena (comprobado en Paragon)</li>
-              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Cero multas por errores de cálculo (STSS, IHSS, RAP)</li>
-              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Tranquilidad: empleados felices, contador feliz</li>
+              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Cálculo legal automático (Honduras)</li>
+              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> 4 horas → 4 minutos (comprobado en Paragon)</li>
+              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> ZIP de vouchers + envío masivo</li>
             </ul>
 
             <div className="mt-5">
@@ -133,14 +133,14 @@ export default function ServicesSection() {
               </div>
               <div>
                 <h3 className="text-xl font-bold text-white">Cálculo automático</h3>
-                <p className="text-sm text-brand-300/90">Cumplimiento legal 100% automático, cero errores</p>
+                <p className="text-sm text-brand-300/90">IHSS, RAP, ISR automáticos según ley hondureña</p>
               </div>
             </div>
 
             <ul className="mt-4 space-y-3">
-              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Ahorro de 2 horas en cálculos manuales</li>
-              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Cero multas por incumplimiento (STSS, IHSS, RAP)</li>
-              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Tranquilidad: auditorías externas siempre exitosas</li>
+              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Cumplimiento legal 100% automático</li>
+              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Vouchers PDF + envío por email/WhatsApp</li>
+              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Auditoría completa y trazabilidad</li>
             </ul>
 
             <div className="mt-5">
@@ -164,10 +164,10 @@ export default function ServicesSection() {
       {/* Mini-proof bar */}
       <div className="mt-8 rounded-xl glass border border-white/10 p-6 flex flex-col items-center gap-4 text-center">
         <div className="text-brand-200">
-          <span className="text-white/90 font-medium">Resultados garantizados:</span>
-          <span className="flex items-center gap-2 mt-2"><CheckCircleIcon className="h-5 w-5 text-emerald-400" /> Ahorro de 6+ horas por quincena</span>
-          <span className="flex items-center gap-2 mt-2"><CheckCircleIcon className="h-5 w-5 text-emerald-400" /> Cero multas por incumplimiento legal</span>
-          <span className="flex items-center gap-2 mt-2"><CheckCircleIcon className="h-5 w-5 text-emerald-400" /> Tranquilidad total en auditorías STSS</span>
+          <span className="text-white/90 font-medium">Prúebalo:</span>
+          <span className="flex items-center gap-2 mt-2"><CheckCircleIcon className="h-5 w-5 text-emerald-400" /> 99% menos tiempo corrigiendo errores</span>
+          <span className="flex items-center gap-2 mt-2"><CheckCircleIcon className="h-5 w-5 text-emerald-400" /> IHSS, RAP, ISR, 2025 en 1 click</span>
+          <span className="flex items-center gap-2 mt-2"><CheckCircleIcon className="h-5 w-5 text-emerald-400" /> Cumplimiento STSS desde implementación</span>
         </div>
         
         <button
