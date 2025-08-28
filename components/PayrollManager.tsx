@@ -200,6 +200,10 @@ export default function PayrollManager() {
     soloEmpleadosConAsistencia: true
   })
 
+  // Estados para modales flotantes
+  const [showGeneratePayrollModal, setShowGeneratePayrollModal] = useState(false)
+  const [showVoucherModal, setShowVoucherModal] = useState(false)
+
   
 
   // Memoized values
@@ -1592,21 +1596,21 @@ export default function PayrollManager() {
 
       </div>
 
-      {/* 3.  Generar Nómina */}
-      <div className="space-y-6">
+      {/* 3. 🏗️ Generar Nómina - COMPACTO */}
+      <div className="space-y-3">
         <Card variant="glass">
           <CardHeader>
-            <CardTitle className="text-white"> Generar Nómina</CardTitle>
-            <CardDescription className="text-gray-300">
-              Genera la nómina para todos los empleados activos para un período y quincena seleccionados
+            <CardTitle className="text-white text-lg">🏗️ Generar Nómina</CardTitle>
+            <CardDescription className="text-gray-300 text-sm">
+              Genera la nómina para todos los empleados activos
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={generatePayroll} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <form onSubmit={generatePayroll} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-white mb-2">
-                    Mes
+                    📅 Mes
                   </label>
                   <Input
                     type="month"
@@ -1618,22 +1622,24 @@ export default function PayrollManager() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-white mb-2">
-                     Rango de Quincena
+                     ⏰ Rango de Quincena
                   </label>
-                  <div className="flex gap-3">
+                  <div className="flex gap-2">
                     <Button 
                       type="button"
+                      size="sm"
                       onClick={() => handleFormChange('quincena', 1)}
-                      className={`flex-1 ${generateForm.quincena === 1 ? 'bg-brand-800 hover:bg-brand-700 text-white' : 'border border-white/20 text-white hover:bg-white/10 bg-transparent'}`}
+                      className={`flex-1 h-9 ${generateForm.quincena === 1 ? 'bg-brand-800 hover:bg-brand-700 text-white' : 'border border-white/20 text-white hover:bg-white/10 bg-transparent'}`}
                     >
-                      1 - 15
+                      1-15
                     </Button>
                     <Button 
                       type="button"
+                      size="sm"
                       onClick={() => handleFormChange('quincena', 2)}
-                      className={`flex-1 ${generateForm.quincena === 2 ? 'bg-brand-800 hover:bg-brand-700 text-white' : 'border border-white/20 text-white hover:bg-white/10 bg-transparent'}`}
+                      className={`flex-1 h-9 ${generateForm.quincena === 2 ? 'bg-brand-800 hover:bg-brand-700 text-white' : 'border border-white/20 text-white hover:bg-white/10 bg-transparent'}`}
                     >
-                      16 - {(() => {
+                      16-{(() => {
                         const [year, month] = generateForm.periodo.split('-').map(Number)
                         return new Date(year, month, 0).getDate()
                       })()}
@@ -1642,8 +1648,8 @@ export default function PayrollManager() {
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="flex items-center space-x-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center space-x-2">
                   <input
                     type="checkbox"
                     checked={generateForm.incluirDeducciones}
@@ -1651,11 +1657,11 @@ export default function PayrollManager() {
                     className="w-4 h-4 accent-brand-500"
                     id="deducciones"
                   />
-                  <label htmlFor="deducciones" className="text-sm font-medium text-white">
+                  <label htmlFor="deducciones" className="text-xs font-medium text-white">
                     💰 Incluir deducciones (ISR, IHSS, RAP)
                   </label>
                 </div>
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2">
                   <input
                     type="checkbox"
                     checked={generateForm.soloEmpleadosConAsistencia}
@@ -1663,19 +1669,19 @@ export default function PayrollManager() {
                     className="w-4 h-4 accent-brand-500"
                     id="asistencia"
                   />
-                  <label htmlFor="asistencia" className="text-sm font-medium text-white">
-                     Solo empleados con asistencia completa
+                  <label htmlFor="asistencia" className="text-xs font-medium text-white">
+                     ✅ Solo empleados con asistencia completa
                   </label>
                 </div>
               </div>
 
               {/* Acciones de Nómina Integradas */}
-              <div className="pt-4 border-t border-white/10">
-                <h4 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                  <Icon name="target" className="w-5 h-5" />
+              <div className="pt-3 border-t border-white/10">
+                <h4 className="text-base font-semibold text-white mb-3 flex items-center gap-2">
+                  <Icon name="target" className="w-4 h-4" />
                   Acciones de Nómina
                 </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
               {/* Botón 1: Generar Preview */}
               <Button
                     type="button"
@@ -1917,16 +1923,16 @@ export default function PayrollManager() {
         </Card>
       </div>
 
-      {/* 4. 🎫 Generar Voucher Individual */}
-      <div className="space-y-6">
+      {/* 4. 🎫 Generar Voucher Individual - COMPACTO */}
+      <div className="space-y-3">
         <Card variant="glass">
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
-              <Icon name="receipt" className="w-5 h-5" />
-              Generar Voucher Individual
+            <CardTitle className="text-white text-lg flex items-center gap-2">
+              <Icon name="receipt" className="w-4 h-4" />
+              🎫 Generar Voucher Individual
             </CardTitle>
-            <CardDescription className="text-gray-300">
-              Genera vouchers individuales para empleados específicos con ajustes personalizados
+            <CardDescription className="text-gray-300 text-sm">
+              Genera vouchers individuales para empleados específicos
             </CardDescription>
           </CardHeader>
           <CardContent>
