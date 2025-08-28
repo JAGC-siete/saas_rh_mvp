@@ -1942,7 +1942,7 @@ export default function PayrollManager() {
                       </td>
                       <td className="py-3 px-4">
                         {getStatusBadge(record.status)}
-                        {('isPreview' in record && record.isPreview) && (
+                        {('isPreview' in record && record.isPreview as boolean) && (
                           <div className="text-xs text-yellow-400 mt-1">Preview</div>
                         )}
                       </td>
@@ -2005,8 +2005,8 @@ export default function PayrollManager() {
                             variant="ghost"
                             onClick={async () => await downloadPayrollPDF(record)}
                             className="text-gray-300 hover:bg-white/10 hover:text-white"
-                            disabled={'isPreview' in record && record.isPreview}
-                            title={'isPreview' in record && record.isPreview ? 'Generá primero la nómina' : 'Descargar PDF'}
+                            disabled={'isPreview' in record && (record.isPreview as boolean)}
+                            title={'isPreview' in record && (record.isPreview as boolean) ? 'Generá primero la nómina' : 'Descargar PDF'}
                           >
                             <Icon name="download" className="w-4 h-4 mr-1" />
                             Descargar PDF
@@ -2016,8 +2016,8 @@ export default function PayrollManager() {
                             variant="ghost"
                             onClick={async () => await downloadIndividualReceipt(record)}
                             className="text-gray-300 hover:bg-white/10 hover:text-white"
-                            disabled={'isPreview' in record && record.isPreview}
-                            title={'isPreview' in record && record.isPreview ? 'Generá primero la nómina' : 'Descargar recibo individual'}
+                            disabled={'isPreview' in record && (record.isPreview as boolean)}
+                            title={'isPreview' in record && (record.isPreview as boolean) ? 'Generá primero la nómina' : 'Descargar recibo individual'}
                           >
                             <Icon name="receipt" className="w-4 h-4 mr-1" />
                             Descargar Recibo
