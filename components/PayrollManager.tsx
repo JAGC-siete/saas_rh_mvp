@@ -156,7 +156,7 @@ const DEFAULT_PERMISSIONS = {
 
 export default function PayrollManager() {
   const [payrollRecords, setPayrollRecords] = useState<PayrollRecord[]>([])
-  const [previewRecords, setPreviewRecords] = useState<PreviewPayrollRecord[]>([])
+
   const [employees, setEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(false)
   const [selectedPeriod, setSelectedPeriod] = useState(new Date().toISOString().slice(0, 7))
@@ -179,9 +179,7 @@ export default function PayrollManager() {
   const [suspendedCount, setSuspendedCount] = useState<number>(0)
   const [compareData, setCompareData] = useState<any>(null)
   // Estado para modo Preview mejorado
-  // Valores por defecto simplificados para preview
-  const DEFAULT_DAYS_WORKED = 15
-  const DEFAULT_OVERTIME_RATE = 1.5
+
   // UI colors (computed to avoid static strings triggering secret scanner)
 
   // Nuevos estados para el sistema de draft
@@ -214,7 +212,7 @@ export default function PayrollManager() {
 
   const filteredRecords = useMemo(() => {
     // Combinar registros reales y de preview
-    const allRecords = [...payrollRecords, ...previewRecords]
+    const allRecords = [...payrollRecords]
     let list = allRecords
     
     // Filtro por periodo (mes)
@@ -252,7 +250,7 @@ export default function PayrollManager() {
       )
     }
     return list
-  }, [payrollRecords, previewRecords, selectedPeriod, filterYear, filterMonth, filterQuincena, filterDept, filterEmployee])
+  }, [payrollRecords, selectedPeriod, filterYear, filterMonth, filterQuincena, filterDept, filterEmployee])
 
   // Función para obtener descripción del filtro aplicado
   const getFilterDescription = useMemo(() => {
@@ -532,92 +530,8 @@ export default function PayrollManager() {
     return new Date(y, m, 0).getDate() // 28–31
   }, [])
 
-  // Función para generar registros Preview cuando no existen payroll_records
-  const generatePreviewRecords = useCallback(async () => {
-    if (!userProfile?.company_id) {
-      console.warn('⚠️ Usuario sin company_id - no se pueden generar registros')
-      return []
-    }
 
-    try {
-      // Obtener empleados activos - SOLO de la empresa del usuario
-      let employeesQuery = supabase
-        .from('employees')
-        .select('id, name, employee_code, base_salary, department_id, status, company_id')
-        .eq('status', 'active')
-        .order('name')
 
-      // IMPORTANTE: Filtrar SOLO por company_id del usuario autenticado
-      if (userProfile.company_id) {
-        employeesQuery = employeesQuery.eq('company_id', userProfile.company_id)
-        console.log('🔒 Filtrando empleados por empresa:', userProfile.company_id)
-      } else {
-        console.warn('⚠️ Usuario sin company_id - no se pueden filtrar empleados')
-        return []
-      }
-
-      const { data: activeEmployees, error: empError } = await employeesQuery
-      if (empError) throw empError
-
-      console.log(`📊 Empleados activos encontrados para empresa ${userProfile.company_id}:`, activeEmployees?.length || 0)
-
-      const lastDay = getLastDayOfMonth(previewForm.periodo)
-      const startDay = previewForm.quincena === 1 ? 1 : 16
-      const endDay = previewForm.quincena === 1 ? 15 : lastDay
-
-      // Generar registros Preview para cada empleado activo usando fórmulas reales
-      const previewRecords: PreviewPayrollRecord[] = activeEmployees.map((emp: any) => {
-        // Aplicar salario base sin ajustes (simplificado)
-        const adjustedBaseSalary = emp.base_salary
-        
-        // Calcular deducciones usando fórmulas oficiales de Honduras
-        // IMPORTANTE: Para planillas quincenales, el salario bruto es mensual ÷ 2
-        const deductions = calculateHondurasDeductions(
-          adjustedBaseSalary,
-          DEFAULT_DAYS_WORKED,
-          false, // No incluir horas extra por defecto
-          0,     // 0 horas extra
-          DEFAULT_OVERTIME_RATE
-        )
-
-        return {
-          employee_id: emp.id,
-          period_start: `${previewForm.periodo}-${startDay.toString().padStart(2, '0')}`,
-          period_end: `${previewForm.periodo}-${endDay.toString().padStart(2, '0')}`,
-          period_type: 'quincenal',
-          base_salary: adjustedBaseSalary,
-          gross_salary: adjustedBaseSalary / 2, // Salario quincenal (mensual ÷ 2)
-          income_tax: deductions.isr,
-          professional_tax: deductions.rap,
-          social_security: deductions.ihss,
-          total_deductions: deductions.totalDeductions,
-          net_salary: deductions.netSalary,
-          days_worked: DEFAULT_DAYS_WORKED,
-          days_absent: 0,
-          late_days: 0,
-          status: 'preview',
-          employees: {
-            name: emp.name,
-            employee_code: emp.employee_code,
-            team: '',
-            department_id: emp.department_id
-          },
-          isPreview: true,
-          previewConfig: {
-            daysWorked: DEFAULT_DAYS_WORKED,
-            includeOvertime: false,
-            overtimeHours: 0,
-            overtimeRate: DEFAULT_OVERTIME_RATE
-          }
-        }
-      })
-
-      return previewRecords
-    } catch (error) {
-      console.error('Error generating preview records:', error)
-      return []
-    }
-  }, [supabase, userProfile, getLastDayOfMonth, previewForm, calculateHondurasDeductions])
 
   // Función para obtener registros del periodo actual (reales o preview)
   const getCurrentPeriodRecords = useCallback(async () => {
@@ -650,11 +564,9 @@ export default function PayrollManager() {
         return []
       }
 
-      // Si no hay registros reales, generar Preview
+      // Si no hay registros reales, retornar array vacío
       if (realRecords.length === 0) {
-        const previewRecords = await generatePreviewRecords()
-        setPreviewRecords(previewRecords)
-        return previewRecords
+        return []
       }
 
       return realRecords
@@ -662,7 +574,7 @@ export default function PayrollManager() {
       console.error('Error en getCurrentPeriodRecords:', error)
       return []
     }
-  }, [userProfile?.company_id, selectedPeriod, getLastDayOfMonth, generatePreviewRecords])
+  }, [userProfile?.company_id, selectedPeriod, getLastDayOfMonth])
 
   const fetchData = useCallback(async () => {
     if (!supabase) return
@@ -1455,43 +1367,9 @@ export default function PayrollManager() {
 
       {/* 1. 📊 Dashboard Ejecutivo */}
       <div className="space-y-6">
-        {/* Banner de Preview */}
-        {previewRecords.length > 0 && (
-          <div className="bg-yellow-500/20 border border-yellow-500/30 rounded-lg p-4">
-            <div className="flex items-center gap-2">
-              <Icon name="warning" className="w-5 h-5 text-yellow-400" />
-              <span className="text-yellow-200 font-medium">Modo Preview</span>
-              <span className="text-yellow-300 text-sm">
-                Mostrando estimado en vivo (no persistido) para {selectedPeriod} Q{selectedQuincena}
-              </span>
-            </div>
-          </div>
-        )}
 
-        {/* Controles de Escenario para Preview - SIMPLIFICADO */}
-        {previewRecords.length > 0 && (
-          <Card variant="glass" className="max-w-md mx-auto">
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <Button
-                  onClick={() => {
-                    getCurrentPeriodRecords().then(currentRecords => {
-                      const activeEmployees = employees.filter(e => e.status === 'active')
-                      calculateDashboardMetrics(activeEmployees)
-                    })
-                  }}
-                  className="bg-brand-600 hover:bg-brand-500 text-white px-8 py-3 text-lg font-medium"
-                >
-                  <Icon name="rocket" className="w-5 h-5 mr-2" />
-                  Generar Preview
-                </Button>
-                <p className="text-sm text-gray-400 mt-2">
-                  Click para generar nómina con configuración actual
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+
+
 
         {/* Summary Cards - Fila 1 */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -1640,12 +1518,7 @@ export default function PayrollManager() {
               {filterEmployee}
             </div>
           )}
-          {previewRecords.length > 0 && (
-            <div className="px-3 py-1 bg-yellow-500/20 border border-yellow-500/30 rounded-full text-sm text-yellow-300 flex items-center gap-2">
-              <Icon name="search" className="w-4 h-4" />
-              Modo Preview
-            </div>
-          )}
+
         </div>
 
         
