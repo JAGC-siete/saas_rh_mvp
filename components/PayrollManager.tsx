@@ -1190,7 +1190,8 @@ export default function PayrollManager() {
         throw new Error('No hay sesión activa')
       }
 
-      const response = await fetch('/api/payroll/report', {
+      // Usar el nuevo endpoint que genera PDF desde datos del draft
+      const response = await fetch('/api/payroll/generate-pdf', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1199,7 +1200,8 @@ export default function PayrollManager() {
         },
         body: JSON.stringify({
           periodo: draft.meta.periodo,
-          quincena: draft.meta.quincena
+          quincena: draft.meta.quincena,
+          draftData: draft
         })
       })
 
@@ -1213,12 +1215,12 @@ export default function PayrollManager() {
         const url = window.URL.createObjectURL(blob)
         const link = document.createElement('a')
         link.href = url
-        link.download = `planilla_paragon_${draft.meta.periodo}_q${draft.meta.quincena}.pdf`
+        link.download = `planilla_draft_${draft.meta.periodo}_q${draft.meta.quincena}.pdf`
         document.body.appendChild(link)
         link.click()
         window.URL.revokeObjectURL(url)
         document.body.removeChild(link)
-        alert('PDF generado y descargado exitosamente')
+        alert('PDF generado y descargado exitosamente desde datos del draft')
       } else {
         const data = await response.json()
         throw new Error(data.error || 'Respuesta inesperada del servidor')
@@ -1234,7 +1236,21 @@ export default function PayrollManager() {
   const generateAndSendVouchers = useCallback(async () => {
     if (!draft || !supabase) return
     
-    if (!confirm('¿Generar y enviar vouchers individuales por email?')) return
+    // Preguntar método de envío
+    const deliveryMethod = prompt(
+      '¿Cómo desea enviar los vouchers?\n\n' +
+      '1. Solo email\n' +
+      '2. Solo WhatsApp\n' +
+      '3. Ambos (email + WhatsApp)\n\n' +
+      'Escriba: email, whatsapp, o both'
+    )
+    
+    if (!deliveryMethod || !['email', 'whatsapp', 'both'].includes(deliveryMethod.toLowerCase())) {
+      alert('Método de envío inválido. Use: email, whatsapp, o both')
+      return
+    }
+    
+    if (!confirm(`¿Generar y enviar vouchers individuales por ${deliveryMethod}?`)) return
     
     setIsWorking(true)
     try {
@@ -1253,7 +1269,7 @@ export default function PayrollManager() {
         body: JSON.stringify({
           periodo: draft.meta.periodo,
           quincena: draft.meta.quincena,
-          delivery: 'email',
+          delivery: deliveryMethod.toLowerCase(),
           draft_overrides: draft.rows.map(row => ({
             employee_id: row.employee_id,
             adj_bonus: row.adj_bonus || 0,

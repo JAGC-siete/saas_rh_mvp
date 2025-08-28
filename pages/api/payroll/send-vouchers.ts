@@ -2,6 +2,9 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../lib/supabase/server'
 import { authenticateUser } from '../../../lib/auth-helpers'
 import { generateEmployeeReceiptPDF } from '../../../lib/payroll/receipt'
+import { notificationManager } from '../../../lib/notification-providers'
+import { emailService } from '../../../lib/email-service'
+import { whatsappService } from '../../../lib/whatsapp-service'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -22,17 +25,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (![1, 2].includes(Number(quincena))) {
       return res.status(400).json({ error: 'Quincena inválida (1 o 2)' })
     }
-    if (delivery !== 'email') {
-      return res.status(400).json({ error: 'Solo se soporta delivery por email' })
+    if (!['email', 'whatsapp', 'both'].includes(delivery)) {
+      return res.status(400).json({ error: 'Delivery debe ser: email, whatsapp, o both' })
     }
 
     const supabase = createClient(req, res)
     const companyId = auth.userProfile.company_id
 
+    if (!companyId) {
+      return res.status(400).json({ error: 'Usuario no tiene empresa asignada' })
+    }
+
+    // Obtener configuración de notificaciones para la empresa
+    const notificationConfig = await notificationManager.getConfigForCompany(companyId)
+    if (!notificationConfig) {
+      return res.status(500).json({ error: 'Configuración de notificaciones no disponible' })
+    }
+
     // Obtener empleados activos
     const { data: employees, error: empError } = await supabase
       .from('employees')
-      .select('id, name, employee_code, email, base_salary, department_id')
+      .select('id, name, employee_code, email, phone, base_salary, department_id')
       .eq('company_id', companyId)
       .eq('status', 'active')
 
@@ -120,18 +133,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           net_salary: payrollData.net_salary
         }, periodo, quincena)
 
-        // Enviar por email usando Resend
-        if (employee.email && options?.attach_pdf) {
-          const emailResponse = await fetch('https://api.resend.com/emails', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              from: 'noreply@humanosisu.net',
+        let emailSent = false
+        let whatsappSent = false
+
+        // Enviar por email si está habilitado
+        if ((delivery === 'email' || delivery === 'both') && employee.email && options?.attach_pdf) {
+          try {
+            const emailResult = await emailService.sendEmail(notificationConfig, {
               to: employee.email,
               subject: `Recibo de Nómina - ${periodo} Q${quincena} - Paragon Honduras`,
+              text: `
+Recibo de Nómina Quincenal
+
+Estimado/a ${employee.name},
+
+Adjunto encontrará su recibo de nómina para el período ${periodo} Q${quincena}.
+
+Resumen:
+• Salario Bruto: L. ${payrollData.gross_salary.toFixed(2)}
+• Total Deducciones: L. ${payrollData.total_deductions.toFixed(2)}
+• Salario Neto: L. ${payrollData.net_salary.toFixed(2)}
+
+Saludos,
+Departamento de Recursos Humanos
+Paragon Honduras
+              `,
               html: `
                 <h2>Recibo de Nómina Quincenal</h2>
                 <p>Estimado/a ${employee.name},</p>
@@ -143,25 +169,66 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                   <li>Salario Neto: L. ${payrollData.net_salary.toFixed(2)}</li>
                 </ul>
                 <p>Saludos,<br>Departamento de Recursos Humanos<br>Paragon Honduras</p>
-              `,
-              attachments: [{
-                filename: `recibo_${employee.employee_code}_${periodo}_q${quincena}.pdf`,
-                content: receiptPDF.toString('base64')
-              }]
+              `
             })
-          })
 
-          if (emailResponse.ok) {
-            results.summary.ok++
-          } else {
-            results.summary.failed++
-            results.failed.push({ employee_id: employee.id, reason: 'email_failed' })
+            if (emailResult.success) {
+              emailSent = true
+              console.log(`✅ Email enviado a ${employee.email}:`, emailResult.messageId)
+            } else {
+              console.error(`❌ Error enviando email a ${employee.email}:`, emailResult.error)
+            }
+          } catch (error: any) {
+            console.error(`❌ Error crítico enviando email a ${employee.email}:`, error)
           }
-        } else if (!employee.email) {
-          results.summary.failed++
-          results.failed.push({ employee_id: employee.id, reason: 'no_email' })
-        } else {
+        }
+
+        // Enviar por WhatsApp si está habilitado
+        if ((delivery === 'whatsapp' || delivery === 'both') && employee.phone) {
+          try {
+            const whatsappResult = await whatsappService.sendWhatsApp(notificationConfig, {
+              phone: employee.phone,
+              message: `Recibo de Nómina - ${periodo} Q${quincena}
+
+Estimado/a ${employee.name},
+
+Su recibo de nómina está listo:
+• Salario Bruto: L. ${payrollData.gross_salary.toFixed(2)}
+• Total Deducciones: L. ${payrollData.total_deductions.toFixed(2)}
+• Salario Neto: L. ${payrollData.net_salary.toFixed(2)}
+
+Para descargar el PDF completo, revise su email o contacte a RRHH.
+
+Saludos,
+Paragon Honduras`,
+              type: 'text'
+            })
+
+            if (whatsappResult.success) {
+              whatsappSent = true
+              console.log(`✅ WhatsApp enviado a ${employee.phone}:`, whatsappResult.messageId)
+            } else {
+              console.error(`❌ Error enviando WhatsApp a ${employee.phone}:`, whatsappResult.error)
+            }
+          } catch (error: any) {
+            console.error(`❌ Error crítico enviando WhatsApp a ${employee.phone}:`, error)
+          }
+        }
+
+        // Contar como exitoso si al menos un método funcionó
+        if (emailSent || whatsappSent) {
           results.summary.ok++
+        } else {
+          results.summary.failed++
+          const reasons = []
+          if (!employee.email && (delivery === 'email' || delivery === 'both')) reasons.push('no_email')
+          if (!employee.phone && (delivery === 'whatsapp' || delivery === 'both')) reasons.push('no_phone')
+          if (!emailSent && !whatsappSent) reasons.push('delivery_failed')
+          
+          results.failed.push({ 
+            employee_id: employee.id, 
+            reason: reasons.join(', ') || 'delivery_failed' 
+          })
         }
       } catch (error: any) {
         console.error(`Error procesando empleado ${employee.id}:`, error)
