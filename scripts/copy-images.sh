@@ -14,3 +14,5 @@ echo "- attendance-dashboard.png"
 echo "- attendance-register.png" 
 echo "- dashboard-overview.png"
 echo "- voucher-sample.png (ya existe)"
+
+

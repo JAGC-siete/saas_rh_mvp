@@ -11,3 +11,5 @@ echo "Screenshots renombrados exitosamente:"
 echo "- attendance-dashboard.png"
 echo "- attendance-register.png"
 echo "- dashboard-overview.png"
+
+

@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { authenticateUser } from '../../../lib/auth-helpers'
+import { notificationManager } from '../../../lib/notification-providers'
+import { emailService } from '../../../lib/email-service'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
@@ -69,23 +71,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const downloadUrl = originUrl ? `${originUrl}${downloadPath}` : downloadPath
 
-    // Validar credenciales SMTP
-    const apiKey = process.env['RESEND_API_KEY'] || ''
-    const fromEmail = process.env.RESEND_FROM || 'noreply@cloudhr.hn'
+    // Obtener configuración de notificaciones para la empresa
+    const notificationConfig = await notificationManager.getConfigForCompany(userProfile.company_id)
     
-    if (!apiKey) {
-      console.error('❌ RESEND_API_KEY missing - no se puede enviar email')
+    if (!notificationConfig) {
+      console.error('❌ No se pudo obtener configuración de notificaciones para la empresa:', userProfile.company_id)
+      return res.status(500).json({ 
+        error: 'Configuración de notificaciones no disponible',
+        downloadUrl,
+        message: 'Error de configuración. Use el enlace para descarga manual.'
+      })
+    }
+
+    // Validar proveedor de email
+    const emailValidation = await notificationManager.validateEmailProvider(notificationConfig.emailProvider)
+    if (!emailValidation.valid) {
+      console.error('❌ Proveedor de email no válido:', emailValidation.error)
       return res.status(200).json({ 
         sent: false, 
-        reason: 'RESEND_API_KEY missing', 
+        reason: emailValidation.error || 'Proveedor de email no válido',
+        errorCode: 'MAIL_CONFIG_MISSING',
         downloadUrl,
         message: 'Credenciales SMTP no configuradas. Use el enlace para descarga manual.'
       })
     }
 
-    console.log('📧 Intentando enviar email con Resend:', {
+    console.log('📧 Intentando enviar email con proveedor:', {
       to,
-      from: fromEmail,
+      provider: notificationConfig.emailProvider.type,
       type,
       periodo,
       quincena,
@@ -93,9 +106,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
 
     try {
-      const { Resend } = await import('resend')
-      const resend = new Resend(apiKey)
-      
       const subject = type === 'recibo' 
         ? `Recibo de pago ${periodo} Q${quincena} - ${userProfile.company_id ? 'Empresa' : 'Sistema'}`
         : `Planilla ${periodo} Q${quincena} - ${userProfile.company_id ? 'Empresa' : 'Sistema'}`
@@ -109,41 +119,53 @@ Este enlace es válido solo para usuarios autorizados de la empresa.
 
 Saludos.`
 
-      const result = await resend.emails.send({
-        from: fromEmail,
+      const emailResult = await emailService.sendEmail(notificationConfig, {
         to,
         subject,
         text: body,
+        from: notificationConfig.emailProvider.fromEmail,
+        fromName: notificationConfig.emailProvider.fromName
       })
 
-      if ((result as any)?.error) {
-        console.error('❌ Error de Resend:', (result as any).error)
+      if (emailResult.success) {
+        console.log('✅ Email enviado exitosamente:', {
+          messageId: emailResult.messageId,
+          provider: emailResult.provider,
+          retryCount: emailResult.retryCount,
+          companyId: userProfile.company_id
+        })
+
+        return res.status(200).json({ 
+          sent: true, 
+          id: emailResult.messageId, 
+          downloadUrl,
+          message: 'Email enviado exitosamente',
+          provider: emailResult.provider,
+          retryCount: emailResult.retryCount
+        })
+      } else {
+        console.error('❌ Error enviando email:', {
+          error: emailResult.error,
+          errorCode: emailResult.errorCode,
+          provider: emailResult.provider,
+          retryCount: emailResult.retryCount
+        })
+
         return res.status(500).json({ 
           error: 'Send failed', 
-          details: (result as any).error?.message || 'Error desconocido de Resend',
-          downloadUrl 
+          details: emailResult.error || 'Error desconocido del proveedor',
+          errorCode: emailResult.errorCode,
+          downloadUrl,
+          message: 'Error al enviar email. Use el enlace para descarga manual.',
+          retryCount: emailResult.retryCount
         })
       }
 
-      console.log('✅ Email enviado exitosamente:', {
-        id: (result as any)?.id,
-        to,
-        type,
-        companyId: userProfile.company_id
-      })
-
-      return res.status(200).json({ 
-        sent: true, 
-        id: (result as any)?.id, 
-        downloadUrl,
-        message: 'Email enviado exitosamente'
-      })
-
-    } catch (resendError: any) {
-      console.error('❌ Error enviando email con Resend:', resendError)
+    } catch (emailError: any) {
+      console.error('❌ Error crítico enviando email:', emailError)
       return res.status(500).json({ 
         error: 'Send failed', 
-        details: resendError?.message || 'Error interno de Resend',
+        details: emailError?.message || 'Error interno del servicio de email',
         downloadUrl,
         message: 'Error al enviar email. Use el enlace para descarga manual.'
       })

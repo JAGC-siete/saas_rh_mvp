@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { authenticateUser } from '../../../lib/auth-helpers'
+import { notificationManager } from '../../../lib/notification-providers'
+import { whatsappService } from '../../../lib/whatsapp-service'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
@@ -77,32 +79,109 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Limpiar teléfono para formato E.164
     const cleanPhone = phone.replace(/\D/g, '')
     
-    // Enlace click-to-chat. Para producción, integrar proveedor (Twilio/Meta WhatsApp Cloud API)
-    const message = encodeURIComponent(
-      `Hola! Aquí tienes el enlace para descargar tu ${type === 'recibo' ? 'recibo de pago' : 'planilla'} del período ${periodo} Q${quincena}:\n\n${url}\n\nEste enlace es válido solo para usuarios autorizados de la empresa.`
-    )
+    // Obtener configuración de notificaciones para la empresa
+    const notificationConfig = await notificationManager.getConfigForCompany(userProfile.company_id)
     
-    const waLink = `https://wa.me/${cleanPhone}?text=${message}`
+    if (!notificationConfig) {
+      console.error('❌ No se pudo obtener configuración de notificaciones para la empresa:', userProfile.company_id)
+      // Fallback a enlace de WhatsApp
+      const message = encodeURIComponent(
+        `Hola! Aquí tienes el enlace para descargar tu ${type === 'recibo' ? 'recibo de pago' : 'planilla'} del período ${periodo} Q${quincena}:\n\n${url}\n\nEste enlace es válido solo para usuarios autorizados de la empresa.`
+      )
+      
+      const waLink = `https://wa.me/${cleanPhone}?text=${message}`
 
-    console.log('📱 Enlace WhatsApp generado:', {
+      return res.status(200).json({ 
+        sent: false, 
+        provider: 'link', 
+        url: waLink,
+        message: 'Configuración no disponible. Enlace de WhatsApp generado como fallback.',
+        phone: cleanPhone,
+        type,
+        periodo,
+        quincena,
+        errorCode: 'WHATSAPP_CONFIG_MISSING'
+      })
+    }
+
+    // Validar proveedor de WhatsApp
+    const whatsappValidation = await notificationManager.validateWhatsAppProvider(notificationConfig.whatsappProvider)
+    if (!whatsappValidation.valid) {
+      console.error('❌ Proveedor de WhatsApp no válido:', whatsappValidation.error)
+      // Fallback a enlace de WhatsApp
+      const message = encodeURIComponent(
+        `Hola! Aquí tienes el enlace para descargar tu ${type === 'recibo' ? 'recibo de pago' : 'planilla'} del período ${periodo} Q${quincena}:\n\n${url}\n\nEste enlace es válido solo para usuarios autorizados de la empresa.`
+      )
+      
+      const waLink = `https://wa.me/${cleanPhone}?text=${message}`
+
+      return res.status(200).json({ 
+        sent: false, 
+        provider: 'link', 
+        url: waLink,
+        message: 'Proveedor de WhatsApp no válido. Enlace generado como fallback.',
+        phone: cleanPhone,
+        type,
+        periodo,
+        quincena,
+        errorCode: 'WHATSAPP_CONFIG_MISSING'
+      })
+    }
+
+    // Intentar envío real de WhatsApp
+    const message = `Hola! Aquí tienes el enlace para descargar tu ${type === 'recibo' ? 'recibo de pago' : 'planilla'} del período ${periodo} Q${quincena}:\n\n${url}\n\nEste enlace es válido solo para usuarios autorizados de la empresa.`
+
+    const whatsappResult = await whatsappService.sendWhatsApp(notificationConfig, {
       phone: cleanPhone,
-      type,
-      periodo,
-      quincena,
-      companyId: userProfile.company_id,
-      waLink
+      message,
+      type: 'text'
     })
 
-    return res.status(200).json({ 
-      sent: false, 
-      provider: 'link', 
-      url: waLink,
-      message: 'Enlace de WhatsApp generado. Copia y pega en WhatsApp o haz clic para abrir.',
-      phone: cleanPhone,
-      type,
-      periodo,
-      quincena
-    })
+    if (whatsappResult.success) {
+      console.log('✅ WhatsApp enviado exitosamente:', {
+        messageId: whatsappResult.messageId,
+        provider: whatsappResult.provider,
+        retryCount: whatsappResult.retryCount,
+        companyId: userProfile.company_id
+      })
+
+      return res.status(200).json({ 
+        sent: true, 
+        id: whatsappResult.messageId, 
+        provider: whatsappResult.provider,
+        retryCount: whatsappResult.retryCount,
+        message: 'WhatsApp enviado exitosamente',
+        phone: cleanPhone,
+        type,
+        periodo,
+        quincena
+      })
+    } else {
+      console.error('❌ Error enviando WhatsApp:', {
+        error: whatsappResult.error,
+        errorCode: whatsappResult.errorCode,
+        provider: whatsappResult.provider,
+        retryCount: whatsappResult.retryCount
+      })
+
+      // Fallback a enlace de WhatsApp
+      const encodedMessage = encodeURIComponent(message)
+      const waLink = `https://wa.me/${cleanPhone}?text=${encodedMessage}`
+
+      return res.status(200).json({ 
+        sent: false, 
+        provider: 'link', 
+        url: waLink,
+        message: 'Error enviando WhatsApp. Enlace generado como fallback.',
+        phone: cleanPhone,
+        type,
+        periodo,
+        quincena,
+        error: whatsappResult.error,
+        errorCode: whatsappResult.errorCode,
+        retryCount: whatsappResult.retryCount
+      })
+    }
 
   } catch (e: any) {
     console.error('❌ Error en send-whatsapp:', e)
