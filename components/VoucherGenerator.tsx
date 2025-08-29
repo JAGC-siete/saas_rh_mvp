@@ -194,49 +194,10 @@ export default function VoucherGenerator({ employees, onVoucherGenerated }: Vouc
 
   // Enviar voucher por WhatsApp
   const sendVoucherWhatsApp = useCallback(async () => {
-    if (!voucherPreview) return
-
-    try {
-      const phone = prompt('Número WhatsApp (E.164, ej. 5049xxxxxxx):')
-      if (!phone) return
-      
-      // Validar formato de teléfono
-      const cleanPhone = phone.replace(/\D/g, '')
-      if (cleanPhone.length < 10 || cleanPhone.length > 15) {
-        alert('❌ Formato de teléfono inválido. Use formato E.164 (ej: 5049xxxxxxx)')
-        return
-      }
-
-      const response = await fetch('/api/payroll/send-voucher-whatsapp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          phone: cleanPhone,
-          employee_id: voucherPreview.employee_id,
-          periodo: voucherPreview.periodo,
-          quincena: voucherPreview.quincena
-        })
-      })
-
-      const result = await response.json()
-      
-      if (!response.ok) {
-        throw new Error(result.error || result.message || 'Error enviando WhatsApp')
-      }
-
-      if (result.url) {
-        const openWhatsApp = confirm(`📱 Enlace de WhatsApp generado para ${cleanPhone}.\n\n¿Abrir WhatsApp?`)
-        if (openWhatsApp) {
-          window.open(result.url, '_blank')
-        }
-      } else {
-        alert(`📱 ${result.message || 'Enlace generado'}`)
-      }
-    } catch (error: any) {
-      console.error('❌ Error enviando voucher por WhatsApp:', error)
-      alert(`❌ Error: ${error.message || 'Error desconocido'}`)
-    }
-  }, [voucherPreview])
+    // FEATURE EN DESARROLLO - WhatsApp no implementado aún
+    alert('🚧 Feature en desarrollo\n\nWhatsApp delivery is not yet implemented.\nWe will implement that later. Forget it for now.\n\nUse email delivery instead.')
+    return
+  }, [])
 
   // Resetear formulario
   const resetForm = useCallback(() => {

@@ -1,15 +1,17 @@
-import type { NextApiRequest, NextApiResponse } from 'next'
+import { NextApiRequest, NextApiResponse } from 'next'
+import { createClient } from '../../../lib/supabase/server'
 import { authenticateUser } from '../../../lib/auth-helpers'
 import { notificationManager } from '../../../lib/notification-providers'
 import { emailService } from '../../../lib/email-service'
-import { whatsappService } from '../../../lib/whatsapp-service'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
 
   try {
-    // AUTENTICACIÓN REQUERIDA - Solo administradores
-    const authResult = await authenticateUser(req, res, ['admin'])
+    // AUTENTICACIÓN REQUERIDA
+    const authResult = await authenticateUser(req, res, ['can_export_payroll'])
     
     if (!authResult.success) {
       return res.status(401).json({ 
@@ -19,7 +21,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const { user, userProfile } = authResult
-    const { companyId, testType, testData } = req.body || {}
+    
+    // Ensure userProfile exists
+    if (!userProfile || !userProfile.company_id) {
+      return res.status(400).json({ 
+        error: 'Invalid user profile',
+        message: 'User profile or company ID not found'
+      })
+    }
+    
+    const supabase = createClient(req, res)
 
     console.log('Usuario autenticado para test de notificaciones:', { 
       userId: user.id, 
@@ -27,152 +38,107 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       companyId: userProfile?.company_id 
     })
 
-    // Validar que el usuario tenga permisos para la empresa especificada
-    const targetCompanyId = companyId || userProfile?.company_id
-    if (!targetCompanyId) {
-      return res.status(400).json({ 
-        error: 'Missing companyId',
-        message: 'Debe especificar una empresa para el test'
-      })
+    const { testType = 'both', testData } = req.body || {}
+    
+    // Validaciones
+    if (!['email', 'whatsapp', 'both'].includes(testType)) {
+      return res.status(400).json({ error: 'testType debe ser: email, whatsapp, o both' })
     }
 
-    // Obtener configuración de notificaciones para la empresa
-    const notificationConfig = await notificationManager.getConfigForCompany(targetCompanyId)
+    // Obtener configuración de notificaciones
+    const notificationConfig = await notificationManager.getConfigForCompany(userProfile.company_id)
     
     if (!notificationConfig) {
-      return res.status(404).json({ 
-        error: 'Configuración no encontrada',
-        message: `No se encontró configuración de notificaciones para la empresa ${targetCompanyId}`
+      return res.status(400).json({ 
+        error: 'Configuración de notificaciones no encontrada',
+        message: 'Configure las notificaciones para su empresa'
       })
     }
 
-    // Validar proveedores
-    const emailValidation = await notificationManager.validateEmailProvider(notificationConfig.emailProvider)
-    const whatsappValidation = await notificationManager.validateWhatsAppProvider(notificationConfig.whatsappProvider)
-
-    const validationResults = {
-      email: {
-        valid: emailValidation.valid,
-        error: emailValidation.error,
-        provider: notificationConfig.emailProvider.type
-      },
-      whatsapp: {
-        valid: whatsappValidation.valid,
-        error: whatsappValidation.error,
-        provider: notificationConfig.whatsappProvider.type
-      }
-    }
-
-    // Si solo se solicita validación, retornar resultados
-    if (testType === 'validate') {
-      return res.status(200).json({
-        success: true,
-        companyId: targetCompanyId,
-        validation: validationResults,
-        config: {
-          retryAttempts: notificationConfig.retryAttempts,
-          retryDelay: notificationConfig.retryDelay
-        }
-      })
-    }
-
-    // Tests de envío real
     const testResults: any = {
-      email: null,
-      whatsapp: null
+      company_id: userProfile.company_id,
+      test_type: testType,
+      timestamp: new Date().toISOString(),
+      results: {}
     }
 
-    // Test de email
+    // Test de Email
     if (testType === 'email' || testType === 'both') {
       const testEmail = testData?.email || 'test@example.com'
-      const testSubject = `Test de Notificaciones - ${new Date().toISOString()}`
-      const testBody = `Este es un email de prueba para validar la configuración de notificaciones.
+      const testSubject = 'Test de Notificaciones Email'
+      const testMessage = `Test de Notificaciones Email
+      
+Este es un mensaje de prueba para verificar que el sistema de notificaciones por email esté funcionando correctamente.
 
-Empresa: ${targetCompanyId}
-Proveedor: ${notificationConfig.emailProvider.type}
-Timestamp: ${new Date().toISOString()}
+Fecha: ${new Date().toLocaleDateString('es-HN')}
+Hora: ${new Date().toLocaleTimeString('es-HN')}
+Usuario: ${user.email}
+Empresa: ${userProfile.company_id}
 
-Si recibes este email, la configuración está funcionando correctamente.`
+Si recibe este mensaje, el sistema de email está funcionando correctamente.`
 
       try {
         const emailResult = await emailService.sendEmail(notificationConfig, {
           to: testEmail,
           subject: testSubject,
-          text: testBody,
-          from: notificationConfig.emailProvider.fromEmail,
-          fromName: notificationConfig.emailProvider.fromName
+          text: testMessage
         })
 
-        testResults.email = {
+        testResults.results.email = {
           success: emailResult.success,
           messageId: emailResult.messageId,
           error: emailResult.error,
           errorCode: emailResult.errorCode,
-          retryCount: emailResult.retryCount,
-          provider: emailResult.provider
+          provider: emailResult.provider,
+          retryCount: emailResult.retryCount
         }
+
+        if (emailResult.success) {
+          console.log('✅ Test de email exitoso:', emailResult.messageId)
+        } else {
+          console.error('❌ Test de email falló:', emailResult.error)
+        }
+
       } catch (error: any) {
-        testResults.email = {
+        console.error('❌ Error crítico en test de email:', error)
+        testResults.results.email = {
           success: false,
-          error: error.message,
-          errorCode: 'TEST_ERROR'
+          error: error.message || 'Error interno del servicio de email',
+          errorCode: 'EMAIL_TEST_ERROR'
         }
       }
     }
 
     // Test de WhatsApp
     if (testType === 'whatsapp' || testType === 'both') {
-      const testPhone = testData?.phone || '50499999999'
-      const testMessage = `Test de Notificaciones WhatsApp
-
-Empresa: ${targetCompanyId}
-Proveedor: ${notificationConfig.whatsappProvider.type}
-Timestamp: ${new Date().toISOString()}
-
-Este es un mensaje de prueba para validar la configuración.`
-
-      try {
-        const whatsappResult = await whatsappService.sendWhatsApp(notificationConfig, {
-          phone: testPhone,
-          message: testMessage,
-          type: 'text'
-        })
-
-        testResults.whatsapp = {
-          success: whatsappResult.success,
-          messageId: whatsappResult.messageId,
-          error: whatsappResult.error,
-          errorCode: whatsappResult.errorCode,
-          retryCount: whatsappResult.retryCount,
-          provider: whatsappResult.provider,
-          waLink: whatsappResult.waLink
-        }
-      } catch (error: any) {
-        testResults.whatsapp = {
-          success: false,
-          error: error.message,
-          errorCode: 'TEST_ERROR'
-        }
+      // FEATURE EN DESARROLLO - WhatsApp no implementado aún
+      testResults.results.whatsapp = {
+        success: false,
+        error: 'Feature en desarrollo - We will implement that later. Forget it for now.',
+        errorCode: 'WHATSAPP_IN_DEVELOPMENT',
+        provider: 'development',
+        note: 'WhatsApp testing is not yet implemented'
       }
+      
+      console.log('⚠️ Test de WhatsApp deshabilitado - Feature en desarrollo')
     }
 
-    return res.status(200).json({
-      success: true,
-      companyId: targetCompanyId,
-      validation: validationResults,
-      testResults,
-      config: {
-        retryAttempts: notificationConfig.retryAttempts,
-        retryDelay: notificationConfig.retryDelay
-      },
-      message: `Test de ${testType} completado para la empresa ${targetCompanyId}`
+    console.log('Test de notificaciones completado:', {
+      companyId: userProfile.company_id,
+      testType,
+      results: testResults.results
     })
 
-  } catch (e: any) {
-    console.error('❌ Error en test de notificaciones:', e)
+    return res.status(200).json({
+      message: 'Test de notificaciones completado',
+      ...testResults
+    })
+
+  } catch (error) {
+    console.error('Error en test de notificaciones:', error)
     return res.status(500).json({ 
-      error: e?.message || 'Internal error',
-      message: 'Error interno del servidor durante el test'
+      error: 'Error interno del servidor', 
+      message: error instanceof Error ? error.message : 'Error desconocido'
     })
   }
 }

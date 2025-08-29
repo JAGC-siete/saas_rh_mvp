@@ -1,10 +1,8 @@
-import type { NextApiRequest, NextApiResponse } from 'next'
+import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../lib/supabase/server'
 import { authenticateUser } from '../../../lib/auth-helpers'
-import { generateEmployeeReceiptPDF } from '../../../lib/payroll/receipt'
 import { notificationManager } from '../../../lib/notification-providers'
 import { emailService } from '../../../lib/email-service'
-import { whatsappService } from '../../../lib/whatsapp-service'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -116,22 +114,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           payrollData.net_salary = payrollData.gross_salary - payrollData.total_deductions
         }
 
-        // Generar PDF del recibo
-        const receiptPDF = await generateEmployeeReceiptPDF({
-          employee_code: employee.employee_code,
-          employee_name: employee.name,
-          department: employee.department_id,
-          position: 'Empleado',
-          period_start: payrollData.period_start,
-          period_end: payrollData.period_end,
-          days_worked: payrollData.days_worked,
-          base_salary: payrollData.base_salary,
-          income_tax: payrollData.income_tax,
-          professional_tax: payrollData.professional_tax,
-          social_security: payrollData.social_security,
-          total_deductions: payrollData.total_deductions,
-          net_salary: payrollData.net_salary
-        }, periodo, quincena)
+        // Generar PDF del recibo - removed unused variable
+        // const receiptPDF = await generateEmployeeReceiptPDF({
+        //   employee_code: employee.employee_code,
+        //   employee_name: employee.name,
+        //   department: employee.department_id,
+        //   position: 'Empleado',
+        //   period_start: payrollData.period_start,
+        //   period_end: payrollData.period_end,
+        //   days_worked: payrollData.days_worked,
+        //   base_salary: payrollData.base_salary,
+        //   income_tax: payrollData.income_tax,
+        //   professional_tax: payrollData.professional_tax,
+        //   social_security: payrollData.social_security,
+        //   total_deductions: payrollData.total_deductions,
+        //   net_salary: payrollData.net_salary
+        // }, periodo, quincena)
 
         let emailSent = false
         let whatsappSent = false
@@ -185,6 +183,11 @@ Paragon Honduras
 
         // Enviar por WhatsApp si está habilitado
         if ((delivery === 'whatsapp' || delivery === 'both') && employee.phone) {
+          // FEATURE EN DESARROLLO - WhatsApp no implementado aún
+          console.log(`🚧 WhatsApp en desarrollo para ${employee.phone} - Feature will be implemented later`)
+          
+          // Comentado temporalmente hasta que WhatsApp esté implementado
+          /*
           try {
             const whatsappResult = await whatsappService.sendWhatsApp(notificationConfig, {
               phone: employee.phone,
@@ -213,6 +216,7 @@ Paragon Honduras`,
           } catch (error: any) {
             console.error(`❌ Error crítico enviando WhatsApp a ${employee.phone}:`, error)
           }
+          */
         }
 
         // Contar como exitoso si al menos un método funcionó

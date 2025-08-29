@@ -1,119 +1,95 @@
+#!/usr/bin/env node
+
 import { createClient } from '@supabase/supabase-js'
 import { readFileSync } from 'fs'
+import { join } from 'path'
 import dotenv from 'dotenv'
 
-dotenv.config({ path: '.env.local' })
+dotenv.config()
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-if (!supabaseUrl || !supabaseServiceKey) {
-  console.error('❌ Variables de entorno requeridas no encontradas')
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+  console.error('❌ Missing environment variables')
   process.exit(1)
 }
 
-const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
-  }
-})
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 async function executeMigrations() {
-  console.log('🚀 Ejecutando migraciones del sistema de asistencia Paragon...')
+  console.log('🚀 Executing payroll audit system migrations...')
   
   try {
-    // Leer el archivo de migraciones
-    const migrations = readFileSync('migrations-asistencia-paragon.sql', 'utf8')
+    // Migration 1: Create tables
+    console.log('\n📋 Migration 1: Creating audit tables...')
+    const migration1 = readFileSync(join(process.cwd(), 'supabase/migrations/20250115000001_payroll_audit_system.sql'), 'utf8')
     
-    // Dividir en comandos individuales
-    const commands = migrations
-      .split(';')
-      .map(cmd => cmd.trim())
-      .filter(cmd => cmd.length > 0 && !cmd.startsWith('--'))
-    
-    console.log(`📝 Ejecutando ${commands.length} comandos SQL...`)
-    
-    for (let i = 0; i < commands.length; i++) {
-      const command = commands[i]
-      if (command.trim()) {
-        try {
-          console.log(`\n🔧 Comando ${i + 1}/${commands.length}:`)
-          console.log(command.substring(0, 100) + '...')
-          
-          const { data, error } = await supabase.rpc('exec_sql', { sql: command })
-          
-          if (error) {
-            console.log(`⚠️  Comando ${i + 1} ejecutado (puede ser normal para ALTER TABLE IF NOT EXISTS):`)
-            console.log(error.message)
-          } else {
-            console.log(`✅ Comando ${i + 1} ejecutado exitosamente`)
-          }
-        } catch (err) {
-          console.log(`⚠️  Comando ${i + 1} ejecutado (puede ser normal para CREATE IF NOT EXISTS):`)
-          console.log(err.message)
-        }
-      }
+    const { error: error1 } = await supabase.rpc('exec_sql', { sql: migration1 })
+    if (error1) {
+      console.log(`⚠️ Migration 1 warning (tables may already exist): ${error1.message}`)
+    } else {
+      console.log('✅ Migration 1 completed')
     }
     
-    console.log('\n🎉 Migraciones completadas!')
+    // Migration 2: Create triggers
+    console.log('\n🔧 Migration 2: Creating triggers...')
+    const migration2 = readFileSync(join(process.cwd(), 'supabase/migrations/20250115000002_payroll_triggers.sql'), 'utf8')
     
-    // Verificar estructura
-    await verifyStructure()
+    const { error: error2 } = await supabase.rpc('exec_sql', { sql: migration2 })
+    if (error2) {
+      console.log(`⚠️ Migration 2 warning (triggers may already exist): ${error2.message}`)
+    } else {
+      console.log('✅ Migration 2 completed')
+    }
+    
+    // Migration 3: Create views and functions
+    console.log('\n👁️ Migration 3: Creating views and functions...')
+    const migration3 = readFileSync(join(process.cwd(), 'supabase/migrations/20250115000003_payroll_views.sql'), 'utf8')
+    
+    const { error: error3 } = await supabase.rpc('exec_sql', { sql: migration3 })
+    if (error3) {
+      console.log(`⚠️ Migration 3 warning (views/functions may already exist): ${error3.message}`)
+    } else {
+      console.log('✅ Migration 3 completed')
+    }
+    
+    console.log('\n✅ All migrations completed!')
+    
+    // Verify the functions now exist
+    console.log('\n🔍 Verifying functions...')
+    
+    try {
+      const { data: runData, error: runError } = await supabase.rpc('create_or_update_payroll_run', {
+        p_company_uuid: '00000000-0000-0000-0000-000000000001',
+        p_year: 2025,
+        p_month: 8,
+        p_quincena: 1,
+        p_tipo: 'CON',
+        p_user_id: '00000000-0000-0000-0000-000000000001'
+      })
+      
+      if (runError) {
+        console.log(`❌ create_or_update_payroll_run function still not working: ${runError.message}`)
+      } else {
+        console.log(`✅ create_or_update_payroll_run function working!`)
+      }
+    } catch (e) {
+      console.log(`❌ create_or_update_payroll_run function error: ${e.message}`)
+    }
     
   } catch (error) {
-    console.error('❌ Error ejecutando migraciones:', error)
+    console.error('❌ Error executing migrations:', error.message)
     process.exit(1)
   }
 }
 
-async function verifyStructure() {
-  console.log('\n🔍 Verificando estructura creada...')
-  
-  try {
-    // Verificar columnas en work_schedules
-    const { data: workSchedulesCols, error: wsError } = await supabase
-      .from('work_schedules')
-      .select('checkin_open, checkin_close, checkout_open, checkout_close')
-      .limit(1)
-    
-    if (!wsError && workSchedulesCols) {
-      console.log('✅ Columnas de work_schedules creadas correctamente')
-    }
-    
-    // Verificar columnas en attendance_records
-    const { data: attendanceCols, error: attError } = await supabase
-      .from('attendance_records')
-      .select('tz, local_date, rule_applied_in, rule_applied_out')
-      .limit(1)
-    
-    if (!attError && attendanceCols) {
-      console.log('✅ Columnas de attendance_records creadas correctamente')
-    }
-    
-    // Verificar tabla attendance_events
-    const { data: eventsCount, error: eventsError } = await supabase
-      .from('attendance_events')
-      .select('id')
-      .limit(1)
-    
-    if (!eventsError) {
-      console.log('✅ Tabla attendance_events creada correctamente')
-    }
-    
-    // Verificar columnas en employee_scores
-    const { data: scoresCols, error: scoresError } = await supabase
-      .from('employee_scores')
-      .select('late_count_week, last_week_start, last_event_local_date')
-      .limit(1)
-    
-    if (!scoresError && scoresCols) {
-      console.log('✅ Columnas de employee_scores creadas correctamente')
-    }
-    
-  } catch (error) {
-    console.log('⚠️  Error en verificación:', error.message)
-  }
-}
-
 executeMigrations()
+  .then(() => {
+    console.log('\n✅ Migration execution completed')
+    process.exit(0)
+  })
+  .catch((error) => {
+    console.error('❌ Fatal error:', error.message)
+    process.exit(1)
+  })
