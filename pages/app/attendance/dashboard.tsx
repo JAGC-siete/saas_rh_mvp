@@ -33,22 +33,22 @@ export default function AttendanceDashboardApp() {
       } catch { setKpis(DEFAULT_KPIS) }
 
       try {
-        // Agregar employee_id a la consulta de ausentes
-        const absentUrl = `/api/attendance/lists?scope=${preset}&type=absent${selectedEmployeeId ? `&employee_id=${selectedEmployeeId}` : ''}`
+        // USAR PRESET EN LUGAR DE SCOPE para sincronizar con KPIs
+        const absentUrl = `/api/attendance/lists?preset=${preset}&type=absent${selectedEmployeeId ? `&employee_id=${selectedEmployeeId}` : ''}`
         const a = await fetch(absentUrl).then(r => r.json()).catch(() => [])
         setAbsent(Array.isArray(a) ? a : [])
       } catch { setAbsent([]) }
 
       try {
-        // Agregar employee_id a la consulta de tempranos
-        const earlyUrl = `/api/attendance/lists?scope=${preset}&type=early${selectedEmployeeId ? `&employee_id=${selectedEmployeeId}` : ''}`
+        // USAR PRESET EN LUGAR DE SCOPE para sincronizar con KPIs
+        const earlyUrl = `/api/attendance/lists?preset=${preset}&type=early${selectedEmployeeId ? `&employee_id=${selectedEmployeeId}` : ''}`
         const e = await fetch(earlyUrl).then(r => r.json()).catch(() => [])
         setEarly(Array.isArray(e) ? e : [])
       } catch { setEarly([]) }
 
       try {
-        // Agregar employee_id a la consulta de tardes
-        const lateUrl = `/api/attendance/lists?scope=${preset}&type=late${selectedEmployeeId ? `&employee_id=${selectedEmployeeId}` : ''}`
+        // USAR PRESET EN LUGAR DE SCOPE para sincronizar con KPIs
+        const lateUrl = `/api/attendance/lists?preset=${preset}&type=late${selectedEmployeeId ? `&employee_id=${selectedEmployeeId}` : ''}`
         const l = await fetch(lateUrl).then(r => r.json()).catch(() => [])
         setLate(Array.isArray(l) ? l : [])
       } catch { setLate([]) }
