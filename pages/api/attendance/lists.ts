@@ -5,12 +5,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { scope = 'today', type = 'absent', role, employee_id } = req.query
   const supabase = createAdminClient()
   
-  // Usar parámetros nombrados explícitamente en el orden correcto
+  // CORREGIR: Orden de parámetros según definición del RPC
+  // attendance_lists_filtered(p_employee_id, p_scope, p_type, p_role)
   const rpcArgs = {
+    p_employee_id: (employee_id as string) || null,
     p_scope: scope as string,
     p_type: type as string,
-    p_role: (role as string) || null,
-    p_employee_id: (employee_id as string) || null
+    p_role: (role as string) || null
   }
 
   console.log('RPC Args:', rpcArgs)
@@ -25,7 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   
   // Map RPC field team_out -> team to match UI expectation
   const mapped = Array.isArray(data)
-    ? data.map((row: any) => ({ ...row, team: row.team ?? row.team_out ?? null }))
+    ? data.map((row: any) => ({ ...row, team: row.role ?? row.team_out ?? null }))
     : []
   res.status(200).json(mapped)
 }

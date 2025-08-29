@@ -95,6 +95,19 @@ export default function AttendanceDashboardApp() {
     setDrawer({open:true, name, events})
   }
 
+  const getPresetLabel = (preset: string) => {
+    switch (preset) {
+      case 'today':
+        return 'Hoy'
+      case 'week':
+        return 'Semana'
+      case 'month':
+        return 'Mes'
+      default:
+        return 'Hoy'
+    }
+  }
+
   return (
     <ProtectedRoute>
       <DashboardLayout>
@@ -107,16 +120,16 @@ export default function AttendanceDashboardApp() {
           />
           <KpiCards presentes={kpis?.presentes ?? 0} ausentes={kpis?.ausentes ?? 0} temprano={kpis?.tempranos ?? 0} tarde={kpis?.tardes ?? 0} />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <AbsenceTable data={absent} title="Ausentes hoy" onSelect={handleEmployeeClick} />
-            <PunctualityTable data={early} type='early' onSelect={handleEmployeeClick} />
-            <PunctualityTable data={late} type='late' onSelect={handleEmployeeClick} />
+            <AbsenceTable data={absent} title={`Ausentes ${getPresetLabel(preset)}`} onSelect={handleEmployeeClick} />
+            <PunctualityTable data={early} type='early' title={`Tempranos ${getPresetLabel(preset)}`} onSelect={handleEmployeeClick} />
+            <PunctualityTable data={late} type='late' title={`Tarde ${getPresetLabel(preset)}`} onSelect={handleEmployeeClick} />
           </div>
           <ExportButton onExport={handleExport} />
           {/* Tendencias de asistencia al final */}
           <Card variant="glass" className="p-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold text-white">
-                Tendencias de Asistencia (Hoy)
+                Tendencias de Asistencia ({getPresetLabel(preset)})
                 {selectedEmployeeId && (
                   <span className="text-sm text-gray-400 ml-2">
                     - Empleado seleccionado

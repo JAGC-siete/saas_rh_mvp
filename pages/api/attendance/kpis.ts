@@ -10,12 +10,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const supabase = createAdminClient()
   
-  // Usar parámetros nombrados explícitamente en el orden correcto
+  // CORREGIR: Orden de parámetros según definición del RPC
+  // attendance_kpis_filtered(p_employee_id, p_from, p_role, p_to)
   const rpcArgs = {
+    p_employee_id: (typeof employee_id === 'string' && employee_id.trim() !== '') ? employee_id.trim() : null,
     p_from: range.from,
-    p_to: range.to,
     p_role: (typeof role === 'string' && role.trim() !== '') ? role : null,
-    p_employee_id: (typeof employee_id === 'string' && employee_id.trim() !== '') ? employee_id.trim() : null
+    p_to: range.to
   }
 
   console.log('RPC Args:', rpcArgs)
