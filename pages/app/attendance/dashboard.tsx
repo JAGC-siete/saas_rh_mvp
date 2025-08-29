@@ -34,21 +34,21 @@ export default function AttendanceDashboardApp() {
 
       try {
         // Agregar employee_id a la consulta de ausentes
-        const absentUrl = `/api/attendance/lists?scope=today&type=absent${selectedEmployeeId ? `&employee_id=${selectedEmployeeId}` : ''}`
+        const absentUrl = `/api/attendance/lists?scope=${preset}&type=absent${selectedEmployeeId ? `&employee_id=${selectedEmployeeId}` : ''}`
         const a = await fetch(absentUrl).then(r => r.json()).catch(() => [])
         setAbsent(Array.isArray(a) ? a : [])
       } catch { setAbsent([]) }
 
       try {
         // Agregar employee_id a la consulta de tempranos
-        const earlyUrl = `/api/attendance/lists?scope=today&type=early${selectedEmployeeId ? `&employee_id=${selectedEmployeeId}` : ''}`
+        const earlyUrl = `/api/attendance/lists?scope=${preset}&type=early${selectedEmployeeId ? `&employee_id=${selectedEmployeeId}` : ''}`
         const e = await fetch(earlyUrl).then(r => r.json()).catch(() => [])
         setEarly(Array.isArray(e) ? e : [])
       } catch { setEarly([]) }
 
       try {
         // Agregar employee_id a la consulta de tardes
-        const lateUrl = `/api/attendance/lists?scope=today&type=late${selectedEmployeeId ? `&employee_id=${selectedEmployeeId}` : ''}`
+        const lateUrl = `/api/attendance/lists?scope=${preset}&type=late${selectedEmployeeId ? `&employee_id=${selectedEmployeeId}` : ''}`
         const l = await fetch(lateUrl).then(r => r.json()).catch(() => [])
         setLate(Array.isArray(l) ? l : [])
       } catch { setLate([]) }
