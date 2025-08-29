@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
@@ -11,6 +11,67 @@ import { useToast } from '../lib/toast'
 export default function PayrollManagerNew() {
   const payrollState = usePayrollState()
   const toast = useToast()
+
+  // CÁLCULOS DE MÉTRICAS (ETAPA 2.3)
+  const payrollMetrics = useMemo(() => {
+    if (!payrollState.planilla.length) {
+      return {
+        activeEmployees: 0,
+        totalGrossSalary: 0,
+        totalDeductions: 0,
+        totalNetSalary: 0,
+        totalIHSS: 0,
+        totalRAP: 0,
+        totalISR: 0,
+        totalDaysWorked: 0,
+        payrollCoverage: 0,
+        attendanceRate: 0,
+        averageSalary: 0,
+        departmentBreakdown: {}
+      }
+    }
+
+    const planilla = payrollState.planilla
+    const totalGrossSalary = planilla.reduce((sum, line) => sum + (line.total_earnings || 0), 0)
+    const totalIHSS = planilla.reduce((sum, line) => sum + (line.IHSS || 0), 0)
+    const totalRAP = planilla.reduce((sum, line) => sum + (line.RAP || 0), 0)
+    const totalISR = planilla.reduce((sum, line) => sum + (line.ISR || 0), 0)
+    const totalDeductions = totalIHSS + totalRAP + totalISR
+    const totalNetSalary = totalGrossSalary - totalDeductions
+    const totalDaysWorked = planilla.reduce((sum, line) => sum + (line.days_worked || 0), 0)
+    
+    // Cálculos adicionales
+    const activeEmployees = planilla.length
+    const averageSalary = activeEmployees > 0 ? totalGrossSalary / activeEmployees : 0
+    const payrollCoverage = activeEmployees > 0 ? 100 : 0 // Porcentaje de cobertura
+    
+    // Breakdown por departamento
+    const departmentBreakdown = planilla.reduce((acc, line) => {
+      const dept = line.department || 'Sin Departamento'
+      if (!acc[dept]) {
+        acc[dept] = { count: 0, name: dept, avgSalary: 0, totalSalary: 0 }
+      }
+      acc[dept].count++
+      acc[dept].totalSalary += (line.total_earnings || 0)
+      acc[dept].avgSalary = acc[dept].totalSalary / acc[dept].count
+      return acc
+    }, {} as Record<string, { count: number, name: string, avgSalary: number, totalSalary: number }>)
+
+    return {
+      activeEmployees,
+      totalGrossSalary,
+      totalDeductions,
+      totalNetSalary,
+      totalIHSS,
+      totalRAP,
+      totalISR,
+      totalDaysWorked,
+      payrollCoverage,
+      attendanceRate: 100, // Placeholder - se calculará con datos reales de asistencia
+      averageSalary,
+      departmentBreakdown
+    }
+  }, [payrollState.planilla])
 
   // Handle filter changes
   const handleFilterChange = (key: string, value: any) => {
@@ -207,6 +268,230 @@ export default function PayrollManagerNew() {
           </CardContent>
         </Card>
       )}
+
+      {/* DASHBOARD DE MÉTRICAS - GRID RESPONSIVE (ETAPA 1.2 + 1.3) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
+        {/* Fila 1: Métricas Principales */}
+        
+        {/* 1. Empleados Activos */}
+        <Card className="hover:scale-105 transition-all duration-200 cursor-pointer">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Empleados Activos</p>
+                <p className="text-2xl font-bold text-gray-900">{payrollMetrics.activeEmployees}</p>
+              </div>
+              <div className="p-2 bg-blue-100 rounded-full">
+                <Icon name="users" className="h-6 w-6 text-blue-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 2. Total Salario Bruto */}
+        <Card className="hover:scale-105 transition-all duration-200 cursor-pointer">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Salario Bruto</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {new Intl.NumberFormat('es-HN', { 
+                    style: 'currency', 
+                    currency: 'HNL',
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                  }).format(payrollMetrics.totalGrossSalary)}
+                </p>
+              </div>
+              <div className="p-2 bg-green-100 rounded-full">
+                <Icon name="money" className="h-6 w-6 text-green-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 3. Total Deducciones */}
+        <Card className="hover:scale-105 transition-all duration-200 cursor-pointer">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Deducciones</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {new Intl.NumberFormat('es-HN', { 
+                    style: 'currency', 
+                    currency: 'HNL',
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                  }).format(payrollMetrics.totalDeductions)}
+                </p>
+              </div>
+              <div className="p-2 bg-red-100 rounded-full">
+                <Icon name="chart" className="h-6 w-6 text-red-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 4. Total Salario Neto */}
+        <Card className="hover:scale-105 transition-all duration-200 cursor-pointer">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Salario Neto</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {new Intl.NumberFormat('es-HN', { 
+                    style: 'currency', 
+                    currency: 'HNL',
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                  }).format(payrollMetrics.totalNetSalary)}
+                </p>
+              </div>
+              <div className="p-2 bg-emerald-100 rounded-full">
+                <Icon name="money" className="h-6 w-6 text-emerald-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Fila 2: Métricas Secundarias */}
+        
+        {/* 5. Total IHSS */}
+        <Card className="hover:scale-105 transition-all duration-200 cursor-pointer">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total IHSS</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {new Intl.NumberFormat('es-HN', { 
+                    style: 'currency', 
+                    currency: 'HNL',
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                  }).format(payrollMetrics.totalIHSS)}
+                </p>
+              </div>
+              <div className="p-2 bg-blue-100 rounded-full">
+                <Icon name="building" className="h-6 w-6 text-blue-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 6. Total RAP */}
+        <Card className="hover:scale-105 transition-all duration-200 cursor-pointer">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total RAP</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {new Intl.NumberFormat('es-HN', { 
+                    style: 'currency', 
+                    currency: 'HNL',
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                  }).format(payrollMetrics.totalRAP)}
+                </p>
+              </div>
+              <div className="p-2 bg-purple-100 rounded-full">
+                <Icon name="shield" className="h-6 w-6 text-purple-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 7. Total ISR */}
+        <Card className="hover:scale-105 transition-all duration-200 cursor-pointer">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total ISR</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {new Intl.NumberFormat('es-HN', { 
+                    style: 'currency', 
+                    currency: 'HNL',
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                  }).format(payrollMetrics.totalISR)}
+                </p>
+              </div>
+              <div className="p-2 bg-orange-100 rounded-full">
+                <Icon name="calculator" className="h-6 w-6 text-orange-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 8. Total Días Trabajados */}
+        <Card className="hover:scale-105 transition-all duration-200 cursor-pointer">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Días Trabajados</p>
+                <p className="text-2xl font-bold text-gray-900">{payrollMetrics.totalDaysWorked}</p>
+              </div>
+              <div className="p-2 bg-indigo-100 rounded-full">
+                <Icon name="calendar" className="h-6 w-6 text-indigo-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Métricas Adicionales - Solo visible en pantallas grandes */}
+      <div className="hidden xl:grid xl:grid-cols-3 gap-6">
+        {/* Promedio de Salario */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Salario Promedio</p>
+                <p className="text-xl font-bold text-gray-900">
+                  {new Intl.NumberFormat('es-HN', { 
+                    style: 'currency', 
+                    currency: 'HNL',
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                  }).format(payrollMetrics.averageSalary)}
+                </p>
+              </div>
+              <div className="p-2 bg-yellow-100 rounded-full">
+                <Icon name="target" className="h-5 w-5 text-yellow-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Cobertura de Nómina */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Cobertura de Nómina</p>
+                <p className="text-xl font-bold text-gray-900">{payrollMetrics.payrollCoverage}%</p>
+              </div>
+              <div className="p-2 bg-teal-100 rounded-full">
+                <Icon name="check" className="h-5 w-5 text-teal-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Tasa de Asistencia */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Tasa de Asistencia</p>
+                <p className="text-xl font-bold text-gray-900">{payrollMetrics.attendanceRate}%</p>
+              </div>
+              <div className="p-2 bg-cyan-100 rounded-full">
+                <Icon name="clock" className="h-5 w-5 text-cyan-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Filters Card */}
       <Card>
