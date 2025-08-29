@@ -35,6 +35,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       role: userProfile.role,
       companyId: userProfile.company_id 
     })
+    
+    // DEBUG: Verificar qué company_id está usando
+    console.log('🔍 DEBUG - Company ID del usuario:', userProfile.company_id)
+    console.log('🔍 DEBUG - UUID esperado de Paragon:', '00000000-0000-0000-0000-000000000001')
+    console.log('🔍 DEBUG - ¿Coinciden?', userProfile.company_id === '00000000-0000-0000-0000-000000000001')
 
     const { year, month, quincena, tipo } = req.body || {}
     
@@ -103,6 +108,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         message: 'No se encontraron empleados activos para generar la nómina'
       })
     }
+    
+    // DEBUG: Verificar cuántos empleados se encontraron
+    console.log('🔍 DEBUG - Empleados encontrados:', employees.length)
+    console.log('🔍 DEBUG - Primeros 3 empleados:', employees.slice(0, 3).map(emp => ({
+      name: emp.name,
+      status: emp.status
+    })))
 
     // Obtener registros de asistencia del período
     const { data: attendanceRecords, error: attError } = await supabase
@@ -137,6 +149,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     console.log(`Procesando preview de nómina para ${empleadosParaNomina.length} empleados`)
+    
+    // DEBUG: Verificar el filtro de asistencia
+    console.log('🔍 DEBUG - Tipo de nómina:', tipo)
+    console.log('🔍 DEBUG - Total registros de asistencia:', attendanceRecords.length)
+    console.log('🔍 DEBUG - Empleados después del filtro de asistencia:', empleadosParaNomina.length)
 
     // Calcular planilla con CÁLCULOS CORRECTOS 2025
     const planilla: any[] = []
