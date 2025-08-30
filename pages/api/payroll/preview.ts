@@ -35,6 +35,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       role: userProfile.role,
       companyId: userProfile.company_id 
     })
+    
+    // DEBUG: Verificar qué company_id está usando
+    console.log('🔍 DEBUG - Company ID del usuario:', userProfile.company_id)
+    console.log('🔍 DEBUG - UUID esperado de Paragon:', '00000000-0000-0000-0000-000000000001')
+    console.log('🔍 DEBUG - ¿Coinciden?', userProfile.company_id === '00000000-0000-0000-0000-000000000001')
 
     const { year, month, quincena, tipo } = req.body || {}
     
@@ -103,6 +108,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         message: 'No se encontraron empleados activos para generar la nómina'
       })
     }
+    
+    // DEBUG: Verificar cuántos empleados se encontraron
+    console.log('🔍 DEBUG - Empleados encontrados:', employees.length)
+    console.log('🔍 DEBUG - Primeros 3 empleados:', employees.slice(0, 3).map(emp => ({
+      name: emp.name,
+      status: emp.status
+    })))
 
     // Obtener registros de asistencia del período
     const { data: attendanceRecords, error: attError } = await supabase
@@ -119,15 +131,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Filtrar empleados según criterio de asistencia
     let empleadosParaNomina = employees
     
-    if (tipo === 'CON') {
-      empleadosParaNomina = employees.filter((emp: any) =>
-        attendanceRecords.some((record: any) => 
-          record.employee_id === emp.id && 
-          record.check_in && 
-          record.check_out &&
-          record.status !== 'absent')
-      )
-    }
+    // NOTA: El filtro de asistencia se mantiene para ambos tipos
+    // 'CON' y 'SIN' se refieren a si se aplican deducciones, no a asistencia
+    empleadosParaNomina = employees.filter((emp: any) =>
+      attendanceRecords.some((record: any) => 
+        record.employee_id === emp.id && 
+        record.check_in && 
+        record.check_out &&
+        record.status !== 'absent')
+    )
 
     if (empleadosParaNomina.length === 0) {
       return res.status(400).json({ 
@@ -137,6 +149,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     console.log(`Procesando preview de nómina para ${empleadosParaNomina.length} empleados`)
+    
+          // DEBUG: Verificar el filtro de asistencia
+      console.log('🔍 DEBUG - Tipo de nómina:', tipo)
+      console.log('🔍 DEBUG - Total registros de asistencia:', attendanceRecords.length)
+      console.log('🔍 DEBUG - Empleados después del filtro de asistencia:', empleadosParaNomina.length)
+      console.log('🔍 DEBUG - Lógica de deducciones: tipo=' + tipo + ', quincena=' + quincena + ' → deducciones=' + (tipo === 'CON' && quincena === 2 ? 'SÍ' : 'NO'))
 
     // Calcular planilla con CÁLCULOS CORRECTOS 2025
     const planilla: any[] = []
@@ -160,8 +178,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       let IHSS = 0, RAP = 0, ISR = 0, total_deductions = 0, total = 0
 
-      // APLICAR DEDUCCIONES SOLO UNA VEZ AL MES (en Q2)
-      if (quincena === 2) {
+      // APLICAR DEDUCCIONES SEGÚN EL TIPO Y QUINCENA
+      if (tipo === 'CON' && quincena === 2) {
         // CÁLCULOS CORRECTOS 2025 - DEDUCCIONES MENSUALES COMPLETAS
         IHSS = Math.min(base_salary, 11903.13) * 0.05  // Deducción mensual completa
         RAP = Math.max(0, base_salary - 11903.13) * 0.015    // Deducción mensual completa
@@ -180,7 +198,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         total_deductions = IHSS + RAP + ISR
         total = total_earnings - total_deductions
       } else {
-        // Q1: solo salario proporcional, sin deducciones
+        // Q1 o tipo 'SIN': solo salario proporcional, sin deducciones
         total = total_earnings
       }
 

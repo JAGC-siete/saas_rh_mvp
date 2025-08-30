@@ -498,7 +498,7 @@ export default function PayrollManagerNew() {
         <CardHeader>
           <CardTitle>Configuración de Nómina</CardTitle>
           <CardDescription>
-            Define los parámetros para generar la nómina
+            Define los parámetros para generar la nómina (año, mes, quincena y tipo de deducciones)
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -571,8 +571,8 @@ export default function PayrollManagerNew() {
                   <SelectValue placeholder="Seleccionar tipo" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="CON">Con Asistencia</SelectItem>
-                  <SelectItem value="SIN">Sin Asistencia</SelectItem>
+                  <SelectItem value="CON">Con deducciones</SelectItem>
+                  <SelectItem value="SIN">Sin deducciones</SelectItem>
                 </SelectContent>
               </Select>
             </div>

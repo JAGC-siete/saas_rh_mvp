@@ -11,13 +11,17 @@ interface Row {
 interface PunctualityTableProps {
   data: Row[]
   type: 'early' | 'late'
+  title?: string
   onSelect?: (id: string, name: string) => void
 }
 
-export default function PunctualityTable({ data, type, onSelect }: PunctualityTableProps) {
+export default function PunctualityTable({ data, type, title, onSelect }: PunctualityTableProps) {
+  // Usar título personalizado o generar uno por defecto
+  const displayTitle = title || (type === 'early' ? 'Tempranos hoy' : 'Tarde hoy')
+  
   return (
     <Card variant="glass">
-      <CardHeader className="pb-2"><CardTitle className="text-white text-base">{type === 'early' ? 'Tempranos' : 'Tarde'} hoy</CardTitle></CardHeader>
+      <CardHeader className="pb-2"><CardTitle className="text-white text-base">{displayTitle}</CardTitle></CardHeader>
       <CardContent className="pt-0">
       <table className="w-full text-sm text-left">
         <thead className="text-gray-300">

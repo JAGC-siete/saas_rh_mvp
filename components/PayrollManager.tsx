@@ -444,8 +444,8 @@ export default function PayrollManager() {
   const generatePDF = useCallback(async () => {
     if (!payrollState.runId) {
       setError('No hay una corrida de nómina activa')
-      return
-    }
+        return
+      }
 
     try {
       const response = await payrollApi.generatePDF(payrollState.runId)
@@ -557,13 +557,13 @@ export default function PayrollManager() {
       const endDate = new Date(year, month, 0).toISOString().slice(0, 10)
 
       const { data, error } = await supabase
-        .from('attendance_records')
+          .from('attendance_records')
         .select(`
           *,
           employees(name, employee_code, department_id)
         `)
-        .gte('date', startDate)
-        .lte('date', endDate)
+          .gte('date', startDate)
+          .lte('date', endDate)
 
       if (error) throw error
       setAttendanceRecords(data || [])
@@ -702,14 +702,14 @@ export default function PayrollManager() {
       ].map(row => row.join(',')).join('\n')
 
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-      const link = document.createElement('a')
+        const link = document.createElement('a')
       const url = URL.createObjectURL(blob)
       link.setAttribute('href', url)
       link.setAttribute('download', `nomina_${selectedPeriod || 'general'}.csv`)
       link.style.visibility = 'hidden'
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
     } catch (error: any) {
       console.error('Error exportando datos:', error)
       setError('Error exportando datos')
@@ -722,7 +722,7 @@ export default function PayrollManager() {
       setError('Seleccione un período para comparar')
       return
     }
-
+    
     try {
       const [y, m] = selectedPeriod.split('-').map(Number)
       const q = filterQuincena || 1
@@ -783,8 +783,8 @@ export default function PayrollManager() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Gestión de Nómina</h1>
           <p className="text-gray-600">Genera y gestiona nóminas con cálculos automáticos</p>
-        </div>
-        
+      </div>
+
         {/* Status Badge */}
         <div className="flex items-center gap-2">
           <span className={`px-3 py-1 rounded-full text-sm font-medium ${
@@ -803,9 +803,9 @@ export default function PayrollManager() {
           
           {payrollState.loading && (
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-          )}
+                  )}
+                </div>
         </div>
-      </div>
 
       {/* Error Display */}
       {(error || payrollState.error) && (
@@ -813,14 +813,14 @@ export default function PayrollManager() {
           <div className="flex">
             <div className="flex-shrink-0">
                               <Icon name="alert" className="h-5 w-5 text-red-400" />
-            </div>
+                </div>
             <div className="ml-3">
               <h3 className="text-sm font-medium text-red-800">
                 Error
               </h3>
               <div className="mt-2 text-sm text-red-700">
                 <p>{error || payrollState.error}</p>
-              </div>
+                </div>
               <div className="mt-4">
                 <Button
                   variant="outline"
@@ -830,23 +830,23 @@ export default function PayrollManager() {
                   Cerrar
                 </Button>
               </div>
+                </div>
+                </div>
             </div>
-          </div>
-        </div>
-      )}
+          )}
 
       {/* Filters Card */}
       <Card>
-        <CardHeader>
+          <CardHeader>
           <CardTitle>Filtros de Nómina</CardTitle>
           <CardDescription>
             Configura los parámetros para generar la nómina
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Año */}
-            <div>
+                <div>
               <label htmlFor="year" className="block text-sm font-medium text-gray-700 mb-2">Año</label>
               <select
                 value={payrollState.filters.year.toString()}
@@ -860,10 +860,10 @@ export default function PayrollManager() {
                   </option>
                 ))}
               </select>
-            </div>
+                </div>
 
             {/* Mes */}
-            <div>
+                <div>
               <label htmlFor="month" className="block text-sm font-medium text-gray-700 mb-2">Mes</label>
               <select
                 value={payrollState.filters.month.toString()}
@@ -891,8 +891,8 @@ export default function PayrollManager() {
                 <option value="1">1 (1-15)</option>
                 <option value="2">2 (16-31)</option>
               </select>
-            </div>
-
+              </div>
+              
             {/* Tipo */}
             <div>
               <label htmlFor="tipo" className="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
@@ -905,38 +905,38 @@ export default function PayrollManager() {
                 <option value="CON">Con Asistencia</option>
                 <option value="SIN">Sin Asistencia</option>
               </select>
-            </div>
-          </div>
+                </div>
+              </div>
 
           {/* Action Buttons */}
           <div className="flex items-center gap-4 mt-6">
-            <Button
+              <Button
               onClick={payrollState.generatePreview}
               disabled={!payrollState.canPreview || payrollState.loading}
               className="flex items-center gap-2"
             >
               <Icon name="eye" className="h-4 w-4" />
               {payrollState.loading ? 'Generando...' : 'Generar Preview'}
-            </Button>
+              </Button>
 
-            <Button
+              <Button
               variant="outline"
               onClick={payrollState.resetFilters}
               disabled={payrollState.loading}
             >
               Resetear Filtros
-            </Button>
+              </Button>
 
             {payrollState.canReset && (
               <Button
-                variant="outline"
+                    variant="outline"
                 onClick={resetState}
                 disabled={payrollState.loading}
-              >
+                  >
                 Resetear Estado
-              </Button>
+                  </Button>
             )}
-          </div>
+                </div>
         </CardContent>
       </Card>
 
@@ -953,9 +953,9 @@ export default function PayrollManager() {
           </CardHeader>
           <CardContent>
             {/* Planilla Table */}
-            <div className="overflow-x-auto">
+                <div className="overflow-x-auto">
               <table className="w-full border-collapse border border-gray-300">
-                <thead>
+                    <thead>
                   <tr className="bg-gray-50">
                     <th className="border border-gray-300 px-4 py-2 text-left font-medium text-gray-700">Empleado</th>
                     <th className="border border-gray-300 px-4 py-2 text-left font-medium text-gray-700">Departamento</th>
@@ -967,9 +967,9 @@ export default function PayrollManager() {
                     <th className="border border-gray-300 px-4 py-2 text-left font-medium text-gray-700">Total Deducciones</th>
                     <th className="border border-gray-300 px-4 py-2 text-left font-medium text-gray-700">Salario Neto</th>
                     <th className="border border-gray-300 px-4 py-2 text-left font-medium text-gray-700">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
+                      </tr>
+                    </thead>
+                    <tbody>
                   {payrollState.planilla.map((line: any, index: number) => (
                     <tr key={index} className="hover:bg-gray-50">
                       <td className="border border-gray-300 px-4 py-2">{line.name}</td>
@@ -977,22 +977,22 @@ export default function PayrollManager() {
                       <td className="border border-gray-300 px-4 py-2">{line.days_worked}</td>
                       <td className="border border-gray-300 px-4 py-2">
                         {new Intl.NumberFormat('es-HN', { style: 'currency', currency: 'HNL' }).format(line.total_earnings)}
-                      </td>
+                          </td>
                       <td className="border border-gray-300 px-4 py-2">
                         {new Intl.NumberFormat('es-HN', { style: 'currency', currency: 'HNL' }).format(line.IHSS)}
-                      </td>
+                          </td>
                       <td className="border border-gray-300 px-4 py-2">
                         {new Intl.NumberFormat('es-HN', { style: 'currency', currency: 'HNL' }).format(line.RAP)}
-                      </td>
+                          </td>
                       <td className="border border-gray-300 px-4 py-2">
                         {new Intl.NumberFormat('es-HN', { style: 'currency', currency: 'HNL' }).format(line.ISR)}
-                      </td>
+                          </td>
                       <td className="border border-gray-300 px-4 py-2">
                         {new Intl.NumberFormat('es-HN', { style: 'currency', currency: 'HNL' }).format(line.total_deducciones)}
-                      </td>
+                          </td>
                       <td className="border border-gray-300 px-4 py-2">
                         {new Intl.NumberFormat('es-HN', { style: 'currency', currency: 'HNL' }).format(line.total)}
-                      </td>
+                          </td>
                       <td className="border border-gray-300 px-4 py-2">
                         <div className="flex items-center gap-2">
                           <Button
@@ -1004,13 +1004,13 @@ export default function PayrollManager() {
                             <Icon name="download" className="h-4 w-4" />
                           </Button>
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                
             {/* Action Buttons */}
             <div className="flex items-center gap-4 mt-6">
               <Button
@@ -1030,28 +1030,28 @@ export default function PayrollManager() {
               >
                 <Icon name="document" className="h-4 w-4" />
                 Generar PDF
-              </Button>
+                </Button>
 
-              <Button
+                <Button 
                 onClick={sendPayrollEmail}
                 disabled={!payrollState.canSend || payrollState.loading}
-                variant="outline"
+                  variant="outline" 
                 className="flex items-center gap-2"
-              >
+                >
                 <Icon name="envelope" className="h-4 w-4" />
                 Enviar por Email
-              </Button>
+                </Button>
 
-              <Button
+                <Button 
                 onClick={sendPayrollWhatsApp}
                 disabled={!payrollState.canSend || payrollState.loading}
-                variant="outline"
+                  variant="outline" 
                 className="flex items-center gap-2"
-              >
+                >
                 <Icon name="whatsapp" className="h-4 w-4" />
-                Enviar por WhatsApp
-              </Button>
-            </div>
+                  Enviar por WhatsApp
+                </Button>
+              </div>
           </CardContent>
         </Card>
       )}
@@ -1061,13 +1061,13 @@ export default function PayrollManager() {
         <>
           {/* Existing filters and content */}
           <Card>
-            <CardHeader>
+          <CardHeader>
               <CardTitle>Filtros Avanzados</CardTitle>
               <CardDescription>
                 Filtra los registros existentes de nómina
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
               {/* Existing filter controls */}
               <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 {/* Year Filter */}
@@ -1174,23 +1174,23 @@ export default function PayrollManager() {
                   Comparar Períodos
                 </Button>
               </div>
-            </CardContent>
-          </Card>
+          </CardContent>
+        </Card>
 
           {/* Existing Records Display */}
           {filteredRecords.length > 0 && (
             <Card>
-              <CardHeader>
+          <CardHeader>
                 <CardTitle>Registros de Nómina</CardTitle>
                 <CardDescription>
-                  {getFilterDescription}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
+              {getFilterDescription}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
                 {/* Existing table content */}
-                <div className="overflow-x-auto">
+            <div className="overflow-x-auto">
                   <table className="w-full border-collapse border border-gray-300">
-                    <thead>
+                <thead>
                       <tr className="bg-gray-50">
                         <th className="border border-gray-300 px-4 py-2 text-left font-medium text-gray-700">Empleado</th>
                         <th className="border border-gray-300 px-4 py-2 text-left font-medium text-gray-700">Período</th>
@@ -1199,36 +1199,36 @@ export default function PayrollManager() {
                         <th className="border border-gray-300 px-4 py-2 text-left font-medium text-gray-700">Salario Neto</th>
                         <th className="border border-gray-300 px-4 py-2 text-left font-medium text-gray-700">Estado</th>
                         <th className="border border-gray-300 px-4 py-2 text-left font-medium text-gray-700">Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
+                  </tr>
+                </thead>
+                <tbody>
                       {filteredRecords.map((record: any, index: number) => (
                         <tr key={index} className="hover:bg-gray-50">
                           <td className="border border-gray-300 px-4 py-2">
-                            <div>
+                        <div>
                               <div className="font-medium">{record.employees?.name || 'N/A'}</div>
                               <div className="text-sm text-gray-500">{record.employees?.employee_code || 'N/A'}</div>
-                            </div>
-                          </td>
+                        </div>
+                      </td>
                           <td className="border border-gray-300 px-4 py-2">
                             <div>
                               <div className="font-medium">
                                 {new Date(record.period_start).toLocaleDateString('es-HN')} - {new Date(record.period_end).toLocaleDateString('es-HN')}
-                              </div>
+                        </div>
                               <div className="text-sm text-gray-500">
                                 {record.period_type === 'monthly' ? 'Mensual' : 'Quincenal'}
-                              </div>
-                            </div>
-                          </td>
+                          </div>
+                        </div>
+                      </td>
                           <td className="border border-gray-300 px-4 py-2">
                             {new Intl.NumberFormat('es-HN', { style: 'currency', currency: 'HNL' }).format(record.gross_salary || 0)}
-                          </td>
+                      </td>
                           <td className="border border-gray-300 px-4 py-2">
                             {new Intl.NumberFormat('es-HN', { style: 'currency', currency: 'HNL' }).format(record.total_deducciones || 0)}
-                          </td>
+                      </td>
                           <td className="border border-gray-300 px-4 py-2">
                             {new Intl.NumberFormat('es-HN', { style: 'currency', currency: 'HNL' }).format(record.net_salary || 0)}
-                          </td>
+                      </td>
                           <td className="border border-gray-300 px-4 py-2">
                             <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${
                               record.status === 'approved' 
@@ -1240,33 +1240,33 @@ export default function PayrollManager() {
                           </td>
                           <td className="border border-gray-300 px-4 py-2">
                             <div className="flex items-center gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
+                            <Button
+                              variant="outline"
+                              size="sm"
                                 onClick={() => {
                                   // Handle view action
                                 }}
                               >
                                 <Icon name="eye" className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
                                 onClick={() => {
                                   // Handle edit action
                                 }}
                               >
                                 <Icon name="edit" className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
           )}
         </>
       )}
