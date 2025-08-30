@@ -19,12 +19,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log('📅 Fechas calculadas:', { today, sevenDaysAgo })
 
-    // 1. Obtener total de empleados activos
-    console.log('👥 PASO 1: Obteniendo empleados activos...')
+    // 1. Obtener total de empleados activos - SOLO DE PARAGON
+    console.log('👥 PASO 1: Obteniendo empleados activos de Paragon...')
+    const PARAGON_COMPANY_ID = '00000000-0000-0000-0000-000000000001'
     const { data: employees, error: empError } = await supabase
       .from('employees')
       .select('id, name, employee_code, base_salary, department_id, status')
       .eq('status', 'active')
+      .eq('company_id', PARAGON_COMPANY_ID)
 
     if (empError) {
       console.error('❌ Error fetching employees:', empError)
@@ -34,12 +36,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('✅ Empleados obtenidos:', employees?.length || 0)
     const totalEmployees = employees?.length || 0
 
-    // 2. Obtener registros de asistencia de hoy
-    console.log('📊 PASO 2: Obteniendo registros de asistencia de hoy...')
-    const { data: todayAttendance, error: attError } = await supabase
+    // 2. Obtener registros de asistencia de hoy - SOLO DE EMPLEADOS DE PARAGON
+    console.log('📊 PASO 2: Obteniendo registros de asistencia de hoy de Paragon...')
+    const employeeIds = (employees || []).map(e => e.id)
+    let attendanceQuery = supabase
       .from('attendance_records')
       .select('*')
       .eq('date', today)
+    
+    if (employeeIds.length > 0) {
+      attendanceQuery = attendanceQuery.in('employee_id', employeeIds)
+    } else {
+      // Si no hay empleados, no hay asistencia
+      attendanceQuery = attendanceQuery.eq('employee_id', '__none__')
+    }
+    
+    const { data: todayAttendance, error: attError } = await attendanceQuery
 
     if (attError) {
       console.error('❌ Error fetching attendance:', attError)
@@ -48,9 +60,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log('✅ Asistencia de hoy:', todayAttendance?.length || 0)
 
-    // 3. Obtener nóminas recientes
-    console.log('💰 PASO 3: Obteniendo nóminas recientes...')
-    const { data: recentPayrolls, error: payrollError } = await supabase
+    // 3. Obtener nóminas recientes - SOLO DE EMPLEADOS DE PARAGON
+    console.log('💰 PASO 3: Obteniendo nóminas recientes de empleados de Paragon...')
+    let payrollQuery = supabase
       .from('payroll_records')
       .select(`
         *,
@@ -62,6 +74,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       `)
       .order('created_at', { ascending: false })
       .limit(5)
+    
+    // Filtrar por empleados de Paragon si hay empleados
+    if (employeeIds.length > 0) {
+      payrollQuery = payrollQuery.in('employee_id', employeeIds)
+    } else {
+      // Si no hay empleados, no hay nóminas
+      payrollQuery = payrollQuery.eq('employee_id', '__none__')
+    }
+    
+    const { data: recentPayrolls, error: payrollError } = await payrollQuery
 
     if (payrollError) {
       console.error('❌ Error fetching payrolls:', payrollError)

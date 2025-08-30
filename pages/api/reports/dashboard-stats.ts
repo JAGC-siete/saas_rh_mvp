@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../lib/supabase/server'
+import { createAdminClient } from '../../../lib/supabase/server'
 import { authenticateUser } from '../../../lib/auth-helpers'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -19,7 +19,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const { user, userProfile } = authResult
-    const supabase = createClient(req, res)
+    const supabase = createAdminClient()
 
     console.log('🔐 Usuario autenticado para dashboard stats:', { 
       userId: user.id, 

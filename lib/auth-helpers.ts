@@ -48,6 +48,7 @@ export async function getOrCreateProfile(supabase: any, userId: string): Promise
         .from('user_profiles')
         .insert({
           id: userId,
+          company_id: '00000000-0000-0000-0000-000000000001', // Paragon Honduras por defecto
           role: 'super_admin',
           is_active: true,
           permissions: {
