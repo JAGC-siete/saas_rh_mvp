@@ -162,7 +162,10 @@ export const usePayrollState = () => {
 
   // Authorize action
   const authorizeRun = useCallback(async () => {
+    console.log('🔍 Authorize attempt:', { runId: state.runId, status: state.status })
+    
     if (!state.runId) {
+      console.error('❌ No runId available for authorization')
       throw new Error('No hay una corrida de nómina activa')
     }
 
@@ -171,6 +174,7 @@ export const usePayrollState = () => {
     clearError()
 
     try {
+      console.log('📤 Sending authorize request with:', { run_id: state.runId })
       const response = await payrollApi.authorize({ run_id: state.runId })
       
       setState((prev: PayrollState) => ({

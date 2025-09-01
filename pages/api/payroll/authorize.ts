@@ -38,8 +38,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { run_id } = req.body || {}
     
+    // Debug logging
+    console.log('Authorize request received:', {
+      hasBody: !!req.body,
+      bodyKeys: req.body ? Object.keys(req.body) : [],
+      run_id,
+      run_id_type: typeof run_id
+    })
+    
     // Validaciones
     if (!run_id) {
+      console.log('Missing run_id in authorize request')
       return res.status(400).json({ error: 'run_id es requerido' })
     }
 
@@ -128,7 +137,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Generar PDF consolidado usando la vista efectiva
     // TODO: Implementar generación de PDF usando v_payroll_lines_effective
-    const pdfUrl = `/api/payroll/generate-pdf?run_id=${run_id}`
+    const pdfUrl = `/api/payroll/generate-pdf-from-run?run_id=${run_id}`
 
     // Generar vouchers individuales
     const vouchers = lines.map(line => ({
