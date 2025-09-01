@@ -179,8 +179,14 @@ export default function PayrollManagerNew() {
     
     try {
       const response = await payrollApi.generatePDF(payrollState.runId)
-      openInNewTab(response.url)
-      toast.success('PDF Generado', 'El PDF se ha abierto en una nueva pestaña', 4000)
+      // Trigger direct download instead of opening in new tab
+      const link = document.createElement('a')
+      link.href = response.url
+      link.download = `planilla_${new Date().toISOString().slice(0, 7)}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      toast.success('PDF Generado', 'El PDF se ha descargado correctamente', 4000)
     } catch (error: any) {
       toast.error('Error Generando PDF', 'No se pudo generar el PDF', 6000)
     }

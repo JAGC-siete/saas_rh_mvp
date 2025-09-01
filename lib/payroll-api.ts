@@ -73,9 +73,12 @@ export const payrollApi = {
       body: JSON.stringify(body)
     }),
 
-  // Generate PDF
-  generatePDF: (runId: string): Promise<{ url: string }> =>
-    api<{ url: string }>(`/api/payroll/generate-pdf?run_id=${runId}`),
+  // Generate PDF from run
+  generatePDF: (runId: string): Promise<{ url: string }> => {
+    // Return the URL directly for download
+    const url = `/api/payroll/generate-pdf-from-run?run_id=${runId}`
+    return Promise.resolve({ url })
+  },
 
   // Generate voucher
   generateVoucher: (runLineId: string): Promise<{ url: string }> =>

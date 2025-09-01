@@ -444,12 +444,19 @@ export default function PayrollManager() {
   const generatePDF = useCallback(async () => {
     if (!payrollState.runId) {
       setError('No hay una corrida de nómina activa')
-        return
-      }
+      return
+    }
 
     try {
       const response = await payrollApi.generatePDF(payrollState.runId)
-      openInNewTab(response.url)
+      // Trigger direct download instead of opening in new tab
+      const link = document.createElement('a')
+      link.href = response.url
+      link.download = `planilla_${new Date().toISOString().slice(0, 7)}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      setError(null) // Clear any previous errors
     } catch (error: any) {
       setError('Error generando PDF')
       console.error('Error generando PDF:', error)
