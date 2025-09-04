@@ -6,6 +6,7 @@ import KpiCards from '../../../components/attendance/KpiCards'
 import AbsenceTable from '../../../components/attendance/AbsenceTable'
 import { Card } from '../../../components/ui/card'
 import { useCompanyContext } from '../../../lib/useCompanyContext'
+import { formatTimeDisplay } from '../../../lib/timezone'
 import PunctualityTable from '../../../components/attendance/PunctualityTable'
 import EmployeeDrawer from '../../../components/attendance/EmployeeDrawer'
 import ExportButton from '../../../components/attendance/ExportButton'
@@ -21,7 +22,7 @@ export default function AttendanceDashboardApp() {
   const [late, setLate] = useState<any[]>([])
   const [drawer, setDrawer] = useState<{open:boolean; name:string; events:any[]}>({open:false,name:'',events:[]})
   const { companyId } = useCompanyContext()
-  const [trends, setTrends] = useState<{ date: string; present: number; absent: number; late: number }[]>([])
+  const [trends, setTrends] = useState<{ date: string; present: number; absent: number; late: number; checkInTimes: string[] }[]>([])
 
   useEffect(() => {
     const load = async () => {
@@ -180,12 +181,23 @@ export default function AttendanceDashboardApp() {
             </div>
             {trends.length > 0 ? (
               <div className="space-y-2">
+                {/* Encabezados de la tabla */}
+                <div className="grid grid-cols-8 gap-2 text-sm py-2 border-b border-gray-600 font-semibold text-gray-300">
+                  <div>Fecha</div>
+                  <div>Presentes</div>
+                  <div>Ausentes</div>
+                  <div>Tarde</div>
+                  <div>Total</div>
+                  <div>Asistencia</div>
+                  <div>Puntualidad</div>
+                  <div>Horas de Entrada</div>
+                </div>
                 {trends.map((t) => {
                   const total = t.present + t.late + t.absent
                   const attendanceRate = total > 0 ? ((t.present + t.late) / total) * 100 : 0
                   const punctualityRate = total > 0 ? (t.present / total) * 100 : 0
                   return (
-                    <div key={t.date} className="grid grid-cols-7 gap-2 text-sm py-2 border-b border-gray-700">
+                    <div key={t.date} className="grid grid-cols-8 gap-2 text-sm py-2 border-b border-gray-700">
                       <div className="text-gray-300">{new Date(t.date).toLocaleDateString('es-HN')}</div>
                       <div className="text-emerald-400 font-medium">{t.present}</div>
                       <div className="text-red-400 font-medium">{t.absent}</div>
@@ -193,6 +205,17 @@ export default function AttendanceDashboardApp() {
                       <div className="font-medium text-white">{total}</div>
                       <div className="font-medium text-gray-200">{attendanceRate.toFixed(1)}%</div>
                       <div className="font-medium text-gray-200">{punctualityRate.toFixed(1)}%</div>
+                      <div className="text-blue-400 font-medium">
+                        {t.checkInTimes && t.checkInTimes.length > 0 ? (
+                          t.checkInTimes.map((time, idx) => (
+                            <div key={idx} className="text-xs">
+                              {formatTimeDisplay(time)}
+                            </div>
+                          ))
+                        ) : (
+                          <span className="text-gray-500">Sin registro</span>
+                        )}
+                      </div>
                     </div>
                   )
                 })}
