@@ -81,9 +81,41 @@ export default function AttendanceDashboardApp() {
   }
 
   const handleExport = async (format: string) => {
-    // Agregar employee_id al export
-    const exportUrl = `/api/attendance/export?format=${format}&preset=${preset}${selectedEmployeeId ? `&employee_id=${selectedEmployeeId}` : ''}`
-    await fetch(exportUrl)
+    try {
+      // Construir URL de exportación con parámetros
+      const exportUrl = `/api/attendance/export?format=${format}&preset=${preset}${selectedEmployeeId ? `&employee_id=${selectedEmployeeId}` : ''}`
+      
+      // Realizar petición
+      const response = await fetch(exportUrl)
+      
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`)
+      }
+      
+      // Obtener el contenido del archivo
+      const blob = await response.blob()
+      
+      // Determinar el nombre del archivo basado en preset y empleado
+      const employeePart = selectedEmployeeId ? '_empleado' : ''
+      const datePart = new Date().toISOString().split('T')[0]
+      const fileName = `asistencia_${preset}${employeePart}_${datePart}.${format}`
+      
+      // Crear enlace de descarga
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = fileName
+      document.body.appendChild(link)
+      link.click()
+      
+      // Limpiar
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+      
+    } catch (error) {
+      console.error('Error al exportar:', error)
+      alert('Error al exportar datos. Por favor intente nuevamente.')
+    }
   }
 
   const handleEmployeeClick = async (id: string, name: string) => {
