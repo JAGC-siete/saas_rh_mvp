@@ -122,10 +122,10 @@ async function getAttendanceTrends(supabase: any, userProfile: any, startDate: s
     }
     
     // Agregar hora de entrada con nombre del empleado si existe
-    if (record.check_in && record.employees) {
+    if (record.check_in) {
       trend.checkInTimes.push({
         time: record.check_in,
-        employee: record.employees.name || record.employees.employee_code || 'Empleado'
+        employee: record.employees?.name || record.employees?.employee_code || 'Empleado'
       })
     }
   })
