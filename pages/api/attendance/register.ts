@@ -325,7 +325,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           date: nowLocal.date, // Corregido: usar 'date' no 'local_date'
           check_in: nowUtc,
           expected_check_in: adjustedExpectedIn,
-          status: rule === 'late' || rule === 'oor' ? 'late_in' : 'present',
+          status: rule === 'early' ? 'early' : (rule === 'late' || rule === 'oor' ? 'late_in' : 'present'),
           rule_applied_in: mapRule(rule),
           late_minutes: lateMinutes,
           tz: 'America/Tegucigalpa',

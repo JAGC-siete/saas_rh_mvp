@@ -191,26 +191,33 @@ export function decideCheckInRule(nowLocal: any, expectedIn: string, rules: { gr
   const diffMinutes = currentMinutes - expectedMinutes;
   
   let rule: 'early' | 'normal' | 'late' | 'oor';
-  let lateMinutes = 0;
+  let lateMinutes = diffMinutes; // ✅ CORREGIDO: Siempre usar diffMinutes (puede ser negativo)
   let msgKey: string;
   let needJust = false;
   
-  if (diffMinutes < -rules.grace) {
+  // Nueva lógica basada en los requerimientos del usuario
+  if (diffMinutes < -5) {  // Más de 5 min temprano
     rule = 'early';
     msgKey = 'early';
-  } else if (diffMinutes <= rules.grace) {
+    // lateMinutes será negativo (ej: -10 para 10 min temprano)
+  } else if (diffMinutes >= -2 && diffMinutes <= 5) {  // Entre 2 min antes y 5 min después
     rule = 'normal';
     msgKey = 'on_time';
-  } else if (diffMinutes <= rules.late_to_inclusive) {
+    // lateMinutes puede ser negativo, 0 o positivo pequeño
+  } else if (diffMinutes > 5 && diffMinutes <= rules.late_to_inclusive) {  // Entre 5 y 20 min tarde
     rule = 'late';
-    lateMinutes = diffMinutes;
     msgKey = 'late';
     needJust = true;
-  } else {
+    // lateMinutes será positivo (ej: 10 para 10 min tarde)
+  } else if (diffMinutes > rules.late_to_inclusive) {  // Más de 20 min tarde
     rule = 'oor';
-    lateMinutes = diffMinutes;
     msgKey = 'oor';
     needJust = true;
+    // lateMinutes será positivo grande (ej: 90 para 1.5 horas tarde)
+  } else {
+    // Fallback para casos edge
+    rule = 'normal';
+    msgKey = 'on_time';
   }
   
   return { rule, lateMinutes, msgKey, needJust };
