@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../lib/supabase/server'
 import { authenticateUser } from '../../../lib/auth-helpers'
+import { getHondurasTimestamp, nowInHonduras } from '../../../lib/timezone'
 
 // CONSTANTES CORRECTAS HONDURAS 2025 (VERIFICACIÓN CRUZADA)
 const HONDURAS_2025_CONSTANTS = {
@@ -135,7 +136,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Validar que no sea un período futuro
     const [year, month] = periodo.split('-').map((n: any) => Number(n))
-    const currentDate = new Date()
+    const currentDate = nowInHonduras()
     const periodDate = new Date(year, month - 1, 1)
     
     if (periodDate > currentDate) {
@@ -319,7 +320,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       notes_on_ingress: item.notes_on_ingress,
       notes_on_deductions: item.notes_on_deductions,
       generated_by: userProfile?.id || 'system',
-      generated_at: new Date().toISOString()
+      generated_at: getHondurasTimestamp()
     }))
 
     const { error: saveError } = await supabase

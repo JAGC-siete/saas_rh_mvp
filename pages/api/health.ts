@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
+import { getHondurasTimestamp } from '../../lib/timezone'
 
 export default async function handler(
   req: NextApiRequest,
@@ -12,7 +13,7 @@ export default async function handler(
     // Basic health check - can be extended with database connectivity, etc.
     const healthStatus = {
       status: 'healthy',
-      timestamp: new Date().toISOString(),
+      timestamp: getHondurasTimestamp(),
       uptime: process.uptime(),
       environment: process.env.NODE_ENV,
       version: process.env.npm_package_version || 'unknown'
@@ -23,7 +24,7 @@ export default async function handler(
     console.error('Health check failed:', error)
     res.status(503).json({ 
       status: 'unhealthy',
-      timestamp: new Date().toISOString(),
+      timestamp: getHondurasTimestamp(),
       error: 'Service unavailable'
     })
   }

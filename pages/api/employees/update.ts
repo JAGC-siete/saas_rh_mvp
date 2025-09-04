@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient } from '../../../lib/supabase/server'
 import { authenticateUser } from '../../../lib/auth-utils'
+import { getHondurasTimestamp } from '../../../lib/timezone'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'PUT' && req.method !== 'PATCH') {
@@ -131,7 +132,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ...(emergency_contact_phone !== undefined ? { emergency_contact_phone: emergency_contact_phone || null } : {}),
       ...(address !== undefined ? { address: address || null } : {}),
       ...(metadata !== undefined ? { metadata: metadata || null } : {}),
-      updated_at: new Date().toISOString()
+      updated_at: getHondurasTimestamp()
     }
 
     console.log('🔧 Final update data:', updateData)

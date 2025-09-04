@@ -1,4 +1,7 @@
 import { createAdminClient } from './supabase/server'
+import { nowInHonduras } from './timezone'
+
+
 
 export interface EmailProvider {
   type: 'resend' | 'sendgrid' | 'smtp'
@@ -45,7 +48,7 @@ export class NotificationProviderManager {
   }
 
   async getConfigForCompany(companyId: string): Promise<NotificationConfig | null> {
-    const now = Date.now()
+    const now = nowInHonduras().getTime()
     const cached = this.configCache.get(companyId)
     const expiry = this.cacheExpiry.get(companyId) || 0
 

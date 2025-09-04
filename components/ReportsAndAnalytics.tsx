@@ -3,6 +3,7 @@ import { useSession } from '@supabase/auth-helpers-react'
 import { useCompanyContext } from '../lib/useCompanyContext'
 import { Button } from './ui/button'
 import { Card } from './ui/card'
+import { nowInHonduras } from '../lib/timezone'
 
 // Iconos simples como placeholders
 const UsersIcon = ({ className }: { className?: string }) => (
@@ -73,13 +74,13 @@ export default function ReportsAndAnalytics() {
   const [error, setError] = useState<string | null>(null)
   
   const [dateRange, setDateRange] = useState({
-    startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-    endDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0]
+    startDate: new Date(nowInHonduras().getFullYear(), nowInHonduras().getMonth(), 1).toISOString().split('T')[0],
+    endDate: new Date(nowInHonduras().getFullYear(), nowInHonduras().getMonth() + 1, 0).toISOString().split('T')[0]
   })
 
   // Obtener rango del mes actual
   const { monthStart, monthEnd } = useMemo(() => {
-    const now = new Date()
+    const now = nowInHonduras()
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
     const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
     return { monthStart, monthEnd }

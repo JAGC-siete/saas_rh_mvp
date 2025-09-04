@@ -1,5 +1,5 @@
 import { createAdminClient } from '../../lib/supabase/server'
-import { getTodayInHonduras, getHondurasTime } from '../../lib/timezone'
+import { getTodayInHonduras, getHondurasTime, nowInHonduras, getHondurasTimestamp } from '../../lib/timezone'
 
 // Gamification helper functions
 async function calculateAttendancePoints(employeeId: string, lateMinutes: number, isEarly: boolean): Promise<number> {
@@ -64,7 +64,7 @@ async function checkForAchievements(employeeId: string, companyId: string): Prom
   const achievements: any[] = []
   
   // Check for "Perfect Week" achievement (5 days punctual this week)
-  const startOfWeek = new Date()
+  const startOfWeek = nowInHonduras()
   startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay())
   startOfWeek.setHours(0, 0, 0, 0)
   
@@ -240,7 +240,7 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
       }
 
       // Get weekly pattern for behavioral analysis
-      const startOfWeek = new Date()
+      const startOfWeek = nowInHonduras()
       startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay())
       startOfWeek.setHours(0, 0, 0, 0)
       const endOfWeek = new Date(startOfWeek)

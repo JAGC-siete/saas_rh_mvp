@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import formidable from 'formidable'
 import { authenticateUser } from '../../../lib/auth-helpers'
 import { logger } from '../../../lib/logger'
+import { nowInHonduras } from '../../../lib/timezone'
 
 export const config = {
   api: {
@@ -164,7 +165,7 @@ async function handleCreateLeaveRequest(req: NextApiRequest, res: NextApiRespons
 
     if (attachment) {
       const fileExtension = attachment.originalFilename?.toLowerCase().split('.').pop()
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExtension}`
+      const fileName = `${nowInHonduras().getTime()}-${Math.random().toString(36).substring(7)}.${fileExtension}`
 
       // Move file to uploads directory
       const fs = require('fs')

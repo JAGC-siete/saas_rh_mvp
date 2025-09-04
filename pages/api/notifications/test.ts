@@ -3,6 +3,7 @@ import { createClient } from '../../../lib/supabase/server'
 import { authenticateUser } from '../../../lib/auth-helpers'
 import { notificationManager } from '../../../lib/notification-providers'
 import { emailService } from '../../../lib/email-service'
+import { getHondurasTimestamp, formatDateForHonduras, nowInHonduras } from '../../../lib/timezone'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -58,7 +59,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const testResults: any = {
       company_id: userProfile.company_id,
       test_type: testType,
-      timestamp: new Date().toISOString(),
+      timestamp: getHondurasTimestamp(),
       results: {}
     }
 
@@ -70,8 +71,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
 Este es un mensaje de prueba para verificar que el sistema de notificaciones por email esté funcionando correctamente.
 
-Fecha: ${new Date().toLocaleDateString('es-HN')}
-Hora: ${new Date().toLocaleTimeString('es-HN')}
+Fecha: ${formatDateForHonduras(nowInHonduras())}
+Hora: ${nowInHonduras().toLocaleTimeString('es-HN')}
 Usuario: ${user.email}
 Empresa: ${userProfile.company_id}
 

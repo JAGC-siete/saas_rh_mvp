@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient } from '../../../lib/supabase/server'
+import { nowInHonduras } from '../../../lib/timezone'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
@@ -7,7 +8,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { months = '6' } = req.query
     const supabase = createAdminClient()
     const m = Math.max(1, Math.min(24, parseInt(String(months), 10) || 6))
-    const since = new Date(); since.setMonth(since.getMonth() - m)
+    const since = nowInHonduras(); since.setMonth(since.getMonth() - m)
     const sinceStr = since.toISOString().slice(0,7) // YYYY-MM
 
     const { data, error } = await supabase

@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient } from '../../../lib/supabase/server'
 import { authenticateUser } from '../../../lib/auth-utils'
+import { getHondurasTimestamp } from '../../../lib/timezone'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -115,7 +116,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
 
     // Process attendance data for today
-    const today = new Date().toISOString().split('T')[0]
+    const today = getHondurasTimestamp().split('T')[0]
     const processedEmployees = employees?.map((emp: any) => {
       const todayAttendance = emp.attendance_records?.find((att: any) => 
         att.check_in && new Date(att.check_in).toISOString().split('T')[0] === today

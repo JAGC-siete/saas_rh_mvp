@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Icon } from './Icon'
+import { getHondurasTimestamp, nowInHonduras } from '../lib/timezone'
 
 interface Employee {
   id: string
@@ -41,9 +42,9 @@ interface VoucherGeneratorProps {
 
 export default function VoucherGenerator({ employees, onVoucherGenerated }: VoucherGeneratorProps) {
   const [selectedEmployee, setSelectedEmployee] = useState<string>('')
-  const [periodo, setPeriodo] = useState(new Date().toISOString().slice(0, 7))
+  const [periodo, setPeriodo] = useState(getHondurasTimestamp().slice(0, 7))
   const [quincena, setQuincena] = useState<number>(() => {
-    const today = new Date()
+    const today = nowInHonduras()
     const day = today.getDate()
     return day <= 15 ? 1 : 2
   })
@@ -202,9 +203,9 @@ export default function VoucherGenerator({ employees, onVoucherGenerated }: Vouc
   // Resetear formulario
   const resetForm = useCallback(() => {
     setSelectedEmployee('')
-    setPeriodo(new Date().toISOString().slice(0, 7))
+    setPeriodo(getHondurasTimestamp().slice(0, 7))
     setQuincena(() => {
-      const today = new Date()
+      const today = nowInHonduras()
       const day = today.getDate()
       return day <= 15 ? 1 : 2
     })

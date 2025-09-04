@@ -1,10 +1,11 @@
 import React from "react";
 import ImageCarousel from "./ImageCarousel";
+import { nowInHonduras } from '../lib/timezone'
 
 export default function LandingHero() {
   // Función simple para obtener la próxima quincena
   const getNextPayday = () => {
-    const now = new Date();
+    const now = nowInHonduras();
     const y = now.getFullYear();
     const m = now.getMonth();
     const day = now.getDate();

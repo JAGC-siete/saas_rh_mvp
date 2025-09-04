@@ -1,4 +1,7 @@
 import React from 'react'
+import { nowInHonduras } from './timezone'
+
+
 
 // Simple Toast Notification System
 // Provides user feedback for payroll actions
@@ -35,7 +38,7 @@ class ToastManager {
       title,
       message,
       duration,
-      timestamp: new Date()
+      timestamp: nowInHonduras()
     }
 
     this.toasts.push(toast)

@@ -7,6 +7,7 @@ import { usePayrollState } from '../lib/hooks/usePayrollState'
 import { PayrollLineEditor } from './PayrollLineEditor'
 import { payrollApi, openInNewTab } from '../lib/payroll-api'
 import { useToast } from '../lib/toast'
+import { getHondurasTimestamp, nowInHonduras } from '../lib/timezone'
 
 export default function PayrollManagerNew() {
   const payrollState = usePayrollState()
@@ -182,7 +183,7 @@ export default function PayrollManagerNew() {
       // Trigger direct download instead of opening in new tab
       const link = document.createElement('a')
       link.href = response.url
-      link.download = `planilla_${new Date().toISOString().slice(0, 7)}.pdf`
+      link.download = `planilla_${getHondurasTimestamp().slice(0, 7)}.pdf`
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
@@ -520,7 +521,7 @@ export default function PayrollManagerNew() {
                   <SelectValue placeholder="Seleccionar año" />
                 </SelectTrigger>
                 <SelectContent>
-                  {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
+                  {Array.from({ length: 5 }, (_, i) => nowInHonduras().getFullYear() - 2 + i).map(year => (
                     <SelectItem key={year} value={year.toString()}>
                       {year}
                     </SelectItem>

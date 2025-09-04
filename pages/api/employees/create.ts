@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient } from '../../../lib/supabase/server'
 import { authenticateUser } from '../../../lib/auth-utils'
+import { getHondurasTimestamp } from '../../../lib/timezone'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -87,8 +88,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       emergency_contact_phone: emergency_contact_phone || null,
       address: address || null,
       metadata: metadata || null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      created_at: getHondurasTimestamp(),
+      updated_at: getHondurasTimestamp()
     }
 
     const { data: inserted, error: insertError } = await supabase

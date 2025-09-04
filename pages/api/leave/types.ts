@@ -2,9 +2,10 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { authenticateUser } from '../../../lib/auth-utils'
 import { createClient } from '../../../lib/supabase/server'
 import { logger } from '../../../lib/logger'
+import { nowInHonduras } from '../../../lib/timezone'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const startTime = Date.now()
+  const startTime = nowInHonduras().getTime()
   
   try {
     // Log request
@@ -48,7 +49,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
   } catch (error) {
-    const duration = Date.now() - startTime
+    const duration = nowInHonduras().getTime() - startTime
     logger.error('Leave types API error', error, {
       method: req.method,
       path: req.url,

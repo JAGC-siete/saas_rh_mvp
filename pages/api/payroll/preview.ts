@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../lib/supabase/server'
 import { authenticateUser } from '../../../lib/auth-helpers'
+import { nowInHonduras } from '../../../lib/timezone'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -57,7 +58,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Validar que no sea un período futuro
-    const currentDate = new Date()
+    const currentDate = nowInHonduras()
     const periodDate = new Date(year, month - 1, 1)
     
     if (periodDate > currentDate) {

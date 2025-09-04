@@ -12,6 +12,7 @@ import { usePayrollState } from '../lib/hooks/usePayrollState'
 import { PayrollLineEditor } from './PayrollLineEditor'
 import { payrollApi, openInNewTab } from '../lib/payroll-api'
 import { PayrollLine } from '../types/payroll'
+import { getHondurasTimestamp, nowInHonduras } from '../lib/timezone'
 
 // MODE: por días (cálculo basado en días trabajados)
 interface PayrollRecord {
@@ -128,9 +129,9 @@ const INITIAL_PAYROLL_METRICS: PayrollMetrics = {
 }
 
 const INITIAL_GENERATE_FORM = {
-  periodo: new Date().toISOString().slice(0, 7),
+  periodo: getHondurasTimestamp().slice(0, 7),
   quincena: (() => {
-    const today = new Date()
+    const today = nowInHonduras()
     const day = today.getDate()
     return day <= 15 ? 1 : 2
   })(),
@@ -188,7 +189,7 @@ export default function PayrollManager() {
   // Memoized values
   const currentPeriodRecords = useMemo(() => 
     payrollRecords.filter(record => 
-      record.period_start.startsWith(selectedPeriod || new Date().toISOString().slice(0, 7))
+      record.period_start.startsWith(selectedPeriod || getHondurasTimestamp().slice(0, 7))
     ),
     [payrollRecords, selectedPeriod]
   )
@@ -255,7 +256,7 @@ export default function PayrollManager() {
   // Add last day of selected month for range chips - FIXED PERIODS
   const lastDayOfSelectedMonth = useMemo(() => {
     // Calcular el último día real del mes seleccionado
-    const [y, m] = (selectedPeriod || new Date().toISOString().slice(0, 7)).split('-').map(Number)
+    const [y, m] = (selectedPeriod || getHondurasTimestamp().slice(0, 7)).split('-').map(Number)
     return new Date(y, m, 0).getDate() // 28–31
   }, [selectedPeriod])
 
@@ -452,7 +453,7 @@ export default function PayrollManager() {
       // Trigger direct download instead of opening in new tab
       const link = document.createElement('a')
       link.href = response.url
-      link.download = `planilla_${new Date().toISOString().slice(0, 7)}.pdf`
+      link.download = `planilla_${getHondurasTimestamp().slice(0, 7)}.pdf`
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
@@ -654,7 +655,7 @@ export default function PayrollManager() {
   // Efecto para establecer periodo por defecto
   useEffect(() => {
     if (!selectedPeriod) {
-      const now = new Date()
+      const now = nowInHonduras()
       const defaultPeriod = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`
       setSelectedPeriod(defaultPeriod)
     }
@@ -861,7 +862,7 @@ export default function PayrollManager() {
                 className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <option value="">Seleccionar año</option>
-                {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
+                {Array.from({ length: 5 }, (_, i) => nowInHonduras().getFullYear() - 2 + i).map(year => (
                   <option key={year} value={year.toString()}>
                     {year}
                   </option>
@@ -1086,7 +1087,7 @@ export default function PayrollManager() {
                     className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <option value="">Todos los años</option>
-                    {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
+                    {Array.from({ length: 5 }, (_, i) => nowInHonduras().getFullYear() - 2 + i).map(year => (
                       <option key={year} value={year.toString()}>
                         {year}
                       </option>

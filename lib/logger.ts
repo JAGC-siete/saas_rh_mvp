@@ -1,3 +1,6 @@
+import { getHondurasTimestamp, nowInHonduras } from './timezone'
+
+
 /**
  * Simple structured logger for the application
  * Follows 12-factor app principles: logs as event streams
@@ -27,7 +30,7 @@ class SimpleLogger {
   }
 
   private formatLog(level: LogLevel, message: string, context?: LogContext) {
-    const timestamp = new Date().toISOString();
+    const timestamp = getHondurasTimestamp();
     const logEntry = {
       timestamp,
       level,
@@ -167,10 +170,10 @@ export const logger = new SimpleLogger();
 
 // Winston compatibility exports
 export const requestLogger = (req: any, res: any, next: any) => {
-  const start = Date.now();
+  const start = nowInHonduras().getTime();
   
   res.on('finish', () => {
-    const duration = Date.now() - start;
+    const duration = nowInHonduras().getTime() - start;
     const logData = {
       method: req.method,
       url: req.url,

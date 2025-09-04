@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { nowInHonduras } from '../lib/timezone'
 
 export default function CountdownTimer() {
   // Countdown to next quincena (15 o último día del mes)
-  const [now, setNow] = useState(new Date());
+  const [now, setNow] = useState(nowInHonduras());
 
   useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 1000); // update cada segundo
+    const t = setInterval(() => setNow(nowInHonduras()), 1000); // update cada segundo
     return () => clearInterval(t);
   }, []);
 

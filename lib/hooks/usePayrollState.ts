@@ -8,12 +8,15 @@ import {
   PayrollFilters
 } from '../../types/payroll'
 import { payrollApi, mapPayrollError } from '../payroll-api'
+import { nowInHonduras } from '../timezone'
+
+
 
 const STORAGE_KEY = 'payroll_filters'
 
 // Default filters
 const getDefaultFilters = (): PayrollFilters => {
-  const now = new Date()
+  const now = nowInHonduras()
   return {
     year: now.getFullYear(),
     month: now.getMonth() + 1,

@@ -1,3 +1,6 @@
+import { getHondurasTimestamp } from './timezone'
+
+
 /**
  * Client-side logger for browser environments
  * Lighter version without server-specific features
@@ -33,7 +36,7 @@ class ClientLogger {
     }
 
     // In development, add more formatting
-    const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+    const timestamp = getHondurasTimestamp().split('T')[1].split('.')[0];
     const contextStr = context ? ` ${JSON.stringify(context, null, 2)}` : '';
     return `[${timestamp}] ${level.toUpperCase()}: ${message}${contextStr}`;
   }

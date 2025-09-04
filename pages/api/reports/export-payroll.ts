@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../lib/supabase/server'
 import { authenticateUser } from '../../../lib/auth-helpers'
+import { formatDateForHonduras, nowInHonduras, formatDateTimeForHonduras } from '../../../lib/timezone'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -208,7 +209,7 @@ function generatePayrollPDFReport(res: NextApiResponse, reportData: any, reportT
     doc.fontSize(10).text('INFORMACIÓN DEL REPORTE:', 30, 100)
     doc.fontSize(9).text(`Tipo: Reporte de Nómina - ${reportType}`, 30, 115)
     doc.fontSize(9).text(`Período: ${periodo || 'General'}`, 30, 130)
-    doc.fontSize(9).text(`Fecha de generación: ${new Date().toLocaleDateString('es-HN')}`, 30, 145)
+    doc.fontSize(9).text(`Fecha de generación: ${formatDateForHonduras(nowInHonduras())}`, 30, 145)
     
     // Resumen ejecutivo
     doc.rect(30, 170, 535, 120).stroke()
@@ -331,7 +332,7 @@ function generatePayrollPDFReport(res: NextApiResponse, reportData: any, reportT
     
     // Pie de página
     doc.fontSize(8).text('Documento generado automáticamente - Sistema de Recursos Humanos', 30, 800, { align: 'center', width: 535 })
-    doc.fontSize(8).text(`Fecha de generación: ${new Date().toLocaleString('es-HN')}`, 30, 815, { align: 'center', width: 535 })
+    doc.fontSize(8).text(`Fecha de generación: ${formatDateTimeForHonduras(nowInHonduras())}`, 30, 815, { align: 'center', width: 535 })
 
     doc.end()
   } catch (error) {
@@ -348,7 +349,7 @@ function generatePayrollCSVReport(res: NextApiResponse, reportData: any, reportT
     csvContent += 'REPORTE DE NÓMINA\n'
     csvContent += `Tipo: ${reportType}\n`
     csvContent += `Período: ${periodo || 'General'}\n`
-    csvContent += `Fecha de generación: ${new Date().toLocaleDateString('es-HN')}\n\n`
+    csvContent += `Fecha de generación: ${formatDateForHonduras(nowInHonduras())}\n\n`
     
     // Resumen ejecutivo
     csvContent += 'RESUMEN EJECUTIVO\n'

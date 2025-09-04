@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../lib/supabase/server'
 import { authenticateUser } from '../../../lib/auth-helpers'
 import { generateEmployeeReceiptPDF } from '../../../lib/payroll/receipt'
+import { getHondurasTimestamp } from '../../../lib/timezone'
 
 // CONSTANTES CORRECTAS HONDURAS 2025
 const HONDURAS_2025_CONSTANTS = {
@@ -278,8 +279,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           notes_on_ingress: voucherPreview.note || '',
           notes_on_deductions: `Voucher individual generado con ajustes: Bono +${adj_bonus}, Descuento -${adj_discount}`,
           generated_by: userProfile.id,
-          generated_at: new Date().toISOString(),
-          approved_at: new Date().toISOString(),
+          generated_at: getHondurasTimestamp(),
+          approved_at: getHondurasTimestamp(),
           approved_by: userProfile.id
         }, { 
           onConflict: 'employee_id,period_start,period_end',

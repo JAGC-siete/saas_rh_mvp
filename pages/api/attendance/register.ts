@@ -2,16 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient } from '../../../lib/supabase/server'
 import { logger } from '../../../lib/logger'
 import { 
-  toHN,
-  assertInsideHardWindow,
-  overrideIfSaturdayHalfDay,
-  decideCheckInRule,
-  decideCheckOutRule,
-  mapRule,
-  distanceMeters,
-  getCheckOutWindow,
-  isDayOpenForPublic
-} from '../../../lib/timezone'
+   toHN, assertInsideHardWindow, overrideIfSaturdayHalfDay, decideCheckInRule, decideCheckOutRule, mapRule, distanceMeters, getCheckOutWindow, isDayOpenForPublic, nowInHonduras, getHondurasTimestamp } from '../../../lib/timezone'
 import { CALL_CENTER_CONFIG, CALL_CENTER_MESSAGES, generateContextualMessage } from '../../../lib/call-center-config'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -164,7 +155,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // PASO 6: Obtener tiempo actual y convertir a Honduras
-    const nowUtc = new Date()
+    const nowUtc = nowInHonduras()
     const nowLocal = toHN(nowUtc)
     
     console.log('🕐 Tiempo actual:', { 
@@ -608,7 +599,7 @@ async function applyPointsAndStreaks(employeeId: string, companyId: string, rule
           weekly_points: score.weekly_points + pointsToAdd,
           monthly_points: score.monthly_points + pointsToAdd,
           early_arrival_count: score.early_arrival_count + (rule === 'early' ? 1 : 0),
-          updated_at: new Date().toISOString()
+          updated_at: getHondurasTimestamp()
         })
         .eq('id', score.id)
 

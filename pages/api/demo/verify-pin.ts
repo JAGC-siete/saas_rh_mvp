@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { logger } from '../../../lib/logger'
+import { nowInHonduras } from '../../../lib/timezone'
 
 interface PinAttempt {
   count: number
@@ -31,7 +32,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     // Check if client is blocked
     const currentAttempt = attempts.get(attemptKey) || { count: 0 }
-    const now = Date.now()
+    const now = nowInHonduras().getTime()
     
     if (currentAttempt.blockedUntil && now < currentAttempt.blockedUntil) {
       const remainingMinutes = Math.ceil((currentAttempt.blockedUntil - now) / (1000 * 60))
@@ -60,7 +61,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       logger.info('Demo PIN verified successfully', { clientIP })
       
       // Set HttpOnly cookie
-      const cookieExpiry = new Date(Date.now() + cookieTTLMinutes * 60 * 1000)
+      const cookieExpiry = new Date(nowInHonduras().getTime() + cookieTTLMinutes * 60 * 1000)
       res.setHeader('Set-Cookie', `demo_ok=1; HttpOnly; Path=/; Expires=${cookieExpiry.toUTCString()}; SameSite=Strict`)
       
       return res.status(200).json({ 

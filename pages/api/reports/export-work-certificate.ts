@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../lib/supabase/server'
 import { authenticateUser } from '../../../lib/auth-helpers'
+import { getHondurasTimestamp, formatDateForHonduras, nowInHonduras } from '../../../lib/timezone'
 
 interface WorkCertificateData {
   employee: {
@@ -143,7 +144,7 @@ async function generateWorkCertificateData(
       },
       certificateInfo: {
         certificateType,
-        requestDate: new Date().toISOString().split('T')[0],
+        requestDate: getHondurasTimestamp().split('T')[0],
         purpose,
         additionalInfo
       }
@@ -172,7 +173,7 @@ function generateWorkCertificatePDF(res: NextApiResponse, certificateData: WorkC
 
     // Configurar headers de respuesta
     res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', `attachment; filename=constancia_laboral_${certificateData.employee.employee_code}_${new Date().toISOString().split('T')[0]}.pdf`)
+    res.setHeader('Content-Disposition', `attachment; filename=constancia_laboral_${certificateData.employee.employee_code}_${getHondurasTimestamp().split('T')[0]}.pdf`)
 
     // Pipe el documento a la respuesta
     doc.pipe(res)
@@ -273,7 +274,7 @@ function generateWorkCertificatePDF(res: NextApiResponse, certificateData: WorkC
     doc.moveDown(3)
 
     // Información de emisión
-    const currentDate = new Date()
+    const currentDate = nowInHonduras()
     const dayInWords = numberToWords(currentDate.getDate())
     const monthInWords = currentDate.toLocaleDateString('es-ES', { month: 'long' }).toUpperCase()
     const yearInWords = numberToWords(currentDate.getFullYear())
@@ -349,7 +350,7 @@ function generateWorkCertificateCSV(res: NextApiResponse, certificateData: WorkC
     
     // Información de la empresa
     csvContent += `Empresa,${certificateData.employee.company_name} S. de R.L.\n`
-    csvContent += `Fecha de emisión,${new Date().toLocaleDateString('es-ES')}\n\n`
+    csvContent += `Fecha de emisión,${formatDateForHonduras(nowInHonduras())}\n\n`
     
     // Datos del empleado
     csvContent += 'DATOS DEL EMPLEADO\n'
@@ -393,7 +394,7 @@ function generateWorkCertificateCSV(res: NextApiResponse, certificateData: WorkC
 
     // Configurar headers de respuesta
     res.setHeader('Content-Type', 'text/csv; charset=utf-8')
-    res.setHeader('Content-Disposition', `attachment; filename=constancia_laboral_${certificateData.employee.employee_code}_${new Date().toISOString().split('T')[0]}.csv`)
+    res.setHeader('Content-Disposition', `attachment; filename=constancia_laboral_${certificateData.employee.employee_code}_${getHondurasTimestamp().split('T')[0]}.csv`)
     
     res.send(csvContent)
 

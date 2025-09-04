@@ -6,6 +6,7 @@ import { useAuth } from '../lib/auth'
 import { Employee } from '../lib/types/employee'
 import AddEmployeeForm from './AddEmployeeForm'
 import { PlusIcon, PencilIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline'
+import { getHondurasTimestamp } from '../lib/timezone'
 
 interface Department {
   id: string
@@ -281,7 +282,7 @@ export default function EmployeeManager() {
       setIsSubmitting(true)
       
       // Usar fecha seleccionada o fecha actual
-      const finalTerminationDate = terminationDate || new Date().toISOString().split('T')[0]
+      const finalTerminationDate = terminationDate || getHondurasTimestamp().split('T')[0]
       
       const response = await fetch('/api/employees/update', {
         method: 'PATCH',

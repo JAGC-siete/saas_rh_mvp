@@ -1,5 +1,8 @@
 import { createClient } from './supabase/server'
 import { NextApiRequest, NextApiResponse } from 'next'
+import { getHondurasTimestamp } from './timezone'
+
+
 
 export interface UserProfile {
   id: string
@@ -63,8 +66,8 @@ export async function getOrCreateProfile(supabase: any, userId: string): Promise
             can_view_own_attendance: true,
             can_register_attendance: true
           },
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          created_at: getHondurasTimestamp(),
+          updated_at: getHondurasTimestamp()
         })
         .select()
         .single()

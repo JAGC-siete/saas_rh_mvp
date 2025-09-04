@@ -95,9 +95,9 @@ export default function AttendanceDashboardApp() {
       // Obtener el contenido del archivo
       const blob = await response.blob()
       
-      // Determinar el nombre del archivo basado en preset y empleado
+      // Determinar el nombre del archivo basado en preset y empleado (usando timezone de Honduras)
       const employeePart = selectedEmployeeId ? '_empleado' : ''
-      const datePart = new Date().toISOString().split('T')[0]
+      const datePart = new Date().toLocaleString('sv-SE', { timeZone: 'America/Tegucigalpa' }).split(' ')[0]
       const fileName = `asistencia_${preset}${employeePart}_${datePart}.${format}`
       
       // Crear enlace de descarga

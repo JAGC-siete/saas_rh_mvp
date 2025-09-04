@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient } from '../../../lib/supabase/server'
+import { getHondurasTimestamp } from '../../../lib/timezone'
 
 const TEST_EMPLOYEES = [
   {
@@ -135,7 +136,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           position: employeeData.position,
           base_salary: employeeData.base_salary,
           status: 'active',
-          hire_date: new Date().toISOString().split('T')[0]
+          hire_date: getHondurasTimestamp().split('T')[0]
         })
         .select()
         .single()

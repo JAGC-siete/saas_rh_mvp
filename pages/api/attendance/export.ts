@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient } from '../../../lib/supabase/server'
 import { getDateRange } from '../../../lib/attendance'
+import { nowInHonduras, formatDateForHonduras } from '../../../lib/timezone'
 import ExcelJS from 'exceljs'
 import PDFDocument from 'pdfkit'
 
@@ -26,8 +27,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.error('attendance_export error', error)
     return res.status(500).json({ error: error.message })
   }
-  // Generar nombre de archivo con fecha y preset
-  const datePart = new Date().toISOString().split('T')[0]
+  // Generar nombre de archivo con fecha y preset (usando timezone de Honduras)
+  const datePart = nowInHonduras().toISOString().split('T')[0]
   const employeePart = employeeIdStr ? '_empleado' : ''
   
   if (formatStr === 'csv') {
@@ -118,7 +119,7 @@ async function exportToPDF(data: any[], preset: string, employeePart: string, da
   
   doc.fontSize(12)
   doc.text(`Período: ${presetLabels[preset] || preset}`)
-  doc.text(`Fecha de generación: ${new Date().toLocaleDateString('es-HN')}`)
+  doc.text(`Fecha de generación: ${formatDateForHonduras(nowInHonduras())}`)
   if (employeePart) {
     doc.text('Filtro: Empleado específico')
   }

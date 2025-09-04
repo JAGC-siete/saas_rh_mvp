@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient } from '../../../lib/supabase/server'
-import { getTodayInHonduras } from '../../../lib/timezone'
+import {  getTodayInHonduras, nowInHonduras } from '../../../lib/timezone'
 
 // Horarios por defecto por departamento
 const DEFAULT_SCHEDULES = {
@@ -50,7 +50,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (error || !data) {
         // Si no existe el empleado, crear uno temporal para el onboarding
         const tempEmployee = {
-          id: `temp_${Date.now()}`,
+          id: `temp_${nowInHonduras().getTime()}`,
           name: `Empleado ${last5}`,
           employee_code: `TEMP${last5}`,
           departments: { name: 'General' },

@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../lib/supabase/server'
 import { authenticateUser } from '../../../lib/auth-helpers'
+import { getHondurasTimestamp } from '../../../lib/timezone'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -107,7 +108,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .from('payroll_runs')
       .update({ 
         status: 'authorized',
-        updated_at: new Date().toISOString()
+        updated_at: getHondurasTimestamp()
       })
       .eq('id', run_id)
       .eq('company_uuid', userProfile.company_id)

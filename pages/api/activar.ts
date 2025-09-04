@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient } from '../../lib/supabase/server'
+import { getHondurasTimestamp, nowInHonduras } from '../../lib/timezone'
 
 export const config = {
   api: {
@@ -76,10 +77,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('✅ Validaciones pasadas exitosamente')
 
     // Generar tenant_id único
-    const tenant_id = `tnt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    const tenant_id = `tnt_${nowInHonduras().getTime()}_${Math.random().toString(36).substr(2, 9)}`
     
     // Calcular fecha de expiración del trial (7 días)
-    const trial_expires_at = new Date()
+    const trial_expires_at = nowInHonduras()
     trial_expires_at.setDate(trial_expires_at.getDate() + 7)
 
     // Generar magic link para acceso inmediato
@@ -205,7 +206,7 @@ async function crearEntornoTrial(supabase: any, data: {
           subdomain: 'demo-trial',
           plan_type: 'trial',
           settings: {
-            trial_activated_at: new Date().toISOString(),
+            trial_activated_at: getHondurasTimestamp(),
             trial_employee_limit: 25,
             timezone: 'America/Tegucigalpa'
           },
@@ -416,7 +417,7 @@ async function dispararWebhookActivaciones(data: {
       employees: data.empleados,
       tenant_id: data.tenant_id,
       status: data.status,
-      submitted_at: new Date().toISOString()
+      submitted_at: getHondurasTimestamp()
     }
 
     const response = await fetch(webhookUrl, {

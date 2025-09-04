@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient } from '../../../lib/supabase/server'
+import { nowInHonduras } from '../../../lib/timezone'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -89,7 +90,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       gamification_points: scoresMap.get(emp.id) || 0,
       // Datos simulados para el trial
       attendance_rate: Math.floor(Math.random() * 20) + 80, // 80-100%
-      last_attendance: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      last_attendance: new Date(nowInHonduras().getTime() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       performance_rating: (Math.random() * 2 + 3).toFixed(1), // 3.0-5.0
     }))
 
