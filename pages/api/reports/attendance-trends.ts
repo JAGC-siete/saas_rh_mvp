@@ -115,10 +115,16 @@ async function getAttendanceTrends(supabase: any, userProfile: any, startDate: s
     }
 
     const trend = trendMap.get(date)!
-    if (record.status === 'present') {
-      trend.present++
-    } else if (record.status === 'late') {
-      trend.late++
+    if (record.late_minutes !== null) {
+      if (record.late_minutes < -5) {
+        // Early - count as present
+        trend.present++
+      } else if (record.late_minutes > 5) {
+        trend.late++
+      } else {
+        // On time - count as present
+        trend.present++
+      }
     }
     
     // Agregar hora de entrada con nombre del empleado si existe

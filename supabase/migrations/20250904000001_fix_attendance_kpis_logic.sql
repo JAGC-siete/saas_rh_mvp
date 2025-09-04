@@ -132,8 +132,8 @@ BEGIN
         WHEN 'absent' THEN ar.check_in IS NULL
         -- TARDE: Llegaron más de 5 minutos después
         WHEN 'late' THEN ar.late_minutes > 5
-        -- TEMPRANO: Llegaron antes de la hora esperada (late_minutes será negativo)
-        WHEN 'early' THEN ar.late_minutes < 0
+        -- TEMPRANO: Llegaron más de 5 minutos antes (late_minutes será negativo)
+        WHEN 'early' THEN ar.late_minutes < -5
         -- PRESENTE: Cualquiera que hizo check-in
         WHEN 'present' THEN ar.check_in IS NOT NULL
         ELSE TRUE
