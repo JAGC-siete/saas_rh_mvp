@@ -56,14 +56,13 @@ export default function AttendanceDashboardApp() {
     load()
   }, [preset, selectedEmployeeId]) // Agregar selectedEmployeeId como dependencia
 
-  // Cargar tendencias de asistencia al final, con el rango de hoy (para coherencia con KPIs)
+  // Cargar tendencias de asistencia usando el mismo preset que los KPIs
   useEffect(() => {
     const loadTrends = async () => {
       try {
         if (!companyId) return
-        const today = new Date().toISOString().split('T')[0]
-        // Agregar employee_id a la consulta de tendencias
-        const trendsUrl = `/api/reports/attendance-trends?startDate=${today}&endDate=${today}${selectedEmployeeId ? `&employee_id=${selectedEmployeeId}` : ''}`
+        // USAR PRESET en lugar de fechas fijas para sincronizar con KPIs
+        const trendsUrl = `/api/reports/attendance-trends?preset=${preset}${selectedEmployeeId ? `&employee_id=${selectedEmployeeId}` : ''}`
         const res = await fetch(trendsUrl)
         const json = await res.json()
         if (json?.success) setTrends(json.data)
@@ -72,7 +71,7 @@ export default function AttendanceDashboardApp() {
       }
     }
     loadTrends()
-  }, [companyId, selectedEmployeeId]) // Agregar selectedEmployeeId como dependencia
+  }, [companyId, selectedEmployeeId, preset]) // Agregar preset como dependencia
 
   const handlePresetChange = (p: string) => setPreset(p)
   

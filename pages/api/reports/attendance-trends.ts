@@ -27,15 +27,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       companyId: userProfile?.company_id 
     })
 
-    const { startDate, endDate } = req.query
+    const { startDate, endDate, preset, employee_id } = req.query
     
-    // Validaciones
+    // Calcular fechas basado en preset si no se proporcionan fechas específicas
+    let finalStartDate = startDate as string
+    let finalEndDate = endDate as string
+    
     if (!startDate || !endDate) {
-      return res.status(400).json({ error: 'Fechas de inicio y fin requeridas' })
+      if (preset) {
+        const { getDateRange } = require('../../../lib/attendance')
+        const range = getDateRange(preset as string)
+        finalStartDate = range.from.split('T')[0]
+        finalEndDate = range.to.split('T')[0]
+      } else {
+        return res.status(400).json({ error: 'Fechas de inicio y fin o preset requeridas' })
+      }
     }
 
-    // Obtener tendencias de asistencia
-    const trends = await getAttendanceTrends(supabase, userProfile, startDate as string, endDate as string)
+    // Obtener tendencias de asistencia con filtro de empleado
+    const trends = await getAttendanceTrends(supabase, userProfile, finalStartDate, finalEndDate, employee_id as string)
 
     return res.status(200).json({
       success: true,
@@ -51,14 +61,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-async function getAttendanceTrends(supabase: any, userProfile: any, startDate: string, endDate: string) {
+async function getAttendanceTrends(supabase: any, userProfile: any, startDate: string, endDate: string, employeeId?: string) {
   const companyId = userProfile?.company_id
 
-  // Obtener registros de asistencia del período - FILTRADO POR COMPANY
-  // attendance_records podría no tener company_id; filtrar por empleados de la empresa si aplica
+  // Obtener registros de asistencia del período - FILTRADO POR COMPANY Y EMPLEADO
   let attendanceQuery = supabase
     .from('attendance_records')
-    .select('date, status, check_in, employee_id')
+    .select('date, status, check_in, employee_id, late_minutes')
     .gte('date', startDate)
     .lte('date', endDate)
     .order('date')
@@ -69,7 +78,15 @@ async function getAttendanceTrends(supabase: any, userProfile: any, startDate: s
       .from('employees')
       .select('id')
       .eq('company_id', companyId)
-    const employeeIds = (companyEmployees || []).map((e: any) => e.id)
+      .eq('status', 'active')
+    
+    let employeeIds = (companyEmployees || []).map((e: any) => e.id)
+    
+    // FILTRAR POR EMPLEADO ESPECÍFICO si se proporciona
+    if (employeeId && employeeId.trim() !== '') {
+      employeeIds = employeeIds.filter((id: string) => id === employeeId.trim())
+    }
+    
     if (employeeIds.length > 0) {
       attendanceQuery = attendanceQuery.in('employee_id', employeeIds)
     } else {
@@ -98,9 +115,12 @@ async function getAttendanceTrends(supabase: any, userProfile: any, startDate: s
     }
   })
 
-  // Determinar base de empleados
+  // Determinar base de empleados (ajustado para empleado específico)
   let employeesCount = 0
-  if (companyId) {
+  if (employeeId && employeeId.trim() !== '') {
+    // Si filtramos por empleado específico, la base es 1
+    employeesCount = 1
+  } else if (companyId) {
     const { data: companyEmployees } = await supabase
       .from('employees')
       .select('id, status')
