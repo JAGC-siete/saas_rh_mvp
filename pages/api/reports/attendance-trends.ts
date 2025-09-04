@@ -67,7 +67,14 @@ async function getAttendanceTrends(supabase: any, userProfile: any, startDate: s
   // Obtener registros de asistencia del período - FILTRADO POR COMPANY Y EMPLEADO
   let attendanceQuery = supabase
     .from('attendance_records')
-    .select('date, status, check_in, employee_id, late_minutes')
+    .select(`
+      date, 
+      status, 
+      check_in, 
+      employee_id, 
+      late_minutes,
+      employees!inner(name, employee_code)
+    `)
     .gte('date', startDate)
     .lte('date', endDate)
     .order('date')
@@ -99,7 +106,7 @@ async function getAttendanceTrends(supabase: any, userProfile: any, startDate: s
   if (error) throw error
 
   // Agrupar por fecha y contar presentes/tarde; ausentes = empleados_activos - (presentes + tarde)
-  const trendMap = new Map<string, { present: number; late: number; checkInTimes: string[] }>()
+  const trendMap = new Map<string, { present: number; late: number; checkInTimes: Array<{time: string, employee: string}> }>()
 
   data?.forEach((record: any) => {
     const date = record.date
@@ -114,9 +121,12 @@ async function getAttendanceTrends(supabase: any, userProfile: any, startDate: s
       trend.late++
     }
     
-    // Agregar hora de entrada si existe
-    if (record.check_in) {
-      trend.checkInTimes.push(record.check_in)
+    // Agregar hora de entrada con nombre del empleado si existe
+    if (record.check_in && record.employees) {
+      trend.checkInTimes.push({
+        time: record.check_in,
+        employee: record.employees.name || record.employees.employee_code || 'Empleado'
+      })
     }
   })
 

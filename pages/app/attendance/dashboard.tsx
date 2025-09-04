@@ -22,7 +22,7 @@ export default function AttendanceDashboardApp() {
   const [late, setLate] = useState<any[]>([])
   const [drawer, setDrawer] = useState<{open:boolean; name:string; events:any[]}>({open:false,name:'',events:[]})
   const { companyId } = useCompanyContext()
-  const [trends, setTrends] = useState<{ date: string; present: number; absent: number; late: number; checkInTimes: string[] }[]>([])
+  const [trends, setTrends] = useState<{ date: string; present: number; absent: number; late: number; checkInTimes: Array<{time: string, employee: string}> }[]>([])
 
   useEffect(() => {
     const load = async () => {
@@ -207,11 +207,14 @@ export default function AttendanceDashboardApp() {
                       <div className="font-medium text-gray-200">{punctualityRate.toFixed(1)}%</div>
                       <div className="text-blue-400 font-medium">
                         {t.checkInTimes && t.checkInTimes.length > 0 ? (
-                          t.checkInTimes.map((time, idx) => (
-                            <div key={idx} className="text-xs">
-                              {formatTimeDisplay(time)}
-                            </div>
-                          ))
+                          <div className="max-h-20 overflow-y-auto">
+                            {t.checkInTimes.map((item, idx) => (
+                              <div key={idx} className="text-xs flex justify-between">
+                                <span>{formatTimeDisplay(item.time)}</span>
+                                <span className="text-gray-400 ml-2">{item.employee}</span>
+                              </div>
+                            ))}
+                          </div>
                         ) : (
                           <span className="text-gray-500">Sin registro</span>
                         )}
