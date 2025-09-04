@@ -98,13 +98,17 @@ export default function AttendanceDashboardApp() {
   const getPresetLabel = (preset: string) => {
     switch (preset) {
       case 'today':
-        return 'Hoy'
+        return 'de Hoy'
       case 'week':
-        return 'Semana'
+        return 'de esta Semana'
+      case 'fortnight':
+        return 'de esta Quincena'
       case 'month':
-        return 'Mes'
+        return 'de este Mes'
+      case 'year':
+        return 'del Año'
       default:
-        return 'Hoy'
+        return 'de Hoy'
     }
   }
 
@@ -118,7 +122,13 @@ export default function AttendanceDashboardApp() {
             selectedEmployeeId={selectedEmployeeId}
             onEmployeeChange={handleEmployeeChange}
           />
-          <KpiCards presentes={kpis?.presentes ?? 0} ausentes={kpis?.ausentes ?? 0} temprano={kpis?.tempranos ?? 0} tarde={kpis?.tardes ?? 0} />
+          <KpiCards 
+            presentes={kpis?.presentes ?? 0} 
+            ausentes={kpis?.ausentes ?? 0} 
+            temprano={kpis?.tempranos ?? 0} 
+            tarde={kpis?.tardes ?? 0}
+            presetLabel={` ${getPresetLabel(preset)}`}
+          />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <AbsenceTable data={absent} title={`Ausentes ${getPresetLabel(preset)}`} onSelect={handleEmployeeClick} />
             <PunctualityTable data={early} type='early' title={`Tempranos ${getPresetLabel(preset)}`} onSelect={handleEmployeeClick} />
@@ -129,7 +139,7 @@ export default function AttendanceDashboardApp() {
           <Card variant="glass" className="p-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold text-white">
-                Tendencias de Asistencia ({getPresetLabel(preset)})
+                Tendencias de Asistencia {getPresetLabel(preset)}
                 {selectedEmployeeId && (
                   <span className="text-sm text-gray-400 ml-2">
                     - Empleado seleccionado

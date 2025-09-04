@@ -5,14 +5,15 @@ interface KpiCardsProps {
   ausentes: number
   temprano: number
   tarde: number
+  presetLabel?: string
 }
 
-export default function KpiCards({ presentes, ausentes, temprano, tarde }: KpiCardsProps) {
+export default function KpiCards({ presentes, ausentes, temprano, tarde, presetLabel = '' }: KpiCardsProps) {
   const items = [
-    { label: 'Presentes', value: presentes, color: 'text-emerald-400' },
-    { label: 'Ausentes', value: ausentes, color: 'text-red-400' },
-    { label: 'Temprano', value: temprano, color: 'text-blue-400' },
-    { label: 'Tarde', value: tarde, color: 'text-yellow-400' }
+    { label: `Presentes${presetLabel}`, value: presentes, color: 'text-emerald-400' },
+    { label: `Ausentes${presetLabel}`, value: ausentes, color: 'text-red-400' },
+    { label: `Temprano${presetLabel}`, value: temprano, color: 'text-blue-400' },
+    { label: `Tarde${presetLabel}`, value: tarde, color: 'text-yellow-400' }
   ]
 
   return (

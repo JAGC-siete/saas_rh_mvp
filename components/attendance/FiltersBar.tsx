@@ -25,11 +25,11 @@ interface FiltersBarProps {
 
 const presets = [
   { label: 'Hoy', value: 'today' },
-  { label: 'Semana', value: 'week' },
-  { label: 'Quincena', value: 'fortnight' },
-  { label: 'Mes', value: 'month' },
-  { label: 'Año', value: 'year' },
-  { label: 'Custom', value: 'custom' }
+  { label: 'Esta Semana', value: 'week' },
+  { label: 'Esta Quincena', value: 'fortnight' },
+  { label: 'Este Mes', value: 'month' },
+  { label: 'Este Año', value: 'year' },
+  { label: 'Personalizado', value: 'custom' }
 ]
 
 export default function FiltersBar({
