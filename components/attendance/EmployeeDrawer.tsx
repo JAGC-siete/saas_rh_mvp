@@ -1,3 +1,5 @@
+import { formatDateTimeForHonduras } from '../../lib/timezone'
+
 interface TimelineEvent {
   ts_local: string
   event_type: string
@@ -25,7 +27,7 @@ export default function EmployeeDrawer({ open, onClose, name, events }: Employee
           {events.map((ev, idx) => (
             <li key={idx} className="bg-gray-800 rounded p-2 text-sm text-gray-100">
               <div className="flex justify-between">
-                <span>{new Date(ev.ts_local).toLocaleString('es-HN')}</span>
+                <span>{formatDateTimeForHonduras(ev.ts_local)}</span>
                 <span>{ev.event_type}</span>
               </div>
               {ev.justification && (

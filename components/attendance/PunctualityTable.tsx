@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
+import { formatTimeDisplay } from '../../lib/timezone'
 
 interface Row {
   id: string
@@ -37,7 +38,7 @@ export default function PunctualityTable({ data, type, title, onSelect }: Punctu
             <tr key={row.id} className="border-t border-gray-700 hover:bg-gray-700/50 cursor-pointer" onClick={() => onSelect && onSelect(row.id, row.name)}>
               <td className="py-1">{row.name}</td>
               <td className="py-1">{row.team || '-'}</td>
-              <td className="py-1">{new Date(row.check_in_time).toLocaleTimeString('es-HN',{hour:'2-digit',minute:'2-digit'})}</td>
+              <td className="py-1">{formatTimeDisplay(row.check_in_time)}</td>
               <td className="py-1">{row.delta_min}</td>
             </tr>
           ))}

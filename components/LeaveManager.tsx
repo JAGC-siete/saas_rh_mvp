@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react'
 import { useLeave } from '../lib/hooks/useLeave'
 import { LeaveRequest } from '../lib/types/leave'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
+import { formatDateForHonduras } from '../lib/timezone'
 
 interface FormData {
   employee_dni: string
@@ -513,8 +514,8 @@ export default function LeaveManager() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
                     <div>
-                      <div>Inicio: {new Date(request.start_date).toLocaleDateString()}</div>
-                      <div>Fin: {new Date(request.end_date).toLocaleDateString()}</div>
+                      <div>Inicio: {formatDateForHonduras(request.start_date)}</div>
+                      <div>Fin: {formatDateForHonduras(request.end_date)}</div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">

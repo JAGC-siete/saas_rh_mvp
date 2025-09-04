@@ -6,7 +6,7 @@ import { useAuth } from '../lib/auth'
 import { Employee } from '../lib/types/employee'
 import AddEmployeeForm from './AddEmployeeForm'
 import { PlusIcon, PencilIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline'
-import { getHondurasTimestamp } from '../lib/timezone'
+import { getHondurasTimestamp, formatTimeDisplay } from '../lib/timezone'
 
 interface Department {
   id: string
@@ -504,7 +504,7 @@ export default function EmployeeManager() {
                           <p><span className="font-medium text-gray-200">Departamento:</span> {employee.departments?.name || 'Sin asignar'}</p>
                           <p><span className="font-medium text-gray-200">Horario:</span> {employee.work_schedules?.name || 'Sin asignar'}</p>
                           {employee.check_in_time && (
-                            <p><span className="font-medium text-gray-200">Entrada:</span> {new Date(employee.check_in_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</p>
+                            <p><span className="font-medium text-gray-200">Entrada:</span> {formatTimeDisplay(employee.check_in_time)}</p>
                           )}
                         </div>
                       </div>
