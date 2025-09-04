@@ -139,8 +139,11 @@ async function getAttendanceTrends(supabase: any, userProfile: any, startDate: s
   // Determinar base de empleados (ajustado para empleado específico)
   let employeesCount = 0
   if (employeeId && employeeId.trim() !== '') {
-    // Si filtramos por empleado específico, la base es 1
-    employeesCount = 1
+    // Si filtramos por empleado específico, la base es el número de días laborales en el período
+    const start = new Date(startDate)
+    const end = new Date(endDate)
+    const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+    employeesCount = Math.max(1, daysDiff) // Mínimo 1 día
   } else if (companyId) {
     const { data: companyEmployees } = await supabase
       .from('employees')
