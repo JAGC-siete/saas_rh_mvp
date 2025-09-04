@@ -3,24 +3,24 @@ import { createAdminClient } from '../../../lib/supabase/server'
 import { getDateRange } from '../../../lib/attendance'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const { scope, preset = 'today', type = 'absent', role, employee_id, from, to } = req.query
+  const { preset = 'today', type = 'absent', role, employee_id, from, to } = req.query
   const supabase = createAdminClient()
   
-  // Usar preset si está disponible, sino scope (compatibilidad)
-  const finalPreset = preset || scope || 'today'
+  // Use standardized preset parameter (remove scope compatibility)
+  const finalPreset = preset
   
   // Calcular fechas igual que KPIs para sincronización
   const range = typeof from === 'string' && typeof to === 'string'
     ? { from, to }
     : getDateRange(finalPreset as string)
   
-  // USAR FECHAS CALCULADAS EN LUGAR DE SCOPE para sincronizar con KPIs
+  // Use standardized RPC parameters for consistency
   const rpcArgs = {
-    p_employee_id: (employee_id as string) || null,
+    p_employee_id: (typeof employee_id === 'string' && employee_id.trim() !== '') ? employee_id.trim() : null,
     p_from: range.from,
     p_to: range.to,
     p_type: type as string,
-    p_role: (role as string) || null
+    p_role: (typeof role === 'string' && role.trim() !== '') ? role.trim() : null
   }
 
   console.log('Lists RPC Args:', rpcArgs)

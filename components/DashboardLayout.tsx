@@ -100,7 +100,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Dashboard', href: '/app/dashboard', icon: ChartBarIcon, permission: 'dashboard' },
     { name: 'Empleados', href: '/app/employees', icon: UsersIcon, permission: 'employees' },
     { name: 'Departamentos', href: '/app/departments', icon: UsersIcon, permission: 'departments' },
-    { name: 'Asistencia', href: '/attendance/dashboard', icon: ClockIcon, permission: 'attendance' },
+    { name: 'Asistencia', href: '/app/attendance/dashboard', icon: ClockIcon, permission: 'attendance' },
     { name: 'Permisos', href: '/app/leave', icon: UserIcon, permission: 'leave' },
     { name: 'Nómina', href: '/app/payroll', icon: CurrencyDollarIcon, permission: 'payroll' },
     { name: 'Reportes', href: '/app/reports', icon: ChartBarIcon, permission: 'reports' },

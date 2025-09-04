@@ -256,7 +256,7 @@ export default function Dashboard() {
                   <Button 
                     variant="outline" 
                     className="w-full border-brand-600 bg-white/10 text-white hover:bg-brand-800 hover:text-white font-medium"
-                    onClick={() => router.push('/attendance')}
+                    onClick={() => router.push('/app/attendance/dashboard')}
                   >
                     Ver Asistencia
                   </Button>

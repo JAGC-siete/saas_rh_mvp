@@ -5,9 +5,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { grain = 'day', from, to } = req.query
   const supabase = createAdminClient()
   const { data, error } = await supabase.rpc('attendance_aggregate', {
-    grain: grain as string,
-    from: from as string,
-    to: to as string
+    p_grain: grain as string,
+    p_from: from as string,
+    p_to: to as string
   })
   if (error) {
     console.error('attendance_aggregate error', error)
