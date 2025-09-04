@@ -26,7 +26,21 @@ export function getHondurasTime(): Date {
  */
 export function convertToHondurasTime(utcTimestamp: string | Date): Date {
   const date = typeof utcTimestamp === 'string' ? new Date(utcTimestamp) : utcTimestamp;
-  return new Date(date.toLocaleString("en-US", { timeZone: HONDURAS_TIMEZONE }));
+  
+  // Check if date is valid
+  if (isNaN(date.getTime())) {
+    return new Date(); // Return current date if invalid
+  }
+  
+  // Convert to Honduras timezone
+  const hondurasTime = new Date(date.toLocaleString("en-US", { timeZone: HONDURAS_TIMEZONE }));
+  
+  // If conversion failed, return original date
+  if (isNaN(hondurasTime.getTime())) {
+    return date;
+  }
+  
+  return hondurasTime;
 }
 
 /**

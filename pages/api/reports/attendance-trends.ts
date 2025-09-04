@@ -73,7 +73,7 @@ async function getAttendanceTrends(supabase: any, userProfile: any, startDate: s
       check_in, 
       employee_id, 
       late_minutes,
-      employees!inner(name, employee_code)
+      employees(name, employee_code)
     `)
     .gte('date', startDate)
     .lte('date', endDate)
