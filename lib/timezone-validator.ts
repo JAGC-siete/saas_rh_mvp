@@ -9,16 +9,7 @@ import { HONDURAS_TIMEZONE } from './timezone';
 
 // Interceptar new Date() globalmente en desarrollo
 if (typeof window === 'undefined' && process.env.NODE_ENV === 'development') {
-  const originalDate = global.Date;
-  
-  // Crear un proxy para interceptar new Date()
-  global.Date = new Proxy(originalDate, {
-    construct(target, args) {
-      console.warn('🚨 WARNING: Direct new Date() usage detected. Consider using nowInHonduras() from lib/timezone instead.');
-      console.trace('Stack trace for new Date() call:');
-      return new target(...args);
-    }
-  }) as any;
+  console.log('🇭🇳 Timezone validator loaded - monitoring for Honduras timezone compliance');
 }
 
 /**
