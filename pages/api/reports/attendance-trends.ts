@@ -105,6 +105,17 @@ async function getAttendanceTrends(supabase: any, userProfile: any, startDate: s
 
   if (error) throw error
 
+  // Debug: Log the raw data to understand what's being returned
+  console.log('🔍 Attendance trends data for period:', { startDate, endDate, recordCount: data?.length || 0 })
+  if (data && data.length > 0) {
+    console.log('📊 Sample records:', data.slice(0, 3).map(r => ({ 
+      date: r.date, 
+      employee: r.employees?.name, 
+      check_in: r.check_in,
+      late_minutes: r.late_minutes 
+    })))
+  }
+
   // Agrupar por fecha y contar presentes/tarde; ausentes = empleados_activos - (presentes + tarde)
   const trendMap = new Map<string, { present: number; late: number; checkInTimes: Array<{time: string, employee: string}> }>()
 
@@ -156,7 +167,16 @@ async function getAttendanceTrends(supabase: any, userProfile: any, startDate: s
   }
 
   const trends = Array.from(trendMap.entries()).map(([date, counts]) => {
-    const absent = Math.max(0, employeesCount - (counts.present + counts.late))
+    // Si no hay registros de asistencia para esta fecha, no asumir que todos estuvieron ausentes
+    // Podría ser un día no laboral (oficina cerrada, feriado, etc.)
+    const hasAttendanceRecords = counts.present > 0 || counts.late > 0 || counts.checkInTimes.length > 0
+    
+    // Solo calcular ausentes si hay registros de asistencia para esa fecha
+    // Esto evita mostrar "todos ausentes" en días no laborales
+    const absent = hasAttendanceRecords 
+      ? Math.max(0, employeesCount - (counts.present + counts.late))
+      : 0
+    
     return {
       date,
       present: counts.present,
@@ -164,6 +184,10 @@ async function getAttendanceTrends(supabase: any, userProfile: any, startDate: s
       absent,
       checkInTimes: counts.checkInTimes, // Incluir horas de entrada
     }
+  }).filter(trend => {
+    // Filtrar fechas que no tienen registros de asistencia para evitar mostrar días no laborales
+    // Solo mostrar fechas donde realmente hubo actividad
+    return trend.present > 0 || trend.late > 0 || trend.checkInTimes.length > 0
   })
 
   return trends
