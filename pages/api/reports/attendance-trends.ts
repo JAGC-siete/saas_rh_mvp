@@ -105,17 +105,6 @@ async function getAttendanceTrends(supabase: any, userProfile: any, startDate: s
 
   if (error) throw error
 
-  // Debug: Log the raw data to understand what's being returned
-  console.log('🔍 Attendance trends data for period:', { startDate, endDate, recordCount: data?.length || 0 })
-  if (data && data.length > 0) {
-    console.log('📊 Sample records:', data.slice(0, 3).map(r => ({ 
-      date: r.date, 
-      employee: r.employees?.name, 
-      check_in: r.check_in,
-      late_minutes: r.late_minutes 
-    })))
-  }
-
   // Agrupar por fecha y contar presentes/tarde; ausentes = empleados_activos - (presentes + tarde)
   const trendMap = new Map<string, { present: number; late: number; checkInTimes: Array<{time: string, employee: string}> }>()
 
