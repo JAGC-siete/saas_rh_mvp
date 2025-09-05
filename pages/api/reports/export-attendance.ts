@@ -6,6 +6,8 @@ import ExcelJS from 'exceljs'
 import { validateExportRequest } from '../../../lib/security/input-validation'
 import { generateSafeFilename } from '../../../lib/security/sanitization'
 import { createSecureErrorResponse, createValidationErrorResponse, handleDatabaseError, handleFileError } from '../../../lib/security/error-handling'
+import { createSecureClient } from '../../../lib/supabase/secure-client'
+import { applyCompanyFilter, applyPermissionFilter, canAccessResource } from '../../../lib/security/query-filters'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
@@ -17,8 +19,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { format, dateFilter, employee_id } = validation.data!
 
-    // 2. AUTENTICACIÓN Y AUTORIZACIÓN
-    const authResult = await authenticateUser(req, res, ['can_view_reports', 'can_manage_attendance'])
+    // 2. AUTENTICACIÓN Y AUTORIZACIÓN SEGURA
+    const authResult = await authenticateUser(req, res, ['can_view_reports', 'can_export_reports'])
     if (!authResult.success) {
       return res.status(401).json({ 
         error: authResult.error,
@@ -27,15 +29,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const { user, userProfile } = authResult
-    const supabase = createClient(req, res)
 
-    // 3. OBTENER DATOS CON FILTROS DE SEGURIDAD
+    // 3. VALIDAR ACCESO AL RECURSO
+    if (!canAccessResource(userProfile!, 'reports')) {
+      return res.status(403).json({
+        error: 'Acceso denegado',
+        message: 'No tiene permisos para acceder a reportes'
+      })
+    }
+
+    // 4. CREAR CLIENTE SUPABASE SEGURO
+    const supabase = createSecureClient({
+      req,
+      res,
+      userProfile: userProfile!,
+      enforceRLS: true
+    })
+
+    // 5. OBTENER DATOS CON FILTROS DE SEGURIDAD APLICADOS
     let employeeIds: string[] = []
     if (userProfile?.company_id) {
-      const { data: employees, error: empError } = await supabase
+      // Obtener empleados con filtros de seguridad
+      const employeesQuery = supabase
         .from('employees')
         .select('id')
-        .eq('company_id', userProfile.company_id)
+      
+      // Aplicar filtros de seguridad
+      const secureEmployeesQuery = applyCompanyFilter(employeesQuery, userProfile!)
+      
+      const { data: employees, error: empError } = await secureEmployeesQuery
       
       if (empError) {
         return res.status(500).json(handleDatabaseError(empError, 'obtener empleados'))
@@ -44,7 +66,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       employeeIds = (employees || []).map((e: any) => e.id)
     }
 
-    // Construir consulta con filtros de empresa
+    // Construir consulta de asistencia con filtros de seguridad
     let attendanceQuery = supabase
       .from('attendance_records')
       .select(`
@@ -60,7 +82,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .gte('date', dateFilter.startDate)
       .lte('date', dateFilter.endDate)
 
-    // Aplicar filtro de empresa
+    // Aplicar filtros de seguridad por permisos
+    attendanceQuery = applyPermissionFilter(attendanceQuery, userProfile!, 'attendance_records')
+
+    // Aplicar filtro de empresa adicional si es necesario
     if (employeeIds.length > 0) {
       attendanceQuery = attendanceQuery.in('employee_id', employeeIds)
     } else if (userProfile?.company_id) {
@@ -70,6 +95,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Filtrar por empleado específico si se proporciona
     if (employee_id) {
+      // Verificar que el usuario puede acceder a ese empleado
+      if (userProfile?.role === 'employee' && employee_id !== userProfile.id) {
+        return res.status(403).json({
+          error: 'Acceso denegado',
+          message: 'No puede acceder a datos de otros empleados'
+        })
+      }
       attendanceQuery = attendanceQuery.eq('employee_id', employee_id)
     }
 
@@ -78,7 +110,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json(handleDatabaseError(error, 'obtener registros de asistencia'))
     }
 
-    // 4. PROCESAR EXPORTACIÓN SEGURA
+    // 6. PROCESAR EXPORTACIÓN SEGURA
     if (format === 'csv') {
       const headers = ['employee_id','date','status','check_in','check_out','late_minutes']
       const csvRows = [headers.join(',')]

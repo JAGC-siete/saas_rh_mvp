@@ -1,6 +1,14 @@
 import { createClient } from './supabase/server'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getHondurasTimestamp } from './timezone'
+import { 
+  userHasAllPermissions, 
+  userHasAnyPermission, 
+  validateRequiredPermissions,
+  isValidRole,
+  ROLES 
+} from './security/permissions'
+import { createSecureErrorResponse, createAuthErrorResponse, createAuthorizationErrorResponse } from './security/error-handling'
 
 
 
@@ -102,22 +110,40 @@ export function hasRole(userProfile: UserProfile, role: string): boolean {
 }
 
 /**
- * Verifica si un usuario tiene un permiso específico
+ * Verifica si un usuario tiene un permiso específico (VERSIÓN SEGURA)
  */
 export function hasPermission(userProfile: UserProfile, permission: string): boolean {
-  // Super admin tiene todos los permisos
-  if (userProfile.role === 'super_admin') return true
-  
-  // Verificar permisos específicos del usuario
-  if (userProfile.permissions && userProfile.permissions[permission]) {
-    return true
-  }
-  
-  return false
+  return userHasAnyPermission(
+    userProfile.role, 
+    userProfile.permissions, 
+    [permission]
+  )
 }
 
 /**
- * Autentica y autoriza un usuario para un endpoint (VERSIÓN TEMPORAL)
+ * Verifica si un usuario tiene todos los permisos requeridos (VERSIÓN SEGURA)
+ */
+export function hasAllPermissions(userProfile: UserProfile, permissions: string[]): boolean {
+  return userHasAllPermissions(
+    userProfile.role,
+    userProfile.permissions,
+    permissions
+  )
+}
+
+/**
+ * Verifica si un usuario tiene al menos uno de los permisos requeridos (VERSIÓN SEGURA)
+ */
+export function hasAnyPermission(userProfile: UserProfile, permissions: string[]): boolean {
+  return userHasAnyPermission(
+    userProfile.role,
+    userProfile.permissions,
+    permissions
+  )
+}
+
+/**
+ * Autentica y autoriza un usuario para un endpoint (VERSIÓN SEGURA)
  */
 export async function authenticateUser(
   req: NextApiRequest, 
@@ -153,7 +179,7 @@ export async function authenticateUser(
       email: user.email
     })
 
-    // 2. Obtener o crear perfil (VERSIÓN TEMPORAL SIN RLS)
+    // 2. Obtener o crear perfil
     let userProfile: UserProfile
     try {
       userProfile = await getOrCreateProfile(supabase, user.id)
@@ -175,11 +201,54 @@ export async function authenticateUser(
       }
     }
 
-    // 4. Verificar permisos requeridos (TEMPORALMENTE PERMITIR TODO)
-    console.log('✅ Usuario autenticado y autorizado (modo temporal):', {
+    // 4. ✅ VALIDAR ROL DEL USUARIO
+    if (!isValidRole(userProfile.role)) {
+      console.error('❌ Rol inválido:', userProfile.role)
+      return {
+        success: false,
+        error: 'Rol inválido',
+        message: 'El rol del usuario no es válido'
+      }
+    }
+
+    // 5. ✅ VALIDAR PERMISOS REQUERIDOS (IMPLEMENTACIÓN REAL)
+    if (requiredPermissions.length > 0) {
+      // Validar que los permisos requeridos sean válidos
+      const permissionValidation = validateRequiredPermissions(requiredPermissions)
+      if (!permissionValidation.valid) {
+        console.error('❌ Permisos inválidos requeridos:', permissionValidation.invalid)
+        return {
+          success: false,
+          error: 'Configuración inválida',
+          message: 'Permisos requeridos no válidos'
+        }
+      }
+
+      // Verificar si el usuario tiene los permisos requeridos
+      const hasPermissions = hasAllPermissions(userProfile, requiredPermissions)
+      if (!hasPermissions) {
+        console.warn('⚠️ Usuario sin permisos suficientes:', {
+          userId: user.id,
+          role: userProfile.role,
+          requiredPermissions,
+          userPermissions: userProfile.permissions
+        })
+        
+        return {
+          success: false,
+          error: 'Permisos insuficientes',
+          message: 'No tiene permisos para acceder a este recurso'
+        }
+      }
+    }
+
+    // 6. ✅ LOG DE ACCESO EXITOSO
+    console.log('✅ Usuario autenticado y autorizado:', {
       userId: user.id,
       role: userProfile.role,
-      permissions: requiredPermissions
+      companyId: userProfile.company_id,
+      requiredPermissions,
+      timestamp: new Date().toISOString()
     })
 
     return {
