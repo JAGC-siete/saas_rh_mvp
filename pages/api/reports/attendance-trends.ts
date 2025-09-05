@@ -132,6 +132,13 @@ async function getAttendanceTrends(supabase: any, userProfile: any, startDate: s
     // Show all dates in the data
     const allDates = [...new Set(data.map((r: any) => r.date))].sort()
     console.log('📅 All dates in results:', allDates)
+    
+    // Show all records for debugging
+    console.log('📋 ALL RECORDS:', data.map((r: any) => ({
+      date: r.date,
+      employee: r.employees?.name,
+      check_in: r.check_in
+    })))
   }
 
   // Agrupar por fecha y contar presentes/tarde; ausentes = empleados_activos - (presentes + tarde)

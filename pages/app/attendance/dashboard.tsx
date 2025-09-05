@@ -64,10 +64,16 @@ export default function AttendanceDashboardApp() {
         if (!companyId) return
         // USAR PRESET en lugar de fechas fijas para sincronizar con KPIs
         const trendsUrl = `/api/reports/attendance-trends?preset=${preset}${selectedEmployeeId ? `&employee_id=${selectedEmployeeId}` : ''}`
+        console.log('🔍 Frontend - Loading trends from:', trendsUrl)
         const res = await fetch(trendsUrl)
         const json = await res.json()
-        if (json?.success) setTrends(json.data)
-      } catch {
+        console.log('📊 Frontend - Trends response:', json)
+        if (json?.success) {
+          console.log('✅ Frontend - Setting trends data:', json.data)
+          setTrends(json.data)
+        }
+      } catch (error) {
+        console.error('❌ Frontend - Error loading trends:', error)
         setTrends([])
       }
     }
@@ -192,7 +198,9 @@ export default function AttendanceDashboardApp() {
                   <div>Puntualidad</div>
                   <div>Horas de Entrada</div>
                 </div>
-                {trends.map((t) => {
+                {(() => {
+                  console.log('🎨 Frontend - Rendering trends data:', trends)
+                  return trends.map((t) => {
                   const total = t.present + t.late + t.absent
                   const attendanceRate = total > 0 ? ((t.present + t.late) / total) * 100 : 0
                   const punctualityRate = total > 0 ? (t.present / total) * 100 : 0
@@ -221,7 +229,8 @@ export default function AttendanceDashboardApp() {
                       </div>
                     </div>
                   )
-                })}
+                })
+                })()}
               </div>
             ) : (
               <div className="text-center py-4 text-gray-400">Sin datos</div>
