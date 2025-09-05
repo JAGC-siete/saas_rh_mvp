@@ -59,7 +59,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const headers = ['employee_id','date','status','check_in','check_out','late_minutes']
       const csvRows = [headers.join(',')]
       for (const r of (records || [])) {
-        const row = [r.employee_id, r.date, r.status, r.check_in || '', r.check_out || '', r.late_minutes || 0]
+        // Formatear fechas correctamente para Honduras
+        const formattedDate = new Date(r.date + 'T00:00:00').toLocaleDateString('es-HN')
+        const formattedCheckIn = r.check_in ? new Date(r.check_in).toLocaleString('es-HN', { timeZone: 'America/Tegucigalpa' }) : ''
+        const formattedCheckOut = r.check_out ? new Date(r.check_out).toLocaleString('es-HN', { timeZone: 'America/Tegucigalpa' }) : ''
+        
+        const row = [r.employee_id, formattedDate, r.status, formattedCheckIn, formattedCheckOut, r.late_minutes || 0]
         csvRows.push(row.join(','))
       }
       const csv = csvRows.join('\n')

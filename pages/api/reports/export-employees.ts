@@ -351,7 +351,7 @@ function generateEmployeeCSVReport(res: NextApiResponse, reportData: any) {
       csvContent += `${emp.departments?.name || 'N/A'},`
       csvContent += `${emp.base_salary ? `L. ${emp.base_salary.toLocaleString('es-HN')}` : 'N/A'},`
       csvContent += `${emp.status === 'active' ? 'Activo' : emp.status === 'inactive' ? 'Inactivo' : 'Terminado'},`
-      csvContent += `${emp.hire_date ? new Date(emp.hire_date).toLocaleDateString('es-HN') : 'N/A'}\n`
+      csvContent += `${emp.hire_date ? new Date(emp.hire_date + 'T00:00:00').toLocaleDateString('es-HN') : 'N/A'}\n`
     })
     
     // Estadísticas por departamento

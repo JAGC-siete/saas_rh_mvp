@@ -206,7 +206,7 @@ export default function AttendanceDashboardApp() {
                   const punctualityRate = total > 0 ? (t.present / total) * 100 : 0
                   return (
                     <div key={t.date} className="grid grid-cols-8 gap-2 text-sm py-2 border-b border-gray-700">
-                      <div className="text-gray-300">{new Date(t.date).toLocaleDateString('es-HN')}</div>
+                      <div className="text-gray-300">{new Date(t.date + 'T00:00:00').toLocaleDateString('es-HN')}</div>
                       <div className="text-emerald-400 font-medium">{t.present}</div>
                       <div className="text-red-400 font-medium">{t.absent}</div>
                       <div className="text-orange-400 font-medium">{t.late}</div>

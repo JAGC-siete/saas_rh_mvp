@@ -45,9 +45,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 // Función para exportar a CSV
 function exportToCSV(data: any[], preset: string, employeePart: string, datePart: string, res: NextApiResponse) {
   const headers = Object.keys(data[0] || {})
+  
+  // Formatear datos con timezone correcto
+  const formattedData = (data as any[]).map(row => {
+    const formattedRow: any = {}
+    Object.keys(row).forEach(key => {
+      const value = row[key]
+      if (key === 'date' && value) {
+        // Formatear fecha correctamente para Honduras
+        formattedRow[key] = new Date(value + 'T00:00:00').toLocaleDateString('es-HN')
+      } else if ((key === 'check_in' || key === 'check_out') && value) {
+        // Formatear timestamps correctamente para Honduras
+        formattedRow[key] = new Date(value).toLocaleString('es-HN', { timeZone: 'America/Tegucigalpa' })
+      } else {
+        formattedRow[key] = value || ''
+      }
+    })
+    return formattedRow
+  })
+  
   const csv = [
     headers.join(','), 
-    ...(data as any[]).map(row => headers.map(h => `"${row[h] || ''}"`).join(','))
+    ...formattedData.map(row => headers.map(h => `"${row[h] || ''}"`).join(','))
   ].join('\n')
   
   const fileName = `asistencia_${preset}${employeePart}_${datePart}.csv`
@@ -75,8 +94,26 @@ async function exportToXLSX(data: any[], preset: string, employeePart: string, d
       fgColor: { argb: 'FF4472C4' }
     }
     
-    // Agregar datos
-    data.forEach(row => {
+    // Formatear datos con timezone correcto
+    const formattedData = data.map(row => {
+      const formattedRow: any = {}
+      Object.keys(row).forEach(key => {
+        const value = row[key]
+        if (key === 'date' && value) {
+          // Formatear fecha correctamente para Honduras
+          formattedRow[key] = new Date(value + 'T00:00:00').toLocaleDateString('es-HN')
+        } else if ((key === 'check_in' || key === 'check_out') && value) {
+          // Formatear timestamps correctamente para Honduras
+          formattedRow[key] = new Date(value).toLocaleString('es-HN', { timeZone: 'America/Tegucigalpa' })
+        } else {
+          formattedRow[key] = value || ''
+        }
+      })
+      return formattedRow
+    })
+    
+    // Agregar datos formateados
+    formattedData.forEach(row => {
       worksheet.addRow(headers.map(h => row[h]))
     })
     
@@ -141,8 +178,26 @@ async function exportToPDF(data: any[], preset: string, employeePart: string, da
     
     doc.moveDown()
     
+    // Formatear datos con timezone correcto
+    const formattedData = data.map(row => {
+      const formattedRow: any = {}
+      Object.keys(row).forEach(key => {
+        const value = row[key]
+        if (key === 'date' && value) {
+          // Formatear fecha correctamente para Honduras
+          formattedRow[key] = new Date(value + 'T00:00:00').toLocaleDateString('es-HN')
+        } else if ((key === 'check_in' || key === 'check_out') && value) {
+          // Formatear timestamps correctamente para Honduras
+          formattedRow[key] = new Date(value).toLocaleString('es-HN', { timeZone: 'America/Tegucigalpa' })
+        } else {
+          formattedRow[key] = value || ''
+        }
+      })
+      return formattedRow
+    })
+    
     // Datos (limitamos a 50 registros para evitar PDFs muy grandes)
-    const limitedData = data.slice(0, 50)
+    const limitedData = formattedData.slice(0, 50)
     limitedData.forEach(row => {
       let x = 50
       headers.forEach(header => {
