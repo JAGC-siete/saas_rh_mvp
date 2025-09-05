@@ -114,12 +114,12 @@ export async function generateConsolidatedAttendancePDF(
       })
 
       doc.fontSize(10).text('TOTALES POR DEPARTAMENTO:', 300, 230)
-      let deptY = 245
+      let summaryDeptY = 245
       Object.entries(deptTotals).forEach(([dept, totals]) => {
-        if (deptY < 290) {
+        if (summaryDeptY < 290) {
           const attendanceRate = totals.count > 0 ? (totals.attendance / totals.count) * 100 : 0
-          doc.fontSize(9).text(`${dept}: ${totals.count} reg. - ${totals.hours.toFixed(1)}h - ${attendanceRate.toFixed(1)}%`, 300, deptY)
-          deptY += 12
+          doc.fontSize(9).text(`${dept}: ${totals.count} reg. - ${totals.hours.toFixed(1)}h - ${attendanceRate.toFixed(1)}%`, 300, summaryDeptY)
+          summaryDeptY += 12
         }
       })
 
