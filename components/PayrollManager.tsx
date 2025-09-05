@@ -903,15 +903,15 @@ export default function PayrollManager() {
               
             {/* Tipo */}
             <div>
-              <label htmlFor="tipo" className="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
+              <label htmlFor="tipo" className="block text-sm font-medium text-gray-700 mb-2">Tipo de Deducciones</label>
               <select
                 value={payrollState.filters.tipo}
                 onChange={(e) => handleNewFilterChange('tipo', e.target.value)}
                 className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <option value="">Seleccionar tipo</option>
-                <option value="CON">Con Asistencia</option>
-                <option value="SIN">Sin Asistencia</option>
+                <option value="CON">Con Deducciones</option>
+                <option value="SIN">Sin Deducciones</option>
               </select>
                 </div>
               </div>

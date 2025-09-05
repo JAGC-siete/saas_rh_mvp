@@ -132,20 +132,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Filtrar empleados según criterio de asistencia
     let empleadosParaNomina = employees
     
-    // NOTA: El filtro de asistencia se mantiene para ambos tipos
-    // 'CON' y 'SIN' se refieren a si se aplican deducciones, no a asistencia
-    empleadosParaNomina = employees.filter((emp: any) =>
-      attendanceRecords.some((record: any) => 
-        record.employee_id === emp.id && 
-        record.check_in && 
-        record.check_out &&
-        record.status !== 'absent')
-    )
+    // Si hay registros de asistencia, filtrar por empleados con asistencia
+    // Si no hay registros de asistencia, incluir todos los empleados activos
+    if (attendanceRecords.length > 0) {
+      empleadosParaNomina = employees.filter((emp: any) =>
+        attendanceRecords.some((record: any) => 
+          record.employee_id === emp.id && 
+          record.check_in && 
+          record.check_out &&
+          record.status !== 'absent')
+      )
+    } else {
+      // Si no hay registros de asistencia, incluir todos los empleados activos
+      empleadosParaNomina = employees
+    }
 
     if (empleadosParaNomina.length === 0) {
       return res.status(400).json({ 
-        error: 'No hay empleados con asistencia',
-        message: 'No se encontraron empleados con asistencia completa para el período seleccionado'
+        error: 'No hay empleados disponibles',
+        message: 'No se encontraron empleados activos para generar la nómina'
       })
     }
 
@@ -155,7 +160,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.log('🔍 DEBUG - Tipo de nómina:', tipo)
       console.log('🔍 DEBUG - Total registros de asistencia:', attendanceRecords.length)
       console.log('🔍 DEBUG - Empleados después del filtro de asistencia:', empleadosParaNomina.length)
-      console.log('🔍 DEBUG - Lógica de deducciones: tipo=' + tipo + ', quincena=' + quincena + ' → deducciones=' + (tipo === 'CON' && quincena === 2 ? 'SÍ' : 'NO'))
+      console.log('🔍 DEBUG - Lógica de deducciones: tipo=' + tipo + ' → deducciones=' + (tipo === 'CON' ? 'SÍ' : 'NO'))
 
     // Calcular planilla con CÁLCULOS CORRECTOS 2025
     const planilla: any[] = []
@@ -168,7 +173,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       // CALCULAR DÍAS TRABAJADOS EN LA QUINCENA ACTUAL
       const diasQuincena = quincena === 1 ? 15 : ultimoDia - 15
-      const days_worked = registros.length
+      
+      // Si hay registros de asistencia, usar la cantidad real
+      // Si no hay registros, asumir que trabajó todos los días de la quincena
+      const days_worked = registros.length > 0 ? registros.length : diasQuincena
       const days_absent = diasQuincena - days_worked
       
       const base_salary = Number(emp.base_salary) || 0
@@ -179,8 +187,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       let IHSS = 0, RAP = 0, ISR = 0, total_deductions = 0, total = 0
 
-      // APLICAR DEDUCCIONES SEGÚN EL TIPO Y QUINCENA
-      if (tipo === 'CON' && quincena === 2) {
+      // APLICAR DEDUCCIONES SEGÚN EL TIPO (independientemente de la quincena)
+      if (tipo === 'CON') {
         // CÁLCULOS CORRECTOS 2025 - DEDUCCIONES MENSUALES COMPLETAS
         IHSS = Math.min(base_salary, 11903.13) * 0.05  // Deducción mensual completa
         RAP = Math.max(0, base_salary - 11903.13) * 0.015    // Deducción mensual completa
@@ -199,7 +207,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         total_deductions = IHSS + RAP + ISR
         total = total_earnings - total_deductions
       } else {
-        // Q1 o tipo 'SIN': solo salario proporcional, sin deducciones
+        // Tipo 'SIN': solo salario proporcional, sin deducciones
         total = total_earnings
       }
 

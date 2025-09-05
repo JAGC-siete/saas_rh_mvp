@@ -1,217 +1,236 @@
-import type { NextApiRequest, NextApiResponse } from 'next'
-import { createAdminClient } from '../../../lib/supabase/server'
-import { getDateRange } from '../../../lib/attendance'
-import { nowInHonduras, formatDateForHonduras } from '../../../lib/timezone'
+import { NextApiRequest, NextApiResponse } from 'next'
+import { createClient } from '../../../lib/supabase/server'
+import { authenticateUser } from '../../../lib/auth-helpers'
 import ExcelJS from 'exceljs'
-import PDFDocument from 'pdfkit'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const { format = 'csv', preset = 'today', employee_id, from, to } = req.query
-  const supabase = createAdminClient()
-
-  // Convertir parámetros a string
-  const formatStr = Array.isArray(format) ? format[0] : format
-  const presetStr = Array.isArray(preset) ? preset[0] : preset
-  const employeeIdStr = Array.isArray(employee_id) ? employee_id[0] : employee_id
-
-  const range = typeof from === 'string' && typeof to === 'string'
-    ? { from, to }
-    : getDateRange(presetStr)
-
-  const { data, error } = await supabase.rpc('attendance_export', {
-    p_employee_id: (employeeIdStr && employeeIdStr.trim() !== '') ? employeeIdStr.trim() : null,
-    p_from: range.from as string,
-    p_to: range.to as string
-  })
-  if (error) {
-    console.error('attendance_export error', error)
-    return res.status(500).json({ error: error.message })
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' })
   }
-  // Generar nombre de archivo con fecha y preset (usando timezone de Honduras)
-  const datePart = nowInHonduras().toISOString().split('T')[0]
-  const employeePart = employeeIdStr ? '_empleado' : ''
-  
-  if (formatStr === 'csv') {
-    return exportToCSV(data, presetStr, employeePart, datePart, res)
-  } else if (formatStr === 'xlsx') {
-    return await exportToXLSX(data, presetStr, employeePart, datePart, res)
-  } else if (formatStr === 'pdf') {
-    return await exportToPDF(data, presetStr, employeePart, datePart, res)
-  } else {
-    return res.status(400).json({ error: 'Formato no soportado. Use csv, xlsx o pdf' })
+
+  try {
+    // AUTENTICACIÓN REQUERIDA
+    const authResult = await authenticateUser(req, res, ['can_view_reports', 'can_export_payroll'])
+    
+    if (!authResult.success) {
+      return res.status(401).json({ 
+        error: authResult.error,
+        message: authResult.message
+      })
+    }
+
+    const { user, userProfile } = authResult
+    const supabase = createClient(req, res)
+
+    console.log('Usuario autenticado para exportación de asistencia:', { 
+      userId: user.id, 
+      role: userProfile?.role,
+      companyId: userProfile?.company_id 
+    })
+
+    const { startDate, endDate, formato = 'excel', employee_id } = req.body
+    
+    if (!startDate || !endDate) {
+      return res.status(400).json({ error: 'startDate y endDate son requeridos' })
+    }
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+      return res.status(400).json({ error: 'Formato de fecha inválido (YYYY-MM-DD)' })
+    }
+
+    // Obtener registros de asistencia del período
+    let query = supabase
+      .from('attendance_records')
+      .select(`
+        *,
+        employees!attendance_records_employee_id_fkey(
+          name,
+          employee_code,
+          department,
+          position,
+          company_id
+        )
+      `)
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .eq('employees.company_id', userProfile?.company_id)
+      .order('date', { ascending: false })
+
+    // Filtrar por empleado específico si se proporciona
+    if (employee_id) {
+      query = query.eq('employee_id', employee_id)
+    }
+
+    const { data: attendanceRecords, error: attendanceError } = await query
+
+    if (attendanceError) {
+      console.error('Error obteniendo registros de asistencia:', attendanceError)
+      return res.status(500).json({ error: 'Error obteniendo registros de asistencia' })
+    }
+
+    if (!attendanceRecords || attendanceRecords.length === 0) {
+      return res.status(404).json({ 
+        error: 'No hay registros',
+        message: 'No se encontraron registros de asistencia para el período especificado'
+      })
+    }
+
+    console.log(`Exportando ${attendanceRecords.length} registros de asistencia para ${startDate} a ${endDate}`)
+
+    if (formato === 'excel') {
+      return exportToExcel(attendanceRecords, startDate, endDate, res)
+    } else if (formato === 'pdf') {
+      return res.status(400).json({ error: 'El PDF consolidado ahora está en /api/attendance/generate-pdf' })
+    } else {
+      return res.status(400).json({ error: 'Formato no soportado. Use "excel" o "pdf"' })
+    }
+
+  } catch (error) {
+    console.error('Error en exportación de asistencia:', error)
+    return res.status(500).json({ 
+      error: 'Error interno del servidor', 
+      message: error instanceof Error ? error.message : 'Error desconocido'
+    })
   }
 }
 
-// Función para exportar a CSV
-function exportToCSV(data: any[], preset: string, employeePart: string, datePart: string, res: NextApiResponse) {
-  const headers = Object.keys(data[0] || {})
-  
-  // Formatear datos con timezone correcto
-  const formattedData = (data as any[]).map(row => {
-    const formattedRow: any = {}
-    Object.keys(row).forEach(key => {
-      const value = row[key]
-      if (key === 'date' && value) {
-        // Formatear fecha correctamente para Honduras
-        formattedRow[key] = new Date(value + 'T00:00:00').toLocaleDateString('es-HN')
-      } else if ((key === 'check_in' || key === 'check_out') && value) {
-        // Formatear timestamps correctamente para Honduras
-        formattedRow[key] = new Date(value).toLocaleString('es-HN', { timeZone: 'America/Tegucigalpa' })
-      } else {
-        formattedRow[key] = value || ''
+async function exportToExcel(attendanceRecords: any[], startDate: string, endDate: string, res: NextApiResponse) {
+  try {
+    // Preparar datos para Excel
+    const excelData = attendanceRecords.map(record => {
+      const checkIn = record.check_in ? new Date(record.check_in) : null
+      const checkOut = record.check_out ? new Date(record.check_out) : null
+      
+      // Calcular horas trabajadas
+      let hoursWorked = 0
+      if (checkIn && checkOut) {
+        const diffMs = checkOut.getTime() - checkIn.getTime()
+        hoursWorked = diffMs / (1000 * 60 * 60) // Convertir a horas
+      }
+
+      // Calcular tardanza (asumiendo horario de 8:00 AM)
+      let lateMinutes = 0
+      if (checkIn) {
+        const expectedTime = new Date(checkIn)
+        expectedTime.setHours(8, 0, 0, 0) // 8:00 AM
+        if (checkIn > expectedTime) {
+          lateMinutes = Math.floor((checkIn.getTime() - expectedTime.getTime()) / (1000 * 60))
+        }
+      }
+
+      // Calcular horas extra (asumiendo 8 horas por día)
+      const overtimeHours = Math.max(0, hoursWorked - 8)
+
+      return {
+        'Código': record.employees?.employee_code || '',
+        'Nombre': record.employees?.name || '',
+        'Departamento': record.employees?.department || '',
+        'Posición': record.employees?.position || '',
+        'Fecha': new Date(record.date).toLocaleDateString('es-HN'),
+        'Día de la Semana': new Date(record.date).toLocaleDateString('es-HN', { weekday: 'long' }),
+        'Hora de Entrada': checkIn ? checkIn.toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
+        'Hora de Salida': checkOut ? checkOut.toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
+        'Horas Trabajadas': hoursWorked.toFixed(2),
+        'Estado': record.status === 'present' ? 'Presente' : record.status === 'late' ? 'Tardanza' : 'Ausente',
+        'Minutos de Tardanza': lateMinutes,
+        'Horas Extra': overtimeHours.toFixed(2),
+        'Justificación': record.justification || '',
+        'Categoría Justificación': record.justification_category || '',
+        'Ubicación': record.location ? `${record.lat}, ${record.lon}` : 'N/A',
+        'Dispositivo': record.device_id || 'N/A',
+        'Registrado': new Date(record.created_at).toLocaleDateString('es-HN')
       }
     })
-    return formattedRow
-  })
-  
-  const csv = [
-    headers.join(','), 
-    ...formattedData.map(row => headers.map(h => `"${row[h] || ''}"`).join(','))
-  ].join('\n')
-  
-  const fileName = `asistencia_${preset}${employeePart}_${datePart}.csv`
-  res.setHeader('Content-Type', 'text/csv; charset=utf-8')
-  res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`)
-  return res.status(200).send('\ufeff' + csv) // BOM para UTF-8
-}
 
-// Función para exportar a XLSX
-async function exportToXLSX(data: any[], preset: string, employeePart: string, datePart: string, res: NextApiResponse) {
-  const workbook = new ExcelJS.Workbook()
-  const worksheet = workbook.addWorksheet('Asistencia')
-  
-  if (data.length > 0) {
-    // Agregar encabezados
-    const headers = Object.keys(data[0])
-    worksheet.addRow(headers)
+    // Preparar datos de resumen
+    const totalRecords = attendanceRecords.length
+    const totalHours = excelData.reduce((sum, r) => sum + parseFloat(r['Horas Trabajadas']), 0)
+    const totalLateMinutes = excelData.reduce((sum, r) => sum + r['Minutos de Tardanza'], 0)
+    const totalOvertime = excelData.reduce((sum, r) => sum + parseFloat(r['Horas Extra']), 0)
+    const presentRecords = excelData.filter(r => r['Estado'] === 'Presente').length
+    const lateRecords = excelData.filter(r => r['Estado'] === 'Tardanza').length
+    const absentRecords = excelData.filter(r => r['Estado'] === 'Ausente').length
+
+    const resumenData = [
+      { 'Concepto': 'Total Registros', 'Valor': totalRecords },
+      { 'Concepto': 'Total Horas Trabajadas', 'Valor': totalHours.toFixed(2) },
+      { 'Concepto': 'Total Minutos de Tardanza', 'Valor': totalLateMinutes },
+      { 'Concepto': 'Total Horas Extra', 'Valor': totalOvertime.toFixed(2) },
+      { 'Concepto': 'Registros Presentes', 'Valor': presentRecords },
+      { 'Concepto': 'Registros con Tardanza', 'Valor': lateRecords },
+      { 'Concepto': 'Registros Ausentes', 'Valor': absentRecords },
+      { 'Concepto': 'Tasa de Asistencia', 'Valor': `${((presentRecords + lateRecords) / totalRecords * 100).toFixed(1)}%` },
+      { 'Concepto': 'Tasa de Puntualidad', 'Valor': `${(presentRecords / totalRecords * 100).toFixed(1)}%` },
+      { 'Concepto': 'Promedio Horas por Día', 'Valor': (totalHours / totalRecords).toFixed(2) }
+    ]
+
+    // Crear workbook
+    const workbook = new ExcelJS.Workbook()
+    const worksheet = workbook.addWorksheet('Asistencia')
     
-    // Estilo para encabezados
-    const headerRow = worksheet.getRow(1)
-    headerRow.font = { bold: true }
-    headerRow.fill = {
+    // Agregar datos a la hoja principal
+    worksheet.columns = [
+      { header: 'Código', key: 'Código', width: 12 },
+      { header: 'Nombre', key: 'Nombre', width: 25 },
+      { header: 'Departamento', key: 'Departamento', width: 15 },
+      { header: 'Posición', key: 'Posición', width: 20 },
+      { header: 'Fecha', key: 'Fecha', width: 12 },
+      { header: 'Día de la Semana', key: 'Día de la Semana', width: 15 },
+      { header: 'Hora de Entrada', key: 'Hora de Entrada', width: 12 },
+      { header: 'Hora de Salida', key: 'Hora de Salida', width: 12 },
+      { header: 'Horas Trabajadas', key: 'Horas Trabajadas', width: 12 },
+      { header: 'Estado', key: 'Estado', width: 10 },
+      { header: 'Minutos de Tardanza', key: 'Minutos de Tardanza', width: 15 },
+      { header: 'Horas Extra', key: 'Horas Extra', width: 12 },
+      { header: 'Justificación', key: 'Justificación', width: 30 },
+      { header: 'Categoría Justificación', key: 'Categoría Justificación', width: 20 },
+      { header: 'Ubicación', key: 'Ubicación', width: 20 },
+      { header: 'Dispositivo', key: 'Dispositivo', width: 15 },
+      { header: 'Registrado', key: 'Registrado', width: 12 }
+    ]
+
+    // Agregar datos
+    excelData.forEach(row => {
+      worksheet.addRow(row)
+    })
+
+    // Estilo para el encabezado
+    worksheet.getRow(1).font = { bold: true }
+    worksheet.getRow(1).fill = {
       type: 'pattern',
       pattern: 'solid',
-      fgColor: { argb: 'FF4472C4' }
+      fgColor: { argb: 'FFE0E0E0' }
     }
-    
-    // Formatear datos con timezone correcto
-    const formattedData = data.map(row => {
-      const formattedRow: any = {}
-      Object.keys(row).forEach(key => {
-        const value = row[key]
-        if (key === 'date' && value) {
-          // Formatear fecha correctamente para Honduras
-          formattedRow[key] = new Date(value + 'T00:00:00').toLocaleDateString('es-HN')
-        } else if ((key === 'check_in' || key === 'check_out') && value) {
-          // Formatear timestamps correctamente para Honduras
-          formattedRow[key] = new Date(value).toLocaleString('es-HN', { timeZone: 'America/Tegucigalpa' })
-        } else {
-          formattedRow[key] = value || ''
-        }
-      })
-      return formattedRow
-    })
-    
-    // Agregar datos formateados
-    formattedData.forEach(row => {
-      worksheet.addRow(headers.map(h => row[h]))
-    })
-    
-    // Ajustar ancho de columnas
-    worksheet.columns.forEach(column => {
-      column.width = 15
-    })
-  }
-  
-  const fileName = `asistencia_${preset}${employeePart}_${datePart}.xlsx`
-  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-  res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`)
-  
-  await workbook.xlsx.write(res)
-  res.end()
-}
 
-// Función para exportar a PDF
-async function exportToPDF(data: any[], preset: string, employeePart: string, datePart: string, res: NextApiResponse) {
-  const doc = new PDFDocument({ margin: 50 })
-  const fileName = `asistencia_${preset}${employeePart}_${datePart}.pdf`
-  
-  res.setHeader('Content-Type', 'application/pdf')
-  res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`)
-  
-  doc.pipe(res)
-  
-  // Título
-  doc.fontSize(18).text('Reporte de Asistencia', { align: 'center' })
-  doc.moveDown()
-  
-  // Información del reporte
-  const presetLabels: { [key: string]: string } = {
-    'today': 'Hoy',
-    'week': 'Esta Semana', 
-    'fortnight': 'Esta Quincena',
-    'month': 'Este Mes',
-    'year': 'Este Año'
-  }
-  
-  doc.fontSize(12)
-  doc.text(`Período: ${presetLabels[preset] || preset}`)
-  doc.text(`Fecha de generación: ${formatDateForHonduras(nowInHonduras())}`)
-  if (employeePart) {
-    doc.text('Filtro: Empleado específico')
-  }
-  doc.moveDown()
-  
-  if (data.length === 0) {
-    doc.text('No hay datos para mostrar')
-  } else {
-    // Tabla de datos
-    const headers = Object.keys(data[0])
-    const startY = doc.y
-    
-    // Encabezados
-    let x = 50
-    headers.forEach(header => {
-      doc.text(header, x, startY, { width: 80 })
-      x += 85
+    // Agregar hoja de resumen
+    const resumenSheet = workbook.addWorksheet('Resumen')
+    resumenSheet.columns = [
+      { header: 'Concepto', key: 'Concepto', width: 25 },
+      { header: 'Valor', key: 'Valor', width: 15 }
+    ]
+
+    resumenData.forEach(row => {
+      resumenSheet.addRow(row)
     })
-    
-    doc.moveDown()
-    
-    // Formatear datos con timezone correcto
-    const formattedData = data.map(row => {
-      const formattedRow: any = {}
-      Object.keys(row).forEach(key => {
-        const value = row[key]
-        if (key === 'date' && value) {
-          // Formatear fecha correctamente para Honduras
-          formattedRow[key] = new Date(value + 'T00:00:00').toLocaleDateString('es-HN')
-        } else if ((key === 'check_in' || key === 'check_out') && value) {
-          // Formatear timestamps correctamente para Honduras
-          formattedRow[key] = new Date(value).toLocaleString('es-HN', { timeZone: 'America/Tegucigalpa' })
-        } else {
-          formattedRow[key] = value || ''
-        }
-      })
-      return formattedRow
-    })
-    
-    // Datos (limitamos a 50 registros para evitar PDFs muy grandes)
-    const limitedData = formattedData.slice(0, 50)
-    limitedData.forEach(row => {
-      let x = 50
-      headers.forEach(header => {
-        doc.text(String(row[header] || ''), x, doc.y, { width: 80 })
-        x += 85
-      })
-      doc.moveDown(0.5)
-    })
-    
-    if (data.length > 50) {
-      doc.moveDown()
-      doc.text(`... y ${data.length - 50} registros más`)
+
+    // Estilo para el resumen
+    resumenSheet.getRow(1).font = { bold: true }
+    resumenSheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE0E0E0' }
     }
+
+    // Generar buffer
+    const excelBuffer = await workbook.xlsx.writeBuffer()
+
+    // Enviar respuesta
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    res.setHeader('Content-Disposition', `attachment; filename=asistencia_paragon_${startDate}_${endDate}.xlsx`)
+    res.send(excelBuffer)
+
+  } catch (error) {
+    console.error('Error generando Excel de asistencia:', error)
+    return res.status(500).json({ error: 'Error generando archivo Excel' })
   }
-  
-  doc.end()
 }
