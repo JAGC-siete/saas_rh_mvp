@@ -38,6 +38,7 @@ export const RATE_LIMITS = {
 /**
  * Genera clave de rate limiting basada en IP y usuario
  */
+ 
 export function generateRateLimitKey(req: NextApiRequest, userId?: string): string {
   const ip = getClientIP(req)
   const userAgent = req.headers['user-agent'] || 'unknown'

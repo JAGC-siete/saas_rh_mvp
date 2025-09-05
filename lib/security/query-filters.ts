@@ -5,7 +5,7 @@
 
 import { NextApiRequest, NextApiResponse } from 'next'
 import { UserProfile } from '../auth-helpers'
-import { ROLES } from './permissions'
+// import { ROLES } from './permissions' // No se usa actualmente
 
 export interface QueryFilterOptions {
   userProfile: UserProfile
@@ -176,10 +176,11 @@ export function createSecureQueryFilter(options: QueryFilterOptions): any {
 /**
  * Valida si un usuario puede acceder a un recurso específico
  */
+ 
 export function canAccessResource(
   userProfile: UserProfile,
   resourceType: string,
-  resourceId?: string
+  _resourceId?: string
 ): boolean {
   // Super admin puede acceder a todo
   if (userProfile.role === 'super_admin') {

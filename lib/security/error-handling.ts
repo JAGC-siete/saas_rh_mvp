@@ -201,11 +201,12 @@ export function isSafeError(error: unknown): boolean {
  * Wrapper para manejo seguro de errores en handlers de API
  */
 export function withSecureErrorHandling<T extends any[]>(
-  handler: (...args: T) => Promise<any>
+  handler: (..._args: T) => Promise<any>
 ) {
-  return async (...args: T) => {
+   
+  return async (..._args: T) => {
     try {
-      return await handler(...args)
+      return await handler(..._args)
     } catch (error) {
       // Si es un error seguro, re-lanzarlo
       if (isSafeError(error)) {

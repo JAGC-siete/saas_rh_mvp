@@ -142,9 +142,10 @@ export function validateQueryParams(req: NextApiRequest, allowedParams: string[]
 /**
  * Middleware wrapper para validación automática
  */
+ 
 export function withValidation<T = any>(
   validator: (req: NextApiRequest) => ValidationResult,
-  handler: (req: NextApiRequest, res: NextApiResponse, validatedData: T) => Promise<void>
+  handler: (_req: NextApiRequest, _res: NextApiResponse, _validatedData: T) => Promise<void>
 ) {
   return async (req: NextApiRequest, res: NextApiResponse) => {
     try {
