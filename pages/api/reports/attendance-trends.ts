@@ -89,21 +89,50 @@ async function getAttendanceTrends(supabase: any, userProfile: any, startDate: s
     
     let employeeIds = (companyEmployees || []).map((e: any) => e.id)
     
+    console.log('👥 Company employees found:', employeeIds.length)
+    console.log('🔍 Employee filter:', { employeeId, hasFilter: !!employeeId })
+    
     // FILTRAR POR EMPLEADO ESPECÍFICO si se proporciona
     if (employeeId && employeeId.trim() !== '') {
       employeeIds = employeeIds.filter((id: string) => id === employeeId.trim())
+      console.log('🎯 Filtered to specific employee:', employeeIds)
     }
     
     if (employeeIds.length > 0) {
       attendanceQuery = attendanceQuery.in('employee_id', employeeIds)
+      console.log('✅ Query filtered to employee IDs:', employeeIds)
     } else {
       attendanceQuery = attendanceQuery.eq('employee_id', '__none__')
+      console.log('❌ No employees found, using fallback filter')
     }
   }
 
   const { data, error } = await attendanceQuery
 
   if (error) throw error
+
+  // Debug: Log exact data being returned for September 1st investigation
+  console.log('🔍 DEBUG - Attendance trends query results:')
+  console.log('📅 Date range:', { startDate, endDate })
+  console.log('📊 Total records found:', data?.length || 0)
+  
+  if (data && data.length > 0) {
+    // Filter for September 1st specifically
+    const sept1Records = data.filter((r: any) => r.date === '2025-09-01')
+    console.log('🚨 SEPTEMBER 1st RECORDS:', sept1Records.length)
+    if (sept1Records.length > 0) {
+      console.log('📋 September 1st data:', sept1Records.map((r: any) => ({
+        employee_id: r.employee_id,
+        employee_name: r.employees?.name,
+        check_in: r.check_in,
+        date: r.date
+      })))
+    }
+    
+    // Show all dates in the data
+    const allDates = [...new Set(data.map((r: any) => r.date))].sort()
+    console.log('📅 All dates in results:', allDates)
+  }
 
   // Agrupar por fecha y contar presentes/tarde; ausentes = empleados_activos - (presentes + tarde)
   const trendMap = new Map<string, { present: number; late: number; checkInTimes: Array<{time: string, employee: string}> }>()
