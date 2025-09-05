@@ -8,8 +8,22 @@ import { generateSafeFilename } from '../../../lib/security/sanitization'
 import { createSecureErrorResponse, createValidationErrorResponse, handleDatabaseError, handleFileError } from '../../../lib/security/error-handling'
 import { createSecureClient } from '../../../lib/supabase/secure-client'
 import { applyCompanyFilter, applyPermissionFilter, canAccessResource } from '../../../lib/security/query-filters'
+import { withExportRateLimit } from '../../../lib/security/rate-limiting'
+import { withAudit, logDataExport, logSensitiveAccess } from '../../../lib/security/audit'
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+// Aplicar rate limiting y auditoría
+const handlerWithSecurity = withExportRateLimit()(
+  withAudit('export_attendance', 'attendance_data', {
+    severity: 'high',
+    includeDetails: true,
+    logOnSuccess: true,
+    logOnError: true
+  })(exportAttendanceHandler)
+)
+
+export default handlerWithSecurity
+
+async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse) {
   try {
     // 1. VALIDACIÓN DE ENTRADA SEGURA
     const validation = validateExportRequest(req)
@@ -110,7 +124,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json(handleDatabaseError(error, 'obtener registros de asistencia'))
     }
 
-    // 6. PROCESAR EXPORTACIÓN SEGURA
+    // 7. LOG DE ACCESO A DATOS SENSIBLES
+    await logSensitiveAccess({
+      req,
+      res,
+      userProfile: userProfile!,
+      action: 'export_attendance',
+      resource: 'attendance_records',
+      details: {
+        format,
+        dateRange: dateFilter,
+        recordCount: records?.length || 0
+      }
+    }, 'attendance_data', records?.length || 0)
+
+    // 8. PROCESAR EXPORTACIÓN SEGURA
     if (format === 'csv') {
       const headers = ['employee_id','date','status','check_in','check_out','late_minutes']
       const csvRows = [headers.join(',')]
@@ -129,14 +157,42 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // NOMBRE DE ARCHIVO SEGURO
       const safeFilename = generateSafeFilename('attendance', dateFilter.startDate, dateFilter.endDate, 'csv')
       res.setHeader('Content-Disposition', `attachment; filename=${safeFilename}`)
+      
+      // LOG DE EXPORTACIÓN
+      await logDataExport({
+        req,
+        res,
+        userProfile: userProfile!,
+        action: 'export_attendance_csv',
+        resource: 'attendance_data'
+      }, 'csv', records?.length || 0)
+      
       return res.status(200).send(csv)
     }
 
     if (format === 'excel') {
+      // LOG DE EXPORTACIÓN EXCEL
+      await logDataExport({
+        req,
+        res,
+        userProfile: userProfile!,
+        action: 'export_attendance_excel',
+        resource: 'attendance_data'
+      }, 'excel', records?.length || 0)
+      
       return exportToExcel(records || [], dateFilter.startDate, dateFilter.endDate, res)
     }
 
     if (format === 'pdf') {
+      // LOG DE EXPORTACIÓN PDF
+      await logDataExport({
+        req,
+        res,
+        userProfile: userProfile!,
+        action: 'export_attendance_pdf',
+        resource: 'attendance_data'
+      }, 'pdf', records?.length || 0)
+      
       return exportToPDF(records || [], dateFilter.startDate, dateFilter.endDate, res, user?.email)
     }
 
