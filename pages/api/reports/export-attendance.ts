@@ -1,13 +1,23 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../lib/supabase/server'
 import { authenticateUser } from '../../../lib/auth-helpers'
+import { generateConsolidatedAttendancePDF, type AttendanceItem, type AttendanceSummary } from '../../../lib/attendance/report'
+import ExcelJS from 'exceljs'
+import { validateExportRequest } from '../../../lib/security/input-validation'
+import { generateSafeFilename } from '../../../lib/security/sanitization'
+import { createSecureErrorResponse, createValidationErrorResponse, handleDatabaseError, handleFileError } from '../../../lib/security/error-handling'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
-
   try {
+    // 1. VALIDACIÓN DE ENTRADA SEGURA
+    const validation = validateExportRequest(req)
+    if (!validation.valid) {
+      return res.status(400).json(createValidationErrorResponse(validation.error!))
+    }
+
+    const { format, dateFilter, employee_id } = validation.data!
+
+    // 2. AUTENTICACIÓN Y AUTORIZACIÓN
     const authResult = await authenticateUser(req, res, ['can_view_reports', 'can_manage_attendance'])
     if (!authResult.success) {
       return res.status(401).json({ 
@@ -16,32 +26,41 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    const { userProfile } = authResult
+    const { user, userProfile } = authResult
     const supabase = createClient(req, res)
 
-    const { format = 'csv', dateFilter } = req.body as { format?: 'csv'|'pdf'; dateFilter: { startDate: string; endDate: string } }
-
-    if (!dateFilter?.startDate || !dateFilter?.endDate) {
-      return res.status(400).json({ error: 'Filtro de fechas requerido' })
-    }
-
-    // Obtener empleados de la empresa (para escoping cuando attendance_records no tiene company_id)
+    // 3. OBTENER DATOS CON FILTROS DE SEGURIDAD
     let employeeIds: string[] = []
     if (userProfile?.company_id) {
-      const { data: employees } = await supabase
+      const { data: employees, error: empError } = await supabase
         .from('employees')
         .select('id')
         .eq('company_id', userProfile.company_id)
+      
+      if (empError) {
+        return res.status(500).json(handleDatabaseError(empError, 'obtener empleados'))
+      }
+      
       employeeIds = (employees || []).map((e: any) => e.id)
     }
 
-    // Obtener registros de asistencia
+    // Construir consulta con filtros de empresa
     let attendanceQuery = supabase
       .from('attendance_records')
-      .select('employee_id, date, check_in, check_out, status, late_minutes')
+      .select(`
+        *,
+        employees!attendance_records_employee_id_fkey(
+          name,
+          employee_code,
+          department,
+          position,
+          company_id
+        )
+      `)
       .gte('date', dateFilter.startDate)
       .lte('date', dateFilter.endDate)
 
+    // Aplicar filtro de empresa
     if (employeeIds.length > 0) {
       attendanceQuery = attendanceQuery.in('employee_id', employeeIds)
     } else if (userProfile?.company_id) {
@@ -49,12 +68,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       attendanceQuery = attendanceQuery.eq('employee_id', '__none__')
     }
 
-    const { data: records, error } = await attendanceQuery
-    if (error) {
-      console.error('❌ Error obteniendo asistencia:', error)
-      return res.status(500).json({ error: 'Error obteniendo registros de asistencia' })
+    // Filtrar por empleado específico si se proporciona
+    if (employee_id) {
+      attendanceQuery = attendanceQuery.eq('employee_id', employee_id)
     }
 
+    const { data: records, error } = await attendanceQuery
+    if (error) {
+      return res.status(500).json(handleDatabaseError(error, 'obtener registros de asistencia'))
+    }
+
+    // 4. PROCESAR EXPORTACIÓN SEGURA
     if (format === 'csv') {
       const headers = ['employee_id','date','status','check_in','check_out','late_minutes']
       const csvRows = [headers.join(',')]
@@ -69,19 +93,247 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
       const csv = csvRows.join('\n')
       res.setHeader('Content-Type', 'text/csv; charset=utf-8')
-      res.setHeader('Content-Disposition', `attachment; filename=attendance_${dateFilter.startDate}_${dateFilter.endDate}.csv`)
+      
+      // NOMBRE DE ARCHIVO SEGURO
+      const safeFilename = generateSafeFilename('attendance', dateFilter.startDate, dateFilter.endDate, 'csv')
+      res.setHeader('Content-Disposition', `attachment; filename=${safeFilename}`)
       return res.status(200).send(csv)
     }
 
-    // PDF no solicitado actualmente; devolver JSON si no CSV
-    return res.status(200).json({ records: records || [] })
+    if (format === 'excel') {
+      return exportToExcel(records || [], dateFilter.startDate, dateFilter.endDate, res)
+    }
+
+    if (format === 'pdf') {
+      return exportToPDF(records || [], dateFilter.startDate, dateFilter.endDate, res, user?.email)
+    }
+
+    // Formato no soportado
+    return res.status(400).json(createValidationErrorResponse('Formato no soportado. Use csv, excel o pdf'))
 
   } catch (error) {
-    console.error('Error en export-attendance:', error)
-    return res.status(500).json({ 
-      error: 'Error interno del servidor', 
-      message: error instanceof Error ? error.message : 'Error desconocido'
+    return res.status(500).json(createSecureErrorResponse(error, {
+      endpoint: '/api/reports/export-attendance',
+      action: 'export_attendance'
+    }))
+  }
+}
+
+async function exportToExcel(attendanceRecords: any[], startDate: string, endDate: string, res: NextApiResponse) {
+  try {
+    // Preparar datos para Excel
+    const excelData = attendanceRecords.map(record => {
+      const checkIn = record.check_in ? new Date(record.check_in) : null
+      const checkOut = record.check_out ? new Date(record.check_out) : null
+      
+      // Calcular horas trabajadas
+      let hoursWorked = 0
+      if (checkIn && checkOut) {
+        const diffMs = checkOut.getTime() - checkIn.getTime()
+        hoursWorked = diffMs / (1000 * 60 * 60) // Convertir a horas
+      }
+
+      // Calcular tardanza (asumiendo horario de 8:00 AM)
+      let lateMinutes = 0
+      if (checkIn) {
+        const expectedTime = new Date(checkIn)
+        expectedTime.setHours(8, 0, 0, 0) // 8:00 AM
+        if (checkIn > expectedTime) {
+          lateMinutes = Math.floor((checkIn.getTime() - expectedTime.getTime()) / (1000 * 60))
+        }
+      }
+
+      // Calcular horas extra (asumiendo 8 horas por día)
+      const overtimeHours = Math.max(0, hoursWorked - 8)
+
+      return {
+        'Código': record.employees?.employee_code || '',
+        'Nombre': record.employees?.name || '',
+        'Departamento': record.employees?.department || '',
+        'Posición': record.employees?.position || '',
+        'Fecha': new Date(record.date).toLocaleDateString('es-HN'),
+        'Día de la Semana': new Date(record.date).toLocaleDateString('es-HN', { weekday: 'long' }),
+        'Hora de Entrada': checkIn ? checkIn.toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
+        'Hora de Salida': checkOut ? checkOut.toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
+        'Horas Trabajadas': hoursWorked.toFixed(2),
+        'Estado': record.status === 'present' ? 'Presente' : record.status === 'late' ? 'Tardanza' : 'Ausente',
+        'Minutos de Tardanza': lateMinutes,
+        'Horas Extra': overtimeHours.toFixed(2),
+        'Justificación': record.justification || '',
+        'Categoría Justificación': record.justification_category || '',
+        'Ubicación': record.location ? `${record.lat}, ${record.lon}` : 'N/A',
+        'Dispositivo': record.device_id || 'N/A',
+        'Registrado': new Date(record.created_at).toLocaleDateString('es-HN')
+      }
     })
+
+    // Calcular resumen
+    const totalRecords = excelData.length
+    const totalHours = excelData.reduce((sum, row) => sum + parseFloat(row['Horas Trabajadas']), 0)
+    const totalLateMinutes = excelData.reduce((sum, row) => sum + row['Minutos de Tardanza'], 0)
+    const totalOvertime = excelData.reduce((sum, row) => sum + parseFloat(row['Horas Extra']), 0)
+    const presentRecords = excelData.filter(r => r['Estado'] === 'Presente').length
+    const lateRecords = excelData.filter(r => r['Estado'] === 'Tardanza').length
+    const absentRecords = excelData.filter(r => r['Estado'] === 'Ausente').length
+
+    const resumenData = [
+      { 'Concepto': 'Total Registros', 'Valor': totalRecords },
+      { 'Concepto': 'Total Horas Trabajadas', 'Valor': totalHours.toFixed(2) },
+      { 'Concepto': 'Total Minutos de Tardanza', 'Valor': totalLateMinutes },
+      { 'Concepto': 'Total Horas Extra', 'Valor': totalOvertime.toFixed(2) },
+      { 'Concepto': 'Registros Presentes', 'Valor': presentRecords },
+      { 'Concepto': 'Registros con Tardanza', 'Valor': lateRecords },
+      { 'Concepto': 'Registros Ausentes', 'Valor': absentRecords },
+      { 'Concepto': 'Tasa de Asistencia', 'Valor': `${((presentRecords + lateRecords) / totalRecords * 100).toFixed(1)}%` },
+      { 'Concepto': 'Tasa de Puntualidad', 'Valor': `${(presentRecords / totalRecords * 100).toFixed(1)}%` },
+      { 'Concepto': 'Promedio Horas por Día', 'Valor': (totalHours / totalRecords).toFixed(2) }
+    ]
+
+    // Crear workbook
+    const workbook = new ExcelJS.Workbook()
+    const worksheet = workbook.addWorksheet('Asistencia')
+    
+    // Agregar datos a la hoja principal
+    worksheet.columns = [
+      { header: 'Código', key: 'Código', width: 12 },
+      { header: 'Nombre', key: 'Nombre', width: 25 },
+      { header: 'Departamento', key: 'Departamento', width: 15 },
+      { header: 'Posición', key: 'Posición', width: 20 },
+      { header: 'Fecha', key: 'Fecha', width: 12 },
+      { header: 'Día de la Semana', key: 'Día de la Semana', width: 15 },
+      { header: 'Hora de Entrada', key: 'Hora de Entrada', width: 12 },
+      { header: 'Hora de Salida', key: 'Hora de Salida', width: 12 },
+      { header: 'Horas Trabajadas', key: 'Horas Trabajadas', width: 12 },
+      { header: 'Estado', key: 'Estado', width: 10 },
+      { header: 'Minutos de Tardanza', key: 'Minutos de Tardanza', width: 15 },
+      { header: 'Horas Extra', key: 'Horas Extra', width: 12 },
+      { header: 'Justificación', key: 'Justificación', width: 30 },
+      { header: 'Categoría Justificación', key: 'Categoría Justificación', width: 20 },
+      { header: 'Ubicación', key: 'Ubicación', width: 20 },
+      { header: 'Dispositivo', key: 'Dispositivo', width: 15 },
+      { header: 'Registrado', key: 'Registrado', width: 12 }
+    ]
+
+    // Agregar datos
+    excelData.forEach(row => {
+      worksheet.addRow(row)
+    })
+
+    // Estilo para el encabezado
+    worksheet.getRow(1).font = { bold: true }
+    worksheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE0E0E0' }
+    }
+
+    // Crear hoja de resumen
+    const summarySheet = workbook.addWorksheet('Resumen')
+    summarySheet.columns = [
+      { header: 'Concepto', key: 'Concepto', width: 25 },
+      { header: 'Valor', key: 'Valor', width: 15 }
+    ]
+
+    resumenData.forEach(row => {
+      summarySheet.addRow(row)
+    })
+
+    summarySheet.getRow(1).font = { bold: true }
+    summarySheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE0E0E0' }
+    }
+
+    const buffer = await workbook.xlsx.writeBuffer()
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    
+    // NOMBRE DE ARCHIVO SEGURO
+    const safeFilename = generateSafeFilename('asistencia_paragon', startDate, endDate, 'xlsx')
+    res.setHeader('Content-Disposition', `attachment; filename=${safeFilename}`)
+    res.send(buffer)
+
+  } catch (error) {
+    return res.status(500).json(handleFileError(error, 'generar Excel de asistencia'))
+  }
+}
+
+async function exportToPDF(attendanceRecords: any[], startDate: string, endDate: string, res: NextApiResponse, generatedByEmail?: string) {
+  try {
+    // Preparar datos para PDF
+    const attendanceData: AttendanceItem[] = attendanceRecords.map(record => {
+      const checkIn = record.check_in ? new Date(record.check_in) : null
+      const checkOut = record.check_out ? new Date(record.check_out) : null
+      
+      // Calcular horas trabajadas
+      let hoursWorked = 0
+      if (checkIn && checkOut) {
+        const diffMs = checkOut.getTime() - checkIn.getTime()
+        hoursWorked = diffMs / (1000 * 60 * 60)
+      }
+
+      // Calcular tardanza
+      let lateMinutes = 0
+      if (checkIn) {
+        const expectedTime = new Date(checkIn)
+        expectedTime.setHours(8, 0, 0, 0)
+        if (checkIn > expectedTime) {
+          lateMinutes = Math.floor((checkIn.getTime() - expectedTime.getTime()) / (1000 * 60))
+        }
+      }
+
+      // Calcular horas extra
+      const overtimeHours = Math.max(0, hoursWorked - 8)
+
+      return {
+        id: record.id,
+        employee_code: record.employees?.employee_code || '',
+        name: record.employees?.name || '',
+        department: record.employees?.department || 'Sin Departamento',
+        position: record.employees?.position || 'Sin Posición',
+        date: record.date,
+        check_in: record.check_in,
+        check_out: record.check_out,
+        hours_worked: hoursWorked,
+        status: record.status === 'present' ? 'present' : record.status === 'late' ? 'late' : 'absent',
+        late_minutes: lateMinutes,
+        overtime_hours: overtimeHours,
+        notes: record.justification || ''
+      }
+    })
+
+    // Calcular resumen
+    const totalEmployees = new Set(attendanceData.map(item => item.employee_code)).size
+    const totalDays = attendanceData.length
+    const totalHoursWorked = attendanceData.reduce((sum, item) => sum + item.hours_worked, 0)
+    const totalLateMinutes = attendanceData.reduce((sum, item) => sum + item.late_minutes, 0)
+    const totalOvertimeHours = attendanceData.reduce((sum, item) => sum + item.overtime_hours, 0)
+    const presentCount = attendanceData.filter(item => item.status === 'present').length
+    const lateCount = attendanceData.filter(item => item.status === 'late').length
+
+    const summary: AttendanceSummary = {
+      total_employees: totalEmployees,
+      total_days: totalDays,
+      total_hours_worked: totalHoursWorked,
+      total_late_minutes: totalLateMinutes,
+      total_overtime_hours: totalOvertimeHours,
+      attendance_rate: totalDays > 0 ? ((presentCount + lateCount) / totalDays) * 100 : 0,
+      punctuality_rate: totalDays > 0 ? (presentCount / totalDays) * 100 : 0,
+      average_hours_per_day: totalDays > 0 ? totalHoursWorked / totalDays : 0
+    }
+
+    console.log(`Generando PDF de asistencia: ${attendanceData.length} registros para ${startDate} a ${endDate}`)
+    const pdfBuffer = await generateConsolidatedAttendancePDF(attendanceData, summary, startDate, endDate, generatedByEmail)
+    
+    res.setHeader('Content-Type', 'application/pdf')
+    
+    // NOMBRE DE ARCHIVO SEGURO
+    const safeFilename = generateSafeFilename('asistencia_paragon', startDate, endDate, 'pdf')
+    res.setHeader('Content-Disposition', `attachment; filename=${safeFilename}`)
+    res.send(pdfBuffer)
+
+  } catch (error) {
+    return res.status(500).json(handleFileError(error, 'generar PDF de asistencia'))
   }
 }
 
