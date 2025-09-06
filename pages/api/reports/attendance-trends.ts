@@ -1,12 +1,17 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../lib/supabase/server'
 import { authenticateUser } from '../../../lib/auth-helpers'
+import { withInputValidation, createSecureErrorResponse } from '../../../lib/security/input-validation'
+import { withReportsRateLimit } from '../../../lib/security/rate-limiting'
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
+// Aplicar rate limiting y validación de entrada
+const handlerWithSecurity = withReportsRateLimit()(
+  withInputValidation(attendanceTrendsHandler)
+)
 
+export default handlerWithSecurity
+
+async function attendanceTrendsHandler(req: NextApiRequest, res: NextApiResponse) {
   try {
     // 🔒 AUTENTICACIÓN REQUERIDA CON PERMISOS DE REPORTS
     const authResult = await authenticateUser(req, res, ['can_view_reports'])
@@ -22,30 +27,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const supabase = createClient(req, res)
 
     console.log('🔐 Usuario autenticado para tendencias de asistencia:', { 
-      userId: user.id, 
+      userId: user.id.substring(0, 8) + '...', // Ocultar ID completo
       role: userProfile?.role,
-      companyId: userProfile?.company_id 
+      companyId: '***' // Ocultar company_id
     })
 
-    const { startDate, endDate, preset, employee_id } = req.query
-    
-    // Calcular fechas basado en preset si no se proporcionan fechas específicas
-    let finalStartDate = startDate as string
-    let finalEndDate = endDate as string
-    
-    if (!startDate || !endDate) {
-      if (preset) {
-        const { getDateRange } = require('../../../lib/attendance')
-        const range = getDateRange(preset as string)
-        finalStartDate = range.from.split('T')[0]
-        finalEndDate = range.to.split('T')[0]
-      } else {
-        return res.status(400).json({ error: 'Fechas de inicio y fin o preset requeridas' })
-      }
-    }
+    // Usar datos validados del middleware
+    const { startDate, endDate, employee_id } = req.validatedData
 
     // Obtener tendencias de asistencia con filtro de empleado
-    const trends = await getAttendanceTrends(supabase, userProfile, finalStartDate, finalEndDate, employee_id as string)
+    const trends = await getAttendanceTrends(supabase, userProfile, startDate, endDate, employee_id as string)
 
     return res.status(200).json({
       success: true,
@@ -54,10 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   } catch (error) {
     console.error('Error obteniendo tendencias de asistencia:', error)
-    return res.status(500).json({ 
-      error: 'Error interno del servidor', 
-      message: error instanceof Error ? error.message : 'Error desconocido'
-    })
+    return res.status(500).json(createSecureErrorResponse(error, 'obtener tendencias de asistencia'))
   }
 }
 

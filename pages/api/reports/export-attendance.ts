@@ -3,37 +3,19 @@ import { createClient } from '../../../lib/supabase/server'
 import { authenticateUser } from '../../../lib/auth-helpers'
 import { generateConsolidatedAttendancePDF, type AttendanceItem, type AttendanceSummary } from '../../../lib/attendance/report'
 import ExcelJS from 'exceljs'
-import { validateExportRequest } from '../../../lib/security/input-validation'
-import { generateSafeFilename } from '../../../lib/security/sanitization'
-import { createSecureErrorResponse, createValidationErrorResponse, handleDatabaseError, handleFileError } from '../../../lib/security/error-handling'
-import { createSecureClient } from '../../../lib/supabase/secure-client'
-import { applyCompanyFilter, applyPermissionFilter, canAccessResource } from '../../../lib/security/query-filters'
+import { withInputValidation, createSecureErrorResponse } from '../../../lib/security/input-validation'
 import { withExportRateLimit } from '../../../lib/security/rate-limiting'
-import { withAudit, logDataExport, logSensitiveAccess } from '../../../lib/security/audit'
 
-// Aplicar rate limiting y auditoría
+// Aplicar rate limiting y validación de entrada
 const handlerWithSecurity = withExportRateLimit()(
-  withAudit('export_attendance', 'attendance_data', {
-    severity: 'high',
-    includeDetails: true,
-    logOnSuccess: true,
-    logOnError: true
-  })(exportAttendanceHandler)
+  withInputValidation(exportAttendanceHandler)
 )
 
 export default handlerWithSecurity
 
 async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    // 1. VALIDACIÓN DE ENTRADA SEGURA
-    const validation = validateExportRequest(req)
-    if (!validation.valid) {
-      return res.status(400).json(createValidationErrorResponse(validation.error!))
-    }
-
-    const { format, dateFilter, employee_id } = validation.data!
-
-    // 2. AUTENTICACIÓN Y AUTORIZACIÓN SEGURA
+    // 1. AUTENTICACIÓN Y AUTORIZACIÓN SEGURA
     const authResult = await authenticateUser(req, res, ['can_view_reports', 'can_export_reports'])
     if (!authResult.success) {
       return res.status(401).json({ 
@@ -44,37 +26,25 @@ async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse
 
     const { user, userProfile } = authResult
 
-    // 3. VALIDAR ACCESO AL RECURSO
-    if (!canAccessResource(userProfile!, 'reports')) {
-      return res.status(403).json({
-        error: 'Acceso denegado',
-        message: 'No tiene permisos para acceder a reportes'
-      })
-    }
+    // 2. CREAR CLIENTE SUPABASE
+    const supabase = createClient(req, res)
 
-    // 4. CREAR CLIENTE SUPABASE SEGURO
-    const supabase = createSecureClient({
-      req,
-      res,
-      userProfile: userProfile!,
-      enforceRLS: true
-    })
+    // 3. USAR DATOS VALIDADOS DEL MIDDLEWARE
+    const { startDate, endDate, formato, employee_id } = req.validatedData
 
-    // 5. OBTENER DATOS CON FILTROS DE SEGURIDAD APLICADOS
+    // 4. OBTENER DATOS CON FILTROS DE SEGURIDAD APLICADOS
     let employeeIds: string[] = []
     if (userProfile?.company_id) {
-      // Obtener empleados con filtros de seguridad
-      const employeesQuery = supabase
+      // Obtener empleados de la empresa del usuario
+      const { data: employees, error: empError } = await supabase
         .from('employees')
         .select('id')
-      
-      // Aplicar filtros de seguridad
-      const secureEmployeesQuery = applyCompanyFilter(employeesQuery, userProfile!)
-      
-      const { data: employees, error: empError } = await secureEmployeesQuery
+        .eq('company_id', userProfile.company_id)
+        .eq('status', 'active')
       
       if (empError) {
-        return res.status(500).json(handleDatabaseError(empError, 'obtener empleados'))
+        console.error('Error obteniendo empleados:', empError)
+        return res.status(500).json(createSecureErrorResponse(empError, 'obtener empleados'))
       }
       
       employeeIds = (employees || []).map((e: any) => e.id)
@@ -93,13 +63,10 @@ async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse
           company_id
         )
       `)
-      .gte('date', dateFilter.startDate)
-      .lte('date', dateFilter.endDate)
+      .gte('date', startDate)
+      .lte('date', endDate)
 
-    // Aplicar filtros de seguridad por permisos
-    attendanceQuery = applyPermissionFilter(attendanceQuery, userProfile!, 'attendance_records')
-
-    // Aplicar filtro de empresa adicional si es necesario
+    // Aplicar filtro de empresa
     if (employeeIds.length > 0) {
       attendanceQuery = attendanceQuery.in('employee_id', employeeIds)
     } else if (userProfile?.company_id) {
@@ -121,25 +88,12 @@ async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse
 
     const { data: records, error } = await attendanceQuery
     if (error) {
-      return res.status(500).json(handleDatabaseError(error, 'obtener registros de asistencia'))
+      console.error('Error obteniendo registros de asistencia:', error)
+      return res.status(500).json(createSecureErrorResponse(error, 'obtener registros de asistencia'))
     }
 
-    // 7. LOG DE ACCESO A DATOS SENSIBLES
-    await logSensitiveAccess({
-      req,
-      res,
-      userProfile: userProfile!,
-      action: 'export_attendance',
-      resource: 'attendance_records',
-      details: {
-        format,
-        dateRange: dateFilter,
-        recordCount: records?.length || 0
-      }
-    }, 'attendance_data', records?.length || 0)
-
-    // 8. PROCESAR EXPORTACIÓN SEGURA
-    if (format === 'csv') {
+    // 5. PROCESAR EXPORTACIÓN SEGURA
+    if (formato === 'csv') {
       const headers = ['employee_id','date','status','check_in','check_out','late_minutes']
       const csvRows = [headers.join(',')]
       for (const r of (records || [])) {
@@ -155,55 +109,31 @@ async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse
       res.setHeader('Content-Type', 'text/csv; charset=utf-8')
       
       // NOMBRE DE ARCHIVO SEGURO
-      const safeFilename = generateSafeFilename('attendance', dateFilter.startDate, dateFilter.endDate, 'csv')
+      const sanitizeFilename = (filename: string) => {
+        return filename.replace(/[^a-zA-Z0-9._-]/g, '_')
+      }
+      const safeFilename = sanitizeFilename(`attendance_${startDate}_${endDate}.csv`)
       res.setHeader('Content-Disposition', `attachment; filename=${safeFilename}`)
-      
-      // LOG DE EXPORTACIÓN
-      await logDataExport({
-        req,
-        res,
-        userProfile: userProfile!,
-        action: 'export_attendance_csv',
-        resource: 'attendance_data'
-      }, 'csv', records?.length || 0)
       
       return res.status(200).send(csv)
     }
 
-    if (format === 'excel') {
-      // LOG DE EXPORTACIÓN EXCEL
-      await logDataExport({
-        req,
-        res,
-        userProfile: userProfile!,
-        action: 'export_attendance_excel',
-        resource: 'attendance_data'
-      }, 'excel', records?.length || 0)
-      
-      return exportToExcel(records || [], dateFilter.startDate, dateFilter.endDate, res)
+    if (formato === 'excel') {
+      return exportToExcel(records || [], startDate, endDate, res)
     }
 
-    if (format === 'pdf') {
-      // LOG DE EXPORTACIÓN PDF
-      await logDataExport({
-        req,
-        res,
-        userProfile: userProfile!,
-        action: 'export_attendance_pdf',
-        resource: 'attendance_data'
-      }, 'pdf', records?.length || 0)
-      
-      return exportToPDF(records || [], dateFilter.startDate, dateFilter.endDate, res, user?.email)
+    if (formato === 'pdf') {
+      return exportToPDF(records || [], startDate, endDate, res, user?.email)
     }
 
     // Formato no soportado
-    return res.status(400).json(createValidationErrorResponse('Formato no soportado. Use csv, excel o pdf'))
+    return res.status(400).json({
+      error: 'Formato no soportado',
+      message: 'Use csv, excel o pdf'
+    })
 
   } catch (error) {
-    return res.status(500).json(createSecureErrorResponse(error, {
-      endpoint: '/api/reports/export-attendance',
-      action: 'export_attendance'
-    }))
+    return res.status(500).json(createSecureErrorResponse(error, 'exportación de asistencia'))
   }
 }
 
@@ -337,12 +267,15 @@ async function exportToExcel(attendanceRecords: any[], startDate: string, endDat
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     
     // NOMBRE DE ARCHIVO SEGURO
-    const safeFilename = generateSafeFilename('asistencia_paragon', startDate, endDate, 'xlsx')
+    const sanitizeFilename = (filename: string) => {
+      return filename.replace(/[^a-zA-Z0-9._-]/g, '_')
+    }
+    const safeFilename = sanitizeFilename(`asistencia_paragon_${startDate}_${endDate}.xlsx`)
     res.setHeader('Content-Disposition', `attachment; filename=${safeFilename}`)
     res.send(buffer)
 
   } catch (error) {
-    return res.status(500).json(handleFileError(error, 'generar Excel de asistencia'))
+    return res.status(500).json(createSecureErrorResponse(error, 'generar Excel de asistencia'))
   }
 }
 
@@ -416,12 +349,15 @@ async function exportToPDF(attendanceRecords: any[], startDate: string, endDate:
     res.setHeader('Content-Type', 'application/pdf')
     
     // NOMBRE DE ARCHIVO SEGURO
-    const safeFilename = generateSafeFilename('asistencia_paragon', startDate, endDate, 'pdf')
+    const sanitizeFilename = (filename: string) => {
+      return filename.replace(/[^a-zA-Z0-9._-]/g, '_')
+    }
+    const safeFilename = sanitizeFilename(`asistencia_paragon_${startDate}_${endDate}.pdf`)
     res.setHeader('Content-Disposition', `attachment; filename=${safeFilename}`)
     res.send(pdfBuffer)
 
   } catch (error) {
-    return res.status(500).json(handleFileError(error, 'generar PDF de asistencia'))
+    return res.status(500).json(createSecureErrorResponse(error, 'generar PDF de asistencia'))
   }
 }
 

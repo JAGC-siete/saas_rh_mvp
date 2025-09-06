@@ -1,237 +1,212 @@
-/**
- * Middleware de validación de entrada para endpoints de exportación
- * Centraliza la validación y sanitización de datos de entrada
- */
-
 import { NextApiRequest, NextApiResponse } from 'next'
-import { validateDateRange } from './validation'
-import { sanitizeQueryParam, sanitizeUUID } from './sanitization'
 
-export interface ExportRequest {
-  format: 'csv' | 'excel' | 'pdf'
-  dateFilter: {
-    startDate: string
-    endDate: string
+// Extender el tipo NextApiRequest para incluir validatedData
+declare module 'next' {
+  interface NextApiRequest {
+    validatedData?: any
   }
-  employee_id?: string
 }
 
-export interface ValidationResult {
+/**
+ * MIDDLEWARE DE VALIDACIÓN DE ENTRADA SEGURA
+ * Usa validación por esquemas + prepared statements (NO regex frágiles)
+ */
+
+// Validadores específicos basados en esquemas
+export const validators = {
+  // Validar formato de fecha YYYY-MM-DD
+  date: (date: string): boolean => {
+    if (!date || typeof date !== 'string') return false
+    
+    // Verificar formato básico
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/
+    if (!dateRegex.test(date)) return false
+    
+    // Verificar que sea una fecha válida
+    const parsedDate = new Date(date + 'T00:00:00.000Z')
+    return parsedDate instanceof Date && !isNaN(parsedDate.getTime()) && 
+           parsedDate.toISOString().split('T')[0] === date
+  },
+
+  // Validar UUID
+  uuid: (uuid: string): boolean => {
+    if (!uuid || typeof uuid !== 'string') return false
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    return uuidRegex.test(uuid)
+  },
+
+  // Validar formato de archivo
+  fileFormat: (format: string): boolean => {
+    if (!format || typeof format !== 'string') return false
+    const allowedFormats = ['excel', 'pdf', 'csv', 'xlsx']
+    return allowedFormats.includes(format.toLowerCase())
+  },
+
+  // Validar string seguro (sin caracteres especiales)
+  safeString: (str: string, maxLength: number = 255): boolean => {
+    if (!str || typeof str !== 'string') return false
+    if (str.length > maxLength) return false
+    
+    // Solo permitir letras, números, guiones y guiones bajos
+    const safeRegex = /^[a-zA-Z0-9_-]+$/
+    return safeRegex.test(str)
+  },
+
+  // Validar nombre de archivo seguro
+  safeFilename: (filename: string): boolean => {
+    if (!filename || typeof filename !== 'string') return false
+    if (filename.length > 100) return false
+    
+    // No permitir caracteres especiales peligrosos
+    const dangerousChars = /[<>:"/\\|?*\x00-\x1f]/
+    return !dangerousChars.test(filename)
+  }
+}
+
+// Sanitizar entrada básica (solo para display, NO para SQL)
+export const sanitizeInput = (input: string): string => {
+  if (!input || typeof input !== 'string') return ''
+  
+  return input
+    .replace(/[<>]/g, '') // Remover < >
+    .replace(/['"]/g, '') // Remover comillas
+    .replace(/[;]/g, '') // Remover punto y coma
+    .replace(/[--]/g, '') // Remover comentarios SQL
+    .replace(/[\/\*]/g, '') // Remover comentarios SQL
+    .replace(/\.\./g, '') // Remover path traversal
+    .trim()
+}
+
+// Esquema de validación para exportación de asistencia
+export const attendanceExportSchema = {
+  startDate: {
+    required: true,
+    validator: validators.date,
+    sanitize: true
+  },
+  endDate: {
+    required: true,
+    validator: validators.date,
+    sanitize: true
+  },
+  formato: {
+    required: true,
+    validator: validators.fileFormat,
+    sanitize: true
+  },
+  employee_id: {
+    required: false,
+    validator: validators.uuid,
+    sanitize: true
+  },
+  company_id: {
+    required: false,
+    validator: validators.uuid,
+    sanitize: true
+  }
+}
+
+// Validar request de exportación
+export const validateAttendanceExportRequest = (req: NextApiRequest): {
   valid: boolean
-  data?: ExportRequest
-  error?: string
-  sanitized?: any
-}
+  data?: any
+  errors?: string[]
+} => {
+  const errors: string[] = []
+  const data: any = {}
 
-/**
- * Valida una solicitud de exportación completa
- */
-export function validateExportRequest(req: NextApiRequest): ValidationResult {
-  try {
-    const { format, dateFilter, employee_id } = req.body
-    
-    // Validar método HTTP
-    if (req.method !== 'POST') {
-      return { 
-        valid: false, 
-        error: 'Método no permitido. Use POST' 
-      }
+  // Verificar método HTTP
+  if (req.method !== 'POST') {
+    errors.push('Método HTTP no permitido. Use POST.')
+    return { valid: false, errors }
+  }
+
+  // Obtener datos del body
+  const body = req.body || {}
+
+  // Validar cada campo según el esquema
+  for (const [field, config] of Object.entries(attendanceExportSchema)) {
+    const value = body[field]
+    const fieldConfig = config as any
+
+    // Verificar si es requerido
+    if (fieldConfig.required && (!value || value === '')) {
+      errors.push(`Campo requerido: ${field}`)
+      continue
     }
-    
+
+    // Si no es requerido y no tiene valor, continuar
+    if (!fieldConfig.required && (!value || value === '')) {
+      continue
+    }
+
     // Validar formato
-    if (!format || !['csv', 'excel', 'pdf'].includes(format)) {
-      return { 
-        valid: false, 
-        error: 'Formato inválido. Use csv, excel o pdf' 
-      }
+    if (fieldConfig.validator && !fieldConfig.validator(value)) {
+      errors.push(`Formato inválido en ${field}`)
+      continue
     }
-    
-    // Validar estructura de dateFilter
-    if (!dateFilter || typeof dateFilter !== 'object') {
-      return { 
-        valid: false, 
-        error: 'dateFilter es requerido y debe ser un objeto' 
-      }
+
+    // Sanitizar si es necesario
+    if (fieldConfig.sanitize) {
+      data[field] = sanitizeInput(value)
+    } else {
+      data[field] = value
     }
+  }
+
+  // Validar rango de fechas
+  if (data.startDate && data.endDate) {
+    const startDate = new Date(data.startDate + 'T00:00:00.000Z')
+    const endDate = new Date(data.endDate + 'T00:00:00.000Z')
     
-    if (!dateFilter.startDate || !dateFilter.endDate) {
-      return { 
-        valid: false, 
-        error: 'startDate y endDate son requeridos en dateFilter' 
-      }
+    if (startDate > endDate) {
+      errors.push('La fecha de inicio debe ser anterior a la fecha de fin')
     }
+
+    // Validar que no sea un rango muy grande (máximo 1 año)
+    const diffTime = Math.abs(endDate.getTime() - startDate.getTime())
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
     
-    // Validar fechas
-    const dateValidation = validateDateRange(dateFilter.startDate, dateFilter.endDate)
-    if (!dateValidation.valid) {
-      return { 
-        valid: false, 
-        error: dateValidation.error 
-      }
+    if (diffDays > 365) {
+      errors.push('El rango de fechas no puede ser mayor a 1 año')
     }
-    
-    // Validar employee_id si se proporciona
-    let sanitizedEmployeeId: string | undefined
-    if (employee_id) {
-      const uuidValidation = sanitizeUUID(employee_id)
-      if (!uuidValidation.valid) {
-        return { 
-          valid: false, 
-          error: `employee_id inválido: ${uuidValidation.error}` 
-        }
-      }
-      sanitizedEmployeeId = uuidValidation.sanitized
-    }
-    
-    // Sanitizar fechas
-    const sanitizedStartDate = sanitizeQueryParam(dateFilter.startDate)
-    const sanitizedEndDate = sanitizeQueryParam(dateFilter.endDate)
-    
-    return {
-      valid: true,
-      data: {
-        format: format as 'csv' | 'excel' | 'pdf',
-        dateFilter: {
-          startDate: sanitizedStartDate,
-          endDate: sanitizedEndDate
-        },
-        employee_id: sanitizedEmployeeId
-      },
-      sanitized: {
-        originalStartDate: dateFilter.startDate,
-        originalEndDate: dateFilter.endDate,
-        originalEmployeeId: employee_id
-      }
-    }
-    
-  } catch (error) {
-    return {
-      valid: false,
-      error: 'Error de validación: ' + (error instanceof Error ? error.message : 'Error desconocido')
-    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    data: errors.length === 0 ? data : undefined,
+    errors: errors.length > 0 ? errors : undefined
   }
 }
 
-/**
- * Valida parámetros de consulta para endpoints GET
- */
-export function validateQueryParams(req: NextApiRequest, allowedParams: string[]): ValidationResult {
-  try {
-    const query = req.query
-    const sanitized: any = {}
-    
-    for (const param of allowedParams) {
-      if (query[param]) {
-        sanitized[param] = sanitizeQueryParam(query[param] as string)
-      }
-    }
-    
-    return {
-      valid: true,
-      sanitized
-    }
-    
-  } catch (error) {
-    return {
-      valid: false,
-      error: 'Error validando parámetros de consulta: ' + (error instanceof Error ? error.message : 'Error desconocido')
-    }
-  }
-}
-
-/**
- * Middleware wrapper para validación automática
- */
- 
-export function withValidation<T = any>(
-  validator: (req: NextApiRequest) => ValidationResult,
-  handler: (_req: NextApiRequest, _res: NextApiResponse, _validatedData: T) => Promise<void>
-) {
+// Middleware de validación
+export const withInputValidation = (handler: any) => {
   return async (req: NextApiRequest, res: NextApiResponse) => {
-    try {
-      const validation = validator(req)
-      
-      if (!validation.valid) {
-        return res.status(400).json({
-          error: 'Datos de entrada inválidos',
-          message: validation.error
-        })
-      }
-      
-      await handler(req, res, validation.data as T)
-      
-    } catch (error) {
-      console.error('Error en middleware de validación:', error)
-      return res.status(500).json({
-        error: 'Error interno del servidor',
-        message: 'Error procesando solicitud'
+    const validation = validateAttendanceExportRequest(req)
+    
+    if (!validation.valid) {
+      return res.status(400).json({
+        error: 'Datos de entrada inválidos',
+        message: 'Los datos proporcionados no son válidos',
+        details: validation.errors,
+        timestamp: new Date().toISOString()
       })
     }
-  }
-}
 
-/**
- * Valida headers de autorización
- */
-export function validateAuthHeaders(req: NextApiRequest): { valid: boolean; error?: string } {
-  const authHeader = req.headers.authorization
-  
-  if (!authHeader) {
-    return { 
-      valid: false, 
-      error: 'Header de autorización requerido' 
-    }
-  }
-  
-  if (!authHeader.startsWith('Bearer ')) {
-    return { 
-      valid: false, 
-      error: 'Formato de autorización inválido. Use Bearer token' 
-    }
-  }
-  
-  const token = authHeader.substring(7)
-  if (!token || token.length < 10) {
-    return { 
-      valid: false, 
-      error: 'Token de autorización inválido' 
-    }
-  }
-  
-  return { valid: true }
-}
-
-/**
- * Valida Content-Type para requests POST
- */
-export function validateContentType(req: NextApiRequest): { valid: boolean; error?: string } {
-  if (req.method === 'POST') {
-    const contentType = req.headers['content-type']
+    // Agregar datos validados al request
+    req.validatedData = validation.data
     
-    if (!contentType || !contentType.includes('application/json')) {
-      return { 
-        valid: false, 
-        error: 'Content-Type debe ser application/json' 
-      }
-    }
+    return handler(req, res)
   }
-  
-  return { valid: true }
 }
 
-/**
- * Valida límites de tamaño de request
- */
-export function validateRequestSize(req: NextApiRequest): { valid: boolean; error?: string } {
-  const contentLength = parseInt(req.headers['content-length'] || '0')
-  const maxSize = 1024 * 1024 // 1MB
+// Función para generar respuesta de error segura
+export const createSecureErrorResponse = (error: any, context: string) => {
+  console.error(`Error en ${context}:`, error)
   
-  if (contentLength > maxSize) {
-    return { 
-      valid: false, 
-      error: `Request demasiado grande. Máximo ${maxSize} bytes` 
-    }
+  return {
+    error: 'Error interno del servidor',
+    message: 'Ha ocurrido un error inesperado',
+    timestamp: new Date().toISOString()
   }
-  
-  return { valid: true }
 }

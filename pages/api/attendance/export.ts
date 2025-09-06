@@ -1,13 +1,17 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../lib/supabase/server'
 import { authenticateUser } from '../../../lib/auth-helpers'
+import { validateAttendanceExport } from '../../../lib/security/schema-validation'
+import { createSecureQueryBuilder } from '../../../lib/security/secure-queries'
+import { withExportRateLimit } from '../../../lib/security/rate-limiting'
 import ExcelJS from 'exceljs'
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
+// Aplicar rate limiting
+const handlerWithSecurity = withExportRateLimit()(attendanceExportHandler)
 
+export default handlerWithSecurity
+
+async function attendanceExportHandler(req: NextApiRequest, res: NextApiResponse) {
   try {
     // AUTENTICACIÓN REQUERIDA
     const authResult = await authenticateUser(req, res, ['can_view_reports', 'can_export_payroll'])
@@ -22,51 +26,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { user, userProfile } = authResult
     const supabase = createClient(req, res)
 
+    // VALIDACIÓN SEGURA CON ZOD
+    const validation = validateAttendanceExport(req.body)
+    if (!validation.success) {
+      return res.status(400).json({
+        error: 'Datos de entrada inválidos',
+        message: validation.error?.message,
+        details: validation.error?.details,
+        timestamp: new Date().toISOString()
+      })
+    }
+
+    const { startDate, endDate, formato, employee_id } = validation.data!
+
     console.log('Usuario autenticado para exportación de asistencia:', { 
-      userId: user.id, 
+      userId: user.id.substring(0, 8) + '...', // Ocultar ID completo
       role: userProfile?.role,
-      companyId: userProfile?.company_id 
+      companyId: '***' // Ocultar company_id
     })
 
-    const { startDate, endDate, formato = 'excel', employee_id } = req.body
-    
-    if (!startDate || !endDate) {
-      return res.status(400).json({ error: 'startDate y endDate son requeridos' })
-    }
-
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
-      return res.status(400).json({ error: 'Formato de fecha inválido (YYYY-MM-DD)' })
-    }
-
-    // Obtener registros de asistencia del período
-    let query = supabase
-      .from('attendance_records')
-      .select(`
-        *,
-        employees!attendance_records_employee_id_fkey(
-          name,
-          employee_code,
-          department,
-          position,
-          company_id
-        )
-      `)
-      .gte('date', startDate)
-      .lte('date', endDate)
-      .eq('employees.company_id', userProfile?.company_id)
-      .order('date', { ascending: false })
-
-    // Filtrar por empleado específico si se proporciona
-    if (employee_id) {
-      query = query.eq('employee_id', employee_id)
-    }
-
-    const { data: attendanceRecords, error: attendanceError } = await query
-
-    if (attendanceError) {
-      console.error('Error obteniendo registros de asistencia:', attendanceError)
-      return res.status(500).json({ error: 'Error obteniendo registros de asistencia' })
-    }
+    // USAR QUERY BUILDER SEGURO
+    const queryBuilder = createSecureQueryBuilder(supabase, userProfile!)
+    const attendanceRecords = await queryBuilder.getAttendanceRecords(validation.data!)
 
     if (!attendanceRecords || attendanceRecords.length === 0) {
       return res.status(404).json({ 
@@ -87,9 +68,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   } catch (error) {
     console.error('Error en exportación de asistencia:', error)
-    return res.status(500).json({ 
-      error: 'Error interno del servidor', 
-      message: error instanceof Error ? error.message : 'Error desconocido'
+    return res.status(500).json({
+      error: 'Error interno del servidor',
+      message: 'Ha ocurrido un error inesperado',
+      timestamp: new Date().toISOString()
     })
   }
 }
@@ -224,9 +206,16 @@ async function exportToExcel(attendanceRecords: any[], startDate: string, endDat
     // Generar buffer
     const excelBuffer = await workbook.xlsx.writeBuffer()
 
+    // Sanitizar nombre de archivo
+    const sanitizeFilename = (filename: string) => {
+      return filename.replace(/[^a-zA-Z0-9._-]/g, '_')
+    }
+    
+    const safeFilename = sanitizeFilename(`asistencia_paragon_${startDate}_${endDate}.xlsx`)
+    
     // Enviar respuesta
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    res.setHeader('Content-Disposition', `attachment; filename=asistencia_paragon_${startDate}_${endDate}.xlsx`)
+    res.setHeader('Content-Disposition', `attachment; filename=${safeFilename}`)
     res.send(excelBuffer)
 
   } catch (error) {

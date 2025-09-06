@@ -1,327 +1,217 @@
-/**
- * Sistema de rate limiting simple y efectivo
- * Previene abuso de API y ataques de fuerza bruta
- */
-
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../supabase/server'
-
-export interface RateLimitConfig {
-  windowMs: number // Ventana de tiempo en ms
-  maxRequests: number // Máximo de requests en la ventana
-  keyGenerator?: (req: NextApiRequest) => string
-  skipSuccessfulRequests?: boolean
-  skipFailedRequests?: boolean
-}
-
-export interface RateLimitInfo {
-  limit: number
-  remaining: number
-  reset: number
-  retryAfter?: number
-}
-
-// Configuraciones predefinidas
-export const RATE_LIMITS = {
-  // Límites generales
-  GENERAL: { windowMs: 15 * 60 * 1000, maxRequests: 100 }, // 100 req/15min
-  AUTH: { windowMs: 15 * 60 * 1000, maxRequests: 5 }, // 5 login/15min
-  EXPORT: { windowMs: 60 * 60 * 1000, maxRequests: 10 }, // 10 exports/hour
-  ATTENDANCE: { windowMs: 5 * 60 * 1000, maxRequests: 20 }, // 20 attendance/5min
-  PAYROLL: { windowMs: 60 * 60 * 1000, maxRequests: 5 }, // 5 payroll/hour
-  
-  // Límites estrictos
-  STRICT: { windowMs: 5 * 60 * 1000, maxRequests: 10 }, // 10 req/5min
-  VERY_STRICT: { windowMs: 60 * 1000, maxRequests: 3 }, // 3 req/min
-}
 
 /**
- * Genera clave de rate limiting basada en IP y usuario
+ * SISTEMA DE RATE LIMITING PARA PROTEGER CONTRA ATAQUES DE FUERZA BRUTA
+ * Implementa diferentes límites según el tipo de endpoint
  */
- 
-export function generateRateLimitKey(req: NextApiRequest, userId?: string): string {
-  const ip = getClientIP(req)
-  const userAgent = req.headers['user-agent'] || 'unknown'
+
+// Configuración de rate limiting por tipo de endpoint
+const RATE_LIMITS = {
+  // Endpoints de exportación (más restrictivos)
+  export: {
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 5, // máximo 5 requests por ventana
+    message: 'Demasiadas exportaciones. Intente más tarde.'
+  },
   
-  // Si hay usuario autenticado, usar su ID
-  if (userId) {
-    return `user:${userId}`
+  // Endpoints de reportes (moderados)
+  reports: {
+    windowMs: 10 * 60 * 1000, // 10 minutos
+    max: 10, // máximo 10 requests por ventana
+    message: 'Demasiadas consultas de reportes. Intente más tarde.'
+  },
+  
+  // Endpoints generales (menos restrictivos)
+  general: {
+    windowMs: 5 * 60 * 1000, // 5 minutos
+    max: 20, // máximo 20 requests por ventana
+    message: 'Demasiadas solicitudes. Intente más tarde.'
   }
-  
-  // Si no, usar IP + User-Agent
-  return `ip:${ip}:${userAgent.slice(0, 50)}`
 }
 
-/**
- * Obtiene la IP del cliente
- */
-function getClientIP(req: NextApiRequest): string {
+// Almacén en memoria para rate limiting (en producción usar Redis)
+const requestCounts = new Map<string, { count: number; resetTime: number }>()
+
+// Obtener IP del cliente
+const getClientIP = (req: NextApiRequest): string => {
   const forwarded = req.headers['x-forwarded-for']
-  const realIP = req.headers['x-real-ip']
+  const ip = forwarded 
+    ? (Array.isArray(forwarded) ? forwarded[0] : forwarded.split(',')[0])
+    : req.connection.remoteAddress || 'unknown'
   
-  if (forwarded) {
-    return Array.isArray(forwarded) ? forwarded[0] : forwarded.split(',')[0]
-  }
-  
-  if (realIP) {
-    return Array.isArray(realIP) ? realIP[0] : realIP
-  }
-  
-  return req.socket.remoteAddress || 'unknown'
+  return ip.trim()
 }
 
-/**
- * Verifica si una request excede el rate limit
- */
-export async function checkRateLimit(
-  key: string,
-  config: RateLimitConfig
-): Promise<{ allowed: boolean; info: RateLimitInfo }> {
-  try {
-    const supabase = createClient({} as NextApiRequest, {} as NextApiResponse)
-    const now = Date.now()
-    const windowStart = now - config.windowMs
-    
-    // Obtener requests en la ventana actual
-    const { data: requests, error } = await supabase
-      .from('rate_limit_requests')
-      .select('timestamp')
-      .eq('key', key)
-      .gte('timestamp', new Date(windowStart).toISOString())
-      .order('timestamp', { ascending: false })
-    
-    if (error) {
-      console.error('Error verificando rate limit:', error)
-      // En caso de error, permitir la request
-      return {
-        allowed: true,
-        info: {
-          limit: config.maxRequests,
-          remaining: config.maxRequests,
-          reset: now + config.windowMs
-        }
-      }
+// Limpiar entradas expiradas del almacén
+const cleanupExpiredEntries = () => {
+  const now = Date.now()
+  for (const [key, value] of requestCounts.entries()) {
+    if (now > value.resetTime) {
+      requestCounts.delete(key)
     }
+  }
+}
+
+// Verificar rate limit
+const checkRateLimit = (key: string, limit: { windowMs: number; max: number }): {
+  allowed: boolean
+  remaining: number
+  resetTime: number
+} => {
+  const now = Date.now()
+  const entry = requestCounts.get(key)
+  
+  if (!entry || now > entry.resetTime) {
+    // Nueva ventana o primera vez
+    requestCounts.set(key, {
+      count: 1,
+      resetTime: now + limit.windowMs
+    })
     
-    const requestCount = requests?.length || 0
-    const allowed = requestCount < config.maxRequests
-    const remaining = Math.max(0, config.maxRequests - requestCount)
-    const reset = now + config.windowMs
-    
-    return {
-      allowed,
-      info: {
-        limit: config.maxRequests,
-        remaining,
-        reset,
-        retryAfter: allowed ? undefined : Math.ceil((reset - now) / 1000)
-      }
-    }
-    
-  } catch (error) {
-    console.error('Error en checkRateLimit:', error)
-    // En caso de error, permitir la request
     return {
       allowed: true,
-      info: {
-        limit: config.maxRequests,
-        remaining: config.maxRequests,
-        reset: Date.now() + config.windowMs
-      }
+      remaining: limit.max - 1,
+      resetTime: now + limit.windowMs
     }
   }
-}
-
-/**
- * Registra una request en el rate limiting
- */
-export async function recordRequest(
-  key: string,
-  req: NextApiRequest,
-  success: boolean = true
-): Promise<void> {
-  try {
-    const supabase = createClient(req, {} as NextApiResponse)
-    
-    await supabase
-      .from('rate_limit_requests')
-      .insert({
-        key,
-        ip_address: getClientIP(req),
-        user_agent: req.headers['user-agent'],
-        method: req.method,
-        url: req.url,
-        success,
-        timestamp: new Date().toISOString()
-      })
-      
-  } catch (error) {
-    console.error('Error registrando request:', error)
+  
+  if (entry.count >= limit.max) {
+    // Límite excedido
+    return {
+      allowed: false,
+      remaining: 0,
+      resetTime: entry.resetTime
+    }
+  }
+  
+  // Incrementar contador
+  entry.count++
+  requestCounts.set(key, entry)
+  
+  return {
+    allowed: true,
+    remaining: limit.max - entry.count,
+    resetTime: entry.resetTime
   }
 }
 
-/**
- * Middleware de rate limiting
- */
-export function withRateLimit(config: RateLimitConfig) {
-  return (handler: Function) => {
+// Middleware de rate limiting
+export const withRateLimit = (endpointType: 'export' | 'reports' | 'general' = 'general') => {
+  return (handler: any) => {
     return async (req: NextApiRequest, res: NextApiResponse) => {
-      const userId = (req as any).userProfile?.id
-      const key = generateRateLimitKey(req, userId)
+      // Limpiar entradas expiradas
+      cleanupExpiredEntries()
+      
+      // Obtener IP del cliente
+      const clientIP = getClientIP(req)
+      const userAgent = req.headers['user-agent'] || 'unknown'
+      
+      // Crear clave única para el rate limiting
+      const rateLimitKey = `${clientIP}:${endpointType}:${userAgent.substring(0, 50)}`
+      
+      // Obtener configuración de límite
+      const limit = RATE_LIMITS[endpointType]
       
       // Verificar rate limit
-      const { allowed, info } = await checkRateLimit(key, config)
+      const rateLimitResult = checkRateLimit(rateLimitKey, limit)
       
-      if (!allowed) {
-        // Agregar headers de rate limit
-        res.setHeader('X-RateLimit-Limit', info.limit.toString())
-        res.setHeader('X-RateLimit-Remaining', info.remaining.toString())
-        res.setHeader('X-RateLimit-Reset', new Date(info.reset).toISOString())
+      if (!rateLimitResult.allowed) {
+        // Log del intento de rate limit
+        console.warn('🚨 Rate limit excedido:', {
+          ip: clientIP,
+          userAgent,
+          endpoint: req.url,
+          endpointType,
+          timestamp: new Date().toISOString()
+        })
         
-        if (info.retryAfter) {
-          res.setHeader('Retry-After', info.retryAfter.toString())
-        }
+        // Agregar headers de rate limit
+        res.setHeader('X-RateLimit-Limit', limit.max.toString())
+        res.setHeader('X-RateLimit-Remaining', '0')
+        res.setHeader('X-RateLimit-Reset', new Date(rateLimitResult.resetTime).toISOString())
+        res.setHeader('Retry-After', Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000).toString())
         
         return res.status(429).json({
           error: 'Demasiadas solicitudes',
-          message: `Límite de ${config.maxRequests} solicitudes por ${Math.ceil(config.windowMs / 60000)} minutos excedido`,
-          retryAfter: info.retryAfter
+          message: limit.message,
+          retryAfter: Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000),
+          timestamp: new Date().toISOString()
         })
       }
       
-      // Agregar headers de rate limit
-      res.setHeader('X-RateLimit-Limit', info.limit.toString())
-      res.setHeader('X-RateLimit-Remaining', info.remaining.toString())
-      res.setHeader('X-RateLimit-Reset', new Date(info.reset).toISOString())
+      // Agregar headers de rate limit exitoso
+      res.setHeader('X-RateLimit-Limit', limit.max.toString())
+      res.setHeader('X-RateLimit-Remaining', rateLimitResult.remaining.toString())
+      res.setHeader('X-RateLimit-Reset', new Date(rateLimitResult.resetTime).toISOString())
       
-      try {
-        // Ejecutar handler
-        const result = await handler(req, res)
-        
-        // Registrar request exitosa
-        if (config.skipSuccessfulRequests !== true) {
-          await recordRequest(key, req, true)
-        }
-        
-        return result
-        
-      } catch (error) {
-        // Registrar request fallida
-        if (config.skipFailedRequests !== true) {
-          await recordRequest(key, req, false)
-        }
-        
-        throw error
-      }
+      return handler(req, res)
     }
   }
 }
 
-/**
- * Rate limiting específico para autenticación
- */
-export function withAuthRateLimit() {
-  return withRateLimit(RATE_LIMITS.AUTH)
+// Rate limiting específico para exportaciones
+export const withExportRateLimit = () => withRateLimit('export')
+
+// Rate limiting específico para reportes
+export const withReportsRateLimit = () => withRateLimit('reports')
+
+// Rate limiting general
+export const withGeneralRateLimit = () => withRateLimit('general')
+
+// Función para verificar rate limit sin middleware
+export const checkRateLimitStatus = (req: NextApiRequest, endpointType: 'export' | 'reports' | 'general' = 'general') => {
+  const clientIP = getClientIP(req)
+  const userAgent = req.headers['user-agent'] || 'unknown'
+  const rateLimitKey = `${clientIP}:${endpointType}:${userAgent.substring(0, 50)}`
+  const limit = RATE_LIMITS[endpointType]
+  
+  return checkRateLimit(rateLimitKey, limit)
 }
 
-/**
- * Rate limiting específico para exportaciones
- */
-export function withExportRateLimit() {
-  return withRateLimit(RATE_LIMITS.EXPORT)
-}
-
-/**
- * Rate limiting específico para asistencia
- */
-export function withAttendanceRateLimit() {
-  return withRateLimit(RATE_LIMITS.ATTENDANCE)
-}
-
-/**
- * Rate limiting específico para nómina
- */
-export function withPayrollRateLimit() {
-  return withRateLimit(RATE_LIMITS.PAYROLL)
-}
-
-/**
- * Rate limiting estricto para operaciones críticas
- */
-export function withStrictRateLimit() {
-  return withRateLimit(RATE_LIMITS.STRICT)
-}
-
-/**
- * Limpia requests antiguas del rate limiting
- */
-export async function cleanupRateLimitRequests(): Promise<void> {
-  try {
-    const supabase = createClient({} as NextApiRequest, {} as NextApiResponse)
-    const cutoffDate = new Date()
-    cutoffDate.setHours(cutoffDate.getHours() - 24) // Limpiar requests de hace 24 horas
-    
-    const { error } = await supabase
-      .from('rate_limit_requests')
-      .delete()
-      .lt('timestamp', cutoffDate.toISOString())
-    
-    if (error) {
-      console.error('Error limpiando rate limit requests:', error)
+// Función para obtener estadísticas de rate limiting
+export const getRateLimitStats = () => {
+  const now = Date.now()
+  const stats = {
+    totalKeys: requestCounts.size,
+    activeKeys: 0,
+    expiredKeys: 0,
+    byType: {
+      export: 0,
+      reports: 0,
+      general: 0
+    }
+  }
+  
+  for (const [key, value] of requestCounts.entries()) {
+    if (now > value.resetTime) {
+      stats.expiredKeys++
     } else {
-      console.log('Rate limit requests antiguas eliminadas')
+      stats.activeKeys++
+      
+      if (key.includes(':export:')) stats.byType.export++
+      else if (key.includes(':reports:')) stats.byType.reports++
+      else if (key.includes(':general:')) stats.byType.general++
     }
-  } catch (error) {
-    console.error('Error en cleanupRateLimitRequests:', error)
   }
+  
+  return stats
 }
 
-/**
- * Obtiene estadísticas de rate limiting
- */
-export async function getRateLimitStats(
-  key?: string,
-  hours: number = 24
-): Promise<{
-  totalRequests: number
-  successfulRequests: number
-  failedRequests: number
-  uniqueIPs: number
-}> {
-  try {
-    const supabase = createClient({} as NextApiRequest, {} as NextApiResponse)
-    const cutoffDate = new Date()
-    cutoffDate.setHours(cutoffDate.getHours() - hours)
-    
-    let query = supabase
-      .from('rate_limit_requests')
-      .select('*')
-      .gte('timestamp', cutoffDate.toISOString())
-    
-    if (key) {
-      query = query.eq('key', key)
+// Función para limpiar rate limits manualmente
+export const clearRateLimits = () => {
+  requestCounts.clear()
+  console.log('🧹 Rate limits limpiados manualmente')
+}
+
+// Función para limpiar rate limits de una IP específica
+export const clearRateLimitsForIP = (ip: string) => {
+  let cleared = 0
+  for (const [key] of requestCounts.entries()) {
+    if (key.startsWith(ip + ':')) {
+      requestCounts.delete(key)
+      cleared++
     }
-    
-    const { data: requests, error } = await query
-    
-    if (error) {
-      console.error('Error obteniendo estadísticas de rate limiting:', error)
-      return { totalRequests: 0, successfulRequests: 0, failedRequests: 0, uniqueIPs: 0 }
-    }
-    
-    const totalRequests = requests?.length || 0
-    const successfulRequests = requests?.filter(r => r.success).length || 0
-    const failedRequests = totalRequests - successfulRequests
-    const uniqueIPs = new Set(requests?.map(r => r.ip_address)).size
-    
-    return {
-      totalRequests,
-      successfulRequests,
-      failedRequests,
-      uniqueIPs
-    }
-  } catch (error) {
-    console.error('Error en getRateLimitStats:', error)
-    return { totalRequests: 0, successfulRequests: 0, failedRequests: 0, uniqueIPs: 0 }
   }
+  console.log(`🧹 Rate limits limpiados para IP ${ip}: ${cleared} entradas`)
+  return cleared
 }
