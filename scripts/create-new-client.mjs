@@ -98,7 +98,7 @@ async function createNewClient(clientData) {
     departmentCount,
     adminName = 'Administrador Sistema',
     adminEmail = `admin@${companyName.toLowerCase().replace(/\s+/g, '')}.com`,
-    adminPassword = 'Admin123!',
+    adminPassword = process.env.ADMIN_PASSWORD || 'AdminPassword123!',
     timezone = 'America/Tegucigalpa'
   } = clientData
 
@@ -693,7 +693,7 @@ const configuracionDefault = {
   industria: 'Distribución y Ventas',
   adminNombre: 'Carlos Mendoza',
   adminEmail: 'admin@distribuidoralaceiba.hn',
-  adminPassword: 'Admin123!',
+  adminPassword: process.env.ADMIN_PASSWORD || 'AdminPassword123!',
   numEmpleados: 15,
   numDepartamentos: 4
 }
