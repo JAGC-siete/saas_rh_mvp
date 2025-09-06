@@ -1,14 +1,18 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../lib/supabase/server'
+import { validatePayrollExport, sanitizeFilename } from '../../../lib/security/payroll-validation'
+import { createSecurePayrollQueryBuilder } from '../../../lib/security/payroll-queries'
+import { withExportRateLimit } from '../../../lib/security/rate-limiting'
 
 // Usar exceljs para generar Excel (más seguro que xlsx)
 import ExcelJS from 'exceljs'
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
+// Aplicar rate limiting
+const handlerWithSecurity = withExportRateLimit()(payrollExportHandler)
 
+export default handlerWithSecurity
+
+async function payrollExportHandler(req: NextApiRequest, res: NextApiResponse) {
   try {
     // AUTENTICACIÓN REQUERIDA
     const supabase = createClient(req, res)
@@ -45,39 +49,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    const { periodo, formato = 'excel' } = req.body
-    
-    if (!periodo) {
-      return res.status(400).json({ error: 'Periodo es requerido' })
+    // VALIDACIÓN SEGURA CON ZOD
+    const validation = validatePayrollExport(req.body)
+    if (!validation.success) {
+      return res.status(400).json({
+        error: 'Datos de entrada inválidos',
+        message: validation.error?.message,
+        details: validation.error?.details,
+        timestamp: new Date().toISOString()
+      })
     }
 
-    if (!/^\d{4}-\d{2}$/.test(periodo)) {
-      return res.status(400).json({ error: 'Periodo inválido (formato: YYYY-MM)' })
-    }
+    const { periodo, formato } = validation.data!
 
-    // Obtener registros de nómina del período
-    const { data: payrollRecords, error: payrollError } = await supabase
-      .from('payroll_records')
-      .select(`
-        *,
-        employees:employee_id (
-          name,
-          employee_code,
-          position,
-          department,
-          bank_name,
-          bank_account
-        )
-      `)
-      .gte('period_start', `${periodo}-01`)
-      .lt('period_start', `${periodo}-32`)
-      .eq('employees.company_id', userProfile.company_id)
-      .order('period_start', { ascending: false })
-
-    if (payrollError) {
-      console.error('Error obteniendo registros de nómina:', payrollError)
-      return res.status(500).json({ error: 'Error obteniendo registros de nómina' })
-    }
+    // USAR QUERY BUILDER SEGURO
+    const queryBuilder = createSecurePayrollQueryBuilder(supabase, userProfile)
+    const payrollRecords = await queryBuilder.getPayrollRecords(validation.data!)
 
     if (!payrollRecords || payrollRecords.length === 0) {
       return res.status(404).json({ 
@@ -264,9 +251,12 @@ async function exportToExcel(payrollRecords: any[], periodo: string, res: NextAp
     // Generar buffer
     const excelBuffer = await workbook.xlsx.writeBuffer()
 
+    // Sanitizar nombre de archivo
+    const safeFilename = sanitizeFilename(`nomina_paragon_${periodo}.xlsx`)
+    
     // Enviar respuesta
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    res.setHeader('Content-Disposition', `attachment; filename=nomina_paragon_${periodo}.xlsx`)
+    res.setHeader('Content-Disposition', `attachment; filename=${safeFilename}`)
     res.send(excelBuffer)
 
   } catch (error) {
