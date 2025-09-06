@@ -5,10 +5,20 @@ import { generateConsolidatedAttendancePDF, type AttendanceItem, type Attendance
 import ExcelJS from 'exceljs'
 import { withInputValidation, createSecureErrorResponse } from '../../../lib/security/input-validation'
 import { withExportRateLimit } from '../../../lib/security/rate-limiting'
+import { 
+  withExportSecurity, 
+  validateCompanyAccess, 
+  buildSecureQuery, 
+  validateContinuousAccess,
+  secureLog,
+  sanitizeFilename
+} from '../../../lib/security/export-security'
 
-// Aplicar rate limiting y validación de entrada
+// Aplicar rate limiting, validación de entrada y seguridad de exportación
 const handlerWithSecurity = withExportRateLimit()(
-  withInputValidation(exportAttendanceHandler)
+  withInputValidation(
+    withExportSecurity(exportAttendanceHandler)
+  )
 )
 
 export default handlerWithSecurity
@@ -26,24 +36,30 @@ async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse
 
     const { user, userProfile } = authResult
 
-    // 2. CREAR CLIENTE SUPABASE
+    // 2. VALIDAR ACCESO A EMPRESA (PREVIENE ACCESO NO AUTORIZADO)
+    const companyAccess = await validateCompanyAccess(supabase, userProfile, req.body.company_id)
+    if (!companyAccess.valid) {
+      return res.status(403).json({
+        error: 'Acceso denegado',
+        message: companyAccess.error
+      })
+    }
+
+    // 3. CREAR CLIENTE SUPABASE
     const supabase = createClient(req, res)
 
-    // 3. USAR DATOS VALIDADOS DEL MIDDLEWARE
+    // 4. USAR DATOS VALIDADOS DEL MIDDLEWARE
     const { startDate, endDate, formato, employee_id } = req.validatedData
 
-    // 4. OBTENER DATOS CON FILTROS DE SEGURIDAD APLICADOS
+    // 5. OBTENER DATOS CON FILTROS DE SEGURIDAD APLICADOS
     let employeeIds: string[] = []
     if (userProfile?.company_id) {
-      // Obtener empleados de la empresa del usuario
-      const { data: employees, error: empError } = await supabase
-        .from('employees')
-        .select('id')
-        .eq('company_id', userProfile.company_id)
-        .eq('status', 'active')
+      // Obtener empleados de la empresa del usuario usando query segura
+      const employeesQuery = buildSecureQuery(supabase, 'employees', userProfile, { status: 'active' })
+      const { data: employees, error: empError } = await employeesQuery.select('id')
       
       if (empError) {
-        console.error('Error obteniendo empleados:', empError)
+        secureLog('Error obteniendo empleados', { error: empError.message })
         return res.status(500).json(createSecureErrorResponse(empError, 'obtener empleados'))
       }
       
@@ -76,11 +92,12 @@ async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse
 
     // Filtrar por empleado específico si se proporciona
     if (employee_id) {
-      // Verificar que el usuario puede acceder a ese empleado
-      if (userProfile?.role === 'employee' && employee_id !== userProfile.id) {
+      // VALIDACIÓN CONTINUA DE ACCESO (PREVIENE BYPASS DE CONTROLES)
+      const accessValidation = await validateContinuousAccess(supabase, userProfile, 'employees', employee_id)
+      if (!accessValidation.valid) {
         return res.status(403).json({
           error: 'Acceso denegado',
-          message: 'No puede acceder a datos de otros empleados'
+          message: accessValidation.error
         })
       }
       attendanceQuery = attendanceQuery.eq('employee_id', employee_id)
@@ -108,10 +125,7 @@ async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse
       const csv = csvRows.join('\n')
       res.setHeader('Content-Type', 'text/csv; charset=utf-8')
       
-      // NOMBRE DE ARCHIVO SEGURO
-      const sanitizeFilename = (filename: string) => {
-        return filename.replace(/[^a-zA-Z0-9._-]/g, '_')
-      }
+      // NOMBRE DE ARCHIVO SEGURO (PREVIENE PATH TRAVERSAL)
       const safeFilename = sanitizeFilename(`attendance_${startDate}_${endDate}.csv`)
       res.setHeader('Content-Disposition', `attachment; filename=${safeFilename}`)
       
@@ -266,10 +280,7 @@ async function exportToExcel(attendanceRecords: any[], startDate: string, endDat
     const buffer = await workbook.xlsx.writeBuffer()
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     
-    // NOMBRE DE ARCHIVO SEGURO
-    const sanitizeFilename = (filename: string) => {
-      return filename.replace(/[^a-zA-Z0-9._-]/g, '_')
-    }
+    // NOMBRE DE ARCHIVO SEGURO (PREVIENE PATH TRAVERSAL)
     const safeFilename = sanitizeFilename(`asistencia_paragon_${startDate}_${endDate}.xlsx`)
     res.setHeader('Content-Disposition', `attachment; filename=${safeFilename}`)
     res.send(buffer)
@@ -348,10 +359,7 @@ async function exportToPDF(attendanceRecords: any[], startDate: string, endDate:
     
     res.setHeader('Content-Type', 'application/pdf')
     
-    // NOMBRE DE ARCHIVO SEGURO
-    const sanitizeFilename = (filename: string) => {
-      return filename.replace(/[^a-zA-Z0-9._-]/g, '_')
-    }
+    // NOMBRE DE ARCHIVO SEGURO (PREVIENE PATH TRAVERSAL)
     const safeFilename = sanitizeFilename(`asistencia_paragon_${startDate}_${endDate}.pdf`)
     res.setHeader('Content-Disposition', `attachment; filename=${safeFilename}`)
     res.send(pdfBuffer)

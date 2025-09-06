@@ -2,12 +2,20 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../lib/supabase/server'
 import { authenticateUser } from '../../../lib/auth-helpers'
 import { getHondurasTimestamp, formatDateForHonduras, nowInHonduras, formatDateTimeForHonduras } from '../../../lib/timezone'
+import { 
+  withExportSecurity, 
+  validateCompanyAccess, 
+  buildSecureQuery, 
+  secureLog,
+  sanitizeFilename
+} from '../../../lib/security/export-security'
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
+// Aplicar seguridad de exportación
+const handlerWithSecurity = withExportSecurity(exportEmployeesHandler)
 
+export default handlerWithSecurity
+
+async function exportEmployeesHandler(req: NextApiRequest, res: NextApiResponse) {
   try {
     // 🔒 AUTENTICACIÓN REQUERIDA CON MISMOS PERMISOS QUE PAYROLL
     const authResult = await authenticateUser(req, res, ['can_view_reports', 'can_manage_employees'])
@@ -22,7 +30,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { user, userProfile } = authResult
     const supabase = createClient(req, res)
 
-    console.log('🔐 Usuario autenticado para reporte de empleados:', { 
+    // VALIDAR ACCESO A EMPRESA (PREVIENE ACCESO NO AUTORIZADO)
+    const companyAccess = await validateCompanyAccess(supabase, userProfile, req.body.company_id)
+    if (!companyAccess.valid) {
+      return res.status(403).json({
+        error: 'Acceso denegado',
+        message: companyAccess.error
+      })
+    }
+
+    secureLog('Usuario autenticado para reporte de empleados', { 
       userId: user.id, 
       role: userProfile?.role,
       companyId: userProfile?.company_id 
@@ -59,9 +76,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 async function generateEmployeeReportData(supabase: any, userProfile: any) {
-  // Obtener empleados activos con información completa
-  let employeesQuery = supabase
-    .from('employees')
+  // Obtener empleados activos con información completa usando query segura
+  const employeesQuery = buildSecureQuery(supabase, 'employees', userProfile)
     .select(`
       id,
       name,
@@ -81,11 +97,6 @@ async function generateEmployeeReportData(supabase: any, userProfile: any) {
     `)
     .order('name')
 
-  // Si el usuario tiene company_id, filtrar por empresa (mismo patrón que payroll)
-  if (userProfile?.company_id) {
-    employeesQuery = employeesQuery.eq('company_id', userProfile.company_id)
-  }
-
   const { data: employees, error: empError } = await employeesQuery
 
   if (empError) {
@@ -93,14 +104,9 @@ async function generateEmployeeReportData(supabase: any, userProfile: any) {
     throw new Error('Error obteniendo empleados')
   }
 
-  // Obtener departamentos
-  let departmentsQuery = supabase
-    .from('departments')
+  // Obtener departamentos usando query segura
+  const departmentsQuery = buildSecureQuery(supabase, 'departments', userProfile)
     .select('id, name')
-
-  if (userProfile?.company_id) {
-    departmentsQuery = departmentsQuery.eq('company_id', userProfile.company_id)
-  }
 
   const { data: departments, error: deptError } = await departmentsQuery
 
@@ -166,7 +172,8 @@ function generateEmployeePDFReport(res: NextApiResponse, reportData: any) {
     doc.on('end', () => {
       const pdf = Buffer.concat(buffers)
       res.setHeader('Content-Type', 'application/pdf')
-      res.setHeader('Content-Disposition', `attachment; filename=reporte_empleados_${getHondurasTimestamp().split('T')[0]}.pdf`)
+      const safeFilename = sanitizeFilename(`reporte_empleados_${getHondurasTimestamp().split('T')[0]}.pdf`)
+      res.setHeader('Content-Disposition', `attachment; filename=${safeFilename}`)
       res.send(pdf)
     })
 
@@ -368,7 +375,8 @@ function generateEmployeeCSVReport(res: NextApiResponse, reportData: any) {
     }
     
     res.setHeader('Content-Type', 'text/csv; charset=utf-8')
-    res.setHeader('Content-Disposition', `attachment; filename=reporte_empleados_${getHondurasTimestamp().split('T')[0]}.csv`)
+    const safeFilename = sanitizeFilename(`reporte_empleados_${getHondurasTimestamp().split('T')[0]}.csv`)
+    res.setHeader('Content-Disposition', `attachment; filename=${safeFilename}`)
     res.send(csvContent)
   } catch (error) {
     console.error('Error generando CSV de empleados:', error)

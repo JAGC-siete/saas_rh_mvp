@@ -2,12 +2,20 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../lib/supabase/server'
 import { authenticateUser } from '../../../lib/auth-helpers'
 import { formatDateForHonduras, nowInHonduras, formatDateTimeForHonduras } from '../../../lib/timezone'
+import { 
+  withExportSecurity, 
+  validateCompanyAccess, 
+  buildSecureQuery, 
+  secureLog,
+  sanitizeFilename
+} from '../../../lib/security/export-security'
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
+// Aplicar seguridad de exportación
+const handlerWithSecurity = withExportSecurity(exportPayrollHandler)
 
+export default handlerWithSecurity
+
+async function exportPayrollHandler(req: NextApiRequest, res: NextApiResponse) {
   try {
     // 🔒 AUTENTICACIÓN REQUERIDA CON MISMOS PERMISOS QUE PAYROLL
     const authResult = await authenticateUser(req, res, ['can_view_reports', 'can_generate_payroll'])
@@ -22,7 +30,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { user, userProfile } = authResult
     const supabase = createClient(req, res)
 
-    console.log('🔐 Usuario autenticado para reporte de nómina:', { 
+    // VALIDAR ACCESO A EMPRESA (PREVIENE ACCESO NO AUTORIZADO)
+    const companyAccess = await validateCompanyAccess(supabase, userProfile, req.body.company_id)
+    if (!companyAccess.valid) {
+      return res.status(403).json({
+        error: 'Acceso denegado',
+        message: companyAccess.error
+      })
+    }
+
+    secureLog('Usuario autenticado para reporte de nómina', { 
       userId: user.id, 
       role: userProfile?.role,
       companyId: userProfile?.company_id 
@@ -65,17 +82,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 async function generatePayrollReportData(supabase: any, reportType: string, periodo: string, userProfile: any) {
-  // Obtener empleados activos
-  let employeesQuery = supabase
-    .from('employees')
+  // Obtener empleados activos usando query segura
+  const employeesQuery = buildSecureQuery(supabase, 'employees', userProfile, { status: 'active' })
     .select('id, name, dni, employee_code, base_salary, department_id, status')
-    .eq('status', 'active')
     .order('name')
-
-  // Si el usuario tiene company_id, filtrar por empresa (mismo patrón que payroll)
-  if (userProfile?.company_id) {
-    employeesQuery = employeesQuery.eq('company_id', userProfile.company_id)
-  }
 
   const { data: employees, error: empError } = await employeesQuery
 
@@ -84,9 +94,8 @@ async function generatePayrollReportData(supabase: any, reportType: string, peri
     throw new Error('Error obteniendo empleados')
   }
 
-  // Obtener registros de nómina
-  let payrollQuery = supabase
-    .from('payroll_records')
+  // Obtener registros de nómina usando query segura
+  const payrollQuery = buildSecureQuery(supabase, 'payroll_records', userProfile)
     .select(`
       *,
       employees (
@@ -96,10 +105,6 @@ async function generatePayrollReportData(supabase: any, reportType: string, peri
       )
     `)
     .order('created_at', { ascending: false })
-
-  if (userProfile?.company_id) {
-    payrollQuery = payrollQuery.eq('employees.company_id', userProfile.company_id)
-  }
 
   // Filtrar por período si es necesario
   if (reportType === 'period' && periodo) {
@@ -189,7 +194,8 @@ function generatePayrollPDFReport(res: NextApiResponse, reportData: any, reportT
     doc.on('end', () => {
       const pdf = Buffer.concat(buffers)
       res.setHeader('Content-Type', 'application/pdf')
-      res.setHeader('Content-Disposition', `attachment; filename=reporte_nomina_${reportType}_${periodo || 'general'}.pdf`)
+      const safeFilename = sanitizeFilename(`reporte_nomina_${reportType}_${periodo || 'general'}.pdf`)
+      res.setHeader('Content-Disposition', `attachment; filename=${safeFilename}`)
       res.send(pdf)
     })
 
@@ -380,7 +386,8 @@ function generatePayrollCSVReport(res: NextApiResponse, reportData: any, reportT
     
     // Configurar respuesta CSV
     res.setHeader('Content-Type', 'text/csv; charset=utf-8')
-    res.setHeader('Content-Disposition', `attachment; filename=reporte_nomina_${reportType}_${periodo || 'general'}.csv`)
+    const safeFilename = sanitizeFilename(`reporte_nomina_${reportType}_${periodo || 'general'}.csv`)
+    res.setHeader('Content-Disposition', `attachment; filename=${safeFilename}`)
     res.send(csvContent)
     
   } catch (error) {
