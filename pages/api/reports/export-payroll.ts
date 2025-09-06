@@ -107,16 +107,17 @@ async function generatePayrollReportData(supabase: any, reportType: string, peri
     .order('created_at', { ascending: false })
 
   // Filtrar por período si es necesario
+  let finalPayrollQuery = payrollQuery
   if (reportType === 'period' && periodo) {
     const [year, month] = periodo.split('-')
     const startDate = `${periodo}-01`
     const endDate = `${periodo}-${new Date(parseInt(year), parseInt(month), 0).getDate()}`
-    payrollQuery = payrollQuery
+    finalPayrollQuery = payrollQuery
       .gte('period_start', startDate)
       .lte('period_end', endDate)
   }
 
-  const { data: payrollRecords, error: payrollError } = await payrollQuery
+  const { data: payrollRecords, error: payrollError } = await finalPayrollQuery
 
   if (payrollError) {
     console.error('Error obteniendo registros de nómina:', payrollError)

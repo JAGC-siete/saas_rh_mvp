@@ -36,7 +36,10 @@ async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse
 
     const { user, userProfile } = authResult
 
-    // 2. VALIDAR ACCESO A EMPRESA (PREVIENE ACCESO NO AUTORIZADO)
+    // 2. CREAR CLIENTE SUPABASE
+    const supabase = createClient(req, res)
+
+    // 3. VALIDAR ACCESO A EMPRESA (PREVIENE ACCESO NO AUTORIZADO)
     const companyAccess = await validateCompanyAccess(supabase, userProfile, req.body.company_id)
     if (!companyAccess.valid) {
       return res.status(403).json({
@@ -44,9 +47,6 @@ async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse
         message: companyAccess.error
       })
     }
-
-    // 3. CREAR CLIENTE SUPABASE
-    const supabase = createClient(req, res)
 
     // 4. USAR DATOS VALIDADOS DEL MIDDLEWARE
     const { startDate, endDate, formato, employee_id } = req.validatedData

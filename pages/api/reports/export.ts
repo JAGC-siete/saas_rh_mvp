@@ -278,12 +278,10 @@ function generatePDFReport(res: NextApiResponse, reportData: ReportData, dateFil
     y += rowHeight
     
     // Datos de empleados
-    let pageCount = 1
-    reportData.employees.forEach((emp: any, index: number) => {
+    reportData.employees.forEach((emp: any) => {
       if (y > 750) {
         doc.addPage()
         y = 30
-        pageCount++
       }
       
       const values = [

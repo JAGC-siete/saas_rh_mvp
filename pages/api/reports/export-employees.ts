@@ -248,7 +248,7 @@ function generateEmployeePDFReport(res: NextApiResponse, reportData: any) {
       y += rowHeight
       
       // Datos de empleados
-      reportData.employees.forEach((emp: any, index: number) => {
+      reportData.employees.forEach((emp: any) => {
         if (y > 750) {
           doc.addPage()
           y = 30
