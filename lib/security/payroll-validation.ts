@@ -15,7 +15,7 @@ export const payrollPeriodSchema = z.string()
   }, 'Período inválido')
 
 // Schema para formatos de archivo (allowlist)
-export const payrollFormatSchema = z.enum(['excel', 'pdf', 'csv'])
+export const payrollFormatSchema = z.enum(['excel', 'pdf', 'csv', 'recibo-individual'])
 
 // Schema principal para exportación de payroll
 export const payrollExportSchema = z.object({

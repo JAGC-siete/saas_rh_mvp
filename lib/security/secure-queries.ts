@@ -1,4 +1,3 @@
-import { createClient } from '../supabase/server'
 import { UserProfile } from '../auth-helpers'
 import { AttendanceExportInput, AttendanceTrendsInput } from './schema-validation'
 

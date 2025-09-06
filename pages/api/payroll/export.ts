@@ -63,7 +63,7 @@ async function payrollExportHandler(req: NextApiRequest, res: NextApiResponse) {
     const { periodo, formato } = validation.data!
 
     // USAR QUERY BUILDER SEGURO
-    const queryBuilder = createSecurePayrollQueryBuilder(supabase, userProfile)
+    const queryBuilder = createSecurePayrollQueryBuilder(supabase, userProfile as any)
     const payrollRecords = await queryBuilder.getPayrollRecords(validation.data!)
 
     if (!payrollRecords || payrollRecords.length === 0) {

@@ -37,7 +37,7 @@ async function attendanceExportHandler(req: NextApiRequest, res: NextApiResponse
       })
     }
 
-    const { startDate, endDate, formato, employee_id } = validation.data!
+    const { startDate, endDate, formato } = validation.data!
 
     console.log('Usuario autenticado para exportación de asistencia:', { 
       userId: user.id.substring(0, 8) + '...', // Ocultar ID completo
