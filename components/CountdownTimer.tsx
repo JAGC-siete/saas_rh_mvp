@@ -85,7 +85,7 @@ export default function CountdownTimer() {
             
             {/* Features text below CTA */}
             <div className="text-sm text-red-100/80">
-              <p>Usalo gratis 30 días. Empleados ilimitados. plan. evaluate. and excecute.</p>
+              <p>Usalo gratis 30 días. Empleados ilimitados.</p>
             </div>
           </div>
         </div>

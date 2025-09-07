@@ -60,7 +60,7 @@ export default function LandingHero() {
                 
                 {/* Features text below CTA */}
                 <div className="text-sm text-brand-200/60">
-                  <p>Usalo gratis 30 días. Empleados ilimitados. plan. evaluate. and excecute.</p>
+                  <p>Usalo gratis 30 días. Empleados ilimitados.</p>
                 </div>
               </div>
             </div>
