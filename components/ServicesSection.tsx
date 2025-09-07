@@ -17,7 +17,7 @@ export default function ServicesSection() {
             CÓMO FUNCIONA
           </div>
           <h2 className="text-3xl font-bold text-white mb-8">
-            Reemplazá equipos internos costosos y apps poco confiables con una tarifa mensual fija
+            Reemplazá equipos internos costosos y consultores poco confiables por una tarifa mensual fija
           </h2>
         </div>
         
@@ -29,7 +29,7 @@ export default function ServicesSection() {
               </div>
               <div>
                 <h3 className="text-xl font-bold text-white mb-2">No más contratar, gestionar o lidiar con personal de RH</h3>
-                <p className="text-gray-300">Nos encargamos de todas las comunicaciones y trabajo administrativo por vos.</p>
+                <p className="text-gray-300">Automatizamos el 80% de las operaciones de Recursos Humanos por vos.</p>
               </div>
             </div>
             
@@ -87,18 +87,6 @@ export default function ServicesSection() {
               <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Pulso laboral: semáforo aleatorio (R/A/V)</li>
             </ul>
 
-            <div className="mt-5">
-              <button
-                onClick={() => window.location.href = '/activar'}
-                className="w-full inline-flex items-center justify-center rounded-xl px-6 py-3 text-base font-semibold shadow-lg bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all duration-300 hover:-translate-y-0.5"
-                data-analytics="cta_service_asistencia_click"
-              >
-                Activar GRATIS hoy
-              </button>
-              <p className="text-center text-xs text-brand-300/70 mt-2">
-                ¿Querés demo primero? <a href="/activar" className="underline hover:text-brand-200">Solicitar demo</a>
-              </p>
-            </div>
           </article>
 
           {/* SOPORTE: Reportes ejecutivos */}
@@ -119,18 +107,6 @@ export default function ServicesSection() {
               <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Alertas inteligentes y notificaciones</li>
             </ul>
 
-            <div className="mt-5">
-              <button
-                onClick={() => window.location.href = '/activar'}
-                className="w-full inline-flex items-center justify-center rounded-xl px-6 py-3 text-base font-semibold shadow-lg bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all duration-300 hover:-translate-y-0.5"
-                data-analytics="cta_service_reportes_click"
-              >
-                Activar GRATIS hoy
-              </button>
-              <p className="text-center text-xs text-brand-300/70 mt-2">
-                ¿Querés demo primero? <a href="/activar" className="underline hover:text-brand-200">Solicitar demo</a>
-              </p>
-            </div>
           </article>
         </div>
       </div>
@@ -157,18 +133,6 @@ export default function ServicesSection() {
               <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> ZIP de vouchers + envío masivo</li>
             </ul>
 
-            <div className="mt-5">
-              <button
-                onClick={() => window.location.href = '/activar'}
-                className="w-full inline-flex items-center justify-center rounded-xl px-6 py-3 text-base font-semibold shadow-lg bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all duration-300 hover:-translate-y-0.5"
-                data-analytics="cta_service_nomina_click"
-              >
-                Activar GRATIS hoy
-              </button>
-              <p className="text-center text-xs text-brand-300/70 mt-2">
-                ¿Querés demo primero? <a href="/activar" className="underline hover:text-brand-200">Solicitar demo</a>
-              </p>
-            </div>
           </article>
 
           {/* SOPORTE: Cálculo automático */}
@@ -189,18 +153,6 @@ export default function ServicesSection() {
               <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Auditoría completa y trazabilidad</li>
             </ul>
 
-            <div className="mt-5">
-              <button
-                onClick={() => window.location.href = '/activar'}
-                className="w-full inline-flex items-center justify-center rounded-xl px-6 py-3 text-base font-semibold shadow-lg bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all duration-300 hover:-translate-y-0.5"
-                data-analytics="cta_service_calculo_click"
-              >
-                Activar GRATIS hoy
-              </button>
-              <p className="text-center text-xs text-brand-300/70 mt-2">
-                ¿Querés demo primero? <a href="/activar" className="underline hover:text-brand-200">Solicitar demo</a>
-              </p>
-            </div>
           </article>
 
 
@@ -208,7 +160,7 @@ export default function ServicesSection() {
       </div>
 
       {/* Mini-proof bar */}
-      <div className="mt-8 rounded-xl glass border border-white/10 p-6 flex flex-col items-center gap-4 text-center">
+      <div className="mt-8 rounded-xl glass border border-white/10 p-6 flex flex-col items-center gap-6 text-center">
         <div className="text-brand-200">
           <span className="text-white/90 font-medium">Prúebalo:</span>
           <span className="flex items-center gap-2 mt-2"><CheckCircleIcon className="h-5 w-5 text-emerald-400" /> 99% menos tiempo corrigiendo errores</span>
@@ -216,13 +168,28 @@ export default function ServicesSection() {
           <span className="flex items-center gap-2 mt-2"><CheckCircleIcon className="h-5 w-5 text-emerald-400" /> Cumplimiento STSS desde implementación</span>
         </div>
         
-        <button
-          onClick={() => window.location.href = '/activar'}
-          className="inline-flex items-center justify-center rounded-xl px-8 py-4 text-lg font-semibold shadow-lg bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all duration-300 hover:-translate-y-0.5"
-          data-analytics="cta_footer_click"
-        >
-          Activar GRATIS hoy
-        </button>
+        {/* Email CTA Section */}
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row gap-3 max-w-md">
+            <input
+              type="email"
+              placeholder="Tu email"
+              className="flex-1 px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-brand-200/70 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent"
+            />
+            <button
+              onClick={() => window.location.href = '/activar'}
+              className="inline-flex items-center justify-center rounded-xl px-6 py-3 text-lg font-semibold shadow-lg bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all duration-300 hover:-translate-y-0.5 whitespace-nowrap"
+              data-analytics="cta_footer_click"
+            >
+              Comenza HOY
+            </button>
+          </div>
+          
+          {/* Features text below CTA */}
+          <div className="text-sm text-brand-200/60">
+            <p>Usalo gratis 30 días. Empleados ilimitados.</p>
+          </div>
+        </div>
       </div>
 
       {/* Animaciones clave globales, sin JS */}
