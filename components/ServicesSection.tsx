@@ -67,7 +67,7 @@ export default function ServicesSection() {
 
       {/* El Libro Rojo - Asistencia */}
       <div id="libro-rojo" className="mb-16">
-        <h3 className="text-2xl font-bold text-white mb-6 text-center">El Libro Rojo de Asistencia</h3>
+        <h3 className="text-2xl font-bold text-white mb-6 text-center">Pulso Laboral</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* SOPORTE: Asistencia */}
           <article className="group relative overflow-hidden rounded-2xl glass border border-white/15 p-6 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
@@ -113,7 +113,7 @@ export default function ServicesSection() {
 
       {/* El Planillero - Nómina */}
       <div id="planillero" className="mb-16">
-        <h3 className="text-2xl font-bold text-white mb-6 text-center">El Planillero Automático</h3>
+        <h3 className="text-2xl font-bold text-white mb-6 text-center">NominaPRO</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* SOPORTE: Nómina sin errores */}
           <article className="group relative overflow-hidden rounded-2xl glass border border-white/15 p-6 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
