@@ -65,18 +65,30 @@ export default function CountdownTimer() {
             </div>
           </div>
         </div>
-        <div className="text-center mt-4">
-          <button
-            onClick={() => window.location.href = '/activar'}
-            className="inline-flex items-center justify-center rounded-xl px-6 py-3 text-base font-semibold shadow-lg bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all duration-300 hover:-translate-y-0.5"
-            data-analytics="cta_countdown_click"
-          >
-            Dejá tu planilla lista → Activar GRATIS hoy
-          </button>
+        <div className="text-center mt-6">
+          {/* Email CTA Section */}
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+              <input
+                type="email"
+                placeholder="Tu email"
+                className="flex-1 px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-red-100/70 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent"
+              />
+              <button
+                onClick={() => window.location.href = '/activar'}
+                className="inline-flex items-center justify-center rounded-xl px-6 py-3 text-base font-semibold shadow-lg bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all duration-300 hover:-translate-y-0.5 whitespace-nowrap"
+                data-analytics="cta_countdown_click"
+              >
+                Comenza HOY
+              </button>
+            </div>
+            
+            {/* Features text below CTA */}
+            <div className="text-sm text-red-100/80">
+              <p>Usalo gratis 30 días. Empleados ilimitados. plan. evaluate. and excecute.</p>
+            </div>
+          </div>
         </div>
-        <p className="text-center text-red-100 text-sm font-medium mt-3">
-          De horas a minutos: dejala lista desde hoy, y olvidate de ella para siempre.
-        </p>
       </div>
     </div>
   );

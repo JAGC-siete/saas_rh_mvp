@@ -41,19 +41,27 @@ export default function LandingHero() {
                 <li className="flex items-start gap-2"><span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 mt-2" /> Ahorro de 6 horas por quincena.</li>
               </ul>
 
-              <div className="flex justify-start">
-                <button
-                  onClick={() => window.location.href = '/activar'}
-                  className="inline-flex items-center justify-center rounded-2xl px-8 py-4 text-lg font-semibold shadow-sm bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all duration-300 hover:-translate-y-1"
-                  data-analytics="cta_hero_click"
-                >
-                  Activar GRATIS hoy
-                </button>
-              </div>
-
-              {/* Features como texto simple, no como badges confusos */}
-              <div className="text-sm text-brand-200/60 space-y-1">
-                <p>✓ Vouchers por WhatsApp • ✓ IHSS, RAP, ISR automáticos • ✓ Cumplimiento STSS desde el día 1</p>
+              {/* Email CTA Section */}
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row gap-3 max-w-md">
+                  <input
+                    type="email"
+                    placeholder="Tu email"
+                    className="flex-1 px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-brand-200/70 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent"
+                  />
+                  <button
+                    onClick={() => window.location.href = '/activar'}
+                    className="inline-flex items-center justify-center rounded-xl px-6 py-3 text-lg font-semibold shadow-sm bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all duration-300 hover:-translate-y-1 whitespace-nowrap"
+                    data-analytics="cta_hero_click"
+                  >
+                    Comenza HOY
+                  </button>
+                </div>
+                
+                {/* Features text below CTA */}
+                <div className="text-sm text-brand-200/60">
+                  <p>Usalo gratis 30 días. Empleados ilimitados. plan. evaluate. and excecute.</p>
+                </div>
               </div>
             </div>
 

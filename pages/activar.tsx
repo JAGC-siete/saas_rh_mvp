@@ -336,53 +336,47 @@ export default function ActivarPage() {
 
         {/* How it works */}
         <div className="max-w-6xl mx-auto mb-16">
-          <h2 className="text-3xl font-bold text-white text-center mb-12">
-            ¿Cómo funciona?
-          </h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            <Card variant="glass" className="text-center">
-              <CardHeader className="pb-4">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-500/10 border border-brand-500/20 mb-4 mx-auto">
-                  <span className="text-2xl font-bold text-brand-400">1</span>
+          <div className="text-center mb-8">
+            <div className="inline-block bg-gray-800/50 text-gray-300 text-sm font-medium px-4 py-2 rounded-full mb-6">
+              HOW IT WORKS
+            </div>
+            <h2 className="text-3xl font-bold text-white mb-8">
+              Replace expensive in-house teams & unreliable freelancers with a flat monthly fee
+            </h2>
+          </div>
+          
+          <div className="bg-gray-900/50 border border-green-500/30 rounded-2xl p-8 max-w-4xl mx-auto">
+            <div className="space-y-8">
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center">
+                  <span className="text-green-400 font-bold text-lg">1</span>
                 </div>
-                <CardTitle className="text-xl font-bold text-white">
-                  Deja tu email
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-brand-300">Creamos tu entorno de prueba con datos demo. Sin tarjeta.</p>
-              </CardContent>
-            </Card>
-
-            
-
-            <Card variant="glass" className="text-center">
-              <CardHeader className="pb-4">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-500/10 border border-brand-500/20 mb-4 mx-auto">
-                  <span className="text-2xl font-bold text-brand-400">2</span>
+                <div>
+                  <h3 className="text-xl font-bold text-white mb-2">No more hiring, managing, or dealing with writers</h3>
+                  <p className="text-gray-300">We take care of all of the comms & busywork for you.</p>
                 </div>
-                <CardTitle className="text-xl font-bold text-white">
-                  Entrega en 24 horas
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-brand-300">Asistencia y planilla operando. Vouchers listos para enviar.</p>
-              </CardContent>
-            </Card>
-
-            <Card variant="glass" className="text-center">
-              <CardHeader className="pb-4">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-500/10 border border-brand-500/20 mb-4 mx-auto">
-                  <span className="text-2xl font-bold text-brand-400">3</span>
+              </div>
+              
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center">
+                  <span className="text-green-400 font-bold text-lg">2</span>
                 </div>
-                <CardTitle className="text-xl font-bold text-white">
-                  O trabajo gratis
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-brand-300">Si falta algo para tu caso, seguimos sin costo hasta dejarlo andando.</p>
-              </CardContent>
-            </Card>
+                <div>
+                  <h3 className="text-xl font-bold text-white mb-2">Extraordinarily simple to use</h3>
+                  <p className="text-gray-300">Add your style guide and keyword(s) & we'll take care of the rest.</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center">
+                  <span className="text-green-400 font-bold text-lg">3</span>
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white mb-2">Completely risk free with unlimited revisions</h3>
+                  <p className="text-gray-300">Don't love your content? We'll rewrite it until you do.</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
