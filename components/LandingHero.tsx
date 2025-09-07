@@ -1,6 +1,7 @@
-import React from "react";
-import ImageCarousel from "./ImageCarousel";
+import React from 'react'
+import ImageCarousel from './ImageCarousel'
 import { nowInHonduras } from '../lib/timezone'
+import { useTranslation } from 'next-i18next'
 
 export default function LandingHero() {
   // Función simple para obtener la próxima quincena
@@ -18,6 +19,8 @@ export default function LandingHero() {
 
   const nextPayday = getNextPayday();
 
+  const { t } = useTranslation(['common', 'landing'])
+
   return (
     <div className="relative isolate overflow-hidden">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 lg:py-20">
@@ -27,18 +30,19 @@ export default function LandingHero() {
             <div className="space-y-6 text-left">
 
               <h1 className="text-4xl sm:text-5xl font-extrabold leading-tight text-white">
-                ¿Siempre corriendo detras de Recursos Humanos?
-                <span className="block text-brand-300">Cambialos por robots y olvidate de las carreras para siempre.</span>
+                {t('hero.title')}
+                <span className="block text-brand-300">{t('hero.subtitle')}</span>
               </h1>
 
-              <p className="text-lg text-brand-200/90">
-                Generá planilla en 5 minutos, con IHSS, RAP e ISR listos y vouchers enviados por Mail/WhatsApp.
-              </p>
+              <p className="text-lg text-brand-200/90">{t('hero.description')}</p>
 
               <ul className="text-brand-200/80 space-y-2">
-                <li className="flex items-start gap-2"><span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 mt-2" /> Cumplimiento STSS desde el día uno.</li>
-                <li className="flex items-start gap-2"><span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 mt-2" /> De Excel caótico a PDF impecable en minutos.</li>
-                <li className="flex items-start gap-2"><span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 mt-2" /> Ahorro de 6 horas por quincena.</li>
+                {(t('hero.bullets', { returnObjects: true }) as string[]).map((item) => (
+                  <li key={item} className="flex items-start gap-2">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 mt-2" />
+                    {item}
+                  </li>
+                ))}
               </ul>
 
               {/* Email CTA Section */}
@@ -46,21 +50,21 @@ export default function LandingHero() {
                 <div className="flex flex-col sm:flex-row gap-3 max-w-md">
                   <input
                     type="email"
-                    placeholder="Tu email"
+                    placeholder={t('common:cta.emailPlaceholder')}
                     className="flex-1 px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-brand-200/70 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent"
                   />
                   <button
-                    onClick={() => window.location.href = '/activar'}
+                    onClick={() => (window.location.href = '/activar')}
                     className="inline-flex items-center justify-center rounded-xl px-6 py-3 text-lg font-semibold shadow-sm bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all duration-300 hover:-translate-y-1 whitespace-nowrap"
                     data-analytics="cta_hero_click"
                   >
-                    Comenza HOY
+                    {t('common:cta.startToday')}
                   </button>
                 </div>
-                
+
                 {/* Features text below CTA */}
                 <div className="text-sm text-brand-200/60">
-                  <p>Usalo gratis 30 días. Empleados ilimitados.</p>
+                  <p>{t('common:cta.trialNote')}</p>
                 </div>
               </div>
             </div>
@@ -74,7 +78,7 @@ export default function LandingHero() {
           {/* Frase de urgencia al final del componente */}
           <div className="text-center mt-12">
             <p className="text-xl font-semibold text-brand-200/90">
-              Próxima planilla: {nextPayday.toLocaleDateString()}. ¿Otra vez la vas a hacer desde cero?
+              {t('hero.nextPayroll', { date: nextPayday.toLocaleDateString() })}
             </p>
           </div>
         </div>

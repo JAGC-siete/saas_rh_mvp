@@ -168,6 +168,30 @@ export async function middleware(request: NextRequest) {
     ip: request.headers.get('x-forwarded-for') || 'unknown'
   })
 
+  // Locale detection and redirection
+  const LOCALE_COOKIE = 'LOCALE'
+  if (!pathname.startsWith('/api') && !pathname.startsWith('/_next')) {
+    const cookieLocale = request.cookies.get(LOCALE_COOKIE)?.value
+    const pathLocale = pathname.startsWith('/en') ? 'en' : 'es'
+    let finalLocale = cookieLocale
+    if (!finalLocale) {
+      const accept = request.headers.get('accept-language') || ''
+      finalLocale = accept.split(',')[0].split('-')[0] === 'en' ? 'en' : 'es'
+    }
+    if ((pathname === '/' || pathname === '/en') && pathLocale !== finalLocale) {
+      const url = request.nextUrl.clone()
+      url.pathname = finalLocale === 'en' ? '/en' : '/'
+      const response = NextResponse.redirect(url)
+      response.cookies.set(LOCALE_COOKIE, finalLocale, { maxAge: 60 * 60 * 24 * 365 })
+      return response
+    }
+    if (!cookieLocale && (pathname === '/' || pathname === '/en')) {
+      const response = NextResponse.next()
+      response.cookies.set(LOCALE_COOKIE, finalLocale, { maxAge: 60 * 60 * 24 * 365 })
+      return response
+    }
+  }
+
   // Handle API routes
   if (pathname.startsWith('/api/')) {
     logger.debug('API route accessed', { path: pathname })

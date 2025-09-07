@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from 'react'
 import { nowInHonduras } from '../lib/timezone'
+import { useTranslation } from 'next-i18next'
 
 export default function CountdownTimer() {
   // Countdown to next quincena (15 o último día del mes)
@@ -38,30 +39,32 @@ export default function CountdownTimer() {
     };
   }, [now]);
 
+  const { t } = useTranslation(['common', 'landing'])
+
   return (
     <div className="text-center mb-12">
       <div className="bg-gradient-to-r from-blue-500/20 to-orange-500/20 border border-black-400/30 rounded-2xl p-6 backdrop-blur-sm shadow-xl max-w-4xl mx-auto">
         <div className="text-center mb-4">
-          <h3 className="text-lg font-semibold text-red-100 mb-2">TU PROXIMA FECHA DE PAGO ES EN</h3>
+          <h3 className="text-lg font-semibold text-red-100 mb-2">{t('countdown.title')}</h3>
           <div className="flex items-center justify-center gap-3 text-3xl font-bold text-white">
             <div className="bg-white/20 rounded-xl px-4 py-2 min-w-[80px]">
               <span className="block text-4xl">{daysLeft}</span>
-              <span className="text-sm text-red-100">DÍAS</span>
+              <span className="text-sm text-red-100">{t('countdown.labels.days')}</span>
             </div>
             <span className="text-red-300">:</span>
             <div className="bg-white/20 rounded-xl px-4 py-2 min-w-[80px]">
               <span className="block text-4xl">{hoursLeft.toString().padStart(2, '0')}</span>
-              <span className="text-sm text-red-100">HORAS</span>
+              <span className="text-sm text-red-100">{t('countdown.labels.hours')}</span>
             </div>
             <span className="text-red-300">:</span>
             <div className="bg-white/20 rounded-xl px-4 py-2 min-w-[80px]">
               <span className="block text-4xl">{minutesLeft.toString().padStart(2, '0')}</span>
-              <span className="text-sm text-red-100">MIN</span>
+              <span className="text-sm text-red-100">{t('countdown.labels.minutes')}</span>
             </div>
             <span className="text-red-300">:</span>
             <div className="bg-white/20 rounded-xl px-4 py-2 min-w-[80px]">
               <span className="block text-4xl">{secondsLeft.toString().padStart(2, '0')}</span>
-              <span className="text-sm text-red-100">SEG</span>
+              <span className="text-sm text-red-100">{t('countdown.labels.seconds')}</span>
             </div>
           </div>
         </div>
@@ -71,21 +74,21 @@ export default function CountdownTimer() {
             <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
               <input
                 type="email"
-                placeholder="Tu email"
+                placeholder={t('common:cta.emailPlaceholder')}
                 className="flex-1 px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-red-100/70 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent"
               />
               <button
-                onClick={() => window.location.href = '/activar'}
+                onClick={() => (window.location.href = '/activar')}
                 className="inline-flex items-center justify-center rounded-xl px-6 py-3 text-base font-semibold shadow-lg bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all duration-300 hover:-translate-y-0.5 whitespace-nowrap"
                 data-analytics="cta_countdown_click"
               >
-                Comenza HOY
+                {t('common:cta.startToday')}
               </button>
             </div>
             
             {/* Features text below CTA */}
             <div className="text-sm text-red-100/80">
-              <p>Usalo gratis 30 días. Empleados ilimitados.</p>
+              <p>{t('common:cta.trialNote')}</p>
             </div>
           </div>
         </div>

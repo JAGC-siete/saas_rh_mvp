@@ -1,0 +1,21 @@
+{
+  "nav": {
+    "services": "Servicios",
+    "login": "Iniciar sesión",
+    "openMenu": "Abrir menú principal"
+  },
+  "language": {
+    "en": "EN",
+    "es": "ES"
+  },
+  "cta": {
+    "emailPlaceholder": "Tu email",
+    "startToday": "Comenza HOY",
+    "trialNote": "Usalo gratis 30 días. Empleados ilimitados."
+  },
+  "footer": {
+    "protect": "Protegemos tu información. <strong>Solo será utilizada para contactarte</strong>.",
+    "privacy": "Política de Privacidad",
+    "rights": "© 2025 Humano SISU. Todos los derechos reservados."
+  }
+}

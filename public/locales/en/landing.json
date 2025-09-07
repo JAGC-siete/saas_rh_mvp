@@ -1,0 +1,141 @@
+{
+  "head": {
+    "title": "Another pay period chasing payroll? | Humano SISU",
+    "description": "Generate payroll in 5 minutes with IHSS, RAP and ISR ready and vouchers sent via WhatsApp. STSS compliance, from chaotic Excel to flawless PDF.",
+    "keywords": "payroll Honduras, IHSS, RAP, ISR, HR automation, STSS, Humano SISU, innovation",
+    "author": "Humano SISU",
+    "ogTitle": "Humano SISU - Payroll Automation in Honduras",
+    "ogDescription": "Generate payroll in 5 minutes with IHSS, RAP and ISR ready. STSS compliance guaranteed.",
+    "twitterTitle": "Humano SISU - Payroll Automation",
+    "twitterDescription": "Generate payroll in 5 minutes with IHSS, RAP and ISR ready."
+  },
+  "header": {
+    "tagline": {
+      "main": "Human Resources on Autopilot",
+      "highlight": "activate, comply and save hours every week"
+    }
+  },
+  "trustBadges": ["Complies with STSS Honduras", "Setup in 24 hours", "02 active companies"],
+  "hero": {
+    "title": "Always running behind HR tasks?",
+    "subtitle": "Swap them for robots and forget about the rush forever.",
+    "description": "Generate payroll in 5 minutes with IHSS, RAP and ISR ready and vouchers sent by Mail/WhatsApp.",
+    "bullets": [
+      "STSS compliance from day one.",
+      "From chaotic Excel to flawless PDF in minutes.",
+      "Save 6 hours every pay period."
+    ],
+    "nextPayroll": "Next payroll: {{date}}. Will you do it from scratch again?"
+  },
+  "countdown": {
+    "title": "YOUR NEXT PAYDAY IS IN",
+    "labels": {"days": "DAYS", "hours": "HOURS", "minutes": "MIN", "seconds": "SEC"}
+  },
+  "services": {
+    "howItWorks": "HOW IT WORKS",
+    "replace": "Replace costly internal teams and unreliable consultants with a flat monthly fee",
+    "steps": [
+      {"title": "No more hiring, managing or dealing with HR staff", "desc": "We automate 80% of HR operations for you."},
+      {"title": "Extraordinarily simple to use", "desc": "Add your specific parameters and we handle the rest."},
+      {"title": "Completely risk free with unlimited employees", "desc": "Don't like your dashboard? We can build your own system."}
+    ],
+    "robotsTitle": "Introducing: Your Human Resources robots",
+    "robotsSubtitle": "Replace repetitive, error-prone tasks with <1>verifiable automation</1>.",
+    "pulsoTitle": "Labor Pulse",
+    "pulso": {
+      "title": "Real-time attendance",
+      "desc": "Check-ins, tolerances, alerts and wellbeing",
+      "features": [
+        "Configured tolerance + smart justification",
+        "Anti-fraud: tardiness patterns and location",
+        "Labor pulse: random traffic light (R/Y/G)"
+      ]
+    },
+    "reports": {
+      "title": "Executive reports",
+      "desc": "Interactive dashboard and automatic export",
+      "features": [
+        "Real-time metrics",
+        "Automatic Excel/PDF export",
+        "Smart alerts and notifications"
+      ]
+    },
+    "nominaTitle": "NominaPRO",
+    "nomina": {
+      "title": "Error-free payroll",
+      "desc": "IHSS, RAP, ISR; PDF + vouchers by email/WhatsApp",
+      "features": [
+        "Automatic legal calculation (Honduras)",
+        "4 hours → 4 minutes (proven at Paragon)",
+        "ZIP of vouchers + bulk sending"
+      ]
+    },
+    "calculo": {
+      "title": "Automatic calculation",
+      "desc": "IHSS, RAP, ISR automatic according to Honduran law",
+      "features": [
+        "100% automatic legal compliance",
+        "PDF vouchers + email/WhatsApp delivery",
+        "Complete audit and traceability"
+      ]
+    },
+    "proof": {
+      "tryIt": "Try it:",
+      "items": [
+        "99% less time fixing errors",
+        "IHSS, RAP, ISR 2025 in 1 click",
+        "STSS compliance from implementation"
+      ],
+      "note": "Use it free for 30 days. Unlimited employees."
+    }
+  },
+  "aws": {
+    "title": "Built by AWS certified engineers",
+    "tagline1": "Made with the same technology used by Netflix and Airbnb, now for your MSME in Honduras",
+    "tagline2": "Optimized so your company in Honduras has the security and scalability of a giant without paying like one.",
+    "tagline3": "Global technology. Local price.",
+    "certifications": [
+      {"name": "AWS Solutions Architect", "icon": "/image-aws-solutions-architect.png", "badgeColor": "bg-blue-500/10 text-blue-400 border-blue-500/20"},
+      {"name": "AWS Developer", "icon": "/image-aws-developer.png", "badgeColor": "bg-blue-500/10 text-blue-400 border-blue-500/20"},
+      {"name": "AWS Cloud Practitioner", "icon": "/image-aws-cloud-practitioner.png", "badgeColor": "bg-gray-400/10 text-gray-300 border-gray-400/20"}
+    ],
+    "guarantee": "Quality and security guaranteed by AWS certification"
+  },
+  "socialProof": {
+    "title": "Companies that already automated their HR",
+    "testimonials": [
+      {
+        "name": "Felix Garcia",
+        "company": "Tony's Mar Restaurant",
+        "employees": "40 employees",
+        "quote": "I no longer lose Sundays doing payroll. 4 hours are now 4 minutes."
+      },
+      {
+        "name": "Gustavo Argueta",
+        "company": "Paragon Honduras",
+        "employees": "37 employees",
+        "quote": "We used to track attendance in a red book, now we have an interactive dashboard."
+      },
+      {
+        "name": "Luis Diego Maradiaga",
+        "company": "AFI & Asociados",
+        "employees": "15 employees",
+        "quote": "Zero IHSS errors since I use it. My accountant is happy."
+      }
+    ]
+  },
+  "demoFooter": {
+    "contact": "Contact",
+    "community": {
+      "title": "Join the Community",
+      "text": "Follow us on social media to know the latest updates"
+    },
+    "about": {
+      "title": "Humano SISU",
+      "desc": "Your HR 100% digital, legal and hassle-free. Made for SMEs like yours.",
+      "rights1": "© 2025 Humano SISU",
+      "rights2": "Human Resources System"
+    },
+    "whatsapp": "WhatsApp: 9470-7007"
+  }
+}

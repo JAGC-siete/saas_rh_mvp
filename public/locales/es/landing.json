@@ -1,0 +1,141 @@
+{
+  "head": {
+    "title": "¿Otra quincena corriendo detrás de la planilla? | Humano SISU",
+    "description": "Generá planilla en 5 minutos con IHSS, RAP e ISR listos y vouchers enviados por WhatsApp. Cumplimiento STSS, de Excel caótico a PDF impecable.",
+    "keywords": "planilla Honduras, IHSS, RAP, ISR, automatización RH, STSS, Humano SISU, innovación",
+    "author": "Humano SISU",
+    "ogTitle": "Humano SISU - Automatización de Planilla en Honduras",
+    "ogDescription": "Generá planilla en 5 minutos con IHSS, RAP e ISR listos. Cumplimiento STSS garantizado.",
+    "twitterTitle": "Humano SISU - Automatización de Planilla",
+    "twitterDescription": "Generá planilla en 5 minutos con IHSS, RAP e ISR listos."
+  },
+  "header": {
+    "tagline": {
+      "main": "Recursos Humanos en Automatico",
+      "highlight": "activa, cumplí y ahorrá horas cada semana"
+    }
+  },
+  "trustBadges": ["Cumple STSS Honduras", "Setup en 24 horas", "02 empresas activas"],
+  "hero": {
+    "title": "¿Siempre corriendo detras de Recursos Humanos?",
+    "subtitle": "Cambialos por robots y olvidate de las carreras para siempre.",
+    "description": "Generá planilla en 5 minutos, con IHSS, RAP e ISR listos y vouchers enviados por Mail/WhatsApp.",
+    "bullets": [
+      "Cumplimiento STSS desde el día uno.",
+      "De Excel caótico a PDF impecable en minutos.",
+      "Ahorro de 6 horas por quincena."
+    ],
+    "nextPayroll": "Próxima planilla: {{date}}. ¿Otra vez la vas a hacer desde cero?"
+  },
+  "countdown": {
+    "title": "TU PROXIMA FECHA DE PAGO ES EN",
+    "labels": {"days": "DÍAS", "hours": "HORAS", "minutes": "MIN", "seconds": "SEG"}
+  },
+  "services": {
+    "howItWorks": "CÓMO FUNCIONA",
+    "replace": "Reemplazá equipos internos costosos y consultores poco confiables por una tarifa mensual fija",
+    "steps": [
+      {"title": "No más contratar, gestionar o lidiar con personal de RH", "desc": "Automatizamos el 80% de las operaciones de Recursos Humanos por vos."},
+      {"title": "Extraordinariamente simple de usar", "desc": "Agregá los parámetros específicos de tu caso de uso y nosotros nos encargamos del resto."},
+      {"title": "Completamente libre de riesgo con empleados ilimitados", "desc": "¿No te gusta tu dashboard? Podemos construir tu propio sistema."}
+    ],
+    "robotsTitle": "Presentamos: Tus robots de Recursos Humanos",
+    "robotsSubtitle": "Reemplazá tareas repetitivas y propensas a error con <1>automatización verificable</1>.",
+    "pulsoTitle": "Pulso Laboral",
+    "pulso": {
+      "title": "Asistencia en tiempo real",
+      "desc": "Checadas, tolerancias, alertas y bienestar",
+      "features": [
+        "Tolerancia configurada + justificación inteligente",
+        "Antifraude: patrones de tardanza y ubicación",
+        "Pulso laboral: semáforo aleatorio (R/A/V)"
+      ]
+    },
+    "reports": {
+      "title": "Reportes ejecutivos",
+      "desc": "Dashboard interactivo y exportación automática",
+      "features": [
+        "Métricas en tiempo real",
+        "Exportación Excel/PDF automática",
+        "Alertas inteligentes y notificaciones"
+      ]
+    },
+    "nominaTitle": "NominaPRO",
+    "nomina": {
+      "title": "Nómina sin errores",
+      "desc": "IHSS, RAP, ISR; PDF + vouchers por email/WhatsApp",
+      "features": [
+        "Cálculo legal automático (Honduras)",
+        "4 horas → 4 minutos (comprobado en Paragon)",
+        "ZIP de vouchers + envío masivo"
+      ]
+    },
+    "calculo": {
+      "title": "Cálculo automático",
+      "desc": "IHSS, RAP, ISR automáticos según ley hondureña",
+      "features": [
+        "Cumplimiento legal 100% automático",
+        "Vouchers PDF + envío por email/WhatsApp",
+        "Auditoría completa y trazabilidad"
+      ]
+    },
+    "proof": {
+      "tryIt": "Prúebalo:",
+      "items": [
+        "99% menos tiempo corrigiendo errores",
+        "IHSS, RAP, ISR 2025 en 1 click",
+        "Cumplimiento STSS desde implementación"
+      ],
+      "note": "Usalo gratis 30 días. Empleados ilimitados."
+    }
+  },
+  "aws": {
+    "title": "Desarrollado por ingenieros certificados en AWS",
+    "tagline1": "Hecho con la misma tecnología que usan Netflix y Airbnb, ahora para tu MIPYMES en Honduras",
+    "tagline2": "Optimizado para que tu empresa en Honduras tenga la seguridad y escalabilidad de un gigante, sin pagar como uno.",
+    "tagline3": "Tecnología global. Precio local.",
+    "certifications": [
+      {"name": "AWS Solutions Architect", "icon": "/image-aws-solutions-architect.png", "badgeColor": "bg-blue-500/10 text-blue-400 border-blue-500/20"},
+      {"name": "AWS Developer", "icon": "/image-aws-developer.png", "badgeColor": "bg-blue-500/10 text-blue-400 border-blue-500/20"},
+      {"name": "AWS Cloud Practitioner", "icon": "/image-aws-cloud-practitioner.png", "badgeColor": "bg-gray-400/10 text-gray-300 border-gray-400/20"}
+    ],
+    "guarantee": "Garantía de calidad y seguridad certificada por AWS"
+  },
+  "socialProof": {
+    "title": "Empresas que ya automatizaron su RH",
+    "testimonials": [
+      {
+        "name": "Felix Garcia",
+        "company": "Tony's Mar Restaurant",
+        "employees": "40 empleados",
+        "quote": "Ya no pierdo domingos haciendo planilla. 4 horas ahora son 4 minutos."
+      },
+      {
+        "name": "Gustavo Argueta",
+        "company": "Paragon Honduras",
+        "employees": "37 empleados",
+        "quote": "Antes llevavamos la asistencia en un libro rojo, ahora tneemos dashboard interactivo."
+      },
+      {
+        "name": "Luis Diego Maradiaga",
+        "company": "AFI & Asociados",
+        "employees": "15 empleados",
+        "quote": "Cero errores en IHSS desde que lo uso. Mi contador está feliz."
+      }
+    ]
+  },
+  "demoFooter": {
+    "contact": "Contacto",
+    "community": {
+      "title": "Únete a la Comunidad",
+      "text": "Síguenos en nuestras redes sociales para conocer las últimas actualizaciones"
+    },
+    "about": {
+      "title": "Humano SISU",
+      "desc": "Tu RH 100% digital, legal y sin complicaciones. Hecho para PYMEs como la tuya.",
+      "rights1": "© 2025 Humano SISU",
+      "rights2": "Sistema de Recursos Humanos"
+    },
+    "whatsapp": "WhatsApp: 9470-7007"
+  }
+}
