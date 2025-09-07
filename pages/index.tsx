@@ -1,6 +1,8 @@
 import Head from 'next/head'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'next-i18next'
+import { serverSideTranslations } from 'next-i18next/serverSideTranslations'
 import DemoFooter from '../components/DemoFooter'
 import ServicesSection from '../components/ServicesSection'
 import AWSCertificationsSection from '../components/AWSCertificationsSection'
@@ -8,12 +10,14 @@ import LandingHero from '../components/LandingHero'
 import CountdownTimer from '../components/CountdownTimer'
 import dynamic from 'next/dynamic'
 import Image from 'next/image'
+import LanguageSwitcher from '../components/LanguageSwitcher'
 
 const CloudBackground = dynamic(() => import('../components/CloudBackground'), { ssr: false })
 
 export default function LandingPage() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const { t } = useTranslation(['common', 'landing'])
 
   useEffect(() => {
     const handleScroll = () => {
@@ -32,27 +36,24 @@ export default function LandingPage() {
       if (element) element.scrollIntoView({ behavior: 'smooth' })
     }
   }
+  const badges = t('trustBadges', { returnObjects: true }) as string[]
 
   return (
     <div className="min-h-screen bg-app pt-20 relative">
       <Head>
-        <title>¿Otra quincena corriendo detrás de la planilla? | Humano SISU</title>
-        <meta
-          name="description"
-          content="Generá planilla en 5 minutos con IHSS, RAP e ISR listos y vouchers enviados por WhatsApp. Cumplimiento STSS, de Excel caótico a PDF impecable."
-        />
-        <meta name="keywords" content="planilla Honduras, IHSS, RAP, ISR, automatización RH, STSS, Humano SISU, innovación" />
-        <meta name="author" content="Humano SISU" />
+        <title>{t('head.title')}</title>
+        <meta name="description" content={t('head.description')} />
+        <meta name="keywords" content={t('head.keywords')} />
+        <meta name="author" content={t('head.author')} />
         <meta name="robots" content="index, follow" />
-        <meta property="og:title" content="Humano SISU - Automatización de Planilla en Honduras" />
-        <meta property="og:description" content="Generá planilla en 5 minutos con IHSS, RAP e ISR listos. Cumplimiento STSS garantizado." />
+        <meta property="og:title" content={t('head.ogTitle')} />
+        <meta property="og:description" content={t('head.ogDescription')} />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://humano-sisu.com" />
+        <meta property="og:url" content={process.env.NEXT_PUBLIC_SITE_URL} />
         <meta property="og:image" content="/logo-humano-sisu.png" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Humano SISU - Automatización de Planilla" />
-        <meta name="twitter:description" content="Generá planilla en 5 minutos con IHSS, RAP e ISR listos." />
-        <link rel="canonical" href="https://humano-sisu.com" />
+        <meta name="twitter:title" content={t('head.twitterTitle')} />
+        <meta name="twitter:description" content={t('head.twitterDescription')} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
       </Head>
@@ -84,9 +85,9 @@ export default function LandingPage() {
               
               {/* Título */}
               <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold text-white leading-tight ml-2 flex-shrink-0 text-left">
-                <span className="text-white">Recursos Humanos en Automatico</span>
+                <span className="text-white">{t('header.tagline.main')}</span>
                 <span className="hidden sm:inline"> </span>
-                <span className="text-brand-300">activa, cumplí y ahorrá horas cada semana</span>
+                <span className="text-brand-300">{t('header.tagline.highlight')}</span>
               </h1>
 
               <div className="hidden md:block ml-auto">
@@ -96,14 +97,15 @@ export default function LandingPage() {
                     className="text-brand-200 hover:text-white px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap"
                     onClick={scrollToSection}
                   >
-                    Servicios
+                    {t('common:nav.services')}
                   </a>
                   <Link
                     href="/app/login"
                     className="bg-brand-600 hover:bg-brand-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 shadow-lg shadow-black/20 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap min-w-[140px] text-center"
                   >
-                    Iniciar sesión
+                    {t('common:nav.login')}
                   </Link>
+                  <LanguageSwitcher />
                 </div>
               </div>
 
@@ -113,7 +115,7 @@ export default function LandingPage() {
                   onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                   className="glass inline-flex items-center justify-center p-2 rounded-md text-brand-200 hover:text-white hover:bg-brand-700/20 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
                 >
-                  <span className="sr-only">Open main menu</span>
+                  <span className="sr-only">{t('common:nav.openMenu')}</span>
                   {isMobileMenuOpen ? (
                     <svg className="block h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -140,15 +142,16 @@ export default function LandingPage() {
                   className="block px-3 py-2 text-base font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  Servicios
+                  {t('common:nav.services')}
                 </a>
                 <Link
                   href="/app/login"
                   className="bg-brand-900 hover:bg-brand-800 text-white w-full text-center block py-2 px-4 rounded-lg transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  Iniciar sesión
+                  {t('common:nav.login')}
                 </Link>
+                <LanguageSwitcher />
               </div>
             </div>
           )}
@@ -160,9 +163,14 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Trust badges */}
           <div className="flex flex-wrap justify-center gap-3 md:gap-6 mb-8 animate-fade-up-subtle">
-            <span className="text-sm bg-green-500/10 text-green-400 px-3 py-1 rounded-full border border-green-500/20 hover:bg-green-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-100">Cumple STSS Honduras</span>
-            <span className="text-sm bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full border border-blue-500/20 hover:bg-blue-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-200">Setup en 24 horas</span>
-            <span className="text-sm bg-orange-500/10 text-orange-400 px-3 py-1 rounded-full border border-orange-500/20 hover:bg-orange-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-300">02 empresas activas</span>
+            {badges.map((badge, i) => (
+              <span
+                key={badge}
+                className={`text-sm px-3 py-1 rounded-full border transition-all duration-300 hover:-translate-y-0.5 animate-delay-${(i + 1) * 100}`}
+              >
+                {badge}
+              </span>
+            ))}
           </div>
 
           {/* Countdown Timer - Centrado debajo de los trust badges */}
@@ -187,15 +195,11 @@ export default function LandingPage() {
       <section id="servicios" className="py-16 bg-white/5">
         <div className="max-w-6xl mx-auto px-4">
           <h2 className="text-3xl font-bold text-center text-white mb-12">
-            Empresas que ya automatizaron su RH
+            {t('socialProof.title')}
           </h2>
 
           <div className="grid md:grid-cols-3 gap-8">
-            {[
-              { name: 'Felix Garcia', company: 'Tony\'s Mar Restaurant', employees: '40 empleados', quote: 'Ya no pierdo domingos haciendo planilla. 4 horas ahora son 4 minutos.' },
-              { name: 'Gustavo Argueta', company: 'Paragon Honduras', employees: '37 empleados', quote: 'Antes llevavamos la asistencia en un libro rojo, ahora tneemos dashboard interactivo.' },
-              { name: 'Luis Diego Maradiaga', company: 'AFI & Asociados', employees: '15 empleados', quote: 'Cero errores en IHSS desde que lo uso. Mi contador está feliz.' }
-            ].map((testimonial, i) => (
+            {(t('socialProof.testimonials', { returnObjects: true }) as any[]).map((testimonial, i) => (
               <div key={`testimonial-${i}`} className="bg-white/5 border border-white/10 rounded-xl p-6">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-12 h-12 bg-brand-500 rounded-full flex items-center justify-center text-white font-bold">
@@ -223,18 +227,16 @@ export default function LandingPage() {
       <footer className="border-t border-white/10 mt-20">
         <div className="max-w-6xl mx-auto px-4 py-12">
           <div className="text-center">
-            <p className="text-slate-400 mb-4">
-              Protegemos tu información. <strong>Solo será utilizadapara contactarte</strong>.
-            </p>
+            <p className="text-slate-400 mb-4" dangerouslySetInnerHTML={{ __html: t('common:footer.protect') }} />
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center text-sm">
-              <Link 
-                href="/politicadeprivacidad" 
+              <Link
+                href="/politicadeprivacidad"
                 className="text-brand-300 hover:text-brand-400 transition-colors underline decoration-brand-400/30 hover:decoration-brand-400"
               >
-                Política de Privacidad
+                {t('common:footer.privacy')}
               </Link>
               <span className="text-slate-500">•</span>
-              <span className="text-slate-500">© 2025 Humano SISU. Todos los derechos reservados.</span>
+              <span className="text-slate-500">{t('common:footer.rights')}</span>
             </div>
           </div>
         </div>
@@ -243,4 +245,12 @@ export default function LandingPage() {
       <DemoFooter />
     </div>
   )
+}
+
+export async function getStaticProps({ locale }: { locale: string }) {
+  return {
+    props: {
+      ...(await serverSideTranslations(locale, ['common', 'landing'])),
+    },
+  }
 }

@@ -1,4 +1,5 @@
 import { AppProps } from 'next/app'
+import { appWithTranslation } from 'next-i18next'
 import { createClient } from '../lib/supabase/client'
 import { createContext, useState, useEffect } from 'react'
 import { AuthProvider } from '../lib/auth'
@@ -33,7 +34,7 @@ async function loadEnvironmentVariables() {
   return null
 }
 
-export default function App({ Component, pageProps }: AppProps) {
+function App({ Component, pageProps }: AppProps) {
   const [supabaseClient, setSupabaseClient] = useState<any>(null)
   const [envLoaded, setEnvLoaded] = useState(false)
 
@@ -72,3 +73,5 @@ export default function App({ Component, pageProps }: AppProps) {
     </SupabaseContext.Provider>
   )
 }
+
+export default appWithTranslation(App)
