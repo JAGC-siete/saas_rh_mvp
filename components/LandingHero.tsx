@@ -27,8 +27,8 @@ export default function LandingHero() {
             <div className="space-y-6 text-left">
 
               <h1 className="text-4xl sm:text-5xl font-extrabold leading-tight text-white">
-                ¿Otra quincena corriendo detrás de la planilla?
-                <span className="block text-brand-300">Activá tu robot de RH y olvidate de las carreras.</span>
+                ¿Siempre corriendo detras de Recursos Humanos?
+                <span className="block text-brand-300">Cambialos por robots y olvidate de las carreras para siempre.</span>
               </h1>
 
               <p className="text-lg text-brand-200/90">
