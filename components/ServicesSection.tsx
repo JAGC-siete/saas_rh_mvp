@@ -10,14 +10,14 @@ export default function ServicesSection() {
         <div className="mx-auto h-72 w-72 blur-3xl rounded-full opacity-20 bg-brand-600/40 translate-y-8" />
       </div>
 
-      {/* How it works section */}
+      {/* Cómo funciona section */}
       <div className="max-w-6xl mx-auto mb-20">
         <div className="text-center mb-8">
           <div className="inline-block bg-gray-800/50 text-gray-300 text-sm font-medium px-4 py-2 rounded-full mb-6">
-            HOW IT WORKS
+            CÓMO FUNCIONA
           </div>
           <h2 className="text-3xl font-bold text-white mb-8">
-            Replace expensive in-house teams & unreliable freelancers with a flat monthly fee
+            Reemplazá equipos internos costosos y apps poco confiables con una tarifa mensual fija
           </h2>
         </div>
         
@@ -28,8 +28,8 @@ export default function ServicesSection() {
                 <span className="text-green-400 font-bold text-lg">1</span>
               </div>
               <div>
-                <h3 className="text-xl font-bold text-white mb-2">No more hiring, managing, or dealing with writers</h3>
-                <p className="text-gray-300">We take care of all of the comms & busywork for you.</p>
+                <h3 className="text-xl font-bold text-white mb-2">No más contratar, gestionar o lidiar con personal de RH</h3>
+                <p className="text-gray-300">Nos encargamos de todas las comunicaciones y trabajo administrativo por vos.</p>
               </div>
             </div>
             
@@ -38,8 +38,8 @@ export default function ServicesSection() {
                 <span className="text-green-400 font-bold text-lg">2</span>
               </div>
               <div>
-                <h3 className="text-xl font-bold text-white mb-2">Extraordinarily simple to use</h3>
-                <p className="text-gray-300">Add your style guide and keyword(s) & we'll take care of the rest.</p>
+                <h3 className="text-xl font-bold text-white mb-2">Extraordinariamente simple de usar</h3>
+                <p className="text-gray-300">Agregá los parámetros específicos de tu caso de uso y nosotros nos encargamos del resto.</p>
               </div>
             </div>
             
@@ -48,8 +48,8 @@ export default function ServicesSection() {
                 <span className="text-green-400 font-bold text-lg">3</span>
               </div>
               <div>
-                <h3 className="text-xl font-bold text-white mb-2">Completely risk free with unlimited revisions</h3>
-                <p className="text-gray-300">Don't love your content? We'll rewrite it until you do.</p>
+                <h3 className="text-xl font-bold text-white mb-2">Completamente libre de riesgo con empleados ilimitados</h3>
+                <p className="text-gray-300">¿No te gusta tu dashboard? Podemos construir tu propio sistema.</p>
               </div>
             </div>
           </div>

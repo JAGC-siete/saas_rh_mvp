@@ -334,51 +334,6 @@ export default function ActivarPage() {
           </Card>
         </div>
 
-        {/* How it works */}
-        <div className="max-w-6xl mx-auto mb-16">
-          <div className="text-center mb-8">
-            <div className="inline-block bg-gray-800/50 text-gray-300 text-sm font-medium px-4 py-2 rounded-full mb-6">
-              HOW IT WORKS
-            </div>
-            <h2 className="text-3xl font-bold text-white mb-8">
-              Replace expensive in-house teams & unreliable freelancers with a flat monthly fee
-            </h2>
-          </div>
-          
-          <div className="bg-gray-900/50 border border-green-500/30 rounded-2xl p-8 max-w-4xl mx-auto">
-            <div className="space-y-8">
-              <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center">
-                  <span className="text-green-400 font-bold text-lg">1</span>
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-white mb-2">No more hiring, managing, or dealing with writers</h3>
-                  <p className="text-gray-300">We take care of all of the comms & busywork for you.</p>
-                </div>
-              </div>
-              
-              <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center">
-                  <span className="text-green-400 font-bold text-lg">2</span>
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-white mb-2">Extraordinarily simple to use</h3>
-                  <p className="text-gray-300">Add your style guide and keyword(s) & we'll take care of the rest.</p>
-                </div>
-              </div>
-              
-              <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center">
-                  <span className="text-green-400 font-bold text-lg">3</span>
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-white mb-2">Completely risk free with unlimited revisions</h3>
-                  <p className="text-gray-300">Don't love your content? We'll rewrite it until you do.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
 
 
 
