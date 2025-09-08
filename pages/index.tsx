@@ -180,7 +180,7 @@ export default function LandingPage() {
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight">
               <span className="text-white">Recursos Humanos 100% digital y automático</span>
               <span className="hidden sm:inline"> </span>
-              <span className="text-brand-300">activa, cumplí y ahorrá horas cada semana</span>
+              <span className="text-brand-300">activa, cumplí y olvidate de las tareas repetitivas para siempre</span>
             </h1>
           </div>
 
