@@ -988,7 +988,7 @@ export default function PayrollManager() {
                       <td className="py-2 pr-4">L {line.RAP?.toFixed(2) || '0.00'}</td>
                       <td className="py-2 pr-4">L {line.ISR?.toFixed(2) || '0.00'}</td>
                       <td className="py-2 pr-4">L {line.total_deducciones?.toFixed(2) || '0.00'}</td>
-                      <td className="py-2 pr-4 font-semibold">L {line.net_salary?.toFixed(2) || '0.00'}</td>
+                      <td className="py-2 pr-4 font-semibold">L {line.total?.toFixed(2) || '0.00'}</td>
                     </tr>
                   ))}
                   {payrollState.planilla.length === 0 && (
