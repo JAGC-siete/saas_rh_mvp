@@ -36,22 +36,22 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-app pt-20 relative">
       <Head>
-        <title>¿Otra quincena corriendo detrás de la planilla? | Humano SISU</title>
+        <title>Software de Recursos Humanos en Honduras | Asistencia & Nómina</title>
         <meta
           name="description"
-          content="Generá planilla en 5 minutos con IHSS, RAP e ISR listos y vouchers enviados por WhatsApp. Cumplimiento STSS, de Excel caótico a PDF impecable."
+          content="RH en automático y digital: asistencia, nómina con deducciones IHSS, RAP, ISR exactas, comprobantes de pago enviados directo a tus empleados."
         />
         <meta name="keywords" content="planilla Honduras, IHSS, RAP, ISR, automatización RH, STSS, Humano SISU, innovación" />
         <meta name="author" content="Humano SISU" />
         <meta name="robots" content="index, follow" />
-        <meta property="og:title" content="Humano SISU - Automatización de Planilla en Honduras" />
-        <meta property="og:description" content="Generá planilla en 5 minutos con IHSS, RAP e ISR listos. Cumplimiento STSS garantizado." />
+        <meta property="og:title" content="Software de Recursos Humanos en Honduras | Asistencia & Nómina" />
+        <meta property="og:description" content="RH en automático y digital: asistencia, nómina con deducciones IHSS, RAP, ISR exactas, comprobantes de pago enviados directo a tus empleados." />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://humano-sisu.com" />
         <meta property="og:image" content="/logo-humano-sisu.png" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Humano SISU - Automatización de Planilla" />
-        <meta name="twitter:description" content="Generá planilla en 5 minutos con IHSS, RAP e ISR listos." />
+        <meta name="twitter:title" content="Software de Recursos Humanos en Honduras | Asistencia & Nómina" />
+        <meta name="twitter:description" content="RH en automático y digital: asistencia, nómina con deducciones IHSS, RAP, ISR exactas, comprobantes de pago enviados directo a tus empleados." />
         <link rel="canonical" href="https://humano-sisu.com" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
@@ -163,7 +163,7 @@ export default function LandingPage() {
           {/* Hero Title - Arriba del countdown */}
           <div className="text-center mb-8">
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight">
-              <span className="text-white">Recursos Humanos en Automatico</span>
+              <span className="text-white">Recursos Humanos en automático</span>
               <span className="hidden sm:inline"> </span>
               <span className="text-brand-300">activa, cumplí y ahorrá horas cada semana</span>
             </h1>
