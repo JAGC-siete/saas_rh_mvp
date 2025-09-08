@@ -24,6 +24,8 @@ interface PayrollLineUpdate {
   IHSS?: number
   RAP?: number
   ISR?: number
+  total_deducciones?: number
+  total?: number
 }
 
 interface EditablePayrollRowProps {
