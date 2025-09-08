@@ -436,7 +436,7 @@ export default function PayrollManager() {
   }, [])
 
   // Función para manejar edición de línea
-  const handleEditLine = useCallback((line: any) => {
+  const handleEditLineClick = useCallback((line: any) => {
     setEditingLine(line)
     setEditValues({
       days_worked: line.days_worked,
@@ -463,7 +463,7 @@ export default function PayrollManager() {
       // Actualizar cada campo individualmente
       for (const [field, value] of Object.entries(editValues)) {
         if (value !== undefined && value !== editingLine[field]) {
-          await payrollState.editLine(editingLine.line_id, field, value, `Editado desde tabla`)
+          await payrollState.editLine(editingLine.line_id, field as any, value as number, `Editado desde tabla`)
         }
       }
       
@@ -1123,7 +1123,7 @@ export default function PayrollManager() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleEditLine(line)}
+                            onClick={() => handleEditLineClick(line)}
                             disabled={payrollState.loading}
                             title="Editar línea"
                           >
@@ -1410,7 +1410,7 @@ export default function PayrollManager() {
                 <Input
                   type="number"
                   value={editValues.days_worked || ''}
-                  onChange={(e) => setEditValues(prev => ({ ...prev, days_worked: parseFloat(e.target.value) || 0 }))}
+                  onChange={(e) => setEditValues((prev: any) => ({ ...prev, days_worked: parseFloat(e.target.value) || 0 }))}
                   min="0"
                   step="0.5"
                 />
@@ -1421,7 +1421,7 @@ export default function PayrollManager() {
                 <Input
                   type="number"
                   value={editValues.total_earnings || ''}
-                  onChange={(e) => setEditValues(prev => ({ ...prev, total_earnings: parseFloat(e.target.value) || 0 }))}
+                  onChange={(e) => setEditValues((prev: any) => ({ ...prev, total_earnings: parseFloat(e.target.value) || 0 }))}
                   min="0"
                   step="0.01"
                 />
@@ -1432,7 +1432,7 @@ export default function PayrollManager() {
                 <Input
                   type="number"
                   value={editValues.IHSS || ''}
-                  onChange={(e) => setEditValues(prev => ({ ...prev, IHSS: parseFloat(e.target.value) || 0 }))}
+                  onChange={(e) => setEditValues((prev: any) => ({ ...prev, IHSS: parseFloat(e.target.value) || 0 }))}
                   min="0"
                   step="0.01"
                 />
@@ -1443,7 +1443,7 @@ export default function PayrollManager() {
                 <Input
                   type="number"
                   value={editValues.RAP || ''}
-                  onChange={(e) => setEditValues(prev => ({ ...prev, RAP: parseFloat(e.target.value) || 0 }))}
+                  onChange={(e) => setEditValues((prev: any) => ({ ...prev, RAP: parseFloat(e.target.value) || 0 }))}
                   min="0"
                   step="0.01"
                 />
@@ -1454,7 +1454,7 @@ export default function PayrollManager() {
                 <Input
                   type="number"
                   value={editValues.ISR || ''}
-                  onChange={(e) => setEditValues(prev => ({ ...prev, ISR: parseFloat(e.target.value) || 0 }))}
+                  onChange={(e) => setEditValues((prev: any) => ({ ...prev, ISR: parseFloat(e.target.value) || 0 }))}
                   min="0"
                   step="0.01"
                 />
