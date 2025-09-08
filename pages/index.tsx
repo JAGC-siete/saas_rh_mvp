@@ -82,12 +82,7 @@ export default function LandingPage() {
                 </div>
               </div>
               
-              {/* Título */}
-              <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold text-white leading-tight ml-2 flex-shrink-0 text-left">
-                <span className="text-white">Recursos Humanos en Automatico</span>
-                <span className="hidden sm:inline"> </span>
-                <span className="text-brand-300">activa, cumplí y ahorrá horas cada semana</span>
-              </h1>
+              {/* Título - Removido para mover al hero */}
 
               <div className="hidden md:block ml-auto">
                 <div className="ml-6 flex items-center space-x-4">
@@ -165,7 +160,16 @@ export default function LandingPage() {
             <span className="text-sm bg-orange-500/10 text-orange-400 px-3 py-1 rounded-full border border-orange-500/20 hover:bg-orange-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-300">02 empresas activas</span>
           </div>
 
-          {/* Countdown Timer - Centrado debajo de los trust badges */}
+          {/* Hero Title - Arriba del countdown */}
+          <div className="text-center mb-8">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight">
+              <span className="text-white">Recursos Humanos en Automatico</span>
+              <span className="hidden sm:inline"> </span>
+              <span className="text-brand-300">activa, cumplí y ahorrá horas cada semana</span>
+            </h1>
+          </div>
+
+          {/* Countdown Timer - Centrado debajo del hero title */}
           <CountdownTimer />
 
           {/* LandingHero Section - Reemplaza completamente al carrusel */}
