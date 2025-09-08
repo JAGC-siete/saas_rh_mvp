@@ -26,7 +26,11 @@ export default function ServicesSection() {
 
       {/* El Libro Rojo - Asistencia */}
       <div id="libro-rojo" className="mb-16">
-        <h3 className="text-2xl font-bold text-white mb-6 text-center">Pulso Laboral</h3>
+        <h3 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6 text-center">
+          <span className="text-white">Pulso</span>
+          <span className="hidden sm:inline"> </span>
+          <span className="text-brand-300">Laboral</span>
+        </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* SOPORTE: Asistencia */}
           <article className="group relative overflow-hidden rounded-2xl glass border border-white/15 p-6 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
@@ -72,7 +76,11 @@ export default function ServicesSection() {
 
       {/* El Planillero - Nómina */}
       <div id="planillero" className="mb-16">
-        <h3 className="text-2xl font-bold text-white mb-6 text-center">NominaPRO</h3>
+        <h3 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6 text-center">
+          <span className="text-white">Nomina</span>
+          <span className="hidden sm:inline"> </span>
+          <span className="text-brand-300">PRO</span>
+        </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* SOPORTE: Nómina sin errores */}
           <article className="group relative overflow-hidden rounded-2xl glass border border-white/15 p-6 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
@@ -120,39 +128,6 @@ export default function ServicesSection() {
 
       {/* Countdown Timer */}
       <CountdownTimer />
-
-      {/* Mini-proof bar */}
-      <div className="mt-8 rounded-xl glass border border-white/10 p-6 flex flex-col items-center gap-6 text-center">
-        <div className="text-brand-200">
-          <span className="text-white/90 font-medium">Prúebalo:</span>
-          <span className="flex items-center gap-2 mt-2"><CheckCircleIcon className="h-5 w-5 text-emerald-400" /> 99% menos tiempo corrigiendo errores</span>
-          <span className="flex items-center gap-2 mt-2"><CheckCircleIcon className="h-5 w-5 text-emerald-400" /> IHSS, RAP, ISR, 2025 en 1 click</span>
-          <span className="flex items-center gap-2 mt-2"><CheckCircleIcon className="h-5 w-5 text-emerald-400" /> Cumplimiento STSS desde implementación</span>
-        </div>
-        
-        {/* Email CTA Section */}
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row gap-3 max-w-md">
-            <input
-              type="email"
-              placeholder="Tu email"
-              className="flex-1 px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-brand-200/70 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent"
-            />
-            <button
-              onClick={() => window.location.href = '/activar'}
-              className="inline-flex items-center justify-center rounded-xl px-6 py-3 text-lg font-semibold shadow-lg bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all duration-300 hover:-translate-y-0.5 whitespace-nowrap"
-              data-analytics="cta_footer_click"
-            >
-              Comenza HOY
-            </button>
-          </div>
-          
-          {/* Features text below CTA */}
-          <div className="text-sm text-brand-200/60">
-            <p>Usalo gratis 30 días. Empleados ilimitados.</p>
-          </div>
-        </div>
-      </div>
 
       {/* Animaciones clave globales, sin JS */}
       <style jsx global>{`
