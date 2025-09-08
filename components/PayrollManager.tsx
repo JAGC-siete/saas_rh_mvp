@@ -1117,6 +1117,24 @@ export default function PayrollManager() {
                           </td>
                       <td className="border border-gray-300 px-4 py-2">
                         <div className="flex items-center gap-2">
+                          <EditablePayrollRow
+                            employee={{
+                              id: line.id || index.toString(),
+                              name: line.name,
+                              department: line.department || 'Sin Departamento',
+                              days_worked: line.days_worked || 0,
+                              total_earnings: line.total_earnings || 0,
+                              IHSS: line.IHSS || 0,
+                              RAP: line.RAP || 0,
+                              ISR: line.ISR || 0,
+                              total_deducciones: line.total_deducciones || 0,
+                              total: line.total || 0,
+                              line_id: line.line_id
+                            }}
+                            onSave={handlePayrollLineEdit}
+                            onCancel={() => handleCancelEdit(line.line_id || index.toString())}
+                            loading={payrollState.loading}
+                          />
                           <Button
                             variant="outline"
                             size="sm"
