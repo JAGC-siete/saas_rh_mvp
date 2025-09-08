@@ -152,7 +152,7 @@ export default function EditablePayrollRow({
               onClick={handleCancel}
               disabled={loading}
             >
-              <Icon name="x" className="h-4 w-4" />
+              <Icon name="close" className="h-4 w-4" />
             </Button>
           </td>
         </tr>
