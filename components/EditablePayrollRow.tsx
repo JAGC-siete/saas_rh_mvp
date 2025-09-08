@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
-import { Icon } from './ui/icon'
+import { Icon } from './Icon'
 
 interface PayrollLine {
   line_id: string
