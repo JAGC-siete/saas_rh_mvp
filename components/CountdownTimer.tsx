@@ -66,29 +66,6 @@ export default function CountdownTimer() {
           </div>
         </div>
         <div className="text-center mt-8">
-          {/* Descripción principal */}
-          <div className="mb-6">
-            <p className="text-lg text-white/90 mb-4">
-              Generá planilla en 5 minutos, con IHSS, RAP e ISR listos y vouchers enviados por Mail/WhatsApp.
-            </p>
-            
-            {/* Bullets */}
-            <ul className="text-white/80 space-y-2 max-w-md mx-auto">
-              <li className="flex items-center gap-2">
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                Cumplimiento STSS desde el día uno.
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                De Excel caótico a PDF impecable en minutos.
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                Ahorro de 6 horas por quincena.
-              </li>
-            </ul>
-          </div>
-
           {/* Email CTA Section */}
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
@@ -102,7 +79,7 @@ export default function CountdownTimer() {
                 className="inline-flex items-center justify-center rounded-xl px-6 py-3 text-base font-semibold shadow-lg bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all duration-300 hover:-translate-y-0.5 whitespace-nowrap"
                 data-analytics="cta_countdown_click"
               >
-                Comenza HOY
+                Probalo HOY
               </button>
             </div>
             
