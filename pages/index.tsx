@@ -175,7 +175,7 @@ export default function LandingPage() {
             <span className="text-sm bg-orange-500/10 text-orange-400 px-3 py-1 rounded-full border border-orange-500/20 hover:bg-orange-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-300">02 empresas activas</span>
           </div>
 
-          {/* Hero Title - Arriba del countdown */}
+          {/* Hero Title - Centrado */}
           <div className="text-center mb-8">
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight">
               <span className="text-white">Recursos Humanos 100% digital y automático</span>
