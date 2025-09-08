@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
-import { Icon } from './Icon'
+import { Icon } from './ui/icon'
 
 interface PayrollLine {
   line_id: string
@@ -24,8 +24,6 @@ interface PayrollLineUpdate {
   IHSS?: number
   RAP?: number
   ISR?: number
-  total_deducciones?: number
-  total?: number
 }
 
 interface EditablePayrollRowProps {
@@ -154,7 +152,7 @@ export default function EditablePayrollRow({
               onClick={handleCancel}
               disabled={loading}
             >
-              <Icon name="close" className="h-4 w-4" />
+              <Icon name="x" className="h-4 w-4" />
             </Button>
           </td>
         </tr>

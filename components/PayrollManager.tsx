@@ -184,6 +184,8 @@ export default function PayrollManager() {
   // Estado para modo Preview mejorado
   const [previewMode, setPreviewMode] = useState(false)
   const [previewData, setPreviewData] = useState<any>(null)
+  const [editingLine, setEditingLine] = useState<any>(null)
+  const [editValues, setEditValues] = useState<any>({})
 
   // Estados para modales flotantes - removed unused variables
 
@@ -432,6 +434,45 @@ export default function PayrollManager() {
   const sendPayrollWhatsApp = useCallback(async () => {
     alert('Feature en desarrollo - We will implement that later. Forget it for now.')
   }, [])
+
+  // Función para manejar edición de línea
+  const handleEditLine = useCallback((line: any) => {
+    setEditingLine(line)
+    setEditValues({
+      days_worked: line.days_worked,
+      total_earnings: line.total_earnings,
+      IHSS: line.IHSS,
+      RAP: line.RAP,
+      ISR: line.ISR
+    })
+  }, [])
+
+  // Función para cancelar edición
+  const handleCancelEdit = useCallback(() => {
+    setEditingLine(null)
+    setEditValues({})
+  }, [])
+
+  // Función para guardar cambios
+  const handleSaveEdit = useCallback(async () => {
+    if (!editingLine) return
+
+    try {
+      setError(null)
+      
+      // Actualizar cada campo individualmente
+      for (const [field, value] of Object.entries(editValues)) {
+        if (value !== undefined && value !== editingLine[field]) {
+          await payrollState.editLine(editingLine.line_id, field, value, `Editado desde tabla`)
+        }
+      }
+      
+      setEditingLine(null)
+      setEditValues({})
+    } catch (error: any) {
+      setError(error.message || 'Error guardando cambios')
+    }
+  }, [editingLine, editValues, payrollState])
 
   // Función para enviar nómina por email
   const sendPayrollEmail = useCallback(async () => {
@@ -1003,7 +1044,7 @@ export default function PayrollManager() {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={12} className="py-6 text-center text-gray-400">
+                      <td colSpan={11} className="py-6 text-center text-gray-400">
                         Haz clic en "Generar Preview" para ver el detalle de empleados
                       </td>
                     </tr>
@@ -1075,8 +1116,18 @@ export default function PayrollManager() {
                             size="sm"
                             onClick={() => generateVoucher(line.line_id)}
                             disabled={payrollState.loading}
+                            title="Descargar voucher"
                           >
                             <Icon name="download" className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditLine(line)}
+                            disabled={payrollState.loading}
+                            title="Editar línea"
+                          >
+                            <Icon name="edit" className="h-4 w-4" />
                           </Button>
                         </div>
                           </td>
@@ -1344,6 +1395,88 @@ export default function PayrollManager() {
         </Card>
           )}
         </>
+      )}
+
+      {/* Modal de Edición de Línea */}
+      {editingLine && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4">
+            <h3 className="text-lg font-semibold mb-4">Editar Línea de Nómina</h3>
+            <p className="text-gray-600 mb-4">Empleado: <strong>{editingLine.name}</strong></p>
+            
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Días Trabajados</label>
+                <Input
+                  type="number"
+                  value={editValues.days_worked || ''}
+                  onChange={(e) => setEditValues(prev => ({ ...prev, days_worked: parseFloat(e.target.value) || 0 }))}
+                  min="0"
+                  step="0.5"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Salario Bruto</label>
+                <Input
+                  type="number"
+                  value={editValues.total_earnings || ''}
+                  onChange={(e) => setEditValues(prev => ({ ...prev, total_earnings: parseFloat(e.target.value) || 0 }))}
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">IHSS</label>
+                <Input
+                  type="number"
+                  value={editValues.IHSS || ''}
+                  onChange={(e) => setEditValues(prev => ({ ...prev, IHSS: parseFloat(e.target.value) || 0 }))}
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">RAP</label>
+                <Input
+                  type="number"
+                  value={editValues.RAP || ''}
+                  onChange={(e) => setEditValues(prev => ({ ...prev, RAP: parseFloat(e.target.value) || 0 }))}
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">ISR</label>
+                <Input
+                  type="number"
+                  value={editValues.ISR || ''}
+                  onChange={(e) => setEditValues(prev => ({ ...prev, ISR: parseFloat(e.target.value) || 0 }))}
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={handleCancelEdit}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleSaveEdit}
+                disabled={payrollState.loading}
+              >
+                {payrollState.loading ? 'Guardando...' : 'Guardar Cambios'}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Voucher Generator Modal */}
