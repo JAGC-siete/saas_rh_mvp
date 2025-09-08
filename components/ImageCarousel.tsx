@@ -127,7 +127,7 @@ export default function ImageCarousel() {
       {/* Contador de tiempo */}
       <div className="text-center mt-2">
         <span className="text-xs text-brand-200/70">
-          Imágenes con fines ilustrativos
+          Así se ve la planilla hecha en 4 minutos con nuestro sistema
         </span>
       </div>
     </div>

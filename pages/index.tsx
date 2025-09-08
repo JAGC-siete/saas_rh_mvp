@@ -184,15 +184,15 @@ export default function LandingPage() {
             </h1>
           </div>
 
-          {/* Countdown Timer - Centrado debajo del hero title */}
-          <CountdownTimer />
-
           {/* LandingHero Section - Reemplaza completamente al carrusel */}
           <div className="text-center max-w-6xl mx-auto mb-6">
             <LandingHero />
           </div>
         </div>
       </section>
+
+      {/* Countdown Timer - Después del hero, antes de Como funciona */}
+      <CountdownTimer />
 
       {/* How It Works Section */}
       <HowItWorks />
