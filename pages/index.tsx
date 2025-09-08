@@ -6,7 +6,6 @@ import ServicesSection from '../components/ServicesSection'
 import HowItWorks from '../components/HowItWorks'
 import AWSCertificationsSection from '../components/AWSCertificationsSection'
 import LandingHero from '../components/LandingHero'
-import CountdownTimer from '../components/CountdownTimer'
 import dynamic from 'next/dynamic'
 import Image from 'next/image'
 
@@ -191,9 +190,6 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
-
-      {/* Countdown Timer - Después del hero, antes de Como funciona */}
-      <CountdownTimer />
 
       {/* How It Works Section */}
       <HowItWorks />

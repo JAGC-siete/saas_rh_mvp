@@ -1,6 +1,7 @@
 import { ClockIcon, CurrencyDollarIcon, CheckCircleIcon, ArrowRightIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 import { Button } from './ui/button'
+import CountdownTimer from './CountdownTimer'
 
 export default function ServicesSection() {
   return (
@@ -116,6 +117,9 @@ export default function ServicesSection() {
 
         </div>
       </div>
+
+      {/* Countdown Timer */}
+      <CountdownTimer />
 
       {/* Mini-proof bar */}
       <div className="mt-8 rounded-xl glass border border-white/10 p-6 flex flex-col items-center gap-6 text-center">
