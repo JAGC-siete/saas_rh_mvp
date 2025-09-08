@@ -973,7 +973,6 @@ export default function PayrollManager() {
                     <th className="py-2 pr-4">ISR</th>
                     <th className="py-2 pr-4">Deducciones</th>
                     <th className="py-2 pr-4">Neto</th>
-                    <th className="py-2 pr-4">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="text-gray-200">
@@ -991,28 +990,6 @@ export default function PayrollManager() {
                         <td className="py-2 pr-4">L {line.ISR?.toFixed(2) || '0.00'}</td>
                         <td className="py-2 pr-4">L {line.total_deducciones?.toFixed(2) || '0.00'}</td>
                         <td className="py-2 pr-4 font-semibold">L {line.total?.toFixed(2) || '0.00'}</td>
-                        <td className="py-2 pr-4">
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => generateVoucher(line.line_id)}
-                              disabled={payrollState.loading}
-                              title="Descargar voucher"
-                            >
-                              <Icon name="download" className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => alert('Editar empleado: ' + line.name)}
-                              disabled={payrollState.loading}
-                              title="Editar empleado"
-                            >
-                              <Icon name="edit" className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </td>
                       </tr>
                     ))
                   ) : (
@@ -1084,22 +1061,25 @@ export default function PayrollManager() {
                           </td>
                       <td className="border border-gray-300 px-4 py-2">
                         <div className="flex items-center gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => generateVoucher(line.line_id)}
-                              disabled={payrollState.loading}
-                            >
-                              <Icon name="download" className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => alert('Editar empleado: ' + line.name)}
-                              disabled={payrollState.loading}
-                            >
-                              <Icon name="edit" className="h-4 w-4" />
-                            </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => generateVoucher(line.line_id)}
+                            disabled={payrollState.loading}
+                          >
+                            <Icon name="download" className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              // TODO: Implementar edición
+                              alert('Funcionalidad de edición en desarrollo')
+                            }}
+                            disabled={payrollState.loading}
+                          >
+                            <Icon name="edit" className="h-4 w-4" />
+                          </Button>
                         </div>
                           </td>
                         </tr>
