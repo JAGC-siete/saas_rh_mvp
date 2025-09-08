@@ -54,7 +54,7 @@ export default function LandingHero() {
                     className="inline-flex items-center justify-center rounded-xl px-6 py-3 text-lg font-semibold shadow-sm bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all duration-300 hover:-translate-y-1 whitespace-nowrap"
                     data-analytics="cta_hero_click"
                   >
-                    Comenza HOY
+                    Probalo HOY
                   </button>
                 </div>
                 

@@ -11,50 +11,6 @@ export default function ServicesSection() {
       </div>
 
       {/* Cómo funciona section */}
-      <div className="max-w-6xl mx-auto mb-20">
-        <div className="text-center mb-8">
-          <div className="inline-block bg-gray-800/50 text-gray-300 text-sm font-medium px-4 py-2 rounded-full mb-6">
-            CÓMO FUNCIONA
-          </div>
-          <h2 className="text-3xl font-bold text-white mb-8">
-            Reemplazá equipos internos costosos y consultores poco confiables por una tarifa mensual fija
-          </h2>
-        </div>
-        
-        <div className="bg-gray-900/50 border border-green-500/30 rounded-2xl p-8 max-w-4xl mx-auto">
-          <div className="space-y-8">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center">
-                <span className="text-green-400 font-bold text-lg">1</span>
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-white mb-2">No más contratar, gestionar o lidiar con personal de RH</h3>
-                <p className="text-gray-300">Automatizamos el 80% de las operaciones de Recursos Humanos por vos.</p>
-              </div>
-            </div>
-            
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center">
-                <span className="text-green-400 font-bold text-lg">2</span>
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-white mb-2">Extraordinariamente simple de usar</h3>
-                <p className="text-gray-300">Agregá los parámetros específicos de tu caso de uso y nosotros nos encargamos del resto.</p>
-              </div>
-            </div>
-            
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center">
-                <span className="text-green-400 font-bold text-lg">3</span>
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-white mb-2">Completamente libre de riesgo con empleados ilimitados</h3>
-                <p className="text-gray-300">¿No te gusta tu dashboard? Podemos construir tu propio sistema.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       <header className="max-w-3xl mb-10 mx-auto text-center">
         <h2 className="text-4xl md:text-5xl font-bold text-white tracking-tight">

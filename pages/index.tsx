@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import DemoFooter from '../components/DemoFooter'
 import ServicesSection from '../components/ServicesSection'
+import HowItWorks from '../components/HowItWorks'
 import AWSCertificationsSection from '../components/AWSCertificationsSection'
 import LandingHero from '../components/LandingHero'
 import CountdownTimer from '../components/CountdownTimer'
@@ -87,6 +88,13 @@ export default function LandingPage() {
               <div className="hidden md:block ml-auto">
                 <div className="ml-6 flex items-center space-x-4">
                   <a
+                    href="#como-funciona"
+                    className="text-brand-200 hover:text-white px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap"
+                    onClick={scrollToSection}
+                  >
+                    Como funciona
+                  </a>
+                  <a
                     href="#servicios"
                     className="text-brand-200 hover:text-white px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap"
                     onClick={scrollToSection}
@@ -131,6 +139,13 @@ export default function LandingPage() {
               <div className="px-2 pt-2 pb-3 space-y-1 glass-strong rounded-lg shadow-lg mt-2">
                 
                 <a
+                  href="#como-funciona"
+                  className="block px-3 py-2 text-base font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Como funciona
+                </a>
+                <a
                   href="#servicios"
                   className="block px-3 py-2 text-base font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
@@ -163,7 +178,7 @@ export default function LandingPage() {
           {/* Hero Title - Arriba del countdown */}
           <div className="text-center mb-8">
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight">
-              <span className="text-white">Recursos Humanos en automático</span>
+              <span className="text-white">Recursos Humanos 100% digital y automático</span>
               <span className="hidden sm:inline"> </span>
               <span className="text-brand-300">activa, cumplí y ahorrá horas cada semana</span>
             </h1>
@@ -178,6 +193,9 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* How It Works Section */}
+      <HowItWorks />
 
       {/* Services Section - Rediseñada */}
       <div className="mt-4">
