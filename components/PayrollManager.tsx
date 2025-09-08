@@ -13,6 +13,7 @@ import { PayrollLineEditor } from './PayrollLineEditor'
 import { payrollApi, openInNewTab } from '../lib/payroll-api'
 import { PayrollLine } from '../types/payroll'
 import { getHondurasTimestamp, nowInHonduras } from '../lib/timezone'
+import EditablePayrollRow from './EditablePayrollRow'
 
 // MODE: por días (cálculo basado en días trabajados)
 interface PayrollRecord {
@@ -183,6 +184,7 @@ export default function PayrollManager() {
   // Estado para modo Preview mejorado
   const [previewMode, setPreviewMode] = useState(false)
   const [previewData, setPreviewData] = useState<any>(null)
+  const [editingRows, setEditingRows] = useState<Set<string>>(new Set())
 
   // Estados para modales flotantes - removed unused variables
 
@@ -775,8 +777,41 @@ export default function PayrollManager() {
     payrollState.resetState()
     setPreviewMode(false)
     setPreviewData(null)
+    setEditingRows(new Set())
     clearError()
   }, [payrollState, clearError])
+
+  // Función para manejar edición de líneas de nómina
+  const handlePayrollLineEdit = useCallback(async (lineId: string, updates: any) => {
+    try {
+      // Actualizar cada campo individualmente usando la API existente
+      for (const [field, value] of Object.entries(updates)) {
+        if (field === 'days_worked' || field === 'total_earnings' || field === 'IHSS' || field === 'RAP' || field === 'ISR') {
+          await payrollState.editLine(lineId, field, value as number, `Edición manual de ${field}`)
+        }
+      }
+      
+      // Remover de la lista de edición
+      setEditingRows(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(lineId)
+        return newSet
+      })
+      
+    } catch (error) {
+      console.error('Error editando línea:', error)
+      throw error
+    }
+  }, [payrollState])
+
+  // Función para cancelar edición
+  const handleCancelEdit = useCallback((lineId: string) => {
+    setEditingRows(prev => {
+      const newSet = new Set(prev)
+      newSet.delete(lineId)
+      return newSet
+    })
+  }, [])
 
   // Función para manejar cambio de filtros del nuevo sistema
   const handleNewFilterChange = useCallback((key: string, value: any) => {
@@ -973,6 +1008,7 @@ export default function PayrollManager() {
                     <th className="py-2 pr-4">ISR</th>
                     <th className="py-2 pr-4">Deducciones</th>
                     <th className="py-2 pr-4">Neto</th>
+                    <th className="py-2 pr-4">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="text-gray-200">
@@ -988,13 +1024,33 @@ export default function PayrollManager() {
                         <td className="py-2 pr-4">L {line.IHSS?.toFixed(2) || '0.00'}</td>
                         <td className="py-2 pr-4">L {line.RAP?.toFixed(2) || '0.00'}</td>
                         <td className="py-2 pr-4">L {line.ISR?.toFixed(2) || '0.00'}</td>
-                        <td className="py-2 pr-4">L {line.total_deducciones?.toFixed(2) || '0.00'}</td>
-                        <td className="py-2 pr-4 font-semibold">L {line.total?.toFixed(2) || '0.00'}</td>
-                      </tr>
+                      <td className="py-2 pr-4">L {line.total_deducciones?.toFixed(2) || '0.00'}</td>
+                      <td className="py-2 pr-4 font-semibold">L {line.total?.toFixed(2) || '0.00'}</td>
+                      <td className="py-2 pr-4">
+                        <EditablePayrollRow
+                          employee={{
+                            id: line.id || index.toString(),
+                            name: line.name,
+                            department: line.department || 'Sin Departamento',
+                            days_worked: line.days_worked || 0,
+                            total_earnings: line.total_earnings || 0,
+                            IHSS: line.IHSS || 0,
+                            RAP: line.RAP || 0,
+                            ISR: line.ISR || 0,
+                            total_deducciones: line.total_deducciones || 0,
+                            total: line.total || 0,
+                            line_id: line.line_id
+                          }}
+                          onSave={handlePayrollLineEdit}
+                          onCancel={() => handleCancelEdit(line.line_id || index.toString())}
+                          loading={payrollState.loading}
+                        />
+                      </td>
+                    </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={11} className="py-6 text-center text-gray-400">
+                      <td colSpan={12} className="py-6 text-center text-gray-400">
                         Haz clic en "Generar Preview" para ver el detalle de empleados
                       </td>
                     </tr>
