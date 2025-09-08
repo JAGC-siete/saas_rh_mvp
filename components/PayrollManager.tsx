@@ -10,10 +10,10 @@ import { useCompanyContext } from '../lib/useCompanyContext'
 import VoucherGenerator from './VoucherGenerator'
 import { usePayrollState } from '../lib/hooks/usePayrollState'
 import { PayrollLineEditor } from './PayrollLineEditor'
+import EditablePayrollRow from './EditablePayrollRow'
 import { payrollApi, openInNewTab } from '../lib/payroll-api'
 import { PayrollLine } from '../types/payroll'
 import { getHondurasTimestamp, nowInHonduras } from '../lib/timezone'
-import EditablePayrollRow from './EditablePayrollRow'
 
 // MODE: por días (cálculo basado en días trabajados)
 interface PayrollRecord {
@@ -184,7 +184,6 @@ export default function PayrollManager() {
   // Estado para modo Preview mejorado
   const [previewMode, setPreviewMode] = useState(false)
   const [previewData, setPreviewData] = useState<any>(null)
-  const [editingRows, setEditingRows] = useState<Set<string>>(new Set())
 
   // Estados para modales flotantes - removed unused variables
 
@@ -777,41 +776,8 @@ export default function PayrollManager() {
     payrollState.resetState()
     setPreviewMode(false)
     setPreviewData(null)
-    setEditingRows(new Set())
     clearError()
   }, [payrollState, clearError])
-
-  // Función para manejar edición de líneas de nómina
-  const handlePayrollLineEdit = useCallback(async (lineId: string, updates: any) => {
-    try {
-      // Actualizar cada campo individualmente usando la API existente
-      for (const [field, value] of Object.entries(updates)) {
-        if (field === 'days_worked' || field === 'total_earnings' || field === 'IHSS' || field === 'RAP' || field === 'ISR') {
-          await payrollState.editLine(lineId, field, value as number, `Edición manual de ${field}`)
-        }
-      }
-      
-      // Remover de la lista de edición
-      setEditingRows(prev => {
-        const newSet = new Set(prev)
-        newSet.delete(lineId)
-        return newSet
-      })
-      
-    } catch (error) {
-      console.error('Error editando línea:', error)
-      throw error
-    }
-  }, [payrollState])
-
-  // Función para cancelar edición
-  const handleCancelEdit = useCallback((lineId: string) => {
-    setEditingRows(prev => {
-      const newSet = new Set(prev)
-      newSet.delete(lineId)
-      return newSet
-    })
-  }, [])
 
   // Función para manejar cambio de filtros del nuevo sistema
   const handleNewFilterChange = useCallback((key: string, value: any) => {
@@ -1014,39 +980,26 @@ export default function PayrollManager() {
                 <tbody className="text-gray-200">
                   {payrollState.planilla.length > 0 ? (
                     payrollState.planilla.map((line: any, index: number) => (
-                      <tr key={index} className="border-t border-white/10">
-                        <td className="py-2 pr-4">{line.name}</td>
-                        <td className="py-2 pr-4">L {line.base_salary?.toFixed(2) || '0.00'}</td>
-                        <td className="py-2 pr-4">{line.days_worked || 0}</td>
-                        <td className="py-2 pr-4">{line.days_absent || 0}</td>
-                        <td className="py-2 pr-4">{line.late_days || 0}</td>
-                        <td className="py-2 pr-4">L {line.total_earnings?.toFixed(2) || '0.00'}</td>
-                        <td className="py-2 pr-4">L {line.IHSS?.toFixed(2) || '0.00'}</td>
-                        <td className="py-2 pr-4">L {line.RAP?.toFixed(2) || '0.00'}</td>
-                        <td className="py-2 pr-4">L {line.ISR?.toFixed(2) || '0.00'}</td>
-                      <td className="py-2 pr-4">L {line.total_deducciones?.toFixed(2) || '0.00'}</td>
-                      <td className="py-2 pr-4 font-semibold">L {line.total?.toFixed(2) || '0.00'}</td>
-                      <td className="py-2 pr-4">
-                        <EditablePayrollRow
-                          employee={{
-                            id: line.id || index.toString(),
-                            name: line.name,
-                            department: line.department || 'Sin Departamento',
-                            days_worked: line.days_worked || 0,
-                            total_earnings: line.total_earnings || 0,
-                            IHSS: line.IHSS || 0,
-                            RAP: line.RAP || 0,
-                            ISR: line.ISR || 0,
-                            total_deducciones: line.total_deducciones || 0,
-                            total: line.total || 0,
-                            line_id: line.line_id
-                          }}
-                          onSave={handlePayrollLineEdit}
-                          onCancel={() => handleCancelEdit(line.line_id || index.toString())}
-                          loading={payrollState.loading}
-                        />
-                      </td>
-                    </tr>
+                      <EditablePayrollRow
+                        key={line.line_id || index}
+                        employee={line}
+                        onSave={async (lineId, updates) => {
+                          try {
+                            // Actualizar cada campo individualmente usando la API existente
+                            for (const [field, value] of Object.entries(updates)) {
+                              if (value !== undefined) {
+                                await payrollState.editLine(lineId, field, value, `Editado desde tabla`)
+                              }
+                            }
+                          } catch (error) {
+                            console.error('Error guardando cambios:', error)
+                            throw error
+                          }
+                        }}
+                        onCancel={() => {
+                          // No hay acción específica para cancelar
+                        }}
+                      />
                     ))
                   ) : (
                     <tr>
@@ -1117,24 +1070,6 @@ export default function PayrollManager() {
                           </td>
                       <td className="border border-gray-300 px-4 py-2">
                         <div className="flex items-center gap-2">
-                          <EditablePayrollRow
-                            employee={{
-                              id: line.id || index.toString(),
-                              name: line.name,
-                              department: line.department || 'Sin Departamento',
-                              days_worked: line.days_worked || 0,
-                              total_earnings: line.total_earnings || 0,
-                              IHSS: line.IHSS || 0,
-                              RAP: line.RAP || 0,
-                              ISR: line.ISR || 0,
-                              total_deducciones: line.total_deducciones || 0,
-                              total: line.total || 0,
-                              line_id: line.line_id
-                            }}
-                            onSave={handlePayrollLineEdit}
-                            onCancel={() => handleCancelEdit(line.line_id || index.toString())}
-                            loading={payrollState.loading}
-                          />
                           <Button
                             variant="outline"
                             size="sm"
