@@ -18,8 +18,10 @@ export default function HowItWorks() {
           <div className="inline-block bg-gray-800/50 text-gray-300 text-sm font-medium px-4 py-2 rounded-full mb-6">
             CÓMO FUNCIONA
           </div>
-          <h2 className="text-3xl font-bold text-white mb-8">
-            Reemplazá equipos internos costosos y consultores poco confiables por una tarifa mensual fija
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-8">
+            <span className="text-white">Reemplazá equipos internos costosos y consultores poco confiables</span>
+            <span className="hidden sm:inline"> </span>
+            <span className="text-brand-300">por una tarifa mensual fija</span>
           </h2>
         </div>
 

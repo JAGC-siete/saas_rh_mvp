@@ -13,8 +13,10 @@ export default function ServicesSection() {
       {/* Cómo funciona section */}
 
       <header className="max-w-3xl mb-10 mx-auto text-center">
-        <h2 className="text-4xl md:text-5xl font-bold text-white tracking-tight">
-          Presentamos: Tus robots de Recursos Humanos
+        <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight">
+          <span className="text-white">Presentamos: Tus robots de</span>
+          <span className="hidden sm:inline"> </span>
+          <span className="text-brand-300">Recursos Humanos</span>
         </h2>
         <p className="mt-3 text-brand-200">
           Reemplazá tareas repetitivas y propensas a error con <span className="text-brand-400">automatización verificable</span>.
