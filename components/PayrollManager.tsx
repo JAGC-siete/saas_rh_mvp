@@ -948,8 +948,8 @@ export default function PayrollManager() {
         </CardContent>
       </Card>
 
-      {/* Employee Detail Table */}
-      {payrollState.hasPlanilla && (
+      {/* Employee Detail Table - SIEMPRE VISIBLE */}
+      {true && (
         <Card variant="glass">
           <CardHeader>
             <CardTitle className="text-white">Detalle por empleado</CardTitle>
@@ -976,24 +976,27 @@ export default function PayrollManager() {
                   </tr>
                 </thead>
                 <tbody className="text-gray-200">
-                  {payrollState.planilla.map((line: any, index: number) => (
-                    <tr key={index} className="border-t border-white/10">
-                      <td className="py-2 pr-4">{line.name}</td>
-                      <td className="py-2 pr-4">L {line.base_salary?.toFixed(2) || '0.00'}</td>
-                      <td className="py-2 pr-4">{line.days_worked || 0}</td>
-                      <td className="py-2 pr-4">{line.days_absent || 0}</td>
-                      <td className="py-2 pr-4">{line.late_days || 0}</td>
-                      <td className="py-2 pr-4">L {line.total_earnings?.toFixed(2) || '0.00'}</td>
-                      <td className="py-2 pr-4">L {line.IHSS?.toFixed(2) || '0.00'}</td>
-                      <td className="py-2 pr-4">L {line.RAP?.toFixed(2) || '0.00'}</td>
-                      <td className="py-2 pr-4">L {line.ISR?.toFixed(2) || '0.00'}</td>
-                      <td className="py-2 pr-4">L {line.total_deducciones?.toFixed(2) || '0.00'}</td>
-                      <td className="py-2 pr-4 font-semibold">L {line.total?.toFixed(2) || '0.00'}</td>
-                    </tr>
-                  ))}
-                  {payrollState.planilla.length === 0 && (
+                  {payrollState.planilla.length > 0 ? (
+                    payrollState.planilla.map((line: any, index: number) => (
+                      <tr key={index} className="border-t border-white/10">
+                        <td className="py-2 pr-4">{line.name}</td>
+                        <td className="py-2 pr-4">L {line.base_salary?.toFixed(2) || '0.00'}</td>
+                        <td className="py-2 pr-4">{line.days_worked || 0}</td>
+                        <td className="py-2 pr-4">{line.days_absent || 0}</td>
+                        <td className="py-2 pr-4">{line.late_days || 0}</td>
+                        <td className="py-2 pr-4">L {line.total_earnings?.toFixed(2) || '0.00'}</td>
+                        <td className="py-2 pr-4">L {line.IHSS?.toFixed(2) || '0.00'}</td>
+                        <td className="py-2 pr-4">L {line.RAP?.toFixed(2) || '0.00'}</td>
+                        <td className="py-2 pr-4">L {line.ISR?.toFixed(2) || '0.00'}</td>
+                        <td className="py-2 pr-4">L {line.total_deducciones?.toFixed(2) || '0.00'}</td>
+                        <td className="py-2 pr-4 font-semibold">L {line.total?.toFixed(2) || '0.00'}</td>
+                      </tr>
+                    ))
+                  ) : (
                     <tr>
-                      <td colSpan={11} className="py-6 text-center text-gray-400">Sin registros de nómina para el período</td>
+                      <td colSpan={11} className="py-6 text-center text-gray-400">
+                        Haz clic en "Generar Preview" para ver el detalle de empleados
+                      </td>
                     </tr>
                   )}
                 </tbody>
