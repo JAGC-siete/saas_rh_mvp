@@ -38,6 +38,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-app pt-20 relative">
       <Head>
         <title>Software de Recursos Humanos en Honduras | Asistencia & Nómina</title>
+        <link rel="icon" href="/logo-humano-sisu.png" />
         <meta
           name="description"
           content="RH en automático y digital: asistencia, nómina con deducciones IHSS, RAP, ISR exactas, comprobantes de pago enviados directo a tus empleados."
