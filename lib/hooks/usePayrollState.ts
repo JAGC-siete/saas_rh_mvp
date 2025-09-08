@@ -97,12 +97,15 @@ export const usePayrollState = () => {
 
   // Preview action
   const generatePreview = useCallback(async () => {
+    console.log('🚀 Iniciando generatePreview con filtros:', state.filters)
     setStatus('previewing')
     setLoading(true)
     clearError()
 
     try {
+      console.log('📤 Enviando request a /api/payroll/preview')
       const response = await payrollApi.preview(state.filters)
+      console.log('✅ Response recibida:', response)
       
       setState((prev: PayrollState) => ({
         ...prev,
@@ -114,6 +117,7 @@ export const usePayrollState = () => {
 
       return response
     } catch (error: any) {
+      console.error('❌ Error en generatePreview:', error)
       const errorMessage = mapPayrollError(error)
       setError(errorMessage)
       throw error
