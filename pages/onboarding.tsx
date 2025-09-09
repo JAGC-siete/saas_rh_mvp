@@ -176,7 +176,7 @@ export default function Onboarding() {
                       type="text"
                       value={companyName}
                       onChange={(e) => setCompanyName(e.target.value)}
-                      placeholder="Paragon Financial Corp"
+                      placeholder="SISU EMPRESA CA"
                       required
                       disabled={loading}
                       className="input-glass h-12"
