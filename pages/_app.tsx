@@ -6,6 +6,12 @@ import { refreshEnvFromWindow } from '../lib/env'
 import '../styles/globals.css'
 import '../styles/landing.css'
 
+// Load environment variables at the top level
+if (typeof window === 'undefined') {
+  // Server-side: load environment variables
+  require('dotenv').config()
+}
+
 // Create a context for Supabase client (using new SSR client)
 export const SupabaseContext = createContext<any>(null)
 
@@ -40,16 +46,20 @@ export default function App({ Component, pageProps }: AppProps) {
   useEffect(() => {
     setIsClient(true)
     
-    // Initialize Supabase client immediately
-    try {
-      const client = createClient()
-      if (client) {
-        setSupabaseClient(client)
-        console.log('✅ Supabase client initialized successfully')
+    // Initialize Supabase client
+    const initClient = async () => {
+      try {
+        const client = await createClient()
+        if (client) {
+          setSupabaseClient(client)
+          console.log('✅ Supabase client initialized successfully')
+        }
+      } catch (error) {
+        console.error('❌ Failed to create Supabase client:', error)
       }
-    } catch (error) {
-      console.error('❌ Failed to create Supabase client:', error)
     }
+    
+    initClient()
   }, [])
 
   // Show loading state during hydration

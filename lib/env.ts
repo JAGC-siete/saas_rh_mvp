@@ -1,6 +1,15 @@
 // Environment Variables Configuration
 // This file ensures all required environment variables are properly loaded
 
+// Load environment variables on server-side
+if (typeof window === 'undefined') {
+  try {
+    require('dotenv').config()
+  } catch (error) {
+    console.warn('⚠️ Could not load dotenv:', error)
+  }
+}
+
 // For Railway deployment, we need to handle runtime environment variables
 function getEnvVar(key: string, fallback: string = ''): string {
   // First try to get from process.env (build time)
@@ -38,6 +47,9 @@ export const env = {
   // Application Configuration
   NODE_ENV: getEnvVar('NODE_ENV', 'development'),
   NEXT_PUBLIC_SITE_URL: getEnvVar('NEXT_PUBLIC_SITE_URL', 'http://localhost:3000'),
+  NEXT_TELEMETRY_DISABLED: getEnvVar('NEXT_TELEMETRY_DISABLED', '1'),
+  SKIP_ENV_VALIDATION: getEnvVar('SKIP_ENV_VALIDATION', 'false'),
+  BASES_DE_DATOS_URL: getEnvVar('BASES_DE_DATOS_URL', 'https://humanosisu.net'),
   
   // Database Configuration
   DATABASE_URL: getEnvVar('DATABASE_URL', ''),
@@ -55,8 +67,19 @@ export const env = {
   // Railway Configuration
   RAILWAY_ENVIRONMENT: getEnvVar('RAILWAY_ENVIRONMENT', ''),
   RAILWAY_PUBLIC_DOMAIN: getEnvVar('RAILWAY_PUBLIC_DOMAIN', ''),
-  PORT: getEnvVar('PORT', '3000'),
-  HOSTNAME: getEnvVar('HOSTNAME', 'localhost'),
+  PORT: getEnvVar('PORT', '8080'),
+  HOSTNAME: getEnvVar('HOSTNAME', '0.0.0.0'),
+  
+  // External Services
+  CRON_SECRET: getEnvVar('CRON_SECRET', ''),
+  RESEND_API_KEY: getEnvVar('RESEND_API_KEY', ''),
+  
+  // Supabase Auth External Providers
+  SUPABASE_AUTH_EXTERNAL_FACEBOOK_SECRET: getEnvVar('SUPABASE_AUTH_EXTERNAL_FACEBOOK_SECRET', ''),
+  SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN: getEnvVar('SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN', ''),
+  
+  // Twilio Configuration
+  AUTH_TOKEN: getEnvVar('auth_token', ''),
 }
 
 // Validation function to check if required environment variables are set
@@ -64,6 +87,11 @@ export function validateEnv() {
   const required = [
     'NEXT_PUBLIC_SUPABASE_URL',
     'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+    'SUPABASE_SERVICE_ROLE_KEY',
+    'DATABASE_URL',
+    'JWT_SECRET',
+    'SUPABASE_JWT_SECRET',
+    'SESSION_SECRET',
   ]
   
   const missing = required.filter(key => !env[key as keyof typeof env])
@@ -73,10 +101,17 @@ export function validateEnv() {
     console.error('Current env values:', {
       NEXT_PUBLIC_SUPABASE_URL: env.NEXT_PUBLIC_SUPABASE_URL ? '✅ Set' : '❌ Missing',
       NEXT_PUBLIC_SUPABASE_ANON_KEY: env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '✅ Set' : '❌ Missing',
+      SUPABASE_SERVICE_ROLE_KEY: env.SUPABASE_SERVICE_ROLE_KEY ? '✅ Set' : '❌ Missing',
+      DATABASE_URL: env.DATABASE_URL ? '✅ Set' : '❌ Missing',
+      JWT_SECRET: env.JWT_SECRET ? '✅ Set' : '❌ Missing',
+      SUPABASE_JWT_SECRET: env.SUPABASE_JWT_SECRET ? '✅ Set' : '❌ Missing',
+      SESSION_SECRET: env.SESSION_SECRET ? '✅ Set' : '❌ Missing',
     })
     console.error('Process.env check:', {
       NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ? '✅ Set' : '❌ Missing',
       NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '✅ Set' : '❌ Missing',
+      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? '✅ Set' : '❌ Missing',
+      DATABASE_URL: process.env.DATABASE_URL ? '✅ Set' : '❌ Missing',
     })
     return false
   }
