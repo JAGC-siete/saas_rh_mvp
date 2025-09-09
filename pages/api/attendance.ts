@@ -1,5 +1,5 @@
 import { createAdminClient } from '../../lib/supabase/server'
-import { getTodayInHonduras, getHondurasTime, nowInHonduras, getHondurasTimestamp } from '../../lib/timezone'
+import { getTodayInHonduras, getHondurasTime, nowInHonduras } from '../../lib/timezone'
 import { incrementUsage } from '../../lib/billing/enforce'
 
 // Gamification helper functions

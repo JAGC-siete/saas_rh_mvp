@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
 import Link from 'next/link'
@@ -7,7 +7,7 @@ const CloudBackground = dynamic(() => import('../components/CloudBackground'), {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
-import { UserPlus, Building, ArrowLeft, Clock, FileText, DollarSign, Lock, Phone, Eye, EyeOff, AlertCircle } from 'lucide-react'
+import { UserPlus, Building, ArrowLeft, Clock, FileText, DollarSign, Lock, Phone, Eye, EyeOff } from 'lucide-react'
 import { createClient as createSupabaseBrowserClient } from '../lib/supabase/client'
 import PhoneAuthForm from '../components/PhoneAuthForm'
 
@@ -30,7 +30,7 @@ export default function Register() {
       const supabase = createSupabaseBrowserClient()
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
       const redirectTo = `${siteUrl}/auth/callback?next=/app/dashboard`
-      const { data, error } = await (supabase as any).auth.signInWithOAuth({
+      const { error } = await (supabase as any).auth.signInWithOAuth({
         provider: 'facebook',
         options: { redirectTo }
       })
@@ -139,7 +139,7 @@ export default function Register() {
                     </Button>
                     <Button
                       type="button"
-                      variant={authMethod === 'phone' ? 'default' : 'outline'}
+                      variant={(authMethod as string) === 'phone' ? 'default' : 'outline'}
                       onClick={() => setAuthMethod('phone')}
                       className="flex-1 h-10"
                     >
@@ -364,7 +364,7 @@ export default function Register() {
           <Card variant="glass" className="border-green-500/30 bg-green-500/5">
             <CardContent className="p-8">
               <p className="text-xl text-white mb-4 text-center">
-                <span className="text-green-400 font-bold">"Reducimos 80% el tiempo de planilla con SISU."</span> — Paragon Financial Corp
+                <span className="text-green-400 font-bold">&quot;Reducimos 80% el tiempo de planilla con SISU.&quot;</span> — Paragon Financial Corp
               </p>
               <p className="text-brand-300 text-center">
                 Infraestructura estilo AWS, datos cifrados en tránsito y en reposo, control de roles. Soporte por email o WhatsApp.

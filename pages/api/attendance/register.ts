@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient } from '../../../lib/supabase/server'
 import { logger } from '../../../lib/logger'
 import { 
-   toHN, assertInsideHardWindow, overrideIfSaturdayHalfDay, decideCheckInRule, decideCheckOutRule, mapRule, distanceMeters, getCheckOutWindow, isDayOpenForPublic, nowInHonduras, getHondurasTimestamp } from '../../../lib/timezone'
+   toHN, overrideIfSaturdayHalfDay, decideCheckInRule, mapRule, distanceMeters, isDayOpenForPublic, nowInHonduras, getHondurasTimestamp } from '../../../lib/timezone'
 import { CALL_CENTER_CONFIG, CALL_CENTER_MESSAGES, generateContextualMessage } from '../../../lib/call-center-config'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -182,10 +182,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
 
     // PASO 8: Validar ventanas duras según política Call Center
-    const checkInWindow = { 
-      open: schedule.checkin_open || CALL_CENTER_CONFIG.windows.check_in_open, 
-      close: schedule.checkin_close || CALL_CENTER_CONFIG.windows.check_in_close 
-    }
+    // const checkInWindow = { 
+    //   open: schedule.checkin_open || CALL_CENTER_CONFIG.windows.check_in_open, 
+    //   close: schedule.checkin_close || CALL_CENTER_CONFIG.windows.check_in_close 
+    // }
 
     // PASO 9: Buscar registro existente para hoy
     const { data: existingRecord, error: recordError } = await supabase
@@ -399,12 +399,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       const rule = 'simple_checkout' // Regla simplificada
       const msgKey = 'check_out_success'
-      const needJust = false // No requiere justificación
+      // const needJust = false // No requiere justificación
       
       console.log('📤 Check-out simplificado procesado:', { 
         rule, 
-        msgKey,
-        needJust: false
+        msgKey
+        // needJust: false
       })
 
       let record: any;
@@ -516,16 +516,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-// Función auxiliar para calcular minutos de salida temprana
-function calculateEarlyDepartureMinutes(currentTime: string, expectedTime: string): number {
-  const [currentHour, currentMin] = currentTime.split(':').map(Number)
-  const [expectedHour, expectedMin] = expectedTime.split(':').map(Number)
-  
-  const currentMinutes = currentHour * 60 + currentMin
-  const expectedMinutes = expectedHour * 60 + expectedMin
-  
-  return Math.max(0, expectedMinutes - currentMinutes)
-}
+// Función auxiliar para calcular minutos de salida temprana (no utilizada)
+// function calculateEarlyDepartureMinutes(currentTime: string, expectedTime: string): number {
+//   const [currentHour, currentMin] = currentTime.split(':').map(Number)
+//   const [expectedHour, expectedMin] = expectedTime.split(':').map(Number)
+//   
+//   const currentMinutes = currentHour * 60 + currentMin
+//   const expectedMinutes = expectedHour * 60 + expectedMin
+//   
+//   return Math.max(0, expectedMinutes - currentMinutes)
+// }
 
 // Función auxiliar para obtener mensajes contextuales personalizados
 function getContextualMessage(

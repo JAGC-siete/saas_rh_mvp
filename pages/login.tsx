@@ -29,7 +29,7 @@ export default function AdminLogin() {
       const supabase = createSupabaseBrowserClient()
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
       const redirectTo = `${siteUrl}/auth/callback?next=/app/dashboard`
-      const { data, error } = await (supabase as any).auth.signInWithOAuth({
+      const { error } = await (supabase as any).auth.signInWithOAuth({
         provider: 'facebook',
         options: { redirectTo }
       })
