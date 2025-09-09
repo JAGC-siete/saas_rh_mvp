@@ -39,8 +39,8 @@ export default function LoginExisting() {
       localStorage.setItem('token', data.token)
       localStorage.setItem('user', JSON.stringify(data.user))
       
-      // Redirigir al dashboard
-      router.push('/app/dashboard')
+      // Forzar recarga de la página para sincronizar el contexto
+      window.location.href = '/app/dashboard'
     } catch (err: any) {
       setError(err.message || 'Error de autenticación')
     } finally {

@@ -120,6 +120,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(session?.user ?? null)
           setError(null)
         }
+        
+        // Si no hay sesión de Supabase, verificar si hay token JWT en localStorage
+        if (!session && typeof window !== 'undefined') {
+          const token = localStorage.getItem('token')
+          const userData = localStorage.getItem('user')
+          
+          if (token && userData) {
+            try {
+              const user = JSON.parse(userData)
+              console.log('🔑 Found JWT token, setting user from localStorage:', user.email)
+              setUser(user)
+              setSession({ 
+                access_token: token, 
+                user: user,
+                expires_at: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
+              } as any)
+            } catch (err) {
+              console.error('❌ Error parsing user data from localStorage:', err)
+              localStorage.removeItem('token')
+              localStorage.removeItem('user')
+            }
+          }
+        }
       } catch (error) {
         console.error('❌ Error getting initial session:', error)
         setError('Failed to get session')
@@ -193,14 +216,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const logout = async () => {
-    if (!supabase) return
-
     try {
-      const { error } = await supabase.auth.signOut()
-      if (error) {
-        console.error('❌ Logout error:', error)
-        setError('Logout failed')
+      // Limpiar localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
       }
+      
+      // Limpiar estado local
+      setUser(null)
+      setSession(null)
+      setError(null)
+      
+      // Si hay cliente de Supabase, hacer signOut
+      if (supabase) {
+        const { error } = await supabase.auth.signOut()
+        if (error) {
+          console.error('❌ Logout error:', error)
+          setError('Logout failed')
+        }
+      }
+      
+      console.log('✅ Logout successful')
     } catch (error) {
       console.error('❌ Logout failed:', error)
       setError('Logout failed')
