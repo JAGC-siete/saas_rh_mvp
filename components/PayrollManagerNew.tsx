@@ -1,11 +1,11 @@
-import React, { useMemo, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Icon } from './Icon'
 import { usePayrollState } from '../lib/hooks/usePayrollState'
 import { payrollApi, openInNewTab } from '../lib/payroll-api'
 import { useToast } from '../lib/toast'
-import { getHondurasTimestamp, nowInHonduras } from '../lib/timezone'
+import { getHondurasTimestamp } from '../lib/timezone'
 import { formatCurrency, formatCurrencyShort } from '../lib/utils/currency'
 import { usePayrollMetrics } from '../lib/hooks/usePayrollMetrics'
 import { fetchUnifiedPayroll, getCurrentPeriod, UnifiedRow, UnifiedResumen } from '../lib/payroll-unified'
@@ -28,25 +28,10 @@ export default function PayrollManagerNew() {
   // Get company_id from user metadata
   const companyId = user?.user_metadata?.company_id || user?.app_metadata?.company_id
 
-  // Early return if no company_id
-  if (!companyId) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Card className="backdrop-blur-md bg-red-500/20 border border-red-500/30">
-          <CardContent className="p-6 text-center">
-            <Icon name="alert" className="h-12 w-12 text-red-400 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-red-300 mb-2">Sin Empresa Asignada</h2>
-            <p className="text-red-200">No se encontró una empresa asociada a tu cuenta. Contacta al administrador.</p>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  // Use centralized metrics hook
+  // Use centralized metrics hook - must be called before any early returns
   const payrollMetrics = usePayrollMetrics(payrollState.planilla)
 
-  // Load current period data on mount only once
+  // Load current period data on mount only once - must be called before any early returns
   useEffect(() => {
     if (hasLoadedInitialData) return
 
@@ -84,6 +69,21 @@ export default function PayrollManagerNew() {
 
     return () => abortController.abort()
   }, [hasLoadedInitialData, toast, companyId])
+
+  // Early return if no company_id - must be after all hooks
+  if (!companyId) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Card className="backdrop-blur-md bg-red-500/20 border border-red-500/30">
+          <CardContent className="p-6 text-center">
+            <Icon name="alert" className="h-12 w-12 text-red-400 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-red-300 mb-2">Sin Empresa Asignada</h2>
+            <p className="text-red-200">No se encontró una empresa asociada a tu cuenta. Contacta al administrador.</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   // Handle filter changes
   const handleFilterChange = (key: string, value: any) => {

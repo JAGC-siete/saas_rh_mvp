@@ -1,7 +1,9 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient } from '../../../lib/supabase/server'
-import { authenticateUser } from '../../../lib/auth-utils'
+import { requireUser } from '../../../lib/auth/requireUser'
 import { getHondurasTimestamp } from '../../../lib/timezone'
+import { requirePlanAndQuota, incrementUsage } from '../../../lib/billing/enforce'
+import { auditEmployeeCreated } from '../../../lib/audit'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -10,18 +12,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // AuthN + AuthZ: company_admin, hr_manager, super_admin
-    const auth = await authenticateUser(req, res, ['can_manage_employees'])
-    if (!auth.success) {
-      const status = auth.error === 'Permisos insuficientes' ? 403 : 401
-      return res.status(status).json({ error: auth.error, message: auth.message })
+    const { supabase, user, userProfile } = await requireUser(req, res)
+    
+    if (!userProfile?.company_id) {
+      return res.status(400).json({ 
+        error: 'Perfil de usuario incompleto',
+        message: 'No se pudo obtener la información de la empresa'
+      })
     }
 
-    const companyId = auth.userProfile?.company_id
-    if (!companyId) {
-      return res.status(400).json({ error: 'User profile not found or no company assigned' })
-    }
+    const companyId = userProfile.company_id
 
-    const supabase = createAdminClient()
+    // Check plan and quota before processing
+    await requirePlanAndQuota(supabase, companyId, 'create_employee')
+
+    // Use admin client for database operations
+    const adminSupabase = createAdminClient()
 
     // Validate required fields
     const {
@@ -92,7 +98,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       updated_at: getHondurasTimestamp()
     }
 
-    const { data: inserted, error: insertError } = await supabase
+    const { data: inserted, error: insertError } = await adminSupabase
       .from('employees')
       .insert([employeeData])
       .select()
@@ -103,10 +109,45 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: 'Error creating employee' })
     }
 
+    // Increment usage meter
+    try {
+      await incrementUsage(supabase, companyId, 'create_employee')
+    } catch (error) {
+      console.warn('Failed to increment usage meter:', error)
+      // Don't fail the request if usage tracking fails
+    }
+
+    // Log audit event
+    try {
+      await auditEmployeeCreated(supabase, user.id, companyId, inserted.id)
+    } catch (error) {
+      console.warn('Failed to log audit event:', error)
+      // Don't fail the request if audit fails
+    }
+
     return res.status(201).json({ message: 'Employee created successfully', employee: inserted })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in protected employee create API:', error)
-    return res.status(500).json({ error: 'Internal server error' })
+    
+    if (error.message === 'UNAUTHORIZED') {
+      return res.status(401).json({ error: 'Unauthorized' })
+    }
+    
+    if (error.message === 'PROFILE_REQUIRED') {
+      return res.status(403).json({ error: 'User profile required' })
+    }
+
+    if (error.message === 'PLAN_REQUIRED') {
+      return res.status(402).json({ error: 'Active plan required to create employees' })
+    }
+
+    if (error.message === 'EMPLOYEE_LIMIT_REACHED') {
+      return res.status(429).json({ error: 'Employee limit reached for this month' })
+    }
+
+    return res.status(500).json({ 
+      error: error.message || 'Internal server error' 
+    })
   }
 }
 

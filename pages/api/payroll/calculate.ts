@@ -2,7 +2,6 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../lib/supabase/server'
 import { authenticateUser } from '../../../lib/auth-helpers'
 import { getHondurasTimestamp, nowInHonduras } from '../../../lib/timezone'
-import { requireUser } from '../../../lib/auth/requireUser'
 import { requirePlanAndQuota, incrementUsage, getBillingErrorCode } from '../../../lib/billing/enforce'
 import { auditPayrollGenerated } from '../../../lib/audit'
 
@@ -123,6 +122,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
 
     // Check plan and quota before processing
+    if (!userProfile?.company_id) {
+      return res.status(400).json({ 
+        error: 'Perfil de usuario incompleto',
+        message: 'No se pudo obtener la información de la empresa'
+      })
+    }
+
     try {
       await requirePlanAndQuota(supabase, userProfile.company_id, 'generate_payroll')
     } catch (error: any) {

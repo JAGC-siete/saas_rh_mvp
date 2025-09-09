@@ -1,7 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../lib/supabase/server'
-import { authenticateUser } from '../../../lib/auth-helpers'
+import { requireUser } from '../../../lib/auth/requireUser'
 import { generateConsolidatedPayrollPDF, type PlanillaItem } from '../../../lib/payroll/report'
+import { requirePlanAndQuota, incrementUsage } from '../../../lib/billing/enforce'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -9,9 +10,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const auth = await authenticateUser(req, res, ['can_view_payroll', 'can_export_payroll'])
-    if (!auth.success || !auth.user || !auth.userProfile) {
-      return res.status(401).json({ error: auth.error || 'Unauthorized', message: auth.message })
+    const { supabase, user, userProfile } = await requireUser(req, res)
+    
+    if (!userProfile?.company_id) {
+      return res.status(400).json({ 
+        error: 'Perfil de usuario incompleto',
+        message: 'No se pudo obtener la información de la empresa'
+      })
     }
 
     const { periodo, quincena, draftData } = req.body
@@ -26,8 +31,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Datos del draft son requeridos' })
     }
 
-    const supabase = createClient(req, res)
-    const companyId = auth.userProfile.company_id
+    const companyId = userProfile.company_id
+
+    // Check plan and quota before processing
+    await requirePlanAndQuota(supabase, companyId, 'generate_payroll')
 
     // Obtener información de empleados para completar los datos
     const employeeIds = draftData.rows.map((row: any) => row.employee_id)
@@ -47,7 +54,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Mapear datos del draft a estructura de PlanillaItem
     const planilla: PlanillaItem[] = draftData.rows.map((row: any) => {
-      const employee = employees.find(e => e.id === row.employee_id)
+      const employee = employees.find((e: any) => e.id === row.employee_id)
       return {
         id: employee?.employee_code || row.employee_code || '',
         name: employee?.name || row.name || '',
@@ -72,7 +79,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log(`Generando PDF desde draft: ${planilla.length} empleados para ${periodo} Q${quincena}`)
 
     // Generar PDF consolidado
-    const pdf = await generateConsolidatedPayrollPDF(planilla, periodo, Number(quincena), auth.user?.email)
+    const pdf = await generateConsolidatedPayrollPDF(planilla, periodo, Number(quincena), user?.email)
+    
+    // Increment usage meter for PDF generation
+    try {
+      await incrementUsage(supabase, companyId, 'generate_payroll')
+    } catch (error) {
+      console.warn('Failed to increment usage meter:', error)
+      // Don't fail the request if usage tracking fails
+    }
     
     res.setHeader('Content-Type', 'application/pdf')
     res.setHeader('Content-Disposition', `attachment; filename=planilla_draft_${periodo}_q${quincena}.pdf`)
@@ -80,9 +95,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   } catch (error: any) {
     console.error('Error generando PDF desde draft:', error)
+    
+    if (error.message === 'UNAUTHORIZED') {
+      return res.status(401).json({ error: 'Unauthorized' })
+    }
+    
+    if (error.message === 'PROFILE_REQUIRED') {
+      return res.status(403).json({ error: 'User profile required' })
+    }
+
+    if (error.message === 'PLAN_REQUIRED') {
+      return res.status(402).json({ error: 'Active plan required to generate PDFs' })
+    }
+
+    if (error.message === 'PDF_LIMIT_REACHED') {
+      return res.status(429).json({ error: 'PDF limit reached for this month' })
+    }
+
     return res.status(500).json({ 
-      error: 'Error interno del servidor',
-      message: error.message || 'Error desconocido'
+      error: error.message || 'Error interno del servidor'
     })
   }
 }
