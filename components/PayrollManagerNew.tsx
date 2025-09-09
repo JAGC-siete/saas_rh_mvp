@@ -213,13 +213,13 @@ export default function PayrollManagerNew() {
 
   const getStatusBadge = (status: string) => {
     const variants = {
-      idle: 'bg-gray-100 text-gray-800',
-      draft: 'bg-blue-100 text-blue-800',
-      editing: 'bg-yellow-100 text-yellow-800',
-      authorizing: 'bg-orange-100 text-orange-800',
-      authorized: 'bg-green-100 text-green-800',
-      distributing: 'bg-purple-100 text-purple-800',
-      error: 'bg-red-100 text-red-800'
+      idle: 'bg-white/20 text-gray-300',
+      draft: 'bg-blue-500/20 text-blue-300',
+      editing: 'bg-yellow-500/20 text-yellow-300',
+      authorizing: 'bg-orange-500/20 text-orange-300',
+      authorized: 'bg-green-500/20 text-green-300',
+      distributing: 'bg-purple-500/20 text-purple-300',
+      error: 'bg-red-500/20 text-red-300'
     }
     
     return (
@@ -250,16 +250,16 @@ export default function PayrollManagerNew() {
           {getStatusBadge(payrollState.status)}
           
           {payrollState.loading && (
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400"></div>
           )}
         </div>
       </div>
 
       {/* Error Display */}
       {payrollState.error && (
-        <Card className="border-red-200 bg-red-50">
+        <Card variant="glass" className="border-red-500/30 bg-red-500/20">
           <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-red-800">
+            <div className="flex items-center gap-2 text-red-300">
               <Icon name="alert" className="h-5 w-5" />
               <span className="font-medium">Error:</span>
               <span>{payrollState.error}</span>
@@ -281,27 +281,27 @@ export default function PayrollManagerNew() {
         {/* Fila 1: Métricas Principales */}
         
         {/* 1. Empleados Activos */}
-        <Card className="hover:scale-105 transition-all duration-200 cursor-pointer">
+        <Card variant="glass" className="hover:scale-105 transition-all duration-200 cursor-pointer">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Empleados Activos</p>
-                <p className="text-2xl font-bold text-gray-900">{payrollMetrics.activeEmployees}</p>
+                <p className="text-sm font-medium text-gray-300">Empleados Activos</p>
+                <p className="text-2xl font-bold text-white">{payrollMetrics.activeEmployees}</p>
               </div>
-              <div className="p-2 bg-blue-100 rounded-full">
-                <Icon name="users" className="h-6 w-6 text-blue-600" />
+              <div className="p-2 bg-blue-500/20 rounded-full">
+                <Icon name="users" className="h-6 w-6 text-blue-300" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* 2. Total Salario Bruto */}
-        <Card className="hover:scale-105 transition-all duration-200 cursor-pointer">
+        <Card variant="glass" className="hover:scale-105 transition-all duration-200 cursor-pointer">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Salario Bruto</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm font-medium text-gray-300">Total Salario Bruto</p>
+                <p className="text-2xl font-bold text-white">
                   {new Intl.NumberFormat('es-HN', { 
                     style: 'currency', 
                     currency: 'HNL',
@@ -310,20 +310,20 @@ export default function PayrollManagerNew() {
                   }).format(payrollMetrics.totalGrossSalary)}
                 </p>
               </div>
-              <div className="p-2 bg-green-100 rounded-full">
-                <Icon name="money" className="h-6 w-6 text-green-600" />
+              <div className="p-2 bg-green-500/20 rounded-full">
+                <Icon name="money" className="h-6 w-6 text-green-300" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* 3. Total Deducciones */}
-        <Card className="hover:scale-105 transition-all duration-200 cursor-pointer">
+        <Card variant="glass" className="hover:scale-105 transition-all duration-200 cursor-pointer">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Deducciones</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm font-medium text-gray-300">Total Deducciones</p>
+                <p className="text-2xl font-bold text-white">
                   {new Intl.NumberFormat('es-HN', { 
                     style: 'currency', 
                     currency: 'HNL',
@@ -332,20 +332,20 @@ export default function PayrollManagerNew() {
                   }).format(payrollMetrics.totalDeductions)}
                 </p>
               </div>
-              <div className="p-2 bg-red-100 rounded-full">
-                <Icon name="chart" className="h-6 w-6 text-red-600" />
+              <div className="p-2 bg-red-500/20 rounded-full">
+                <Icon name="chart" className="h-6 w-6 text-red-300" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* 4. Total Salario Neto */}
-        <Card className="hover:scale-105 transition-all duration-200 cursor-pointer">
+        <Card variant="glass" className="hover:scale-105 transition-all duration-200 cursor-pointer">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Salario Neto</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm font-medium text-gray-300">Total Salario Neto</p>
+                <p className="text-2xl font-bold text-white">
                   {new Intl.NumberFormat('es-HN', { 
                     style: 'currency', 
                     currency: 'HNL',
@@ -354,8 +354,8 @@ export default function PayrollManagerNew() {
                   }).format(payrollMetrics.totalNetSalary)}
                 </p>
               </div>
-              <div className="p-2 bg-emerald-100 rounded-full">
-                <Icon name="money" className="h-6 w-6 text-emerald-600" />
+              <div className="p-2 bg-emerald-500/20 rounded-full">
+                <Icon name="money" className="h-6 w-6 text-emerald-300" />
               </div>
             </div>
           </CardContent>
@@ -364,12 +364,12 @@ export default function PayrollManagerNew() {
         {/* Fila 2: Métricas Secundarias */}
         
         {/* 5. Total IHSS */}
-        <Card className="hover:scale-105 transition-all duration-200 cursor-pointer">
+        <Card variant="glass" className="hover:scale-105 transition-all duration-200 cursor-pointer">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total IHSS</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm font-medium text-gray-300">Total IHSS</p>
+                <p className="text-2xl font-bold text-white">
                   {new Intl.NumberFormat('es-HN', { 
                     style: 'currency', 
                     currency: 'HNL',
@@ -378,20 +378,20 @@ export default function PayrollManagerNew() {
                   }).format(payrollMetrics.totalIHSS)}
                 </p>
               </div>
-              <div className="p-2 bg-blue-100 rounded-full">
-                <Icon name="building" className="h-6 w-6 text-blue-600" />
+              <div className="p-2 bg-blue-500/20 rounded-full">
+                <Icon name="building" className="h-6 w-6 text-blue-300" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* 6. Total RAP */}
-        <Card className="hover:scale-105 transition-all duration-200 cursor-pointer">
+        <Card variant="glass" className="hover:scale-105 transition-all duration-200 cursor-pointer">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total RAP</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm font-medium text-gray-300">Total RAP</p>
+                <p className="text-2xl font-bold text-white">
                   {new Intl.NumberFormat('es-HN', { 
                     style: 'currency', 
                     currency: 'HNL',
@@ -400,20 +400,20 @@ export default function PayrollManagerNew() {
                   }).format(payrollMetrics.totalRAP)}
                 </p>
               </div>
-              <div className="p-2 bg-purple-100 rounded-full">
-                <Icon name="shield" className="h-6 w-6 text-purple-600" />
+              <div className="p-2 bg-purple-500/20 rounded-full">
+                <Icon name="shield" className="h-6 w-6 text-purple-300" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* 7. Total ISR */}
-        <Card className="hover:scale-105 transition-all duration-200 cursor-pointer">
+        <Card variant="glass" className="hover:scale-105 transition-all duration-200 cursor-pointer">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total ISR</p>
-                <p className="text-2xl font-bold text-gray-900">
+                <p className="text-sm font-medium text-gray-300">Total ISR</p>
+                <p className="text-2xl font-bold text-white">
                   {new Intl.NumberFormat('es-HN', { 
                     style: 'currency', 
                     currency: 'HNL',
@@ -422,23 +422,23 @@ export default function PayrollManagerNew() {
                   }).format(payrollMetrics.totalISR)}
                 </p>
               </div>
-              <div className="p-2 bg-orange-100 rounded-full">
-                <Icon name="calculator" className="h-6 w-6 text-orange-600" />
+              <div className="p-2 bg-orange-500/20 rounded-full">
+                <Icon name="calculator" className="h-6 w-6 text-orange-300" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* 8. Total Días Trabajados */}
-        <Card className="hover:scale-105 transition-all duration-200 cursor-pointer">
+        <Card variant="glass" className="hover:scale-105 transition-all duration-200 cursor-pointer">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Días Trabajados</p>
-                <p className="text-2xl font-bold text-gray-900">{payrollMetrics.totalDaysWorked}</p>
+                <p className="text-sm font-medium text-gray-300">Total Días Trabajados</p>
+                <p className="text-2xl font-bold text-white">{payrollMetrics.totalDaysWorked}</p>
               </div>
-              <div className="p-2 bg-indigo-100 rounded-full">
-                <Icon name="calendar" className="h-6 w-6 text-indigo-600" />
+              <div className="p-2 bg-indigo-500/20 rounded-full">
+                <Icon name="calendar" className="h-6 w-6 text-indigo-300" />
               </div>
             </div>
           </CardContent>
@@ -448,12 +448,12 @@ export default function PayrollManagerNew() {
       {/* Métricas Adicionales - Solo visible en pantallas grandes */}
       <div className="hidden xl:grid xl:grid-cols-3 gap-6">
         {/* Promedio de Salario */}
-        <Card>
+        <Card variant="glass">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Salario Promedio</p>
-                <p className="text-xl font-bold text-gray-900">
+                <p className="text-sm font-medium text-gray-300">Salario Promedio</p>
+                <p className="text-xl font-bold text-white">
                   {new Intl.NumberFormat('es-HN', { 
                     style: 'currency', 
                     currency: 'HNL',
@@ -462,38 +462,38 @@ export default function PayrollManagerNew() {
                   }).format(payrollMetrics.averageSalary)}
                 </p>
               </div>
-              <div className="p-2 bg-yellow-100 rounded-full">
-                <Icon name="target" className="h-5 w-5 text-yellow-600" />
+              <div className="p-2 bg-yellow-500/20 rounded-full">
+                <Icon name="target" className="h-5 w-5 text-yellow-300" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Cobertura de Nómina */}
-        <Card>
+        <Card variant="glass">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Cobertura de Nómina</p>
-                <p className="text-xl font-bold text-gray-900">{payrollMetrics.payrollCoverage}%</p>
+                <p className="text-sm font-medium text-gray-300">Cobertura de Nómina</p>
+                <p className="text-xl font-bold text-white">{payrollMetrics.payrollCoverage}%</p>
               </div>
-              <div className="p-2 bg-teal-100 rounded-full">
-                <Icon name="check" className="h-5 w-5 text-teal-600" />
+              <div className="p-2 bg-teal-500/20 rounded-full">
+                <Icon name="check" className="h-5 w-5 text-teal-300" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Tasa de Asistencia */}
-        <Card>
+        <Card variant="glass">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Tasa de Asistencia</p>
-                <p className="text-xl font-bold text-gray-900">{payrollMetrics.attendanceRate}%</p>
+                <p className="text-sm font-medium text-gray-300">Tasa de Asistencia</p>
+                <p className="text-xl font-bold text-white">{payrollMetrics.attendanceRate}%</p>
               </div>
-              <div className="p-2 bg-cyan-100 rounded-full">
-                <Icon name="clock" className="h-5 w-5 text-cyan-600" />
+              <div className="p-2 bg-cyan-500/20 rounded-full">
+                <Icon name="clock" className="h-5 w-5 text-cyan-300" />
               </div>
             </div>
           </CardContent>
@@ -501,10 +501,10 @@ export default function PayrollManagerNew() {
       </div>
 
       {/* Filters Card */}
-      <Card>
+      <Card variant="glass">
         <CardHeader>
-          <CardTitle>Configuración de Nómina</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-white">Configuración de Nómina</CardTitle>
+          <CardDescription className="text-gray-300">
             Define los parámetros para generar la nómina (año, mes, quincena y tipo de deducciones)
           </CardDescription>
         </CardHeader>
@@ -512,7 +512,7 @@ export default function PayrollManagerNew() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Año */}
             <div>
-              <label htmlFor="year" className="block text-sm font-medium text-gray-700 mb-2">Año</label>
+              <label htmlFor="year" className="block text-sm font-medium text-gray-300 mb-2">Año</label>
               <Select
                 value={payrollState.filters.year.toString()}
                 onValueChange={(value) => handleFilterChange('year', parseInt(value))}
@@ -532,7 +532,7 @@ export default function PayrollManagerNew() {
 
             {/* Mes */}
             <div>
-              <label htmlFor="month" className="block text-sm font-medium text-gray-700 mb-2">Mes</label>
+              <label htmlFor="month" className="block text-sm font-medium text-gray-300 mb-2">Mes</label>
               <Select
                 value={payrollState.filters.month.toString()}
                 onValueChange={(value) => handleFilterChange('month', parseInt(value))}
@@ -552,7 +552,7 @@ export default function PayrollManagerNew() {
 
             {/* Quincena */}
             <div>
-              <label htmlFor="quincena" className="block text-sm font-medium text-gray-700 mb-2">Quincena</label>
+              <label htmlFor="quincena" className="block text-sm font-medium text-gray-300 mb-2">Quincena</label>
               <Select
                 value={payrollState.filters.quincena.toString()}
                 onValueChange={(value) => handleFilterChange('quincena', parseInt(value))}
@@ -569,7 +569,7 @@ export default function PayrollManagerNew() {
 
             {/* Tipo */}
             <div>
-              <label htmlFor="tipo" className="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
+              <label htmlFor="tipo" className="block text-sm font-medium text-gray-300 mb-2">Tipo</label>
               <Select
                 value={payrollState.filters.tipo}
                 onValueChange={(value) => handleFilterChange('tipo', value)}
@@ -617,12 +617,67 @@ export default function PayrollManagerNew() {
         </CardContent>
       </Card>
 
+      {/* Employee Detail Table */}
+      {payrollState.hasPlanilla && (
+        <Card variant="glass">
+          <CardHeader>
+            <CardTitle className="text-white">Detalle por empleado</CardTitle>
+            <CardDescription className="text-gray-300">
+              Base en datos de asistencia de {new Date(payrollState.filters.year, payrollState.filters.month - 1).toLocaleDateString('es-HN', { month: 'long', year: 'numeric' })}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead className="text-left text-gray-300">
+                  <tr>
+                    <th className="py-2 pr-4">Empleado</th>
+                    <th className="py-2 pr-4">Salario</th>
+                    <th className="py-2 pr-4">Trabajados</th>
+                    <th className="py-2 pr-4">Ausentes</th>
+                    <th className="py-2 pr-4">Tardes</th>
+                    <th className="py-2 pr-4">Bruto</th>
+                    <th className="py-2 pr-4">IHSS</th>
+                    <th className="py-2 pr-4">RAP</th>
+                    <th className="py-2 pr-4">ISR</th>
+                    <th className="py-2 pr-4">Deducciones</th>
+                    <th className="py-2 pr-4">Neto</th>
+                  </tr>
+                </thead>
+                <tbody className="text-gray-200">
+                  {payrollState.planilla.map((line: any, index: number) => (
+                    <tr key={index} className="border-t border-white/10">
+                      <td className="py-2 pr-4">{line.name}</td>
+                      <td className="py-2 pr-4">L {line.base_salary?.toFixed(2) || '0.00'}</td>
+                      <td className="py-2 pr-4">{line.days_worked || 0}</td>
+                      <td className="py-2 pr-4">{line.days_absent || 0}</td>
+                      <td className="py-2 pr-4">{line.late_days || 0}</td>
+                      <td className="py-2 pr-4">L {line.total_earnings?.toFixed(2) || '0.00'}</td>
+                      <td className="py-2 pr-4">L {line.IHSS?.toFixed(2) || '0.00'}</td>
+                      <td className="py-2 pr-4">L {line.RAP?.toFixed(2) || '0.00'}</td>
+                      <td className="py-2 pr-4">L {line.ISR?.toFixed(2) || '0.00'}</td>
+                      <td className="py-2 pr-4">L {line.total_deducciones?.toFixed(2) || '0.00'}</td>
+                      <td className="py-2 pr-4 font-semibold">L {line.total?.toFixed(2) || '0.00'}</td>
+                    </tr>
+                  ))}
+                  {payrollState.planilla.length === 0 && (
+                    <tr>
+                      <td colSpan={11} className="py-6 text-center text-gray-400">Sin registros de nómina para el período</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Planilla Display */}
       {payrollState.hasPlanilla && (
-        <Card>
+        <Card variant="glass">
           <CardHeader>
-            <CardTitle>Planilla de Nómina</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-white">Planilla de Nómina</CardTitle>
+            <CardDescription className="text-gray-300">
               {payrollState.totalEmployees} empleados - 
               Total Bruto: {formatCurrency(payrollState.totalBruto)} - 
               Total Neto: {formatCurrency(payrollState.totalNeto)}
@@ -631,34 +686,34 @@ export default function PayrollManagerNew() {
           <CardContent>
             {/* Planilla Table */}
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-white/20">
+                <thead className="bg-white/10">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Empleado</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Departamento</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Días Trabajados</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Salario Bruto</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IHSS</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RAP</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ISR</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Deducciones</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Salario Neto</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Empleado</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Departamento</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Días Trabajados</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Salario Bruto</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">IHSS</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">RAP</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">ISR</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Total Deducciones</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Salario Neto</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-transparent divide-y divide-white/10">
                   {payrollState.planilla.map((line: any, index: number) => (
-                    <tr key={index}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{line.name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{line.department}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{line.days_worked}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatCurrency(line.total_earnings)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatCurrency(line.IHSS)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatCurrency(line.RAP)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatCurrency(line.ISR)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatCurrency(line.total_deducciones)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatCurrency(line.total)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <tr key={index} className="hover:bg-white/5">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{line.name}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{line.department}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{line.days_worked}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{formatCurrency(line.total_earnings)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{formatCurrency(line.IHSS)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{formatCurrency(line.RAP)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{formatCurrency(line.ISR)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{formatCurrency(line.total_deducciones)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{formatCurrency(line.total)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                         <div className="flex items-center gap-2">
                           <Button
                             variant="outline"
@@ -723,17 +778,17 @@ export default function PayrollManagerNew() {
 
       {/* Line Editor for Editable Mode */}
       {payrollState.canEdit && payrollState.planilla.length > 0 && (
-        <Card>
+        <Card variant="glass">
           <CardHeader>
-            <CardTitle>Editor de Líneas</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-white">Editor de Líneas</CardTitle>
+            <CardDescription className="text-gray-300">
               Edita los valores de la nómina antes de autorizar
             </CardDescription>
           </CardHeader>
           <CardContent>
             {payrollState.planilla.map((line: any, index: number) => (
-              <div key={index} className="mb-6 p-4 border rounded-lg">
-                <h4 className="font-medium mb-3">{line.name}</h4>
+              <div key={index} className="mb-6 p-4 border border-white/20 rounded-lg">
+                <h4 className="font-medium mb-3 text-white">{line.name}</h4>
                 <PayrollLineEditor
                   line={line}
                   onEdit={handleEditLine}
@@ -747,30 +802,30 @@ export default function PayrollManagerNew() {
 
       {/* Summary Card */}
       {payrollState.hasPlanilla && (
-        <Card>
+        <Card variant="glass">
           <CardHeader>
-            <CardTitle>Resumen de Nómina</CardTitle>
+            <CardTitle className="text-white">Resumen de Nómina</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">{payrollState.totalEmployees}</div>
-                <div className="text-sm text-blue-600">Empleados</div>
+              <div className="text-center p-4 bg-blue-500/20 rounded-lg">
+                <div className="text-2xl font-bold text-blue-300">{payrollState.totalEmployees}</div>
+                <div className="text-sm text-blue-300">Empleados</div>
               </div>
               
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <div className="text-2xl font-bold text-green-600">{formatCurrency(payrollState.totalBruto)}</div>
-                <div className="text-sm text-green-600">Total Bruto</div>
+              <div className="text-center p-4 bg-green-500/20 rounded-lg">
+                <div className="text-2xl font-bold text-green-300">{formatCurrency(payrollState.totalBruto)}</div>
+                <div className="text-sm text-green-300">Total Bruto</div>
               </div>
               
-              <div className="text-center p-4 bg-red-50 rounded-lg">
-                <div className="text-2xl font-bold text-red-600">{formatCurrency(payrollState.totalDeducciones)}</div>
-                <div className="text-sm text-red-600">Total Deducciones</div>
+              <div className="text-center p-4 bg-red-500/20 rounded-lg">
+                <div className="text-2xl font-bold text-red-300">{formatCurrency(payrollState.totalDeducciones)}</div>
+                <div className="text-sm text-red-300">Total Deducciones</div>
               </div>
               
-              <div className="text-center p-4 bg-purple-50 rounded-lg">
-                <div className="text-2xl font-bold text-purple-600">{formatCurrency(payrollState.totalNeto)}</div>
-                <div className="text-sm text-purple-600">Total Neto</div>
+              <div className="text-center p-4 bg-purple-500/20 rounded-lg">
+                <div className="text-2xl font-bold text-purple-300">{formatCurrency(payrollState.totalNeto)}</div>
+                <div className="text-sm text-purple-300">Total Neto</div>
               </div>
             </div>
           </CardContent>
