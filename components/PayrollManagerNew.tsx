@@ -19,13 +19,16 @@ export default function PayrollManagerNew() {
   // Unified data state
   const [unifiedData, setUnifiedData] = useState<{ rows: UnifiedRow[]; resumen: UnifiedResumen } | null>(null)
   const [unifiedLoading, setUnifiedLoading] = useState(false)
-  const [currentPeriod, setCurrentPeriod] = useState(getCurrentPeriod())
+  const [currentPeriod, setCurrentPeriod] = useState(() => getCurrentPeriod())
+  const [hasLoadedInitialData, setHasLoadedInitialData] = useState(false)
 
   // Use centralized metrics hook
   const payrollMetrics = usePayrollMetrics(payrollState.planilla)
 
-  // Load current period data on mount
+  // Load current period data on mount only once
   useEffect(() => {
+    if (hasLoadedInitialData) return
+
     const loadCurrentPeriodData = async () => {
       setUnifiedLoading(true)
       try {
@@ -36,6 +39,7 @@ export default function PayrollManagerNew() {
           currentPeriod.quincena
         )
         setUnifiedData(data)
+        setHasLoadedInitialData(true)
       } catch (error) {
         console.error('Error loading current period data:', error)
         toast.error('Error', 'No se pudieron cargar los datos del período actual', 5000)
@@ -45,12 +49,13 @@ export default function PayrollManagerNew() {
     }
 
     loadCurrentPeriodData()
-  }, [currentPeriod, toast])
+  }, [hasLoadedInitialData, currentPeriod, toast])
 
   // Handle filter changes
   const handleFilterChange = (key: string, value: any) => {
     payrollState.updateFilters({ [key]: value })
     setCurrentPeriod(prev => ({ ...prev, [key]: value }))
+    setHasLoadedInitialData(false) // Reset to allow new data loading
   }
 
   // Handle unified preview
