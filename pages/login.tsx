@@ -42,6 +42,7 @@ export default function AdminLogin() {
     }
   }
 
+
   // Redirect if already logged in - ONLY when auth is not loading
   useEffect(() => {
     if (!authLoading && user) {
@@ -160,79 +161,83 @@ export default function AdminLogin() {
               {authMethod === 'phone' ? (
                 <PhoneAuthForm onBack={() => setAuthMethod('email')} />
               ) : (
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Email Field */}
-                <div className="space-y-2">
-                  <label htmlFor="email" className="text-sm font-medium text-gray-700">
-                    Correo Electrónico
-                  </label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="admin@empresa.com"
-                    autoComplete="username"
-                    required
-                    disabled={loading}
-                    className="h-12"
-                  />
-                </div>
-
-                {/* Password Field */}
-                <div className="space-y-2">
-                  <label htmlFor="password" className="text-sm font-medium text-gray-700">
-                    Contraseña
-                  </label>
-                  <div className="relative">
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  {/* Email Field */}
+                  <div className="space-y-2">
+                    <label htmlFor="email" className="text-sm font-medium text-gray-700">
+                      Correo Electrónico
+                    </label>
                     <Input
-                      id="password"
-                      name="password"
-                      type={showPassword ? 'text' : 'password'}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      autoComplete="current-password"
+                      id="email"
+                      name="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="admin@empresa.com"
+                      autoComplete="username"
                       required
                       disabled={loading}
-                      className="h-12 pr-12"
+                      className="h-12"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      disabled={loading}
-                    >
-                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                    </button>
                   </div>
-                </div>
 
-                {/* Error Message */}
-                {(error || authError) && (
-                  <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 p-3 rounded-md">
-                    <AlertCircle className="h-4 w-4" />
-                    {error || authError}
-                  </div>
-                )}
-
-                {/* Submit Button */}
-                <Button 
-                  type="submit" 
-                  className="w-full h-12 bg-blue-600 hover:bg-blue-700" 
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <div className="flex items-center gap-2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      Verificando...
+                  {/* Password Field */}
+                  <div className="space-y-2">
+                    <label htmlFor="password" className="text-sm font-medium text-gray-700">
+                      Contraseña
+                    </label>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        name="password"
+                        type={showPassword ? 'text' : 'password'}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="••••••••"
+                        autoComplete="current-password"
+                        required
+                        disabled={loading}
+                        className="h-12 pr-12"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        disabled={loading}
+                      >
+                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
                     </div>
-                  ) : (
-                    'Ingresar al Sistema'
-                  )}
-                </Button>
+                  </div>
 
+                  {/* Error Message */}
+                  {(error || authError) && (
+                    <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 p-3 rounded-md">
+                      <AlertCircle className="h-4 w-4" />
+                      {error || authError}
+                    </div>
+                  )}
+
+                  {/* Submit Button */}
+                  <Button 
+                    type="submit" 
+                    className="w-full h-12 bg-blue-600 hover:bg-blue-700" 
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Verificando...
+                      </div>
+                    ) : (
+                      'Ingresar al Sistema'
+                    )}
+                  </Button>
+                </form>
+              )}
+
+              {/* OAuth Providers - Available for both methods */}
+              <div className="mt-6">
                 {/* Divider */}
                 <div className="relative my-4">
                   <div className="absolute inset-0 flex items-center">
@@ -252,8 +257,7 @@ export default function AdminLogin() {
                 >
                   Continuar con Facebook
                 </Button>
-              </form>
-              )}
+              </div>
             </CardContent>
           </Card>
 
