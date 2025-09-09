@@ -9,6 +9,7 @@ const PUBLIC_ROUTES = new Set([
   '/auth/start',       // Página de inicio de autenticación - PÚBLICO
   '/auth/callback',    // OAuth callback - PÚBLICO
   '/onboarding',       // Página de onboarding post-auth - PÚBLICO
+  '/app/login',        // Login con password - PÚBLICO
   '/register',         // Redirigir a /auth/start - PÚBLICO (legacy)
   '/login',            // Redirigir a /auth/start - PÚBLICO (legacy)
   '/demo',             // Página de solicitud de demo - PÚBLICO

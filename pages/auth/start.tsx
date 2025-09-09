@@ -235,7 +235,7 @@ export default function AuthStart() {
 
                   <div className="text-center">
                     <Link 
-                      href="/login-existing" 
+                      href="/app/login" 
                       className="text-sm text-brand-300 hover:text-white transition-colors"
                     >
                       ¿Ya tenés cuenta? Entrá acá
