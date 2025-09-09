@@ -51,15 +51,28 @@ export async function fetchUnifiedPayroll(
   month: number, 
   quincena: number
 ): Promise<{ rows: UnifiedRow[]; resumen: UnifiedResumen }> {
+  // Validate input parameters
+  if (!companyId || !year || !month || !quincena) {
+    throw new Error('Parámetros requeridos faltantes')
+  }
+  if (month < 1 || month > 12) {
+    throw new Error('Mes inválido (debe ser 1-12)')
+  }
+  if (quincena < 1 || quincena > 2) {
+    throw new Error('Quincena inválida (debe ser 1 o 2)')
+  }
+
   try {
     // Fetch both datasets in parallel
     const [planillaRes, detalleRes] = await Promise.all([
       fetch(`/api/payroll/preview?companyId=${companyId}&year=${year}&month=${month}&quincena=${quincena}`),
-      fetch(`/api/attendance/employee?companyId=${companyId}&year=${year}&month=${month}&quincena=${quincena}`)
+      fetch(`/api/payroll/records?companyId=${companyId}&year=${year}&month=${month}&quincena=${quincena}`)
     ]);
 
     if (!planillaRes.ok || !detalleRes.ok) {
-      throw new Error('Error fetching payroll data');
+      const planillaError = planillaRes.ok ? null : `Planilla: ${planillaRes.status} ${planillaRes.statusText}`
+      const detalleError = detalleRes.ok ? null : `Detalle: ${detalleRes.status} ${detalleRes.statusText}`
+      throw new Error(`Error fetching payroll data. ${planillaError || ''} ${detalleError || ''}`.trim())
     }
 
     const planilla: PlanillaRow[] = await planillaRes.json();

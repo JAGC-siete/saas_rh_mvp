@@ -11,16 +11,37 @@ import { usePayrollMetrics } from '../lib/hooks/usePayrollMetrics'
 import { fetchUnifiedPayroll, getCurrentPeriod, UnifiedRow, UnifiedResumen } from '../lib/payroll-unified'
 import UnifiedPayrollTable from './UnifiedPayrollTable'
 import ConfigNomina from './ConfigNomina'
+import { useAuth } from '../lib/auth'
 
 export default function PayrollManagerNew() {
   const payrollState = usePayrollState()
   const toast = useToast()
+  const { user } = useAuth()
 
   // Unified data state
   const [unifiedData, setUnifiedData] = useState<{ rows: UnifiedRow[]; resumen: UnifiedResumen } | null>(null)
   const [unifiedLoading, setUnifiedLoading] = useState(false)
   const [currentPeriod, setCurrentPeriod] = useState(() => getCurrentPeriod())
   const [hasLoadedInitialData, setHasLoadedInitialData] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // Get company_id from user metadata
+  const companyId = user?.user_metadata?.company_id || user?.app_metadata?.company_id
+
+  // Early return if no company_id
+  if (!companyId) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Card className="backdrop-blur-md bg-red-500/20 border border-red-500/30">
+          <CardContent className="p-6 text-center">
+            <Icon name="alert" className="h-12 w-12 text-red-400 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-red-300 mb-2">Sin Empresa Asignada</h2>
+            <p className="text-red-200">No se encontró una empresa asociada a tu cuenta. Contacta al administrador.</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   // Use centralized metrics hook
   const payrollMetrics = usePayrollMetrics(payrollState.planilla)
@@ -29,27 +50,40 @@ export default function PayrollManagerNew() {
   useEffect(() => {
     if (hasLoadedInitialData) return
 
+    const abortController = new AbortController()
+
     const loadCurrentPeriodData = async () => {
       setUnifiedLoading(true)
       try {
         const data = await fetchUnifiedPayroll(
-          'current-company-id', // TODO: Get from auth context
+          companyId,
           currentPeriod.year,
           currentPeriod.month,
           currentPeriod.quincena
         )
-        setUnifiedData(data)
-        setHasLoadedInitialData(true)
-      } catch (error) {
-        console.error('Error loading current period data:', error)
-        toast.error('Error', 'No se pudieron cargar los datos del período actual', 5000)
+        
+        if (!abortController.signal.aborted) {
+          setUnifiedData(data)
+          setHasLoadedInitialData(true)
+        }
+      } catch (error: any) {
+        if (!abortController.signal.aborted) {
+          console.error('Error loading current period data:', error)
+          const errorMessage = error?.message || 'Error desconocido'
+          setError(`Error cargando datos: ${errorMessage}`)
+          toast.error('Error', 'No se pudieron cargar los datos del período actual', 5000)
+        }
       } finally {
-        setUnifiedLoading(false)
+        if (!abortController.signal.aborted) {
+          setUnifiedLoading(false)
+        }
       }
     }
 
     loadCurrentPeriodData()
-  }, [hasLoadedInitialData, currentPeriod, toast])
+
+    return () => abortController.abort()
+  }, [hasLoadedInitialData, toast, companyId])
 
   // Handle filter changes
   const handleFilterChange = (key: string, value: any) => {
@@ -63,7 +97,7 @@ export default function PayrollManagerNew() {
     setUnifiedLoading(true)
     try {
       const data = await fetchUnifiedPayroll(
-        'current-company-id', // TODO: Get from auth context
+        companyId,
         currentPeriod.year,
         currentPeriod.month,
         currentPeriod.quincena
@@ -256,22 +290,32 @@ export default function PayrollManagerNew() {
       </div>
 
       {/* Error Display */}
-      {payrollState.error && (
+      {(payrollState.error || error) && (
         <Card variant="glass" className="border-red-500/30 bg-red-500/20">
           <CardContent className="pt-6">
             <div className="flex items-center gap-2 text-red-300">
               <Icon name="alert" className="h-5 w-5" />
               <span className="font-medium">Error:</span>
-              <span>{payrollState.error}</span>
+              <span>{payrollState.error || error}</span>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={payrollState.clearError}
-              className="mt-2"
-            >
-              Cerrar
-            </Button>
+            <div className="flex gap-2 mt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={payrollState.clearError}
+              >
+                Cerrar
+              </Button>
+              {error && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setError(null)}
+                >
+                  Limpiar Error
+                </Button>
+              )}
+            </div>
           </CardContent>
         </Card>
       )}
@@ -285,7 +329,11 @@ export default function PayrollManagerNew() {
               <div>
                 <p className="text-sm font-semibold text-gray-200">Empleados Activos</p>
                 <p className="text-2xl font-bold text-white">
-                  {unifiedData?.resumen.empleados || payrollMetrics.activeEmployees}
+                  {unifiedLoading ? (
+                    <div className="animate-pulse bg-white/20 h-8 w-16 rounded"></div>
+                  ) : (
+                    unifiedData?.resumen.empleados || payrollMetrics.activeEmployees || 0
+                  )}
                 </p>
               </div>
               <div className="p-2 bg-blue-500/30 rounded-full">
