@@ -7,9 +7,10 @@ const CloudBackground = dynamic(() => import('../components/CloudBackground'), {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
-import { Shield, Lock, Eye, EyeOff, AlertCircle, Clock } from 'lucide-react'
+import { Shield, Lock, Eye, EyeOff, AlertCircle, Clock, Phone } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 import { createClient as createSupabaseBrowserClient } from '../lib/supabase/client'
+import PhoneAuthForm from '../components/PhoneAuthForm'
 
 export default function AdminLogin() {
   const [email, setEmail] = useState('')
@@ -18,6 +19,7 @@ export default function AdminLogin() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [currentTime, setCurrentTime] = useState('')
+  const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email')
   
   const { user, loading: authLoading, login, error: authError } = useAuth()
   const router = useRouter()
@@ -133,6 +135,31 @@ export default function AdminLogin() {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {/* Auth Method Selector */}
+              <div className="flex gap-2 mb-6">
+                <Button
+                  type="button"
+                  variant={authMethod === 'email' ? 'default' : 'outline'}
+                  onClick={() => setAuthMethod('email')}
+                  className="flex-1 h-10"
+                >
+                  <Lock className="h-4 w-4 mr-2" />
+                  Email
+                </Button>
+                <Button
+                  type="button"
+                  variant={authMethod === 'phone' ? 'default' : 'outline'}
+                  onClick={() => setAuthMethod('phone')}
+                  className="flex-1 h-10"
+                >
+                  <Phone className="h-4 w-4 mr-2" />
+                  Teléfono
+                </Button>
+              </div>
+
+              {authMethod === 'phone' ? (
+                <PhoneAuthForm onBack={() => setAuthMethod('email')} />
+              ) : (
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Email Field */}
                 <div className="space-y-2">
@@ -226,6 +253,7 @@ export default function AdminLogin() {
                   Continuar con Facebook
                 </Button>
               </form>
+              )}
             </CardContent>
           </Card>
 
