@@ -19,7 +19,6 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const id = setTimeout(() => ctrl.abort(), 20_000) // 20 second timeout
   
   try {
-    console.log('🌐 API Request:', { url, method: init?.method, body: init?.body })
     const response = await fetch(url, {
       ...init,
       signal: ctrl.signal,
@@ -29,9 +28,7 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
       }
     })
     
-    console.log('📡 API Response:', { status: response.status, ok: response.ok })
     const data = await response.json()
-    console.log('📄 API Data:', data)
     
     if (!response.ok || data?.ok === false) {
       throw {

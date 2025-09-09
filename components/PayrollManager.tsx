@@ -789,18 +789,18 @@ export default function PayrollManager() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Gestión de Nómina</h1>
-          <p className="text-gray-600">Genera y gestiona nóminas con cálculos automáticos</p>
+          <h1 className="text-2xl font-bold text-white">Gestión de Nómina</h1>
+          <p className="text-gray-300">Genera y gestiona nóminas con cálculos automáticos</p>
       </div>
 
         {/* Status Badge */}
         <div className="flex items-center gap-2">
           <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-            payrollState.status === 'idle' ? 'bg-gray-100 text-gray-800' :
-            payrollState.status === 'draft' ? 'bg-blue-100 text-blue-800' :
-            payrollState.status === 'authorized' ? 'bg-green-100 text-green-800' :
-            payrollState.status === 'error' ? 'bg-red-100 text-red-800' :
-            'bg-yellow-100 text-yellow-800'
+            payrollState.status === 'idle' ? 'bg-white/20 text-gray-300' :
+            payrollState.status === 'draft' ? 'bg-blue-500/20 text-blue-300' :
+            payrollState.status === 'authorized' ? 'bg-green-500/20 text-green-300' :
+            payrollState.status === 'error' ? 'bg-red-500/20 text-red-300' :
+            'bg-yellow-500/20 text-yellow-300'
           }`}>
             {payrollState.status === 'idle' ? 'Inactivo' :
              payrollState.status === 'draft' ? 'Borrador' :
@@ -810,23 +810,23 @@ export default function PayrollManager() {
           </span>
           
           {payrollState.loading && (
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400"></div>
                   )}
                 </div>
         </div>
 
       {/* Error Display */}
       {(error || payrollState.error) && (
-        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+        <div className="bg-red-500/20 border border-red-500/30 rounded-md p-4">
           <div className="flex">
             <div className="flex-shrink-0">
                               <Icon name="alert" className="h-5 w-5 text-red-400" />
                 </div>
             <div className="ml-3">
-              <h3 className="text-sm font-medium text-red-800">
+              <h3 className="text-sm font-medium text-red-300">
                 Error
               </h3>
-              <div className="mt-2 text-sm text-red-700">
+              <div className="mt-2 text-sm text-red-200">
                 <p>{error || payrollState.error}</p>
                 </div>
               <div className="mt-4">
@@ -844,10 +844,10 @@ export default function PayrollManager() {
           )}
 
       {/* Filters Card */}
-      <Card>
+      <Card variant="glass">
           <CardHeader>
-          <CardTitle>Filtros de Nómina</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-white">Filtros de Nómina</CardTitle>
+          <CardDescription className="text-gray-300">
             Configura los parámetros para generar la nómina
             </CardDescription>
           </CardHeader>
@@ -855,7 +855,7 @@ export default function PayrollManager() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Año */}
                 <div>
-              <label htmlFor="year" className="block text-sm font-medium text-gray-700 mb-2">Año</label>
+              <label htmlFor="year" className="block text-sm font-medium text-gray-300 mb-2">Año</label>
               <select
                 value={payrollState.filters.year.toString()}
                 onChange={(e) => handleNewFilterChange('year', parseInt(e.target.value))}
@@ -872,7 +872,7 @@ export default function PayrollManager() {
 
             {/* Mes */}
                 <div>
-              <label htmlFor="month" className="block text-sm font-medium text-gray-700 mb-2">Mes</label>
+              <label htmlFor="month" className="block text-sm font-medium text-gray-300 mb-2">Mes</label>
               <select
                 value={payrollState.filters.month.toString()}
                 onChange={(e) => handleNewFilterChange('month', parseInt(e.target.value))}
@@ -889,7 +889,7 @@ export default function PayrollManager() {
 
             {/* Quincena */}
             <div>
-              <label htmlFor="quincena" className="block text-sm font-medium text-gray-700 mb-2">Quincena</label>
+              <label htmlFor="quincena" className="block text-sm font-medium text-gray-300 mb-2">Quincena</label>
               <select
                 value={payrollState.filters.quincena.toString()}
                 onChange={(e) => handleNewFilterChange('quincena', parseInt(e.target.value))}
@@ -903,7 +903,7 @@ export default function PayrollManager() {
               
             {/* Tipo */}
             <div>
-              <label htmlFor="tipo" className="block text-sm font-medium text-gray-700 mb-2">Tipo de Deducciones</label>
+              <label htmlFor="tipo" className="block text-sm font-medium text-gray-300 mb-2">Tipo de Deducciones</label>
               <select
                 value={payrollState.filters.tipo}
                 onChange={(e) => handleNewFilterChange('tipo', e.target.value)}
@@ -948,8 +948,8 @@ export default function PayrollManager() {
         </CardContent>
       </Card>
 
-      {/* Employee Detail Table - SIEMPRE VISIBLE */}
-      {true && (
+      {/* Employee Detail Table */}
+      {payrollState.hasPlanilla && (
         <Card variant="glass">
           <CardHeader>
             <CardTitle className="text-white">Detalle por empleado</CardTitle>
@@ -976,27 +976,24 @@ export default function PayrollManager() {
                   </tr>
                 </thead>
                 <tbody className="text-gray-200">
-                  {payrollState.planilla.length > 0 ? (
-                    payrollState.planilla.map((line: any, index: number) => (
-                      <tr key={index} className="border-t border-white/10">
-                        <td className="py-2 pr-4">{line.name}</td>
-                        <td className="py-2 pr-4">L {line.base_salary?.toFixed(2) || '0.00'}</td>
-                        <td className="py-2 pr-4">{line.days_worked || 0}</td>
-                        <td className="py-2 pr-4">{line.days_absent || 0}</td>
-                        <td className="py-2 pr-4">{line.late_days || 0}</td>
-                        <td className="py-2 pr-4">L {line.total_earnings?.toFixed(2) || '0.00'}</td>
-                        <td className="py-2 pr-4">L {line.IHSS?.toFixed(2) || '0.00'}</td>
-                        <td className="py-2 pr-4">L {line.RAP?.toFixed(2) || '0.00'}</td>
-                        <td className="py-2 pr-4">L {line.ISR?.toFixed(2) || '0.00'}</td>
-                        <td className="py-2 pr-4">L {line.total_deducciones?.toFixed(2) || '0.00'}</td>
-                        <td className="py-2 pr-4 font-semibold">L {line.total?.toFixed(2) || '0.00'}</td>
-                      </tr>
-                    ))
-                  ) : (
+                  {payrollState.planilla.map((line: any, index: number) => (
+                    <tr key={index} className="border-t border-white/10">
+                      <td className="py-2 pr-4">{line.name}</td>
+                      <td className="py-2 pr-4">L {line.base_salary?.toFixed(2) || '0.00'}</td>
+                      <td className="py-2 pr-4">{line.days_worked || 0}</td>
+                      <td className="py-2 pr-4">{line.days_absent || 0}</td>
+                      <td className="py-2 pr-4">{line.late_days || 0}</td>
+                      <td className="py-2 pr-4">L {line.total_earnings?.toFixed(2) || '0.00'}</td>
+                      <td className="py-2 pr-4">L {line.IHSS?.toFixed(2) || '0.00'}</td>
+                      <td className="py-2 pr-4">L {line.RAP?.toFixed(2) || '0.00'}</td>
+                      <td className="py-2 pr-4">L {line.ISR?.toFixed(2) || '0.00'}</td>
+                      <td className="py-2 pr-4">L {line.total_deducciones?.toFixed(2) || '0.00'}</td>
+                      <td className="py-2 pr-4 font-semibold">L {line.net_salary?.toFixed(2) || '0.00'}</td>
+                    </tr>
+                  ))}
+                  {payrollState.planilla.length === 0 && (
                     <tr>
-                      <td colSpan={11} className="py-6 text-center text-gray-400">
-                        Haz clic en "Generar Preview" para ver el detalle de empleados
-                      </td>
+                      <td colSpan={11} className="py-6 text-center text-gray-400">Sin registros de nómina para el período</td>
                     </tr>
                   )}
                 </tbody>
@@ -1008,10 +1005,10 @@ export default function PayrollManager() {
 
       {/* Planilla Display */}
       {payrollState.hasPlanilla && (
-        <Card>
+        <Card variant="glass">
           <CardHeader>
-            <CardTitle>Planilla de Nómina</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-white">Planilla de Nómina</CardTitle>
+            <CardDescription className="text-gray-300">
               {payrollState.totalEmployees} empleados - 
               Total Bruto: {new Intl.NumberFormat('es-HN', { style: 'currency', currency: 'HNL' }).format(payrollState.totalBruto)} - 
               Total Neto: {new Intl.NumberFormat('es-HN', { style: 'currency', currency: 'HNL' }).format(payrollState.totalNeto)}
@@ -1020,46 +1017,46 @@ export default function PayrollManager() {
           <CardContent>
             {/* Planilla Table */}
                 <div className="overflow-x-auto">
-              <table className="w-full border-collapse border border-gray-300">
+              <table className="w-full border-collapse border border-white/20">
                     <thead>
-                  <tr className="bg-gray-50">
-                    <th className="border border-gray-300 px-4 py-2 text-left font-medium text-gray-700">Empleado</th>
-                    <th className="border border-gray-300 px-4 py-2 text-left font-medium text-gray-700">Departamento</th>
-                    <th className="border border-gray-300 px-4 py-2 text-left font-medium text-gray-700">Días Trabajados</th>
-                    <th className="border border-gray-300 px-4 py-2 text-left font-medium text-gray-700">Salario Bruto</th>
-                    <th className="border border-gray-300 px-4 py-2 text-left font-medium text-gray-700">IHSS</th>
-                    <th className="border border-gray-300 px-4 py-2 text-left font-medium text-gray-700">RAP</th>
-                    <th className="border border-gray-300 px-4 py-2 text-left font-medium text-gray-700">ISR</th>
-                    <th className="border border-gray-300 px-4 py-2 text-left font-medium text-gray-700">Total Deducciones</th>
-                    <th className="border border-gray-300 px-4 py-2 text-left font-medium text-gray-700">Salario Neto</th>
-                    <th className="border border-gray-300 px-4 py-2 text-left font-medium text-gray-700">Acciones</th>
+                  <tr className="bg-white/10">
+                    <th className="border border-white/20 px-4 py-2 text-left font-medium text-gray-300">Empleado</th>
+                    <th className="border border-white/20 px-4 py-2 text-left font-medium text-gray-300">Departamento</th>
+                    <th className="border border-white/20 px-4 py-2 text-left font-medium text-gray-300">Días Trabajados</th>
+                    <th className="border border-white/20 px-4 py-2 text-left font-medium text-gray-300">Salario Bruto</th>
+                    <th className="border border-white/20 px-4 py-2 text-left font-medium text-gray-300">IHSS</th>
+                    <th className="border border-white/20 px-4 py-2 text-left font-medium text-gray-300">RAP</th>
+                    <th className="border border-white/20 px-4 py-2 text-left font-medium text-gray-300">ISR</th>
+                    <th className="border border-white/20 px-4 py-2 text-left font-medium text-gray-300">Total Deducciones</th>
+                    <th className="border border-white/20 px-4 py-2 text-left font-medium text-gray-300">Salario Neto</th>
+                    <th className="border border-white/20 px-4 py-2 text-left font-medium text-gray-300">Acciones</th>
                       </tr>
                     </thead>
                     <tbody>
                   {payrollState.planilla.map((line: any, index: number) => (
-                    <tr key={index} className="hover:bg-gray-50">
-                      <td className="border border-gray-300 px-4 py-2">{line.name}</td>
-                      <td className="border border-gray-300 px-4 py-2">{line.department}</td>
-                      <td className="border border-gray-300 px-4 py-2">{line.days_worked}</td>
-                      <td className="border border-gray-300 px-4 py-2">
+                    <tr key={index} className="hover:bg-white/5 border-t border-white/10">
+                      <td className="border border-white/20 px-4 py-2 text-gray-200">{line.name}</td>
+                      <td className="border border-white/20 px-4 py-2 text-gray-200">{line.department}</td>
+                      <td className="border border-white/20 px-4 py-2 text-gray-200">{line.days_worked}</td>
+                      <td className="border border-white/20 px-4 py-2 text-gray-200">
                         {new Intl.NumberFormat('es-HN', { style: 'currency', currency: 'HNL' }).format(line.total_earnings)}
                           </td>
-                      <td className="border border-gray-300 px-4 py-2">
+                      <td className="border border-white/20 px-4 py-2 text-gray-200">
                         {new Intl.NumberFormat('es-HN', { style: 'currency', currency: 'HNL' }).format(line.IHSS)}
                           </td>
-                      <td className="border border-gray-300 px-4 py-2">
+                      <td className="border border-white/20 px-4 py-2 text-gray-200">
                         {new Intl.NumberFormat('es-HN', { style: 'currency', currency: 'HNL' }).format(line.RAP)}
                           </td>
-                      <td className="border border-gray-300 px-4 py-2">
+                      <td className="border border-white/20 px-4 py-2 text-gray-200">
                         {new Intl.NumberFormat('es-HN', { style: 'currency', currency: 'HNL' }).format(line.ISR)}
                           </td>
-                      <td className="border border-gray-300 px-4 py-2">
+                      <td className="border border-white/20 px-4 py-2 text-gray-200">
                         {new Intl.NumberFormat('es-HN', { style: 'currency', currency: 'HNL' }).format(line.total_deducciones)}
                           </td>
-                      <td className="border border-gray-300 px-4 py-2">
+                      <td className="border border-white/20 px-4 py-2 text-gray-200">
                         {new Intl.NumberFormat('es-HN', { style: 'currency', currency: 'HNL' }).format(line.total)}
                           </td>
-                      <td className="border border-gray-300 px-4 py-2">
+                      <td className="border border-white/20 px-4 py-2 text-gray-200">
                         <div className="flex items-center gap-2">
                           <Button
                             variant="outline"
@@ -1068,17 +1065,6 @@ export default function PayrollManager() {
                             disabled={payrollState.loading}
                           >
                             <Icon name="download" className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              // TODO: Implementar edición
-                              alert('Funcionalidad de edición en desarrollo')
-                            }}
-                            disabled={payrollState.loading}
-                          >
-                            <Icon name="edit" className="h-4 w-4" />
                           </Button>
                         </div>
                           </td>
@@ -1137,10 +1123,10 @@ export default function PayrollManager() {
       {!payrollState.hasPlanilla && (
         <>
           {/* Existing filters and content */}
-          <Card>
+          <Card variant="glass">
           <CardHeader>
-              <CardTitle>Filtros Avanzados</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-white">Filtros Avanzados</CardTitle>
+              <CardDescription className="text-gray-300">
                 Filtra los registros existentes de nómina
             </CardDescription>
           </CardHeader>
@@ -1256,57 +1242,57 @@ export default function PayrollManager() {
 
           {/* Existing Records Display */}
           {filteredRecords.length > 0 && (
-            <Card>
+            <Card variant="glass">
           <CardHeader>
-                <CardTitle>Registros de Nómina</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-white">Registros de Nómina</CardTitle>
+                <CardDescription className="text-gray-300">
               {getFilterDescription}
             </CardDescription>
           </CardHeader>
           <CardContent>
                 {/* Existing table content */}
             <div className="overflow-x-auto">
-                  <table className="w-full border-collapse border border-gray-300">
+                  <table className="w-full border-collapse border border-white/20">
                 <thead>
-                      <tr className="bg-gray-50">
-                        <th className="border border-gray-300 px-4 py-2 text-left font-medium text-gray-700">Empleado</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left font-medium text-gray-700">Período</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left font-medium text-gray-700">Salario Bruto</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left font-medium text-gray-700">Deducciones</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left font-medium text-gray-700">Salario Neto</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left font-medium text-gray-700">Estado</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left font-medium text-gray-700">Acciones</th>
+                      <tr className="bg-white/10">
+                        <th className="border border-white/20 px-4 py-2 text-left font-medium text-gray-300">Empleado</th>
+                        <th className="border border-white/20 px-4 py-2 text-left font-medium text-gray-300">Período</th>
+                        <th className="border border-white/20 px-4 py-2 text-left font-medium text-gray-300">Salario Bruto</th>
+                        <th className="border border-white/20 px-4 py-2 text-left font-medium text-gray-300">Deducciones</th>
+                        <th className="border border-white/20 px-4 py-2 text-left font-medium text-gray-300">Salario Neto</th>
+                        <th className="border border-white/20 px-4 py-2 text-left font-medium text-gray-300">Estado</th>
+                        <th className="border border-white/20 px-4 py-2 text-left font-medium text-gray-300">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                       {filteredRecords.map((record: any, index: number) => (
-                        <tr key={index} className="hover:bg-gray-50">
-                          <td className="border border-gray-300 px-4 py-2">
+                        <tr key={index} className="hover:bg-white/5 border-t border-white/10">
+                          <td className="border border-white/20 px-4 py-2 text-gray-200">
                         <div>
                               <div className="font-medium">{record.employees?.name || 'N/A'}</div>
-                              <div className="text-sm text-gray-500">{record.employees?.employee_code || 'N/A'}</div>
+                              <div className="text-sm text-gray-400">{record.employees?.employee_code || 'N/A'}</div>
                         </div>
                       </td>
-                          <td className="border border-gray-300 px-4 py-2">
+                          <td className="border border-white/20 px-4 py-2 text-gray-200">
                             <div>
                               <div className="font-medium">
                                 {new Date(record.period_start).toLocaleDateString('es-HN')} - {new Date(record.period_end).toLocaleDateString('es-HN')}
                         </div>
-                              <div className="text-sm text-gray-500">
+                              <div className="text-sm text-gray-400">
                                 {record.period_type === 'monthly' ? 'Mensual' : 'Quincenal'}
                           </div>
                         </div>
                       </td>
-                          <td className="border border-gray-300 px-4 py-2">
+                          <td className="border border-white/20 px-4 py-2 text-gray-200">
                             {new Intl.NumberFormat('es-HN', { style: 'currency', currency: 'HNL' }).format(record.gross_salary || 0)}
                       </td>
-                          <td className="border border-gray-300 px-4 py-2">
+                          <td className="border border-white/20 px-4 py-2 text-gray-200">
                             {new Intl.NumberFormat('es-HN', { style: 'currency', currency: 'HNL' }).format(record.total_deducciones || 0)}
                       </td>
-                          <td className="border border-gray-300 px-4 py-2">
+                          <td className="border border-white/20 px-4 py-2 text-gray-200">
                             {new Intl.NumberFormat('es-HN', { style: 'currency', currency: 'HNL' }).format(record.net_salary || 0)}
                       </td>
-                          <td className="border border-gray-300 px-4 py-2">
+                          <td className="border border-white/20 px-4 py-2 text-gray-200">
                             <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${
                               record.status === 'approved' 
                                 ? 'border-transparent bg-primary text-primary-foreground hover:bg-primary/80' 
@@ -1315,7 +1301,7 @@ export default function PayrollManager() {
                               {record.status === 'approved' ? 'Aprobado' : 'Borrador'}
                             </span>
                           </td>
-                          <td className="border border-gray-300 px-4 py-2">
+                          <td className="border border-white/20 px-4 py-2 text-gray-200">
                             <div className="flex items-center gap-2">
                             <Button
                               variant="outline"
