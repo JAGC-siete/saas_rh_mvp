@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
+import Link from 'next/link'
 import dynamic from 'next/dynamic'
 const CloudBackground = dynamic(() => import('../../components/CloudBackground'), { ssr: false })
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
@@ -36,9 +37,17 @@ export default function AuthStart() {
       
       if (error) throw error
       
+      // Mostrar mensaje de éxito
+      setError('')
       setStep('email')
     } catch (err: any) {
-      setError(err.message || 'Error enviando enlace mágico')
+      if (err.message?.includes('Invalid email')) {
+        setError('Revisá el formato del correo.')
+      } else if (err.message?.includes('rate limit')) {
+        setError('Demasiados intentos. Volvé en 15 min.')
+      } else {
+        setError(err.message || 'Error enviando enlace mágico')
+      }
     } finally {
       setLoading(false)
     }
@@ -64,7 +73,13 @@ export default function AuthStart() {
       
       setStep('otp')
     } catch (err: any) {
-      setError(err.message || 'Error enviando código SMS')
+      if (err.message?.includes('Invalid phone')) {
+        setError('Usá formato internacional: +504…')
+      } else if (err.message?.includes('rate limit')) {
+        setError('Demasiados intentos. Volvé en 15 min.')
+      } else {
+        setError(err.message || 'Error enviando código SMS')
+      }
     } finally {
       setLoading(false)
     }
@@ -91,7 +106,13 @@ export default function AuthStart() {
       
       router.push('/onboarding')
     } catch (err: any) {
-      setError(err.message || 'Código inválido')
+      if (err.message?.includes('Invalid OTP') || err.message?.includes('expired')) {
+        setError('Código inválido o expirado. Reintentar en 30s.')
+      } else if (err.message?.includes('rate limit')) {
+        setError('Demasiados intentos. Volvé en 15 min.')
+      } else {
+        setError(err.message || 'Código inválido')
+      }
     } finally {
       setLoading(false)
     }
@@ -137,16 +158,16 @@ export default function AuthStart() {
               <ArrowRight className="h-10 w-10 text-brand-900" />
             </div>
             <h1 className="text-3xl font-bold text-white mb-2">
-              {step === 'method' ? 'Accede a tu cuenta' : 
-               step === 'email' ? 'Revisa tu email' :
-               step === 'phone' ? 'Ingresa tu teléfono' :
-               'Verifica tu código'}
+              {step === 'method' ? 'Activá tus Robots de RH en 60s' : 
+               step === 'email' ? 'Revisá tu correo' :
+               step === 'phone' ? 'Ingresá tu teléfono' :
+               'Verificá tu código'}
             </h1>
             <p className="text-brand-200/90">
-              {step === 'method' ? 'Elige cómo quieres acceder' :
+              {step === 'method' ? 'Planilla lista en 5 minutos. IHSS, RAP e ISR incluidos. Vouchers por Mail/WhatsApp.' :
                step === 'email' ? 'Te enviamos un enlace mágico' :
                step === 'phone' ? 'Te enviaremos un código por SMS' :
-               'Ingresa el código de 6 dígitos'}
+               'Ingresá el código de 6 dígitos'}
             </p>
           </div>
 
@@ -160,79 +181,95 @@ export default function AuthStart() {
                     className="w-full h-12 bg-brand-900 hover:bg-brand-800 text-white"
                   >
                     <Mail className="h-5 w-5 mr-2" />
-                    Continuar con Email
+                    Entrar con Email
                   </Button>
                   
-                  <Button
-                    onClick={() => setStep('phone')}
-                    variant="outline"
-                    className="w-full h-12 border-brand-500/20 text-brand-200 hover:bg-brand-800/20"
-                  >
-                    <Phone className="h-5 w-5 mr-2" />
-                    Continuar con Teléfono
-                  </Button>
-
-                  <div className="relative my-4">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t border-brand-500/20"></span>
-                    </div>
-                    <div className="relative flex justify-center text-sm">
-                      <span className="bg-brand-900/50 px-2 text-brand-200">o</span>
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      onClick={() => setStep('phone')}
+                      variant="outline"
+                      className="flex-1 h-12 border-brand-500/20 text-brand-200 hover:bg-brand-800/20"
+                    >
+                      <Phone className="h-5 w-5 mr-2" />
+                      Entrar con Teléfono
+                    </Button>
+                    
+                    <span className="text-brand-200/60">·</span>
+                    
+                    <Button
+                      onClick={() => handleOAuth('google')}
+                      variant="outline"
+                      className="flex-1 h-12 border-brand-500/20 text-brand-200 hover:bg-brand-800/20"
+                      disabled={loading}
+                    >
+                      <Github className="h-5 w-5 mr-2" />
+                      Entrar con Google
+                    </Button>
                   </div>
 
-                  <Button
-                    onClick={() => handleOAuth('google')}
-                    variant="outline"
-                    className="w-full h-12 border-brand-500/20 text-brand-200 hover:bg-brand-800/20"
-                    disabled={loading}
-                  >
-                    <Github className="h-5 w-5 mr-2" />
-                    Continuar con Google
-                  </Button>
+                  <p className="text-xs text-brand-200/60 text-center">
+                    Sin contraseñas. Sin tarjeta. Cumplimiento STSS desde el día uno.
+                  </p>
+
+                  <div className="text-center">
+                    <Link 
+                      href="/login" 
+                      className="text-sm text-brand-300 hover:text-white transition-colors"
+                    >
+                      ¿Ya tenés cuenta? Ingresá acá
+                    </Link>
+                  </div>
                 </div>
               )}
 
               {step === 'email' && (
-                <form onSubmit={handleEmailMagicLink} className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium text-brand-200/90 mb-2 block">
-                      Correo Electrónico
-                    </label>
-                    <Input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="tu@email.com"
-                      required
-                      disabled={loading}
-                      className="input-glass h-12"
-                    />
+                <div className="space-y-4">
+                  <div className="text-center">
+                    <div className="text-green-400 text-sm glass-strong p-3 rounded-md">
+                      Revisá tu correo (o spam). Asunto: "Tu acceso a Humano SISU". Válido por 10 min.
+                    </div>
                   </div>
 
-                  {error && (
-                    <div className="text-red-200 text-sm glass-strong p-3 rounded-md">
-                      {error}
+                  <form onSubmit={handleEmailMagicLink} className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium text-brand-200/90 mb-2 block">
+                        Correo Electrónico
+                      </label>
+                      <Input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="tu@empresa.com"
+                        required
+                        disabled={loading}
+                        className="input-glass h-12"
+                      />
                     </div>
-                  )}
 
-                  <Button
-                    type="submit"
-                    className="w-full h-12 bg-brand-900 hover:bg-brand-800 text-white"
-                    disabled={loading || !email}
-                  >
-                    {loading ? 'Enviando...' : 'Enviar Enlace Mágico'}
-                  </Button>
+                    {error && (
+                      <div className="text-red-200 text-sm glass-strong p-3 rounded-md">
+                        {error}
+                      </div>
+                    )}
 
-                  <Button
-                    type="button"
-                    onClick={() => setStep('method')}
-                    variant="ghost"
-                    className="w-full h-12 text-brand-300 hover:text-white"
-                  >
-                    ← Volver
-                  </Button>
-                </form>
+                    <Button
+                      type="submit"
+                      className="w-full h-12 bg-brand-900 hover:bg-brand-800 text-white"
+                      disabled={loading || !email}
+                    >
+                      {loading ? 'Mandando tu enlace seguro…' : 'Enviar Enlace Mágico'}
+                    </Button>
+
+                    <Button
+                      type="button"
+                      onClick={() => setStep('method')}
+                      variant="ghost"
+                      className="w-full h-12 text-brand-300 hover:text-white"
+                    >
+                      ← Volver
+                    </Button>
+                  </form>
+                </div>
               )}
 
               {step === 'phone' && (
@@ -245,13 +282,13 @@ export default function AuthStart() {
                       type="tel"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      placeholder="+504 9999-9999"
+                      placeholder="+504 9xx xxx xx"
                       required
                       disabled={loading}
                       className="input-glass h-12"
                     />
                     <p className="text-xs text-brand-400 mt-1">
-                      Incluye el código de país (+504 para Honduras)
+                      Usá formato internacional: +504…
                     </p>
                   </div>
 
@@ -266,7 +303,7 @@ export default function AuthStart() {
                     className="w-full h-12 bg-brand-900 hover:bg-brand-800 text-white"
                     disabled={loading || !phone}
                   >
-                    {loading ? 'Enviando...' : 'Enviar Código SMS'}
+                    {loading ? 'Mandando tu enlace seguro…' : 'Enviar Código SMS'}
                   </Button>
 
                   <Button
@@ -297,7 +334,7 @@ export default function AuthStart() {
                       maxLength={6}
                     />
                     <p className="text-xs text-brand-400 mt-1">
-                      Código enviado a: {phone}
+                      Te enviamos un código de 6 dígitos. Expira en 2 min.
                     </p>
                   </div>
 
@@ -312,7 +349,7 @@ export default function AuthStart() {
                     className="w-full h-12 bg-brand-900 hover:bg-brand-800 text-white"
                     disabled={loading || otpCode.length !== 6}
                   >
-                    {loading ? 'Verificando...' : 'Verificar Código'}
+                    {loading ? 'Verificando…' : 'Verificar Código'}
                   </Button>
 
                   <Button
@@ -327,6 +364,13 @@ export default function AuthStart() {
               )}
             </CardContent>
           </Card>
+
+          {/* Pie de confianza */}
+          <div className="text-center mt-6">
+            <p className="text-xs text-brand-200/60">
+              Sesión segura con cookies httpOnly. Sin contraseñas. Podés desvincular acceso cuando quieras.
+            </p>
+          </div>
         </div>
       </div>
     </>
