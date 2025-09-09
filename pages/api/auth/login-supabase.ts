@@ -38,30 +38,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'Credenciales inválidas' })
     }
 
-    // Buscar información adicional del usuario en la tabla employees
-    let userRole = 'admin' // Por defecto
+    // Buscar información del usuario en user_profiles (sistema correcto)
+    let userRole = 'employee' // Por defecto
     let userName = authData.user.user_metadata?.name || authData.user.email?.split('@')[0] || 'Usuario'
+    let companyId = null
 
-    // Buscar rol en tabla employees si es empleado
-    const { data: employee } = await supabase
-      .from('employees')
-      .select('name, role, team')
-      .eq('email', email) // Buscar por email del usuario
+    // Buscar perfil de usuario en user_profiles
+    const { data: userProfile } = await supabase
+      .from('user_profiles')
+      .select('role, company_id, employee_id, permissions')
+      .eq('id', authData.user.id)
       .single()
 
-    if (employee) {
-      userName = employee.name
-      // Determinar rol basado en role y team
-      if (employee.role?.toLowerCase().includes('gerente') || 
-          employee.role?.toLowerCase().includes('manager') ||
-          employee.role?.toLowerCase().includes('jefe')) {
-        userRole = 'manager'
-      } else if (employee.role?.toLowerCase().includes('recursos humanos') ||
-                 employee.role?.toLowerCase().includes('hr')) {
-        userRole = 'hr'
-      } else {
-        userRole = 'employee'
+    if (userProfile) {
+      userRole = userProfile.role
+      companyId = userProfile.company_id
+      
+      // Si tiene employee_id, obtener nombre del empleado
+      if (userProfile.employee_id) {
+        const { data: employee } = await supabase
+          .from('employees')
+          .select('name')
+          .eq('id', userProfile.employee_id)
+          .single()
+        
+        if (employee) {
+          userName = employee.name
+        }
       }
+    } else {
+      // Si no tiene perfil, crear uno básico
+      console.warn('User profile not found, creating basic profile for:', authData.user.email)
+      userRole = 'employee' // Rol por defecto
     }
 
     // Crear token JWT personalizado
@@ -79,11 +87,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Set Supabase session cookies for middleware compatibility
     if (authData.session) {
       const { access_token, refresh_token, expires_at } = authData.session
+      const maxAge = expires_at ? expires_at - Math.floor(Date.now() / 1000) : 86400 // Default to 24 hours if expires_at is undefined
       
-      // Set the session cookies that Supabase expects
+      // Set the session cookies that Supabase expects (correct names)
       res.setHeader('Set-Cookie', [
-        `sb-access-token=${access_token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${expires_at - Math.floor(Date.now() / 1000)}`,
-        `sb-refresh-token=${refresh_token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`, // 30 days
+        `sb-${process.env.NEXT_PUBLIC_SUPABASE_URL?.split('//')[1]?.split('.')[0]}-auth-token=${access_token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`,
+        `sb-${process.env.NEXT_PUBLIC_SUPABASE_URL?.split('//')[1]?.split('.')[0]}-auth-token.${Math.random().toString(36).substring(2)}=${refresh_token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`,
       ])
     }
 
@@ -93,7 +102,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         id: authData.user.id,
         email: authData.user.email,
         name: userName,
-        role: userRole
+        role: userRole,
+        company_id: companyId
       }
     })
 

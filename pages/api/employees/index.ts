@@ -1,15 +1,14 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { requireUser } from '../../../lib/auth/requireUser'
+import { requireCompanyAccess } from '../../../lib/auth/api-auth'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const { supabase, userProfile } = await requireUser(req, res)
+    const { supabase, companyId, role } = await requireCompanyAccess(req, res)
     
-    if (!userProfile?.company_id) {
-      return res.status(400).json({ error: 'Company ID required' })
+    // Check if user has permission to manage employees
+    if (!['super_admin', 'company_admin', 'hr_manager'].includes(role)) {
+      return res.status(403).json({ error: 'Insufficient permissions to manage employees' })
     }
-
-    const companyId = userProfile.company_id
 
     switch (req.method) {
       case 'GET':
@@ -68,7 +67,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   } catch (error: any) {
     console.error('Employees API error:', error)
-    return res.status(error.message === 'UNAUTHORIZED' ? 401 : 500).json({ 
+    
+    // Handle specific authentication errors
+    if (error.message === 'UNAUTHORIZED') {
+      return res.status(401).json({ error: 'Unauthorized' })
+    }
+    if (error.message === 'PROFILE_REQUIRED') {
+      return res.status(403).json({ error: 'User profile required' })
+    }
+    if (error.message === 'COMPANY_ACCESS_REQUIRED') {
+      return res.status(400).json({ error: 'Company access required' })
+    }
+    
+    return res.status(500).json({ 
       error: error.message || 'Internal server error' 
     })
   }

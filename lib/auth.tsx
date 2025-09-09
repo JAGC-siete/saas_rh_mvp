@@ -3,24 +3,38 @@ import { createClient } from './supabase/client'
 import { User, Session } from '@supabase/supabase-js'
 import { env, refreshEnvFromWindow } from './env'
 
+interface UserProfile {
+  id: string
+  email: string
+  name: string
+  role: string
+  company_id: string | null
+  employee_id?: string
+  permissions?: Record<string, any>
+}
+
 interface AuthContextType {
   user: User | null
+  userProfile: UserProfile | null
   session: Session | null
   // eslint-disable-next-line no-unused-vars
   login: (email: string, password: string) => Promise<boolean>
   logout: () => void
   loading: boolean
   error: string | null
+  refreshUserProfile: () => Promise<void>
 }
 
 // Create default context value
 const defaultAuthContext: AuthContextType = {
   user: null,
+  userProfile: null,
   session: null,
   login: async () => false,
   logout: () => {},
   loading: true,
-  error: null
+  error: null,
+  refreshUserProfile: async () => {}
 }
 
 const AuthContext = createContext<AuthContextType>(defaultAuthContext)
@@ -29,6 +43,7 @@ export const useAuth = () => useContext(AuthContext)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -36,6 +51,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   
   // Create Supabase client with error handling
   const [supabase, setSupabase] = useState<any>(null)
+
+  // Function to refresh user profile
+  const refreshUserProfile = async () => {
+    if (!supabase || !user) return
+
+    try {
+      const response = await fetch('/api/user-profiles', {
+        headers: {
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        // Find the current user's profile
+        const profile = data.profiles?.find((p: any) => p.id === user.id)
+        if (profile) {
+          setUserProfile(profile)
+        }
+      }
+    } catch (error) {
+      console.error('Error refreshing user profile:', error)
+    }
+  }
 
   // ✅ Factor VI: Detectar si estamos en el cliente
   useEffect(() => {
@@ -177,35 +216,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [isClient, supabase]) // ✅ Dependencia en isClient y supabase
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    if (!supabase) {
-      setError('Authentication not initialized')
-      return false
-    }
-
     try {
       setLoading(true)
       setError(null)
       console.log('🔐 Attempting login with:', email)
 
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
+      const response = await fetch('/api/auth/login-supabase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
       })
 
-      if (error) {
-        console.error('❌ Login error:', error)
-        setError(error.message || 'Login failed')
+      if (!response.ok) {
+        const errorData = await response.json()
+        setError(errorData.error || 'Login failed')
         return false
       }
 
-      if (data.user) {
-        console.log('✅ Login successful:', data.user.email)
-        setError(null)
-        return true
+      const data = await response.json()
+      
+      // Store token and user data in localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('token', data.token)
+        localStorage.setItem('user', JSON.stringify(data.user))
       }
 
-      setError('Login failed')
-      return false
+      // Set user profile from login response
+      setUserProfile(data.user)
+      setUser(data.user)
+      setSession({ 
+        access_token: data.token, 
+        user: data.user,
+        expires_at: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
+      } as any)
+
+      console.log('✅ Login successful:', data.user.email)
+      setError(null)
+      return true
+
     } catch (error) {
       console.error('❌ Login failed:', error)
       setError('Login failed')
@@ -225,6 +273,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Limpiar estado local
       setUser(null)
+      setUserProfile(null)
       setSession(null)
       setError(null)
       
@@ -249,11 +298,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return (
       <AuthContext.Provider value={{ 
         user: null, 
+        userProfile: null,
         session: null, 
         login: async () => false, 
         logout: () => {}, 
         loading: true,
-        error: null
+        error: null,
+        refreshUserProfile: async () => {}
       }}>
         {children}
       </AuthContext.Provider>
@@ -261,7 +312,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, login, logout, loading, error }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      userProfile, 
+      session, 
+      login, 
+      logout, 
+      loading, 
+      error, 
+      refreshUserProfile 
+    }}>
       {children}
     </AuthContext.Provider>
   )

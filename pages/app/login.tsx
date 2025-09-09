@@ -39,8 +39,13 @@ export default function LoginExisting() {
       localStorage.setItem('token', data.token)
       localStorage.setItem('user', JSON.stringify(data.user))
       
-      // Forzar recarga de la página para sincronizar el contexto
-      window.location.href = '/app/dashboard'
+      // Check if user has a profile, if not redirect to profile creation
+      if (!data.user.company_id) {
+        window.location.href = '/onboarding'
+      } else {
+        // Forzar recarga de la página para sincronizar el contexto
+        window.location.href = '/app/dashboard'
+      }
     } catch (err: any) {
       setError(err.message || 'Error de autenticación')
     } finally {

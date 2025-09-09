@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../lib/supabase/server'
+import { requireRoles } from '../../../lib/auth/api-auth'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -7,27 +7,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Validar autenticación
-    const supabase = createClient(req, res)
-    // ✅ Get user with getUser() to validate token with Supabase server
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
-    if (authError || !user) {
-      return res.status(401).json({ error: 'Unauthorized' })
-    }
-
-    const userId = user.id
-
-    // Verificar permisos del usuario
-    const { data: userProfile } = await supabase
-      .from('user_profiles')
-      .select('role, company_id')
-      .eq('id', userId)
-      .single()
-
-    if (!userProfile || !['company_admin', 'hr_manager', 'super_admin'].includes(userProfile.role)) {
-      return res.status(403).json({ error: 'Insufficient permissions' })
-    }
+    // Use new authentication helper with role requirements
+    const { supabase, companyId, role } = await requireRoles(req, res, [
+      'super_admin', 'company_admin', 'hr_manager'
+    ])
 
     const { periodo, quincena } = req.query
     
