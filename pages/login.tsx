@@ -46,7 +46,7 @@ export default function AdminLogin() {
   // Redirect if already logged in - ONLY when auth is not loading
   useEffect(() => {
     if (!authLoading && user) {
-      router.push('/dashboard')
+      router.push('/app/dashboard')
     }
   }, [user, authLoading, router])
 
