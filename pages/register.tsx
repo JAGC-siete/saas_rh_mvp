@@ -111,46 +111,45 @@ export default function Register() {
           </div>
 
           {/* Registration Form */}
-          <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-xl">
+          <Card variant="glass" className="shadow-xl">
             <CardHeader className="text-center pb-6">
-              <CardTitle className="flex items-center justify-center gap-2 text-gray-800">
+              <CardTitle className="flex items-center justify-center gap-2 text-white">
                 <Building className="h-5 w-5" />
                 Registro de Empresa
               </CardTitle>
-              <CardDescription className="text-gray-600">
+              <CardDescription className="text-brand-200/90">
                 Completa los datos para crear tu cuenta
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {/* Auth Method Selector */}
-              <div className="flex gap-2 mb-6">
-                <Button
-                  type="button"
-                  variant={authMethod === 'email' ? 'default' : 'outline'}
-                  onClick={() => setAuthMethod('email')}
-                  className="flex-1 h-10"
-                >
-                  <Lock className="h-4 w-4 mr-2" />
-                  Email
-                </Button>
-                <Button
-                  type="button"
-                  variant={authMethod === 'phone' ? 'default' : 'outline'}
-                  onClick={() => setAuthMethod('phone')}
-                  className="flex-1 h-10"
-                >
-                  <Phone className="h-4 w-4 mr-2" />
-                  Teléfono
-                </Button>
-              </div>
-
               {authMethod === 'phone' ? (
                 <PhoneAuthForm onBack={() => setAuthMethod('email')} />
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-6">
+                  {/* Auth Method Selector */}
+                  <div className="flex gap-2 mb-6">
+                    <Button
+                      type="button"
+                      variant={authMethod === 'email' ? 'default' : 'outline'}
+                      onClick={() => setAuthMethod('email')}
+                      className="flex-1 h-10"
+                    >
+                      <Lock className="h-4 w-4 mr-2" />
+                      Email
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={authMethod === 'phone' ? 'default' : 'outline'}
+                      onClick={() => setAuthMethod('phone')}
+                      className="flex-1 h-10"
+                    >
+                      <Phone className="h-4 w-4 mr-2" />
+                      Teléfono
+                    </Button>
+                  </div>
                   {/* Full Name */}
                   <div className="space-y-2">
-                    <label htmlFor="fullName" className="text-sm font-medium text-gray-700">
+                    <label htmlFor="fullName" className="text-sm font-medium text-brand-200/90">
                       Nombre Completo
                     </label>
                     <Input
@@ -161,13 +160,13 @@ export default function Register() {
                       placeholder="Tu nombre completo"
                       required
                       disabled={loading}
-                      className="h-12"
+                      className="input-glass h-12"
                     />
                   </div>
 
                   {/* Company Name */}
                   <div className="space-y-2">
-                    <label htmlFor="companyName" className="text-sm font-medium text-gray-700">
+                    <label htmlFor="companyName" className="text-sm font-medium text-brand-200/90">
                       Nombre de la Empresa
                     </label>
                     <Input
@@ -178,13 +177,13 @@ export default function Register() {
                       placeholder="Mi Empresa S.A."
                       required
                       disabled={loading}
-                      className="h-12"
+                      className="input-glass h-12"
                     />
                   </div>
 
                   {/* Email */}
                   <div className="space-y-2">
-                    <label htmlFor="email" className="text-sm font-medium text-gray-700">
+                    <label htmlFor="email" className="text-sm font-medium text-brand-200/90">
                       Correo Electrónico
                     </label>
                     <Input
@@ -195,13 +194,13 @@ export default function Register() {
                       placeholder="admin@empresa.com"
                       required
                       disabled={loading}
-                      className="h-12"
+                      className="input-glass h-12"
                     />
                   </div>
 
                   {/* Password */}
                   <div className="space-y-2">
-                    <label htmlFor="password" className="text-sm font-medium text-gray-700">
+                    <label htmlFor="password" className="text-sm font-medium text-brand-200/90">
                       Contraseña
                     </label>
                     <div className="relative">
@@ -213,12 +212,12 @@ export default function Register() {
                         placeholder="••••••••"
                         required
                         disabled={loading}
-                        className="h-12 pr-12"
+                        className="input-glass h-12 pr-12"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-400 hover:text-brand-300"
                         disabled={loading}
                       >
                         {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
@@ -228,7 +227,7 @@ export default function Register() {
 
                   {/* Confirm Password */}
                   <div className="space-y-2">
-                    <label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700">
+                    <label htmlFor="confirmPassword" className="text-sm font-medium text-brand-200/90">
                       Confirmar Contraseña
                     </label>
                     <Input
@@ -239,14 +238,13 @@ export default function Register() {
                       placeholder="••••••••"
                       required
                       disabled={loading}
-                      className="h-12"
+                      className="input-glass h-12"
                     />
                   </div>
 
                   {/* Error Message */}
                   {error && (
-                    <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 p-3 rounded-md">
-                      <AlertCircle className="h-4 w-4" />
+                    <div className="text-red-200 text-sm glass-strong p-3 rounded-md">
                       {error}
                     </div>
                   )}
@@ -254,52 +252,45 @@ export default function Register() {
                   {/* Submit Button */}
                   <Button 
                     type="submit" 
-                    className="w-full h-12 bg-blue-600 hover:bg-blue-700" 
+                    className="w-full h-12 bg-brand-900 hover:bg-brand-800 text-white focus-ring" 
                     disabled={loading}
                   >
-                    {loading ? (
-                      <div className="flex items-center gap-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        Creando cuenta...
-                      </div>
-                    ) : (
-                      'Crear Cuenta'
-                    )}
+                    {loading ? 'Creando cuenta...' : 'Crear Cuenta'}
                   </Button>
+
+                  {/* OAuth Providers */}
+                  <div className="mt-6">
+                    {/* Divider */}
+                    <div className="relative my-4">
+                      <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t border-brand-500/20"></span>
+                      </div>
+                      <div className="relative flex justify-center text-sm">
+                        <span className="bg-brand-900/50 px-2 text-brand-200">o</span>
+                      </div>
+                    </div>
+
+                    {/* Facebook OAuth */}
+                    <Button 
+                      type="button"
+                      variant="secondary"
+                      className="w-full h-12 bg-brand-800/20 hover:bg-brand-800/30 text-brand-200 border-brand-500/20"
+                      onClick={handleFacebookRegister}
+                    >
+                      Registrarse con Facebook
+                    </Button>
+                  </div>
                 </form>
               )}
-
-              {/* OAuth Providers */}
-              <div className="mt-6">
-                {/* Divider */}
-                <div className="relative my-4">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t border-gray-200"></span>
-                  </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="bg-white px-2 text-gray-500">o</span>
-                  </div>
-                </div>
-
-                {/* Facebook OAuth */}
-                <Button 
-                  type="button"
-                  variant="secondary"
-                  className="w-full h-12"
-                  onClick={handleFacebookRegister}
-                >
-                  Registrarse con Facebook
-                </Button>
-              </div>
             </CardContent>
           </Card>
 
           {/* Qué incluye */}
-          <div className="max-w-6xl mx-auto mb-16">
+          <div className="max-w-4xl mx-auto mb-16">
             <h2 className="text-3xl font-bold text-white text-center mb-12">
               Qué incluye tu cuenta gratuita
             </h2>
-            <div className="grid md:grid-cols-3 gap-8">
+            <div className="grid md:grid-cols-3 gap-6">
               <Card variant="glass" className="text-center">
                 <CardHeader className="pb-4">
                   <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-500/10 border border-brand-500/20 mb-4 mx-auto">
