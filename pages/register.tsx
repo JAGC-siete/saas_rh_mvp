@@ -1,11 +1,15 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
+const CloudBackground = dynamic(() => import('../components/CloudBackground'), { ssr: false })
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
-import { UserPlus, Building, ArrowLeft, Clock, FileText, DollarSign } from 'lucide-react'
+import { UserPlus, Building, ArrowLeft, Clock, FileText, DollarSign, Lock, Phone, Eye, EyeOff, AlertCircle } from 'lucide-react'
+import { createClient as createSupabaseBrowserClient } from '../lib/supabase/client'
+import PhoneAuthForm from '../components/PhoneAuthForm'
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -17,7 +21,27 @@ export default function Register() {
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email')
   const router = useRouter()
+
+  const handleFacebookRegister = async () => {
+    try {
+      const supabase = createSupabaseBrowserClient()
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
+      const redirectTo = `${siteUrl}/auth/callback?next=/app/dashboard`
+      const { data, error } = await (supabase as any).auth.signInWithOAuth({
+        provider: 'facebook',
+        options: { redirectTo }
+      })
+      if (error) {
+        setError(error.message || 'No se pudo registrarse con Facebook')
+      }
+      // In browser this will redirect automatically
+    } catch (e: any) {
+      setError(e?.message || 'Error registrándose con Facebook')
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -51,7 +75,7 @@ export default function Register() {
       if (data.user.needsEmailConfirmation) {
         router.push('/login?message=confirmation-required')
       } else {
-        router.push('/dashboard')
+        router.push('/app/dashboard')
       }
     } catch (err: any) {
       setError(err.message)
@@ -67,8 +91,12 @@ export default function Register() {
         <meta name="description" content="Crea tu cuenta y comienza a gestionar tu empresa" />
       </Head>
 
-      <div className="min-h-screen bg-app flex items-center justify-center p-4">
-        <div className="w-full max-w-md space-y-8">
+      <div className="min-h-screen bg-app flex items-center justify-center p-4 relative">
+        <CloudBackground />
+        {/* Background Pattern */}
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiMxZTI5M2IiIGZpbGwtb3BhY2l0eT0iMC4xIj48Y2lyY2xlIGN4PSIzMCIgY3k9IjMwIiByPSI0Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
+        
+        <div className="relative w-full max-w-md space-y-8 z-10">
           {/* Header */}
           <div className="text-center">
             <div className="mx-auto h-20 w-20 bg-white rounded-full flex items-center justify-center mb-6 shadow-xl">
@@ -83,119 +111,186 @@ export default function Register() {
           </div>
 
           {/* Registration Form */}
-          <Card variant="glass" className="shadow-xl">
+          <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-xl">
             <CardHeader className="text-center pb-6">
-              <CardTitle className="flex items-center justify-center gap-2 text-white">
+              <CardTitle className="flex items-center justify-center gap-2 text-gray-800">
                 <Building className="h-5 w-5" />
                 Registro de Empresa
               </CardTitle>
-              <CardDescription className="text-brand-200/90">
+              <CardDescription className="text-gray-600">
                 Completa los datos para crear tu cuenta
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Full Name */}
-                <div className="space-y-2">
-                  <label htmlFor="fullName" className="text-sm font-medium text-brand-200/90">
-                    Nombre Completo
-                  </label>
-                  <Input
-                    id="fullName"
-                    type="text"
-                    value={formData.fullName}
-                    onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
-                    placeholder="Tu nombre completo"
-                    required
-                    disabled={loading}
-                    className="input-glass h-12"
-                  />
-                </div>
-
-                {/* Company Name */}
-                <div className="space-y-2">
-                  <label htmlFor="companyName" className="text-sm font-medium text-brand-200/90">
-                    Nombre de la Empresa
-                  </label>
-                  <Input
-                    id="companyName"
-                    type="text"
-                    value={formData.companyName}
-                    onChange={(e) => setFormData(prev => ({ ...prev, companyName: e.target.value }))}
-                    placeholder="Mi Empresa S.A."
-                    required
-                    disabled={loading}
-                    className="input-glass h-12"
-                  />
-                </div>
-
-                {/* Email */}
-                <div className="space-y-2">
-                  <label htmlFor="email" className="text-sm font-medium text-brand-200/90">
-                    Correo Electrónico
-                  </label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                    placeholder="admin@empresa.com"
-                    required
-                    disabled={loading}
-                    className="input-glass h-12"
-                  />
-                </div>
-
-                {/* Password */}
-                <div className="space-y-2">
-                  <label htmlFor="password" className="text-sm font-medium text-brand-200/90">
-                    Contraseña
-                  </label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                    placeholder="••••••••"
-                    required
-                    disabled={loading}
-                    className="input-glass h-12"
-                  />
-                </div>
-
-                {/* Confirm Password */}
-                <div className="space-y-2">
-                  <label htmlFor="confirmPassword" className="text-sm font-medium text-brand-200/90">
-                    Confirmar Contraseña
-                  </label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    value={formData.confirmPassword}
-                    onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                    placeholder="••••••••"
-                    required
-                    disabled={loading}
-                    className="input-glass h-12"
-                  />
-                </div>
-
-                {/* Error Message */}
-                {error && (
-                  <div className="text-red-200 text-sm glass-strong p-3 rounded-md">
-                    {error}
-                  </div>
-                )}
-
-                {/* Submit Button */}
-                <Button 
-                  type="submit" 
-                  className="w-full h-12 bg-brand-900 hover:bg-brand-800 text-white focus-ring" 
-                  disabled={loading}
+              {/* Auth Method Selector */}
+              <div className="flex gap-2 mb-6">
+                <Button
+                  type="button"
+                  variant={authMethod === 'email' ? 'default' : 'outline'}
+                  onClick={() => setAuthMethod('email')}
+                  className="flex-1 h-10"
                 >
-                  {loading ? 'Creando cuenta...' : 'Crear Cuenta'}
+                  <Lock className="h-4 w-4 mr-2" />
+                  Email
                 </Button>
-              </form>
+                <Button
+                  type="button"
+                  variant={authMethod === 'phone' ? 'default' : 'outline'}
+                  onClick={() => setAuthMethod('phone')}
+                  className="flex-1 h-10"
+                >
+                  <Phone className="h-4 w-4 mr-2" />
+                  Teléfono
+                </Button>
+              </div>
+
+              {authMethod === 'phone' ? (
+                <PhoneAuthForm onBack={() => setAuthMethod('email')} />
+              ) : (
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  {/* Full Name */}
+                  <div className="space-y-2">
+                    <label htmlFor="fullName" className="text-sm font-medium text-gray-700">
+                      Nombre Completo
+                    </label>
+                    <Input
+                      id="fullName"
+                      type="text"
+                      value={formData.fullName}
+                      onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
+                      placeholder="Tu nombre completo"
+                      required
+                      disabled={loading}
+                      className="h-12"
+                    />
+                  </div>
+
+                  {/* Company Name */}
+                  <div className="space-y-2">
+                    <label htmlFor="companyName" className="text-sm font-medium text-gray-700">
+                      Nombre de la Empresa
+                    </label>
+                    <Input
+                      id="companyName"
+                      type="text"
+                      value={formData.companyName}
+                      onChange={(e) => setFormData(prev => ({ ...prev, companyName: e.target.value }))}
+                      placeholder="Mi Empresa S.A."
+                      required
+                      disabled={loading}
+                      className="h-12"
+                    />
+                  </div>
+
+                  {/* Email */}
+                  <div className="space-y-2">
+                    <label htmlFor="email" className="text-sm font-medium text-gray-700">
+                      Correo Electrónico
+                    </label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                      placeholder="admin@empresa.com"
+                      required
+                      disabled={loading}
+                      className="h-12"
+                    />
+                  </div>
+
+                  {/* Password */}
+                  <div className="space-y-2">
+                    <label htmlFor="password" className="text-sm font-medium text-gray-700">
+                      Contraseña
+                    </label>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? 'text' : 'password'}
+                        value={formData.password}
+                        onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                        placeholder="••••••••"
+                        required
+                        disabled={loading}
+                        className="h-12 pr-12"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        disabled={loading}
+                      >
+                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Confirm Password */}
+                  <div className="space-y-2">
+                    <label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700">
+                      Confirmar Contraseña
+                    </label>
+                    <Input
+                      id="confirmPassword"
+                      type="password"
+                      value={formData.confirmPassword}
+                      onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                      placeholder="••••••••"
+                      required
+                      disabled={loading}
+                      className="h-12"
+                    />
+                  </div>
+
+                  {/* Error Message */}
+                  {error && (
+                    <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 p-3 rounded-md">
+                      <AlertCircle className="h-4 w-4" />
+                      {error}
+                    </div>
+                  )}
+
+                  {/* Submit Button */}
+                  <Button 
+                    type="submit" 
+                    className="w-full h-12 bg-blue-600 hover:bg-blue-700" 
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Creando cuenta...
+                      </div>
+                    ) : (
+                      'Crear Cuenta'
+                    )}
+                  </Button>
+                </form>
+              )}
+
+              {/* OAuth Providers */}
+              <div className="mt-6">
+                {/* Divider */}
+                <div className="relative my-4">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-gray-200"></span>
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="bg-white px-2 text-gray-500">o</span>
+                  </div>
+                </div>
+
+                {/* Facebook OAuth */}
+                <Button 
+                  type="button"
+                  variant="secondary"
+                  className="w-full h-12"
+                  onClick={handleFacebookRegister}
+                >
+                  Registrarse con Facebook
+                </Button>
+              </div>
             </CardContent>
           </Card>
 

@@ -6,6 +6,7 @@ import { logger } from './lib/logger'
 // Cache public routes for better performance
 const PUBLIC_ROUTES = new Set([
   '/',                 // Landing principal (marketing)
+  '/login',            // Página de login principal - PÚBLICO
   '/demo',             // Página de solicitud de demo - PÚBLICO
   '/activar',          // Formulario de activación - PÚBLICO
   '/register',         // Página de registro - PÚBLICO
