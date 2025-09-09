@@ -56,16 +56,21 @@ export default function Onboarding() {
       const supabase = createSupabaseBrowserClient()
       if (!supabase) throw new Error('Error inicializando Supabase')
       
-      // Actualizar perfil del usuario
-      const { error } = await supabase.auth.updateUser({
-        data: { full_name: fullName }
+      // Crear empresa directamente
+      const response = await fetch('/api/companies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: companyName })
       })
       
-      if (error) throw error
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Error creando empresa')
+      }
       
-      setStep('company')
+      setStep('complete')
     } catch (err: any) {
-      setError(err.message || 'Error actualizando perfil')
+      setError(err.message || 'Error creando empresa')
     } finally {
       setLoading(false)
     }
@@ -147,12 +152,12 @@ export default function Onboarding() {
               )}
             </div>
             <h1 className="text-3xl font-bold text-white mb-2">
-              {step === 'profile' ? 'Cuéntanos sobre ti' :
+              {step === 'profile' ? 'Dale nombre a tu empresa' :
                step === 'company' ? 'Configura tu empresa' :
                '¡Listo para comenzar!'}
             </h1>
             <p className="text-brand-200/90">
-              {step === 'profile' ? 'Solo necesitamos tu nombre para comenzar' :
+              {step === 'profile' ? 'Es para tu panel y facturación. Podés cambiarlo después.' :
                step === 'company' ? '¿Tienes un código de invitación o crearemos una nueva empresa?' :
                'Tu cuenta está configurada correctamente'}
             </p>
@@ -165,17 +170,20 @@ export default function Onboarding() {
                 <form onSubmit={handleProfileSubmit} className="space-y-6">
                   <div>
                     <label className="text-sm font-medium text-brand-200/90 mb-2 block">
-                      Nombre Completo
+                      Nombre de la empresa
                     </label>
                     <Input
                       type="text"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      placeholder="Tu nombre completo"
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      placeholder="Paragon Financial Corp"
                       required
                       disabled={loading}
                       className="input-glass h-12"
                     />
+                    <p className="text-xs text-brand-400 mt-1">
+                      Se crea tu espacio con reglas de STSS y nómina de Honduras pre-configuradas.
+                    </p>
                   </div>
 
                   {error && (
@@ -187,9 +195,9 @@ export default function Onboarding() {
                   <Button
                     type="submit"
                     className="w-full h-12 bg-brand-900 hover:bg-brand-800 text-white"
-                    disabled={loading || !fullName}
+                    disabled={loading || !companyName}
                   >
-                    {loading ? 'Guardando...' : 'Continuar'}
+                    {loading ? 'Creando...' : 'Crear departamento'}
                     <ArrowRight className="h-5 w-5 ml-2" />
                   </Button>
                 </form>
