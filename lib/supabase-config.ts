@@ -9,7 +9,7 @@ export const supabaseConfig = {
 export function validateSupabaseConfig() {
   if (!supabaseConfig.url || !supabaseConfig.anonKey) {
     throw new Error(
-      'Missing Supabase environment variables. Please check your .env.local file.'
+      'Missing Supabase environment variables. Please check your .env file.'
     )
   }
 } 
