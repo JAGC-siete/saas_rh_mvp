@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
-import { UserPlus, Building, ArrowLeft } from 'lucide-react'
+import { UserPlus, Building, ArrowLeft, Clock, FileText, DollarSign } from 'lucide-react'
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -75,10 +75,10 @@ export default function Register() {
               <UserPlus className="h-10 w-10 text-brand-900" />
             </div>
             <h1 className="text-3xl font-bold text-white mb-2">
-              Crear Cuenta
+              Úsalo gratis por 30 días
             </h1>
             <p className="text-brand-200/90">
-              Comienza a gestionar tu empresa
+              Automatiza tu planilla en 24 horas o trabajo gratis hasta lograrlo
             </p>
           </div>
 
@@ -196,6 +196,93 @@ export default function Register() {
                   {loading ? 'Creando cuenta...' : 'Crear Cuenta'}
                 </Button>
               </form>
+            </CardContent>
+          </Card>
+
+          {/* Qué incluye */}
+          <div className="max-w-6xl mx-auto mb-16">
+            <h2 className="text-3xl font-bold text-white text-center mb-12">
+              Qué incluye tu cuenta gratuita
+            </h2>
+            <div className="grid md:grid-cols-3 gap-8">
+              <Card variant="glass" className="text-center">
+                <CardHeader className="pb-4">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-500/10 border border-brand-500/20 mb-4 mx-auto">
+                    <Clock className="h-8 w-8 text-brand-400" />
+                  </div>
+                  <CardTitle className="text-xl font-bold text-white">
+                    Asistencia en tiempo real
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-brand-300">Entradas/salidas, tardanza con justificación y reportes básicos.</p>
+                </CardContent>
+              </Card>
+
+              <Card variant="glass" className="text-center">
+                <CardHeader className="pb-4">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-500/10 border border-brand-500/20 mb-4 mx-auto">
+                    <FileText className="h-8 w-8 text-brand-400" />
+                  </div>
+                  <CardTitle className="text-xl font-bold text-white">
+                    Planilla legal HN
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-brand-300">IHSS, RAP, ISR parametrizables; planilla de ejemplo lista para validar.</p>
+                </CardContent>
+              </Card>
+
+              <Card variant="glass" className="text-center">
+                <CardHeader className="pb-4">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-500/10 border border-brand-500/20 mb-4 mx-auto">
+                    <DollarSign className="h-8 w-8 text-brand-400" />
+                  </div>
+                  <CardTitle className="text-xl font-bold text-white">
+                    Vouchers en PDF
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-brand-300">Descarga masiva y envío por email/WhatsApp cuando pases a plan.</p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          {/* Garantía */}
+          <Card variant="glass" className="border-green-500/30 bg-green-500/5">
+            <CardContent className="p-8">
+              <h2 className="text-2xl font-bold text-white mb-4 text-center">
+                Garantía: 24 horas o trabajo gratis hasta dejarlo andando
+              </h2>
+              <p className="text-lg text-brand-300 mb-6 text-center">
+                Si en tu caso necesitamos más ajustes, seguimos trabajando sin costo adicional hasta que tu proceso quede funcionando.
+              </p>
+              <div className="grid md:grid-cols-2 gap-4 max-w-md mx-auto">
+                <div className="text-center">
+                  <p className="text-sm text-brand-300">WhatsApp</p>
+                  <p className="text-xs text-brand-400">+504 9470-7007</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm text-brand-300">Email</p>
+                  <p className="text-xs text-brand-400">jorge7gomez@gmail.com</p>
+                </div>
+              </div>
+              <p className="text-sm text-brand-400 text-center mt-6">
+                Solo email requerido. Sin tarjeta. Sin compromiso.
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Social Proof */}
+          <Card variant="glass" className="border-green-500/30 bg-green-500/5">
+            <CardContent className="p-8">
+              <p className="text-xl text-white mb-4 text-center">
+                <span className="text-green-400 font-bold">"Reducimos 80% el tiempo de planilla con SISU."</span> — Paragon Financial Corp
+              </p>
+              <p className="text-brand-300 text-center">
+                Infraestructura estilo AWS, datos cifrados en tránsito y en reposo, control de roles. Soporte por email o WhatsApp.
+              </p>
             </CardContent>
           </Card>
 
