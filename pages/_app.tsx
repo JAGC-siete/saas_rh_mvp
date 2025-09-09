@@ -35,22 +35,12 @@ async function loadEnvironmentVariables() {
 
 export default function App({ Component, pageProps }: AppProps) {
   const [supabaseClient, setSupabaseClient] = useState<any>(null)
-  const [envLoaded, setEnvLoaded] = useState(false)
+  const [isClient, setIsClient] = useState(false)
 
   useEffect(() => {
-    // Load environment variables first
-    const loadEnv = async () => {
-      await loadEnvironmentVariables()
-      setEnvLoaded(true)
-    }
+    setIsClient(true)
     
-    loadEnv()
-  }, [])
-
-  useEffect(() => {
-    // Initialize Supabase client only after environment variables are loaded
-    if (!envLoaded) return
-    
+    // Initialize Supabase client immediately
     try {
       const client = createClient()
       if (client) {
@@ -60,7 +50,16 @@ export default function App({ Component, pageProps }: AppProps) {
     } catch (error) {
       console.error('❌ Failed to create Supabase client:', error)
     }
-  }, [envLoaded])
+  }, [])
+
+  // Show loading state during hydration
+  if (!isClient) {
+    return (
+      <div className="min-h-screen bg-app flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+      </div>
+    )
+  }
 
   return (
     <SupabaseContext.Provider value={supabaseClient}>
