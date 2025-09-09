@@ -102,7 +102,7 @@ export default function LandingPage() {
                     Servicios
                   </a>
                   <Link
-                    href="/register"
+                    href="/auth/start"
                     className="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 shadow-lg shadow-black/20 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap min-w-[160px] text-center"
                   >
                     Crea tu departamento

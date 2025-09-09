@@ -6,10 +6,11 @@ import { logger } from './lib/logger'
 // Cache public routes for better performance
 const PUBLIC_ROUTES = new Set([
   '/',                 // Landing principal (marketing)
-  '/login',            // Página de login principal - PÚBLICO
+  '/auth/start',       // Página de inicio de autenticación - PÚBLICO
+  '/auth/callback',    // OAuth callback - PÚBLICO
+  '/onboarding',       // Página de onboarding post-auth - PÚBLICO
   '/demo',             // Página de solicitud de demo - PÚBLICO
   '/activar',          // Formulario de activación - PÚBLICO
-  '/register',         // Página de registro - PÚBLICO
   '/gracias',          // Página de confirmación - PÚBLICO
   '/pricing',          // Página de precios - PÚBLICO
   '/features',         // Página de características - PÚBLICO
@@ -21,10 +22,8 @@ const PUBLIC_ROUTES = new Set([
   '/trial/attendance', // Asistencia del trial - PÚBLICO
   '/trial/payroll',    // Nómina del trial - PÚBLICO
   '/trial/gamification', // Gamificación del trial - PÚBLICO
-  '/auth/callback',     // OAuth callback - PÚBLICO
   '/auth/auth-code-error', // OAuth error page - PÚBLICO
   '/politicadeprivacidad', // Política de privacidad - PÚBLICO
-  '/app/login',        // Login de la aplicación
   '/app/demo/pin',     // PIN de demo - PÚBLICO
   '/app/attendance/register', // Registro de asistencia - PÚBLICO
   '/registrodeasistencia',
@@ -35,7 +34,6 @@ const PUBLIC_ROUTES = new Set([
   '/api/attendance/first-time-check',
   '/api/attendance/update-schedule',
   '/api/activar',      // API para formulario de activación - PÚBLICO
-  '/api/auth/register', // API de registro - PÚBLICO
   '/api/demo/verify-pin', // API para verificar PIN demo - PÚBLICO
   '/api/trial',        // Todas las APIs del trial - PÚBLICO
   '/api/trial/*',      // Sub-APIs del trial - PÚBLICO
