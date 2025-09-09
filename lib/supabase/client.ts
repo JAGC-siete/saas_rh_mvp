@@ -2,9 +2,20 @@ import { createBrowserClient } from '@supabase/ssr'
 import { env } from '../env'
 
 export function createClient() {
-  // Get environment variables from centralized config
-  const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseAnonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  // Get environment variables directly from process.env for client-side
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  // Debug logging
+  console.log('🔍 Supabase client initialization:', {
+    supabaseUrl: supabaseUrl ? '✅ Set' : '❌ Missing',
+    supabaseAnonKey: supabaseAnonKey ? '✅ Set' : '❌ Missing',
+    processEnv: {
+      NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ? '✅ Set' : '❌ Missing',
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '✅ Set' : '❌ Missing',
+    },
+    env: env
+  })
 
   // Check if environment variables are available
   if (!supabaseUrl || !supabaseAnonKey) {
@@ -18,6 +29,10 @@ export function createClient() {
     console.error('SUPABASE_URL:', supabaseUrl ? '✅ Set' : '❌ Missing')
     console.error('SUPABASE_ANON_KEY:', supabaseAnonKey ? '✅ Set' : '❌ Missing')
     console.error('Environment check:', env)
+    console.error('Process.env check:', {
+      NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ? '✅ Set' : '❌ Missing',
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '✅ Set' : '❌ Missing',
+    })
     throw new Error('Supabase environment variables are not configured')
   }
 

@@ -308,8 +308,12 @@ export async function middleware(request: NextRequest) {
           get(name: string) {
             return request.cookies.get(name)?.value
           },
-          set() {},
-          remove() {},
+          set(name: string, value: string, options: any) {
+            // Don't set cookies in middleware, just read them
+          },
+          remove(name: string, options: any) {
+            // Don't remove cookies in middleware, just read them
+          },
         },
       })
       
@@ -403,8 +407,12 @@ export async function middleware(request: NextRequest) {
         get(name: string) {
           return request.cookies.get(name)?.value
         },
-        set() {},
-        remove() {},
+        set(name: string, value: string, options: any) {
+          // Don't set cookies in middleware, just read them
+        },
+        remove(name: string, options: any) {
+          // Don't remove cookies in middleware, just read them
+        },
       },
     })
     

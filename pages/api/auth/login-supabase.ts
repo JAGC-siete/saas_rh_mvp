@@ -76,6 +76,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       { expiresIn: '24h' }
     )
 
+    // Set Supabase session cookies for middleware compatibility
+    if (authData.session) {
+      const { access_token, refresh_token, expires_at } = authData.session
+      
+      // Set the session cookies that Supabase expects
+      res.setHeader('Set-Cookie', [
+        `sb-access-token=${access_token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${expires_at - Math.floor(Date.now() / 1000)}`,
+        `sb-refresh-token=${refresh_token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`, // 30 days
+      ])
+    }
+
     return res.status(200).json({
       token,
       user: {

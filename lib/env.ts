@@ -18,6 +18,14 @@ function getEnvVar(key: string, fallback: string = ''): string {
     return (global as any)[key]
   }
   
+  // For Next.js, try to get from process.env with NEXT_PUBLIC_ prefix
+  if (key.startsWith('NEXT_PUBLIC_')) {
+    const nextKey = key
+    if (process.env[nextKey]) {
+      return process.env[nextKey]!
+    }
+  }
+  
   return fallback
 }
 
