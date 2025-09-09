@@ -2,10 +2,10 @@ import { useState } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
 import dynamic from 'next/dynamic'
-const CloudBackground = dynamic(() => import('../components/CloudBackground'), { ssr: false })
-import { Card, CardContent } from '../components/ui/card'
-import { Button } from '../components/ui/button'
-import { Input } from '../components/ui/input'
+const CloudBackground = dynamic(() => import('../../components/CloudBackground'), { ssr: false })
+import { Card, CardContent } from '../../components/ui/card'
+import { Button } from '../../components/ui/button'
+import { Input } from '../../components/ui/input'
 import { Mail, Lock, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 
