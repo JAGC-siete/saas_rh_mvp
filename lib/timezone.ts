@@ -408,3 +408,17 @@ export function validateHondurasTimezone(date: Date): void {
     });
   }
 }
+
+/**
+ * 🇭🇳 GET DATE PARTS IN TEGUCIGALPA TIMEZONE
+ * Returns { year, month, day } for current date in Honduras
+ */
+export function toTGUDateParts(date?: Date): { year: number; month: number; day: number } {
+  const hondurasDate = date ? convertToHondurasTime(date) : nowInHonduras();
+  
+  return {
+    year: hondurasDate.getFullYear(),
+    month: hondurasDate.getMonth() + 1, // JavaScript months are 0-based
+    day: hondurasDate.getDate()
+  };
+}
