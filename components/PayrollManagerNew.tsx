@@ -1,27 +1,83 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { Icon } from './Icon'
 import { usePayrollState } from '../lib/hooks/usePayrollState'
-// PayrollLineEditor only used in edit mode - keeping for now
-import { PayrollLineEditor } from './PayrollLineEditor'
 import { payrollApi, openInNewTab } from '../lib/payroll-api'
 import { useToast } from '../lib/toast'
 import { getHondurasTimestamp, nowInHonduras } from '../lib/timezone'
 import { formatCurrency, formatCurrencyShort } from '../lib/utils/currency'
 import { usePayrollMetrics } from '../lib/hooks/usePayrollMetrics'
+import { fetchUnifiedPayroll, getCurrentPeriod, UnifiedRow, UnifiedResumen } from '../lib/payroll-unified'
+import UnifiedPayrollTable from './UnifiedPayrollTable'
+import ConfigNomina from './ConfigNomina'
 
 export default function PayrollManagerNew() {
   const payrollState = usePayrollState()
   const toast = useToast()
 
+  // Unified data state
+  const [unifiedData, setUnifiedData] = useState<{ rows: UnifiedRow[]; resumen: UnifiedResumen } | null>(null)
+  const [unifiedLoading, setUnifiedLoading] = useState(false)
+  const [currentPeriod, setCurrentPeriod] = useState(getCurrentPeriod())
+
   // Use centralized metrics hook
   const payrollMetrics = usePayrollMetrics(payrollState.planilla)
+
+  // Load current period data on mount
+  useEffect(() => {
+    const loadCurrentPeriodData = async () => {
+      setUnifiedLoading(true)
+      try {
+        const data = await fetchUnifiedPayroll(
+          'current-company-id', // TODO: Get from auth context
+          currentPeriod.year,
+          currentPeriod.month,
+          currentPeriod.quincena
+        )
+        setUnifiedData(data)
+      } catch (error) {
+        console.error('Error loading current period data:', error)
+        toast.error('Error', 'No se pudieron cargar los datos del período actual', 5000)
+      } finally {
+        setUnifiedLoading(false)
+      }
+    }
+
+    loadCurrentPeriodData()
+  }, [currentPeriod, toast])
 
   // Handle filter changes
   const handleFilterChange = (key: string, value: any) => {
     payrollState.updateFilters({ [key]: value })
+    setCurrentPeriod(prev => ({ ...prev, [key]: value }))
+  }
+
+  // Handle unified preview
+  const handleUnifiedPreview = async () => {
+    setUnifiedLoading(true)
+    try {
+      const data = await fetchUnifiedPayroll(
+        'current-company-id', // TODO: Get from auth context
+        currentPeriod.year,
+        currentPeriod.month,
+        currentPeriod.quincena
+      )
+      setUnifiedData(data)
+      toast.success(
+        'Preview Generado',
+        `${data.resumen.empleados} empleados procesados exitosamente`,
+        5000
+      )
+    } catch (error: any) {
+      toast.error(
+        'Error en Preview',
+        error.message || 'No se pudo generar el preview',
+        8000
+      )
+    } finally {
+      setUnifiedLoading(false)
+    }
   }
 
   // Handle actions
@@ -188,7 +244,7 @@ export default function PayrollManagerNew() {
         <div className="flex items-center gap-2">
           {getStatusBadge(payrollState.status)}
           
-          {payrollState.loading && (
+          {(payrollState.loading || unifiedLoading) && (
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400"></div>
           )}
         </div>
@@ -215,17 +271,17 @@ export default function PayrollManagerNew() {
         </Card>
       )}
 
-      {/* DASHBOARD DE MÉTRICAS - GRID RESPONSIVE (ETAPA 1.2 + 1.3) */}
+      {/* DASHBOARD DE MÉTRICAS - GRID RESPONSIVE */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
-        {/* Fila 1: Métricas Principales */}
-        
         {/* 1. Empleados Activos */}
         <Card variant="glass" className="hover:scale-105 transition-all duration-200 cursor-pointer backdrop-blur-md bg-white/10 border border-white/20">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-semibold text-gray-200">Empleados Activos</p>
-                <p className="text-2xl font-bold text-white">{payrollMetrics.activeEmployees}</p>
+                <p className="text-2xl font-bold text-white">
+                  {unifiedData?.resumen.empleados || payrollMetrics.activeEmployees}
+                </p>
               </div>
               <div className="p-2 bg-blue-500/30 rounded-full">
                 <Icon name="users" className="h-6 w-6 text-blue-200" />
@@ -241,7 +297,7 @@ export default function PayrollManagerNew() {
               <div>
                 <p className="text-sm font-semibold text-gray-200">Total Salario Bruto</p>
                 <p className="text-2xl font-bold text-white">
-                  {formatCurrencyShort(payrollMetrics.totalGrossSalary)}
+                  {formatCurrencyShort(unifiedData?.resumen.total_bruto || payrollMetrics.totalGrossSalary)}
                 </p>
               </div>
               <div className="p-2 bg-green-500/30 rounded-full">
@@ -258,7 +314,11 @@ export default function PayrollManagerNew() {
               <div>
                 <p className="text-sm font-semibold text-gray-200">Total Deducciones</p>
                 <p className="text-2xl font-bold text-white">
-                  {formatCurrencyShort(payrollMetrics.totalDeductions)}
+                  {formatCurrencyShort(
+                    unifiedData?.resumen.total_deducciones 
+                      ? Object.values(unifiedData.resumen.total_deducciones).reduce((a, b) => a + b, 0)
+                      : payrollMetrics.totalDeductions
+                  )}
                 </p>
               </div>
               <div className="p-2 bg-red-500/30 rounded-full">
@@ -275,7 +335,7 @@ export default function PayrollManagerNew() {
               <div>
                 <p className="text-sm font-semibold text-gray-200">Total Salario Neto</p>
                 <p className="text-2xl font-bold text-white">
-                  {formatCurrencyShort(payrollMetrics.totalNetSalary)}
+                  {formatCurrencyShort(unifiedData?.resumen.total_neto || payrollMetrics.totalNetSalary)}
                 </p>
               </div>
               <div className="p-2 bg-emerald-500/30 rounded-full">
@@ -284,354 +344,68 @@ export default function PayrollManagerNew() {
             </div>
           </CardContent>
         </Card>
-
-        {/* Fila 2: Métricas Secundarias */}
-        
-        {/* 5. Total IHSS */}
-        <Card variant="glass" className="hover:scale-105 transition-all duration-200 cursor-pointer backdrop-blur-md bg-white/10 border border-white/20">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold text-gray-200">Total IHSS</p>
-                <p className="text-2xl font-bold text-white">
-                  {formatCurrencyShort(payrollMetrics.totalIHSS)}
-                </p>
-              </div>
-              <div className="p-2 bg-blue-500/30 rounded-full">
-                <Icon name="building" className="h-6 w-6 text-blue-200" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* 6. Total RAP */}
-        <Card variant="glass" className="hover:scale-105 transition-all duration-200 cursor-pointer backdrop-blur-md bg-white/10 border border-white/20">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold text-gray-200">Total RAP</p>
-                <p className="text-2xl font-bold text-white">
-                  {formatCurrencyShort(payrollMetrics.totalRAP)}
-                </p>
-              </div>
-              <div className="p-2 bg-purple-500/30 rounded-full">
-                <Icon name="shield" className="h-6 w-6 text-purple-200" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* 7. Total ISR */}
-        <Card variant="glass" className="hover:scale-105 transition-all duration-200 cursor-pointer backdrop-blur-md bg-white/10 border border-white/20">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold text-gray-200">Total ISR</p>
-                <p className="text-2xl font-bold text-white">
-                  {formatCurrencyShort(payrollMetrics.totalISR)}
-                </p>
-              </div>
-              <div className="p-2 bg-orange-500/30 rounded-full">
-                <Icon name="calculator" className="h-6 w-6 text-orange-200" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* 8. Total Días Trabajados */}
-        <Card variant="glass" className="hover:scale-105 transition-all duration-200 cursor-pointer backdrop-blur-md bg-white/10 border border-white/20">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold text-gray-200">Total Días Trabajados</p>
-                <p className="text-2xl font-bold text-white">{payrollMetrics.totalDaysWorked}</p>
-              </div>
-              <div className="p-2 bg-indigo-500/30 rounded-full">
-                <Icon name="calendar" className="h-6 w-6 text-indigo-200" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
-      {/* Métricas Adicionales - Solo visible en pantallas grandes */}
-      <div className="hidden xl:grid xl:grid-cols-3 gap-6">
-        {/* Promedio de Salario */}
-        <Card variant="glass" className="backdrop-blur-md bg-white/10 border border-white/20">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold text-gray-200">Salario Promedio</p>
-                <p className="text-xl font-bold text-white">
-                  {formatCurrencyShort(payrollMetrics.averageSalary)}
-                </p>
-              </div>
-              <div className="p-2 bg-yellow-500/30 rounded-full">
-                <Icon name="target" className="h-5 w-5 text-yellow-200" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Configuración de Nómina */}
+      <ConfigNomina
+        year={currentPeriod.year}
+        month={currentPeriod.month}
+        quincena={currentPeriod.quincena}
+        tipo={payrollState.filters.tipo}
+        onYearChange={(year) => handleFilterChange('year', year)}
+        onMonthChange={(month) => handleFilterChange('month', month)}
+        onQuincenaChange={(quincena) => handleFilterChange('quincena', quincena)}
+        onTipoChange={(tipo) => handleFilterChange('tipo', tipo)}
+        onPreview={handleUnifiedPreview}
+        onReset={() => {
+          const newPeriod = getCurrentPeriod()
+          setCurrentPeriod(newPeriod)
+          payrollState.resetFilters()
+        }}
+        loading={unifiedLoading}
+        canPreview={true}
+      />
 
-        {/* Cobertura de Nómina */}
-        <Card variant="glass" className="backdrop-blur-md bg-white/10 border border-white/20">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold text-gray-200">Cobertura de Nómina</p>
-                <p className="text-xl font-bold text-white">{payrollMetrics.payrollCoverage}%</p>
-              </div>
-              <div className="p-2 bg-teal-500/30 rounded-full">
-                <Icon name="check" className="h-5 w-5 text-teal-200" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Unified Payroll Table */}
+      {unifiedData && (
+        <UnifiedPayrollTable
+          rows={unifiedData.rows}
+          resumen={unifiedData.resumen}
+          onGenerateVoucher={handleGenerateVoucher}
+          onAuthorize={handleAuthorize}
+          onGeneratePDF={handleGeneratePDF}
+          onSendEmail={() => handleSendEmail()}
+          loading={unifiedLoading}
+          canAuthorize={payrollState.canAuthorize}
+          canSend={payrollState.canSend}
+          runId={payrollState.runId}
+          period={currentPeriod}
+        />
+      )}
 
-        {/* Tasa de Asistencia */}
-        <Card variant="glass" className="backdrop-blur-md bg-white/10 border border-white/20">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold text-gray-200">Tasa de Asistencia</p>
-                <p className="text-xl font-bold text-white">{payrollMetrics.attendanceRate}%</p>
-              </div>
-              <div className="p-2 bg-cyan-500/30 rounded-full">
-                <Icon name="clock" className="h-5 w-5 text-cyan-200" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filters Card */}
-      <Card variant="glass" className="backdrop-blur-md bg-white/10 border border-white/20">
-        <CardHeader>
-          <CardTitle className="text-white text-xl font-semibold">Configuración de Nómina</CardTitle>
-          <CardDescription className="text-gray-200 text-base">
-            Define los parámetros para generar la nómina (año, mes, quincena y tipo de deducciones)
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Año */}
-            <div>
-              <label htmlFor="year" className="block text-sm font-semibold text-gray-200 mb-2">Año</label>
-              <Select
-                value={payrollState.filters.year.toString()}
-                onValueChange={(value) => handleFilterChange('year', parseInt(value))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar año" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Array.from({ length: 5 }, (_, i) => nowInHonduras().getFullYear() - 2 + i).map(year => (
-                    <SelectItem key={year} value={year.toString()}>
-                      {year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Mes */}
-            <div>
-              <label htmlFor="month" className="block text-sm font-semibold text-gray-200 mb-2">Mes</label>
-              <Select
-                value={payrollState.filters.month.toString()}
-                onValueChange={(value) => handleFilterChange('month', parseInt(value))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar mes" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
-                    <SelectItem key={month} value={month.toString()}>
-                      {new Date(payrollState.filters.year, month - 1).toLocaleDateString('es-HN', { month: 'long' })}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Quincena */}
-            <div>
-              <label htmlFor="quincena" className="block text-sm font-semibold text-gray-200 mb-2">Quincena</label>
-              <Select
-                value={payrollState.filters.quincena.toString()}
-                onValueChange={(value) => handleFilterChange('quincena', parseInt(value))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar quincena" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">1 (1-15)</SelectItem>
-                  <SelectItem value="2">2 (16-31)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Tipo */}
-            <div>
-              <label htmlFor="tipo" className="block text-sm font-semibold text-gray-200 mb-2">Tipo</label>
-              <Select
-                value={payrollState.filters.tipo}
-                onValueChange={(value) => handleFilterChange('tipo', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="CON">Con deducciones</SelectItem>
-                  <SelectItem value="SIN">Sin deducciones</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex items-center gap-4 mt-6">
-            <Button
-              onClick={handlePreview}
-              disabled={!payrollState.canPreview || payrollState.loading}
-              className="flex items-center gap-2"
-            >
-              <Icon name="eye" className="h-4 w-4" />
-              {payrollState.loading ? 'Generando...' : 'Generar Preview'}
-            </Button>
-
-            <Button
-              variant="outline"
-              onClick={payrollState.resetFilters}
-              disabled={payrollState.loading}
-            >
-              Resetear Filtros
-            </Button>
-
-            {payrollState.canReset && (
-              <Button
-                variant="outline"
-                onClick={payrollState.resetState}
-                disabled={payrollState.loading}
-              >
-                Resetear Estado
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* UNIFIED PAYROLL TABLE - Detalle por empleado + Planilla de Nómina */}
-      {payrollState.hasPlanilla && (
+      {/* Fallback to legacy table if no unified data */}
+      {!unifiedData && payrollState.hasPlanilla && (
         <Card variant="glass" className="backdrop-blur-md bg-white/10 border border-white/20">
           <CardHeader>
-            <CardTitle className="text-white text-xl font-semibold">Planilla de Nómina - Detalle por Empleado</CardTitle>
+            <CardTitle className="text-white text-xl font-semibold">Planilla de Nómina</CardTitle>
             <CardDescription className="text-gray-200 text-base">
               {payrollState.totalEmployees} empleados - 
               Total Bruto: {formatCurrency(payrollState.totalBruto)} - 
-              Total Neto: {formatCurrency(payrollState.totalNeto)} - 
-              Período: {new Date(payrollState.filters.year, payrollState.filters.month - 1).toLocaleDateString('es-HN', { month: 'long', year: 'numeric' })} Q{payrollState.filters.quincena}
+              Total Neto: {formatCurrency(payrollState.totalNeto)}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {/* Unified Table with better readability */}
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-white/30">
-                <thead className="bg-white/20">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Empleado</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Depto</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Salario Base</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Días Trab.</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Ausentes</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Tardes</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Salario Bruto</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">IHSS</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">RAP</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">ISR</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Total Ded.</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Salario Neto</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-transparent divide-y divide-white/20">
-                  {payrollState.planilla.map((line: any, index: number) => (
-                    <tr key={index} className="hover:bg-white/10 transition-colors duration-200">
-                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-white">{line.name}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">{line.department || 'N/A'}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">{formatCurrency(line.base_salary || 0)}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">{line.days_worked || 0}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">{line.days_absent || 0}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">{line.late_days || 0}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-green-300">{formatCurrency(line.total_earnings || 0)}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-red-300">{formatCurrency(line.IHSS || 0)}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-red-300">{formatCurrency(line.RAP || 0)}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-red-300">{formatCurrency(line.ISR || 0)}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-red-300">{formatCurrency(line.total_deducciones || 0)}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-white">{formatCurrency(line.total || 0)}</td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleGenerateVoucher(line.line_id)}
-                            disabled={payrollState.loading}
-                            className="bg-white/10 border-white/30 text-white hover:bg-white/20"
-                          >
-                            <Icon name="download" className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {payrollState.planilla.length === 0 && (
-                    <tr>
-                      <td colSpan={13} className="px-4 py-8 text-center text-gray-400 text-lg">
-                        Sin registros de nómina para el período seleccionado
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex items-center gap-4 mt-6 pt-6 border-t border-white/20">
-              <Button
-                onClick={handleAuthorize}
-                disabled={!payrollState.canAuthorize || payrollState.loading}
-                className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
-              >
-                <Icon name="check" className="h-4 w-4" />
-                {payrollState.loading ? 'Autorizando...' : 'Autorizar Nómina'}
-              </Button>
-
-              <Button
-                onClick={handleGeneratePDF}
-                disabled={!payrollState.runId || payrollState.loading}
-                variant="outline"
-                className="flex items-center gap-2 bg-white/10 border-white/30 text-white hover:bg-white/20"
-              >
-                <Icon name="document" className="h-4 w-4" />
-                Generar PDF
-              </Button>
-
-              <Button
-                onClick={() => handleSendEmail()}
-                disabled={!payrollState.canSend || payrollState.loading}
-                variant="outline"
-                className="flex items-center gap-2 bg-white/10 border-white/30 text-white hover:bg-white/20"
-              >
-                <Icon name="envelope" className="h-4 w-4" />
-                Enviar por Email
-              </Button>
+            <div className="text-center py-8 text-gray-400">
+              <Icon name="alert" className="h-12 w-12 mx-auto mb-4" />
+              <p className="text-lg">Cargando datos unificados...</p>
+              <p className="text-sm">Si el problema persiste, usa la configuración de nómina para generar un preview</p>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Line Editor for Editable Mode */}
-      {payrollState.canEdit && payrollState.planilla.length > 0 && (
+      {/* Line Editor for Editable Mode - Only show if using legacy data */}
+      {payrollState.canEdit && payrollState.planilla.length > 0 && !unifiedData && (
         <Card variant="glass" className="backdrop-blur-md bg-white/10 border border-white/20">
           <CardHeader>
             <CardTitle className="text-white text-xl font-semibold">Editor de Líneas</CardTitle>
@@ -643,45 +417,10 @@ export default function PayrollManagerNew() {
             {payrollState.planilla.map((line: any, index: number) => (
               <div key={index} className="mb-6 p-4 border border-white/20 rounded-lg">
                 <h4 className="font-medium mb-3 text-white">{line.name}</h4>
-                <PayrollLineEditor
-                  line={line}
-                  onEdit={handleEditLine}
-                  isEditing={payrollState.canEdit}
-                />
+                {/* PayrollLineEditor component would go here if needed */}
+                <div className="text-gray-400 text-sm">Editor de líneas no disponible en modo unificado</div>
               </div>
             ))}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Summary Card */}
-      {payrollState.hasPlanilla && (
-        <Card variant="glass" className="backdrop-blur-md bg-white/10 border border-white/20">
-          <CardHeader>
-            <CardTitle className="text-white text-xl font-semibold">Resumen de Nómina</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="text-center p-4 bg-blue-500/30 rounded-lg border border-blue-500/20">
-                <div className="text-2xl font-bold text-blue-200">{payrollState.totalEmployees}</div>
-                <div className="text-sm font-semibold text-blue-200">Empleados</div>
-              </div>
-              
-              <div className="text-center p-4 bg-green-500/30 rounded-lg border border-green-500/20">
-                <div className="text-2xl font-bold text-green-200">{formatCurrency(payrollState.totalBruto)}</div>
-                <div className="text-sm font-semibold text-green-200">Total Bruto</div>
-              </div>
-              
-              <div className="text-center p-4 bg-red-500/30 rounded-lg border border-red-500/20">
-                <div className="text-2xl font-bold text-red-200">{formatCurrency(payrollState.totalDeducciones)}</div>
-                <div className="text-sm font-semibold text-red-200">Total Deducciones</div>
-              </div>
-              
-              <div className="text-center p-4 bg-purple-500/30 rounded-lg border border-purple-500/20">
-                <div className="text-2xl font-bold text-purple-200">{formatCurrency(payrollState.totalNeto)}</div>
-                <div className="text-sm font-semibold text-purple-200">Total Neto</div>
-              </div>
-            </div>
           </CardContent>
         </Card>
       )}
