@@ -9,6 +9,8 @@ const PUBLIC_ROUTES = new Set([
   '/auth/start',       // Página de inicio de autenticación - PÚBLICO
   '/auth/callback',    // OAuth callback - PÚBLICO
   '/onboarding',       // Página de onboarding post-auth - PÚBLICO
+  '/register',         // Redirigir a /auth/start - PÚBLICO (legacy)
+  '/login',            // Redirigir a /auth/start - PÚBLICO (legacy)
   '/demo',             // Página de solicitud de demo - PÚBLICO
   '/activar',          // Formulario de activación - PÚBLICO
   '/gracias',          // Página de confirmación - PÚBLICO
@@ -160,6 +162,17 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   const startTime = Date.now()
 
+  // Handle legacy route redirections
+  if (pathname === '/register') {
+    logger.info('Redirecting legacy /register to /auth/start', { path: pathname })
+    return NextResponse.redirect(new URL('/auth/start', request.url))
+  }
+  
+  if (pathname === '/login') {
+    logger.info('Redirecting legacy /login to /auth/start', { path: pathname })
+    return NextResponse.redirect(new URL('/auth/start', request.url))
+  }
+
   // Log all requests with structured logging
   logger.debug('Middleware request', {
     method: request.method,
@@ -286,7 +299,7 @@ export async function middleware(request: NextRequest) {
           hasUrl: !!supabaseUrl,
           hasAnon: !!anon
         })
-        return NextResponse.redirect(new URL('/app/login', request.url))
+        return NextResponse.redirect(new URL('/auth/start', request.url))
       }
       
       const supabase = createServerClient(supabaseUrl, anon as string, {
@@ -309,12 +322,12 @@ export async function middleware(request: NextRequest) {
         } else {
           logger.error('Error getting user', error)
         }
-        return NextResponse.redirect(new URL('/app/login', request.url))
+        return NextResponse.redirect(new URL('/auth/start', request.url))
       }
       
       if (!user) {
         logger.info('No user found for protected app route', { path: pathname })
-        return NextResponse.redirect(new URL('/app/login', request.url))
+        return NextResponse.redirect(new URL('/auth/start', request.url))
       }
 
       // Check admin privileges for admin routes
@@ -366,7 +379,7 @@ export async function middleware(request: NextRequest) {
       
     } catch (error) {
       logger.error('Authentication error in protected app route', error)
-      return NextResponse.redirect(new URL('/app/login', request.url))
+      return NextResponse.redirect(new URL('/auth/start', request.url))
     }
   }
 
@@ -381,7 +394,7 @@ export async function middleware(request: NextRequest) {
         hasUrl: !!supabaseUrl,
         hasAnon: !!anon
       })
-      return NextResponse.redirect(new URL('/app/login', request.url))
+      return NextResponse.redirect(new URL('/auth/start', request.url))
     }
     
     const supabase = createServerClient(supabaseUrl, anon as string, {
@@ -404,12 +417,12 @@ export async function middleware(request: NextRequest) {
       } else {
         logger.error('Error getting user', error)
       }
-      return NextResponse.redirect(new URL('/app/login', request.url))
+      return NextResponse.redirect(new URL('/auth/start', request.url))
     }
     
     if (!user) {
       logger.info('No user found for private route', { path: pathname })
-      return NextResponse.redirect(new URL('/app/login', request.url))
+      return NextResponse.redirect(new URL('/auth/start', request.url))
     }
     
     logger.debug('Valid user found', { 
@@ -431,7 +444,7 @@ export async function middleware(request: NextRequest) {
     
   } catch (error) {
     logger.error('Authentication error in middleware', error)
-    return NextResponse.redirect(new URL('/app/login', request.url))
+    return NextResponse.redirect(new URL('/auth/start', request.url))
   }
 }
 
