@@ -115,15 +115,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Now initialize Supabase client
       try {
         console.log('🔧 Initializing Supabase client...')
-        const client = createClient()
-        if (client) {
-          setSupabase(client)
-          console.log('✅ Supabase client initialized successfully')
-        } else {
-          console.error('❌ Failed to create Supabase client - client is null')
-          setError('Failed to initialize authentication')
-          setLoading(false)
-        }
+        const client = await createClient()
+        setSupabase(client)
+        console.log('✅ Supabase client initialized successfully')
       } catch (err) {
         console.error('❌ Failed to create Supabase client:', err)
         setError('Failed to initialize authentication')

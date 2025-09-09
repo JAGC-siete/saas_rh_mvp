@@ -1,7 +1,8 @@
 import { createBrowserClient } from '@supabase/ssr'
 import { env, refreshEnvFromWindow } from '../env'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
-export function createClient() {
+export async function createClient(): Promise<SupabaseClient> {
   // Get environment variables from centralized config
   const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -25,51 +26,48 @@ export function createClient() {
     // During build time, return a mock client to prevent build failures
     if (typeof window === 'undefined') {
       console.warn('⚠️ Supabase environment variables not available during build time')
-      return null
+      throw new Error('Supabase environment variables are not configured')
     }
     
     // For client-side, try to load environment variables from API
     console.warn('⚠️ Supabase environment variables not available, trying to load from API...')
     
-    // Return a promise that will resolve when environment variables are loaded
-    return new Promise((resolve, reject) => {
+    try {
       // Try to load environment variables from API
-      fetch('/api/env')
-        .then(response => response.json())
-        .then(envData => {
-          if (envData.NEXT_PUBLIC_SUPABASE_URL && envData.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-            // Inject environment variables into global scope
-            if (typeof window !== 'undefined') {
-              (window as any).__ENV__ = envData
-              // Refresh the env object
-              refreshEnvFromWindow()
+      const response = await fetch('/api/env')
+      const envData = await response.json()
+      
+      if (envData.NEXT_PUBLIC_SUPABASE_URL && envData.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+        // Inject environment variables into global scope
+        if (typeof window !== 'undefined') {
+          (window as any).__ENV__ = envData
+          // Refresh the env object
+          refreshEnvFromWindow()
+        }
+        
+        // Create client with loaded variables
+        const client = createBrowserClient(envData.NEXT_PUBLIC_SUPABASE_URL, envData.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
+          auth: {
+            autoRefreshToken: true,
+            persistSession: true,
+            detectSessionInUrl: true
+          },
+          global: {
+            headers: {
+              'X-Client-Info': 'hr-saas-frontend'
             }
-            
-            // Create client with loaded variables
-            const client = createBrowserClient(envData.NEXT_PUBLIC_SUPABASE_URL, envData.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
-              auth: {
-                autoRefreshToken: true,
-                persistSession: true,
-                detectSessionInUrl: true
-              },
-              global: {
-                headers: {
-                  'X-Client-Info': 'hr-saas-frontend'
-                }
-              }
-            })
-            
-            console.log('✅ Supabase browser client created successfully with API-loaded variables')
-            resolve(client)
-          } else {
-            reject(new Error('Supabase environment variables are not configured'))
           }
         })
-        .catch(error => {
-          console.error('❌ Failed to load environment variables from API:', error)
-          reject(new Error('Supabase environment variables are not configured'))
-        })
-    })
+        
+        console.log('✅ Supabase browser client created successfully with API-loaded variables')
+        return client
+      } else {
+        throw new Error('Supabase environment variables are not configured')
+      }
+    } catch (error) {
+      console.error('❌ Failed to load environment variables from API:', error)
+      throw new Error('Supabase environment variables are not configured')
+    }
   }
 
   try {

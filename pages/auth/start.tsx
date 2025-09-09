@@ -25,7 +25,7 @@ export default function AuthStart() {
     setError('')
 
     try {
-      const supabase = createSupabaseBrowserClient()
+      const supabase = await createSupabaseBrowserClient()
       if (!supabase) throw new Error('Error inicializando Supabase')
       
       const { error } = await supabase.auth.signInWithOtp({
@@ -59,7 +59,7 @@ export default function AuthStart() {
     setError('')
 
     try {
-      const supabase = createSupabaseBrowserClient()
+      const supabase = await createSupabaseBrowserClient()
       if (!supabase) throw new Error('Error inicializando Supabase')
       
       const formattedPhone = phone.startsWith('+') ? phone : `+504${phone.replace(/\D/g, '')}`
@@ -91,7 +91,7 @@ export default function AuthStart() {
     setError('')
 
     try {
-      const supabase = createSupabaseBrowserClient()
+      const supabase = await createSupabaseBrowserClient()
       if (!supabase) throw new Error('Error inicializando Supabase')
       
       const formattedPhone = phone.startsWith('+') ? phone : `+504${phone.replace(/\D/g, '')}`
@@ -123,7 +123,7 @@ export default function AuthStart() {
     setError('')
 
     try {
-      const supabase = createSupabaseBrowserClient()
+      const supabase = await createSupabaseBrowserClient()
       if (!supabase) throw new Error('Error inicializando Supabase')
       
       const { error } = await supabase.auth.signInWithOAuth({

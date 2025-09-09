@@ -24,7 +24,7 @@ export default function PhoneAuthForm({ onBack }: PhoneAuthFormProps) {
     setError('')
 
     try {
-      const supabase = createSupabaseBrowserClient()
+      const supabase = await createSupabaseBrowserClient()
       
       if (!supabase) {
         setError('Error de configuración de autenticación')
@@ -61,7 +61,7 @@ export default function PhoneAuthForm({ onBack }: PhoneAuthFormProps) {
     setError('')
 
     try {
-      const supabase = createSupabaseBrowserClient()
+      const supabase = await createSupabaseBrowserClient()
       
       if (!supabase) {
         setError('Error de configuración de autenticación')
@@ -94,7 +94,7 @@ export default function PhoneAuthForm({ onBack }: PhoneAuthFormProps) {
     setError('')
 
     try {
-      const supabase = createSupabaseBrowserClient()
+      const supabase = await createSupabaseBrowserClient()
       
       if (!supabase) {
         setError('Error de configuración de autenticación')
