@@ -2,6 +2,9 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../lib/supabase/server'
 import { authenticateUser } from '../../../lib/auth-helpers'
 import { getHondurasTimestamp, nowInHonduras } from '../../../lib/timezone'
+import { requireUser } from '../../../lib/auth/requireUser'
+import { requirePlanAndQuota, incrementUsage, getBillingErrorCode } from '../../../lib/billing/enforce'
+import { auditPayrollGenerated } from '../../../lib/audit'
 
 // CONSTANTES CORRECTAS HONDURAS 2025 (VERIFICACIÓN CRUZADA)
 const HONDURAS_2025_CONSTANTS = {
@@ -118,6 +121,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       role: userProfile?.role,
       companyId: userProfile?.company_id 
     })
+
+    // Check plan and quota before processing
+    try {
+      await requirePlanAndQuota(supabase, userProfile.company_id, 'generate_payroll')
+    } catch (error: any) {
+      const statusCode = getBillingErrorCode(error.message)
+      return res.status(statusCode).json({ 
+        error: error.message,
+        code: error.message
+      })
+    }
 
     const { periodo, quincena, tipoCalculo } = req.body || {}
     
@@ -336,6 +350,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     console.log(`Nómina generada exitosamente para ${planilla.length} empleados`)
+
+    // Increment usage meter
+    try {
+      await incrementUsage(supabase, userProfile.company_id, 'generate_payroll')
+    } catch (error) {
+      console.warn('Failed to increment usage meter:', error)
+      // Don't fail the request if usage tracking fails
+    }
+
+    // Log audit event
+    try {
+      await auditPayrollGenerated(supabase, user.id, userProfile.company_id, periodo)
+    } catch (error) {
+      console.warn('Failed to log audit event:', error)
+      // Don't fail the request if audit fails
+    }
 
     return res.status(200).json({
       message: 'Nómina calculada exitosamente',
