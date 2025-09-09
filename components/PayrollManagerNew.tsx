@@ -4,75 +4,20 @@ import { Button } from './ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { Icon } from './Icon'
 import { usePayrollState } from '../lib/hooks/usePayrollState'
+// PayrollLineEditor only used in edit mode - keeping for now
 import { PayrollLineEditor } from './PayrollLineEditor'
 import { payrollApi, openInNewTab } from '../lib/payroll-api'
 import { useToast } from '../lib/toast'
 import { getHondurasTimestamp, nowInHonduras } from '../lib/timezone'
+import { formatCurrency, formatCurrencyShort } from '../lib/utils/currency'
+import { usePayrollMetrics } from '../lib/hooks/usePayrollMetrics'
 
 export default function PayrollManagerNew() {
   const payrollState = usePayrollState()
   const toast = useToast()
 
-  // CÁLCULOS DE MÉTRICAS (ETAPA 2.3)
-  const payrollMetrics = useMemo(() => {
-    if (!payrollState.planilla.length) {
-      return {
-        activeEmployees: 0,
-        totalGrossSalary: 0,
-        totalDeductions: 0,
-        totalNetSalary: 0,
-        totalIHSS: 0,
-        totalRAP: 0,
-        totalISR: 0,
-        totalDaysWorked: 0,
-        payrollCoverage: 0,
-        attendanceRate: 0,
-        averageSalary: 0,
-        departmentBreakdown: {}
-      }
-    }
-
-    const planilla = payrollState.planilla
-    const totalGrossSalary = planilla.reduce((sum, line) => sum + (line.total_earnings || 0), 0)
-    const totalIHSS = planilla.reduce((sum, line) => sum + (line.IHSS || 0), 0)
-    const totalRAP = planilla.reduce((sum, line) => sum + (line.RAP || 0), 0)
-    const totalISR = planilla.reduce((sum, line) => sum + (line.ISR || 0), 0)
-    const totalDeductions = totalIHSS + totalRAP + totalISR
-    const totalNetSalary = totalGrossSalary - totalDeductions
-    const totalDaysWorked = planilla.reduce((sum, line) => sum + (line.days_worked || 0), 0)
-    
-    // Cálculos adicionales
-    const activeEmployees = planilla.length
-    const averageSalary = activeEmployees > 0 ? totalGrossSalary / activeEmployees : 0
-    const payrollCoverage = activeEmployees > 0 ? 100 : 0 // Porcentaje de cobertura
-    
-    // Breakdown por departamento
-    const departmentBreakdown = planilla.reduce((acc, line) => {
-      const dept = line.department || 'Sin Departamento'
-      if (!acc[dept]) {
-        acc[dept] = { count: 0, name: dept, avgSalary: 0, totalSalary: 0 }
-      }
-      acc[dept].count++
-      acc[dept].totalSalary += (line.total_earnings || 0)
-      acc[dept].avgSalary = acc[dept].totalSalary / acc[dept].count
-      return acc
-    }, {} as Record<string, { count: number, name: string, avgSalary: number, totalSalary: number }>)
-
-    return {
-      activeEmployees,
-      totalGrossSalary,
-      totalDeductions,
-      totalNetSalary,
-      totalIHSS,
-      totalRAP,
-      totalISR,
-      totalDaysWorked,
-      payrollCoverage,
-      attendanceRate: 100, // Placeholder - se calculará con datos reales de asistencia
-      averageSalary,
-      departmentBreakdown
-    }
-  }, [payrollState.planilla])
+  // Use centralized metrics hook
+  const payrollMetrics = usePayrollMetrics(payrollState.planilla)
 
   // Handle filter changes
   const handleFilterChange = (key: string, value: any) => {
@@ -203,13 +148,7 @@ export default function PayrollManagerNew() {
     }
   }
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('es-HN', {
-      style: 'currency',
-      currency: 'HNL',
-      minimumFractionDigits: 2
-    }).format(value)
-  }
+  // formatCurrency now imported from utils
 
   const getStatusBadge = (status: string) => {
     const variants = {
@@ -302,12 +241,7 @@ export default function PayrollManagerNew() {
               <div>
                 <p className="text-sm font-medium text-gray-300">Total Salario Bruto</p>
                 <p className="text-2xl font-bold text-white">
-                  {new Intl.NumberFormat('es-HN', { 
-                    style: 'currency', 
-                    currency: 'HNL',
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 0
-                  }).format(payrollMetrics.totalGrossSalary)}
+                  {formatCurrencyShort(payrollMetrics.totalGrossSalary)}
                 </p>
               </div>
               <div className="p-2 bg-green-500/20 rounded-full">
@@ -324,12 +258,7 @@ export default function PayrollManagerNew() {
               <div>
                 <p className="text-sm font-medium text-gray-300">Total Deducciones</p>
                 <p className="text-2xl font-bold text-white">
-                  {new Intl.NumberFormat('es-HN', { 
-                    style: 'currency', 
-                    currency: 'HNL',
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 0
-                  }).format(payrollMetrics.totalDeductions)}
+                  {formatCurrencyShort(payrollMetrics.totalDeductions)}
                 </p>
               </div>
               <div className="p-2 bg-red-500/20 rounded-full">
@@ -346,12 +275,7 @@ export default function PayrollManagerNew() {
               <div>
                 <p className="text-sm font-medium text-gray-300">Total Salario Neto</p>
                 <p className="text-2xl font-bold text-white">
-                  {new Intl.NumberFormat('es-HN', { 
-                    style: 'currency', 
-                    currency: 'HNL',
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 0
-                  }).format(payrollMetrics.totalNetSalary)}
+                  {formatCurrencyShort(payrollMetrics.totalNetSalary)}
                 </p>
               </div>
               <div className="p-2 bg-emerald-500/20 rounded-full">
@@ -370,12 +294,7 @@ export default function PayrollManagerNew() {
               <div>
                 <p className="text-sm font-medium text-gray-300">Total IHSS</p>
                 <p className="text-2xl font-bold text-white">
-                  {new Intl.NumberFormat('es-HN', { 
-                    style: 'currency', 
-                    currency: 'HNL',
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 0
-                  }).format(payrollMetrics.totalIHSS)}
+                  {formatCurrencyShort(payrollMetrics.totalIHSS)}
                 </p>
               </div>
               <div className="p-2 bg-blue-500/20 rounded-full">
@@ -392,12 +311,7 @@ export default function PayrollManagerNew() {
               <div>
                 <p className="text-sm font-medium text-gray-300">Total RAP</p>
                 <p className="text-2xl font-bold text-white">
-                  {new Intl.NumberFormat('es-HN', { 
-                    style: 'currency', 
-                    currency: 'HNL',
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 0
-                  }).format(payrollMetrics.totalRAP)}
+                  {formatCurrencyShort(payrollMetrics.totalRAP)}
                 </p>
               </div>
               <div className="p-2 bg-purple-500/20 rounded-full">
@@ -414,12 +328,7 @@ export default function PayrollManagerNew() {
               <div>
                 <p className="text-sm font-medium text-gray-300">Total ISR</p>
                 <p className="text-2xl font-bold text-white">
-                  {new Intl.NumberFormat('es-HN', { 
-                    style: 'currency', 
-                    currency: 'HNL',
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 0
-                  }).format(payrollMetrics.totalISR)}
+                  {formatCurrencyShort(payrollMetrics.totalISR)}
                 </p>
               </div>
               <div className="p-2 bg-orange-500/20 rounded-full">
@@ -454,12 +363,7 @@ export default function PayrollManagerNew() {
               <div>
                 <p className="text-sm font-medium text-gray-300">Salario Promedio</p>
                 <p className="text-xl font-bold text-white">
-                  {new Intl.NumberFormat('es-HN', { 
-                    style: 'currency', 
-                    currency: 'HNL',
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 0
-                  }).format(payrollMetrics.averageSalary)}
+                  {formatCurrencyShort(payrollMetrics.averageSalary)}
                 </p>
               </div>
               <div className="p-2 bg-yellow-500/20 rounded-full">
@@ -543,7 +447,7 @@ export default function PayrollManagerNew() {
                 <SelectContent>
                   {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
                     <SelectItem key={month} value={month.toString()}>
-                      {new Date(2024, month - 1).toLocaleDateString('es-HN', { month: 'long' })}
+                      {new Date(payrollState.filters.year, month - 1).toLocaleDateString('es-HN', { month: 'long' })}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -762,15 +666,7 @@ export default function PayrollManagerNew() {
                 Enviar por Email
               </Button>
 
-              <Button
-                onClick={() => toast.info('WhatsApp', 'Feature en desarrollo - We will implement that later. Forget it for now.', 6000)}
-                disabled={!payrollState.canSend || payrollState.loading}
-                variant="outline"
-                className="flex items-center gap-2"
-              >
-                <Icon name="whatsapp" className="h-4 w-4" />
-                Enviar por WhatsApp
-              </Button>
+              {/* WhatsApp functionality removed - placeholder was not useful */}
             </div>
           </CardContent>
         </Card>

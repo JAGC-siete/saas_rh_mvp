@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Button } from '../../../components/ui/button'
 import EmployeeManager from '../../../components/EmployeeManager'
 import AttendanceManager from '../../../components/AttendanceManager'
-import PayrollManager from '../../../components/PayrollManager'
+import PayrollManagerNew from '../../../components/PayrollManagerNew'
 import ReportsManager from '../../../components/ReportsManager'
 import { ChartBarIcon, UsersIcon, ClockIcon, CurrencyDollarIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
 
@@ -264,7 +264,7 @@ export default function Demo() {
       case 'attendance':
         return <AttendanceManager />
       case 'payroll':
-        return <PayrollManager />
+        return <PayrollManagerNew />
       case 'reports':
         return <ReportsManager />
       default:

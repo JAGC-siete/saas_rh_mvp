@@ -94,10 +94,10 @@ else
 fi
 
 # Verificar componentes
-if [ -f "components/PayrollManager.tsx" ]; then
-    echo -e "${GREEN}✅ PayrollManager.tsx encontrado${NC}"
+if [ -f "components/PayrollManagerNew.tsx" ]; then
+    echo -e "${GREEN}✅ PayrollManagerNew.tsx encontrado${NC}"
 else
-    echo -e "${RED}❌ PayrollManager.tsx no encontrado${NC}"
+    echo -e "${RED}❌ PayrollManagerNew.tsx no encontrado${NC}"
 fi
 
 if [ -f "components/VoucherGenerator.tsx" ]; then
