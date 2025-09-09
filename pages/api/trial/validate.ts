@@ -52,9 +52,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: 'Error interno del sistema' })
     }
 
-    // Verificar que el trial no haya expirado (7 días desde creación)
+    // Verificar que el trial no haya expirado (30 días desde creación)
     const trialExpiresAt = new Date(trialUser.created_at)
-    trialExpiresAt.setDate(trialExpiresAt.getDate() + 7)
+    trialExpiresAt.setDate(trialExpiresAt.getDate() + 30)
     const now = nowInHonduras()
 
     if (trialExpiresAt < now) {
