@@ -14,49 +14,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     switch (req.method) {
       case 'PUT':
-        const { 
-          name, 
-          email, 
-          phone, 
-          employee_code, 
-          position, 
-          department_id, 
-          base_salary, 
-          hire_date,
-          status
-        } = req.body
+        const { name, description } = req.body
         
         if (!name) {
-          return res.status(400).json({ error: 'Employee name is required' })
+          return res.status(400).json({ error: 'Department name is required' })
         }
 
-        const { data: updatedEmployee, error: updateError } = await supabase
-          .from('employees')
-          .update({
-            name,
-            email: email || null,
-            phone: phone || null,
-            employee_code: employee_code || null,
-            position: position || null,
-            department_id: department_id || null,
-            base_salary: base_salary || 0,
-            hire_date: hire_date || null,
-            status: status || 'active'
-          })
+        const { data: updatedDept, error: updateError } = await supabase
+          .from('departments')
+          .update({ name, description: description || null })
           .eq('id', id)
           .eq('company_id', companyId)
-          .select(`
-            *,
-            departments(name)
-          `)
+          .select()
           .single()
 
         if (updateError) throw updateError
-        return res.json({ employee: updatedEmployee })
+        return res.json({ department: updatedDept })
 
       case 'DELETE':
         const { error: deleteError } = await supabase
-          .from('employees')
+          .from('departments')
           .delete()
           .eq('id', id)
           .eq('company_id', companyId)
@@ -68,7 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(405).json({ error: 'Method not allowed' })
     }
   } catch (error: any) {
-    console.error('Employee API error:', error)
+    console.error('Department API error:', error)
     return res.status(error.message === 'UNAUTHORIZED' ? 401 : 500).json({ 
       error: error.message || 'Internal server error' 
     })

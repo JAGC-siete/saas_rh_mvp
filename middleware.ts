@@ -8,6 +8,7 @@ const PUBLIC_ROUTES = new Set([
   '/',                 // Landing principal (marketing)
   '/demo',             // Página de solicitud de demo - PÚBLICO
   '/activar',          // Formulario de activación - PÚBLICO
+  '/register',         // Página de registro - PÚBLICO
   '/gracias',          // Página de confirmación - PÚBLICO
   '/pricing',          // Página de precios - PÚBLICO
   '/features',         // Página de características - PÚBLICO
@@ -33,6 +34,7 @@ const PUBLIC_ROUTES = new Set([
   '/api/attendance/first-time-check',
   '/api/attendance/update-schedule',
   '/api/activar',      // API para formulario de activación - PÚBLICO
+  '/api/auth/register', // API de registro - PÚBLICO
   '/api/demo/verify-pin', // API para verificar PIN demo - PÚBLICO
   '/api/trial',        // Todas las APIs del trial - PÚBLICO
   '/api/trial/*',      // Sub-APIs del trial - PÚBLICO
