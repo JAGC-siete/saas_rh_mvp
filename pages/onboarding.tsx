@@ -23,6 +23,11 @@ export default function Onboarding() {
     // Verificar si el usuario está autenticado
     const checkUser = async () => {
       const supabase = createSupabaseBrowserClient()
+      if (!supabase) {
+        router.push('/auth/start')
+        return
+      }
+      
       const { data: { user } } = await supabase.auth.getUser()
       
       if (!user) {
@@ -49,6 +54,7 @@ export default function Onboarding() {
 
     try {
       const supabase = createSupabaseBrowserClient()
+      if (!supabase) throw new Error('Error inicializando Supabase')
       
       // Actualizar perfil del usuario
       const { error } = await supabase.auth.updateUser({
@@ -72,6 +78,7 @@ export default function Onboarding() {
 
     try {
       const supabase = createSupabaseBrowserClient()
+      if (!supabase) throw new Error('Error inicializando Supabase')
       
       if (inviteToken) {
         // Unirse a empresa existente

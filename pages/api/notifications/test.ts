@@ -31,7 +31,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
     
-    const supabase = createClient(req, res)
+    // const supabase = createClient(req, res)
 
     console.log('Usuario autenticado para test de notificaciones:', { 
       userId: user.id, 

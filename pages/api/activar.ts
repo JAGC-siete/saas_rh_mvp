@@ -91,7 +91,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Guardar en base de datos
     console.log('💾 Intentando insertar en base de datos...')
     
-    const { data: activacion, error: dbError } = await supabase
+    const { error: dbError } = await supabase
       .from('activaciones')
       .insert([{
         empleados,
@@ -164,7 +164,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json({ 
       message: 'Trial activado exitosamente',
       data: {
-        ...activacion[0],
+        // ...activacion[0],
         magic_link,
         tenant_id,
         trial_expires_at: trial_expires_at.toISOString()

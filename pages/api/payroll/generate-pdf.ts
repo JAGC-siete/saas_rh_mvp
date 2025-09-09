@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../lib/supabase/server'
+// import { createClient } from '../../../lib/supabase/server'
 import { requireUser } from '../../../lib/auth/requireUser'
 import { generateConsolidatedPayrollPDF, type PlanillaItem } from '../../../lib/payroll/report'
 import { requirePlanAndQuota, incrementUsage } from '../../../lib/billing/enforce'

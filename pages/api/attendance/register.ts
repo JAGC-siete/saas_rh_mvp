@@ -3,7 +3,7 @@ import { createAdminClient } from '../../../lib/supabase/server'
 import { logger } from '../../../lib/logger'
 import { 
    toHN, overrideIfSaturdayHalfDay, decideCheckInRule, mapRule, distanceMeters, isDayOpenForPublic, nowInHonduras, getHondurasTimestamp } from '../../../lib/timezone'
-import { CALL_CENTER_CONFIG, CALL_CENTER_MESSAGES, generateContextualMessage } from '../../../lib/call-center-config'
+import { CALL_CENTER_MESSAGES, generateContextualMessage } from '../../../lib/call-center-config'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   

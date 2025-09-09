@@ -8,8 +8,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { supabase, user, userProfile } = await requireUser(req, res)
-    const { company_id } = req.query
+    const { supabase, userProfile } = await requireUser(req, res)
+    // const { company_id } = req.query
 
     if (!userProfile?.company_id) {
       return res.status(400).json({ 

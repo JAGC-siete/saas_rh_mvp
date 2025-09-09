@@ -110,7 +110,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const totalOvertime = attendanceData.reduce((sum, r) => sum + r.overtime_hours, 0)
     const presentRecords = attendanceData.filter(r => r.status === 'present').length
     const lateRecords = attendanceData.filter(r => r.status === 'late').length
-    const absentRecords = attendanceData.filter(r => r.status === 'absent').length
+    // const absentRecords = attendanceData.filter(r => r.status === 'absent').length
 
     const summary: AttendanceSummary = {
       total_employees: new Set(attendanceData.map(r => r.employee_code)).size,

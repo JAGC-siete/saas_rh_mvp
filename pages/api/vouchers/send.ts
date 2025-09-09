@@ -10,7 +10,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const { supabase, user, userProfile } = await requireUser(req, res)
-    const { company_id, employee_id, period_start, period_end, method = 'email' } = req.body
+    const { employee_id, period_start, period_end, method = 'email' } = req.body
 
     if (!userProfile?.company_id) {
       return res.status(400).json({ 
