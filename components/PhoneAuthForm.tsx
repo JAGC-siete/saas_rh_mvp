@@ -26,6 +26,11 @@ export default function PhoneAuthForm({ onBack }: PhoneAuthFormProps) {
     try {
       const supabase = createSupabaseBrowserClient()
       
+      if (!supabase) {
+        setError('Error de configuración de autenticación')
+        return
+      }
+      
       // Format phone number for international format
       const formattedPhone = phoneNumber.startsWith('+') 
         ? phoneNumber 
@@ -58,6 +63,11 @@ export default function PhoneAuthForm({ onBack }: PhoneAuthFormProps) {
     try {
       const supabase = createSupabaseBrowserClient()
       
+      if (!supabase) {
+        setError('Error de configuración de autenticación')
+        return
+      }
+      
       const { data, error } = await supabase.auth.verifyOtp({
         phone: phoneNumber.startsWith('+') 
           ? phoneNumber 
@@ -85,6 +95,11 @@ export default function PhoneAuthForm({ onBack }: PhoneAuthFormProps) {
 
     try {
       const supabase = createSupabaseBrowserClient()
+      
+      if (!supabase) {
+        setError('Error de configuración de autenticación')
+        return
+      }
       
       const { error } = await supabase.auth.signInWithOtp({
         phone: phoneNumber.startsWith('+') 
