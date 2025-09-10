@@ -52,6 +52,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Create Supabase client with error handling
   const [supabase, setSupabase] = useState<any>(null)
 
+  // Function to load user profile from database
+  const loadUserProfileFromDatabase = async (userId: string, token: string) => {
+    try {
+      console.log('📊 Loading user profile from database for user:', userId)
+      const response = await fetch('/api/user-profiles/get-profile', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include' // Include cookies for authentication
+      })
+
+      if (response.ok) {
+        const profile = await response.json()
+        console.log('✅ User profile loaded from database:', profile)
+        setUserProfile(profile)
+      } else {
+        console.error('❌ Failed to load user profile:', response.status)
+        const errorData = await response.json()
+        console.error('❌ Error details:', errorData)
+      }
+    } catch (error) {
+      console.error('❌ Error loading user profile from database:', error)
+    }
+  }
+
   // Function to refresh user profile
   const refreshUserProfile = async () => {
     if (!supabase || !user) return
@@ -152,6 +178,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setSession(session)
           setUser(session?.user ?? null)
           setError(null)
+          
+          // Load user profile if user exists
+          if (session?.user && session?.access_token) {
+            loadUserProfileFromDatabase(session.user.id, session.access_token)
+          }
         }
         
         // Si no hay sesión de Supabase, verificar si hay token JWT en localStorage
@@ -169,6 +200,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 user: user,
                 expires_at: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
               } as any)
+              
+              // Create a proper user profile object from localStorage data
+              const userProfile = {
+                id: user.id,
+                email: user.email,
+                name: user.name,
+                role: user.role,
+                company_id: user.company_id,
+                is_active: true,
+                permissions: {},
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              }
+              
+              setUserProfile(userProfile)
+              console.log('✅ User profile set from localStorage:', userProfile)
             } catch (err) {
               console.error('❌ Error parsing user data from localStorage:', err)
               localStorage.removeItem('token')
@@ -194,6 +241,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null)
         setLoading(false)
         setError(null)
+
+        // Load user profile if user exists
+        if (session?.user && session?.access_token) {
+          loadUserProfileFromDatabase(session.user.id, session.access_token)
+        } else {
+          setUserProfile(null)
+        }
 
         // ✅ Solo redirigir si estamos en el cliente y tenemos window
         if (isClient && typeof window !== 'undefined') {
@@ -235,8 +289,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('user', JSON.stringify(data.user))
       }
 
+      // Create a proper user profile object from login response
+      const userProfile = {
+        id: data.user.id,
+        email: data.user.email,
+        name: data.user.name,
+        role: data.user.role,
+        company_id: data.user.company_id,
+        is_active: true,
+        permissions: {},
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+      
       // Set user profile from login response
-      setUserProfile(data.user)
+      setUserProfile(userProfile)
       setUser(data.user)
       setSession({ 
         access_token: data.token, 
