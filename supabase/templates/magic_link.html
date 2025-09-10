@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tu acceso a Humano SISU</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8fafc;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #1e293b, #3b82f6);
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        h1 {
+            color: #1e293b;
+            margin: 0 0 10px 0;
+            font-size: 28px;
+        }
+        .subtitle {
+            color: #64748b;
+            font-size: 16px;
+            margin: 0;
+        }
+        .content {
+            margin: 30px 0;
+        }
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #1e293b, #3b82f6);
+            color: white;
+            text-decoration: none;
+            padding: 16px 32px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            text-align: center;
+            margin: 20px 0;
+            transition: transform 0.2s;
+        }
+        .button:hover {
+            transform: translateY(-2px);
+        }
+        .security-info {
+            background: #f1f5f9;
+            border-left: 4px solid #3b82f6;
+            padding: 20px;
+            margin: 30px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+            color: #64748b;
+            font-size: 14px;
+        }
+        .features {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 30px 0;
+        }
+        .feature {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 14px;
+        }
+        .feature-icon {
+            font-size: 20px;
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">SISU</div>
+            <h1>¡Bienvenido a Humano SISU!</h1>
+            <p class="subtitle">Tu Departamento de RH digital está listo</p>
+        </div>
+
+        <div class="content">
+            <p>Hola,</p>
+            <p>Tu cuenta en <strong>Humano SISU</strong> está lista. Hacé clic en el botón para acceder a tu dashboard y comenzar a cumplir con S.T.S.S. desde hoy.</p>
+
+            <div style="text-align: center;">
+                <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email" class="button">
+                    🚀 Acceder a mi Dashboard
+                </a>
+            </div>
+
+            <div class="security-info">
+                <h3 style="margin-top: 0; color: #1e293b;">🔒 Seguridad</h3>
+                <p style="margin-bottom: 0;">Este enlace es único y expira en <strong>1 hora</strong>. Solo funciona una vez para mayor seguridad.</p>
+            </div>
+
+            <div class="features">
+                <div class="feature">
+                    <div class="feature-icon">📊</div>
+                    <div><strong>Planilla automática</strong><br>IHSS, RAP e ISR incluidos</div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">⚡</div>
+                    <div><strong>Setup en 24 horas</strong><br>Empezás hoy mismo</div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">📱</div>
+                    <div><strong>Vouchers por WhatsApp</strong><br>100% digital</div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">✅</div>
+                    <div><strong>Cumplí STSS</strong><br>Sin complicaciones</div>
+                </div>
+            </div>
+
+            <p>Si no solicitaste este acceso, podés ignorar este correo de forma segura.</p>
+        </div>
+
+        <div class="footer">
+            <p><strong>Humano SISU</strong> - Departamento de RH Digital</p>
+            <p>📍 Tegucigalpa, Honduras | 📧 soporte@humanosisu.net</p>
+            <p style="font-size: 12px; color: #94a3b8;">
+                Este enlace expira en 1 hora. Si necesitás uno nuevo, volvé a solicitar acceso.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

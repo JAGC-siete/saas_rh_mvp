@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Código de verificación - Humano SISU</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8fafc;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #1e293b, #3b82f6);
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        h1 {
+            color: #1e293b;
+            margin: 0 0 10px 0;
+            font-size: 28px;
+        }
+        .subtitle {
+            color: #64748b;
+            font-size: 16px;
+            margin: 0;
+        }
+        .otp-code {
+            background: #f1f5f9;
+            border: 2px solid #3b82f6;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            margin: 30px 0;
+        }
+        .otp-number {
+            font-size: 48px;
+            font-weight: bold;
+            color: #1e293b;
+            letter-spacing: 8px;
+            margin: 0;
+            font-family: 'Courier New', monospace;
+        }
+        .otp-label {
+            color: #64748b;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        .security-info {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 20px;
+            margin: 30px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+            color: #64748b;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">SISU</div>
+            <h1>Código de Verificación</h1>
+            <p class="subtitle">Tu acceso seguro a Humano SISU</p>
+        </div>
+
+        <div class="content">
+            <p>Hola,</p>
+            <p>Usá este código de 6 dígitos para completar tu acceso a <strong>Humano SISU</strong>:</p>
+
+            <div class="otp-code">
+                <div class="otp-number">{{ .Token }}</div>
+                <div class="otp-label">Código de verificación</div>
+            </div>
+
+            <div class="security-info">
+                <h3 style="margin-top: 0; color: #92400e;">⏰ Importante</h3>
+                <p style="margin-bottom: 0;">Este código expira en <strong>1 hora</strong> y solo se puede usar una vez. No lo compartas con nadie.</p>
+            </div>
+
+            <p>Si no solicitaste este código, podés ignorar este correo de forma segura.</p>
+        </div>
+
+        <div class="footer">
+            <p><strong>Humano SISU</strong> - Departamento de RH Digital</p>
+            <p>📍 Tegucigalpa, Honduras | 📧 soporte@humanosisu.net</p>
+            <p style="font-size: 12px; color: #94a3b8;">
+                Este código expira en 1 hora. Si necesitás uno nuevo, volvé a solicitar acceso.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

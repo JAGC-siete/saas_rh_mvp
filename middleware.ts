@@ -8,6 +8,7 @@ const PUBLIC_ROUTES = new Set([
   '/',                 // Landing principal (marketing)
   '/auth/start',       // Página de inicio de autenticación - PÚBLICO
   '/auth/callback',    // OAuth callback - PÚBLICO
+  '/auth/confirm',     // Magic Link confirmation - PÚBLICO
   '/onboarding',       // Página de onboarding post-auth - PÚBLICO
   '/app/login',        // Login con password - PÚBLICO
   '/register',         // Redirigir a /auth/start - PÚBLICO (legacy)
