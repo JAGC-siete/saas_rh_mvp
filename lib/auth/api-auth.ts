@@ -46,6 +46,8 @@ export async function authenticateUser(
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
     if (authError || !user) {
+      console.error('Auth error:', authError)
+      console.error('User:', user)
       res.status(401).json({ error: 'Unauthorized' })
       throw new Error('UNAUTHORIZED')
     }

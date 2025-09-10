@@ -48,7 +48,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   } catch (error: any) {
     console.error('Departments API error:', error)
-    return res.status(error.message === 'UNAUTHORIZED' ? 401 : 500).json({ 
+    
+    // Handle specific authentication errors
+    if (error.message === 'UNAUTHORIZED') {
+      return res.status(401).json({ error: 'Unauthorized' })
+    }
+    if (error.message === 'PROFILE_REQUIRED') {
+      return res.status(403).json({ error: 'User profile required' })
+    }
+    if (error.message === 'COMPANY_ACCESS_REQUIRED') {
+      return res.status(400).json({ error: 'Company access required. Please contact administrator to assign you to a company.' })
+    }
+    
+    return res.status(500).json({ 
       error: error.message || 'Internal server error' 
     })
   }

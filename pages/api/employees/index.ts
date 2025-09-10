@@ -76,7 +76,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(403).json({ error: 'User profile required' })
     }
     if (error.message === 'COMPANY_ACCESS_REQUIRED') {
-      return res.status(400).json({ error: 'Company access required' })
+      return res.status(400).json({ error: 'Company access required. Please contact administrator to assign you to a company.' })
     }
     
     return res.status(500).json({ 
