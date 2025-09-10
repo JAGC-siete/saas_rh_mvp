@@ -87,7 +87,6 @@ temp/
 
 # Audit reports
 audit-reports/
-*.md
 
 # Scripts and utilities
 scripts/
@@ -110,4 +109,3 @@ tests/
 
 # Documentation
 docs/
-*.md
