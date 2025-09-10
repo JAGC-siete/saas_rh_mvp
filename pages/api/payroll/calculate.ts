@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../lib/supabase/server'
-import { authenticateUser } from '../../../lib/auth-helpers'
+import { requireCompanyAccess } from '../../../lib/auth/api-auth'
 import { getHondurasTimestamp, nowInHonduras } from '../../../lib/timezone'
 import { requirePlanAndQuota, incrementUsage, getBillingErrorCode } from '../../../lib/billing/enforce'
 import { auditPayrollGenerated } from '../../../lib/audit'
@@ -102,35 +101,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // AUTENTICACIÓN REQUERIDA
-    const authResult = await authenticateUser(req, res, ['can_generate_payroll'])
+    // AUTENTICACIÓN ESTANDARIZADA - Usar requireCompanyAccess
+    const { supabase, companyId, role, user, userProfile } = await requireCompanyAccess(req, res)
     
-    if (!authResult.success) {
-      return res.status(401).json({ 
-        error: authResult.error,
-        message: authResult.message
+    // Verificar roles específicos para generar nómina
+    if (!['super_admin', 'company_admin', 'hr_manager'].includes(role)) {
+      return res.status(403).json({ 
+        error: 'Permisos insuficientes',
+        message: 'No tiene permisos para generar nómina'
       })
     }
 
-    const { user, userProfile } = authResult
-    const supabase = createClient(req, res)
-
-    console.log('Usuario autenticado para nómina:', { 
-      userId: user.id, 
-      role: userProfile?.role,
-      companyId: userProfile?.company_id 
-    })
-
-    // Check plan and quota before processing
-    if (!userProfile?.company_id) {
+    // Validar que companyId esté presente
+    if (!companyId) {
       return res.status(400).json({ 
         error: 'Perfil de usuario incompleto',
         message: 'No se pudo obtener la información de la empresa'
       })
     }
 
+    console.log('Usuario autenticado para nómina:', { 
+      userId: user.id, 
+      role: role,
+      companyId: companyId 
+    })
+
     try {
-      await requirePlanAndQuota(supabase, userProfile.company_id, 'generate_payroll')
+      await requirePlanAndQuota(supabase, companyId, 'generate_payroll')
     } catch (error: any) {
       const statusCode = getBillingErrorCode(error.message)
       return res.status(statusCode).json({ 
@@ -192,8 +189,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq('status', 'active')
       .order('name')
 
-    if (userProfile?.company_id) {
-      employeesQuery = employeesQuery.eq('company_id', userProfile?.company_id)
+    if (companyId) {
+      employeesQuery = employeesQuery.eq('company_id', companyId)
     }
 
     const { data: employees, error: empError } = await employeesQuery
@@ -339,7 +336,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       status: 'draft',
       notes_on_ingress: item.notes_on_ingress,
       notes_on_deductions: item.notes_on_deductions,
-      generated_by: userProfile?.id || 'system',
+      generated_by: user.id || 'system',
       generated_at: getHondurasTimestamp()
     }))
 
@@ -359,7 +356,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Increment usage meter
     try {
-      await incrementUsage(supabase, userProfile.company_id, 'generate_payroll')
+      await incrementUsage(supabase, companyId, 'generate_payroll')
     } catch (error) {
       console.warn('Failed to increment usage meter:', error)
       // Don't fail the request if usage tracking fails
@@ -367,7 +364,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Log audit event
     try {
-      await auditPayrollGenerated(supabase, user.id, userProfile.company_id, periodo)
+      await auditPayrollGenerated(supabase, user.id, companyId, periodo)
     } catch (error) {
       console.warn('Failed to log audit event:', error)
       // Don't fail the request if audit fails

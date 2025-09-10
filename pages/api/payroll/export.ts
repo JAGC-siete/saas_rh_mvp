@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../lib/supabase/server'
+import { requireCompanyAccess } from '../../../lib/auth/api-auth'
 import { validatePayrollExport, sanitizeFilename } from '../../../lib/security/payroll-validation'
 import { createSecurePayrollQueryBuilder } from '../../../lib/security/payroll-queries'
 import { withExportRateLimit } from '../../../lib/security/rate-limiting'
@@ -14,35 +14,11 @@ export default handlerWithSecurity
 
 async function payrollExportHandler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    // AUTENTICACIÓN REQUERIDA
-    const supabase = createClient(req, res)
-    // Get user with getUser() to validate token with Supabase server
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // AUTENTICACIÓN ESTANDARIZADA - Usar requireCompanyAccess
+    const { supabase, companyId, role, user } = await requireCompanyAccess(req, res)
     
-    if (authError || !user) {
-      return res.status(401).json({ 
-        error: 'No autorizado',
-        message: 'Debe iniciar sesión para exportar nómina'
-      })
-    }
-
-    // Verificar permisos del usuario
-    const { data: userProfile } = await supabase
-      .from('user_profiles')
-      .select('role, permissions, company_id')
-      .eq('id', user.id)
-      .single()
-
-    if (!userProfile) {
-      return res.status(403).json({ 
-        error: 'Perfil no encontrado',
-        message: 'Su perfil de usuario no está configurado correctamente'
-      })
-    }
-
-    // Verificar permisos específicos para nómina
-    const allowedRoles = ['company_admin', 'hr_manager', 'super_admin']
-    if (!allowedRoles.includes(userProfile.role)) {
+    // Verificar roles específicos para exportar nómina
+    if (!['super_admin', 'company_admin', 'hr_manager'].includes(role)) {
       return res.status(403).json({ 
         error: 'Permisos insuficientes',
         message: 'No tiene permisos para exportar nómina'
@@ -63,7 +39,11 @@ async function payrollExportHandler(req: NextApiRequest, res: NextApiResponse) {
     const { periodo, formato } = validation.data!
 
     // USAR QUERY BUILDER SEGURO
-    const queryBuilder = createSecurePayrollQueryBuilder(supabase, userProfile as any)
+    const queryBuilder = createSecurePayrollQueryBuilder(supabase, { 
+      id: user.id, 
+      company_id: companyId, 
+      role: role 
+    } as any)
     const payrollRecords = await queryBuilder.getPayrollRecords(validation.data!)
 
     if (!payrollRecords || payrollRecords.length === 0) {

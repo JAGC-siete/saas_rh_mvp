@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../lib/supabase/server'
-import { authenticateUser } from '../../../lib/auth-helpers'
+import { requireCompanyAccess } from '../../../lib/auth/api-auth'
 import { generateEmployeeReceiptPDF } from '../../../lib/payroll/receipt'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -9,9 +8,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const auth = await authenticateUser(req, res, ['can_view_payroll', 'can_export_payroll'])
-    if (!auth.success || !auth.user || !auth.userProfile) {
-      return res.status(401).json({ error: auth.error || 'Unauthorized', message: auth.message })
+    // AUTENTICACIÓN ESTANDARIZADA - Usar requireCompanyAccess
+    const { supabase, companyId, role, user } = await requireCompanyAccess(req, res)
+    
+    // Verificar roles específicos para generar recibo
+    if (!['super_admin', 'company_admin', 'hr_manager'].includes(role)) {
+      return res.status(403).json({ 
+        error: 'Permisos insuficientes',
+        message: 'No tiene permisos para generar recibo'
+      })
     }
 
     const { periodo, quincena, employeeId } = (req.method === 'GET') ? (req.query as any) : (req.body || {})
@@ -24,8 +29,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!employeeId) {
       return res.status(400).json({ error: 'employeeId es requerido' })
     }
-
-    const supabase = createClient(req, res)
     const [year, month] = periodo.split('-').map(Number)
     const ultimoDia = new Date(year, month, 0).getDate()
     const fechaInicio = Number(quincena) === 1 ? `${periodo}-01` : `${periodo}-16`
@@ -54,7 +57,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(404).json({ error: 'Empleado no encontrado en la nómina' })
     }
 
-    if (auth.userProfile.company_id && (record.employees?.company_id || null) !== auth.userProfile.company_id) {
+    if (companyId && (record.employees?.company_id || null) !== companyId) {
       return res.status(403).json({ error: 'No autorizado' })
     }
 

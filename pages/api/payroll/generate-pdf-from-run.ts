@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../lib/supabase/server'
-import { authenticateUser } from '../../../lib/auth-helpers'
+import { requireCompanyAccess } from '../../../lib/auth/api-auth'
 import { generateConsolidatedPayrollPDF, type PlanillaItem } from '../../../lib/payroll/report'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -15,19 +14,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const auth = await authenticateUser(req, res, ['can_view_payroll', 'can_export_payroll'])
-    if (!auth.success || !auth.user || !auth.userProfile) {
-      return res.status(401).json({ error: auth.error || 'Unauthorized', message: auth.message })
+    // AUTENTICACIÓN ESTANDARIZADA - Usar requireCompanyAccess
+    const { supabase, companyId, role, user } = await requireCompanyAccess(req, res)
+    
+    // Verificar roles específicos para generar PDF
+    if (!['super_admin', 'company_admin', 'hr_manager'].includes(role)) {
+      return res.status(403).json({ 
+        error: 'Permisos insuficientes',
+        message: 'No tiene permisos para generar PDF de nómina'
+      })
     }
-
-    const supabase = createClient(req, res)
 
     // Obtener información de la corrida de nómina
     const { data: payrollRun, error: runError } = await supabase
       .from('payroll_runs')
       .select('id, company_uuid, year, month, quincena, tipo, status')
       .eq('id', run_id)
-      .eq('company_uuid', auth.userProfile.company_id)
+      .eq('company_uuid', companyId)
       .single()
 
     if (runError) {
@@ -44,7 +47,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .from('v_payroll_lines_effective')
       .select('*')
       .eq('run_id', run_id)
-      .eq('company_uuid', auth.userProfile.company_id)
+      .eq('company_uuid', companyId)
 
     if (linesError) {
       console.error('Error obteniendo líneas de nómina:', linesError)

@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../lib/supabase/server'
-import { authenticateUser } from '../../../lib/auth-helpers'
+import { requireCompanyAccess } from '../../../lib/auth/api-auth'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -8,32 +7,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // AUTENTICACIÓN REQUERIDA
-    const authResult = await authenticateUser(req, res, ['can_generate_payroll'])
+    // AUTENTICACIÓN ESTANDARIZADA - Usar requireCompanyAccess
+    const { supabase, companyId, role, user } = await requireCompanyAccess(req, res)
     
-    if (!authResult.success) {
-      return res.status(401).json({ 
-        error: authResult.error,
-        message: authResult.message
+    // Verificar roles específicos para editar nómina
+    if (!['super_admin', 'company_admin', 'hr_manager'].includes(role)) {
+      return res.status(403).json({ 
+        error: 'Permisos insuficientes',
+        message: 'No tiene permisos para editar nómina'
       })
     }
-
-    const { user, userProfile } = authResult
-    
-    // Ensure userProfile exists
-    if (!userProfile || !userProfile.company_id) {
-      return res.status(400).json({ 
-        error: 'Invalid user profile',
-        message: 'User profile or company ID not found'
-      })
-    }
-    
-    const supabase = createClient(req, res)
 
     console.log('Usuario autenticado para edición de nómina:', { 
       userId: user.id, 
-      role: userProfile.role,
-      companyId: userProfile.company_id 
+      role: role,
+      companyId: companyId 
     })
 
     const { run_line_id, field, new_value, reason } = req.body || {}
@@ -57,7 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .from('payroll_run_lines')
       .select('id, company_uuid, run_id, edited')
       .eq('id', run_line_id)
-      .eq('company_uuid', userProfile.company_id)
+      .eq('company_uuid', companyId)
       .single()
 
     if (lineError || !line) {
@@ -93,14 +81,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       field,
       new_value,
       reason,
-      companyId: userProfile.company_id,
+      companyId: companyId,
       runStatus: run.status
     })
 
     // Aplicar ajuste usando la función helper
     const { data: adjustmentResult, error: adjustmentError } = await supabase.rpc('apply_payroll_adjustment', {
       p_run_line_id: run_line_id,
-      p_company_uuid: userProfile.company_id,
+      p_company_uuid: companyId,
       p_field: field,
       p_new_value: Number(new_value),
       p_reason: reason || `Ajuste manual de ${field}`,

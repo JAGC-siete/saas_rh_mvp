@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../lib/supabase/server'
-import { authenticateUser } from '../../../lib/auth-helpers'
+import { requireCompanyAccess } from '../../../lib/auth/api-auth'
 import { getHondurasTimestamp } from '../../../lib/timezone'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -9,32 +8,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // AUTENTICACIÓN REQUERIDA
-    const authResult = await authenticateUser(req, res, ['can_generate_payroll'])
+    // AUTENTICACIÓN ESTANDARIZADA - Usar requireCompanyAccess
+    const { supabase, companyId, role, user } = await requireCompanyAccess(req, res)
     
-    if (!authResult.success) {
-      return res.status(401).json({ 
-        error: authResult.error,
-        message: authResult.message
+    // Verificar roles específicos para autorizar nómina
+    if (!['super_admin', 'company_admin', 'hr_manager'].includes(role)) {
+      return res.status(403).json({ 
+        error: 'Permisos insuficientes',
+        message: 'No tiene permisos para autorizar nómina'
       })
     }
-
-    const { user, userProfile } = authResult
-    
-    // Ensure userProfile exists
-    if (!userProfile || !userProfile.company_id) {
-      return res.status(400).json({ 
-        error: 'Invalid user profile',
-        message: 'User profile or company ID not found'
-      })
-    }
-    
-    const supabase = createClient(req, res)
 
     console.log('Usuario autenticado para autorización de nómina:', { 
       userId: user.id, 
-      role: userProfile.role,
-      companyId: userProfile.company_id 
+      role: role,
+      companyId: companyId 
     })
 
     const { run_id } = req.body || {}
@@ -58,7 +46,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .from('payroll_runs')
       .select('id, company_uuid, status, year, month, quincena, tipo')
       .eq('id', run_id)
-      .eq('company_uuid', userProfile.company_id)
+      .eq('company_uuid', companyId)
       .single()
 
     if (runError || !run) {
@@ -81,7 +69,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .from('payroll_run_lines')
       .select('id, employee_id, eff_hours, eff_bruto, eff_ihss, eff_rap, eff_isr, eff_neto, edited')
       .eq('run_id', run_id)
-      .eq('company_uuid', userProfile.company_id)
+      .eq('company_uuid', companyId)
 
     if (linesError) {
       console.error('Error obteniendo líneas de planilla:', linesError)
@@ -97,7 +85,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log('Autorizando corrida de planilla:', {
       run_id,
-      companyId: userProfile.company_id,
+      companyId: companyId,
       status: run.status,
       lines_count: lines.length,
       has_edits: lines.some(l => l.edited)
@@ -111,7 +99,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         updated_at: getHondurasTimestamp()
       })
       .eq('id', run_id)
-      .eq('company_uuid', userProfile.company_id)
+      .eq('company_uuid', companyId)
 
     if (updateError) {
       console.error('Error actualizando estado de corrida:', updateError)
@@ -122,7 +110,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { error: auditError } = await supabase
       .from('audit_logs')
       .insert({
-        company_id: userProfile.company_id,
+        company_id: companyId,
         user_id: user.id,
         action: 'UPDATE',
         resource_type: 'payroll_runs',

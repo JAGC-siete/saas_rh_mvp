@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../lib/supabase/server'
-import { authenticateUser } from '../../../lib/auth-helpers'
+import { requireCompanyAccess } from '../../../lib/auth/api-auth'
 import { generateConsolidatedPayrollPDF, type PlanillaItem } from '../../../lib/payroll/report'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -9,12 +8,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const auth = await authenticateUser(req, res, ['can_view_payroll', 'can_export_payroll'])
-    if (!auth.success || !auth.user || !auth.userProfile) {
-      return res.status(401).json({ error: auth.error || 'Unauthorized', message: auth.message })
+    // AUTENTICACIÓN ESTANDARIZADA - Usar requireCompanyAccess
+    const { supabase, companyId, role, user } = await requireCompanyAccess(req, res)
+    
+    // Verificar roles específicos para generar reporte
+    if (!['super_admin', 'company_admin', 'hr_manager'].includes(role)) {
+      return res.status(403).json({ 
+        error: 'Permisos insuficientes',
+        message: 'No tiene permisos para generar reporte de nómina'
+      })
     }
-
-    const supabase = createClient(req, res)
     const { periodo, quincena } = (req.method === 'GET') ? (req.query as any) : (req.body || {})
 
     if (!periodo || !/^[0-9]{4}-[0-9]{2}$/.test(periodo)) {
@@ -58,8 +61,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Si el usuario pertenece a una empresa, validar que los registros correspondan
-    if (auth.userProfile.company_id) {
-      const anyOtherCompany = payrollRecords.some((r: any) => (r.employees?.company_id || null) !== auth.userProfile!.company_id)
+    if (companyId) {
+      const anyOtherCompany = payrollRecords.some((r: any) => (r.employees?.company_id || null) !== companyId)
       if (anyOtherCompany) {
         return res.status(403).json({ error: 'No autorizado para acceder a registros de otra empresa' })
       }

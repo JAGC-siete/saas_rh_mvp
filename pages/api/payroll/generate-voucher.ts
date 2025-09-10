@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../lib/supabase/server'
-import { authenticateUser } from '../../../lib/auth-helpers'
+import { requireCompanyAccess } from '../../../lib/auth/api-auth'
 import { generateEmployeeReceiptPDF } from '../../../lib/payroll/receipt'
 import { getHondurasTimestamp } from '../../../lib/timezone'
 
@@ -86,22 +85,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // AUTENTICACIÓN REQUERIDA
-    const authResult = await authenticateUser(req, res, ['can_export_payroll'])
+    // AUTENTICACIÓN ESTANDARIZADA - Usar requireCompanyAccess
+    const { supabase, companyId, role, user } = await requireCompanyAccess(req, res)
     
-    if (!authResult.success) {
-      return res.status(401).json({ 
-        error: authResult.error,
-        message: authResult.message
+    // Verificar roles específicos para generar voucher
+    if (!['super_admin', 'company_admin', 'hr_manager'].includes(role)) {
+      return res.status(403).json({ 
+        error: 'Permisos insuficientes',
+        message: 'No tiene permisos para generar voucher'
       })
     }
 
-    const { user, userProfile } = authResult
-    const supabase = createClient(req, res)
-
     console.log('Usuario autenticado para generación de voucher:', { 
       userId: user.id, 
-      role: userProfile?.role,
-      companyId: userProfile?.company_id 
+      role: role,
+      companyId: companyId 
     })
 
     const { employee_id, periodo, quincena, incluirDeducciones, adj_bonus = 0, adj_discount = 0, note = '' }: VoucherData = req.body
@@ -122,7 +120,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Validar que el usuario pertenezca a la empresa
-    if (!userProfile?.company_id) {
+    if (!companyId) {
       return res.status(403).json({ 
         error: 'No autorizado',
         message: 'Usuario no tiene empresa asignada'
@@ -134,7 +132,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .from('employees')
       .select('id, name, employee_code, base_salary, department_id, position, bank_name, bank_account, company_id, status')
       .eq('id', employee_id)
-      .eq('company_id', userProfile.company_id)
+      .eq('company_id', companyId)
       .eq('status', 'active')
       .single()
 
@@ -278,10 +276,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           status: 'approved',
           notes_on_ingress: voucherPreview.note || '',
           notes_on_deductions: `Voucher individual generado con ajustes: Bono +${adj_bonus}, Descuento -${adj_discount}`,
-          generated_by: userProfile.id,
+          generated_by: user.id,
           generated_at: getHondurasTimestamp(),
           approved_at: getHondurasTimestamp(),
-          approved_by: userProfile.id
+          approved_by: user.id
         }, { 
           onConflict: 'employee_id,period_start,period_end',
           ignoreDuplicates: false 
