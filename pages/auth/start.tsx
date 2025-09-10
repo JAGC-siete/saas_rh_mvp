@@ -96,8 +96,15 @@ export default function AuthStart() {
       const supabase = await createSupabaseBrowserClient()
       if (!supabase) throw new Error('Error inicializando Supabase')
       
+      // Formatear el teléfono correctamente
+      let formattedPhone = phone.trim()
+      if (!formattedPhone.startsWith('+')) {
+        // Si no tiene código de país, agregar +504 para Honduras
+        formattedPhone = `+504${formattedPhone.replace(/\D/g, '')}`
+      }
+      
       const { error } = await supabase.auth.signInWithOtp({
-        phone,
+        phone: formattedPhone,
         options: {
           channel: 'sms'
         }
@@ -107,7 +114,13 @@ export default function AuthStart() {
       
       setStep('otp')
     } catch (err: any) {
-      setError(err.message || 'Error enviando código SMS')
+      if (err.message?.includes('Invalid phone')) {
+        setError('Formato de teléfono inválido. Usá: +504 9999-9999')
+      } else if (err.message?.includes('rate limit')) {
+        setError('Demasiados intentos. Volvé en 15 minutos.')
+      } else {
+        setError(err.message || 'Error enviando código SMS')
+      }
     } finally {
       setLoading(false)
     }
