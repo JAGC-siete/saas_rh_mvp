@@ -75,8 +75,19 @@ export async function fetchUnifiedPayroll(
       throw new Error(`Error fetching payroll data. ${planillaError || ''} ${detalleError || ''}`.trim())
     }
 
-    const planilla: PlanillaRow[] = await planillaRes.json();
-    const detalle: DetalleRow[] = await detalleRes.json();
+    const planillaData = await planillaRes.json();
+    const detalleData = await detalleRes.json();
+    
+    // Extract the actual arrays from the API responses
+    const planilla: PlanillaRow[] = Array.isArray(planillaData.planilla) ? planillaData.planilla : [];
+    const detalle: DetalleRow[] = Array.isArray(detalleData.records) ? detalleData.records : [];
+    
+    console.log('📊 Payroll data loaded:', {
+      planillaCount: planilla.length,
+      detalleCount: detalle.length,
+      planillaDataKeys: Object.keys(planillaData),
+      detalleDataKeys: Object.keys(detalleData)
+    });
 
     // Merge by employee_id
     const byId = new Map<string, UnifiedRow>();

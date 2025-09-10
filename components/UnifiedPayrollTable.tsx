@@ -149,126 +149,126 @@ export default function UnifiedPayrollTable({
               </tr>
             </thead>
             <tbody className="bg-transparent divide-y divide-white/20">
-              {rows.map((row, index) => (
-                <React.Fragment key={row.employee_id}>
-                  <tr className="hover:bg-white/10 transition-colors duration-200">
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <button
-                          onClick={() => toggleRow(row.employee_id)}
-                          className="mr-2 text-white hover:text-gray-300"
-                        >
-                          {expandedRows.has(row.employee_id) ? (
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                          ) : (
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                            </svg>
-                          )}
-                        </button>
-                        <div>
-                          <div className="text-sm font-medium text-white">{row.name}</div>
-                          <div className="text-xs text-gray-300">{row.department || 'N/A'}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      {getStatusBadge(row.status || 'completo')}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">
-                      {formatCurrency(row.base_salary || 0)}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">
-                      {row.days_worked || 0}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">
-                      {row.extras?.horas || 0}h
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-green-300">
-                      {formatCurrency(row.total_earnings || 0)}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-red-300">
-                      {formatCurrency(row.total_deducciones || 0)}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-white">
-                      {formatCurrency(row.total || 0)}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => onGenerateVoucher(row.line_id || row.employee_id)}
-                          disabled={loading}
-                          className="bg-white/10 border-white/30 text-white hover:bg-white/20"
-                        >
-                          <Icon name="download" className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                  
-                  {/* Expanded Row Details */}
-                  {expandedRows.has(row.employee_id) && (
-                    <tr className="bg-white/5">
-                      <td colSpan={9} className="px-4 py-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          {/* Deducciones Breakdown */}
+              {Array.isArray(rows) && rows.length > 0 ? (
+                rows.map((row, index) => (
+                  <React.Fragment key={row.employee_id}>
+                    <tr className="hover:bg-white/10 transition-colors duration-200">
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <button
+                            onClick={() => toggleRow(row.employee_id)}
+                            className="mr-2 text-white hover:text-gray-300"
+                          >
+                            {expandedRows.has(row.employee_id) ? (
+                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            ) : (
+                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                            )}
+                          </button>
                           <div>
-                            <h4 className="text-sm font-semibold text-white mb-2">Desglose de Deducciones</h4>
-                            <div className="space-y-1 text-sm">
-                              <div className="flex justify-between text-gray-200">
-                                <span>IHSS:</span>
-                                <span className="text-red-300">{formatCurrency(row.IHSS || 0)}</span>
-                              </div>
-                              <div className="flex justify-between text-gray-200">
-                                <span>RAP:</span>
-                                <span className="text-red-300">{formatCurrency(row.RAP || 0)}</span>
-                              </div>
-                              <div className="flex justify-between text-gray-200">
-                                <span>ISR:</span>
-                                <span className="text-red-300">{formatCurrency(row.ISR || 0)}</span>
-                              </div>
-                              <div className="flex justify-between text-gray-200">
-                                <span>Otros:</span>
-                                <span className="text-red-300">
-                                  {formatCurrency((row.total_deducciones || 0) - (row.IHSS || 0) - (row.RAP || 0) - (row.ISR || 0))}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Asistencia Details */}
-                          <div>
-                            <h4 className="text-sm font-semibold text-white mb-2">Detalles de Asistencia</h4>
-                            <div className="space-y-1 text-sm text-gray-200">
-                              <div>Días trabajados: {row.days_worked || 0}</div>
-                              <div>Días ausentes: {row.days_absent || 0}</div>
-                              <div>Días tarde: {row.late_days || 0}</div>
-                              <div>Horas extras: {row.extras?.horas || 0}h</div>
-                            </div>
-                          </div>
-
-                          {/* Observaciones */}
-                          <div>
-                            <h4 className="text-sm font-semibold text-white mb-2">Observaciones</h4>
-                            <p className="text-sm text-gray-200">
-                              {row.observaciones || 'Sin observaciones'}
-                            </p>
+                            <div className="text-sm font-medium text-white">{row.name}</div>
+                            <div className="text-xs text-gray-300">{row.department || 'N/A'}</div>
                           </div>
                         </div>
                       </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        {getStatusBadge(row.status || 'completo')}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">
+                        {formatCurrency(row.base_salary || 0)}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">
+                        {row.days_worked || 0}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">
+                        {row.extras?.horas || 0}h
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-green-300">
+                        {formatCurrency(row.total_earnings || 0)}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-red-300">
+                        {formatCurrency(row.total_deducciones || 0)}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-white">
+                        {formatCurrency(row.total || 0)}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onGenerateVoucher(row.line_id || row.employee_id)}
+                            disabled={loading}
+                            className="bg-white/10 border-white/30 text-white hover:bg-white/20"
+                          >
+                            <Icon name="download" className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </td>
                     </tr>
-                  )}
-                </React.Fragment>
-              ))}
-              
-              {rows.length === 0 && (
+                    
+                    {/* Expanded Row Details */}
+                    {expandedRows.has(row.employee_id) && (
+                      <tr className="bg-white/5">
+                        <td colSpan={9} className="px-4 py-4">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {/* Deducciones Breakdown */}
+                            <div>
+                              <h4 className="text-sm font-semibold text-white mb-2">Desglose de Deducciones</h4>
+                              <div className="space-y-1 text-sm">
+                                <div className="flex justify-between text-gray-200">
+                                  <span>IHSS:</span>
+                                  <span className="text-red-300">{formatCurrency(row.IHSS || 0)}</span>
+                                </div>
+                                <div className="flex justify-between text-gray-200">
+                                  <span>RAP:</span>
+                                  <span className="text-red-300">{formatCurrency(row.RAP || 0)}</span>
+                                </div>
+                                <div className="flex justify-between text-gray-200">
+                                  <span>ISR:</span>
+                                  <span className="text-red-300">{formatCurrency(row.ISR || 0)}</span>
+                                </div>
+                                <div className="flex justify-between text-gray-200">
+                                  <span>Otros:</span>
+                                  <span className="text-red-300">
+                                    {formatCurrency((row.total_deducciones || 0) - (row.IHSS || 0) - (row.RAP || 0) - (row.ISR || 0))}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Asistencia Details */}
+                            <div>
+                              <h4 className="text-sm font-semibold text-white mb-2">Detalles de Asistencia</h4>
+                              <div className="space-y-1 text-sm text-gray-200">
+                                <div>Días trabajados: {row.days_worked || 0}</div>
+                                <div>Días ausentes: {row.days_absent || 0}</div>
+                                <div>Días tarde: {row.late_days || 0}</div>
+                                <div>Horas extras: {row.extras?.horas || 0}h</div>
+                              </div>
+                            </div>
+
+                            {/* Observaciones */}
+                            <div>
+                              <h4 className="text-sm font-semibold text-white mb-2">Observaciones</h4>
+                              <p className="text-sm text-gray-200">
+                                {row.observaciones || 'Sin observaciones'}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                ))
+              ) : (
                 <tr>
                   <td colSpan={9} className="px-4 py-8 text-center text-gray-400 text-lg">
-                    Sin registros de nómina para el período seleccionado
+                    {!Array.isArray(rows) ? 'Error cargando datos' : 'Sin registros de nómina para el período seleccionado'}
                   </td>
                 </tr>
               )}

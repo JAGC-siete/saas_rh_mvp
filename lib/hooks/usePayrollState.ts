@@ -271,7 +271,7 @@ export const usePayrollState = () => {
     
     // Utility
     hasPlanilla: state.planilla.length > 0,
-    hasEdits: state.planilla.some((line: any) => line.line_id && state.planilla.some((l: any) => l.line_id === line.line_id)),
+    hasEdits: state.planilla.some((line: any) => line.line_id && line.edited),
     totalEmployees: state.planilla.length,
     totalBruto: state.planilla.reduce((sum: number, line: any) => sum + line.total_earnings, 0),
     totalDeducciones: state.planilla.reduce((sum: number, line: any) => sum + line.total_deducciones, 0),

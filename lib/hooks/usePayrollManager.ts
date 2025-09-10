@@ -1,0 +1,446 @@
+// Unified Payroll Manager Hook
+// Consolidates all payroll state management into a single, cohesive system
+// Replaces the dual state system with a single source of truth
+
+import { useReducer, useCallback, useMemo, useEffect } from 'react'
+import { useCompanyContext } from '../useCompanyContext'
+import { useToast } from '../toast'
+import { fetchUnifiedPayroll, getCurrentPeriod, UnifiedRow, UnifiedResumen } from '../payroll-unified'
+import { usePayrollMetrics } from './usePayrollMetrics'
+import { payrollApi, mapPayrollError } from '../payroll-api'
+import { PayrollFilters, UIRunStatus } from '../../types/payroll'
+
+// Unified State Interface
+export interface PayrollManagerState {
+  // Data
+  unifiedData: { rows: UnifiedRow[]; resumen: UnifiedResumen } | null
+  currentPeriod: { year: number; month: number; quincena: 1 | 2 }
+  
+  // UI State
+  status: UIRunStatus
+  loading: boolean
+  error: string | null
+  
+  // Filters
+  filters: PayrollFilters
+  
+  // Legacy compatibility (will be removed)
+  runId?: string
+  hasLoadedInitialData: boolean
+}
+
+// Action Types
+export type PayrollManagerAction =
+  | { type: 'SET_LOADING'; payload: boolean }
+  | { type: 'SET_DATA'; payload: { rows: UnifiedRow[]; resumen: UnifiedResumen } }
+  | { type: 'SET_ERROR'; payload: string | null }
+  | { type: 'SET_STATUS'; payload: UIRunStatus }
+  | { type: 'SET_FILTERS'; payload: Partial<PayrollFilters> }
+  | { type: 'SET_PERIOD'; payload: { year: number; month: number; quincena: 1 | 2 } }
+  | { type: 'SET_RUN_ID'; payload: string | undefined }
+  | { type: 'SET_LOADED_INITIAL'; payload: boolean }
+  | { type: 'CLEAR_ERROR' }
+  | { type: 'RESET_STATE' }
+
+// Initial State
+const getInitialState = (): PayrollManagerState => {
+  const currentPeriod = getCurrentPeriod()
+  return {
+    unifiedData: null,
+    currentPeriod: {
+      ...currentPeriod,
+      quincena: currentPeriod.quincena as 1 | 2
+    },
+    status: 'idle',
+    loading: false,
+    error: null,
+    filters: {
+      year: currentPeriod.year,
+      month: currentPeriod.month,
+      quincena: currentPeriod.quincena as 1 | 2,
+      tipo: 'CON'
+    },
+    runId: undefined,
+    hasLoadedInitialData: false
+  }
+}
+
+// Reducer
+const payrollManagerReducer = (
+  state: PayrollManagerState,
+  action: PayrollManagerAction
+): PayrollManagerState => {
+  switch (action.type) {
+    case 'SET_LOADING':
+      return { ...state, loading: action.payload }
+    
+    case 'SET_DATA':
+      return { 
+        ...state, 
+        unifiedData: action.payload, 
+        loading: false,
+        error: null
+      }
+    
+    case 'SET_ERROR':
+      return { 
+        ...state, 
+        error: action.payload, 
+        loading: false,
+        status: action.payload ? 'error' : state.status
+      }
+    
+    case 'SET_STATUS':
+      return { ...state, status: action.payload }
+    
+    case 'SET_FILTERS':
+      return { 
+        ...state, 
+        filters: { ...state.filters, ...action.payload }
+      }
+    
+    case 'SET_PERIOD':
+      return { 
+        ...state, 
+        currentPeriod: action.payload,
+        hasLoadedInitialData: false // Reset to allow new data loading
+      }
+    
+    case 'SET_RUN_ID':
+      return { ...state, runId: action.payload }
+    
+    case 'SET_LOADED_INITIAL':
+      return { ...state, hasLoadedInitialData: action.payload }
+    
+    case 'CLEAR_ERROR':
+      return { ...state, error: null }
+    
+    case 'RESET_STATE':
+      return getInitialState()
+    
+    default:
+      return state
+  }
+}
+
+// Main Hook
+export const usePayrollManager = () => {
+  const [state, dispatch] = useReducer(payrollManagerReducer, getInitialState())
+  const { companyId, loading: companyLoading } = useCompanyContext()
+  const toast = useToast()
+
+  // Metrics calculation
+  const metrics = usePayrollMetrics(state.unifiedData?.rows || [])
+
+  // Action Creators
+  const setLoading = useCallback((loading: boolean) => {
+    dispatch({ type: 'SET_LOADING', payload: loading })
+  }, [])
+
+  const setError = useCallback((error: string | null) => {
+    dispatch({ type: 'SET_ERROR', payload: error })
+  }, [])
+
+  const clearError = useCallback(() => {
+    dispatch({ type: 'CLEAR_ERROR' })
+  }, [])
+
+  const setStatus = useCallback((status: UIRunStatus) => {
+    dispatch({ type: 'SET_STATUS', payload: status })
+  }, [])
+
+  // Filter Management
+  const updateFilter = useCallback((key: keyof PayrollFilters, value: any) => {
+    dispatch({ type: 'SET_FILTERS', payload: { [key]: value } })
+    
+    // Update period if it's a period-related filter
+    if (['year', 'month', 'quincena'].includes(key)) {
+      dispatch({ 
+        type: 'SET_PERIOD', 
+        payload: { 
+          ...state.currentPeriod, 
+          [key]: value 
+        } 
+      })
+    }
+  }, [state.currentPeriod])
+
+  const resetFilters = useCallback(() => {
+    const newPeriod = getCurrentPeriod()
+    dispatch({ 
+      type: 'SET_PERIOD', 
+      payload: {
+        ...newPeriod,
+        quincena: newPeriod.quincena as 1 | 2
+      }
+    })
+    dispatch({ 
+      type: 'SET_FILTERS', 
+      payload: {
+        year: newPeriod.year,
+        month: newPeriod.month,
+        quincena: newPeriod.quincena as 1 | 2,
+        tipo: 'CON'
+      }
+    })
+  }, [])
+
+  // Data Loading
+  const loadUnifiedData = useCallback(async () => {
+    if (!companyId) return
+
+    setLoading(true)
+    clearError()
+
+    try {
+      console.log('🔄 Loading unified payroll data:', {
+        companyId,
+        year: state.currentPeriod.year,
+        month: state.currentPeriod.month,
+        quincena: state.currentPeriod.quincena
+      })
+
+      const data = await fetchUnifiedPayroll(
+        companyId,
+        state.currentPeriod.year,
+        state.currentPeriod.month,
+        state.currentPeriod.quincena
+      )
+
+      dispatch({ type: 'SET_DATA', payload: data })
+      dispatch({ type: 'SET_LOADED_INITIAL', payload: true })
+
+      console.log('✅ Unified payroll data loaded:', {
+        rowsCount: data.rows?.length || 0,
+        resumen: data.resumen
+      })
+
+    } catch (error: any) {
+      console.error('❌ Error loading unified payroll data:', error)
+      const errorMessage = error?.message || 'Error desconocido'
+      setError(`Error cargando datos: ${errorMessage}`)
+      toast.error('Error', 'No se pudieron cargar los datos del período actual', 5000)
+    }
+  }, [companyId, state.currentPeriod, setLoading, clearError, setError, toast])
+
+  // Legacy API Actions (for compatibility during migration)
+  const generatePreview = useCallback(async () => {
+    setStatus('previewing')
+    setLoading(true)
+    clearError()
+
+    try {
+      const response = await payrollApi.preview(state.filters)
+      
+      dispatch({ type: 'SET_RUN_ID', payload: response.run_id })
+      setStatus('draft')
+      
+      toast.success(
+        'Preview Generado',
+        `${response.empleados} empleados procesados exitosamente`,
+        5000
+      )
+
+      return response
+    } catch (error: any) {
+      const errorMessage = mapPayrollError(error)
+      setError(errorMessage)
+      toast.error('Error en Preview', errorMessage, 8000)
+      throw error
+    }
+  }, [state.filters, setStatus, setLoading, clearError, setError, toast])
+
+  const editLine = useCallback(async (
+    runLineId: string,
+    field: string,
+    newValue: number,
+    reason?: string
+  ) => {
+    if (!state.runId) {
+      throw new Error('No hay una corrida de nómina activa')
+    }
+
+    setStatus('editing')
+    setLoading(true)
+    clearError()
+
+    try {
+      const response = await payrollApi.edit({
+        run_line_id: runLineId,
+        field: field as any,
+        new_value: newValue,
+        reason
+      })
+
+      setStatus('draft')
+      toast.success('Línea Editada', `Campo ${field} actualizado a ${newValue}`, 4000)
+
+      return response
+    } catch (error: any) {
+      const errorMessage = mapPayrollError(error)
+      setError(errorMessage)
+      toast.error('Error Editando', errorMessage, 6000)
+      throw error
+    }
+  }, [state.runId, setStatus, setLoading, clearError, setError, toast])
+
+  const authorizeRun = useCallback(async () => {
+    if (!state.runId) {
+      throw new Error('No hay una corrida de nómina activa')
+    }
+
+    setStatus('authorizing')
+    setLoading(true)
+    clearError()
+
+    try {
+      const response = await payrollApi.authorize({ run_id: state.runId })
+      
+      setStatus('authorized')
+      toast.success('Nómina Autorizada', 'La nómina ha sido autorizada exitosamente', 6000)
+
+      return response
+    } catch (error: any) {
+      const errorMessage = mapPayrollError(error)
+      setError(errorMessage)
+      toast.error('Error Autorizando', errorMessage, 8000)
+      throw error
+    }
+  }, [state.runId, setStatus, setLoading, clearError, setError, toast])
+
+  const sendEmail = useCallback(async (employeeId?: string) => {
+    if (!state.runId) {
+      throw new Error('No hay una corrida de nómina activa')
+    }
+
+    setStatus('distributing')
+    setLoading(true)
+    clearError()
+
+    try {
+      const response = await payrollApi.sendMail({
+        run_id: state.runId,
+        employee_id: employeeId
+      })
+
+      setStatus('authorized')
+      
+      if (response.successful > 0) {
+        toast.success('Emails Enviados', `${response.successful} emails enviados exitosamente`, 5000)
+      }
+      
+      if (response.failed > 0) {
+        toast.warning('Algunos Emails Fallaron', `${response.failed} emails no se pudieron enviar`, 8000)
+      }
+
+      return response
+    } catch (error: any) {
+      const errorMessage = mapPayrollError(error)
+      setError(errorMessage)
+      toast.error('Error Enviando Emails', errorMessage, 8000)
+      throw error
+    }
+  }, [state.runId, setStatus, setLoading, clearError, setError, toast])
+
+  const generatePDF = useCallback(async () => {
+    if (!state.runId) {
+      toast.error('Error', 'No hay una corrida de nómina activa', 4000)
+      return
+    }
+    
+    try {
+      const response = await payrollApi.generatePDF(state.runId)
+      
+      // Trigger direct download
+      const link = document.createElement('a')
+      link.href = response.url
+      link.download = `planilla_${state.currentPeriod.year}-${state.currentPeriod.month.toString().padStart(2, '0')}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      
+      toast.success('PDF Generado', 'El PDF se ha descargado correctamente', 4000)
+    } catch (error: any) {
+      toast.error('Error Generando PDF', 'No se pudo generar el PDF', 6000)
+    }
+  }, [state.runId, state.currentPeriod, toast])
+
+  const generateVoucher = useCallback(async (runLineId: string) => {
+    try {
+      const response = await payrollApi.generateVoucher(runLineId)
+      
+      // Open in new tab
+      window.open(response.url, '_blank')
+      toast.success('Voucher Generado', 'El voucher se ha abierto en una nueva pestaña', 4000)
+    } catch (error: any) {
+      toast.error('Error Generando Voucher', 'No se pudo generar el voucher', 6000)
+    }
+  }, [toast])
+
+  // Auto-load data when period changes
+  useEffect(() => {
+    if (state.hasLoadedInitialData || !companyId) return
+
+    const abortController = new AbortController()
+    loadUnifiedData()
+
+    return () => abortController.abort()
+  }, [state.hasLoadedInitialData, companyId, loadUnifiedData])
+
+  // Computed Properties
+  const canPreview = state.status === 'idle' || state.status === 'draft' || state.status === 'error'
+  const canEdit = state.status === 'draft' && !!state.runId
+  const canAuthorize = state.status === 'draft' && !!state.runId
+  const canSend = state.status === 'authorized' && !!state.runId
+  const canReset = state.status !== 'idle'
+
+  // Legacy compatibility properties
+  const hasPlanilla = (state.unifiedData?.rows?.length || 0) > 0
+  const totalEmployees = state.unifiedData?.resumen.empleados || 0
+  const totalBruto = state.unifiedData?.resumen.total_bruto || 0
+  const totalNeto = state.unifiedData?.resumen.total_neto || 0
+
+  return {
+    // State
+    ...state,
+    
+    // Metrics
+    metrics,
+    
+    // Actions
+    loadUnifiedData,
+    generatePreview,
+    editLine,
+    authorizeRun,
+    sendEmail,
+    generatePDF,
+    generateVoucher,
+    
+    // Filter Management
+    updateFilter,
+    resetFilters,
+    
+    // State Management
+    setStatus,
+    setError,
+    clearError,
+    setLoading,
+    
+    // Computed Properties
+    canPreview,
+    canEdit,
+    canAuthorize,
+    canSend,
+    canReset,
+    
+    // Legacy Compatibility
+    hasPlanilla,
+    totalEmployees,
+    totalBruto,
+    totalNeto,
+    
+    // Company Context
+    companyId,
+    companyLoading
+  }
+}
