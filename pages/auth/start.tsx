@@ -7,7 +7,7 @@ const CloudBackground = dynamic(() => import('../../components/CloudBackground')
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
-import { Mail, Phone, Facebook, ArrowRight, Loader2 } from 'lucide-react'
+import { Mail, Phone, /* Facebook, */ ArrowRight, Loader2 } from 'lucide-react'
 import { createClient as createSupabaseBrowserClient } from '../../lib/supabase/client'
 
 export default function AuthStart() {
@@ -144,27 +144,28 @@ export default function AuthStart() {
     }
   }
 
-  const handleOAuth = async (provider: 'facebook') => {
-    setLoading(true)
-    setError('')
+  // Facebook OAuth - Comentado hasta configurar en Facebook Developers
+  // const handleOAuth = async (provider: 'facebook') => {
+  //   setLoading(true)
+  //   setError('')
 
-    try {
-      const supabase = await createSupabaseBrowserClient()
-      if (!supabase) throw new Error('Error inicializando Supabase')
+  //   try {
+  //     const supabase = await createSupabaseBrowserClient()
+  //     if (!supabase) throw new Error('Error inicializando Supabase')
       
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=/onboarding`
-        }
-      })
+  //     const { error } = await supabase.auth.signInWithOAuth({
+  //       provider,
+  //       options: {
+  //         redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?next=/onboarding`
+  //       }
+  //     })
       
-      if (error) throw error
-    } catch (err: any) {
-      setError(err.message || 'Error con autenticación de Facebook')
-      setLoading(false)
-    }
-  }
+  //     if (error) throw error
+  //   } catch (err: any) {
+  //     setError(err.message || 'Error con autenticación de Facebook')
+  //     setLoading(false)
+  //   }
+  // }
 
   return (
     <>
@@ -228,7 +229,8 @@ export default function AuthStart() {
                     Crear mi cuenta con correo
                   </Button>
                   
-                  <Button
+                  {/* Facebook OAuth - Comentado hasta configurar en Facebook Developers */}
+                  {/* <Button
                     onClick={() => handleOAuth('facebook')}
                     variant="outline"
                     className="w-full h-12 border-brand-500/20 text-brand-200 hover:bg-brand-800/20"
@@ -236,7 +238,7 @@ export default function AuthStart() {
                   >
                     <Facebook className="h-5 w-5 mr-2" />
                     Continuar con Facebook
-                  </Button>
+                  </Button> */}
 
                   <Button
                     onClick={() => setStep('phone')}
