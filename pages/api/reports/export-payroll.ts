@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../lib/supabase/server'
-import { authenticateUser } from '../../../lib/auth-helpers'
+import { requireCompanyAccess } from '../../../lib/auth/api-auth'
+import { getCompanyData } from '../../../lib/helpers/company-filter'
 import { formatDateForHonduras, nowInHonduras, formatDateTimeForHonduras } from '../../../lib/timezone'
 import { 
   withExportSecurity, 
@@ -17,33 +17,11 @@ export default handlerWithSecurity
 
 async function exportPayrollHandler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    // 🔒 AUTENTICACIÓN REQUERIDA CON MISMOS PERMISOS QUE PAYROLL
-    const authResult = await authenticateUser(req, res, ['can_view_reports', 'can_generate_payroll'])
+    const { supabase, companyId } = await requireCompanyAccess(req, res)
     
-    if (!authResult.success) {
-      return res.status(401).json({ 
-        error: authResult.error,
-        message: authResult.message
-      })
+    if (!companyId) {
+      return res.status(400).json({ error: 'Company ID is required' })
     }
-
-    const { user, userProfile } = authResult
-    const supabase = createClient(req, res)
-
-    // VALIDAR ACCESO A EMPRESA (PREVIENE ACCESO NO AUTORIZADO)
-    const companyAccess = await validateCompanyAccess(supabase, userProfile, req.body.company_id)
-    if (!companyAccess.valid) {
-      return res.status(403).json({
-        error: 'Acceso denegado',
-        message: companyAccess.error
-      })
-    }
-
-    secureLog('Usuario autenticado para reporte de nómina', { 
-      userId: user.id, 
-      role: userProfile?.role,
-      companyId: userProfile?.company_id 
-    })
 
     const { format, reportType, periodo } = req.body
     
@@ -60,11 +38,11 @@ async function exportPayrollHandler(req: NextApiRequest, res: NextApiResponse) {
       format,
       reportType,
       periodo,
-      user: user.email
+      companyId
     })
 
     // Obtener datos del reporte
-    const reportData = await generatePayrollReportData(supabase, reportType, periodo, userProfile)
+    const reportData = await generatePayrollReportData(supabase, reportType, periodo, companyId)
 
     if (format === 'pdf') {
       return generatePayrollPDFReport(res, reportData, reportType, periodo)
@@ -72,52 +50,55 @@ async function exportPayrollHandler(req: NextApiRequest, res: NextApiResponse) {
       return generatePayrollCSVReport(res, reportData, reportType, periodo)
     }
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error generando reporte de nómina:', error)
-    return res.status(500).json({ 
-      error: 'Error interno del servidor', 
-      message: error instanceof Error ? error.message : 'Error desconocido'
+    return res.status(error.message === 'UNAUTHORIZED' ? 401 : 500).json({
+      error: error.message || 'Internal server error'
     })
   }
 }
 
-async function generatePayrollReportData(supabase: any, reportType: string, periodo: string, userProfile: any) {
-  // Obtener empleados activos usando query segura
-  const employeesQuery = buildSecureQuery(supabase, 'employees', userProfile, { status: 'active' })
-    .select('id, name, dni, employee_code, base_salary, department_id, status')
-    .order('name')
-
-  const { data: employees, error: empError } = await employeesQuery
+async function generatePayrollReportData(supabase: any, reportType: string, periodo: string, companyId: string) {
+  // Obtener empleados activos usando getCompanyData
+  const { data: employees, error: empError } = await getCompanyData(
+    supabase,
+    'employees',
+    companyId,
+    'id, name, dni, employee_code, base_salary, department_id, status',
+    { status: 'active' }
+  ).order('name')
 
   if (empError) {
     console.error('Error obteniendo empleados:', empError)
     throw new Error('Error obteniendo empleados')
   }
 
-  // Obtener registros de nómina usando query segura
-  const payrollQuery = buildSecureQuery(supabase, 'payroll_records', userProfile)
-    .select(`
+  // Obtener registros de nómina usando getCompanyData
+  let payrollQuery = getCompanyData(
+    supabase,
+    'payroll_records',
+    companyId,
+    `
       *,
       employees (
         name,
         employee_code,
         department_id
       )
-    `)
-    .order('created_at', { ascending: false })
+    `
+  ).order('created_at', { ascending: false })
 
   // Filtrar por período si es necesario
-  let finalPayrollQuery = payrollQuery
   if (reportType === 'period' && periodo) {
     const [year, month] = periodo.split('-')
     const startDate = `${periodo}-01`
     const endDate = `${periodo}-${new Date(parseInt(year), parseInt(month), 0).getDate()}`
-    finalPayrollQuery = payrollQuery
+    payrollQuery = payrollQuery
       .gte('period_start', startDate)
       .lte('period_end', endDate)
   }
 
-  const { data: payrollRecords, error: payrollError } = await finalPayrollQuery
+  const { data: payrollRecords, error: payrollError } = await payrollQuery
 
   if (payrollError) {
     console.error('Error obteniendo registros de nómina:', payrollError)

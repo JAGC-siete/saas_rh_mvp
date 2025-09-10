@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../lib/supabase/server'
-import { authenticateUser } from '../../../lib/auth-helpers'
+import { requireCompanyAccess } from '../../../lib/auth/api-auth'
+import { getCompanyData } from '../../../lib/helpers/company-filter'
 import { generateConsolidatedAttendancePDF, type AttendanceItem, type AttendanceSummary } from '../../../lib/attendance/report'
 import ExcelJS from 'exceljs'
 import { withInputValidation, createSecureErrorResponse } from '../../../lib/security/input-validation'
@@ -25,46 +25,29 @@ export default handlerWithSecurity
 
 async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    // 1. AUTENTICACIÓN Y AUTORIZACIÓN SEGURA
-    const authResult = await authenticateUser(req, res, ['can_view_reports', 'can_export_reports'])
-    if (!authResult.success) {
-      return res.status(401).json({ 
-        error: authResult.error,
-        message: authResult.message
-      })
+    const { supabase, companyId } = await requireCompanyAccess(req, res)
+    
+    if (!companyId) {
+      return res.status(400).json({ error: 'Company ID is required' })
     }
 
-    const { user, userProfile } = authResult
+    const { startDate, endDate, formato, employee_id } = req.body
 
-    // 2. CREAR CLIENTE SUPABASE
-    const supabase = createClient(req, res)
-
-    // 3. VALIDAR ACCESO A EMPRESA (PREVIENE ACCESO NO AUTORIZADO)
-    const companyAccess = await validateCompanyAccess(supabase, userProfile, req.body.company_id)
-    if (!companyAccess.valid) {
-      return res.status(403).json({
-        error: 'Acceso denegado',
-        message: companyAccess.error
-      })
+    // Obtener empleados de la empresa usando getCompanyData
+    const { data: employees, error: empError } = await getCompanyData(
+      supabase,
+      'employees',
+      companyId,
+      'id',
+      { status: 'active' }
+    )
+    
+    if (empError) {
+      console.error('Error obteniendo empleados', { error: empError.message })
+      return res.status(500).json({ error: 'Error obteniendo empleados' })
     }
-
-    // 4. USAR DATOS VALIDADOS DEL MIDDLEWARE
-    const { startDate, endDate, formato, employee_id } = req.validatedData
-
-    // 5. OBTENER DATOS CON FILTROS DE SEGURIDAD APLICADOS
-    let employeeIds: string[] = []
-    if (userProfile?.company_id) {
-      // Obtener empleados de la empresa del usuario usando query segura
-      const employeesQuery = buildSecureQuery(supabase, 'employees', userProfile, { status: 'active' })
-      const { data: employees, error: empError } = await employeesQuery.select('id')
-      
-      if (empError) {
-        secureLog('Error obteniendo empleados', { error: empError.message })
-        return res.status(500).json(createSecureErrorResponse(empError, 'obtener empleados'))
-      }
-      
-      employeeIds = (employees || []).map((e: any) => e.id)
-    }
+    
+    const employeeIds = (employees || []).map((e: any) => e.id)
 
     // Construir consulta de asistencia con filtros de seguridad
     let attendanceQuery = supabase
@@ -85,19 +68,18 @@ async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse
     // Aplicar filtro de empresa
     if (employeeIds.length > 0) {
       attendanceQuery = attendanceQuery.in('employee_id', employeeIds)
-    } else if (userProfile?.company_id) {
+    } else {
       // Forzar vacío si no hay empleados para esa empresa
       attendanceQuery = attendanceQuery.eq('employee_id', '__none__')
     }
 
     // Filtrar por empleado específico si se proporciona
     if (employee_id) {
-      // VALIDACIÓN CONTINUA DE ACCESO (PREVIENE BYPASS DE CONTROLES)
-      const accessValidation = await validateContinuousAccess(supabase, userProfile, 'employees', employee_id)
-      if (!accessValidation.valid) {
+      // Verificar que el empleado pertenece a la empresa
+      if (!employeeIds.includes(employee_id)) {
         return res.status(403).json({
           error: 'Acceso denegado',
-          message: accessValidation.error
+          message: 'Empleado no pertenece a tu empresa'
         })
       }
       attendanceQuery = attendanceQuery.eq('employee_id', employee_id)
@@ -106,7 +88,7 @@ async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse
     const { data: records, error } = await attendanceQuery
     if (error) {
       console.error('Error obteniendo registros de asistencia:', error)
-      return res.status(500).json(createSecureErrorResponse(error, 'obtener registros de asistencia'))
+      return res.status(500).json({ error: 'Error obteniendo registros de asistencia' })
     }
 
     // 5. PROCESAR EXPORTACIÓN SEGURA
@@ -137,7 +119,7 @@ async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse
     }
 
     if (formato === 'pdf') {
-      return exportToPDF(records || [], startDate, endDate, res, user?.email)
+      return exportToPDF(records || [], startDate, endDate, res)
     }
 
     // Formato no soportado
@@ -146,8 +128,11 @@ async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse
       message: 'Use csv, excel o pdf'
     })
 
-  } catch (error) {
-    return res.status(500).json(createSecureErrorResponse(error, 'exportación de asistencia'))
+  } catch (error: any) {
+    console.error('Error en exportación de asistencia:', error)
+    return res.status(error.message === 'UNAUTHORIZED' ? 401 : 500).json({
+      error: error.message || 'Internal server error'
+    })
   }
 }
 
@@ -290,7 +275,7 @@ async function exportToExcel(attendanceRecords: any[], startDate: string, endDat
   }
 }
 
-async function exportToPDF(attendanceRecords: any[], startDate: string, endDate: string, res: NextApiResponse, generatedByEmail?: string) {
+async function exportToPDF(attendanceRecords: any[], startDate: string, endDate: string, res: NextApiResponse) {
   try {
     // Preparar datos para PDF
     const attendanceData: AttendanceItem[] = attendanceRecords.map(record => {
@@ -355,7 +340,7 @@ async function exportToPDF(attendanceRecords: any[], startDate: string, endDate:
     }
 
     console.log(`Generando PDF de asistencia: ${attendanceData.length} registros para ${startDate} a ${endDate}`)
-    const pdfBuffer = await generateConsolidatedAttendancePDF(attendanceData, summary, startDate, endDate, generatedByEmail)
+    const pdfBuffer = await generateConsolidatedAttendancePDF(attendanceData, summary, startDate, endDate)
     
     res.setHeader('Content-Type', 'application/pdf')
     

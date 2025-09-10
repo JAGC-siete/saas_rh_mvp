@@ -148,6 +148,7 @@ export default function ReportsAndAnalytics() {
         body: JSON.stringify({
           format: format,
           dateFilter: { startDate: dateRange.startDate, endDate: dateRange.endDate }
+          // company_id now comes from auth context
         })
       })
 

@@ -35,7 +35,7 @@ export default function GamificationLeaderboard({ companyId, limit = 20 }: Gamif
       setLoading(true)
       setError(null)
       
-      const response = await fetch(`/api/gamification?action=leaderboard&company_id=${companyId}&limit=${limit}`)
+      const response = await fetch(`/api/gamification?action=leaderboard&limit=${limit}`)
       const data = await response.json()
       
       if (data.success) {
@@ -49,7 +49,7 @@ export default function GamificationLeaderboard({ companyId, limit = 20 }: Gamif
     } finally {
       setLoading(false)
     }
-  }, [companyId, limit])
+  }, [limit])
 
   useEffect(() => {
     if (!companyId) return
