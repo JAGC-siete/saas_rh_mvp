@@ -32,8 +32,13 @@ const getDefaultFilters = (): PayrollFilters => {
   }
 }
 
-// Load filters from localStorage
+// Load filters from localStorage (client-side only)
 const loadFilters = (): PayrollFilters => {
+  // Only access localStorage on client-side
+  if (typeof window === 'undefined') {
+    return getDefaultFilters()
+  }
+  
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
     if (stored) {
@@ -49,8 +54,13 @@ const loadFilters = (): PayrollFilters => {
   return getDefaultFilters()
 }
 
-// Save filters to localStorage
+// Save filters to localStorage (client-side only)
 const saveFilters = (filters: PayrollFilters) => {
+  // Only access localStorage on client-side
+  if (typeof window === 'undefined') {
+    return
+  }
+  
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(filters))
   } catch (error) {

@@ -377,8 +377,10 @@ export const usePayrollManager = () => {
     }
   }, [toast])
 
-  // Auto-load data when period changes
+  // Auto-load data when period changes (client-side only)
   useEffect(() => {
+    // Only run on client-side
+    if (typeof window === 'undefined') return
     if (state.hasLoadedInitialData || !companyId) return
 
     const abortController = new AbortController()
