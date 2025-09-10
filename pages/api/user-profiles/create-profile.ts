@@ -13,7 +13,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { 
       company_name,
       company_id, 
-      employee_id, 
       role = 'hr_manager', 
       permissions = {},
       is_active = true 
@@ -68,13 +67,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       finalCompanyId = newCompany.id
     }
 
+    // Generate automatic employee ID (EMP001 for first employee)
+    const employeeId = 'EMP001'
+
     // Create new user profile
     const { data: newProfile, error: createError } = await supabase
       .from('user_profiles')
       .insert([{
         id: user.id,
         company_id: finalCompanyId,
-        employee_id: employee_id || null,
+        employee_id: employeeId,
         role,
         permissions,
         is_active
