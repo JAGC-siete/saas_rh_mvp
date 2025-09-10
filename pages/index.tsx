@@ -183,9 +183,10 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Trust badges */}
           <div className="flex flex-wrap justify-center gap-3 md:gap-6 mb-8 animate-fade-up-subtle">
-            <span className="text-sm bg-green-500/10 text-green-400 px-3 py-1 rounded-full border border-green-500/20 hover:bg-green-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-100">Cumple STSS Honduras</span>
-            <span className="text-sm bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full border border-blue-500/20 hover:bg-blue-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-200">Setup en 24 horas</span>
-            <span className="text-sm bg-orange-500/10 text-orange-400 px-3 py-1 rounded-full border border-orange-500/20 hover:bg-orange-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-300">02 empresas activas</span>
+            <span className="text-sm bg-green-500/10 text-green-400 px-3 py-1 rounded-full border border-green-500/20 hover:bg-green-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-100">Cumplí STSS Honduras</span>
+            <span className="text-sm bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full border border-blue-500/20 hover:bg-blue-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-200">Setup en 5 minutos</span>
+            <span className="text-sm bg-purple-500/10 text-purple-400 px-3 py-1 rounded-full border border-purple-500/20 hover:bg-purple-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-300">30 días gratis</span>
+            <span className="text-sm bg-orange-500/10 text-orange-400 px-3 py-1 rounded-full border border-orange-500/20 hover:bg-orange-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-400">Empleados ilimitados</span>
           </div>
 
           {/* Hero Title - Centrado */}
@@ -215,8 +216,8 @@ export default function LandingPage() {
       {/* AWS Certifications Section */}
       <AWSCertificationsSection />
 
-      {/* Social Proof Section - Simplificada */}
-      <section id="servicios" className="py-16 bg-white/5">
+      {/* Social Proof Section - Comentada temporalmente */}
+      {/* <section id="servicios" className="py-16 bg-white/5">
         <div className="max-w-6xl mx-auto px-4">
           <h2 className="text-3xl font-bold text-center text-white mb-12">
             Empresas que ya automatizaron su RH
@@ -246,7 +247,7 @@ export default function LandingPage() {
             ))}
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* Shared Cloud Background */}
       <CloudBackground />
