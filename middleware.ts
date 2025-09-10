@@ -292,7 +292,7 @@ export async function middleware(request: NextRequest) {
     logger.debug('Protected app route accessed', { path: pathname })
     
     try {
-      // Create Supabase client for middleware
+      // Create Supabase client for middleware using proper SSR pattern
       const supabaseUrl = process.env['NEXT_PUBLIC_SUPABASE_URL']
       const anon = process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY']
       
@@ -415,7 +415,7 @@ export async function middleware(request: NextRequest) {
 
   // For other private routes (legacy), check for Supabase session
   try {
-    // Create Supabase client for middleware
+    // Create Supabase client for middleware using proper SSR pattern
     const supabaseUrl = process.env['NEXT_PUBLIC_SUPABASE_URL']
     const anon = process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY']
     

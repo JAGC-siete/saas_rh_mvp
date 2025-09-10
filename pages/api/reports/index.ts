@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { requireUser } from '../../../lib/auth/requireUser'
+import { requireCompanyAccess } from '../../../lib/auth/api-auth'
 import { requirePlanAndQuota } from '../../../lib/billing/enforce'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -8,35 +8,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { supabase, userProfile } = await requireUser(req, res)
-    // const { company_id } = req.query
+    const { supabase, companyId } = await requireCompanyAccess(req, res)
 
-    if (!userProfile?.company_id) {
-      return res.status(400).json({ 
-        error: 'Perfil de usuario incompleto',
-        message: 'No se pudo obtener la información de la empresa'
-      })
+    if (!companyId) {
+      return res.status(400).json({ error: 'Company ID is required' })
     }
 
     // Check plan and quota before processing
-    await requirePlanAndQuota(supabase, userProfile.company_id, 'view_reports')
+    await requirePlanAndQuota(supabase, companyId, 'view_reports')
 
     // Get basic company stats for reports
     const { data: company } = await supabase
       .from('companies')
       .select('name, id')
-      .eq('id', userProfile.company_id)
+      .eq('id', companyId)
       .single()
 
     if (!company) {
       return res.status(404).json({ error: 'Company not found' })
     }
 
-    // Get employee count
+    // Get employee count using company filter
     const { count: employeeCount } = await supabase
       .from('employees')
       .select('*', { count: 'exact', head: true })
-      .eq('company_id', userProfile.company_id)
+      .eq('company_id', companyId)
       .eq('status', 'active')
 
     // Get attendance stats for current month
@@ -44,7 +40,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { count: attendanceCount } = await supabase
       .from('attendance_records')
       .select('*', { count: 'exact', head: true })
-      .eq('company_id', userProfile.company_id)
+      .eq('company_id', companyId)
       .gte('date', `${currentMonth}-01`)
       .lte('date', `${currentMonth}-31`)
 
@@ -52,7 +48,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { count: payrollCount } = await supabase
       .from('payroll_records')
       .select('*', { count: 'exact', head: true })
-      .eq('company_id', userProfile.company_id)
+      .eq('company_id', companyId)
       .gte('period_start', `${currentMonth}-01`)
       .lte('period_end', `${currentMonth}-31`)
 

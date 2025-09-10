@@ -1,14 +1,15 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { createAdminClient } from '../../../lib/supabase/server'
+import { requireCompanyAccess } from '../../../lib/auth/api-auth'
 import { getDateRange } from '../../../lib/attendance'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const { preset = 'today', from, to, role, employee_id } = req.query
-  const range = typeof from === 'string' && typeof to === 'string'
-    ? { from, to }
-    : getDateRange(preset as string)
-
-  const supabase = createAdminClient()
+  try {
+    const { supabase, companyId } = await requireCompanyAccess(req, res)
+    
+    const { preset = 'today', from, to, role, employee_id } = req.query
+    const range = typeof from === 'string' && typeof to === 'string'
+      ? { from, to }
+      : getDateRange(preset as string)
   
   // CORREGIR: Orden de parámetros según definición del RPC
   // attendance_kpis_filtered(p_employee_id, p_from, p_role, p_to)
@@ -29,7 +30,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: error.message })
   }
 
-  // RPC puede devolver row único en array
-  const row = Array.isArray(data) ? (data[0] || null) : data
-  res.status(200).json(row)
+    // RPC puede devolver row único en array
+    const row = Array.isArray(data) ? (data[0] || null) : data
+    res.status(200).json(row)
+  } catch (error: any) {
+    console.error('Attendance KPIs API error:', error)
+    return res.status(error.message === 'UNAUTHORIZED' ? 401 : 500).json({ 
+      error: error.message || 'Internal server error' 
+    })
+  }
 }

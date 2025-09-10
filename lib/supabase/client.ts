@@ -2,7 +2,7 @@ import { createBrowserClient } from '@supabase/ssr'
 import { env, refreshEnvFromWindow } from '../env'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-export async function createClient(): Promise<SupabaseClient> {
+export function createClient(): SupabaseClient {
   // Get environment variables from centralized config
   const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -34,36 +34,23 @@ export async function createClient(): Promise<SupabaseClient> {
     
     try {
       // Try to load environment variables from API
-      const response = await fetch('/api/env')
-      const envData = await response.json()
-      
-      if (envData.NEXT_PUBLIC_SUPABASE_URL && envData.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-        // Inject environment variables into global scope
-        if (typeof window !== 'undefined') {
-          (window as any).__ENV__ = envData
-          // Refresh the env object
-          refreshEnvFromWindow()
-        }
-        
-        // Create client with loaded variables
-        const client = createBrowserClient(envData.NEXT_PUBLIC_SUPABASE_URL, envData.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
-          auth: {
-            autoRefreshToken: true,
-            persistSession: true,
-            detectSessionInUrl: true
-          },
-          global: {
-            headers: {
-              'X-Client-Info': 'hr-saas-frontend'
+      fetch('/api/env')
+        .then(response => response.json())
+        .then(envData => {
+          if (envData.NEXT_PUBLIC_SUPABASE_URL && envData.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+            // Inject environment variables into global scope
+            if (typeof window !== 'undefined') {
+              (window as any).__ENV__ = envData
+              // Refresh the env object
+              refreshEnvFromWindow()
             }
           }
         })
-        
-        console.log('✅ Supabase browser client created successfully with API-loaded variables')
-        return client
-      } else {
-        throw new Error('Supabase environment variables are not configured')
-      }
+        .catch(error => {
+          console.error('❌ Failed to load environment variables from API:', error)
+        })
+      
+      throw new Error('Supabase environment variables are not configured')
     } catch (error) {
       console.error('❌ Failed to load environment variables from API:', error)
       throw new Error('Supabase environment variables are not configured')
@@ -90,4 +77,9 @@ export async function createClient(): Promise<SupabaseClient> {
     console.error('❌ Failed to create Supabase browser client:', error)
     throw error
   }
+}
+
+// Async version for backward compatibility
+export async function createClientAsync(): Promise<SupabaseClient> {
+  return createClient()
 }

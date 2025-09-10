@@ -1,23 +1,23 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { requireUser } from '../../../lib/auth/requireUser'
+import { requireCompanyAccess } from '../../../lib/auth/api-auth'
+import { getCompanyData, addCompanyToInsertData } from '../../../lib/helpers/company-filter'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const { supabase, userProfile } = await requireUser(req, res)
-    
-    if (!userProfile?.company_id) {
-      return res.status(400).json({ error: 'Company ID required' })
-    }
+    const { supabase, companyId } = await requireCompanyAccess(req, res)
 
-    const companyId = userProfile.company_id
+    if (!companyId) {
+      return res.status(400).json({ error: 'Company ID is required' })
+    }
 
     switch (req.method) {
       case 'GET':
-        const { data: departments, error: fetchError } = await supabase
-          .from('departments')
-          .select('*')
-          .eq('company_id', companyId)
-          .order('name')
+        const { data: departments, error: fetchError } = await getCompanyData(
+          supabase,
+          'departments',
+          companyId,
+          '*'
+        ).order('name')
 
         if (fetchError) throw fetchError
         return res.json({ departments })
@@ -29,13 +29,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           return res.status(400).json({ error: 'Department name is required' })
         }
 
+        const insertData = addCompanyToInsertData({
+          name,
+          description: description || null
+        }, companyId)
+
         const { data: newDept, error: createError } = await supabase
           .from('departments')
-          .insert([{
-            company_id: companyId,
-            name,
-            description: description || null
-          }])
+          .insert(insertData)
           .select()
           .single()
 

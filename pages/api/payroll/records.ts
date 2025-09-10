@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { requireRoles } from '../../../lib/auth/api-auth'
+import { requireCompanyAccess } from '../../../lib/auth/api-auth'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -7,10 +7,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Use new authentication helper with role requirements
-    const { supabase, companyId, role } = await requireRoles(req, res, [
-      'super_admin', 'company_admin', 'hr_manager'
-    ])
+    // Use company access helper with role requirements
+    const { supabase, companyId, role } = await requireCompanyAccess(req, res)
+    
+    // Check if user has required role for payroll access
+    if (!['super_admin', 'company_admin', 'hr_manager'].includes(role)) {
+      return res.status(403).json({ error: 'Insufficient permissions for payroll access' })
+    }
 
     const { periodo, quincena } = req.query
     
