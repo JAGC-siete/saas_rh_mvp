@@ -3,8 +3,7 @@ import { useAuth } from '../lib/auth'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
-import { Loader2, User, Building, Shield } from 'lucide-react'
+import { Loader2, User, Building, CheckCircle } from 'lucide-react'
 
 interface UserProfileSetupProps {
   onComplete: () => void
@@ -15,10 +14,8 @@ export default function UserProfileSetup({ onComplete }: UserProfileSetupProps) 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [formData, setFormData] = useState({
-    company_id: '',
-    employee_id: '',
-    role: 'employee',
-    is_active: true
+    company_name: '',
+    employee_id: ''
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -30,7 +27,12 @@ export default function UserProfileSetup({ onComplete }: UserProfileSetupProps) 
       const response = await fetch('/api/user-profiles/create-profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          company_name: formData.company_name,
+          employee_id: formData.employee_id || null,
+          role: 'hr_manager', // Fixed role
+          is_active: true
+        })
       })
 
       if (!response.ok) {
@@ -62,79 +64,60 @@ export default function UserProfileSetup({ onComplete }: UserProfileSetupProps) 
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto h-12 w-12 bg-brand-100 rounded-full flex items-center justify-center mb-4">
-            <User className="h-6 w-6 text-brand-900" />
+            <Building className="h-6 w-6 text-brand-900" />
           </div>
-          <CardTitle className="text-2xl">Complete Your Profile</CardTitle>
+          <CardTitle className="text-2xl">¡Bienvenido a Humano SISU!</CardTitle>
           <p className="text-gray-600">
-            Set up your user profile to access the system
+            Configurá tu empresa para comenzar a gestionar tu equipo
           </p>
         </CardHeader>
         
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="text-sm font-medium text-gray-700 mb-2 block">
-                Company ID
+                Nombre de tu Empresa
               </label>
               <Input
                 type="text"
-                value={formData.company_id}
-                onChange={(e) => handleInputChange('company_id', e.target.value)}
-                placeholder="Enter company ID"
+                value={formData.company_name}
+                onChange={(e) => handleInputChange('company_name', e.target.value)}
+                placeholder="Ej: Mi Empresa S.A. de C.V."
                 required
                 disabled={loading}
+                className="h-12"
               />
               <p className="text-xs text-gray-500 mt-1">
-                Contact your administrator for the company ID
+                Crearemos automáticamente tu empresa en el sistema
               </p>
             </div>
 
             <div>
               <label className="text-sm font-medium text-gray-700 mb-2 block">
-                Role
-              </label>
-              <Select
-                value={formData.role}
-                onValueChange={(value) => handleInputChange('role', value)}
-                disabled={loading}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select your role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="employee">
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4" />
-                      Employee
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="manager">
-                    <div className="flex items-center gap-2">
-                      <Building className="h-4 w-4" />
-                      Manager
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="hr_manager">
-                    <div className="flex items-center gap-2">
-                      <Shield className="h-4 w-4" />
-                      HR Manager
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">
-                Employee ID (Optional)
+                Tu ID de Empleado (Opcional)
               </label>
               <Input
                 type="text"
                 value={formData.employee_id}
                 onChange={(e) => handleInputChange('employee_id', e.target.value)}
-                placeholder="Enter employee ID if applicable"
+                placeholder="Ej: EMP001 o tu número de empleado"
                 disabled={loading}
+                className="h-12"
               />
+              <p className="text-xs text-gray-500 mt-1">
+                Si ya tenés un ID de empleado en tu empresa
+              </p>
+            </div>
+
+            {/* Role Info */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <CheckCircle className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-medium text-blue-900">Rol Asignado</span>
+              </div>
+              <p className="text-xs text-blue-700">
+                Serás configurado como <strong>HR Manager</strong> con acceso completo para gestionar empleados, departamentos y nóminas.
+              </p>
             </div>
 
             {error && (
@@ -145,16 +128,16 @@ export default function UserProfileSetup({ onComplete }: UserProfileSetupProps) 
 
             <Button
               type="submit"
-              className="w-full"
-              disabled={loading || !formData.company_id}
+              className="w-full h-12 bg-brand-900 hover:bg-brand-800"
+              disabled={loading || !formData.company_name}
             >
               {loading ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Creating Profile...
+                  Configurando tu empresa...
                 </>
               ) : (
-                'Complete Setup'
+                '🚀 Comenzar con Humano SISU'
               )}
             </Button>
           </form>

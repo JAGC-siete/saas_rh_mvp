@@ -11,15 +11,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { supabase, user } = await authenticateUser(req, res, { requireProfile: false })
 
     const { 
+      company_name,
       company_id, 
       employee_id, 
-      role = 'employee', 
+      role = 'hr_manager', 
       permissions = {},
       is_active = true 
     } = req.body
 
-    if (!company_id) {
-      return res.status(400).json({ error: 'Company ID is required' })
+    if (!company_name && !company_id) {
+      return res.status(400).json({ error: 'Company name is required' })
     }
 
     // Validate role
@@ -39,12 +40,40 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(409).json({ error: 'User profile already exists' })
     }
 
+    let finalCompanyId = company_id
+
+    // If company_name is provided, create or find company
+    if (company_name && !company_id) {
+      // Generate a unique company ID
+      const companyId = `comp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      
+      // Create new company
+      const { data: newCompany, error: companyError } = await supabase
+        .from('companies')
+        .insert([{
+          id: companyId,
+          name: company_name,
+          created_by: user.id,
+          is_active: true,
+          created_at: new Date().toISOString()
+        }])
+        .select('id')
+        .single()
+
+      if (companyError) {
+        console.error('Error creating company:', companyError)
+        return res.status(500).json({ error: 'Failed to create company' })
+      }
+
+      finalCompanyId = newCompany.id
+    }
+
     // Create new user profile
     const { data: newProfile, error: createError } = await supabase
       .from('user_profiles')
       .insert([{
         id: user.id,
-        company_id,
+        company_id: finalCompanyId,
         employee_id: employee_id || null,
         role,
         permissions,
@@ -52,7 +81,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }])
       .select(`
         *,
-        employees(name, email, position)
+        employees(name, email, position),
+        companies(name, is_active)
       `)
       .single()
 
