@@ -150,7 +150,7 @@ export const usePayrollManager = () => {
   }, [])
 
   // Filter Management
-  const updateFilter = useCallback((key: keyof PayrollFilters, value: any) => {
+  const updateFilter = useCallback(async (key: keyof PayrollFilters, value: any) => {
     dispatch({ type: 'SET_FILTERS', payload: { [key]: value } })
     
     // Update period if it's a period-related filter
@@ -163,7 +163,29 @@ export const usePayrollManager = () => {
         } 
       })
     }
-  }, [state.currentPeriod])
+    
+    // If tipo changes, reload data to reflect the change
+    if (key === 'tipo' && companyId) {
+      try {
+        dispatch({ type: 'SET_LOADING', payload: true })
+        dispatch({ type: 'CLEAR_ERROR' })
+        
+        const data = await fetchUnifiedPayroll(
+          companyId,
+          state.currentPeriod.year,
+          state.currentPeriod.month,
+          state.currentPeriod.quincena
+        )
+        
+        dispatch({ type: 'SET_DATA', payload: data })
+      } catch (error: any) {
+        const errorMessage = error?.message || 'Error desconocido'
+        dispatch({ type: 'SET_ERROR', payload: `Error cargando datos: ${errorMessage}` })
+      } finally {
+        dispatch({ type: 'SET_LOADING', payload: false })
+      }
+    }
+  }, [state.currentPeriod, companyId])
 
   const resetFilters = useCallback(() => {
     const newPeriod = getCurrentPeriod()

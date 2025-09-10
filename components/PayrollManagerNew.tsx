@@ -44,8 +44,8 @@ export default function PayrollManagerNew() {
   }
 
   // Handle filter changes - now unified
-  const handleFilterChange = (key: string, value: any) => {
-    payroll.updateFilter(key as any, value)
+  const handleFilterChange = async (key: string, value: any) => {
+    await payroll.updateFilter(key as any, value)
   }
 
   // Handle unified preview - now single handler
