@@ -74,6 +74,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ])
     }
 
+    console.log('🔍 Debug login response:', {
+      hasUser: !!authData.user,
+      hasSession: !!authData.session,
+      sessionKeys: authData.session ? Object.keys(authData.session) : 'no session'
+    })
+
     return res.status(200).json({
       user: {
         id: authData.user.id,
