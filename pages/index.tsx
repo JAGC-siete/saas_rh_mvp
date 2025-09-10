@@ -72,12 +72,12 @@ export default function LandingPage() {
             <div className="flex items-center h-16">
               {/* Logo SISU */}
               <div className="flex items-center">
-                <div className="bg-white/10 px-3 py-2 rounded-lg border border-white/20 backdrop-blur-sm">
+                <div className="bg-white/10 px-6 py-4 rounded-lg border border-white/20 backdrop-blur-sm">
                   <Image
                     src="/logo-humano-sisu.png"
                     alt="Humano SISU Logo"
-                    width={64}
-                    height={64}
+                    width={128}
+                    height={128}
                     className="rounded-lg"
                   />
                 </div>

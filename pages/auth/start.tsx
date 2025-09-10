@@ -204,12 +204,12 @@ export default function AuthStart() {
               </div>
             )}
 
-            <div className="mx-auto h-20 w-20 bg-white/10 rounded-full flex items-center justify-center mb-6 shadow-xl border border-white/20 backdrop-blur-sm">
+            <div className="mx-auto h-40 w-40 bg-white/10 rounded-full flex items-center justify-center mb-6 shadow-xl border border-white/20 backdrop-blur-sm">
               <Image
                 src="/logo-humano-sisu.png"
                 alt="Humano SISU Logo"
-                width={48}
-                height={48}
+                width={96}
+                height={96}
                 className="rounded-lg"
               />
             </div>

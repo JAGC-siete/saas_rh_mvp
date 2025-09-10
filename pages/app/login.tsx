@@ -8,6 +8,7 @@ import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Mail, Lock, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 
 export default function LoginExisting() {
   const [email, setEmail] = useState('')
@@ -67,8 +68,14 @@ export default function LoginExisting() {
         <div className="relative w-full max-w-md space-y-8 z-10">
           {/* Header */}
           <div className="text-center">
-            <div className="mx-auto h-20 w-20 bg-white rounded-full flex items-center justify-center mb-6 shadow-xl">
-              <ArrowRight className="h-10 w-10 text-brand-900" />
+            <div className="mx-auto h-40 w-40 bg-white/10 rounded-full flex items-center justify-center mb-6 shadow-xl border border-white/20 backdrop-blur-sm">
+              <Image
+                src="/logo-humano-sisu.png"
+                alt="Humano SISU Logo"
+                width={96}
+                height={96}
+                className="rounded-lg"
+              />
             </div>
             <h1 className="text-3xl font-bold text-white mb-2">
               Iniciar Sesión
