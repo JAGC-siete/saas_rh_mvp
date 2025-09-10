@@ -29,7 +29,7 @@ async function handleGetLeaveRequests(req: NextApiRequest, res: NextApiResponse)
       .from('leave_requests')
       .select(`
         *,
-        employee:employees(id, first_name, last_name, email, dni, company_id),
+        employee:employees!leave_requests_employee_id_fkey(id, first_name, last_name, email, dni, company_id),
         leave_type:leave_types(id, name, color, is_paid, requires_approval)
       `)
       .order('created_at', { ascending: false })

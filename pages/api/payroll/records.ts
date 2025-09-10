@@ -18,8 +18,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .from('payroll_records')
       .select(`
         *,
-        employees!inner(name, dni, base_salary)
+        employees!payroll_records_employee_id_fkey(name, dni, base_salary, company_id)
       `)
+      .eq('employees.company_id', companyId)
       .order('period_start', { ascending: false })
       .limit(50)
 

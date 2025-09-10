@@ -16,7 +16,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           .from('employees')
           .select(`
             *,
-            departments(name)
+            departments!employees_department_id_fkey(name)
           `)
           .eq('company_id', companyId)
           .order('name')
@@ -55,7 +55,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }])
           .select(`
             *,
-            departments(name)
+            departments!employees_department_id_fkey(name)
           `)
           .single()
 
