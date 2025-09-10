@@ -80,7 +80,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }))
 
     const periodo = `${payrollRun.year}-${String(payrollRun.month).padStart(2, '0')}`
-    const pdf = await generateConsolidatedPayrollPDF(planilla, periodo, payrollRun.quincena, auth.user?.email)
+    const pdf = await generateConsolidatedPayrollPDF(planilla, periodo, payrollRun.quincena, user.email)
     
     res.setHeader('Content-Type', 'application/pdf')
     res.setHeader('Content-Disposition', `attachment; filename=planilla_run_${run_id.slice(0, 8)}_${periodo}_q${payrollRun.quincena}.pdf`)

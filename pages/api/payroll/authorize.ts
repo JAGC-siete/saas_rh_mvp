@@ -88,7 +88,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       companyId: companyId,
       status: run.status,
       lines_count: lines.length,
-      has_edits: lines.some(l => l.edited)
+      has_edits: lines.some((l: any) => l.edited)
     })
 
     // Actualizar estado de la corrida a 'authorized'
@@ -129,7 +129,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const pdfUrl = `/api/payroll/generate-pdf-from-run?run_id=${run_id}`
 
     // Generar vouchers individuales
-    const vouchers = lines.map(line => ({
+    const vouchers = lines.map((line: any) => ({
       employee_id: line.employee_id,
       url: `/api/payroll/generate-voucher?run_line_id=${line.id}`
     }))
@@ -150,10 +150,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       vouchers,
       summary: {
         total_lines: lines.length,
-        edited_lines: lines.filter(l => l.edited).length,
-        total_bruto: lines.reduce((sum, l) => sum + Number(l.eff_bruto), 0),
-        total_deducciones: lines.reduce((sum, l) => sum + Number(l.eff_ihss) + Number(l.eff_rap) + Number(l.eff_isr), 0),
-        total_neto: lines.reduce((sum, l) => sum + Number(l.eff_neto), 0)
+        edited_lines: lines.filter((l: any) => l.edited).length,
+        total_bruto: lines.reduce((sum: number, l: any) => sum + Number(l.eff_bruto), 0),
+        total_deducciones: lines.reduce((sum: number, l: any) => sum + Number(l.eff_ihss) + Number(l.eff_rap) + Number(l.eff_isr), 0),
+        total_neto: lines.reduce((sum: number, l: any) => sum + Number(l.eff_neto), 0)
       }
     })
 

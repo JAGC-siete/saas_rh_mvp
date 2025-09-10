@@ -89,7 +89,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       notes_on_deductions: r.notes_on_deductions || ''
     }))
 
-    const pdf = await generateConsolidatedPayrollPDF(planilla, periodo, Number(quincena), auth.user?.email)
+    const pdf = await generateConsolidatedPayrollPDF(planilla, periodo, Number(quincena), user.email)
     res.setHeader('Content-Type', 'application/pdf')
     res.setHeader('Content-Disposition', `attachment; filename=planilla_paragon_${periodo}_q${quincena}.pdf`)
     return res.send(pdf)
