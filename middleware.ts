@@ -325,18 +325,32 @@ export async function middleware(request: NextRequest) {
         path: pathname, 
         cookieNames, 
         authCookies,
-        hasAuthCookie: authCookies.length > 0
+        hasAuthCookie: authCookies.length > 0,
+        cookieValues: authCookies.map(name => ({
+          name,
+          hasValue: !!request.cookies.get(name)?.value,
+          valueLength: request.cookies.get(name)?.value?.length || 0
+        }))
       })
       
-      // Get user from Supabase (more secure than getSession)
-      const { data: { user }, error } = await supabase.auth.getUser()
+      // Get session from Supabase (better for middleware)
+      const { data: { session }, error } = await supabase.auth.getSession()
+      const user = session?.user
+      
+      logger.info('Session debug', {
+        path: pathname,
+        hasSession: !!session,
+        hasUser: !!user,
+        userId: user?.id,
+        error: error?.message
+      })
       
       if (error) {
         const isMissing = (error as any)?.message?.toLowerCase?.().includes('auth session missing')
         if (isMissing) {
           logger.info('No session for protected app route', { path: pathname })
         } else {
-          logger.error('Error getting user', error)
+          logger.error('Error getting session', error)
         }
         return NextResponse.redirect(new URL('/auth/start', request.url))
       }
