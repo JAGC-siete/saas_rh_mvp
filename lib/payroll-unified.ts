@@ -49,7 +49,8 @@ export async function fetchUnifiedPayroll(
   companyId: string, 
   year: number, 
   month: number, 
-  quincena: number
+  quincena: number,
+  tipo: string = 'CON'
 ): Promise<{ rows: UnifiedRow[]; resumen: UnifiedResumen }> {
   // Validate input parameters
   if (!companyId || !year || !month || !quincena) {
@@ -64,7 +65,7 @@ export async function fetchUnifiedPayroll(
 
   try {
     // Fetch only the preview data which contains all active employees with attendance
-    const planillaRes = await fetch(`/api/payroll/preview?year=${year}&month=${month}&quincena=${quincena}&tipo=CON`);
+    const planillaRes = await fetch(`/api/payroll/preview?year=${year}&month=${month}&quincena=${quincena}&tipo=${tipo}`);
 
     if (!planillaRes.ok) {
       throw new Error(`Error fetching payroll data: ${planillaRes.status} ${planillaRes.statusText}`)

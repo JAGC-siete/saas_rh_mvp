@@ -174,7 +174,8 @@ export const usePayrollManager = () => {
           companyId,
           state.currentPeriod.year,
           state.currentPeriod.month,
-          state.currentPeriod.quincena
+          state.currentPeriod.quincena,
+          state.filters.tipo
         )
         
         dispatch({ type: 'SET_DATA', payload: data })
@@ -424,7 +425,8 @@ export const usePayrollManager = () => {
           companyId,
           state.currentPeriod.year,
           state.currentPeriod.month,
-          state.currentPeriod.quincena
+          state.currentPeriod.quincena,
+          state.filters.tipo
         )
 
         dispatch({ type: 'SET_DATA', payload: data })
