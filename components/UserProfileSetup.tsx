@@ -61,13 +61,13 @@ export default function UserProfileSetup({ onComplete }: UserProfileSetupProps) 
 
   return (
     <div className="min-h-screen bg-app flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+      <Card variant="glass" className="w-full max-w-md shadow-xl">
         <CardHeader className="text-center">
-          <div className="mx-auto h-12 w-12 bg-brand-100 rounded-full flex items-center justify-center mb-4">
-            <Building className="h-6 w-6 text-brand-900" />
+          <div className="mx-auto h-12 w-12 bg-white/10 rounded-full flex items-center justify-center mb-4 border border-white/20">
+            <Building className="h-6 w-6 text-white" />
           </div>
-          <CardTitle className="text-2xl">¡Bienvenido a Humano SISU!</CardTitle>
-          <p className="text-gray-600">
+          <CardTitle className="text-2xl text-white">¡Bienvenido a Humano SISU!</CardTitle>
+          <p className="text-gray-300">
             Configurá tu empresa para comenzar a gestionar tu equipo
           </p>
         </CardHeader>
@@ -75,60 +75,62 @@ export default function UserProfileSetup({ onComplete }: UserProfileSetupProps) 
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">
+              <label className="text-sm font-medium text-white mb-2 block">
                 Nombre de tu Empresa
               </label>
-              <Input
+              <input
                 type="text"
                 value={formData.company_name}
                 onChange={(e) => handleInputChange('company_name', e.target.value)}
                 placeholder="Ej: Mi Empresa S.A. de C.V."
                 required
                 disabled={loading}
-                className="h-12"
+                className="input-glass h-12 w-full"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-gray-300 mt-1">
                 Crearemos automáticamente tu empresa en el sistema
               </p>
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">
+              <label className="text-sm font-medium text-white mb-2 block">
                 Tu ID de Empleado (Opcional)
               </label>
-              <Input
+              <input
                 type="text"
                 value={formData.employee_id}
                 onChange={(e) => handleInputChange('employee_id', e.target.value)}
                 placeholder="Ej: EMP001 o tu número de empleado"
                 disabled={loading}
-                className="h-12"
+                className="input-glass h-12 w-full"
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-gray-300 mt-1">
                 Si ya tenés un ID de empleado en tu empresa
               </p>
             </div>
 
             {/* Role Info */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="glass-strong p-4">
               <div className="flex items-center gap-2 mb-2">
-                <CheckCircle className="h-4 w-4 text-blue-600" />
-                <span className="text-sm font-medium text-blue-900">Rol Asignado</span>
+                <CheckCircle className="h-4 w-4 text-green-400" />
+                <span className="text-sm font-medium text-white">Rol Asignado</span>
               </div>
-              <p className="text-xs text-blue-700">
-                Serás configurado como <strong>HR Manager</strong> con acceso completo para gestionar empleados, departamentos y nóminas.
+              <p className="text-xs text-gray-300">
+                Serás configurado como <strong className="text-white">HR Manager</strong> con acceso completo para gestionar empleados, departamentos y nóminas.
               </p>
             </div>
 
             {error && (
-              <div className="text-red-600 text-sm bg-red-50 p-3 rounded-md">
+              <div className="text-red-200 text-sm glass-strong p-3 rounded-md">
                 {error}
               </div>
             )}
 
             <Button
               type="submit"
-              className="w-full h-12 bg-brand-900 hover:bg-brand-800"
+              variant="modern"
+              size="lg"
+              className="w-full h-12"
               disabled={loading || !formData.company_name}
             >
               {loading ? (
