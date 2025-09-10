@@ -11,12 +11,12 @@ import { usePayrollMetrics } from '../lib/hooks/usePayrollMetrics'
 import { fetchUnifiedPayroll, getCurrentPeriod, UnifiedRow, UnifiedResumen } from '../lib/payroll-unified'
 import UnifiedPayrollTable from './UnifiedPayrollTable'
 import ConfigNomina from './ConfigNomina'
-import { useAuth } from '../lib/auth'
+import { useCompanyContext } from '../lib/useCompanyContext'
 
 export default function PayrollManagerNew() {
   const payrollState = usePayrollState()
   const toast = useToast()
-  const { user } = useAuth()
+  const { companyId, loading: companyLoading } = useCompanyContext()
 
   // Unified data state
   const [unifiedData, setUnifiedData] = useState<{ rows: UnifiedRow[]; resumen: UnifiedResumen } | null>(null)
@@ -25,15 +25,12 @@ export default function PayrollManagerNew() {
   const [hasLoadedInitialData, setHasLoadedInitialData] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Get company_id from user metadata
-  const companyId = user?.user_metadata?.company_id || user?.app_metadata?.company_id
-
   // Use centralized metrics hook - must be called before any early returns
   const payrollMetrics = usePayrollMetrics(payrollState.planilla)
 
   // Load current period data on mount only once - must be called before any early returns
   useEffect(() => {
-    if (hasLoadedInitialData) return
+    if (hasLoadedInitialData || !companyId) return
 
     const abortController = new AbortController()
 
@@ -70,6 +67,21 @@ export default function PayrollManagerNew() {
     return () => abortController.abort()
   }, [hasLoadedInitialData, toast, companyId])
 
+  // Loading state while company is being loaded
+  if (companyLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Card className="backdrop-blur-md bg-blue-500/20 border border-blue-500/30">
+          <CardContent className="p-6 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mx-auto mb-4"></div>
+            <h2 className="text-xl font-semibold text-blue-300 mb-2">Cargando...</h2>
+            <p className="text-blue-200">Obteniendo información de la empresa...</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   // Early return if no company_id - must be after all hooks
   if (!companyId) {
     return (
@@ -94,6 +106,8 @@ export default function PayrollManagerNew() {
 
   // Handle unified preview
   const handleUnifiedPreview = async () => {
+    if (!companyId) return
+    
     setUnifiedLoading(true)
     try {
       const data = await fetchUnifiedPayroll(

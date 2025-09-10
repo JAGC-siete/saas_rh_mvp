@@ -65,8 +65,8 @@ export async function fetchUnifiedPayroll(
   try {
     // Fetch both datasets in parallel
     const [planillaRes, detalleRes] = await Promise.all([
-      fetch(`/api/payroll/preview?companyId=${companyId}&year=${year}&month=${month}&quincena=${quincena}`),
-      fetch(`/api/payroll/records?companyId=${companyId}&year=${year}&month=${month}&quincena=${quincena}`)
+      fetch(`/api/payroll/preview?year=${year}&month=${month}&quincena=${quincena}&tipo=CON`),
+      fetch(`/api/payroll/records?periodo=${year}-${month.toString().padStart(2, '0')}&quincena=${quincena}`)
     ]);
 
     if (!planillaRes.ok || !detalleRes.ok) {
