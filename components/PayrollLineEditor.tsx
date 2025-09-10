@@ -15,7 +15,7 @@ interface PayrollLineEditorProps {
 
 const EDITABLE_FIELDS: { key: EditField; label: string; type: 'number' | 'currency' }[] = [
   { key: 'days_worked', label: 'Días Trabajados', type: 'number' },
-  { key: 'total_earnings', label: 'Salario Bruto', type: 'currency' },
+  { key: 'total_earnings', label: 'Salario Quincenal', type: 'currency' },
   { key: 'IHSS', label: 'IHSS', type: 'currency' },
   { key: 'RAP', label: 'RAP', type: 'currency' },
   { key: 'ISR', label: 'ISR', type: 'currency' },

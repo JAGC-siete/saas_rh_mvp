@@ -63,83 +63,33 @@ export async function fetchUnifiedPayroll(
   }
 
   try {
-    // Fetch both datasets in parallel
-    const [planillaRes, detalleRes] = await Promise.all([
-      fetch(`/api/payroll/preview?year=${year}&month=${month}&quincena=${quincena}&tipo=CON`),
-      fetch(`/api/payroll/records?periodo=${year}-${month.toString().padStart(2, '0')}&quincena=${quincena}`)
-    ]);
+    // Fetch only the preview data which contains all active employees with attendance
+    const planillaRes = await fetch(`/api/payroll/preview?year=${year}&month=${month}&quincena=${quincena}&tipo=CON`);
 
-    if (!planillaRes.ok || !detalleRes.ok) {
-      const planillaError = planillaRes.ok ? null : `Planilla: ${planillaRes.status} ${planillaRes.statusText}`
-      const detalleError = detalleRes.ok ? null : `Detalle: ${detalleRes.status} ${detalleRes.statusText}`
-      throw new Error(`Error fetching payroll data. ${planillaError || ''} ${detalleError || ''}`.trim())
+    if (!planillaRes.ok) {
+      throw new Error(`Error fetching payroll data: ${planillaRes.status} ${planillaRes.statusText}`)
     }
 
     const planillaData = await planillaRes.json();
-    const detalleData = await detalleRes.json();
     
-    // Extract the actual arrays from the API responses
+    // Extract the actual array from the API response
     const planilla: PlanillaRow[] = Array.isArray(planillaData.planilla) ? planillaData.planilla : [];
-    const detalle: DetalleRow[] = Array.isArray(detalleData.records) ? detalleData.records : [];
     
     console.log('📊 Payroll data loaded:', {
       planillaCount: planilla.length,
-      detalleCount: detalle.length,
-      planillaDataKeys: Object.keys(planillaData),
-      detalleDataKeys: Object.keys(detalleData)
+      planillaDataKeys: Object.keys(planillaData)
     });
+    
+    console.log('🔍 DEBUG - Planilla data sample:', planilla.slice(0, 3));
 
-    // Merge by employee_id
-    const byId = new Map<string, UnifiedRow>();
-
-    // Start with planilla data
-    for (const p of planilla) {
-      byId.set(p.employee_id, {
-        ...p,
-        horas_trabajadas: 0,
-        extras: { horas: 0, monto: 0 },
-        observaciones: '',
-        status: 'completo' as const
-      });
-    }
-
-    // Merge with detalle data
-    for (const d of detalle) {
-      const existing = byId.get(d.employee_id);
-      if (existing) {
-        byId.set(d.employee_id, { ...existing, ...d, status: 'completo' });
-      } else {
-        // Employee in detalle but not in planilla
-        byId.set(d.employee_id, {
-          name: 'Empleado sin planilla',
-          base_salary: 0,
-          total_earnings: 0,
-          IHSS: 0,
-          RAP: 0,
-          ISR: 0,
-          total_deducciones: 0,
-          total: 0,
-          days_worked: 0,
-          days_absent: 0,
-          late_days: 0,
-          department: 'N/A',
-          ...d,
-          status: 'sin_planilla' as const
-        });
-      }
-    }
-
-    // Mark employees in planilla but not in detalle
-    for (const [id, row] of byId.entries()) {
-      if (row.status === 'completo' && !detalle.find(d => d.employee_id === id)) {
-        row.status = 'sin_asistencia';
-        row.horas_trabajadas = 0;
-        row.extras = { horas: 0, monto: 0 };
-        row.observaciones = 'Sin datos de asistencia';
-      }
-    }
-
-    const rows = Array.from(byId.values());
+    // Convert planilla data to unified format
+    const rows: UnifiedRow[] = planilla.map(p => ({
+      ...p,
+      horas_trabajadas: 0,
+      extras: { horas: 0, monto: 0 },
+      observaciones: '',
+      status: 'completo' as const
+    }));
 
     // Calculate summary
     const resumen = rows.reduce((acc, r) => {

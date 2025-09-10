@@ -186,9 +186,9 @@ export default function EditablePayrollRow({
                   )}
                 </div>
 
-                {/* Salario Bruto */}
+                {/* Salario Quincenal */}
                 <div>
-                  <label className="block text-xs text-gray-300 mb-1">Salario Bruto</label>
+                  <label className="block text-xs text-gray-300 mb-1">Salario Quincenal</label>
                   <Input
                     type="number"
                     value={editedValues.total_earnings || ''}

@@ -193,12 +193,7 @@ export const usePayrollManager = () => {
     dispatch({ type: 'CLEAR_ERROR' })
 
     try {
-      console.log('🔄 Loading unified payroll data:', {
-        companyId,
-        year: state.currentPeriod.year,
-        month: state.currentPeriod.month,
-        quincena: state.currentPeriod.quincena
-      })
+      // Loading unified payroll data
 
       const data = await fetchUnifiedPayroll(
         companyId,
@@ -210,13 +205,9 @@ export const usePayrollManager = () => {
       dispatch({ type: 'SET_DATA', payload: data })
       dispatch({ type: 'SET_LOADED_INITIAL', payload: true })
 
-      console.log('✅ Unified payroll data loaded:', {
-        rowsCount: data.rows?.length || 0,
-        resumen: data.resumen
-      })
+      // Unified payroll data loaded successfully
 
     } catch (error: any) {
-      console.error('❌ Error loading unified payroll data:', error)
       const errorMessage = error?.message || 'Error desconocido'
       dispatch({ type: 'SET_ERROR', payload: `Error cargando datos: ${errorMessage}` })
       toast.error('Error', 'No se pudieron cargar los datos del período actual', 5000)
@@ -235,6 +226,22 @@ export const usePayrollManager = () => {
       dispatch({ type: 'SET_RUN_ID', payload: response.run_id })
       setStatus('draft')
       
+      // Recargar datos unificados para actualizar la tabla
+      if (companyId) {
+        try {
+          const data = await fetchUnifiedPayroll(
+            companyId,
+            state.currentPeriod.year,
+            state.currentPeriod.month,
+            state.currentPeriod.quincena
+          )
+          dispatch({ type: 'SET_DATA', payload: data })
+        } catch (dataError: any) {
+          console.error('Error recargando datos después del preview:', dataError)
+          // No interrumpir el flujo, solo loggear el error
+        }
+      }
+      
       toast.success(
         'Preview Generado',
         `${response.empleados} empleados procesados exitosamente`,
@@ -248,7 +255,7 @@ export const usePayrollManager = () => {
       toast.error('Error en Preview', errorMessage, 8000)
       throw error
     }
-  }, [state.filters, setStatus, setLoading, clearError, setError, toast])
+  }, [state.filters, state.currentPeriod, companyId, setStatus, setLoading, clearError, setError, toast])
 
   const editLine = useCallback(async (
     runLineId: string,

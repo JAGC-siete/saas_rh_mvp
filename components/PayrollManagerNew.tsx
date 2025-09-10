@@ -148,12 +148,12 @@ export default function PayrollManagerNew() {
           </CardContent>
         </Card>
 
-        {/* 2. Total Salario Bruto */}
+        {/* 2. Total Salario Quincenal */}
         <Card variant="glass" className="hover:scale-105 transition-all duration-200 cursor-pointer backdrop-blur-md bg-white/10 border border-white/20">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold text-gray-200">Total Salario Bruto</p>
+                <p className="text-sm font-semibold text-gray-200">Total Salario Quincenal</p>
                 <p className="text-2xl font-bold text-white">
                   {formatCurrencyShort(payroll.unifiedData?.resumen.total_bruto || payroll.metrics.totalGrossSalary)}
                 </p>

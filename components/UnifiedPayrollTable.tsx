@@ -135,7 +135,7 @@ export default function UnifiedPayrollTable({
                   Horas Extras
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
-                  Salario Bruto
+                  Salario Quincenal
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
                   Deducciones

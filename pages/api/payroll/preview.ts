@@ -97,6 +97,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     // DEBUG: Verificar cuántos empleados se encontraron
     console.log('🔍 DEBUG - Empleados encontrados:', employees.length)
+    console.log('🔍 DEBUG - Company ID usado:', companyId)
+    console.log('🔍 DEBUG - Primeros 3 empleados:', employees.slice(0, 3))
     console.log('🔍 DEBUG - Primeros 3 empleados:', employees.slice(0, 3).map((emp: any) => ({
       name: emp.name,
       status: emp.status
@@ -166,9 +168,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       const base_salary = Number(emp.base_salary) || 0
       
-      // CALCULAR SALARIO PROPORCIONAL POR DÍAS TRABAJADOS EN LA QUINCENA
-      const salarioProporcional = (base_salary / 30) * days_worked
-      const total_earnings = salarioProporcional
+      // CALCULAR SALARIO QUINCENAL (SALARIO MENSUAL / 2)
+      const salarioQuincenal = base_salary / 2
+      const total_earnings = salarioQuincenal
       
       let IHSS = 0, RAP = 0, ISR = 0, total_deductions = 0, total = 0
 
@@ -215,11 +217,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       planilla.push({
+        employee_id: emp.id,
         id: emp.dni,
         name: emp?.name,
         bank: emp.bank_name || '',
         bank_account: emp.bank_account || '',
         department: emp.department_id || 'Sin Departamento',
+        base_salary: base_salary,
         monthly_salary: base_salary,
         days_worked,
         days_absent,
