@@ -1,5 +1,6 @@
 
 import { NextApiRequest, NextApiResponse } from 'next'
+import { createClient } from '../../../lib/supabase/server'
 import { createAdminClient } from '../../../lib/supabase/server'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -8,16 +9,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Para rutas de login, no validamos autenticación previa
-    // pero sí validamos que sea una petición válida
     const { email, password } = req.body
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email y contraseña son requeridos' })
     }
 
-    // Usar Supabase Auth para autenticación
-    const supabase = createAdminClient()
+    // Usar el cliente con cookies para autenticación
+    const supabase = createClient(req, res)
     
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email,
@@ -28,13 +27,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'Credenciales inválidas' })
     }
 
-    // Buscar información del usuario en user_profiles (sistema correcto)
+    // Buscar información del usuario en user_profiles usando admin client
+    const adminSupabase = createAdminClient()
     let userRole = 'employee' // Por defecto
     let userName = authData.user.user_metadata?.name || authData.user.email?.split('@')[0] || 'Usuario'
     let companyId = null
 
     // Buscar perfil de usuario en user_profiles
-    const { data: userProfile } = await supabase
+    const { data: userProfile } = await adminSupabase
       .from('user_profiles')
       .select('role, company_id, employee_id, permissions')
       .eq('id', authData.user.id)
@@ -46,7 +46,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       // Si tiene employee_id, obtener nombre del empleado
       if (userProfile.employee_id) {
-        const { data: employee } = await supabase
+        const { data: employee } = await adminSupabase
           .from('employees')
           .select('name')
           .eq('id', userProfile.employee_id)
@@ -62,22 +62,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       userRole = 'employee' // Rol por defecto
     }
 
-    // Set Supabase session cookies for middleware compatibility
-    if (authData.session) {
-      const { access_token, refresh_token, expires_at } = authData.session
-      const maxAge = expires_at ? expires_at - Math.floor(Date.now() / 1000) : 86400 // Default to 24 hours if expires_at is undefined
-      
-      // Set the session cookies that Supabase expects (correct names)
-      res.setHeader('Set-Cookie', [
-        `sb-${process.env.NEXT_PUBLIC_SUPABASE_URL?.split('//')[1]?.split('.')[0]}-auth-token=${access_token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`,
-        `sb-${process.env.NEXT_PUBLIC_SUPABASE_URL?.split('//')[1]?.split('.')[0]}-auth-token.${Math.random().toString(36).substring(2)}=${refresh_token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`,
-      ])
-    }
-
     console.log('🔍 Debug login response:', {
       hasUser: !!authData.user,
       hasSession: !!authData.session,
-      sessionKeys: authData.session ? Object.keys(authData.session) : 'no session'
+      sessionKeys: authData.session ? Object.keys(authData.session) : 'no session',
+      cookiesSet: res.getHeader('Set-Cookie')
     })
 
     return res.status(200).json({

@@ -22,8 +22,8 @@ export function createClient(req: NextApiRequest, res: NextApiResponse) {
       set(name: string, value: string, options: CookieOptions) {
         const cookie = serialize(name, value, {
           path: options?.path ?? '/',
-          httpOnly: options?.httpOnly ?? false,
-          secure: options?.secure ?? false,
+          httpOnly: options?.httpOnly ?? true,
+          secure: options?.secure ?? process.env.NODE_ENV === 'production',
           sameSite: (options?.sameSite as any) ?? 'lax',
           domain: options?.domain,
           maxAge: options?.maxAge,
@@ -42,8 +42,8 @@ export function createClient(req: NextApiRequest, res: NextApiResponse) {
       remove(name: string, options: CookieOptions) {
         const cookie = serialize(name, '', {
           path: options?.path ?? '/',
-          httpOnly: options?.httpOnly ?? false,
-          secure: options?.secure ?? false,
+          httpOnly: options?.httpOnly ?? true,
+          secure: options?.secure ?? process.env.NODE_ENV === 'production',
           sameSite: (options?.sameSite as any) ?? 'lax',
           domain: options?.domain,
           maxAge: 0,

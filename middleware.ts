@@ -319,7 +319,7 @@ export async function middleware(request: NextRequest) {
       })
       
       // Debug cookies
-      const cookieNames = Array.from(request.cookies.keys())
+      const cookieNames = Object.keys(request.cookies.getAll())
       const authCookies = cookieNames.filter(name => name.includes('auth-token'))
       logger.info('Middleware debug', { 
         path: pathname, 
