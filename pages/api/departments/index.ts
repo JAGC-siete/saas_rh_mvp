@@ -12,6 +12,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     switch (req.method) {
       case 'GET':
+        // Get departments
         const { data: departments, error: fetchError } = await getCompanyData(
           supabase,
           'departments',
@@ -20,7 +21,57 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         ).order('name')
 
         if (fetchError) throw fetchError
-        return res.json({ departments })
+
+        // Get employees for each department to calculate stats
+        const { data: employees, error: empError } = await getCompanyData(
+          supabase,
+          'employees',
+          companyId,
+          'id, name, base_salary, department_id, status'
+        ).eq('status', 'active')
+
+        if (empError) throw empError
+
+        // Calculate department stats
+        const departmentStats: { [key: string]: any } = {}
+        const summary = {
+          totalDepartments: departments?.length || 0,
+          totalEmployees: employees?.length || 0,
+          totalSalary: 0,
+          averageSalary: 0
+        }
+
+        // Process each department
+        departments?.forEach((dept: any) => {
+          const deptEmployees = employees?.filter((emp: any) => emp.department_id === dept.id) || []
+          const totalSalary = deptEmployees.reduce((sum: number, emp: any) => sum + (emp.base_salary || 0), 0)
+          const averageSalary = deptEmployees.length > 0 ? totalSalary / deptEmployees.length : 0
+
+          departmentStats[dept.name] = {
+            id: dept.id,
+            name: dept.name,
+            description: dept.description,
+            employeeCount: deptEmployees.length,
+            totalSalary,
+            averageSalary,
+            employees: deptEmployees.map((emp: any) => ({
+              id: emp.id,
+              name: emp.name,
+              base_salary: emp.base_salary,
+              status: emp.status
+            }))
+          }
+
+          summary.totalSalary += totalSalary
+        })
+
+        summary.averageSalary = summary.totalEmployees > 0 ? summary.totalSalary / summary.totalEmployees : 0
+
+        return res.json({
+          departments,
+          departmentStats,
+          summary
+        })
 
       case 'POST':
         const { name, description } = req.body

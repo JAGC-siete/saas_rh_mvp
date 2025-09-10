@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '@supabase/supabase-js'
 import formidable from 'formidable'
-import { authenticateUser } from '../../../lib/auth-helpers'
+import { requireCompanyAccess } from '../../../lib/auth/api-auth'
 import { logger } from '../../../lib/logger'
 import { nowInHonduras } from '../../../lib/timezone'
 
@@ -18,55 +18,52 @@ const supabase = createClient(
 
 async function handleGetLeaveRequests(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const authResult = await authenticateUser(req, res, ['can_manage_employees'])
-    if (!authResult.success || !authResult.user || !authResult.userProfile) {
-      return res.status(401).json({ error: authResult.error || 'Authentication failed' })
+    const { companyId } = await requireCompanyAccess(req, res)
+    
+    if (!companyId) {
+      return res.status(400).json({ error: 'Company ID is required' })
     }
-
-    const { user, userProfile } = authResult
 
     let query = supabase
       .from('leave_requests')
       .select(`
         *,
-        employee:employees!leave_requests_employee_id_fkey(id, first_name, last_name, email, dni, company_id),
+        employee:employees!leave_requests_employee_id_fkey(id, name, email, dni, company_id),
         leave_type:leave_types(id, name, color, is_paid, requires_approval)
       `)
       .order('created_at', { ascending: false })
 
-    // Filter by company for non-super_admin users
-    if (userProfile.role !== 'super_admin') {
-      query = query.eq('employee.company_id', userProfile.company_id)
-    }
+    // Filter by company
+    query = query.eq('employee.company_id', companyId)
 
     const { data, error } = await query
 
     if (error) {
-      logger.error('Error fetching leave requests:', { error: error.message, userId: user.id })
+      logger.error('Error fetching leave requests:', { error: error.message, companyId })
       return res.status(500).json({ error: 'Error fetching leave requests' })
     }
 
     logger.info('Leave requests fetched successfully', { 
       count: data?.length || 0, 
-      userId: user.id,
-      userRole: userProfile.role 
+      companyId
     })
 
     res.status(200).json(data || [])
   } catch (error: any) {
-    logger.error('Unexpected error in handleGetLeaveRequests:', { error: error.message })
-    res.status(500).json({ error: 'Internal server error' })
+    logger.error('Leave requests API error:', { error: error.message })
+    return res.status(error.message === 'UNAUTHORIZED' ? 401 : 500).json({
+      error: error.message || 'Internal server error'
+    })
   }
 }
 
 async function handleCreateLeaveRequest(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const authResult = await authenticateUser(req, res, ['can_manage_employees'])
-    if (!authResult.success || !authResult.user || !authResult.userProfile) {
-      return res.status(401).json({ error: authResult.error || 'Authentication failed' })
+    const { companyId } = await requireCompanyAccess(req, res)
+    
+    if (!companyId) {
+      return res.status(400).json({ error: 'Company ID is required' })
     }
-
-    const { user, userProfile } = authResult
 
     // Parse form data
     const form = formidable({
@@ -133,15 +130,14 @@ async function handleCreateLeaveRequest(req: NextApiRequest, res: NextApiRespons
       .single()
 
     if (empError || !employee) {
-      logger.warn('Employee not found by DNI', { dni: employee_dni, userId: user.id })
+      logger.warn('Employee not found by DNI', { dni: employee_dni, companyId })
       return res.status(404).json({ error: 'Employee not found' })
     }
 
-    // Verify employee belongs to user's company (unless super_admin)
-    if (userProfile.role !== 'super_admin' && employee.company_id !== userProfile.company_id) {
+    // Verify employee belongs to user's company
+    if (employee.company_id !== companyId) {
       logger.warn('User trying to create leave request for employee from different company', {
-        userId: user.id,
-        userCompanyId: userProfile.company_id,
+        companyId,
         employeeCompanyId: employee.company_id
       })
       return res.status(403).json({ error: 'Access denied' })
@@ -188,7 +184,7 @@ async function handleCreateLeaveRequest(req: NextApiRequest, res: NextApiRespons
         fileName,
         originalName: attachment.originalFilename,
         size: attachment.size,
-        userId: user.id
+        companyId
       })
     }
 
@@ -217,7 +213,7 @@ async function handleCreateLeaveRequest(req: NextApiRequest, res: NextApiRespons
     if (createError) {
       logger.error('Error creating leave request:', { 
         error: createError.message, 
-        userId: user.id,
+        companyId,
         employeeId: employee.id 
       })
       return res.status(500).json({ error: 'Error creating leave request' })
@@ -226,15 +222,17 @@ async function handleCreateLeaveRequest(req: NextApiRequest, res: NextApiRespons
     logger.info('Leave request created successfully', {
       leaveRequestId: leaveRequest.id,
       employeeId: employee.id,
-      userId: user.id,
+      companyId,
       durationType: duration_type,
       daysRequested: days_requested
     })
 
     res.status(201).json(leaveRequest)
   } catch (error: any) {
-    logger.error('Unexpected error in handleCreateLeaveRequest:', { error: error.message })
-    res.status(500).json({ error: 'Internal server error' })
+    logger.error('Leave create request API error:', { error: error.message })
+    return res.status(error.message === 'UNAUTHORIZED' ? 401 : 500).json({
+      error: error.message || 'Internal server error'
+    })
   }
 }
 
