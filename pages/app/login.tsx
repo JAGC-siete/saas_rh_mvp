@@ -36,8 +36,7 @@ export default function LoginExisting() {
 
       const data = await response.json()
       
-      // Guardar token en localStorage
-      localStorage.setItem('token', data.token)
+      // Guardar datos del usuario en localStorage (sin JWT personalizado)
       localStorage.setItem('user', JSON.stringify(data.user))
       
       // Check if user has a profile, if not redirect to profile creation

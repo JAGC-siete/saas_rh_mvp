@@ -1,16 +1,6 @@
 
 import { NextApiRequest, NextApiResponse } from 'next'
-import jwt from 'jsonwebtoken'
 import { createAdminClient } from '../../../lib/supabase/server'
-
-const JWT_SECRET = process.env.JWT_SECRET
-
-if (!JWT_SECRET) {
-  throw new Error('JWT_SECRET environment variable is required')
-}
-
-// TypeScript assertion to ensure JWT_SECRET is string
-const jwtSecret = JWT_SECRET as string
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -72,18 +62,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       userRole = 'employee' // Rol por defecto
     }
 
-    // Crear token JWT personalizado
-    const token = jwt.sign(
-      { 
-        userId: authData.user.id, 
-        email: authData.user.email, 
-        role: userRole,
-        supabaseToken: authData.session?.access_token
-      },
-      jwtSecret,
-      { expiresIn: '24h' }
-    )
-
     // Set Supabase session cookies for middleware compatibility
     if (authData.session) {
       const { access_token, refresh_token, expires_at } = authData.session
@@ -97,14 +75,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     return res.status(200).json({
-      token,
       user: {
         id: authData.user.id,
         email: authData.user.email,
         name: userName,
         role: userRole,
         company_id: companyId
-      }
+      },
+      session: authData.session
     })
 
   } catch (error) {

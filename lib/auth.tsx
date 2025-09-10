@@ -52,31 +52,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Create Supabase client with error handling
   const [supabase, setSupabase] = useState<any>(null)
 
-  // Function to load user profile from database
-  const loadUserProfileFromDatabase = async (userId: string, token: string) => {
-    try {
-      console.log('📊 Loading user profile from database for user:', userId)
-      const response = await fetch('/api/user-profiles/get-profile', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include' // Include cookies for authentication
-      })
-
-      if (response.ok) {
-        const profile = await response.json()
-        console.log('✅ User profile loaded from database:', profile)
-        setUserProfile(profile)
-      } else {
-        console.error('❌ Failed to load user profile:', response.status)
-        const errorData = await response.json()
-        console.error('❌ Error details:', errorData)
-      }
-    } catch (error) {
-      console.error('❌ Error loading user profile from database:', error)
-    }
-  }
 
   // Function to refresh user profile
   const refreshUserProfile = async () => {
@@ -179,27 +154,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(session?.user ?? null)
           setError(null)
           
-          // Load user profile if user exists
-          if (session?.user && session?.access_token) {
-            loadUserProfileFromDatabase(session.user.id, session.access_token)
-          }
+          // User profile will be loaded from login response data
         }
         
-        // Si no hay sesión de Supabase, verificar si hay token JWT en localStorage
+        // Si no hay sesión de Supabase, verificar si hay datos de usuario en localStorage
         if (!session && typeof window !== 'undefined') {
-          const token = localStorage.getItem('token')
           const userData = localStorage.getItem('user')
           
-          if (token && userData) {
+          if (userData) {
             try {
               const user = JSON.parse(userData)
-              console.log('🔑 Found JWT token, setting user from localStorage:', user.email)
+              console.log('🔑 Found user data in localStorage:', user.email)
               setUser(user)
-              setSession({ 
-                access_token: token, 
-                user: user,
-                expires_at: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
-              } as any)
               
               // Create a proper user profile object from localStorage data
               const userProfile = {
@@ -218,7 +184,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               console.log('✅ User profile set from localStorage:', userProfile)
             } catch (err) {
               console.error('❌ Error parsing user data from localStorage:', err)
-              localStorage.removeItem('token')
               localStorage.removeItem('user')
             }
           }
@@ -242,12 +207,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false)
         setError(null)
 
-        // Load user profile if user exists
-        if (session?.user && session?.access_token) {
-          loadUserProfileFromDatabase(session.user.id, session.access_token)
-        } else {
-          setUserProfile(null)
-        }
+        // User profile will be loaded from login response data
 
         // ✅ Solo redirigir si estamos en el cliente y tenemos window
         if (isClient && typeof window !== 'undefined') {
@@ -283,9 +243,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const data = await response.json()
       
-      // Store token and user data in localStorage
+      // Store user data in localStorage (no custom JWT needed)
       if (typeof window !== 'undefined') {
-        localStorage.setItem('token', data.token)
         localStorage.setItem('user', JSON.stringify(data.user))
       }
 
@@ -305,11 +264,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Set user profile from login response
       setUserProfile(userProfile)
       setUser(data.user)
-      setSession({ 
-        access_token: data.token, 
-        user: data.user,
-        expires_at: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
-      } as any)
+      setSession(data.session) // Use Supabase session directly
 
       console.log('✅ Login successful:', data.user.email)
       setError(null)
@@ -328,7 +283,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       // Limpiar localStorage
       if (typeof window !== 'undefined') {
-        localStorage.removeItem('token')
         localStorage.removeItem('user')
       }
       
