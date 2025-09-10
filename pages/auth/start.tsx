@@ -244,14 +244,15 @@ export default function AuthStart() {
                     Continuar con Facebook
                   </Button> */}
 
-                  <Button
+                  {/* Phone SMS - Comentado para desarrollo futuro */}
+                  {/* <Button
                     onClick={() => setStep('phone')}
                     variant="outline"
                     className="w-full h-12 border-brand-500/20 text-brand-200 hover:bg-brand-800/20"
                   >
                     <Phone className="h-5 w-5 mr-2" />
                     Continuar con Teléfono
-                  </Button>
+                  </Button> */}
 
                   <p className="text-xs text-brand-200/60 text-center">
                     Sin contraseña. Sin tarjeta. Podés cancelar cuando quieras.
