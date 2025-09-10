@@ -318,6 +318,16 @@ export async function middleware(request: NextRequest) {
         },
       })
       
+      // Debug cookies
+      const cookieNames = Array.from(request.cookies.keys())
+      const authCookies = cookieNames.filter(name => name.includes('auth-token'))
+      logger.info('Middleware debug', { 
+        path: pathname, 
+        cookieNames, 
+        authCookies,
+        hasAuthCookie: authCookies.length > 0
+      })
+      
       // Get user from Supabase (more secure than getSession)
       const { data: { user }, error } = await supabase.auth.getUser()
       
