@@ -189,8 +189,8 @@ export const usePayrollManager = () => {
   const loadUnifiedData = useCallback(async () => {
     if (!companyId) return
 
-    setLoading(true)
-    clearError()
+    dispatch({ type: 'SET_LOADING', payload: true })
+    dispatch({ type: 'CLEAR_ERROR' })
 
     try {
       console.log('🔄 Loading unified payroll data:', {
@@ -218,10 +218,10 @@ export const usePayrollManager = () => {
     } catch (error: any) {
       console.error('❌ Error loading unified payroll data:', error)
       const errorMessage = error?.message || 'Error desconocido'
-      setError(`Error cargando datos: ${errorMessage}`)
+      dispatch({ type: 'SET_ERROR', payload: `Error cargando datos: ${errorMessage}` })
       toast.error('Error', 'No se pudieron cargar los datos del período actual', 5000)
     }
-  }, [companyId, state.currentPeriod, setLoading, clearError, setError, toast])
+  }, [companyId, state.currentPeriod, toast])
 
   // Legacy API Actions (for compatibility during migration)
   const generatePreview = useCallback(async () => {
@@ -383,11 +383,31 @@ export const usePayrollManager = () => {
     if (typeof window === 'undefined') return
     if (state.hasLoadedInitialData || !companyId) return
 
-    const abortController = new AbortController()
-    loadUnifiedData()
+    // Load data directly without calling the callback to avoid dependency issues
+    const loadData = async () => {
+      if (!companyId) return
 
-    return () => abortController.abort()
-  }, [state.hasLoadedInitialData, companyId, loadUnifiedData])
+      dispatch({ type: 'SET_LOADING', payload: true })
+      dispatch({ type: 'CLEAR_ERROR' })
+
+      try {
+        const data = await fetchUnifiedPayroll(
+          companyId,
+          state.currentPeriod.year,
+          state.currentPeriod.month,
+          state.currentPeriod.quincena
+        )
+
+        dispatch({ type: 'SET_DATA', payload: data })
+        dispatch({ type: 'SET_LOADED_INITIAL', payload: true })
+      } catch (error: any) {
+        const errorMessage = error?.message || 'Error desconocido'
+        dispatch({ type: 'SET_ERROR', payload: `Error cargando datos: ${errorMessage}` })
+      }
+    }
+
+    loadData()
+  }, [state.hasLoadedInitialData, companyId, state.currentPeriod.year, state.currentPeriod.month, state.currentPeriod.quincena])
 
   // Computed Properties
   const canPreview = state.status === 'idle' || state.status === 'draft' || state.status === 'error'
