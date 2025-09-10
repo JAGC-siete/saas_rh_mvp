@@ -96,15 +96,34 @@ export default function AuthStart() {
       const supabase = await createSupabaseBrowserClient()
       if (!supabase) throw new Error('Error inicializando Supabase')
       
-      // Formatear el teléfono correctamente
+      // Formatear el teléfono de manera más flexible
       let formattedPhone = phone.trim()
-      if (!formattedPhone.startsWith('+')) {
-        // Si no tiene código de país, agregar +504 para Honduras
-        formattedPhone = `+504${formattedPhone.replace(/\D/g, '')}`
+      
+      // Remover todos los caracteres no numéricos excepto el +
+      let cleanPhone = formattedPhone.replace(/[^\d+]/g, '')
+      
+      // Si no tiene código de país, agregar +504 para Honduras
+      if (!cleanPhone.startsWith('+')) {
+        // Si empieza con 504, agregar el +
+        if (cleanPhone.startsWith('504')) {
+          cleanPhone = `+${cleanPhone}`
+        } else {
+          // Si no tiene código de país, agregar +504
+          cleanPhone = `+504${cleanPhone}`
+        }
       }
       
+      // Validar que tenga al menos 8 dígitos después del código de país
+      const phoneDigits = cleanPhone.replace(/^\+\d{3}/, '')
+      if (phoneDigits.length < 8) {
+        setError('El número debe tener al menos 8 dígitos')
+        return
+      }
+      
+      console.log('📱 Enviando SMS a:', cleanPhone)
+      
       const { error } = await supabase.auth.signInWithOtp({
-        phone: formattedPhone,
+        phone: cleanPhone,
         options: {
           channel: 'sms'
         }
@@ -114,10 +133,13 @@ export default function AuthStart() {
       
       setStep('otp')
     } catch (err: any) {
+      console.error('❌ Error SMS:', err)
       if (err.message?.includes('Invalid phone')) {
-        setError('Formato de teléfono inválido. Usá: +504 9999-9999')
+        setError('Número de teléfono inválido. Verificá que sea correcto.')
       } else if (err.message?.includes('rate limit')) {
         setError('Demasiados intentos. Volvé en 15 minutos.')
+      } else if (err.message?.includes('Database error')) {
+        setError('Error del servidor. Intentá de nuevo.')
       } else {
         setError(err.message || 'Error enviando código SMS')
       }
