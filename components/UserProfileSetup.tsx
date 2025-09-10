@@ -14,7 +14,8 @@ export default function UserProfileSetup({ onComplete }: UserProfileSetupProps) 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [formData, setFormData] = useState({
-    company_name: ''
+    company_name: '',
+    employee_id: ''
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -28,6 +29,7 @@ export default function UserProfileSetup({ onComplete }: UserProfileSetupProps) 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           company_name: formData.company_name,
+          employee_id: formData.employee_id || null,
           role: 'hr_manager', // Fixed role
           is_active: true
         })
@@ -90,6 +92,22 @@ export default function UserProfileSetup({ onComplete }: UserProfileSetupProps) 
               </p>
             </div>
 
+            <div>
+              <label className="text-sm font-medium text-white mb-2 block">
+                Tu ID de Empleado (Opcional)
+              </label>
+              <input
+                type="text"
+                value={formData.employee_id}
+                onChange={(e) => handleInputChange('employee_id', e.target.value)}
+                placeholder="Ej: EMP001, 001, o tu código actual"
+                disabled={loading}
+                className="input-glass h-12 w-full"
+              />
+              <p className="text-xs text-gray-300 mt-1">
+                Si tenés un código de empleado, úsalo. Los siguientes empleados seguirán el patrón correlativo.
+              </p>
+            </div>
 
             {/* Role Info */}
             <div className="glass-strong p-4">
@@ -98,7 +116,7 @@ export default function UserProfileSetup({ onComplete }: UserProfileSetupProps) 
                 <span className="text-sm font-medium text-white">Rol Asignado</span>
               </div>
               <p className="text-xs text-gray-300">
-                Serás configurado como <strong className="text-white">HR Manager</strong> con acceso completo para gestionar empleados, departamentos y nóminas. Tu ID de empleado será asignado automáticamente como <strong className="text-white">EMP001</strong>.
+                Serás configurado como <strong className="text-white">HR Manager</strong> con acceso completo para gestionar empleados, departamentos y nóminas. Si no proporcionás un ID, se asignará automáticamente <strong className="text-white">EMP001</strong>.
               </p>
             </div>
 

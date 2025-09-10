@@ -13,6 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { 
       company_name,
       company_id, 
+      employee_id,
       role = 'hr_manager', 
       permissions = {},
       is_active = true 
@@ -67,8 +68,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       finalCompanyId = newCompany.id
     }
 
-    // Generate automatic employee ID (EMP001 for first employee)
-    const employeeId = 'EMP001'
+    // Generate employee ID: use provided ID or default to EMP001
+    const employeeId = employee_id || 'EMP001'
 
     // Create new user profile
     const { data: newProfile, error: createError } = await supabase
@@ -93,9 +94,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: 'Failed to create user profile' })
     }
 
+    // Store the employee ID pattern for future employees
+    if (employee_id) {
+      // Store the pattern in company metadata for future use
+      await supabase
+        .from('companies')
+        .update({ 
+          metadata: { 
+            employee_id_pattern: employee_id,
+            last_employee_number: 1 
+          } 
+        })
+        .eq('id', finalCompanyId)
+    }
+
     return res.status(201).json({ 
       profile: newProfile,
-      message: 'User profile created successfully' 
+      message: 'User profile created successfully',
+      employee_id: employeeId
     })
 
   } catch (error: any) {
