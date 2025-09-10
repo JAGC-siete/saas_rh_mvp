@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Mail, Phone, /* Facebook, */ ArrowRight, Loader2 } from 'lucide-react'
+import Image from 'next/image'
 import { createClient as createSupabaseBrowserClient } from '../../lib/supabase/client'
 
 export default function AuthStart() {
@@ -192,7 +193,7 @@ export default function AuthStart() {
                   Cumplí STSS Honduras
                 </span>
                 <span className="px-3 py-1 bg-blue-500/20 text-blue-300 text-xs rounded-full border border-blue-500/30">
-                  Setup en 24 horas
+                  Setup en 5 minutos
                 </span>
                 <span className="px-3 py-1 bg-purple-500/20 text-purple-300 text-xs rounded-full border border-purple-500/30">
                   30 días gratis
@@ -203,8 +204,14 @@ export default function AuthStart() {
               </div>
             )}
 
-            <div className="mx-auto h-20 w-20 bg-white rounded-full flex items-center justify-center mb-6 shadow-xl">
-              <ArrowRight className="h-10 w-10 text-brand-900" />
+            <div className="mx-auto h-20 w-20 bg-white/10 rounded-full flex items-center justify-center mb-6 shadow-xl border border-white/20 backdrop-blur-sm">
+              <Image
+                src="/logo-humano-sisu.png"
+                alt="Humano SISU Logo"
+                width={48}
+                height={48}
+                className="rounded-lg"
+              />
             </div>
             <h1 className="text-3xl font-bold text-white mb-2">
               {step === 'method' ? 'Creá tu Departamento de RH en 1 minuto y cumplí con S.T.S.S. desde hoy' : 
