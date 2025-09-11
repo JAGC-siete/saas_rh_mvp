@@ -81,10 +81,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const runId = runResult
     console.log('🔍 DEBUG - RunId from RPC:', runId, 'Type:', typeof runId)
 
-    // Obtener empleados activos
+    // Obtener empleados activos con información de departamento
     const { data: employees, error: empError } = await supabase
       .from('employees')
-      .select('id, name, dni, base_salary, bank_name, bank_account, status, department_id')
+      .select(`
+        id, name, dni, base_salary, bank_name, bank_account, status, department_id,
+        departments(name)
+      `)
       .eq('status', 'active')
       .eq('company_id', companyId)
       .order('name')
@@ -226,9 +229,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         employee_id: emp.id,
         id: emp.dni,
         name: emp?.name,
-        bank: emp.bank_name || '',
-        bank_account: emp.bank_account || '',
-        department: emp.department_id || 'Sin Departamento',
+        bank: emp.bank_name || 'No especificado',
+        bank_account: emp.bank_account || 'No especificado',
+        department: emp.departments?.name || 'Sin Departamento',
         base_salary: base_salary,
         monthly_salary: base_salary,
         days_worked,
