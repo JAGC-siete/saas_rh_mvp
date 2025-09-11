@@ -249,10 +249,17 @@ export const usePayrollManager = () => {
       
       console.log('🔍 DEBUG - Respuesta del preview:', response)
       console.log('🔍 DEBUG - RunId recibido:', response.run_id)
+      console.log('🔍 DEBUG - RunId type:', typeof response.run_id)
+      console.log('🔍 DEBUG - RunId truthy:', !!response.run_id)
       
       dispatch({ type: 'SET_RUN_ID', payload: response.run_id })
       dispatch({ type: 'SET_STATUS', payload: 'draft' })
       dispatch({ type: 'CLEAR_ERROR' }) // Limpiar cualquier error previo
+      
+      console.log('🔍 DEBUG - Estado después de dispatch:', {
+        runId: response.run_id,
+        status: 'draft'
+      })
       
       // ACTUALIZAR TABLA INMEDIATAMENTE con datos de la respuesta
       if (response.planilla && Array.isArray(response.planilla)) {
@@ -484,7 +491,9 @@ export const usePayrollManager = () => {
     error: state.error,
     canAuthorize,
     canSend,
-    canEdit
+    canEdit,
+    unifiedDataExists: !!state.unifiedData,
+    unifiedDataRows: state.unifiedData?.rows?.length || 0
   })
 
   // Legacy compatibility properties
