@@ -86,7 +86,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .from('employees')
       .select(`
         id, name, dni, base_salary, bank_name, bank_account, status, department_id,
-        departments(name)
+        departments!employees_department_id_fkey(name)
       `)
       .eq('status', 'active')
       .eq('company_id', companyId)

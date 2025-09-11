@@ -49,7 +49,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         *,
         employees!payroll_run_lines_employee_id_fkey(
           id, name, dni, base_salary, bank_name, bank_account,
-          departments(name)
+          departments!employees_department_id_fkey(name)
         )
       `)
       .eq('run_id', run_id)
