@@ -207,23 +207,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         total = total_earnings
       }
 
-      // Crear línea de planilla usando la nueva función
-      const { data: lineResult, error: lineError } = await supabase.rpc('insert_payroll_line', {
-        p_run_id: runId,
-        p_company_uuid: companyId,
-        p_employee_id: emp.id,
-        p_calc_hours: days_worked * 8, // 8 horas por día
-        p_calc_bruto: total_earnings,
-        p_calc_ihss: IHSS,
-        p_calc_rap: RAP,
-        p_calc_isr: ISR,
-        p_calc_neto: total
-      })
-
-      if (lineError) {
-        console.error(`Error creando línea para empleado ${emp.name}:`, lineError)
-        continue
-      }
+      // Preview no necesita insertar en payroll_run_lines
+      // Solo generar los datos para mostrar
 
       planilla.push({
         employee_id: emp.id,
@@ -242,7 +227,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         ISR: Math.round(ISR * 100) / 100,
         total_deducciones: Math.round(total_deductions * 100) / 100,
         total: Math.round(total * 100) / 100,
-        line_id: lineResult
+        line_id: null // Preview no tiene line_id
       })
     }
 
