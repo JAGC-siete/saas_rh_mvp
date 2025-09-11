@@ -222,7 +222,8 @@ export const usePayrollManager = () => {
         companyId,
         state.currentPeriod.year,
         state.currentPeriod.month,
-        state.currentPeriod.quincena
+        state.currentPeriod.quincena,
+        state.filters.tipo
       )
 
       dispatch({ type: 'SET_DATA', payload: data })
@@ -246,23 +247,51 @@ export const usePayrollManager = () => {
     try {
       const response = await payrollApi.preview(state.filters)
       
+      console.log('🔍 DEBUG - Respuesta del preview:', response)
+      console.log('🔍 DEBUG - RunId recibido:', response.run_id)
+      
       dispatch({ type: 'SET_RUN_ID', payload: response.run_id })
       setStatus('draft')
       
-      // Recargar datos unificados para actualizar la tabla
-      if (companyId) {
-        try {
-          const data = await fetchUnifiedPayroll(
-            companyId,
-            state.currentPeriod.year,
-            state.currentPeriod.month,
-            state.currentPeriod.quincena
-          )
-          dispatch({ type: 'SET_DATA', payload: data })
-        } catch (dataError: any) {
-          console.error('Error recargando datos después del preview:', dataError)
-          // No interrumpir el flujo, solo loggear el error
-        }
+      // ACTUALIZAR TABLA INMEDIATAMENTE con datos de la respuesta
+      if (response.planilla && Array.isArray(response.planilla)) {
+        console.log('🔍 DEBUG - Actualizando tabla con datos del preview:', response.planilla.length, 'empleados')
+        
+        // Convertir datos del preview a formato unificado
+        const rows: UnifiedRow[] = response.planilla.map((p: any) => ({
+          ...p,
+          horas_trabajadas: 0,
+          extras: { horas: 0, monto: 0 },
+          observaciones: '',
+          status: 'completo' as const
+        }))
+        
+        // Calcular resumen
+        const resumen = rows.reduce((acc, r) => {
+          acc.empleados += 1
+          acc.total_bruto += r.total_earnings
+          acc.total_deducciones.IHSS += r.IHSS || 0
+          acc.total_deducciones.RAP += r.RAP || 0
+          acc.total_deducciones.ISR += r.ISR || 0
+          acc.total_deducciones.otros += 0
+          acc.total_neto += r.total
+          acc.total_dias_trabajados += r.days_worked || 0
+          acc.total_horas_extras += 0
+          return acc
+        }, {
+          empleados: 0,
+          total_bruto: 0,
+          total_deducciones: { IHSS: 0, RAP: 0, ISR: 0, otros: 0 },
+          total_neto: 0,
+          total_dias_trabajados: 0,
+          total_horas_extras: 0
+        })
+        
+        // Actualizar estado inmediatamente
+        dispatch({ type: 'SET_DATA', payload: { rows, resumen } })
+        console.log('✅ Tabla actualizada inmediatamente con datos del preview')
+      } else {
+        console.error('❌ No se encontraron datos de planilla en la respuesta')
       }
       
       toast.success(

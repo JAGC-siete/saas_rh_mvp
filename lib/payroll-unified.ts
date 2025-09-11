@@ -65,7 +65,9 @@ export async function fetchUnifiedPayroll(
 
   try {
     // Fetch only the preview data which contains all active employees with attendance
-    const planillaRes = await fetch(`/api/payroll/preview?year=${year}&month=${month}&quincena=${quincena}&tipo=${tipo}`);
+    // Add cache-busting to ensure fresh data
+    const timestamp = Date.now()
+    const planillaRes = await fetch(`/api/payroll/preview?year=${year}&month=${month}&quincena=${quincena}&tipo=${tipo}&_t=${timestamp}`);
 
     if (!planillaRes.ok) {
       throw new Error(`Error fetching payroll data: ${planillaRes.status} ${planillaRes.statusText}`)

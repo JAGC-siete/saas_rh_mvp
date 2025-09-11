@@ -24,6 +24,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { year, month, quincena, tipo } = req.query
     
+    // DEBUG: Verificar parámetros recibidos
+    console.log('🔍 DEBUG - Parámetros recibidos:', { year, month, quincena, tipo })
+    
     // Validaciones
     if (!year || !month || !quincena) {
       return res.status(400).json({ error: 'year, month, y quincena son requeridos' })
@@ -32,7 +35,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const yearNum = parseInt(year as string)
     const monthNum = parseInt(month as string)
     const quincenaNum = parseInt(quincena as string)
-    const tipoParam = tipo as string || 'normal'
+    const tipoParam = tipo as string || 'CON'
     
     if (![1, 2].includes(quincenaNum)) {
       return res.status(400).json({ error: 'Quincena inválida (debe ser 1 o 2)' })
@@ -238,6 +241,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     console.log(`Preview de nómina generado exitosamente para ${planilla.length} empleados`)
+    console.log('🔍 DEBUG - RunId generado:', runId)
+    console.log('🔍 DEBUG - Tipo procesado:', tipoParam)
 
     return res.status(200).json({
       message: 'Preview de nómina generado exitosamente',
