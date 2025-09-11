@@ -47,9 +47,8 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
 export const payrollApi = {
   // Generate payroll preview
   preview: (body: PreviewRequest): Promise<PreviewResponse> =>
-    api<PreviewResponse>('/api/payroll/preview', {
-      method: 'POST',
-      body: JSON.stringify(body)
+    api<PreviewResponse>(`/api/payroll/preview?year=${body.year}&month=${body.month}&quincena=${body.quincena}&tipo=${body.tipo}`, {
+      method: 'GET'
     }),
 
   // Edit payroll line
