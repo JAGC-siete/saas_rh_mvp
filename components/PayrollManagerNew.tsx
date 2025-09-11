@@ -51,7 +51,7 @@ export default function PayrollManagerNew() {
   // Handle unified preview - now single handler
   const handlePreview = async () => {
     try {
-      await payroll.loadUnifiedData()
+      await payroll.generatePreview()
     } catch (error: any) {
       // Error handling is done in the hook
     }

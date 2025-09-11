@@ -240,6 +240,7 @@ export const usePayrollManager = () => {
 
   // Legacy API Actions (for compatibility during migration)
   const generatePreview = useCallback(async () => {
+    console.log('🚀 DEBUG - generatePreview INICIADO')
     setStatus('previewing')
     setLoading(true)
     clearError()
