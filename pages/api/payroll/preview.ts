@@ -71,12 +71,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       p_user_id: companyId
     })
 
+    console.log('🔍 DEBUG - RPC call result:', { runResult, runError })
+
     if (runError) {
       console.error('Error creando corrida de planilla:', runError)
       return res.status(500).json({ error: 'Error creando corrida de planilla' })
     }
 
     const runId = runResult
+    console.log('🔍 DEBUG - RunId from RPC:', runId, 'Type:', typeof runId)
 
     // Obtener empleados activos
     const { data: employees, error: empError } = await supabase
