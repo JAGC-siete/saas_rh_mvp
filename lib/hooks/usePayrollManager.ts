@@ -251,7 +251,8 @@ export const usePayrollManager = () => {
       console.log('🔍 DEBUG - RunId recibido:', response.run_id)
       
       dispatch({ type: 'SET_RUN_ID', payload: response.run_id })
-      setStatus('draft')
+      dispatch({ type: 'SET_STATUS', payload: 'draft' })
+      dispatch({ type: 'CLEAR_ERROR' }) // Limpiar cualquier error previo
       
       // ACTUALIZAR TABLA INMEDIATAMENTE con datos de la respuesta
       if (response.planilla && Array.isArray(response.planilla)) {
@@ -475,6 +476,16 @@ export const usePayrollManager = () => {
   const canAuthorize = state.status === 'draft' && !!state.runId
   const canSend = state.status === 'authorized' && !!state.runId
   const canReset = state.status !== 'idle'
+  
+  // DEBUG: Log current state for debugging
+  console.log('🔍 DEBUG - Estado actual del payroll:', {
+    status: state.status,
+    runId: state.runId,
+    error: state.error,
+    canAuthorize,
+    canSend,
+    canEdit
+  })
 
   // Legacy compatibility properties
   const hasPlanilla = (state.unifiedData?.rows?.length || 0) > 0
