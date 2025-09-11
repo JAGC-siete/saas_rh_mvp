@@ -281,7 +281,16 @@ export default function UnifiedPayrollTable({
           <Button
             onClick={onAuthorize}
             disabled={!canAuthorize || loading}
-            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
+            className={`flex items-center gap-2 ${
+              canAuthorize 
+                ? 'bg-green-600 hover:bg-green-700 text-white' 
+                : 'bg-gray-600 text-gray-300 cursor-not-allowed'
+            }`}
+            title={
+              !canAuthorize 
+                ? 'Se requiere una corrida de nómina en estado draft con datos válidos para autorizar'
+                : 'Autorizar la nómina actual'
+            }
           >
             <Icon name="check" className="h-4 w-4" />
             {loading ? 'Autorizando...' : 'Autorizar Nómina'}

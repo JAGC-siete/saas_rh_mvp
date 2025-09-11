@@ -168,7 +168,7 @@ export interface PayrollAdjustment {
 }
 
 // UI State Types
-export type UIRunStatus = 'idle' | 'previewing' | 'draft' | 'editing' | 'authorizing' | 'authorized' | 'distributing' | 'error';
+export type UIRunStatus = 'idle' | 'previewing' | 'draft' | 'edited' | 'editing' | 'authorizing' | 'authorized' | 'distributing' | 'error';
 
 export interface PayrollFilters {
   year: number;
