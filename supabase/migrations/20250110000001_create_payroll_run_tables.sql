@@ -108,3 +108,4 @@ CREATE POLICY "Users can update payroll run lines for their company" ON payroll_
             WHERE id = auth.uid()
         )
     );
+

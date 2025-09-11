@@ -57,3 +57,4 @@ $$;
 
 -- Grant execute permission
 GRANT EXECUTE ON FUNCTION insert_payroll_line TO authenticated;
+
