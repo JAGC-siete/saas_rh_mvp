@@ -1,163 +1,118 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../lib/supabase/server'
+import { requireCompanyAccess } from '../../../lib/auth/api-auth'
+import { getCompanyData, addCompanyToInsertData } from '../../../lib/helpers/company-filter'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
-
   try {
-    console.log('🏢 Departments API: Iniciando fetch de datos...')
+    const { supabase, companyId } = await requireCompanyAccess(req, res)
 
-    // Create Supabase client for Pages API
-    const supabase = createClient(req, res)
+    if (!companyId) {
+      return res.status(400).json({ error: 'Company ID is required' })
+    }
 
-    // Get user (more secure than getSession)
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    switch (req.method) {
+      case 'GET':
+        // Get departments
+        const { data: departments, error: fetchError } = await getCompanyData(
+          supabase,
+          'departments',
+          companyId,
+          '*'
+        ).order('name')
+
+        if (fetchError) throw fetchError
+
+        // Get employees for each department to calculate stats
+        const { data: employees, error: empError } = await getCompanyData(
+          supabase,
+          'employees',
+          companyId,
+          'id, name, base_salary, department_id, status'
+        ).eq('status', 'active')
+
+        if (empError) throw empError
+
+        // Calculate department stats
+        const departmentStats: { [key: string]: any } = {}
+        const summary = {
+          totalDepartments: departments?.length || 0,
+          totalEmployees: employees?.length || 0,
+          totalSalary: 0,
+          averageSalary: 0
+        }
+
+        // Process each department
+        departments?.forEach((dept: any) => {
+          const deptEmployees = employees?.filter((emp: any) => emp.department_id === dept.id) || []
+          const totalSalary = deptEmployees.reduce((sum: number, emp: any) => sum + (emp.base_salary || 0), 0)
+          const averageSalary = deptEmployees.length > 0 ? totalSalary / deptEmployees.length : 0
+
+          departmentStats[dept.name] = {
+            id: dept.id,
+            name: dept.name,
+            description: dept.description,
+            employeeCount: deptEmployees.length,
+            totalSalary,
+            averageSalary,
+            employees: deptEmployees.map((emp: any) => ({
+              id: emp.id,
+              name: emp.name,
+              base_salary: emp.base_salary,
+              status: emp.status
+            }))
+          }
+
+          summary.totalSalary += totalSalary
+        })
+
+        summary.averageSalary = summary.totalEmployees > 0 ? summary.totalSalary / summary.totalEmployees : 0
+
+        return res.json({
+          departments,
+          departmentStats,
+          summary
+        })
+
+      case 'POST':
+        const { name, description } = req.body
+        
+        if (!name) {
+          return res.status(400).json({ error: 'Department name is required' })
+        }
+
+        const insertData = addCompanyToInsertData({
+          name,
+          description: description || null
+        }, companyId)
+
+        const { data: newDept, error: createError } = await supabase
+          .from('departments')
+          .insert(insertData)
+          .select()
+          .single()
+
+        if (createError) throw createError
+        return res.status(201).json({ department: newDept })
+
+      default:
+        return res.status(405).json({ error: 'Method not allowed' })
+    }
+  } catch (error: any) {
+    console.error('Departments API error:', error)
     
-    if (authError || !user) {
-      console.error('❌ Auth error:', authError)
+    // Handle specific authentication errors
+    if (error.message === 'UNAUTHORIZED') {
       return res.status(401).json({ error: 'Unauthorized' })
     }
-
-    // Get user's company_id (optional for now)
-    let companyId = '00000000-0000-0000-0000-000000000001' // Default company ID
+    if (error.message === 'PROFILE_REQUIRED') {
+      return res.status(403).json({ error: 'User profile required' })
+    }
+    if (error.message === 'COMPANY_ACCESS_REQUIRED') {
+      return res.status(400).json({ error: 'Company access required. Please contact administrator to assign you to a company.' })
+    }
     
-    try {
-      const { data: userProfile, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('company_id')
-        .eq('user_id', user.id)
-        .single()
-
-      if (!profileError && userProfile?.company_id) {
-        companyId = userProfile.company_id
-      }
-    } catch (error) {
-      console.log('⚠️ No user profile found, using default company ID')
-    }
-
-    // 1. Obtener todos los departamentos de la compañía del usuario
-    console.log('🔍 Buscando departamentos con company_id:', companyId)
-    
-    // DEBUG: Query ALL departments without any filters to see what's in the table
-    const { data: allDepartments, error: allDeptError } = await supabase
-      .from('departments')
-      .select('*')
-    
-    console.log('🔍 DEBUG: ALL departments in table:', allDepartments)
-    console.log('🔍 DEBUG: ALL departments error:', allDeptError)
-    
-    const { data: departments, error: deptError } = await supabase
-      .from('departments')
-      .select('id, name, description, created_at, company_id')
-      // .eq('company_id', companyId) // Temporarily disabled to see all departments
-      .order('name')
-
-    if (deptError) {
-      console.error('❌ Error fetching departments:', deptError)
-      return res.status(500).json({ error: 'Error fetching departments' })
-    }
-
-    console.log('✅ Departments obtenidos:', departments?.length || 0)
-    console.log('📋 Departments encontrados:', departments?.map(d => ({ id: d.id, name: d.name, company_id: d.company_id })))
-
-    // 2. Obtener empleados activos de la compañía del usuario
-    const { data: employees, error: empError } = await supabase
-      .from('employees')
-      .select('id, name, department_id, base_salary, status')
-      .eq('company_id', companyId)
-      .eq('status', 'active')
-
-    if (empError) {
-      console.error('❌ Error fetching employees:', empError)
-      return res.status(500).json({ error: 'Error fetching employees' })
-    }
-
-    console.log('✅ Empleados activos obtenidos:', employees?.length || 0)
-
-    // 3. Generar estadísticas por departamento
-    const departmentStats: { [key: string]: any } = {}
-    let totalSalary = 0
-
-    // Si no hay departamentos, crear un departamento por defecto para empleados sin asignar
-    if (!departments || departments.length === 0) {
-      const unassignedEmployees = employees || []
-      const unassignedSalary = unassignedEmployees.reduce((sum, emp) => sum + (emp.base_salary || 0), 0)
-      const avgSalary = unassignedEmployees.length > 0 ? unassignedSalary / unassignedEmployees.length : 0
-      
-      departmentStats['Sin Asignar'] = {
-        id: 'unassigned',
-        name: 'Sin Asignar',
-        description: 'Empleados sin departamento asignado',
-        employeeCount: unassignedEmployees.length,
-        totalSalary: unassignedSalary,
-        averageSalary: avgSalary,
-        employees: unassignedEmployees
-      }
-      
-      totalSalary = unassignedSalary
-    } else {
-      // Procesar departamentos existentes
-      departments.forEach(dept => {
-        const deptEmployees = employees?.filter(emp => emp.department_id === dept.id) || []
-        const deptSalary = deptEmployees.reduce((sum, emp) => sum + (emp.base_salary || 0), 0)
-        const avgSalary = deptEmployees.length > 0 ? deptSalary / deptEmployees.length : 0
-        
-        departmentStats[dept.name] = {
-          id: dept.id,
-          name: dept.name,
-          description: dept.description || '',
-          employeeCount: deptEmployees.length,
-          totalSalary: deptSalary,
-          averageSalary: avgSalary,
-          employees: deptEmployees
-        }
-        
-        totalSalary += deptSalary
-      })
-
-      // Agregar empleados sin departamento asignado
-      const unassignedEmployees = employees?.filter(emp => !emp.department_id) || []
-      if (unassignedEmployees.length > 0) {
-        const unassignedSalary = unassignedEmployees.reduce((sum, emp) => sum + (emp.base_salary || 0), 0)
-        const avgSalary = unassignedEmployees.length > 0 ? unassignedSalary / unassignedEmployees.length : 0
-        
-        departmentStats['Sin Asignar'] = {
-          id: 'unassigned',
-          name: 'Sin Asignar',
-          description: 'Empleados sin departamento asignado',
-          employeeCount: unassignedEmployees.length,
-          totalSalary: unassignedSalary,
-          averageSalary: avgSalary,
-          employees: unassignedEmployees
-        }
-        
-        totalSalary += unassignedSalary
-      }
-    }
-
-    const response = {
-      departments: departments || [],
-      departmentStats,
-      summary: {
-        totalDepartments: departments?.length || 0,
-        totalEmployees: employees?.length || 0,
-        totalSalary,
-        averageSalary: employees?.length > 0 ? totalSalary / employees.length : 0
-      }
-    }
-
-    console.log('✅ Departments API: Datos procesados exitosamente')
-    console.log('📊 Resumen:', {
-      totalDepartments: response.summary.totalDepartments,
-      totalEmployees: response.summary.totalEmployees
+    return res.status(500).json({ 
+      error: error.message || 'Internal server error' 
     })
-
-    res.status(200).json(response)
-
-  } catch (error) {
-    console.error('💥 Departments API: Error inesperado:', error)
-    res.status(500).json({ error: 'Internal server error' })
   }
-} 
+}

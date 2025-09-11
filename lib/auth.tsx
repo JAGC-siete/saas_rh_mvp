@@ -3,24 +3,38 @@ import { createClient } from './supabase/client'
 import { User, Session } from '@supabase/supabase-js'
 import { env, refreshEnvFromWindow } from './env'
 
+interface UserProfile {
+  id: string
+  email: string
+  name: string
+  role: string
+  company_id: string | null
+  employee_id?: string
+  permissions?: Record<string, any>
+}
+
 interface AuthContextType {
   user: User | null
+  userProfile: UserProfile | null
   session: Session | null
   // eslint-disable-next-line no-unused-vars
   login: (email: string, password: string) => Promise<boolean>
   logout: () => void
   loading: boolean
   error: string | null
+  refreshUserProfile: () => Promise<void>
 }
 
 // Create default context value
 const defaultAuthContext: AuthContextType = {
   user: null,
+  userProfile: null,
   session: null,
   login: async () => false,
   logout: () => {},
   loading: true,
-  error: null
+  error: null,
+  refreshUserProfile: async () => {}
 }
 
 const AuthContext = createContext<AuthContextType>(defaultAuthContext)
@@ -29,6 +43,7 @@ export const useAuth = () => useContext(AuthContext)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -36,6 +51,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   
   // Create Supabase client with error handling
   const [supabase, setSupabase] = useState<any>(null)
+
+
+  // Function to refresh user profile
+  const refreshUserProfile = async () => {
+    if (!supabase || !user) return
+
+    try {
+      const response = await fetch('/api/user-profiles', {
+        headers: {
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        // Find the current user's profile
+        const profile = data.profiles?.find((p: any) => p.id === user.id)
+        if (profile) {
+          setUserProfile(profile)
+        }
+      }
+    } catch (error) {
+      console.error('Error refreshing user profile:', error)
+    }
+  }
 
   // ✅ Factor VI: Detectar si estamos en el cliente
   useEffect(() => {
@@ -76,15 +116,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Now initialize Supabase client
       try {
         console.log('🔧 Initializing Supabase client...')
-        const client = createClient()
-        if (client) {
-          setSupabase(client)
-          console.log('✅ Supabase client initialized successfully')
-        } else {
-          console.error('❌ Failed to create Supabase client - client is null')
-          setError('Failed to initialize authentication')
-          setLoading(false)
-        }
+        const client = await createClient()
+        setSupabase(client)
+        console.log('✅ Supabase client initialized successfully')
       } catch (err) {
         console.error('❌ Failed to create Supabase client:', err)
         setError('Failed to initialize authentication')
@@ -119,6 +153,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setSession(session)
           setUser(session?.user ?? null)
           setError(null)
+          
+          // User profile will be loaded from login response data
+        }
+        
+        // Si no hay sesión de Supabase, verificar si hay datos de usuario en localStorage
+        if (!session && typeof window !== 'undefined') {
+          const userData = localStorage.getItem('user')
+          
+          if (userData) {
+            try {
+              const user = JSON.parse(userData)
+              console.log('🔑 Found user data in localStorage:', user.email)
+              setUser(user)
+              
+              // Create a proper user profile object from localStorage data
+              const userProfile = {
+                id: user.id,
+                email: user.email,
+                name: user.name,
+                role: user.role,
+                company_id: user.company_id,
+                is_active: true,
+                permissions: {},
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              }
+              
+              setUserProfile(userProfile)
+              console.log('✅ User profile set from localStorage:', userProfile)
+            } catch (err) {
+              console.error('❌ Error parsing user data from localStorage:', err)
+              localStorage.removeItem('user')
+            }
+          }
         }
       } catch (error) {
         console.error('❌ Error getting initial session:', error)
@@ -139,6 +207,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false)
         setError(null)
 
+        // User profile will be loaded from login response data
+
         // ✅ Solo redirigir si estamos en el cliente y tenemos window
         if (isClient && typeof window !== 'undefined') {
           if (event === 'SIGNED_IN' && window.location.pathname === '/app/login') {
@@ -154,35 +224,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [isClient, supabase]) // ✅ Dependencia en isClient y supabase
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    if (!supabase) {
-      setError('Authentication not initialized')
-      return false
-    }
-
     try {
       setLoading(true)
       setError(null)
       console.log('🔐 Attempting login with:', email)
 
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
+      const response = await fetch('/api/auth/login-supabase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
       })
 
-      if (error) {
-        console.error('❌ Login error:', error)
-        setError(error.message || 'Login failed')
+      if (!response.ok) {
+        const errorData = await response.json()
+        setError(errorData.error || 'Login failed')
         return false
       }
 
-      if (data.user) {
-        console.log('✅ Login successful:', data.user.email)
-        setError(null)
-        return true
+      const data = await response.json()
+      
+      // Store user data in localStorage (no custom JWT needed)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('user', JSON.stringify(data.user))
       }
 
-      setError('Login failed')
-      return false
+      // Create a proper user profile object from login response
+      const userProfile = {
+        id: data.user.id,
+        email: data.user.email,
+        name: data.user.name,
+        role: data.user.role,
+        company_id: data.user.company_id,
+        is_active: true,
+        permissions: {},
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+      
+      // Set user profile from login response
+      setUserProfile(userProfile)
+      setUser(data.user)
+      setSession(data.session) // Use Supabase session directly
+
+      console.log('✅ Login successful:', data.user.email)
+      setError(null)
+      return true
+
     } catch (error) {
       console.error('❌ Login failed:', error)
       setError('Login failed')
@@ -193,14 +280,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const logout = async () => {
-    if (!supabase) return
-
     try {
-      const { error } = await supabase.auth.signOut()
-      if (error) {
-        console.error('❌ Logout error:', error)
-        setError('Logout failed')
+      // Limpiar localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('user')
       }
+      
+      // Limpiar estado local
+      setUser(null)
+      setUserProfile(null)
+      setSession(null)
+      setError(null)
+      
+      // Si hay cliente de Supabase, hacer signOut
+      if (supabase) {
+        const { error } = await supabase.auth.signOut()
+        if (error) {
+          console.error('❌ Logout error:', error)
+          setError('Logout failed')
+        }
+      }
+      
+      console.log('✅ Logout successful')
     } catch (error) {
       console.error('❌ Logout failed:', error)
       setError('Logout failed')
@@ -212,11 +313,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return (
       <AuthContext.Provider value={{ 
         user: null, 
+        userProfile: null,
         session: null, 
         login: async () => false, 
         logout: () => {}, 
         loading: true,
-        error: null
+        error: null,
+        refreshUserProfile: async () => {}
       }}>
         {children}
       </AuthContext.Provider>
@@ -224,7 +327,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, login, logout, loading, error }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      userProfile, 
+      session, 
+      login, 
+      logout, 
+      loading, 
+      error, 
+      refreshUserProfile 
+    }}>
       {children}
     </AuthContext.Provider>
   )

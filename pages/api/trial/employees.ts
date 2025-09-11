@@ -1,9 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-<<<<<<< HEAD
-import { createClient } from '../../../lib/supabase/server'
-=======
 import { createAdminClient } from '../../../lib/supabase/server'
->>>>>>> 7bc9d85 (feat: implement glass effect in trial system and add employees API)
+import { nowInHonduras } from '../../../lib/timezone'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -17,15 +14,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Tenant requerido' })
     }
 
-<<<<<<< HEAD
-    const supabase = createClient(req, res)
-
-    // Buscar empresa demo por UUID específico
-    const { data: company, error: companyError } = await supabase
-      .from('companies')
-      .select('id, name, subdomain')
-      .eq('id', 'c0f49c93-f9a6-40df-b3bd-422963c50e28')
-=======
     const supabase = createAdminClient()
 
     // Buscar empresa demo
@@ -33,7 +21,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .from('companies')
       .select('id, name, subdomain')
       .eq('name', 'DEMO EMPRESARIAL  - Datos de  Prueba')
->>>>>>> 7bc9d85 (feat: implement glass effect in trial system and add employees API)
       .eq('is_active', true)
       .single()
 
@@ -53,12 +40,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         employee_code, 
         email, 
         phone, 
-<<<<<<< HEAD
         role,
         team,
-=======
-        position, 
->>>>>>> 7bc9d85 (feat: implement glass effect in trial system and add employees API)
         base_salary, 
         hire_date, 
         status,
@@ -69,10 +52,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .order('name')
 
     if (employeesError) {
-<<<<<<< HEAD
       console.error('❌ Error obteniendo empleados:', employeesError)
-=======
->>>>>>> 7bc9d85 (feat: implement glass effect in trial system and add employees API)
       return res.status(500).json({ error: 'Error obteniendo empleados', details: employeesError })
     }
 
@@ -110,7 +90,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       gamification_points: scoresMap.get(emp.id) || 0,
       // Datos simulados para el trial
       attendance_rate: Math.floor(Math.random() * 20) + 80, // 80-100%
-      last_attendance: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      last_attendance: new Date(nowInHonduras().getTime() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       performance_rating: (Math.random() * 2 + 3).toFixed(1), // 3.0-5.0
     }))
 
@@ -130,17 +110,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-<<<<<<< HEAD
     console.log('✅ Empleados del trial obtenidos:', enrichedEmployees.length)
     return res.status(200).json(result)
   } catch (error) {
     console.error('💥 Error en trial employees:', error)
     return res.status(500).json({ error: 'Error interno del servidor', details: error })
-=======
-    return res.status(200).json(result)
-  } catch (error) {
-    console.error('💥 Error en trial employees:', error)
-    return res.status(500).json({ error: 'Error interno del servidor' })
->>>>>>> 7bc9d85 (feat: implement glass effect in trial system and add employees API)
   }
 }

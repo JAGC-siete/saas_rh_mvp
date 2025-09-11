@@ -38,8 +38,8 @@ export default function GamificationDashboard() {
     try {
       setLoading(true)
       
-      // Fetch stats using unified endpoint
-      const response = await fetch(`/api/gamification?action=stats&company_id=${companyId}`)
+      // Fetch stats using unified endpoint - company_id now comes from auth context
+      const response = await fetch(`/api/gamification?action=stats`)
       const data = await response.json()
 
       if (data.success) {

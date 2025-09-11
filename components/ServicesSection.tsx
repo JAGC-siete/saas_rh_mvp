@@ -1,6 +1,7 @@
 import { ClockIcon, CurrencyDollarIcon, CheckCircleIcon, ArrowRightIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 import { Button } from './ui/button'
+import CountdownTimer from './CountdownTimer'
 
 export default function ServicesSection() {
   return (
@@ -10,9 +11,13 @@ export default function ServicesSection() {
         <div className="mx-auto h-72 w-72 blur-3xl rounded-full opacity-20 bg-brand-600/40 translate-y-8" />
       </div>
 
+      {/* Cómo funciona section */}
+
       <header className="max-w-3xl mb-10 mx-auto text-center">
-        <h2 className="text-4xl md:text-5xl font-bold text-white tracking-tight">
-          Presentamos: Tus robots de Recursos Humanos
+        <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight">
+          <span className="text-white">Presentamos: Tus robots de</span>
+          <span className="hidden sm:inline"> </span>
+          <span className="text-brand-300">Recursos Humanos</span>
         </h2>
         <p className="mt-3 text-brand-200">
           Reemplazá tareas repetitivas y propensas a error con <span className="text-brand-400">automatización verificable</span>.
@@ -21,7 +26,11 @@ export default function ServicesSection() {
 
       {/* El Libro Rojo - Asistencia */}
       <div id="libro-rojo" className="mb-16">
-        <h3 className="text-2xl font-bold text-white mb-6 text-center">El Libro Rojo de Asistencia</h3>
+        <h3 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6 text-center">
+          <span className="text-white">Pulso</span>
+          <span className="hidden sm:inline"> </span>
+          <span className="text-brand-300">Laboral</span>
+        </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* SOPORTE: Asistencia */}
           <article className="group relative overflow-hidden rounded-2xl glass border border-white/15 p-6 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
@@ -41,14 +50,6 @@ export default function ServicesSection() {
               <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Pulso laboral: semáforo aleatorio (R/A/V)</li>
             </ul>
 
-            <div className="mt-5 flex gap-3">
-              <Button variant="outline" asChild className="h-10 px-4">
-                <Link href="/activar">Solicitar Demo</Link>
-              </Button>
-              <Link href="/activar" className="inline-flex items-center underline decoration-white/20 underline-offset-4 hover:decoration-brand-400 transition text-brand-300 hover:text-white">
-                Activar <ArrowRightIcon className="ml-1 h-4 w-4" />
-              </Link>
-            </div>
           </article>
 
           {/* SOPORTE: Reportes ejecutivos */}
@@ -69,21 +70,17 @@ export default function ServicesSection() {
               <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Alertas inteligentes y notificaciones</li>
             </ul>
 
-            <div className="mt-5 flex gap-3">
-              <Button variant="outline" asChild className="h-10 px-4">
-                <Link href="/activar">Solicitar Demo</Link>
-              </Button>
-              <Link href="/activar" className="inline-flex items-center underline decoration-white/20 underline-offset-4 hover:decoration-brand-400 transition text-brand-300 hover:text-white">
-                Activar <ArrowRightIcon className="ml-1 h-4 w-4" />
-              </Link>
-            </div>
           </article>
         </div>
       </div>
 
       {/* El Planillero - Nómina */}
       <div id="planillero" className="mb-16">
-        <h3 className="text-2xl font-bold text-white mb-6 text-center">El Planillero Automático</h3>
+        <h3 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6 text-center">
+          <span className="text-white">Nomina</span>
+          <span className="hidden sm:inline"> </span>
+          <span className="text-brand-300">PRO</span>
+        </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* SOPORTE: Nómina sin errores */}
           <article className="group relative overflow-hidden rounded-2xl glass border border-white/15 p-6 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
@@ -103,14 +100,6 @@ export default function ServicesSection() {
               <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> ZIP de vouchers + envío masivo</li>
             </ul>
 
-            <div className="mt-5 flex gap-3">
-              <Button variant="outline" asChild className="h-10 px-4">
-                <Link href="/activar">Solicitar Demo</Link>
-              </Button>
-              <Link href="/activar" className="inline-flex items-center underline decoration-white/20 underline-offset-4 hover:decoration-brand-400 transition text-brand-300 hover:text-white">
-                Activar <ArrowRightIcon className="ml-1 h-4 w-4" />
-              </Link>
-            </div>
           </article>
 
           {/* SOPORTE: Cálculo automático */}
@@ -131,27 +120,14 @@ export default function ServicesSection() {
               <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Auditoría completa y trazabilidad</li>
             </ul>
 
-            <div className="mt-5 flex gap-3">
-              <Button variant="outline" asChild className="h-10 px-4">
-                <Link href="/activar">Solicitar Demo</Link>
-              </Button>
-              <Link href="/activar" className="inline-flex items-center underline decoration-white/20 underline-offset-4 hover:decoration-brand-400 transition text-brand-300 hover:text-white">
-                Activar <ArrowRightIcon className="ml-1 h-4 w-4" />
-              </Link>
-            </div>
           </article>
 
 
         </div>
       </div>
 
-      {/* Mini-proof bar */}
-      <div className="mt-8 rounded-xl glass border border-white/10 p-4 flex flex-col sm:flex-row sm:items-center gap-3 text-brand-200">
-        <span className="text-white/90 font-medium">Pruébalo:</span>
-        <span className="flex items-center gap-2"><CheckCircleIcon className="h-5 w-5 text-emerald-400" /> 99% menos tiempo corrigiendo errores</span>
-        <span className="flex items-center gap-2"><CheckCircleIcon className="h-5 w-5 text-emerald-400" /> IHSS, RAP, ISR, 2025 en 1 click</span>
-        <span className="flex items-center gap-2"><CheckCircleIcon className="h-5 w-5 text-emerald-400" /> Cumplimiento STSS desde implementación</span>
-      </div>
+      {/* Countdown Timer */}
+      <CountdownTimer />
 
       {/* Animaciones clave globales, sin JS */}
       <style jsx global>{`

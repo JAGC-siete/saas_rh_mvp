@@ -6,6 +6,12 @@ import { refreshEnvFromWindow } from '../lib/env'
 import '../styles/globals.css'
 import '../styles/landing.css'
 
+// Load environment variables at the top level
+if (typeof window === 'undefined') {
+  // Server-side: load environment variables
+  require('dotenv').config()
+}
+
 // Create a context for Supabase client (using new SSR client)
 export const SupabaseContext = createContext<any>(null)
 
@@ -35,32 +41,35 @@ async function loadEnvironmentVariables() {
 
 export default function App({ Component, pageProps }: AppProps) {
   const [supabaseClient, setSupabaseClient] = useState<any>(null)
-  const [envLoaded, setEnvLoaded] = useState(false)
+  const [isClient, setIsClient] = useState(false)
 
   useEffect(() => {
-    // Load environment variables first
-    const loadEnv = async () => {
-      await loadEnvironmentVariables()
-      setEnvLoaded(true)
+    setIsClient(true)
+    
+    // Initialize Supabase client
+    const initClient = async () => {
+      try {
+        const client = await createClient()
+        if (client) {
+          setSupabaseClient(client)
+          console.log('✅ Supabase client initialized successfully')
+        }
+      } catch (error) {
+        console.error('❌ Failed to create Supabase client:', error)
+      }
     }
     
-    loadEnv()
+    initClient()
   }, [])
 
-  useEffect(() => {
-    // Initialize Supabase client only after environment variables are loaded
-    if (!envLoaded) return
-    
-    try {
-      const client = createClient()
-      if (client) {
-        setSupabaseClient(client)
-        console.log('✅ Supabase client initialized successfully')
-      }
-    } catch (error) {
-      console.error('❌ Failed to create Supabase client:', error)
-    }
-  }, [envLoaded])
+  // Show loading state during hydration
+  if (!isClient) {
+    return (
+      <div className="min-h-screen bg-app flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+      </div>
+    )
+  }
 
   return (
     <SupabaseContext.Provider value={supabaseClient}>

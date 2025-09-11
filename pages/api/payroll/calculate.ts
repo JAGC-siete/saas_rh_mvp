@@ -1,6 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../lib/supabase/server'
-import { authenticateUser } from '../../../lib/auth-helpers'
+import { requireCompanyAccess } from '../../../lib/auth/api-auth'
+import { getHondurasTimestamp, nowInHonduras } from '../../../lib/timezone'
+import { requirePlanAndQuota, incrementUsage, getBillingErrorCode } from '../../../lib/billing/enforce'
+import { auditPayrollGenerated } from '../../../lib/audit'
 
 // CONSTANTES CORRECTAS HONDURAS 2025 (VERIFICACIÓN CRUZADA)
 const HONDURAS_2025_CONSTANTS = {
@@ -99,26 +101,42 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // AUTENTICACIÓN REQUERIDA
-    const authResult = await authenticateUser(req, res, ['can_generate_payroll'])
+    // AUTENTICACIÓN ESTANDARIZADA - Usar requireCompanyAccess
+    const { supabase, companyId, role, user, userProfile } = await requireCompanyAccess(req, res)
     
-    if (!authResult.success) {
-      return res.status(401).json({ 
-        error: authResult.error,
-        message: authResult.message
+    // Verificar roles específicos para generar nómina
+    if (!['super_admin', 'company_admin', 'hr_manager'].includes(role)) {
+      return res.status(403).json({ 
+        error: 'Permisos insuficientes',
+        message: 'No tiene permisos para generar nómina'
       })
     }
 
-    const { user, userProfile } = authResult
-    const supabase = createClient(req, res)
+    // Validar que companyId esté presente
+    if (!companyId) {
+      return res.status(400).json({ 
+        error: 'Perfil de usuario incompleto',
+        message: 'No se pudo obtener la información de la empresa'
+      })
+    }
 
     console.log('Usuario autenticado para nómina:', { 
       userId: user.id, 
-      role: userProfile?.role,
-      companyId: userProfile?.company_id 
+      role: role,
+      companyId: companyId 
     })
 
-    const { periodo, quincena, incluirDeducciones, soloEmpleadosConAsistencia = true } = req.body
+    try {
+      await requirePlanAndQuota(supabase, companyId, 'generate_payroll')
+    } catch (error: any) {
+      const statusCode = getBillingErrorCode(error.message)
+      return res.status(statusCode).json({ 
+        error: error.message,
+        code: error.message
+      })
+    }
+
+    const { periodo, quincena, tipoCalculo } = req.body || {}
     
     // Validaciones
     if (!periodo || !quincena) {
@@ -135,7 +153,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Validar que no sea un período futuro
     const [year, month] = periodo.split('-').map((n: any) => Number(n))
-    const currentDate = new Date()
+    const currentDate = nowInHonduras()
     const periodDate = new Date(year, month - 1, 1)
     
     if (periodDate > currentDate) {
@@ -155,13 +173,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Q2: salario bruto proporcional + deducciones mensuales completas
     const aplicarDeducciones = quincena === 2
 
-    console.log('Generando nómina para:', {
+    console.log('Generando nómina:', {
       periodo,
       quincena,
       fechaInicio,
       fechaFin,
       aplicarDeducciones,
-      soloEmpleadosConAsistencia
+      tipoCalculo
     })
 
     // Obtener empleados activos
@@ -171,8 +189,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq('status', 'active')
       .order('name')
 
-    if (userProfile?.company_id) {
-      employeesQuery = employeesQuery.eq('company_id', userProfile?.company_id)
+    if (companyId) {
+      employeesQuery = employeesQuery.eq('company_id', companyId)
     }
 
     const { data: employees, error: empError } = await employeesQuery
@@ -204,13 +222,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Filtrar empleados según criterio de asistencia
     let empleadosParaNomina = employees
     
-    if (soloEmpleadosConAsistencia) {
+    if (tipoCalculo === 'con_asistencia') {
       empleadosParaNomina = employees.filter((emp: any) =>
         attendanceRecords.some((record: any) => 
           record.employee_id === emp.id && 
           record.check_in && 
           record.check_out &&
           record.status !== 'absent')
+      )
+    } else {
+      empleadosParaNomina = employees.filter((emp: any) =>
+        attendanceRecords.some((record: any) => 
+          record.employee_id === emp.id && 
+          record.check_in && 
+          record.check_out)
       )
     }
 
@@ -311,8 +336,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       status: 'draft',
       notes_on_ingress: item.notes_on_ingress,
       notes_on_deductions: item.notes_on_deductions,
-      generated_by: userProfile?.id || 'system',
-      generated_at: new Date().toISOString()
+      generated_by: user.id || 'system',
+      generated_at: getHondurasTimestamp()
     }))
 
     const { error: saveError } = await supabase
@@ -328,6 +353,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     console.log(`Nómina generada exitosamente para ${planilla.length} empleados`)
+
+    // Increment usage meter
+    try {
+      await incrementUsage(supabase, companyId, 'generate_payroll')
+    } catch (error) {
+      console.warn('Failed to increment usage meter:', error)
+      // Don't fail the request if usage tracking fails
+    }
+
+    // Log audit event
+    try {
+      await auditPayrollGenerated(supabase, user.id, companyId, periodo)
+    } catch (error) {
+      console.warn('Failed to log audit event:', error)
+      // Don't fail the request if audit fails
+    }
 
     return res.status(200).json({
       message: 'Nómina calculada exitosamente',

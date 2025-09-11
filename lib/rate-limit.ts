@@ -1,4 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
+import { nowInHonduras } from './timezone'
+
+
 
 interface RateLimitConfig {
   windowMs: number // Ventana de tiempo en milisegundos
@@ -23,7 +26,7 @@ const rateLimitStore: RateLimitStore = {}
 export function rateLimit(config: RateLimitConfig) {
   return (req: NextApiRequest, res: NextApiResponse, next: () => void) => {
     const key = getClientKey(req)
-    const now = Date.now()
+    const now = nowInHonduras().getTime()
     
     // Limpiar entradas expiradas
     if (rateLimitStore[key] && now > rateLimitStore[key].resetTime) {

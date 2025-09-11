@@ -1,80 +1,40 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createServerClient } from '@supabase/ssr'
+import { requireCompanyAccess } from '../../lib/auth/api-auth'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Create Supabase client with cookies from request
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return req.cookies[name]
-        },
-        set() {},
-        remove() {},
-      },
-    }
-  )
-
-  // Get user from auth
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-  
-  if (authError || !user) {
-    return res.status(401).json({ error: 'Unauthorized' })
-  }
-
-  // Get user profile to verify company access
-  const { data: userProfile, error: profileError } = await supabase
-    .from('user_profiles')
-    .select('company_id, role, employee_id')
-    .eq('id', user.id)
-    .single()
-
-  if (profileError || !userProfile) {
-    return res.status(403).json({ error: 'Access denied' })
-  }
-
-  const { company_id, action, employee_id, limit = 20 } = req.query
-
-  if (!company_id) {
-    return res.status(400).json({ error: 'Company ID is required' })
-  }
-
-  // Verify user has access to this company
-  if (userProfile.company_id !== company_id && userProfile.role !== 'super_admin') {
-    return res.status(403).json({ error: 'Access denied to this company' })
-  }
-
   try {
+    const { supabase, companyId } = await requireCompanyAccess(req, res)
+    
+    if (!companyId) {
+      return res.status(400).json({ error: 'Company ID is required' })
+    }
+
+    const { action, employee_id, limit = 20 } = req.query
+
     switch (action) {
       case 'leaderboard':
-        return await handleLeaderboard(req, res, supabase, company_id as string, Number(limit))
+        return await handleLeaderboard(req, res, supabase, companyId, Number(limit))
       
       case 'achievements':
-        return await handleAchievements(req, res, supabase, company_id as string, employee_id as string)
+        return await handleAchievements(req, res, supabase, companyId, employee_id as string)
       
       case 'employee-progress':
         if (!employee_id) {
           return res.status(400).json({ error: 'Employee ID is required for progress' })
         }
-        // Verify user can access this employee's data (own data or admin)
-        if (userProfile.employee_id !== employee_id && 
-            userProfile.role !== 'super_admin' && 
-            userProfile.role !== 'company_admin') {
-          return res.status(403).json({ error: 'Access denied to this employee data' })
-        }
-        return await handleEmployeeProgress(req, res, supabase, company_id as string, employee_id as string)
+        return await handleEmployeeProgress(req, res, supabase, companyId, employee_id as string)
       
       case 'stats':
-        return await handleStats(req, res, supabase, company_id as string)
+        return await handleStats(req, res, supabase, companyId)
       
       default:
         return res.status(400).json({ error: 'Invalid action. Use: leaderboard, achievements, employee-progress, or stats' })
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Gamification API error:', error)
-    res.status(500).json({ error: 'Internal server error' })
+    return res.status(error.message === 'UNAUTHORIZED' ? 401 : 500).json({
+      error: error.message || 'Internal server error'
+    })
   }
 }
 

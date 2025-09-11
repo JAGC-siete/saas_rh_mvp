@@ -38,16 +38,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // 1. Obtener todos los horarios de la compañía del usuario
-    const { data: schedules, error: schedError } = await supabase
+      const { data: schedules } = await supabase
       .from('work_schedules')
       .select('id, name')
       .eq('company_id', companyId)
       .order('name')
 
-    if (schedError) {
-      console.error('❌ Error fetching work schedules:', schedError)
-      return res.status(500).json({ error: 'Error fetching work schedules' })
-    }
+    // if (schedError) {
+    //   console.error('❌ Error fetching work schedules:', schedError)
+    //   return res.status(500).json({ error: 'Error fetching work schedules' })
+    // }
 
     console.log('✅ Work schedules obtenidos:', schedules?.length || 0)
 

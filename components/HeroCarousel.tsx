@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import Link from 'next/link'
 
 interface Slide {
   id: string
@@ -100,7 +101,7 @@ export default function HeroCarousel() {
       el.removeEventListener("touchstart", onStart)
       el.removeEventListener("touchmove", onMove)
     }
-  }, [index])
+  }, [index, next, prev])
 
   return (
     <section
@@ -148,13 +149,13 @@ export default function HeroCarousel() {
                 >
                   {s.ctaText}
                 </a>
-                                            <a
+                                            <Link
                               href="/activar"
                               className="btn btn-ghost h-12 px-8"
                               aria-label="Solicitar demo de 15 minutos"
                             >
                               Solicitar Demo
-                            </a>
+                            </Link>
               </div>
             </div>
           ))}

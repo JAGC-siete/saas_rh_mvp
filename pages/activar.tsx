@@ -334,57 +334,6 @@ export default function ActivarPage() {
           </Card>
         </div>
 
-        {/* How it works */}
-        <div className="max-w-6xl mx-auto mb-16">
-          <h2 className="text-3xl font-bold text-white text-center mb-12">
-            ¿Cómo funciona?
-          </h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            <Card variant="glass" className="text-center">
-              <CardHeader className="pb-4">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-500/10 border border-brand-500/20 mb-4 mx-auto">
-                  <span className="text-2xl font-bold text-brand-400">1</span>
-                </div>
-                <CardTitle className="text-xl font-bold text-white">
-                  Deja tu email
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-brand-300">Creamos tu entorno de prueba con datos demo. Sin tarjeta.</p>
-              </CardContent>
-            </Card>
-
-            
-
-            <Card variant="glass" className="text-center">
-              <CardHeader className="pb-4">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-500/10 border border-brand-500/20 mb-4 mx-auto">
-                  <span className="text-2xl font-bold text-brand-400">2</span>
-                </div>
-                <CardTitle className="text-xl font-bold text-white">
-                  Entrega en 24 horas
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-brand-300">Asistencia y planilla operando. Vouchers listos para enviar.</p>
-              </CardContent>
-            </Card>
-
-            <Card variant="glass" className="text-center">
-              <CardHeader className="pb-4">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-brand-500/10 border border-brand-500/20 mb-4 mx-auto">
-                  <span className="text-2xl font-bold text-brand-400">3</span>
-                </div>
-                <CardTitle className="text-xl font-bold text-white">
-                  O trabajo gratis
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-brand-300">Si falta algo para tu caso, seguimos sin costo hasta dejarlo andando.</p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
 
 
 

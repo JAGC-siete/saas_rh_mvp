@@ -1,4 +1,7 @@
 import { Buffer } from 'buffer'
+import { formatDateForHonduras, nowInHonduras, formatDateTimeForHonduras } from '../timezone'
+
+
 
 export interface PlanillaItem {
   id: string
@@ -74,7 +77,7 @@ export async function generateConsolidatedPayrollPDF(
       doc.fontSize(10).text('INFORMACIÓN DEL PERÍODO:', 300, 120)
       doc.fontSize(9).text(`Período: ${periodo}`, 300, 135)
       doc.fontSize(9).text(`Quincena: ${quincena === 1 ? 'Primera (1-15)' : 'Segunda (16-fin de mes)'}`, 300, 150)
-      doc.fontSize(9).text(`Fecha de generación: ${new Date().toLocaleDateString('es-HN')}`, 300, 165)
+      doc.fontSize(9).text(`Fecha de generación: ${formatDateForHonduras(nowInHonduras())}`, 300, 165)
       if (generatedByEmail) {
         doc.fontSize(9).text(`Generado por: ${generatedByEmail}`, 300, 180)
       }
@@ -217,7 +220,7 @@ export async function generateConsolidatedPayrollPDF(
       doc.fontSize(9).text('• Para consultas, contactar al departamento de recursos humanos.', 30, bankY + 95)
 
       doc.fontSize(8).text('Documento generado automáticamente - Paragon Honduras - Sistema de Recursos Humanos', 30, 800, { align: 'center', width: 535 })
-      doc.fontSize(8).text(`Fecha de generación: ${new Date().toLocaleString('es-HN')}`, 30, 815, { align: 'center', width: 535 })
+      doc.fontSize(8).text(`Fecha de generación: ${formatDateTimeForHonduras(nowInHonduras())}`, 30, 815, { align: 'center', width: 535 })
 
       doc.end()
     } catch (error) {

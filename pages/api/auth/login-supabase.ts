@@ -1,16 +1,7 @@
 
 import { NextApiRequest, NextApiResponse } from 'next'
-import jwt from 'jsonwebtoken'
+import { createClient } from '../../../lib/supabase/server'
 import { createAdminClient } from '../../../lib/supabase/server'
-
-const JWT_SECRET = process.env.JWT_SECRET
-
-if (!JWT_SECRET) {
-  throw new Error('JWT_SECRET environment variable is required')
-}
-
-// TypeScript assertion to ensure JWT_SECRET is string
-const jwtSecret = JWT_SECRET as string
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -18,16 +9,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Para rutas de login, no validamos autenticación previa
-    // pero sí validamos que sea una petición válida
     const { email, password } = req.body
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email y contraseña son requeridos' })
     }
 
-    // Usar Supabase Auth para autenticación
-    const supabase = createAdminClient()
+    // Usar el cliente con cookies para autenticación
+    const supabase = createClient(req, res)
     
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email,
@@ -38,52 +27,57 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'Credenciales inválidas' })
     }
 
-    // Buscar información adicional del usuario en la tabla employees
-    let userRole = 'admin' // Por defecto
+    // Buscar información del usuario en user_profiles usando admin client
+    const adminSupabase = createAdminClient()
+    let userRole = 'employee' // Por defecto
     let userName = authData.user.user_metadata?.name || authData.user.email?.split('@')[0] || 'Usuario'
+    let companyId = null
 
-    // Buscar rol en tabla employees si es empleado
-    const { data: employee } = await supabase
-      .from('employees')
-      .select('name, role, team')
-      .eq('email', email) // Buscar por email del usuario
+    // Buscar perfil de usuario en user_profiles
+    const { data: userProfile } = await adminSupabase
+      .from('user_profiles')
+      .select('role, company_id, employee_id, permissions')
+      .eq('id', authData.user.id)
       .single()
 
-    if (employee) {
-      userName = employee.name
-      // Determinar rol basado en role y team
-      if (employee.role?.toLowerCase().includes('gerente') || 
-          employee.role?.toLowerCase().includes('manager') ||
-          employee.role?.toLowerCase().includes('jefe')) {
-        userRole = 'manager'
-      } else if (employee.role?.toLowerCase().includes('recursos humanos') ||
-                 employee.role?.toLowerCase().includes('hr')) {
-        userRole = 'hr'
-      } else {
-        userRole = 'employee'
+    if (userProfile) {
+      userRole = userProfile.role
+      companyId = userProfile.company_id
+      
+      // Si tiene employee_id, obtener nombre del empleado
+      if (userProfile.employee_id) {
+        const { data: employee } = await adminSupabase
+          .from('employees')
+          .select('name')
+          .eq('id', userProfile.employee_id)
+          .single()
+        
+        if (employee) {
+          userName = employee.name
+        }
       }
+    } else {
+      // Si no tiene perfil, crear uno básico
+      console.warn('User profile not found, creating basic profile for:', authData.user.email)
+      userRole = 'employee' // Rol por defecto
     }
 
-    // Crear token JWT personalizado
-    const token = jwt.sign(
-      { 
-        userId: authData.user.id, 
-        email: authData.user.email, 
-        role: userRole,
-        supabaseToken: authData.session?.access_token
-      },
-      jwtSecret,
-      { expiresIn: '24h' }
-    )
+    console.log('🔍 Debug login response:', {
+      hasUser: !!authData.user,
+      hasSession: !!authData.session,
+      sessionKeys: authData.session ? Object.keys(authData.session) : 'no session',
+      cookiesSet: res.getHeader('Set-Cookie')
+    })
 
     return res.status(200).json({
-      token,
       user: {
         id: authData.user.id,
         email: authData.user.email,
         name: userName,
-        role: userRole
-      }
+        role: userRole,
+        company_id: companyId
+      },
+      session: authData.session
     })
 
   } catch (error) {

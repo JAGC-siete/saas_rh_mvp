@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createAdminClient } from '../../../lib/supabase/server'
-import { authenticateUser } from '../../../lib/auth-utils'
+import { requireCompanyAccess } from '../../../lib/auth/api-auth'
+import { getHondurasTimestamp } from '../../../lib/timezone'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -10,20 +10,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     console.log('🔍 Employees Search API: Iniciando...')
 
-    // AuthN + AuthZ (read access allowed for company admins, HR, managers)
-    const auth = await authenticateUser(req, res, ['can_view_employees', 'can_manage_employees'])
-    if (!auth.success) {
-      const status = auth.error === 'Permisos insuficientes' ? 403 : 401
-      return res.status(status).json({ error: auth.error, message: auth.message })
-    }
-
-    // Use admin client for server-side operation (read)
-    const supabase = createAdminClient()
-
-    // Company context from authenticated user profile (no defaults)
-    const companyId = auth.userProfile?.company_id
+    // Use the new authentication method that handles company context properly
+    const { supabase, companyId } = await requireCompanyAccess(req, res)
+    
     if (!companyId) {
-      return res.status(400).json({ error: 'User profile not found or no company assigned' })
+      return res.status(400).json({ error: 'Company ID is required' })
     }
 
     // Get query parameters
@@ -115,7 +106,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
 
     // Process attendance data for today
-    const today = new Date().toISOString().split('T')[0]
+    const today = getHondurasTimestamp().split('T')[0]
     const processedEmployees = employees?.map((emp: any) => {
       const todayAttendance = emp.attendance_records?.find((att: any) => 
         att.check_in && new Date(att.check_in).toISOString().split('T')[0] === today
@@ -160,8 +151,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     })
 
-  } catch (error) {
-    console.error('API error:', error)
-    return res.status(500).json({ error: 'Internal server error' })
+  } catch (error: any) {
+    console.error('Employees Search API error:', error)
+    return res.status(error.message === 'UNAUTHORIZED' ? 401 : 500).json({
+      error: error.message || 'Internal server error'
+    })
   }
 } 

@@ -23,11 +23,7 @@ export function useCompanyContext() {
       }
 
       try {
-        const supabase = createClient()
-        
-        if (!supabase) {
-          throw new Error('No se pudo inicializar Supabase')
-        }
+        const supabase = await createClient()
         
         // Obtener el company_id del user_profile
         console.log('🔍 Buscando perfil para usuario:', user.id)

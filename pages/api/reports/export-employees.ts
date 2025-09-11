@@ -1,31 +1,27 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../lib/supabase/server'
-import { authenticateUser } from '../../../lib/auth-helpers'
+import { requireCompanyAccess } from '../../../lib/auth/api-auth'
+import { getCompanyData } from '../../../lib/helpers/company-filter'
+import { getHondurasTimestamp, formatDateForHonduras, nowInHonduras, formatDateTimeForHonduras } from '../../../lib/timezone'
+import { 
+  withExportSecurity, 
+  validateCompanyAccess, 
+  buildSecureQuery, 
+  secureLog,
+  sanitizeFilename
+} from '../../../lib/security/export-security'
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
+// Aplicar seguridad de exportación
+const handlerWithSecurity = withExportSecurity(exportEmployeesHandler)
 
+export default handlerWithSecurity
+
+async function exportEmployeesHandler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    // 🔒 AUTENTICACIÓN REQUERIDA CON MISMOS PERMISOS QUE PAYROLL
-    const authResult = await authenticateUser(req, res, ['can_view_reports', 'can_manage_employees'])
+    const { supabase, companyId } = await requireCompanyAccess(req, res)
     
-    if (!authResult.success) {
-      return res.status(401).json({ 
-        error: authResult.error,
-        message: authResult.message
-      })
+    if (!companyId) {
+      return res.status(400).json({ error: 'Company ID is required' })
     }
-
-    const { user, userProfile } = authResult
-    const supabase = createClient(req, res)
-
-    console.log('🔐 Usuario autenticado para reporte de empleados:', { 
-      userId: user.id, 
-      role: userProfile?.role,
-      companyId: userProfile?.company_id 
-    })
 
     const { format = 'pdf' } = req.body
     
@@ -36,11 +32,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log('📊 Generando reporte de empleados:', { 
       format, 
-      user: user.email 
+      companyId 
     })
 
     // Obtener datos del reporte
-    const reportData = await generateEmployeeReportData(supabase, userProfile)
+    const reportData = await generateEmployeeReportData(supabase, companyId)
 
     if (format === 'pdf') {
       return generateEmployeePDFReport(res, reportData)
@@ -48,20 +44,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return generateEmployeeCSVReport(res, reportData)
     }
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error generando reporte de empleados:', error)
-    return res.status(500).json({ 
-      error: 'Error interno del servidor', 
-      message: error instanceof Error ? error.message : 'Error desconocido'
+    return res.status(error.message === 'UNAUTHORIZED' ? 401 : 500).json({
+      error: error.message || 'Internal server error'
     })
   }
 }
 
-async function generateEmployeeReportData(supabase: any, userProfile: any) {
-  // Obtener empleados activos con información completa
-  let employeesQuery = supabase
-    .from('employees')
-    .select(`
+async function generateEmployeeReportData(supabase: any, companyId: string) {
+  // Obtener empleados activos con información completa usando getCompanyData
+  const { data: employees, error: empError } = await getCompanyData(
+    supabase,
+    'employees',
+    companyId,
+    `
       id,
       name,
       email,
@@ -77,31 +74,21 @@ async function generateEmployeeReportData(supabase: any, userProfile: any) {
       created_at,
       departments!employees_department_id_fkey(name),
       companies(name)
-    `)
-    .order('name')
-
-  // Si el usuario tiene company_id, filtrar por empresa (mismo patrón que payroll)
-  if (userProfile?.company_id) {
-    employeesQuery = employeesQuery.eq('company_id', userProfile.company_id)
-  }
-
-  const { data: employees, error: empError } = await employeesQuery
+    `
+  ).order('name')
 
   if (empError) {
     console.error('Error obteniendo empleados:', empError)
     throw new Error('Error obteniendo empleados')
   }
 
-  // Obtener departamentos
-  let departmentsQuery = supabase
-    .from('departments')
-    .select('id, name')
-
-  if (userProfile?.company_id) {
-    departmentsQuery = departmentsQuery.eq('company_id', userProfile.company_id)
-  }
-
-  const { data: departments, error: deptError } = await departmentsQuery
+  // Obtener departamentos usando getCompanyData
+  const { data: departments, error: deptError } = await getCompanyData(
+    supabase,
+    'departments',
+    companyId,
+    'id, name'
+  )
 
   if (deptError) {
     console.error('Error obteniendo departamentos:', deptError)
@@ -165,7 +152,8 @@ function generateEmployeePDFReport(res: NextApiResponse, reportData: any) {
     doc.on('end', () => {
       const pdf = Buffer.concat(buffers)
       res.setHeader('Content-Type', 'application/pdf')
-      res.setHeader('Content-Disposition', `attachment; filename=reporte_empleados_${new Date().toISOString().split('T')[0]}.pdf`)
+      const safeFilename = sanitizeFilename(`reporte_empleados_${getHondurasTimestamp().split('T')[0]}.pdf`)
+      res.setHeader('Content-Disposition', `attachment; filename=${safeFilename}`)
       res.send(pdf)
     })
 
@@ -176,14 +164,14 @@ function generateEmployeePDFReport(res: NextApiResponse, reportData: any) {
     doc.fillColor('white')
     doc.fontSize(20).text('SISTEMA DE RECURSOS HUMANOS', 30, 20, { align: 'center', width: 535 })
     doc.fontSize(16).text('Reporte de Empleados', 30, 45, { align: 'center', width: 535 })
-    doc.fontSize(12).text(`Generado el ${new Date().toLocaleDateString('es-HN')}`, 30, 65, { align: 'center', width: 535 })
+    doc.fontSize(12).text(`Generado el ${formatDateForHonduras(nowInHonduras())}`, 30, 65, { align: 'center', width: 535 })
     
     // Reset colors
     doc.fillColor('black')
     
     // Información del reporte
     doc.fontSize(10).text('INFORMACIÓN DEL REPORTE:', 30, 100)
-    doc.fontSize(9).text(`Fecha de generación: ${new Date().toLocaleDateString('es-HN')}`, 30, 115)
+    doc.fontSize(9).text(`Fecha de generación: ${formatDateForHonduras(nowInHonduras())}`, 30, 115)
     doc.fontSize(9).text(`Tipo: Reporte Completo de Empleados`, 30, 130)
     doc.fontSize(9).text(`Total de registros: ${reportData.employees.length}`, 30, 145)
     
@@ -240,7 +228,7 @@ function generateEmployeePDFReport(res: NextApiResponse, reportData: any) {
       y += rowHeight
       
       // Datos de empleados
-      reportData.employees.forEach((emp: any, index: number) => {
+      reportData.employees.forEach((emp: any) => {
         if (y > 750) {
           doc.addPage()
           y = 30
@@ -311,7 +299,7 @@ function generateEmployeePDFReport(res: NextApiResponse, reportData: any) {
     
     // Pie de página
     doc.fontSize(8).text('Documento generado automáticamente - Sistema de Recursos Humanos', 30, 800, { align: 'center', width: 535 })
-    doc.fontSize(8).text(`Fecha de generación: ${new Date().toLocaleString('es-HN')}`, 30, 815, { align: 'center', width: 535 })
+    doc.fontSize(8).text(`Fecha de generación: ${formatDateTimeForHonduras(nowInHonduras())}`, 30, 815, { align: 'center', width: 535 })
 
     doc.end()
   } catch (error) {
@@ -326,7 +314,7 @@ function generateEmployeeCSVReport(res: NextApiResponse, reportData: any) {
     
     // Header del reporte
     csvContent += 'REPORTE DE EMPLEADOS\n'
-    csvContent += `Fecha de generación: ${new Date().toLocaleDateString('es-HN')}\n`
+    csvContent += `Fecha de generación: ${formatDateForHonduras(nowInHonduras())}\n`
     csvContent += `Total de empleados: ${reportData.employees.length}\n\n`
     
     // Resumen ejecutivo
@@ -350,7 +338,7 @@ function generateEmployeeCSVReport(res: NextApiResponse, reportData: any) {
       csvContent += `${emp.departments?.name || 'N/A'},`
       csvContent += `${emp.base_salary ? `L. ${emp.base_salary.toLocaleString('es-HN')}` : 'N/A'},`
       csvContent += `${emp.status === 'active' ? 'Activo' : emp.status === 'inactive' ? 'Inactivo' : 'Terminado'},`
-      csvContent += `${emp.hire_date ? new Date(emp.hire_date).toLocaleDateString('es-HN') : 'N/A'}\n`
+      csvContent += `${emp.hire_date ? new Date(emp.hire_date + 'T00:00:00').toLocaleDateString('es-HN') : 'N/A'}\n`
     })
     
     // Estadísticas por departamento
@@ -367,7 +355,8 @@ function generateEmployeeCSVReport(res: NextApiResponse, reportData: any) {
     }
     
     res.setHeader('Content-Type', 'text/csv; charset=utf-8')
-    res.setHeader('Content-Disposition', `attachment; filename=reporte_empleados_${new Date().toISOString().split('T')[0]}.csv`)
+    const safeFilename = sanitizeFilename(`reporte_empleados_${getHondurasTimestamp().split('T')[0]}.csv`)
+    res.setHeader('Content-Disposition', `attachment; filename=${safeFilename}`)
     res.send(csvContent)
   } catch (error) {
     console.error('Error generando CSV de empleados:', error)

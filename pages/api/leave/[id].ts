@@ -2,9 +2,10 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { authenticateUser } from '../../../lib/auth-utils'
 import { createClient } from '../../../lib/supabase/server'
 import { logger } from '../../../lib/logger'
+import { getHondurasTimestamp, nowInHonduras } from '../../../lib/timezone'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const startTime = Date.now()
+  const startTime = nowInHonduras().getTime()
   const { id } = req.query
   
   try {
@@ -56,7 +57,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
   } catch (error) {
-    const duration = Date.now() - startTime
+    const duration = nowInHonduras().getTime() - startTime
     logger.error('Leave API error', error, {
       method: req.method,
       path: req.url,
@@ -138,12 +139,12 @@ async function handleUpdateLeaveRequest(
     // Prepare update data
     const updateData: any = {
       status,
-      updated_at: new Date().toISOString()
+      updated_at: getHondurasTimestamp()
     }
 
     if (status === 'approved') {
       updateData.approved_by = userProfile.employee_id || userProfile.id
-      updateData.approved_at = new Date().toISOString()
+      updateData.approved_at = getHondurasTimestamp()
       updateData.rejection_reason = null
     } else if (status === 'rejected') {
       updateData.rejection_reason = rejection_reason || 'Rechazado por el administrador'

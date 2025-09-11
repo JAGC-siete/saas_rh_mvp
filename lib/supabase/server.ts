@@ -1,8 +1,10 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { serialize } from 'cookie'
 import { NextApiRequest, NextApiResponse } from 'next'
+import { cookies } from 'next/headers'
 import { env } from '../env'
 
+// Legacy API route client (for pages/api routes)
 export function createClient(req: NextApiRequest, res: NextApiResponse) {
   // Get environment variables from centralized config
   const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL
@@ -20,47 +22,88 @@ export function createClient(req: NextApiRequest, res: NextApiResponse) {
         return req.cookies[name]
       },
       set(name: string, value: string, options: CookieOptions) {
-        const cookie = serialize(name, value, {
-          path: options?.path ?? '/',
-          httpOnly: options?.httpOnly ?? false,
-          secure: options?.secure ?? false,
-          sameSite: (options?.sameSite as any) ?? 'lax',
-          domain: options?.domain,
-          maxAge: options?.maxAge,
-          expires: options?.expires,
-        })
+        try {
+          const cookie = serialize(name, value, {
+            path: options?.path ?? '/',
+            httpOnly: options?.httpOnly ?? true,
+            secure: options?.secure ?? process.env.NODE_ENV === 'production',
+            sameSite: (options?.sameSite as any) ?? 'lax',
+            domain: options?.domain,
+            maxAge: options?.maxAge,
+            expires: options?.expires,
+          })
 
-        const prev = res.getHeader('Set-Cookie')
-        if (!prev) {
-          res.setHeader('Set-Cookie', cookie)
-        } else if (Array.isArray(prev)) {
-          res.setHeader('Set-Cookie', [...prev, cookie])
-        } else {
-          res.setHeader('Set-Cookie', [prev as string, cookie])
+          const prev = res.getHeader('Set-Cookie')
+          if (!prev) {
+            res.setHeader('Set-Cookie', cookie)
+          } else if (Array.isArray(prev)) {
+            res.setHeader('Set-Cookie', [...prev, cookie])
+          } else {
+            res.setHeader('Set-Cookie', [prev as string, cookie])
+          }
+        } catch (error) {
+          console.warn('Failed to set cookie:', name, error)
         }
       },
       remove(name: string, options: CookieOptions) {
-        const cookie = serialize(name, '', {
-          path: options?.path ?? '/',
-          httpOnly: options?.httpOnly ?? false,
-          secure: options?.secure ?? false,
-          sameSite: (options?.sameSite as any) ?? 'lax',
-          domain: options?.domain,
-          maxAge: 0,
-          expires: new Date(0),
-        })
+        try {
+          const cookie = serialize(name, '', {
+            path: options?.path ?? '/',
+            httpOnly: options?.httpOnly ?? true,
+            secure: options?.secure ?? process.env.NODE_ENV === 'production',
+            sameSite: (options?.sameSite as any) ?? 'lax',
+            domain: options?.domain,
+            maxAge: 0,
+            expires: new Date(0),
+          })
 
-        const prev = res.getHeader('Set-Cookie')
-        if (!prev) {
-          res.setHeader('Set-Cookie', cookie)
-        } else if (Array.isArray(prev)) {
-          res.setHeader('Set-Cookie', [...prev, cookie])
-        } else {
-          res.setHeader('Set-Cookie', [prev as string, cookie])
+          const prev = res.getHeader('Set-Cookie')
+          if (!prev) {
+            res.setHeader('Set-Cookie', cookie)
+          } else if (Array.isArray(prev)) {
+            res.setHeader('Set-Cookie', [...prev, cookie])
+          } else {
+            res.setHeader('Set-Cookie', [prev as string, cookie])
+          }
+        } catch (error) {
+          console.warn('Failed to remove cookie:', name, error)
         }
       },
     },
   })
+}
+
+// App Router client (for server components and middleware)
+export async function createServerComponentClient() {
+  const cookieStore = await cookies()
+
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          try {
+            cookieStore.set(name, value, options)
+          } catch {
+            // Handle errors when setting cookies in server components
+            console.warn('Failed to set cookie in server component:', name)
+          }
+        },
+        remove(name: string, options: CookieOptions) {
+          try {
+            cookieStore.set(name, '', { ...options, maxAge: 0 })
+          } catch {
+            // Handle errors when removing cookies in server components
+            console.warn('Failed to remove cookie in server component:', name)
+          }
+        }
+      }
+    }
+  )
 }
 
 // Admin client for server-side operations with service role

@@ -14,7 +14,7 @@ WORKDIR /app
 
 # Install dependencies based on the preferred package manager
 COPY package.json package-lock.json* ./
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci && npm cache clean --force
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -43,13 +43,8 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Create necessary directories with proper permissions
-RUN mkdir -p ./public ./.next && \
-    chown nextjs:nodejs ./public ./.next
-
-# Install only production dependencies and curl for health checks
-RUN apk add --no-cache --virtual .build-deps curl && \
-    rm -rf /var/cache/apk/*
+# Install curl for health checks
+RUN apk add --no-cache curl
 
 # Copy standalone build and static files
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
@@ -68,5 +63,5 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 # Expose port 8080 for Railway
 EXPOSE 8080
 
-# Start the application
+# Start the application using the standalone server
 CMD ["node", "server.js"]

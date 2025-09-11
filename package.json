@@ -20,6 +20,7 @@
     "audit:analyze": "node scripts/analyze-audit-report.js",
     "logs:dev": "node scripts/logs-dev.js",
     "logs:prod": "node scripts/logs-prod.js",
+    "test:cookies": "node scripts/test-supabase-cookies.js",
     "prepare": "husky || true",
     "svgo": "svgo -f public -r"
   },
@@ -30,6 +31,7 @@
     "@mui/icons-material": "^7.1.1",
     "@mui/material": "^7.1.1",
     "@radix-ui/react-select": "^2.2.5",
+    "@sendgrid/mail": "^8.1.5",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/auth-helpers-react": "^0.5.0",
     "@supabase/ssr": "^0.6.1",
@@ -39,9 +41,12 @@
     "@types/formidable": "^3.4.5",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/lodash": "^4.17.20",
+    "@types/luxon": "^3.6.2",
     "@types/multiparty": "^4.2.1",
     "@types/node": "^24.1.0",
     "@types/node-cron": "^3.0.11",
+    "@types/nodemailer": "^7.0.1",
+    "@types/pdfkit": "^0.17.2",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.5",
     "@types/winston": "^2.4.4",
@@ -49,7 +54,8 @@
     "axios": "^1.7.9",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "dotenv": "^17.2.1",
+    "date-fns": "^4.1.0",
+    "dotenv": "^17.2.2",
     "exceljs": "^4.4.0",
     "formidable": "^3.5.4",
     "jsonwebtoken": "^9.0.2",
@@ -59,7 +65,8 @@
     "multiparty": "^4.2.3",
     "next": "^15.4.3",
     "node-cron": "^3.0.3",
-    "node-fetch": "^3.3.2",
+    "node-fetch": "^2.7.0",
+    "nodemailer": "^7.0.5",
     "pdfkit": "^0.17.1",
     "postcss": "^8.5.6",
     "react": "^19.1.0",
@@ -68,14 +75,14 @@
     "recharts": "^3.1.0",
     "resend": "^6.0.1",
     "tailwind-merge": "^3.3.1",
+    "typescript": "5.8.3",
     "winston": "^3.17.0",
-    "winston-daily-rotate-file": "^4.7.1"
+    "winston-daily-rotate-file": "^4.7.1",
+    "zod": "^4.1.5"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
     "@eslint/js": "^9.31.0",
-    "@types/luxon": "^3.6.2",
-    "@types/pdfkit": "^0.17.2",
     "@typescript-eslint/eslint-plugin": "^8.38.0",
     "@typescript-eslint/parser": "^8.38.0",
     "emoji-regex": "^10.4.0",
@@ -84,7 +91,6 @@
     "husky": "^9.1.7",
     "lint-staged": "^15.5.2",
     "svgo": "^3.3.2",
-    "tailwindcss": "^3.4.17",
-    "typescript": "5.8.3"
+    "tailwindcss": "^3.4.17"
   }
 }

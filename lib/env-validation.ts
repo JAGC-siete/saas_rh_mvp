@@ -1,7 +1,7 @@
 import { config } from 'dotenv'
 
-// Load environment variables from .env.local
-config({ path: '.env.local' })
+// Load environment variables from .env
+config({ path: '.env' })
 
 // Required environment variables for Supabase
 const requiredEnvVars = {

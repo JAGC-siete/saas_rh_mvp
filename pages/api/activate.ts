@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { getHondurasTimestamp } from '../../lib/timezone'
 
 export default async function handler(
   req: NextApiRequest,
@@ -17,7 +18,7 @@ export default async function handler(
       company,
       contact,
       employees,
-      timestamp: new Date().toISOString()
+      timestamp: getHondurasTimestamp()
     });
 
     // TODO: Implement actual demo creation logic

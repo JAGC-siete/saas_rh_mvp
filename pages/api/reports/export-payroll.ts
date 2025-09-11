@@ -1,31 +1,27 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../lib/supabase/server'
-import { authenticateUser } from '../../../lib/auth-helpers'
+import { requireCompanyAccess } from '../../../lib/auth/api-auth'
+import { getCompanyData } from '../../../lib/helpers/company-filter'
+import { formatDateForHonduras, nowInHonduras, formatDateTimeForHonduras } from '../../../lib/timezone'
+import { 
+  withExportSecurity, 
+  validateCompanyAccess, 
+  buildSecureQuery, 
+  secureLog,
+  sanitizeFilename
+} from '../../../lib/security/export-security'
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
-  }
+// Aplicar seguridad de exportación
+const handlerWithSecurity = withExportSecurity(exportPayrollHandler)
 
+export default handlerWithSecurity
+
+async function exportPayrollHandler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    // 🔒 AUTENTICACIÓN REQUERIDA CON MISMOS PERMISOS QUE PAYROLL
-    const authResult = await authenticateUser(req, res, ['can_view_reports', 'can_generate_payroll'])
+    const { supabase, companyId } = await requireCompanyAccess(req, res)
     
-    if (!authResult.success) {
-      return res.status(401).json({ 
-        error: authResult.error,
-        message: authResult.message
-      })
+    if (!companyId) {
+      return res.status(400).json({ error: 'Company ID is required' })
     }
-
-    const { user, userProfile } = authResult
-    const supabase = createClient(req, res)
-
-    console.log('🔐 Usuario autenticado para reporte de nómina:', { 
-      userId: user.id, 
-      role: userProfile?.role,
-      companyId: userProfile?.company_id 
-    })
 
     const { format, reportType, periodo } = req.body
     
@@ -42,11 +38,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       format,
       reportType,
       periodo,
-      user: user.email
+      companyId
     })
 
     // Obtener datos del reporte
-    const reportData = await generatePayrollReportData(supabase, reportType, periodo, userProfile)
+    const reportData = await generatePayrollReportData(supabase, reportType, periodo, companyId)
 
     if (format === 'pdf') {
       return generatePayrollPDFReport(res, reportData, reportType, periodo)
@@ -54,51 +50,43 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return generatePayrollCSVReport(res, reportData, reportType, periodo)
     }
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error generando reporte de nómina:', error)
-    return res.status(500).json({ 
-      error: 'Error interno del servidor', 
-      message: error instanceof Error ? error.message : 'Error desconocido'
+    return res.status(error.message === 'UNAUTHORIZED' ? 401 : 500).json({
+      error: error.message || 'Internal server error'
     })
   }
 }
 
-async function generatePayrollReportData(supabase: any, reportType: string, periodo: string, userProfile: any) {
-  // Obtener empleados activos
-  let employeesQuery = supabase
-    .from('employees')
-    .select('id, name, dni, employee_code, base_salary, department_id, status')
-    .eq('status', 'active')
-    .order('name')
-
-  // Si el usuario tiene company_id, filtrar por empresa (mismo patrón que payroll)
-  if (userProfile?.company_id) {
-    employeesQuery = employeesQuery.eq('company_id', userProfile.company_id)
-  }
-
-  const { data: employees, error: empError } = await employeesQuery
+async function generatePayrollReportData(supabase: any, reportType: string, periodo: string, companyId: string) {
+  // Obtener empleados activos usando getCompanyData
+  const { data: employees, error: empError } = await getCompanyData(
+    supabase,
+    'employees',
+    companyId,
+    'id, name, dni, employee_code, base_salary, department_id, status',
+    { status: 'active' }
+  ).order('name')
 
   if (empError) {
     console.error('Error obteniendo empleados:', empError)
     throw new Error('Error obteniendo empleados')
   }
 
-  // Obtener registros de nómina
-  let payrollQuery = supabase
-    .from('payroll_records')
-    .select(`
+  // Obtener registros de nómina usando getCompanyData
+  let payrollQuery = getCompanyData(
+    supabase,
+    'payroll_records',
+    companyId,
+    `
       *,
       employees (
         name,
         employee_code,
         department_id
       )
-    `)
-    .order('created_at', { ascending: false })
-
-  if (userProfile?.company_id) {
-    payrollQuery = payrollQuery.eq('employees.company_id', userProfile.company_id)
-  }
+    `
+  ).order('created_at', { ascending: false })
 
   // Filtrar por período si es necesario
   if (reportType === 'period' && periodo) {
@@ -188,7 +176,8 @@ function generatePayrollPDFReport(res: NextApiResponse, reportData: any, reportT
     doc.on('end', () => {
       const pdf = Buffer.concat(buffers)
       res.setHeader('Content-Type', 'application/pdf')
-      res.setHeader('Content-Disposition', `attachment; filename=reporte_nomina_${reportType}_${periodo || 'general'}.pdf`)
+      const safeFilename = sanitizeFilename(`reporte_nomina_${reportType}_${periodo || 'general'}.pdf`)
+      res.setHeader('Content-Disposition', `attachment; filename=${safeFilename}`)
       res.send(pdf)
     })
 
@@ -208,7 +197,7 @@ function generatePayrollPDFReport(res: NextApiResponse, reportData: any, reportT
     doc.fontSize(10).text('INFORMACIÓN DEL REPORTE:', 30, 100)
     doc.fontSize(9).text(`Tipo: Reporte de Nómina - ${reportType}`, 30, 115)
     doc.fontSize(9).text(`Período: ${periodo || 'General'}`, 30, 130)
-    doc.fontSize(9).text(`Fecha de generación: ${new Date().toLocaleDateString('es-HN')}`, 30, 145)
+    doc.fontSize(9).text(`Fecha de generación: ${formatDateForHonduras(nowInHonduras())}`, 30, 145)
     
     // Resumen ejecutivo
     doc.rect(30, 170, 535, 120).stroke()
@@ -314,7 +303,7 @@ function generatePayrollPDFReport(res: NextApiResponse, reportData: any, reportT
       
       const values = [
         record.employees?.name || 'N/A',
-        `${new Date(record.period_start).toLocaleDateString('es-HN')} - ${new Date(record.period_end).toLocaleDateString('es-HN')}`,
+        `${new Date(record.period_start + 'T00:00:00').toLocaleDateString('es-HN')} - ${new Date(record.period_end + 'T00:00:00').toLocaleDateString('es-HN')}`,
         `L. ${(record.gross_salary || 0).toFixed(2)}`,
         `L. ${(record.total_deductions || 0).toFixed(2)}`,
         `L. ${(record.net_salary || 0).toFixed(2)}`,
@@ -331,7 +320,7 @@ function generatePayrollPDFReport(res: NextApiResponse, reportData: any, reportT
     
     // Pie de página
     doc.fontSize(8).text('Documento generado automáticamente - Sistema de Recursos Humanos', 30, 800, { align: 'center', width: 535 })
-    doc.fontSize(8).text(`Fecha de generación: ${new Date().toLocaleString('es-HN')}`, 30, 815, { align: 'center', width: 535 })
+    doc.fontSize(8).text(`Fecha de generación: ${formatDateTimeForHonduras(nowInHonduras())}`, 30, 815, { align: 'center', width: 535 })
 
     doc.end()
   } catch (error) {
@@ -348,7 +337,7 @@ function generatePayrollCSVReport(res: NextApiResponse, reportData: any, reportT
     csvContent += 'REPORTE DE NÓMINA\n'
     csvContent += `Tipo: ${reportType}\n`
     csvContent += `Período: ${periodo || 'General'}\n`
-    csvContent += `Fecha de generación: ${new Date().toLocaleDateString('es-HN')}\n\n`
+    csvContent += `Fecha de generación: ${formatDateForHonduras(nowInHonduras())}\n\n`
     
     // Resumen ejecutivo
     csvContent += 'RESUMEN EJECUTIVO\n'
@@ -379,7 +368,8 @@ function generatePayrollCSVReport(res: NextApiResponse, reportData: any, reportT
     
     // Configurar respuesta CSV
     res.setHeader('Content-Type', 'text/csv; charset=utf-8')
-    res.setHeader('Content-Disposition', `attachment; filename=reporte_nomina_${reportType}_${periodo || 'general'}.csv`)
+    const safeFilename = sanitizeFilename(`reporte_nomina_${reportType}_${periodo || 'general'}.csv`)
+    res.setHeader('Content-Disposition', `attachment; filename=${safeFilename}`)
     res.send(csvContent)
     
   } catch (error) {

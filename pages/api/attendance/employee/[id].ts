@@ -11,9 +11,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const supabase = createAdminClient()
   const { data, error } = await supabase.rpc('attendance_employee_timeline', {
-    employee_id: id as string,
-    from: range.from,
-    to: range.to
+    p_employee_id: id as string,
+    p_from: range.from,
+    p_to: range.to
   })
   if (error) {
     console.error('attendance_employee_timeline error', error)

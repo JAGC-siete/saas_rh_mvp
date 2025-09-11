@@ -2,17 +2,8 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient } from '../../../lib/supabase/server'
 import { logger } from '../../../lib/logger'
 import { 
-  toHN,
-  assertInsideHardWindow,
-  overrideIfSaturdayHalfDay,
-  decideCheckInRule,
-  decideCheckOutRule,
-  mapRule,
-  distanceMeters,
-  getCheckOutWindow,
-  isDayOpenForPublic
-} from '../../../lib/timezone'
-import { CALL_CENTER_CONFIG, CALL_CENTER_MESSAGES, generateContextualMessage } from '../../../lib/call-center-config'
+   toHN, overrideIfSaturdayHalfDay, decideCheckInRule, mapRule, distanceMeters, isDayOpenForPublic, nowInHonduras, getHondurasTimestamp } from '../../../lib/timezone'
+import { CALL_CENTER_MESSAGES, generateContextualMessage } from '../../../lib/call-center-config'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   
@@ -164,7 +155,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // PASO 6: Obtener tiempo actual y convertir a Honduras
-    const nowUtc = new Date()
+    const nowUtc = nowInHonduras()
     const nowLocal = toHN(nowUtc)
     
     console.log('🕐 Tiempo actual:', { 
@@ -191,10 +182,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
 
     // PASO 8: Validar ventanas duras según política Call Center
-    const checkInWindow = { 
-      open: schedule.checkin_open || CALL_CENTER_CONFIG.windows.check_in_open, 
-      close: schedule.checkin_close || CALL_CENTER_CONFIG.windows.check_in_close 
-    }
+    // const checkInWindow = { 
+    //   open: schedule.checkin_open || CALL_CENTER_CONFIG.windows.check_in_open, 
+    //   close: schedule.checkin_close || CALL_CENTER_CONFIG.windows.check_in_close 
+    // }
 
     // PASO 9: Buscar registro existente para hoy
     const { data: existingRecord, error: recordError } = await supabase
@@ -325,7 +316,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           date: nowLocal.date, // Corregido: usar 'date' no 'local_date'
           check_in: nowUtc,
           expected_check_in: adjustedExpectedIn,
-          status: rule === 'late' || rule === 'oor' ? 'late_in' : 'present',
+          status: rule === 'early' ? 'early' : (rule === 'late' || rule === 'oor' ? 'late_in' : 'present'),
           rule_applied_in: mapRule(rule),
           late_minutes: lateMinutes,
           tz: 'America/Tegucigalpa',
@@ -408,12 +399,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       const rule = 'simple_checkout' // Regla simplificada
       const msgKey = 'check_out_success'
-      const needJust = false // No requiere justificación
+      // const needJust = false // No requiere justificación
       
       console.log('📤 Check-out simplificado procesado:', { 
         rule, 
-        msgKey,
-        needJust: false
+        msgKey
+        // needJust: false
       })
 
       let record: any;
@@ -525,16 +516,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-// Función auxiliar para calcular minutos de salida temprana
-function calculateEarlyDepartureMinutes(currentTime: string, expectedTime: string): number {
-  const [currentHour, currentMin] = currentTime.split(':').map(Number)
-  const [expectedHour, expectedMin] = expectedTime.split(':').map(Number)
-  
-  const currentMinutes = currentHour * 60 + currentMin
-  const expectedMinutes = expectedHour * 60 + expectedMin
-  
-  return Math.max(0, expectedMinutes - currentMinutes)
-}
+// Función auxiliar para calcular minutos de salida temprana (no utilizada)
+// function calculateEarlyDepartureMinutes(currentTime: string, expectedTime: string): number {
+//   const [currentHour, currentMin] = currentTime.split(':').map(Number)
+//   const [expectedHour, expectedMin] = expectedTime.split(':').map(Number)
+//   
+//   const currentMinutes = currentHour * 60 + currentMin
+//   const expectedMinutes = expectedHour * 60 + expectedMin
+//   
+//   return Math.max(0, expectedMinutes - currentMinutes)
+// }
 
 // Función auxiliar para obtener mensajes contextuales personalizados
 function getContextualMessage(
@@ -608,7 +599,7 @@ async function applyPointsAndStreaks(employeeId: string, companyId: string, rule
           weekly_points: score.weekly_points + pointsToAdd,
           monthly_points: score.monthly_points + pointsToAdd,
           early_arrival_count: score.early_arrival_count + (rule === 'early' ? 1 : 0),
-          updated_at: new Date().toISOString()
+          updated_at: getHondurasTimestamp()
         })
         .eq('id', score.id)
 

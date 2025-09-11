@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { logger } from '../../../lib/logger'
 import { createAdminClient } from '../../../lib/supabase/server'
+import { nowInHonduras } from '../../../lib/timezone'
 
 interface LogsResponse {
   success: boolean
@@ -109,7 +110,7 @@ export default async function handler(
     const { data: stats, error: statsError } = await supabase
       .from('system_logs')
       .select('level')
-      .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // Últimas 24 horas
+      .gte('created_at', new Date(nowInHonduras().getTime() - 24 * 60 * 60 * 1000).toISOString()) // Últimas 24 horas
 
     if (statsError) {
       logger.error('Error fetching log statistics', { error: statsError })

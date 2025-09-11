@@ -1,10 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient } from '../../../lib/supabase/server'
+import { getHondurasTimestamp } from '../../../lib/timezone'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
   try {
-    const { periodo = new Date().toISOString().slice(0,7), quincena = '1' } = req.query
+    const { periodo = getHondurasTimestamp().slice(0,7), quincena = '1' } = req.query
     const supabase = createAdminClient()
 
     const getRange = (ym: string, q: number) => {

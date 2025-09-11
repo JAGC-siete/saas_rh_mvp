@@ -1,9 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
+import { formatTimeDisplay } from '../../lib/timezone'
 
 interface AbsenceRow {
   id: string
   name: string
   team?: string
+  check_in_time?: string
 }
 
 interface AbsenceTableProps {
@@ -22,6 +24,7 @@ export default function AbsenceTable({ data, title, onSelect }: AbsenceTableProp
           <tr>
             <th className="py-1">Empleado</th>
             <th className="py-1">Equipo</th>
+            <th className="py-1">Entrada</th>
           </tr>
         </thead>
         <tbody className="text-gray-100">
@@ -29,11 +32,12 @@ export default function AbsenceTable({ data, title, onSelect }: AbsenceTableProp
             <tr key={row.id} className="border-t border-gray-700 hover:bg-gray-700/50 cursor-pointer" onClick={() => onSelect && onSelect(row.id, row.name)}>
               <td className="py-1">{row.name}</td>
               <td className="py-1">{row.team || '-'}</td>
+              <td className="py-1">{formatTimeDisplay(row.check_in_time || null)}</td>
             </tr>
           ))}
           {data.length === 0 && (
             <tr>
-              <td colSpan={2} className="text-center py-4 text-gray-400">Sin datos</td>
+              <td colSpan={3} className="text-center py-4 text-gray-400">Sin datos</td>
             </tr>
           )}
         </tbody>

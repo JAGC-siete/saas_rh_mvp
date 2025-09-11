@@ -3,6 +3,7 @@ import { useSession } from '@supabase/auth-helpers-react'
 import { useCompanyContext } from '../lib/useCompanyContext'
 import { Button } from './ui/button'
 import { Card } from './ui/card'
+import { nowInHonduras } from '../lib/timezone'
 
 // Iconos simples como placeholders
 const UsersIcon = ({ className }: { className?: string }) => (
@@ -73,13 +74,13 @@ export default function ReportsAndAnalytics() {
   const [error, setError] = useState<string | null>(null)
   
   const [dateRange, setDateRange] = useState({
-    startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-    endDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0]
+    startDate: new Date(nowInHonduras().getFullYear(), nowInHonduras().getMonth(), 1).toISOString().split('T')[0],
+    endDate: new Date(nowInHonduras().getFullYear(), nowInHonduras().getMonth() + 1, 0).toISOString().split('T')[0]
   })
 
   // Obtener rango del mes actual
   const { monthStart, monthEnd } = useMemo(() => {
-    const now = new Date()
+    const now = nowInHonduras()
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
     const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
     return { monthStart, monthEnd }
@@ -129,7 +130,7 @@ export default function ReportsAndAnalytics() {
   // Tendencias movidas al dashboard de asistencia
 
   // Función para exportar reportes
-  const exportReport = useCallback(async (type: 'attendance' | 'payroll' | 'employees') => {
+  const exportReport = useCallback(async (type: 'attendance' | 'payroll' | 'employees', format: 'csv' | 'excel' | 'pdf' = 'csv') => {
     if (!companyId) {
       setError('No hay empresa seleccionada')
       return
@@ -145,8 +146,9 @@ export default function ReportsAndAnalytics() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          format: 'csv',
+          format: format,
           dateFilter: { startDate: dateRange.startDate, endDate: dateRange.endDate }
+          // company_id now comes from auth context
         })
       })
 
@@ -155,12 +157,15 @@ export default function ReportsAndAnalytics() {
         throw new Error(errorData.message || `Error HTTP: ${response.status}`)
       }
 
-      // Descargar el archivo CSV
+      // Descargar el archivo
       const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `${type}_report_${dateRange.startDate}_${dateRange.endDate}.csv`
+      
+      // Determinar extensión del archivo
+      const extension = format === 'excel' ? 'xlsx' : format === 'pdf' ? 'pdf' : 'csv'
+      a.download = `${type}_report_${dateRange.startDate}_${dateRange.endDate}.${extension}`
       a.click()
       window.URL.revokeObjectURL(url)
 
@@ -339,38 +344,81 @@ export default function ReportsAndAnalytics() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-lg font-semibold text-white">Exportar Reportes</h3>
-            <p className="text-gray-300">Descarga reportes en formato CSV</p>
+            <p className="text-gray-300">Descarga reportes en múltiples formatos</p>
           </div>
           <DocumentChartBarIcon className="h-6 w-6 text-gray-400" />
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Button
-            onClick={() => exportReport('attendance')}
-            variant="outline"
-            className="flex items-center justify-center space-x-2 bg-white/5 border-white/20 text-white hover:bg-white/10"
-          >
-            <ClockIcon className="h-5 w-5" />
-            <span>Reporte de Asistencia</span>
-          </Button>
-          
-          <Button
-            onClick={() => exportReport('payroll')}
-            variant="outline"
-            className="flex items-center justify-center space-x-2 bg-white/5 border-white/20 text-white hover:bg-white/10"
-          >
-            <CurrencyDollarIcon className="h-5 w-5" />
-            <span>Reporte de Nómina</span>
-          </Button>
-          
-          <Button
-            onClick={() => exportReport('employees')}
-            variant="outline"
-            className="flex items-center justify-center space-x-2 bg-white/5 border-white/20 text-white hover:bg-white/10"
-          >
-            <UsersIcon className="h-5 w-5" />
-            <span>Reporte de Empleados</span>
-          </Button>
+        <div className="space-y-4">
+          {/* Reporte de Asistencia */}
+          <div className="space-y-2">
+            <h4 className="text-md font-medium text-white flex items-center space-x-2">
+              <ClockIcon className="h-5 w-5" />
+              <span>Reporte de Asistencia</span>
+            </h4>
+            <div className="flex space-x-2">
+              <Button
+                onClick={() => exportReport('attendance', 'csv')}
+                variant="outline"
+                size="sm"
+                className="bg-white/5 border-white/20 text-white hover:bg-white/10"
+              >
+                CSV
+              </Button>
+              <Button
+                onClick={() => exportReport('attendance', 'excel')}
+                variant="outline"
+                size="sm"
+                className="bg-white/5 border-white/20 text-white hover:bg-white/10"
+              >
+                Excel
+              </Button>
+              <Button
+                onClick={() => exportReport('attendance', 'pdf')}
+                variant="outline"
+                size="sm"
+                className="bg-white/5 border-white/20 text-white hover:bg-white/10"
+              >
+                PDF
+              </Button>
+            </div>
+          </div>
+
+          {/* Reporte de Nómina */}
+          <div className="space-y-2">
+            <h4 className="text-md font-medium text-white flex items-center space-x-2">
+              <CurrencyDollarIcon className="h-5 w-5" />
+              <span>Reporte de Nómina</span>
+            </h4>
+            <div className="flex space-x-2">
+              <Button
+                onClick={() => exportReport('payroll', 'csv')}
+                variant="outline"
+                size="sm"
+                className="bg-white/5 border-white/20 text-white hover:bg-white/10"
+              >
+                CSV
+              </Button>
+            </div>
+          </div>
+
+          {/* Reporte de Empleados */}
+          <div className="space-y-2">
+            <h4 className="text-md font-medium text-white flex items-center space-x-2">
+              <UsersIcon className="h-5 w-5" />
+              <span>Reporte de Empleados</span>
+            </h4>
+            <div className="flex space-x-2">
+              <Button
+                onClick={() => exportReport('employees', 'csv')}
+                variant="outline"
+                size="sm"
+                className="bg-white/5 border-white/20 text-white hover:bg-white/10"
+              >
+                CSV
+              </Button>
+            </div>
+          </div>
         </div>
       </Card>
     </div>

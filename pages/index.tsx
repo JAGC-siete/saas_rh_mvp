@@ -3,9 +3,9 @@ import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import DemoFooter from '../components/DemoFooter'
 import ServicesSection from '../components/ServicesSection'
+import HowItWorks from '../components/HowItWorks'
 import AWSCertificationsSection from '../components/AWSCertificationsSection'
 import LandingHero from '../components/LandingHero'
-import CountdownTimer from '../components/CountdownTimer'
 import dynamic from 'next/dynamic'
 import Image from 'next/image'
 
@@ -36,22 +36,23 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-app pt-20 relative">
       <Head>
-        <title>¿Otra quincena corriendo detrás de la planilla? | Humano SISU</title>
+        <title>Software de Recursos Humanos en Honduras | Asistencia & Nómina</title>
+        <link rel="icon" href="/logo-humano-sisu.png" />
         <meta
           name="description"
-          content="Generá planilla en 5 minutos con IHSS, RAP e ISR listos y vouchers enviados por WhatsApp. Cumplimiento STSS, de Excel caótico a PDF impecable."
+          content="RH en automático y digital: asistencia, nómina con deducciones IHSS, RAP, ISR exactas, comprobantes de pago enviados directo a tus empleados."
         />
         <meta name="keywords" content="planilla Honduras, IHSS, RAP, ISR, automatización RH, STSS, Humano SISU, innovación" />
         <meta name="author" content="Humano SISU" />
         <meta name="robots" content="index, follow" />
-        <meta property="og:title" content="Humano SISU - Automatización de Planilla en Honduras" />
-        <meta property="og:description" content="Generá planilla en 5 minutos con IHSS, RAP e ISR listos. Cumplimiento STSS garantizado." />
+        <meta property="og:title" content="Software de Recursos Humanos en Honduras | Asistencia & Nómina" />
+        <meta property="og:description" content="RH en automático y digital: asistencia, nómina con deducciones IHSS, RAP, ISR exactas, comprobantes de pago enviados directo a tus empleados." />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://humano-sisu.com" />
         <meta property="og:image" content="/logo-humano-sisu.png" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Humano SISU - Automatización de Planilla" />
-        <meta name="twitter:description" content="Generá planilla en 5 minutos con IHSS, RAP e ISR listos." />
+        <meta name="twitter:title" content="Software de Recursos Humanos en Honduras | Asistencia & Nómina" />
+        <meta name="twitter:description" content="RH en automático y digital: asistencia, nómina con deducciones IHSS, RAP, ISR exactas, comprobantes de pago enviados directo a tus empleados." />
         <link rel="canonical" href="https://humano-sisu.com" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
@@ -71,26 +72,28 @@ export default function LandingPage() {
             <div className="flex items-center h-16">
               {/* Logo SISU */}
               <div className="flex items-center">
-                <div className="bg-white/10 px-3 py-2 rounded-lg border border-white/20 backdrop-blur-sm">
+                <div className="bg-white/10 px-6 py-4 rounded-lg border border-white/20 backdrop-blur-sm">
                   <Image
                     src="/logo-humano-sisu.png"
                     alt="Humano SISU Logo"
-                    width={64}
-                    height={64}
+                    width={128}
+                    height={128}
                     className="rounded-lg"
                   />
                 </div>
               </div>
               
-              {/* Título */}
-              <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold text-white leading-tight ml-2 flex-shrink-0 text-left">
-                <span className="text-white">I.H.S.S., R.A.P. e I.S.R. en automático</span>
-                <span className="hidden sm:inline"> </span>
-                <span className="text-brand-300">activa, cumplí y ahorrá horas cada quincena</span>
-              </h1>
+              {/* Título - Removido para mover al hero */}
 
               <div className="hidden md:block ml-auto">
                 <div className="ml-6 flex items-center space-x-4">
+                  <a
+                    href="#como-funciona"
+                    className="text-brand-200 hover:text-white px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap"
+                    onClick={scrollToSection}
+                  >
+                    Como funciona
+                  </a>
                   <a
                     href="#servicios"
                     className="text-brand-200 hover:text-white px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap"
@@ -98,6 +101,12 @@ export default function LandingPage() {
                   >
                     Servicios
                   </a>
+                  <Link
+                    href="/auth/start"
+                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 shadow-lg shadow-black/20 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap min-w-[160px] text-center"
+                  >
+                    Crea tu departamento
+                  </Link>
                   <Link
                     href="/app/login"
                     className="bg-brand-600 hover:bg-brand-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 shadow-lg shadow-black/20 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap min-w-[140px] text-center"
@@ -136,12 +145,26 @@ export default function LandingPage() {
               <div className="px-2 pt-2 pb-3 space-y-1 glass-strong rounded-lg shadow-lg mt-2">
                 
                 <a
+                  href="#como-funciona"
+                  className="block px-3 py-2 text-base font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Como funciona
+                </a>
+                <a
                   href="#servicios"
                   className="block px-3 py-2 text-base font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Servicios
                 </a>
+                <Link
+                  href="/register"
+                  className="bg-green-600 hover:bg-green-700 text-white w-full text-center block py-2 px-4 rounded-lg transition-colors mb-2"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Crea tu departamento
+                </Link>
                 <Link
                   href="/app/login"
                   className="bg-brand-900 hover:bg-brand-800 text-white w-full text-center block py-2 px-4 rounded-lg transition-colors"
@@ -160,13 +183,20 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Trust badges */}
           <div className="flex flex-wrap justify-center gap-3 md:gap-6 mb-8 animate-fade-up-subtle">
-            <span className="text-sm bg-green-500/10 text-green-400 px-3 py-1 rounded-full border border-green-500/20 hover:bg-green-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-100">Cumple STSS Honduras</span>
-            <span className="text-sm bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full border border-blue-500/20 hover:bg-blue-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-200">Setup en 24 horas</span>
-            <span className="text-sm bg-orange-500/10 text-orange-400 px-3 py-1 rounded-full border border-orange-500/20 hover:bg-orange-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-300">02 empresas activas</span>
+            <span className="text-sm bg-green-500/10 text-green-400 px-3 py-1 rounded-full border border-green-500/20 hover:bg-green-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-100">Cumplí STSS Honduras</span>
+            <span className="text-sm bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full border border-blue-500/20 hover:bg-blue-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-200">Setup en 5 minutos</span>
+            <span className="text-sm bg-purple-500/10 text-purple-400 px-3 py-1 rounded-full border border-purple-500/20 hover:bg-purple-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-300">30 días gratis</span>
+            <span className="text-sm bg-orange-500/10 text-orange-400 px-3 py-1 rounded-full border border-orange-500/20 hover:bg-orange-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-400">Empleados ilimitados</span>
           </div>
 
-          {/* Countdown Timer - Centrado debajo de los trust badges */}
-          <CountdownTimer />
+          {/* Hero Title - Centrado */}
+          <div className="text-center mb-8">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight">
+              <span className="text-white">Recursos Humanos 100% digital y automático</span>
+              <span className="hidden sm:inline"> </span>
+              <span className="text-brand-300">activa, cumplí y olvidate de las tareas repetitivas para siempre</span>
+            </h1>
+          </div>
 
           {/* LandingHero Section - Reemplaza completamente al carrusel */}
           <div className="text-center max-w-6xl mx-auto mb-6">
@@ -174,6 +204,9 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* How It Works Section */}
+      <HowItWorks />
 
       {/* Services Section - Rediseñada */}
       <div className="mt-4">
@@ -183,8 +216,8 @@ export default function LandingPage() {
       {/* AWS Certifications Section */}
       <AWSCertificationsSection />
 
-      {/* Social Proof Section - Simplificada */}
-      <section id="servicios" className="py-16 bg-white/5">
+      {/* Social Proof Section - Comentada temporalmente */}
+      {/* <section id="servicios" className="py-16 bg-white/5">
         <div className="max-w-6xl mx-auto px-4">
           <h2 className="text-3xl font-bold text-center text-white mb-12">
             Empresas que ya automatizaron su RH
@@ -214,7 +247,7 @@ export default function LandingPage() {
             ))}
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* Shared Cloud Background */}
       <CloudBackground />

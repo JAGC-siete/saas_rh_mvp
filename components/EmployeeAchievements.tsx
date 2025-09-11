@@ -32,7 +32,7 @@ export default function EmployeeAchievements({ companyId, employeeId, limit = 10
       setLoading(true)
       setError(null)
       
-      let url = `/api/gamification?action=achievements&company_id=${companyId}&limit=${limit}`
+      let url = `/api/gamification?action=achievements&limit=${limit}`
       if (employeeId) {
         url += `&employee_id=${employeeId}`
       }
@@ -51,7 +51,7 @@ export default function EmployeeAchievements({ companyId, employeeId, limit = 10
     } finally {
       setLoading(false)
     }
-  }, [companyId, employeeId, limit])
+  }, [employeeId, limit])
 
   useEffect(() => {
     if (!companyId) return

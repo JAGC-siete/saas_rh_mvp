@@ -6,6 +6,13 @@ import { logger } from './lib/logger'
 // Cache public routes for better performance
 const PUBLIC_ROUTES = new Set([
   '/',                 // Landing principal (marketing)
+  '/auth/start',       // Página de inicio de autenticación - PÚBLICO
+  '/auth/callback',    // OAuth callback - PÚBLICO
+  '/auth/confirm',     // Magic Link confirmation - PÚBLICO
+  '/onboarding',       // Página de onboarding post-auth - PÚBLICO
+  '/app/login',        // Login con password - PÚBLICO
+  '/register',         // Redirigir a /auth/start - PÚBLICO (legacy)
+  '/login',            // Redirigir a /auth/start - PÚBLICO (legacy)
   '/demo',             // Página de solicitud de demo - PÚBLICO
   '/activar',          // Formulario de activación - PÚBLICO
   '/gracias',          // Página de confirmación - PÚBLICO
@@ -19,8 +26,8 @@ const PUBLIC_ROUTES = new Set([
   '/trial/attendance', // Asistencia del trial - PÚBLICO
   '/trial/payroll',    // Nómina del trial - PÚBLICO
   '/trial/gamification', // Gamificación del trial - PÚBLICO
+  '/auth/auth-code-error', // OAuth error page - PÚBLICO
   '/politicadeprivacidad', // Política de privacidad - PÚBLICO
-  '/app/login',        // Login de la aplicación
   '/app/demo/pin',     // PIN de demo - PÚBLICO
   '/app/attendance/register', // Registro de asistencia - PÚBLICO
   '/registrodeasistencia',
@@ -49,6 +56,10 @@ const PUBLIC_ASSETS = new Set([
   '/icons/aws-solutions-architect.svg', // Icono SVG AWS Solutions Architect
   '/icons/aws-developer.svg', // Icono SVG AWS Developer
   '/icons/aws-cloud-practitioner.svg', // Icono SVG AWS Cloud Practitioner
+  '/1.png', // Nueva imagen del carrusel - Vista 1
+  '/2.png', // Nueva imagen del carrusel - Vista 2
+  '/3.png', // Nueva imagen del carrusel - Vista 3
+  '/4.png', // Nueva imagen del carrusel - Vista 4
   '/favicon.ico',         // Favicon
   '/robots.txt',          // Robots.txt
   '/sitemap.xml'          // Sitemap
@@ -152,6 +163,17 @@ function isPublicRoute(pathname: string): boolean {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   const startTime = Date.now()
+
+  // Handle legacy route redirections
+  if (pathname === '/register') {
+    logger.info('Redirecting legacy /register to /auth/start', { path: pathname })
+    return NextResponse.redirect(new URL('/auth/start', request.url))
+  }
+  
+  if (pathname === '/login') {
+    logger.info('Redirecting legacy /login to /auth/start', { path: pathname })
+    return NextResponse.redirect(new URL('/auth/start', request.url))
+  }
 
   // Log all requests with structured logging
   logger.debug('Middleware request', {
@@ -270,7 +292,7 @@ export async function middleware(request: NextRequest) {
     logger.debug('Protected app route accessed', { path: pathname })
     
     try {
-      // Create Supabase client for middleware
+      // Create Supabase client for middleware using proper SSR pattern
       const supabaseUrl = process.env['NEXT_PUBLIC_SUPABASE_URL']
       const anon = process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY']
       
@@ -279,7 +301,7 @@ export async function middleware(request: NextRequest) {
           hasUrl: !!supabaseUrl,
           hasAnon: !!anon
         })
-        return NextResponse.redirect(new URL('/app/login', request.url))
+        return NextResponse.redirect(new URL('/auth/start', request.url))
       }
       
       const supabase = createServerClient(supabaseUrl, anon as string, {
@@ -287,27 +309,55 @@ export async function middleware(request: NextRequest) {
           get(name: string) {
             return request.cookies.get(name)?.value
           },
-          set() {},
-          remove() {},
+          set(name: string, value: string, options: any) {
+            // Don't set cookies in middleware, just read them
+          },
+          remove(name: string, options: any) {
+            // Don't remove cookies in middleware, just read them
+          },
         },
       })
       
-      // Get user from Supabase (more secure than getSession)
-      const { data: { user }, error } = await supabase.auth.getUser()
+      // Debug cookies
+      const cookieNames = Object.keys(request.cookies.getAll())
+      const authCookies = cookieNames.filter(name => name.includes('auth-token'))
+      logger.info('Middleware debug', { 
+        path: pathname, 
+        cookieNames, 
+        authCookies,
+        hasAuthCookie: authCookies.length > 0,
+        cookieValues: authCookies.map(name => ({
+          name,
+          hasValue: !!request.cookies.get(name)?.value,
+          valueLength: request.cookies.get(name)?.value?.length || 0
+        }))
+      })
+      
+      // Get session from Supabase (better for middleware)
+      const { data: { session }, error } = await supabase.auth.getSession()
+      const user = session?.user
+      
+      logger.info('Session debug', {
+        path: pathname,
+        hasSession: !!session,
+        hasUser: !!user,
+        userId: user?.id,
+        error: error?.message
+      })
       
       if (error) {
         const isMissing = (error as any)?.message?.toLowerCase?.().includes('auth session missing')
         if (isMissing) {
           logger.info('No session for protected app route', { path: pathname })
         } else {
-          logger.error('Error getting user', error)
+          logger.error('Error getting session', error)
         }
-        return NextResponse.redirect(new URL('/app/login', request.url))
+        return NextResponse.redirect(new URL('/auth/start', request.url))
       }
       
       if (!user) {
         logger.info('No user found for protected app route', { path: pathname })
-        return NextResponse.redirect(new URL('/app/login', request.url))
+        return NextResponse.redirect(new URL('/auth/start', request.url))
       }
 
       // Check admin privileges for admin routes
@@ -319,7 +369,7 @@ export async function middleware(request: NextRequest) {
         
         // Get user profile to check role
         const { data: profile, error: profileError } = await supabase
-          .from('profiles')
+          .from('user_profiles')
           .select('role')
           .eq('id', user.id)
           .single()
@@ -359,13 +409,13 @@ export async function middleware(request: NextRequest) {
       
     } catch (error) {
       logger.error('Authentication error in protected app route', error)
-      return NextResponse.redirect(new URL('/app/login', request.url))
+      return NextResponse.redirect(new URL('/auth/start', request.url))
     }
   }
 
   // For other private routes (legacy), check for Supabase session
   try {
-    // Create Supabase client for middleware
+    // Create Supabase client for middleware using proper SSR pattern
     const supabaseUrl = process.env['NEXT_PUBLIC_SUPABASE_URL']
     const anon = process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY']
     
@@ -374,7 +424,7 @@ export async function middleware(request: NextRequest) {
         hasUrl: !!supabaseUrl,
         hasAnon: !!anon
       })
-      return NextResponse.redirect(new URL('/app/login', request.url))
+      return NextResponse.redirect(new URL('/auth/start', request.url))
     }
     
     const supabase = createServerClient(supabaseUrl, anon as string, {
@@ -382,8 +432,12 @@ export async function middleware(request: NextRequest) {
         get(name: string) {
           return request.cookies.get(name)?.value
         },
-        set() {},
-        remove() {},
+        set(name: string, value: string, options: any) {
+          // Don't set cookies in middleware, just read them
+        },
+        remove(name: string, options: any) {
+          // Don't remove cookies in middleware, just read them
+        },
       },
     })
     
@@ -397,12 +451,12 @@ export async function middleware(request: NextRequest) {
       } else {
         logger.error('Error getting user', error)
       }
-      return NextResponse.redirect(new URL('/app/login', request.url))
+      return NextResponse.redirect(new URL('/auth/start', request.url))
     }
     
     if (!user) {
       logger.info('No user found for private route', { path: pathname })
-      return NextResponse.redirect(new URL('/app/login', request.url))
+      return NextResponse.redirect(new URL('/auth/start', request.url))
     }
     
     logger.debug('Valid user found', { 
@@ -424,7 +478,7 @@ export async function middleware(request: NextRequest) {
     
   } catch (error) {
     logger.error('Authentication error in middleware', error)
-    return NextResponse.redirect(new URL('/app/login', request.url))
+    return NextResponse.redirect(new URL('/auth/start', request.url))
   }
 }
 

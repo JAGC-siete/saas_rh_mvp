@@ -1,40 +1,43 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
+import { useAuth } from '../../lib/auth'
 import { supabase } from '../../lib/supabase'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import DashboardLayout from '../../components/DashboardLayout'
 
-export default function AttendancePage() {
+export default function AttendanceIndex() {
   const router = useRouter()
+  const { user, loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const checkUserRole = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser()
-        
-        if (!user) {
-          router.push('/login')
-          return
-        }
+      if (authLoading) return
 
-        // Obtener perfil del usuario
+      if (!user) {
+        router.push('/login')
+        return
+      }
+
+      try {
+        // Fetch user profile to determine role
         const { data: profile } = await supabase
           .from('user_profiles')
           .select('role')
           .eq('id', user.id)
           .single()
 
+        // Role-based redirection
         if (profile?.role === 'company_admin' || profile?.role === 'super_admin') {
-          // Admin de compañía o superadmin van al dashboard
+          // Admins go to attendance dashboard
           router.push('/app/attendance/dashboard')
         } else {
-          // Empleados van al registro de asistencia
+          // Employees go to attendance registration
           router.push('/attendance/register')
         }
       } catch (error) {
         console.error('Error checking user role:', error)
-        // Por defecto, ir al registro de asistencia
+        // Default fallback to registration
         router.push('/attendance/register')
       } finally {
         setLoading(false)
@@ -42,9 +45,9 @@ export default function AttendancePage() {
     }
 
     checkUserRole()
-  }, [router])
+  }, [user, authLoading, router])
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <ProtectedRoute>
         <DashboardLayout>

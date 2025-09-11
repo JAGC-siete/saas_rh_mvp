@@ -1,6 +1,9 @@
 import { createAdminClient } from './supabase/server'
 import { logger } from './logger'
 import axios from 'axios'
+import { getHondurasTimestamp, nowInHonduras } from './timezone'
+
+
 
 // Tipos para los jobs
 export interface JobConfig {
@@ -41,12 +44,12 @@ export class AdminJobManager {
       throw new Error(`Job not found: ${jobName}`)
     }
 
-    const startTime = Date.now()
+    const startTime = nowInHonduras().getTime()
     logger.info(`Starting job: ${jobName}`)
 
     try {
       await job.handler()
-      const duration = Date.now() - startTime
+      const duration = nowInHonduras().getTime() - startTime
       
       const result: JobResult = {
         success: true,
@@ -58,7 +61,7 @@ export class AdminJobManager {
       return result
 
     } catch (error) {
-      const duration = Date.now() - startTime
+      const duration = nowInHonduras().getTime() - startTime
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       
       const result: JobResult = {
@@ -146,7 +149,7 @@ export class AdminJobManager {
     const supabase = createAdminClient()
     
     // Limpiar logs de auditoría antiguos (más de 90 días)
-    const ninetyDaysAgo = new Date()
+    const ninetyDaysAgo = nowInHonduras()
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
     
     const { error } = await supabase
@@ -188,7 +191,7 @@ export class AdminJobManager {
     const backupData = {
       employees,
       companies,
-      backup_date: new Date().toISOString(),
+      backup_date: getHondurasTimestamp(),
       version: process.env.npm_package_version || '0.1.0',
     }
     
@@ -248,7 +251,7 @@ export class AdminJobManager {
     const supabase = createAdminClient()
     
     // Generar reporte semanal de asistencia
-    const lastWeek = new Date()
+    const lastWeek = nowInHonduras()
     lastWeek.setDate(lastWeek.getDate() - 7)
     
     const { data: weeklyAttendance, error: attendanceError } = await supabase
@@ -267,12 +270,12 @@ export class AdminJobManager {
     // Guardar reporte generado
     const reportData = {
       type: 'weekly_attendance',
-      generated_at: new Date().toISOString(),
+      generated_at: getHondurasTimestamp(),
       data: weeklyAttendance,
       summary: {
         total_records: weeklyAttendance?.length || 0,
         period_start: lastWeek.toISOString(),
-        period_end: new Date().toISOString(),
+        period_end: getHondurasTimestamp(),
       }
     }
     
@@ -295,7 +298,7 @@ export class AdminJobManager {
     const supabase = createAdminClient()
     
     // Limpiar sesiones expiradas (más de 24 horas)
-    const twentyFourHoursAgo = new Date()
+    const twentyFourHoursAgo = nowInHonduras()
     twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24)
     
     const { error } = await supabase

@@ -1,4 +1,7 @@
 import { Buffer } from 'buffer'
+import { formatDateTimeForHonduras, nowInHonduras } from '../timezone'
+
+
 
 export interface EmployeeReceiptInput {
   employee_code?: string
@@ -122,7 +125,7 @@ export async function generateEmployeeReceiptPDF(
       doc.fontSize(10).text('Firma del Autorizado:', 300, 650)
       doc.rect(300, 665, 200, 30).stroke()
       doc.fontSize(8).text('Documento generado automáticamente - Paragon Honduras - Sistema de Recursos Humanos', 30, 750, { align: 'center', width: 535 })
-      doc.fontSize(8).text(`Fecha de generación: ${new Date().toLocaleString('es-HN')}`, 30, 765, { align: 'center', width: 535 })
+      doc.fontSize(8).text(`Fecha de generación: ${formatDateTimeForHonduras(nowInHonduras())}`, 30, 765, { align: 'center', width: 535 })
 
       doc.end()
     } catch (error) {

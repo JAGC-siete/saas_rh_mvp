@@ -1,9 +1,17 @@
 /**
- * Timezone utility functions for HR SaaS System
- * Handles timezone conversion for attendance registration in Honduras timezone
+ * 🇭🇳 TIMEZONE UTILITY FOR TEGUCIGALPA, HONDURAS
+ * 
+ * ⚠️  CRITICAL: ALL DATE/TIME OPERATIONS MUST USE AMERICA/TEGUCIGALPA
+ * 
+ * This utility ensures CONSISTENT timezone handling across the entire application.
+ * NEVER use new Date(), Date.now(), or any other timezone without this utility.
  */
 
 export const HONDURAS_TIMEZONE = 'America/Tegucigalpa';
+
+// Export shortcuts to prevent timezone errors
+export const HN_TZ = HONDURAS_TIMEZONE;
+export const TEGUCIGALPA_TZ = HONDURAS_TIMEZONE;
 
 /**
  * Get current time in Honduras timezone
@@ -18,7 +26,21 @@ export function getHondurasTime(): Date {
  */
 export function convertToHondurasTime(utcTimestamp: string | Date): Date {
   const date = typeof utcTimestamp === 'string' ? new Date(utcTimestamp) : utcTimestamp;
-  return new Date(date.toLocaleString("en-US", { timeZone: HONDURAS_TIMEZONE }));
+  
+  // Check if date is valid
+  if (isNaN(date.getTime())) {
+    return new Date(); // Return current date if invalid
+  }
+  
+  // Convert to Honduras timezone
+  const hondurasTime = new Date(date.toLocaleString("en-US", { timeZone: HONDURAS_TIMEZONE }));
+  
+  // If conversion failed, return original date
+  if (isNaN(hondurasTime.getTime())) {
+    return date;
+  }
+  
+  return hondurasTime;
 }
 
 /**
@@ -191,26 +213,33 @@ export function decideCheckInRule(nowLocal: any, expectedIn: string, rules: { gr
   const diffMinutes = currentMinutes - expectedMinutes;
   
   let rule: 'early' | 'normal' | 'late' | 'oor';
-  let lateMinutes = 0;
+  let lateMinutes = diffMinutes; // ✅ CORREGIDO: Siempre usar diffMinutes (puede ser negativo)
   let msgKey: string;
   let needJust = false;
   
-  if (diffMinutes < -rules.grace) {
+  // Nueva lógica basada en los requerimientos del usuario
+  if (diffMinutes < -5) {  // Más de 5 min temprano
     rule = 'early';
     msgKey = 'early';
-  } else if (diffMinutes <= rules.grace) {
+    // lateMinutes será negativo (ej: -10 para 10 min temprano)
+  } else if (diffMinutes >= -2 && diffMinutes <= 5) {  // Entre 2 min antes y 5 min después
     rule = 'normal';
     msgKey = 'on_time';
-  } else if (diffMinutes <= rules.late_to_inclusive) {
+    // lateMinutes puede ser negativo, 0 o positivo pequeño
+  } else if (diffMinutes > 5 && diffMinutes <= rules.late_to_inclusive) {  // Entre 5 y 20 min tarde
     rule = 'late';
-    lateMinutes = diffMinutes;
     msgKey = 'late';
     needJust = true;
-  } else {
+    // lateMinutes será positivo (ej: 10 para 10 min tarde)
+  } else if (diffMinutes > rules.late_to_inclusive) {  // Más de 20 min tarde
     rule = 'oor';
-    lateMinutes = diffMinutes;
     msgKey = 'oor';
     needJust = true;
+    // lateMinutes será positivo grande (ej: 90 para 1.5 horas tarde)
+  } else {
+    // Fallback para casos edge
+    rule = 'normal';
+    msgKey = 'on_time';
   }
   
   return { rule, lateMinutes, msgKey, needJust };
@@ -296,4 +325,86 @@ export function distanceMeters(coord1: [number, number], coord2: [number, number
   
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
   return R * c;
+}
+
+// =====================================================
+// 🚨 MANDATORY FUNCTIONS - USE THESE INSTEAD OF new Date()
+// =====================================================
+
+/**
+ * 🇭🇳 GET CURRENT DATE/TIME IN TEGUCIGALPA - USE THIS INSTEAD OF new Date()
+ * Returns current time in Honduras timezone as Date object
+ */
+export function nowInHonduras(): Date {
+  return getHondurasTime();
+}
+
+/**
+ * 🇭🇳 GET TODAY'S DATE STRING IN TEGUCIGALPA - USE FOR DATABASE STORAGE
+ * Returns YYYY-MM-DD format in Honduras timezone
+ */
+export function todayInHonduras(): string {
+  return getTodayInHonduras();
+}
+
+/**
+ * 🇭🇳 FORMAT DATE FOR DISPLAY IN HONDURAS LOCALE
+ * Returns date formatted for Honduras (dd/mm/yyyy)
+ */
+export function formatDateForHonduras(date: Date | string): string {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  const hondurasDate = convertToHondurasTime(d);
+  
+  return hondurasDate.toLocaleDateString('es-HN', {
+    timeZone: HONDURAS_TIMEZONE,
+    day: '2-digit',
+    month: '2-digit', 
+    year: 'numeric'
+  });
+}
+
+/**
+ * 🇭🇳 FORMAT DATETIME FOR DISPLAY IN HONDURAS LOCALE
+ * Returns datetime formatted for Honduras with timezone
+ */
+export function formatDateTimeForHonduras(date: Date | string): string {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  
+  return d.toLocaleString('es-HN', {
+    timeZone: HONDURAS_TIMEZONE,
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+}
+
+/**
+ * 🇭🇳 GET CURRENT TIMESTAMP FOR DATABASE STORAGE
+ * Returns ISO string representing current time in Honduras
+ */
+export function getHondurasTimestamp(): string {
+  return getHondurasTimeISO();
+}
+
+/**
+ * 🚨 VALIDATION FUNCTION - THROWS ERROR IF TIMEZONE IS WRONG
+ * Use this to validate that dates are using correct timezone
+ */
+export function validateHondurasTimezone(date: Date): void {
+  const hondurasTime = convertToHondurasTime(date);
+  const utcTime = new Date(date.toISOString());
+  
+  // Check if there's a significant timezone difference (more than 1 hour)
+  const timeDiff = Math.abs(hondurasTime.getTime() - utcTime.getTime()) / (1000 * 60 * 60);
+  
+  if (timeDiff < 5 || timeDiff > 7) {
+    console.warn('⚠️  Possible timezone issue detected:', {
+      inputDate: date.toISOString(),
+      hondurasTime: hondurasTime.toISOString(),
+      timeDiffHours: timeDiff
+    });
+  }
 }

@@ -32,7 +32,7 @@ export default function PoliticaPrivacidad() {
             <section className="mb-8">
               <h2 className="text-2xl font-semibold text-white mb-4">1) Responsable</h2>
               <p className="text-slate-300">
-                <strong>Humano SISU</strong> ("nosotros"), <strong>Honduras</strong>.
+                <strong>Humano SISU</strong> (&quot;nosotros&quot;), <strong>Honduras</strong>.
                 <br />
                 Contacto: <strong>jorge7gomez@gmail.comt</strong> | <strong>+504 9470-7007</strong>
               </p>
@@ -99,7 +99,7 @@ export default function PoliticaPrivacidad() {
             <section className="mb-8">
               <h2 className="text-2xl font-semibold text-white mb-4">8) Tus derechos</h2>
               <p className="text-slate-300 mb-4">
-                Podés ejercer <strong>acceso, rectificación, supresión, oposición, limitación y portabilidad</strong>, además de <strong>retirar tu consentimiento</strong> en cualquier momento, escribiendo a <strong>jorge@humanosisu.net</strong> con el asunto "Derechos de datos – [tu nombre]".
+                Podés ejercer <strong>acceso, rectificación, supresión, oposición, limitación y portabilidad</strong>, además de <strong>retirar tu consentimiento</strong> en cualquier momento, escribiendo a <strong>jorge@humanosisu.net</strong> con el asunto &quot;Derechos de datos – [tu nombre]&quot;.
               </p>
               <p className="text-slate-300">
                 También podés reclamar ante la autoridad de control competente conforme a las <strong>leyes aplicables de protección de datos de Honduras y/o Guatemala</strong>.
@@ -142,7 +142,7 @@ export default function PoliticaPrivacidad() {
               <h2 className="text-2xl font-semibold text-white mb-4">Footer ultra breve (para landing)</h2>
               <div className="p-4 bg-slate-800/50 rounded-lg">
                 <p className="text-slate-300">
-                  "Protegemos tu información. Solo la utilizamos <strong> para contactarte</strong>. Más info en la <strong>Política de Privacidad</strong>."
+                  &quot;Protegemos tu información. Solo la utilizamos <strong> para contactarte</strong>. Más info en la <strong>Política de Privacidad</strong>.&quot;
                 </p>
               </div>
             </section>

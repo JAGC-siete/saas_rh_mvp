@@ -6,6 +6,7 @@ import { useAuth } from '../lib/auth'
 import { Employee } from '../lib/types/employee'
 import AddEmployeeForm from './AddEmployeeForm'
 import { PlusIcon, PencilIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline'
+import { getHondurasTimestamp, formatTimeDisplay } from '../lib/timezone'
 
 interface Department {
   id: string
@@ -56,6 +57,8 @@ export default function EmployeeManager() {
   const [showDeactivateModal, setShowDeactivateModal] = useState(false)
   const [employeeToDeactivate, setEmployeeToDeactivate] = useState<Employee | null>(null)
   const [terminationDate, setTerminationDate] = useState('')
+  const [showDetailsModal, setShowDetailsModal] = useState(false)
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
   const { user, loading: sessionLoading } = useAuth()
 
   const getErrorMessage = useCallback((error: unknown) => {
@@ -274,6 +277,11 @@ export default function EmployeeManager() {
     setShowDeactivateModal(true)
   }, [])
 
+  const handleViewDetails = useCallback((employee: Employee) => {
+    setSelectedEmployee(employee)
+    setShowDetailsModal(true)
+  }, [])
+
   const confirmDeactivate = useCallback(async () => {
     if (!employeeToDeactivate) return
 
@@ -281,7 +289,7 @@ export default function EmployeeManager() {
       setIsSubmitting(true)
       
       // Usar fecha seleccionada o fecha actual
-      const finalTerminationDate = terminationDate || new Date().toISOString().split('T')[0]
+      const finalTerminationDate = terminationDate || getHondurasTimestamp().split('T')[0]
       
       const response = await fetch('/api/employees/update', {
         method: 'PATCH',
@@ -503,7 +511,7 @@ export default function EmployeeManager() {
                           <p><span className="font-medium text-gray-200">Departamento:</span> {employee.departments?.name || 'Sin asignar'}</p>
                           <p><span className="font-medium text-gray-200">Horario:</span> {employee.work_schedules?.name || 'Sin asignar'}</p>
                           {employee.check_in_time && (
-                            <p><span className="font-medium text-gray-200">Entrada:</span> {new Date(employee.check_in_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}</p>
+                            <p><span className="font-medium text-gray-200">Entrada:</span> {formatTimeDisplay(employee.check_in_time)}</p>
                           )}
                         </div>
                       </div>
@@ -518,6 +526,16 @@ export default function EmployeeManager() {
                       )}
                       
                       <div className="flex gap-2 mt-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleViewDetails(employee)}
+                          className="flex items-center gap-1 bg-blue-500/20 border-blue-500/30 text-blue-400 hover:bg-blue-500/30"
+                        >
+                          <EyeIcon className="h-4 w-4" />
+                          <span className="hidden sm:inline">Ver</span>
+                        </Button>
+                        
                         <Button
                           size="sm"
                           variant="outline"
@@ -548,6 +566,183 @@ export default function EmployeeManager() {
           )}
         </CardContent>
       </Card>
+
+      {/* Modal de Detalles del Empleado */}
+      {showDetailsModal && selectedEmployee && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 border border-white/20 rounded-lg p-6 max-w-2xl w-full mx-4 backdrop-blur-sm max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold text-white">
+                Detalles del Empleado
+              </h3>
+              <Button
+                onClick={() => setShowDetailsModal(false)}
+                variant="outline"
+                size="sm"
+                className="bg-white/5 border-white/20 text-white hover:bg-white/10"
+              >
+                ✕
+              </Button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="text-center mb-6">
+                <h4 className="text-lg font-medium text-white">{selectedEmployee.name}</h4>
+                <p className="text-sm text-gray-400">{selectedEmployee.employee_code}</p>
+                <div className="flex justify-center gap-2 mt-2">
+                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                    selectedEmployee.status === 'active' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
+                  }`}>
+                    {selectedEmployee.status === 'active' ? 'Activo' : 'Inactivo'}
+                  </span>
+                  {selectedEmployee.attendance_status && (
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${
+                      selectedEmployee.attendance_status === 'present' ? 'bg-brand-500/20 text-brand-400' :
+                      selectedEmployee.attendance_status === 'late' ? 'bg-yellow-500/20 text-yellow-400' :
+                      selectedEmployee.attendance_status === 'absent' ? 'bg-red-500/20 text-red-400' :
+                      'bg-gray-500/20 text-gray-400'
+                    }`}>
+                      {selectedEmployee.attendance_status === 'present' ? 'Presente' :
+                       selectedEmployee.attendance_status === 'late' ? 'Tardanza' :
+                       selectedEmployee.attendance_status === 'absent' ? 'Ausente' : 'No registrado'}
+                    </span>
+                  )}
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-400">Nombre Completo</label>
+                    <div className="text-white font-medium">{selectedEmployee.name}</div>
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium text-gray-400">Código de Empleado</label>
+                    <div className="text-white font-medium">{selectedEmployee.employee_code}</div>
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium text-gray-400">DNI</label>
+                    <div className="text-white font-medium">{selectedEmployee.dni}</div>
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium text-gray-400">Departamento</label>
+                    <div className="text-white font-medium">{selectedEmployee.departments?.name || 'Sin asignar'}</div>
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium text-gray-400">Cargo/Posición</label>
+                    <div className="text-white font-medium">{selectedEmployee.role || 'No especificado'}</div>
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium text-gray-400">Salario Base</label>
+                    <div className="text-green-400 font-medium">
+                      {selectedEmployee.base_salary ? 
+                        new Intl.NumberFormat('es-HN', {
+                          style: 'currency',
+                          currency: 'HNL'
+                        }).format(selectedEmployee.base_salary) : 
+                        'No especificado'
+                      }
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-400">Email</label>
+                    <div className="text-white font-medium">{selectedEmployee.email || 'No especificado'}</div>
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium text-gray-400">Teléfono</label>
+                    <div className="text-white font-medium">{selectedEmployee.phone || 'No especificado'}</div>
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium text-gray-400">Fecha de Contratación</label>
+                    <div className="text-white font-medium">
+                      {selectedEmployee.hire_date ? 
+                        new Date(selectedEmployee.hire_date).toLocaleDateString('es-HN') : 
+                        'No especificada'
+                      }
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium text-gray-400">Horario de Trabajo</label>
+                    <div className="text-white font-medium">{selectedEmployee.work_schedules?.name || 'Sin asignar'}</div>
+                  </div>
+                  
+                  {selectedEmployee.check_in_time && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-400">Entrada de Hoy</label>
+                      <div className="text-white font-medium">{formatTimeDisplay(selectedEmployee.check_in_time)}</div>
+                    </div>
+                  )}
+                  
+                  {selectedEmployee.employee_scores && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-400">Puntos de Gamificación</label>
+                      <div className="text-yellow-400 font-medium">
+                        Total: {selectedEmployee.employee_scores.total_points || 0} | 
+                        Semana: {selectedEmployee.employee_scores.weekly_points || 0}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {(selectedEmployee.address || selectedEmployee.emergency_contact_name) && (
+                <div className="border-t border-white/10 pt-4">
+                  <h5 className="text-sm font-medium text-gray-400 mb-3">Información Adicional</h5>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {selectedEmployee.address && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-400">Dirección</label>
+                        <div className="text-white font-medium">{selectedEmployee.address}</div>
+                      </div>
+                    )}
+                    {selectedEmployee.emergency_contact_name && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-400">Contacto de Emergencia</label>
+                        <div className="text-white font-medium">
+                          {selectedEmployee.emergency_contact_name}
+                          {selectedEmployee.emergency_contact_phone && (
+                            <span className="text-gray-400"> - {selectedEmployee.emergency_contact_phone}</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex gap-3 mt-6 pt-4 border-t border-white/10">
+              <Button
+                onClick={() => setShowDetailsModal(false)}
+                className="flex-1 bg-white/5 border-white/20 text-white hover:bg-white/10"
+                variant="outline"
+              >
+                Cerrar
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowDetailsModal(false)
+                  handleEdit(selectedEmployee)
+                }}
+                className="flex-1 bg-brand-600 hover:bg-brand-700"
+              >
+                Editar Empleado
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de Confirmación de Baja */}
       {showDeactivateModal && employeeToDeactivate && (
