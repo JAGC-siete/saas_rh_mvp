@@ -83,8 +83,6 @@ export default function EmployeeManager() {
     setEmployeesError(null)
     
     try {
-      console.log('🔍 Fetching employees for user:', user.id)
-      
       const response = await fetch('/api/employees/search?limit=50', {
         method: 'GET',
         credentials: 'include',
@@ -92,29 +90,20 @@ export default function EmployeeManager() {
           'Content-Type': 'application/json',
         },
       })
-      console.log('📡 API Response status:', response.status)
       
       if (!response.ok) {
         const errorText = await response.text()
-        console.error('❌ API Error:', errorText)
         throw new Error(`API Error: ${response.status} - ${errorText}`)
       }
       
       const data = await response.json()
-      console.log('✅ API Data received:', data)
       
       if (data.employees && data.employees.length > 0) {
-        console.log('📋 Sample employee data:', {
-          name: data.employees[0].name,
-          departments: data.employees[0].departments,
-          work_schedules: data.employees[0].work_schedules,
-          role: data.employees[0].role
-        })
+        // Employees loaded successfully
       }
       
       setEmployees(data.employees || [])
     } catch (err) {
-      console.error('💥 Fetch error:', err)
       setEmployeesError(getErrorMessage(err))
     } finally {
       setEmployeesLoading(false)
@@ -126,7 +115,6 @@ export default function EmployeeManager() {
     setDepartmentsError(null)
     
     try {
-      console.log('🔍 Fetching departments...')
       const response = await fetch('/api/departments')
       
       if (!response.ok) {
@@ -134,21 +122,12 @@ export default function EmployeeManager() {
       }
       
       const data = await response.json()
-      console.log('📦 Raw departments response:', data)
       
       // Extraer departments del objeto de respuesta
       const departmentsList = data.departments || []
-      console.log(`✅ Departments loaded: ${departmentsList.length} departments`)
-      
-      if (departmentsList.length > 0) {
-        console.log('📋 Sample departments:', departmentsList.slice(0, 3).map((d: Department) => `${d.name} (${d.id})`))
-      } else {
-        console.warn('⚠️ No departments found in response')
-      }
       
       setDepartments(departmentsList)
     } catch (error) {
-      console.error('💥 Error fetching departments:', error)
       setDepartmentsError('Error loading departments')
     } finally {
       setDepartmentsLoading(false)
@@ -160,7 +139,6 @@ export default function EmployeeManager() {
     setSchedulesError(null)
     
     try {
-      console.log('🔍 Fetching work schedules...')
       const response = await fetch('/api/work-schedules')
       
       if (!response.ok) {
@@ -168,21 +146,12 @@ export default function EmployeeManager() {
       }
       
       const data = await response.json()
-      console.log('📦 Raw work schedules response:', data)
       
       // Extraer schedules del objeto de respuesta
       const schedulesList = data.schedules || []
-      console.log(`✅ Work schedules loaded: ${schedulesList.length} schedules`)
-      
-      if (schedulesList.length > 0) {
-        console.log('📋 Sample schedules:', schedulesList.slice(0, 3).map((s: WorkSchedule) => `${s.name} (${s.id})`))
-      } else {
-        console.warn('⚠️ No work schedules found in response')
-      }
       
       setWorkSchedules(schedulesList)
     } catch (error) {
-      console.error('💥 Error fetching work schedules:', error)
       setSchedulesError('Error loading work schedules')
     } finally {
       setSchedulesLoading(false)
@@ -235,7 +204,6 @@ export default function EmployeeManager() {
       resetForm()
       fetchEmployees()
     } catch (error) {
-      console.error(`Error ${editingEmployee ? 'updating' : 'creating'} employee:`, error)
       setEmployeesError(error instanceof Error ? error.message : `Error ${editingEmployee ? 'updating' : 'creating'} employee`)
     } finally {
       setIsSubmitting(false)
@@ -313,7 +281,6 @@ export default function EmployeeManager() {
       setTerminationDate('') // Resetear fecha
       fetchEmployees()
     } catch (error) {
-      console.error('Error deactivating employee:', error)
       setEmployeesError(error instanceof Error ? error.message : 'Error deactivating employee')
     } finally {
       setIsSubmitting(false)

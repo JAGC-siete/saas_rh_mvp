@@ -30,11 +30,6 @@ const CalendarDaysIcon = ({ className }: { className?: string }) => (
   </svg>
 )
 
-const ChartBarIcon = ({ className }: { className?: string }) => (
-  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-  </svg>
-)
 
 const DocumentChartBarIcon = ({ className }: { className?: string }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -56,12 +51,6 @@ interface DashboardStats {
   period: { startDate: string; endDate: string }
 }
 
-interface AttendanceTrend {
-  date: string
-  present: number
-  absent: number
-  late: number
-}
 
 export default function ReportsAndAnalytics() {
   const session = useSession()
@@ -69,7 +58,6 @@ export default function ReportsAndAnalytics() {
   
   // Estado local para datos
   const [stats, setStats] = useState<DashboardStats | null>(null)
-  // const [attendanceTrends, setAttendanceTrends] = useState<AttendanceTrend[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   
@@ -97,8 +85,6 @@ export default function ReportsAndAnalytics() {
       setLoading(true)
       setError(null)
 
-      console.log('Fetching dashboard stats for company:', companyId, 'period:', { monthStart, monthEnd })
-
       const response = await fetch(`/api/reports/dashboard-stats?startDate=${monthStart}&endDate=${monthEnd}`)
       
       if (!response.ok) {
@@ -108,11 +94,8 @@ export default function ReportsAndAnalytics() {
       
       const result = await response.json()
       
-      console.log('Dashboard stats response:', result)
-      
       if (result.success) {
         setStats(result.data)
-        console.log('Dashboard stats loaded successfully:', result.data)
       } else {
         throw new Error(result.error || 'Error en la respuesta del servidor')
       }
@@ -120,7 +103,6 @@ export default function ReportsAndAnalytics() {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error desconocido'
       setError(errorMessage)
-      console.error('Error fetching dashboard stats:', err)
     } finally {
       setLoading(false)
     }
@@ -172,7 +154,6 @@ export default function ReportsAndAnalytics() {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error desconocido'
       setError(errorMessage)
-      console.error('Error exporting report:', err)
     } finally {
       setLoading(false)
     }
@@ -181,7 +162,6 @@ export default function ReportsAndAnalytics() {
   // Cargar datos iniciales
   useEffect(() => {
     if (session?.user && companyId && !companyLoading) {
-      console.log('Refreshing dashboard for company:', companyId)
       fetchDashboardStats()
     }
   }, [session, companyId, companyLoading, monthStart, monthEnd, fetchDashboardStats])
@@ -195,11 +175,6 @@ export default function ReportsAndAnalytics() {
     return `${Math.round((value / total) * 100)}%`
   }, [])
 
-  const getAttendanceColor = useCallback((rate: number) => {
-    if (rate >= 90) return 'text-emerald-400'
-    if (rate >= 75) return 'text-orange-400'
-    return 'text-red-400'
-  }, [])
 
   const handleDateRangeChange = useCallback((field: 'startDate' | 'endDate', value: string) => {
     setDateRange(prev => ({ ...prev, [field]: value }))
