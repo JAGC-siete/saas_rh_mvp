@@ -61,25 +61,62 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const fechaInicio = quincenaNum === 1 ? `${yearNum}-${monthNum.toString().padStart(2, '0')}-01` : `${yearNum}-${monthNum.toString().padStart(2, '0')}-16`
     const fechaFin = quincenaNum === 1 ? `${yearNum}-${monthNum.toString().padStart(2, '0')}-15` : `${yearNum}-${monthNum.toString().padStart(2, '0')}-${ultimoDia}`
 
-    // Crear o actualizar corrida de planilla
-    const { data: runResult, error: runError } = await supabase.rpc('create_or_update_payroll_run', {
-      p_company_uuid: companyId,
-      p_year: yearNum,
-      p_month: monthNum,
-      p_quincena: quincenaNum,
-      p_tipo: tipoParam,
-      p_user_id: companyId
-    })
+    // Verificar si ya existe una corrida para este período
+    const { data: existingRun, error: checkError } = await supabase
+      .from('payroll_runs')
+      .select('id, status')
+      .eq('company_uuid', companyId)
+      .eq('year', yearNum)
+      .eq('month', monthNum)
+      .eq('quincena', quincenaNum)
+      .eq('tipo', tipoParam)
+      .single()
 
-    console.log('🔍 DEBUG - RPC call result:', { runResult, runError })
+    console.log('🔍 DEBUG - Existing run check:', { existingRun, checkError })
 
-    if (runError) {
-      console.error('Error creando corrida de planilla:', runError)
-      return res.status(500).json({ error: 'Error creando corrida de planilla' })
+    let runId: string
+
+    if (existingRun) {
+      // Si ya existe una corrida, verificar su estado
+      console.log('🔍 DEBUG - Existing run found:', { id: existingRun.id, status: existingRun.status })
+      
+      if (existingRun.status === 'authorized') {
+        return res.status(400).json({
+          error: 'Corrida ya autorizada',
+          message: 'Ya existe una corrida autorizada para este período. No se puede generar un nuevo preview.',
+          run_id: existingRun.id,
+          status: existingRun.status
+        })
+      }
+      
+      runId = existingRun.id
+    } else {
+      // Crear nueva corrida
+      const { data: newRun, error: createError } = await supabase
+        .from('payroll_runs')
+        .insert({
+          company_uuid: companyId,
+          year: yearNum,
+          month: monthNum,
+          quincena: quincenaNum,
+          tipo: tipoParam,
+          status: 'draft',
+          created_by: companyId
+        })
+        .select('id')
+        .single()
+
+      console.log('🔍 DEBUG - New run creation:', { newRun, createError })
+
+      if (createError) {
+        console.error('Error creando nueva corrida:', createError)
+        return res.status(500).json({ error: 'Error creando nueva corrida de planilla' })
+      }
+
+      runId = newRun.id
     }
 
-    const runId = runResult
-    console.log('🔍 DEBUG - RunId from RPC:', runId, 'Type:', typeof runId)
+    console.log('🔍 DEBUG - Final RunId:', runId, 'Type:', typeof runId)
 
     // Obtener empleados activos con información de departamento
     const { data: employees, error: empError } = await supabase

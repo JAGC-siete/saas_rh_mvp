@@ -51,7 +51,7 @@ export async function fetchUnifiedPayroll(
   month: number, 
   quincena: number,
   tipo: string = 'CON'
-): Promise<{ rows: UnifiedRow[]; resumen: UnifiedResumen }> {
+): Promise<{ rows: UnifiedRow[]; resumen: UnifiedResumen; runId?: string }> {
   // Validate input parameters
   if (!companyId || !year || !month || !quincena) {
     throw new Error('Parámetros requeridos faltantes')
@@ -115,7 +115,15 @@ export async function fetchUnifiedPayroll(
       total_horas_extras: 0
     } as UnifiedResumen);
 
-    return { rows, resumen };
+    // Incluir run_id si está disponible en la respuesta
+    const result: { rows: UnifiedRow[]; resumen: UnifiedResumen; runId?: string } = { rows, resumen };
+    
+    if (planillaData.run_id) {
+      result.runId = planillaData.run_id;
+      console.log('🔍 DEBUG - Run ID included in result:', planillaData.run_id);
+    }
+
+    return result;
   } catch (error) {
     console.error('Error fetching unified payroll:', error);
     throw error;

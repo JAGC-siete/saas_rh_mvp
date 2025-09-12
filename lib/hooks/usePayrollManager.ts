@@ -13,7 +13,7 @@ import { PayrollFilters, UIRunStatus } from '../../types/payroll'
 // Unified State Interface
 export interface PayrollManagerState {
   // Data
-  unifiedData: { rows: UnifiedRow[]; resumen: UnifiedResumen } | null
+  unifiedData: { rows: UnifiedRow[]; resumen: UnifiedResumen; runId?: string } | null
   currentPeriod: { year: number; month: number; quincena: 1 | 2 }
   
   // UI State
@@ -227,14 +227,29 @@ export const usePayrollManager = () => {
       )
 
       dispatch({ type: 'SET_DATA', payload: data })
+      
+      // Si hay un runId en la respuesta, actualizarlo
+      if (data.runId) {
+        dispatch({ type: 'SET_RUN_ID', payload: data.runId })
+        console.log('🔍 DEBUG - Run ID set from data:', data.runId)
+      }
+      
       dispatch({ type: 'SET_LOADED_INITIAL', payload: true })
 
       // Unified payroll data loaded successfully
 
     } catch (error: any) {
-      const errorMessage = error?.message || 'Error desconocido'
-      dispatch({ type: 'SET_ERROR', payload: `Error cargando datos: ${errorMessage}` })
-      toast.error('Error', 'No se pudieron cargar los datos del período actual', 5000)
+      console.error('🔍 DEBUG - Error in loadInitialData:', error)
+      
+      // Manejar error específico de corrida ya autorizada
+      if (error.message && error.message.includes('ya autorizada')) {
+        dispatch({ type: 'SET_ERROR', payload: 'Ya existe una nómina autorizada para este período. No se puede generar un nuevo preview.' })
+        toast.error('Corrida Ya Autorizada', 'Ya existe una nómina autorizada para este período', 8000)
+      } else {
+        const errorMessage = error?.message || 'Error desconocido'
+        dispatch({ type: 'SET_ERROR', payload: `Error cargando datos: ${errorMessage}` })
+        toast.error('Error', 'No se pudieron cargar los datos del período actual', 5000)
+      }
     }
   }, [companyId, state.currentPeriod, toast])
 
