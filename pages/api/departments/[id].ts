@@ -1,13 +1,14 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireUser } from '../../../lib/auth/requireUser'
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse): Promise<void> {
   try {
     const { supabase, userProfile } = await requireUser(req, res)
     const { id } = req.query
 
     if (!userProfile?.company_id) {
-      return res.status(400).json({ error: 'Company ID required' })
+      res.status(400).json({ error: 'Company ID required' })
+      return
     }
 
     const companyId = userProfile.company_id
@@ -17,7 +18,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const { name, description } = req.body
         
         if (!name) {
-          return res.status(400).json({ error: 'Department name is required' })
+          res.status(400).json({ error: 'Department name is required' })
+          return
         }
 
         const { data: updatedDept, error: updateError } = await supabase
@@ -29,7 +31,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           .single()
 
         if (updateError) throw updateError
-        return res.json({ department: updatedDept })
+        res.json({ department: updatedDept })
+        return
 
       case 'DELETE':
         const { error: deleteError } = await supabase
@@ -39,15 +42,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           .eq('company_id', companyId)
 
         if (deleteError) throw deleteError
-        return res.status(204).end()
+        res.status(204).end()
+        return
 
       default:
-        return res.status(405).json({ error: 'Method not allowed' })
+        res.status(405).json({ error: 'Method not allowed' })
+        return
     }
   } catch (error: any) {
     console.error('Department API error:', error)
-    return res.status(error.message === 'UNAUTHORIZED' ? 401 : 500).json({ 
+    res.status(error.message === 'UNAUTHORIZED' ? 401 : 500).json({ 
       error: error.message || 'Internal server error' 
     })
+    return
   }
 }

@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://api.humanosisu.net/schemas/preview-output.json",
+  "title": "PreviewOutput",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "run_id",
+    "status",
+    "resumen",
+    "planilla",
+    "generated_at",
+    "etag"
+  ],
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "UUID de la corrida generada"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "edited", "authorized", "distributed"],
+      "description": "Estado actual de la corrida"
+    },
+    "resumen": {
+      "$ref": "./resumen.json"
+    },
+    "planilla": {
+      "type": "array",
+      "items": {
+        "$ref": "./planilla-row.json"
+      },
+      "description": "Array de líneas de nómina"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp de generación en RFC 3339 UTC"
+    },
+    "etag": {
+      "type": "string",
+      "description": "ETag para control de concurrencia"
+    }
+  }
+}

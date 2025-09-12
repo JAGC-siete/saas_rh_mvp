@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://api.humanosisu.net/schemas/planilla-row.json",
+  "title": "PlanillaRow",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "employee_id",
+    "name",
+    "base_salary",
+    "total_earnings",
+    "IHSS",
+    "RAP",
+    "ISR",
+    "total_deducciones",
+    "total",
+    "days_worked",
+    "days_absent",
+    "late_days"
+  ],
+  "properties": {
+    "employee_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "UUID del empleado"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Nombre completo del empleado"
+    },
+    "base_salary": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Salario base mensual"
+    },
+    "total_earnings": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Total de ingresos (salario + extras)"
+    },
+    "IHSS": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Deducción IHSS"
+    },
+    "RAP": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Deducción RAP"
+    },
+    "ISR": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Deducción ISR"
+    },
+    "total_deducciones": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Total de deducciones"
+    },
+    "total": {
+      "type": "number",
+      "description": "Salario neto final"
+    },
+    "days_worked": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Días trabajados en el período"
+    },
+    "days_absent": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Días ausentes en el período"
+    },
+    "late_days": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Días con llegadas tardías"
+    },
+    "department": {
+      "type": ["string", "null"],
+      "description": "Departamento del empleado"
+    },
+    "line_id": {
+      "type": ["string", "null"],
+      "format": "uuid",
+      "description": "UUID de la línea de nómina (null en preview)"
+    }
+  }
+}

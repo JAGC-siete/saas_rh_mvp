@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://api.humanosisu.net/schemas/authorize-output.json",
+  "title": "AuthorizeOutput",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "run_id",
+    "status",
+    "artifact_url",
+    "vouchers_count",
+    "authorized_at",
+    "etag"
+  ],
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "UUID de la corrida autorizada"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["authorized"],
+      "description": "Nuevo estado de la corrida"
+    },
+    "artifact_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL del PDF generado"
+    },
+    "vouchers_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Número de comprobantes generados"
+    },
+    "authorized_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp de autorización en RFC 3339 UTC"
+    },
+    "etag": {
+      "type": "string",
+      "description": "Nuevo ETag de la corrida autorizada"
+    },
+    "summary": {
+      "$ref": "./resumen.json",
+      "description": "Resumen de la nómina autorizada"
+    }
+  }
+}

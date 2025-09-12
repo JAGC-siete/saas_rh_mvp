@@ -1,0 +1,321 @@
+// Next.js Pages API Route: Authorize Payroll
+// Autoriza nómina con control de concurrencia via ETag
+
+import { NextApiRequest, NextApiResponse } from 'next'
+import { validateRequest, validateResponse, createProblemDetails, ERROR_TYPES } from '../../../../lib/validation/ajv-validator'
+import { requireCompanyAccess } from '../../../../lib/auth/api-auth'
+
+// Tipos del contrato OpenAPI
+interface AuthorizeInput {
+  run_id: string
+}
+
+interface AuthorizeOutput {
+  run_id: string
+  status: 'authorized'
+  artifact_url: string
+  vouchers_count: number
+  authorized_at: string
+  etag: string
+  summary?: {
+    empleados: number
+    total_bruto: number
+    total_deducciones: {
+      IHSS: number
+      RAP: number
+      ISR: number
+      otros: number
+    }
+    total_neto: number
+    total_dias_trabajados: number
+    total_horas_extras: number
+  }
+}
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
+
+  try {
+    // Validar autenticación y permisos
+    const { supabase: client, companyId, role, userId } = await requireCompanyAccess(req, res)
+    
+    if (!['super_admin', 'company_admin', 'hr_manager'].includes(role)) {
+      return res.status(403).json(
+        createProblemDetails(
+          ERROR_TYPES.FORBIDDEN,
+          'Insufficient permissions',
+          403,
+          'Payroll authorization requires hr_manager role or higher',
+          req.url || '',
+          'INSUFFICIENT_PERMISSIONS'
+        )
+      )
+    }
+
+    // Validar If-Match header para control de concurrencia
+    const ifMatch = req.headers['if-match']
+    if (!ifMatch) {
+      return res.status(400).json(
+        createProblemDetails(
+          ERROR_TYPES.VALIDATION_FAILED,
+          'Missing If-Match header',
+          400,
+          'If-Match header is required for authorization',
+          req.url || '',
+          'MISSING_IF_MATCH'
+        )
+      )
+    }
+
+    // Parsear y validar request body
+    const validatedInput = validateRequest<AuthorizeInput>(req.body, 'authorizeInput')
+
+    // Verificar que la corrida existe y pertenece a la empresa
+    const { data: payrollRun, error: runError } = await client
+      .from('payroll_runs')
+      .select(`
+        id,
+        company_uuid,
+        status,
+        created_at,
+        authorized_by,
+        authorized_at
+      `)
+      .eq('id', validatedInput.run_id)
+      .single()
+
+    if (runError || !payrollRun) {
+      return res.status(404).json(
+        createProblemDetails(
+          ERROR_TYPES.NOT_FOUND,
+          'Payroll run not found',
+          404,
+          'The specified payroll run does not exist',
+          req.url || '',
+          'PAYROLL_RUN_NOT_FOUND'
+        )
+      )
+    }
+
+    // Validar que pertenece a la empresa del usuario
+    if (payrollRun.company_uuid !== companyId) {
+      return res.status(403).json(
+        createProblemDetails(
+          ERROR_TYPES.FORBIDDEN,
+          'Company mismatch',
+          403,
+          'Payroll run does not belong to your company',
+          req.url || '',
+          'COMPANY_MISMATCH'
+        )
+      )
+    }
+
+    // Validar estado actual
+    if (payrollRun.status === 'authorized') {
+      return res.status(409).json(
+        createProblemDetails(
+          ERROR_TYPES.CONFLICT,
+          'Already authorized',
+          409,
+          'Payroll run has already been authorized',
+          req.url || '',
+          'ALREADY_AUTHORIZED'
+        )
+      )
+    }
+
+    if (payrollRun.status === 'distributed') {
+      return res.status(409).json(
+        createProblemDetails(
+          ERROR_TYPES.CONFLICT,
+          'Already distributed',
+          409,
+          'Payroll run has already been distributed',
+          req.url || '',
+          'ALREADY_DISTRIBUTED'
+        )
+      )
+    }
+
+    if (!['draft', 'edited'].includes(payrollRun.status)) {
+      return res.status(409).json(
+        createProblemDetails(
+          ERROR_TYPES.INVALID_STATE_TRANSITION,
+          'Invalid state transition',
+          409,
+          `Cannot authorize from status '${payrollRun.status}'. Must be 'draft' or 'edited'`,
+          req.url || '',
+          'INVALID_STATE_TRANSITION'
+        )
+      )
+    }
+
+    // Validar ETag real usando función de base de datos
+    const { data: etagData, error: etagError } = await client
+      .rpc('get_payroll_etag', { p_run_id: validatedInput.run_id })
+
+    if (etagError || !etagData) {
+      console.error('Error getting ETag:', etagError)
+      return res.status(500).json(
+        createProblemDetails(
+          ERROR_TYPES.INTERNAL_SERVER_ERROR,
+          'Database error',
+          500,
+          'Failed to get ETag for payroll run',
+          req.url || '',
+          'DATABASE_ERROR'
+        )
+      )
+    }
+
+    const currentETag = etagData
+    if (ifMatch !== currentETag) {
+      return res.status(412).json(
+        createProblemDetails(
+          ERROR_TYPES.PRECONDITION_FAILED,
+          'Precondition Failed',
+          412,
+          'ETag does not match. The resource may have been modified by another request',
+          req.url || '',
+          'ETAG_MISMATCH'
+        )
+      )
+    }
+
+    // Obtener líneas de nómina
+    const { data: payrollLines, error: linesError } = await client
+      .from('payroll_run_lines')
+      .select(`
+        id,
+        employee_id,
+        eff_bruto,
+        eff_ihss,
+        eff_rap,
+        eff_isr,
+        eff_neto,
+        edited
+      `)
+      .eq('run_id', validatedInput.run_id)
+
+    if (linesError) {
+      console.error('Error fetching payroll lines:', linesError)
+      return res.status(500).json(
+        createProblemDetails(
+          ERROR_TYPES.INTERNAL_SERVER_ERROR,
+          'Database error',
+          500,
+          'Failed to fetch payroll lines',
+          req.url || '',
+          'DATABASE_ERROR'
+        )
+      )
+    }
+
+    if (!payrollLines || payrollLines.length === 0) {
+      return res.status(404).json(
+        createProblemDetails(
+          ERROR_TYPES.NOT_FOUND,
+          'No payroll lines found',
+          404,
+          'No payroll lines found for the specified run',
+          req.url || '',
+          'NO_PAYROLL_LINES'
+        )
+      )
+    }
+
+    // Actualizar estado de la corrida
+    const authorizedAt = new Date().toISOString()
+    const { error: updateError } = await client
+      .from('payroll_runs')
+      .update({
+        status: 'authorized',
+        authorized_by: userId,
+        authorized_at: authorizedAt,
+        updated_at: authorizedAt
+      })
+      .eq('id', validatedInput.run_id)
+
+    if (updateError) {
+      console.error('Error updating payroll run:', updateError)
+      return res.status(500).json(
+        createProblemDetails(
+          ERROR_TYPES.INTERNAL_SERVER_ERROR,
+          'Database error',
+          500,
+          'Failed to authorize payroll run',
+          req.url || '',
+          'DATABASE_ERROR'
+        )
+      )
+    }
+
+    // Generar URL del PDF
+    const artifactUrl = `/api/v1/payroll/generate-pdf-from-run?run_id=${validatedInput.run_id}`
+    
+    // Calcular resumen
+    const summary = {
+      empleados: payrollLines.length,
+      total_bruto: Math.round(payrollLines.reduce((sum, line) => sum + Number(line.eff_bruto), 0) * 100) / 100,
+      total_deducciones: {
+        IHSS: Math.round(payrollLines.reduce((sum, line) => sum + Number(line.eff_ihss), 0) * 100) / 100,
+        RAP: Math.round(payrollLines.reduce((sum, line) => sum + Number(line.eff_rap), 0) * 100) / 100,
+        ISR: Math.round(payrollLines.reduce((sum, line) => sum + Number(line.eff_isr), 0) * 100) / 100,
+        otros: 0
+      },
+      total_neto: Math.round(payrollLines.reduce((sum, line) => sum + Number(line.eff_neto), 0) * 100) / 100,
+      total_dias_trabajados: 0, // TODO: Calcular desde asistencia
+      total_horas_extras: 0
+    }
+
+    // Generar nuevo ETag
+    const newETag = `"${validatedInput.run_id}-${Date.now()}"`
+
+    // Crear respuesta según contrato OpenAPI
+    const response: AuthorizeOutput = {
+      run_id: validatedInput.run_id,
+      status: 'authorized',
+      artifact_url: artifactUrl,
+      vouchers_count: payrollLines.length,
+      authorized_at: authorizedAt,
+      etag: newETag,
+      summary
+    }
+
+    // Validar response contra schema
+    validateResponse<AuthorizeOutput>(response, 'authorizeOutput')
+
+    // Log de auditoría
+    console.log(`Payroll run ${validatedInput.run_id} authorized by ${userId} at ${authorizedAt}`)
+
+    // Retornar respuesta con headers apropiados
+    res.setHeader('Content-Type', 'application/json')
+    res.setHeader('ETag', newETag)
+    res.setHeader('Cache-Control', 'no-cache')
+    
+    return res.status(200).json(response)
+
+  } catch (error: any) {
+    console.error('Authorize payroll error:', error)
+
+    if (error.name === 'ValidationError') {
+      return res.status(400).json(
+        error.toProblemDetails(req.url || '')
+      )
+    }
+
+    return res.status(500).json(
+      createProblemDetails(
+        ERROR_TYPES.INTERNAL_SERVER_ERROR,
+        'Internal server error',
+        500,
+        error.message || 'An unexpected error occurred',
+        req.url || '',
+        'INTERNAL_ERROR'
+      )
+    )
+  }
+}

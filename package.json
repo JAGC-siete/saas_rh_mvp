@@ -21,6 +21,9 @@
     "logs:dev": "node scripts/logs-dev.js",
     "logs:prod": "node scripts/logs-prod.js",
     "test:cookies": "node scripts/test-supabase-cookies.js",
+    "generate:types": "node scripts/generate-types.js",
+    "generate:supabase": "node scripts/generate-supabase-types.js",
+    "migrate:db": "node scripts/migrate-database.js",
     "prepare": "husky || true",
     "svgo": "svgo -f public -r"
   },
@@ -58,6 +61,7 @@
     "dotenv": "^17.2.2",
     "exceljs": "^4.4.0",
     "formidable": "^3.5.4",
+    "glob": "^11.0.3",
     "jsonwebtoken": "^9.0.2",
     "lodash": "^4.17.21",
     "lucide-react": "^0.526.0",
@@ -83,13 +87,17 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
     "@eslint/js": "^9.31.0",
+    "@types/ajv": "^0.0.5",
     "@typescript-eslint/eslint-plugin": "^8.38.0",
     "@typescript-eslint/parser": "^8.38.0",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
     "emoji-regex": "^10.4.0",
     "eslint": "^9.32.0",
     "eslint-config-next": "^15.4.3",
     "husky": "^9.1.7",
     "lint-staged": "^15.5.2",
+    "openapi-typescript": "^7.9.1",
     "svgo": "^3.3.2",
     "tailwindcss": "^3.4.17"
   }

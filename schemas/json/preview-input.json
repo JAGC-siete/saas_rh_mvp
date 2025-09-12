@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://api.humanosisu.net/schemas/preview-input.json",
+  "title": "PreviewInput",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "period_start",
+    "period_end", 
+    "company_id",
+    "pay_cycle"
+  ],
+  "properties": {
+    "period_start": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Inicio del período en RFC 3339 UTC"
+    },
+    "period_end": {
+      "type": "string", 
+      "format": "date-time",
+      "description": "Fin del período en RFC 3339 UTC"
+    },
+    "company_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "UUID de la empresa"
+    },
+    "pay_cycle": {
+      "type": "string",
+      "enum": ["quincena"],
+      "description": "Tipo de ciclo de pago"
+    },
+    "calculation_type": {
+      "type": "string",
+      "enum": ["CON", "SIN"],
+      "description": "Tipo de cálculo (CON/SIN deducciones)",
+      "default": "CON"
+    }
+  }
+}

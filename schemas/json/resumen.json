@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://api.humanosisu.net/schemas/resumen.json",
+  "title": "Resumen",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "empleados",
+    "total_bruto",
+    "total_deducciones",
+    "total_neto",
+    "total_dias_trabajados",
+    "total_horas_extras"
+  ],
+  "properties": {
+    "empleados": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Número total de empleados"
+    },
+    "total_bruto": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Total de salarios brutos"
+    },
+    "total_deducciones": {
+      "$ref": "./total-deducciones.json"
+    },
+    "total_neto": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Total de salarios netos"
+    },
+    "total_dias_trabajados": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total de días trabajados"
+    },
+    "total_horas_extras": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Total de horas extras"
+    }
+  }
+}

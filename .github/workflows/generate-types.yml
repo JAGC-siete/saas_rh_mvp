@@ -1,0 +1,82 @@
+name: Generate TypeScript Types
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'openapi.yaml'
+      - '.github/workflows/generate-types.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'openapi.yaml'
+      - '.github/workflows/generate-types.yml'
+  workflow_dispatch:
+
+jobs:
+  generate-types:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Generate TypeScript types from OpenAPI
+      run: npm run generate:types
+      
+    - name: Check for changes
+      id: verify-changed-files
+      run: |
+        if [ -n "$(git status --porcelain)" ]; then
+          echo "changed=true" >> $GITHUB_OUTPUT
+        else
+          echo "changed=false" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Commit generated types
+      if: steps.verify-changed-files.outputs.changed == 'true' && github.event_name == 'push'
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add src/types/api.d.ts
+        git commit -m "chore: regenerate TypeScript types from OpenAPI contract [skip ci]"
+        git push
+        
+    - name: Comment on PR
+      if: steps.verify-changed-files.outputs.changed == 'true' && github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: '⚠️ **OpenAPI Contract Changes Detected**\n\nThis PR modifies the OpenAPI contract. Please run `npm run generate:types` locally to update the TypeScript types and include them in this PR.'
+          })
+          
+    - name: Validate OpenAPI contract
+      run: |
+        # Install openapi-cli for validation
+        npm install -g @redocly/cli
+        
+        # Validate OpenAPI contract
+        redocly lint openapi.yaml
+        
+    - name: Build project with generated types
+      run: npm run build
+      
+    - name: Upload generated types as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: generated-types
+        path: src/types/api.d.ts
+        retention-days: 30

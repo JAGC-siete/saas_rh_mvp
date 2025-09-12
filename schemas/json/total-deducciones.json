@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://api.humanosisu.net/schemas/total-deducciones.json",
+  "title": "TotalDeducciones",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "IHSS",
+    "RAP", 
+    "ISR",
+    "otros"
+  ],
+  "properties": {
+    "IHSS": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Total deducciones IHSS"
+    },
+    "RAP": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Total deducciones RAP"
+    },
+    "ISR": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Total deducciones ISR"
+    },
+    "otros": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Otras deducciones"
+    }
+  }
+}

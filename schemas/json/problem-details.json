@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://api.humanosisu.net/schemas/problem-details.json",
+  "title": "ProblemDetails",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "type",
+    "title",
+    "status"
+  ],
+  "properties": {
+    "type": {
+      "type": "string",
+      "format": "uri",
+      "description": "URI que identifica el tipo de problema"
+    },
+    "title": {
+      "type": "string",
+      "description": "Título legible del problema"
+    },
+    "status": {
+      "type": "integer",
+      "description": "Código de estado HTTP"
+    },
+    "detail": {
+      "type": "string",
+      "description": "Descripción detallada del problema"
+    },
+    "instance": {
+      "type": "string",
+      "format": "uri",
+      "description": "URI específica de la ocurrencia del problema"
+    },
+    "code": {
+      "type": "string",
+      "description": "Código interno del error"
+    }
+  }
+}

@@ -1,0 +1,488 @@
+openapi: 3.1.1
+info:
+  title: Payroll API
+  description: |
+    API formal para gestión de nóminas con cálculos IHSS/RAP/ISR parametrizados.
+    Versión 1.0.0 - Contrato único de verdad para FE/BE.
+  version: 1.0.0
+  contact:
+    name: Humano Sisu
+    url: https://humanosisu.net
+servers:
+  - url: https://humanosisu.net/api/v1
+    description: Production server
+  - url: http://localhost:3000/api/v1
+    description: Development server
+
+paths:
+  /payroll/preview:
+    post:
+      summary: Generar preview de nómina
+      description: |
+        Genera un preview de nómina para un período específico.
+        No modifica datos - solo calcula y retorna resultados.
+      operationId: previewPayroll
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreviewInput'
+      responses:
+        '200':
+          description: Preview generado exitosamente
+          headers:
+            ETag:
+              description: ETag del preview generado
+              schema:
+                type: string
+                example: '"abc123"'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreviewOutput'
+        '400':
+          description: Error de validación en entrada
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: No autorizado
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: Conflicto - período ya procesado
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /payroll/calculate:
+    post:
+      summary: Calcular y guardar nómina
+      description: |
+        Calcula nómina y la guarda en la base de datos.
+        Crea payroll_run y payroll_run_lines.
+      operationId: calculatePayroll
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreviewInput'
+      responses:
+        '201':
+          description: Nómina calculada y guardada exitosamente
+          headers:
+            ETag:
+              description: ETag de la corrida creada
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreviewOutput'
+        '400':
+          description: Error de validación
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: Conflicto - corrida ya existe
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /payroll/authorize:
+    post:
+      summary: Autorizar nómina
+      description: |
+        Autoriza una corrida de nómina existente.
+        Requiere If-Match header para control de concurrencia.
+      operationId: authorizePayroll
+      parameters:
+        - name: If-Match
+          in: header
+          required: true
+          description: ETag de la corrida a autorizar
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthorizeInput'
+      responses:
+        '200':
+          description: Nómina autorizada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthorizeOutput'
+        '400':
+          description: Error de validación
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: Conflicto - transición de estado inválida
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '412':
+          description: Precondition Failed - ETag no coincide
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+components:
+  schemas:
+    PreviewInput:
+      type: object
+      additionalProperties: false
+      required:
+        - period_start
+        - period_end
+        - company_id
+        - pay_cycle
+      properties:
+        period_start:
+          type: string
+          format: date-time
+          description: Inicio del período en RFC 3339 UTC
+          example: "2025-01-01T00:00:00Z"
+        period_end:
+          type: string
+          format: date-time
+          description: Fin del período en RFC 3339 UTC
+          example: "2025-01-15T23:59:59Z"
+        company_id:
+          type: string
+          format: uuid
+          description: UUID de la empresa
+          example: "00000000-0000-0000-0000-000000000001"
+        pay_cycle:
+          type: string
+          enum: [quincena]
+          description: Tipo de ciclo de pago
+          example: "quincena"
+        calculation_type:
+          type: string
+          enum: [CON, SIN]
+          description: Tipo de cálculo (CON/SIN deducciones)
+          example: "CON"
+
+    AuthorizeInput:
+      type: object
+      additionalProperties: false
+      required:
+        - run_id
+      properties:
+        run_id:
+          type: string
+          format: uuid
+          description: UUID de la corrida a autorizar
+          example: "38ea2a3d-b9d9-442d-98a1-131e6150c82f"
+
+    Resumen:
+      type: object
+      additionalProperties: false
+      required:
+        - empleados
+        - total_bruto
+        - total_deducciones
+        - total_neto
+        - total_dias_trabajados
+        - total_horas_extras
+      properties:
+        empleados:
+          type: integer
+          minimum: 0
+          description: Número total de empleados
+          example: 34
+        total_bruto:
+          type: number
+          format: float
+          description: Total de salarios brutos
+          example: 45000.00
+        total_deducciones:
+          $ref: '#/components/schemas/TotalDeducciones'
+        total_neto:
+          type: number
+          format: float
+          description: Total de salarios netos
+          example: 38000.00
+        total_dias_trabajados:
+          type: integer
+          minimum: 0
+          description: Total de días trabajados
+          example: 510
+        total_horas_extras:
+          type: number
+          format: float
+          minimum: 0
+          description: Total de horas extras
+          example: 0.0
+
+    TotalDeducciones:
+      type: object
+      additionalProperties: false
+      required:
+        - IHSS
+        - RAP
+        - ISR
+        - otros
+      properties:
+        IHSS:
+          type: number
+          format: float
+          minimum: 0
+          description: Total deducciones IHSS
+          example: 2250.00
+        RAP:
+          type: number
+          format: float
+          minimum: 0
+          description: Total deducciones RAP
+          example: 675.00
+        ISR:
+          type: number
+          format: float
+          minimum: 0
+          description: Total deducciones ISR
+          example: 1800.00
+        otros:
+          type: number
+          format: float
+          minimum: 0
+          description: Otras deducciones
+          example: 0.0
+
+    PlanillaRow:
+      type: object
+      additionalProperties: false
+      required:
+        - employee_id
+        - name
+        - base_salary
+        - total_earnings
+        - IHSS
+        - RAP
+        - ISR
+        - total_deducciones
+        - total
+        - days_worked
+        - days_absent
+        - late_days
+      properties:
+        employee_id:
+          type: string
+          format: uuid
+          description: UUID del empleado
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        name:
+          type: string
+          description: Nombre completo del empleado
+          example: "Juan Pérez"
+        base_salary:
+          type: number
+          format: float
+          minimum: 0
+          description: Salario base mensual
+          example: 15000.00
+        total_earnings:
+          type: number
+          format: float
+          minimum: 0
+          description: Total de ingresos (salario + extras)
+          example: 7500.00
+        IHSS:
+          type: number
+          format: float
+          minimum: 0
+          description: Deducción IHSS
+          example: 375.00
+        RAP:
+          type: number
+          format: float
+          minimum: 0
+          description: Deducción RAP
+          example: 112.50
+        ISR:
+          type: number
+          format: float
+          minimum: 0
+          description: Deducción ISR
+          example: 300.00
+        total_deducciones:
+          type: number
+          format: float
+          minimum: 0
+          description: Total de deducciones
+          example: 787.50
+        total:
+          type: number
+          format: float
+          description: Salario neto final
+          example: 6712.50
+        days_worked:
+          type: integer
+          minimum: 0
+          description: Días trabajados en el período
+          example: 15
+        days_absent:
+          type: integer
+          minimum: 0
+          description: Días ausentes en el período
+          example: 0
+        late_days:
+          type: integer
+          minimum: 0
+          description: Días con llegadas tardías
+          example: 0
+        department:
+          type: string
+          nullable: true
+          description: Departamento del empleado
+          example: "Ventas"
+        line_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: UUID de la línea de nómina (null en preview)
+          example: null
+
+    PreviewOutput:
+      type: object
+      additionalProperties: false
+      required:
+        - run_id
+        - status
+        - resumen
+        - planilla
+        - generated_at
+        - etag
+      properties:
+        run_id:
+          type: string
+          format: uuid
+          description: UUID de la corrida generada
+          example: "38ea2a3d-b9d9-442d-98a1-131e6150c82f"
+        status:
+          type: string
+          enum: [draft, edited, authorized, distributed]
+          description: Estado actual de la corrida
+          example: "draft"
+        resumen:
+          $ref: '#/components/schemas/Resumen'
+        planilla:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlanillaRow'
+          description: Array de líneas de nómina
+        generated_at:
+          type: string
+          format: date-time
+          description: Timestamp de generación en RFC 3339 UTC
+          example: "2025-01-12T19:14:29.666Z"
+        etag:
+          type: string
+          description: ETag para control de concurrencia
+          example: '"abc123"'
+
+    AuthorizeOutput:
+      type: object
+      additionalProperties: false
+      required:
+        - run_id
+        - status
+        - artifact_url
+        - vouchers_count
+        - authorized_at
+        - etag
+      properties:
+        run_id:
+          type: string
+          format: uuid
+          description: UUID de la corrida autorizada
+          example: "38ea2a3d-b9d9-442d-98a1-131e6150c82f"
+        status:
+          type: string
+          enum: [authorized]
+          description: Nuevo estado de la corrida
+          example: "authorized"
+        artifact_url:
+          type: string
+          format: uri
+          description: URL del PDF generado
+          example: "/api/v1/payroll/generate-pdf-from-run?run_id=38ea2a3d-b9d9-442d-98a1-131e6150c82f"
+        vouchers_count:
+          type: integer
+          minimum: 0
+          description: Número de comprobantes generados
+          example: 34
+        authorized_at:
+          type: string
+          format: date-time
+          description: Timestamp de autorización en RFC 3339 UTC
+          example: "2025-01-12T19:14:29.666Z"
+        etag:
+          type: string
+          description: Nuevo ETag de la corrida autorizada
+          example: '"def456"'
+        summary:
+          $ref: '#/components/schemas/Resumen'
+
+    ProblemDetails:
+      type: object
+      additionalProperties: false
+      required:
+        - type
+        - title
+        - status
+      properties:
+        type:
+          type: string
+          format: uri
+          description: URI que identifica el tipo de problema
+          example: "https://docs.humanosisu.net/errors/invalid-transition"
+        title:
+          type: string
+          description: Título legible del problema
+          example: "Invalid state transition"
+        status:
+          type: integer
+          description: Código de estado HTTP
+          example: 409
+        detail:
+          type: string
+          description: Descripción detallada del problema
+          example: "Cannot authorize from draft. Move to edited first."
+        instance:
+          type: string
+          format: uri
+          description: URI específica de la ocurrencia del problema
+          example: "/api/v1/payroll/authorize"
+        code:
+          type: string
+          description: Código interno del error
+          example: "INVALID_STATE_TRANSITION"
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token de autenticación
+
+security:
+  - bearerAuth: []
