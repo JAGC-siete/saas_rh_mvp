@@ -32,7 +32,7 @@ export default function AuthStart() {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/confirm?next=/onboarding`
+          emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net'}/auth/confirm?next=/onboarding`
         }
       })
       
