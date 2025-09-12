@@ -92,7 +92,7 @@ export default function AuthConfirm() {
     if (router.isReady && router.query.token_hash) {
       handleMagicLink()
     }
-  }, [router.isReady, router.query])
+  }, [router.isReady, router.query, router])
 
   const getStatusIcon = () => {
     switch (status) {
