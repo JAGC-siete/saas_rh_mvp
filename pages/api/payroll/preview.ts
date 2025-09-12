@@ -272,9 +272,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('🔍 DEBUG - RunId generado:', runId)
     console.log('🔍 DEBUG - Tipo procesado:', tipoParam)
 
+    // Obtener el estado actual de la corrida
+    const { data: currentRun, error: statusError } = await supabase
+      .from('payroll_runs')
+      .select('status, authorized_by, authorized_at')
+      .eq('id', runId)
+      .single()
+
+    if (statusError) {
+      console.error('Error obteniendo estado de corrida:', statusError)
+    }
+
+    const currentStatus = currentRun?.status || 'draft'
+    console.log('🔍 DEBUG - Estado actual de la corrida:', { runId, status: currentStatus })
+
     return res.status(200).json({
       message: 'Preview de nómina generado exitosamente',
       run_id: runId,
+      status: currentStatus,
       year: yearNum,
       month: monthNum,
       quincena: quincenaNum,
