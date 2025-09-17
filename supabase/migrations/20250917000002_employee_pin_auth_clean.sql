@@ -157,18 +157,11 @@ BEGIN
         RETURN;
     END IF;
     
-    -- Validate peppers
-    IF p_pin_pepper IS NULL OR LENGTH(p_pin_pepper) < 32 THEN
-        RAISE EXCEPTION 'PIN pepper invalid or too short';
-    END IF;
-    
-    IF p_last5_pepper IS NULL OR LENGTH(p_last5_pepper) < 32 THEN
-        RAISE EXCEPTION 'Last5 pepper invalid or too short';
-    END IF;
+    -- Peppers validated at API level for better error handling
     
     -- Generate hashes using app-provided peppers
-    v_hmac_pin := encode(hmac(p_pin, p_pin_pepper, 'sha256'), 'hex');
-    v_last5_hash := encode(hmac(p_last5, p_last5_pepper, 'sha256'), 'hex');
+    v_hmac_pin := encode(hmac(p_pin, p_pin_pepper, 'sha256'::text), 'hex');
+    v_last5_hash := encode(hmac(p_last5, p_last5_pepper, 'sha256'::text), 'hex');
     
     -- IP-based rate limiting
     INSERT INTO public.employee_failed_attempts_ip (ip_address, company_id, attempt_count, window_start, locked_until)

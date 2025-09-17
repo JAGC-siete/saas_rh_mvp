@@ -123,7 +123,17 @@ function isProtectedAppRoute(pathname: string): boolean {
 
 // Helper function to check if API route is protected
 function isProtectedApiRoute(pathname: string): boolean {
-  // Check exact match first
+  // FIXED: Check if route is explicitly public first
+  if (PUBLIC_ROUTES.has(pathname)) return false
+  
+  // Check for public routes with wildcards
+  for (const publicRoute of Array.from(PUBLIC_ROUTES)) {
+    if (publicRoute.endsWith('/*') && pathname.startsWith(publicRoute.slice(0, -2))) {
+      return false
+    }
+  }
+  
+  // Check exact match for protected routes
   if (PROTECTED_API_ROUTES.has(pathname)) return true
   
   // Check for routes starting with protected API paths
@@ -215,7 +225,9 @@ export async function middleware(request: NextRequest) {
           ip: request.headers.get('x-forwarded-for') || 'unknown',
           userAgent: request.headers.get('user-agent')
         })
-        return NextResponse.json({ error: 'Authentication required' }, { status: 401 })
+        // Use Spanish for employee routes, English for admin routes
+        const errorMessage = pathname.startsWith('/api/employees') ? 'Credenciales inválidas' : 'Authentication required'
+        return NextResponse.json({ error: errorMessage }, { status: 401 })
       }
       
       // Permitir que la API maneje la validación detallada
