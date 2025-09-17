@@ -5,6 +5,7 @@ import DashboardLayout from '../../../components/DashboardLayout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card'
 import { Button } from '../../../components/ui/button'
 import CreateDepartmentModal from '../../../components/CreateDepartmentModal'
+import EditDepartmentModal from '../../../components/EditDepartmentModal'
 import DepartmentActionsMenu from '../../../components/DepartmentActionsMenu'
 
 interface Department {
@@ -56,6 +57,8 @@ export default function DepartmentsPage() {
   const [loading, setLoading] = useState(true)
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editingDepartment, setEditingDepartment] = useState<Department | null>(null)
   const router = useRouter()
 
   // Memo del formateador para evitar recrearlo por render
@@ -101,6 +104,22 @@ export default function DepartmentsPage() {
       controller.abort()
     }
   }, [fetchDepartmentsData])
+
+  const handleEditDepartment = useCallback((deptStats: any) => {
+    const department: Department = {
+      id: deptStats.id,
+      name: deptStats.name,
+      description: deptStats.description || '',
+      created_at: new Date().toISOString()
+    }
+    setEditingDepartment(department)
+    setShowEditModal(true)
+  }, [])
+
+  const handleCloseEditModal = useCallback(() => {
+    setShowEditModal(false)
+    setEditingDepartment(null)
+  }, [])
 
   if (loading) {
     return (
@@ -244,9 +263,13 @@ export default function DepartmentsPage() {
                             </div>
                           </div>
                           <DepartmentActionsMenu
-                            departmentId={stats.id}
-                            departmentName={deptName}
+                            department={{
+                              id: stats.id,
+                              name: deptName,
+                              description: stats.description
+                            }}
                             onUpdate={fetchDepartmentsData}
+                            onEdit={handleEditDepartment}
                           />
                         </div>
                       </div>
@@ -391,6 +414,14 @@ export default function DepartmentsPage() {
           <CreateDepartmentModal
             isOpen={showCreateModal}
             onClose={() => setShowCreateModal(false)}
+            onSuccess={fetchDepartmentsData}
+          />
+
+          {/* Edit Department Modal */}
+          <EditDepartmentModal
+            isOpen={showEditModal}
+            department={editingDepartment}
+            onClose={handleCloseEditModal}
             onSuccess={fetchDepartmentsData}
           />
         </div>

@@ -2,37 +2,66 @@ import { useState, useCallback } from 'react'
 import { EllipsisVerticalIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { useToast } from '../lib/toast'
 
+interface Department {
+  id: string
+  name: string
+  description?: string
+  manager_id?: string
+}
+
 interface DepartmentActionsMenuProps {
-  departmentId: string
-  departmentName: string
+  department: Department
   onUpdate: () => void
+  onEdit: (department: Department) => void
 }
 
 export default function DepartmentActionsMenu({ 
-  departmentId, 
-  departmentName, 
-  onUpdate 
+  department, 
+  onUpdate,
+  onEdit
 }: DepartmentActionsMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const toast = useToast()
 
   const handleDelete = useCallback(async () => {
-    const confirmMessage = `¿Estás seguro de que quieres eliminar el departamento "${departmentName}"?`
+    const confirmMessage = `¿Estás seguro de que quieres eliminar el departamento "${department.name}"?
+
+⚠️ ADVERTENCIA: Esta acción no se puede deshacer.
+- Los empleados asignados a este departamento quedarán sin departamento asignado
+- Se perderán los datos históricos asociados al departamento
+
+Escribe "ELIMINAR" para confirmar:`
     
-    if (!confirm(confirmMessage)) {
+    const userConfirmation = prompt(confirmMessage)
+    
+    if (userConfirmation !== 'ELIMINAR') {
+      if (userConfirmation !== null) {
+        toast.warning('Cancelado', 'Eliminación cancelada. Debe escribir "ELIMINAR" para confirmar.')
+      }
       return
     }
-
+    
     try {
       setLoading(true)
-      const response = await fetch(`/api/departments/${departmentId}`, {
+      setIsOpen(false) // Close menu immediately
+      
+      const response = await fetch(`/api/departments/${department.id}`, {
         method: 'DELETE',
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Error al eliminar el departamento')
+        const errorData = await response.json().catch(() => ({}))
+        
+        if (response.status === 409) {
+          throw new Error('No se puede eliminar el departamento porque tiene empleados asignados')
+        } else if (response.status === 404) {
+          throw new Error('Departamento no encontrado')
+        } else if (response.status === 403) {
+          throw new Error('No tienes permisos para eliminar este departamento')
+        } else {
+          throw new Error(errorData.error || 'Error al eliminar el departamento')
+        }
       }
 
       toast.success('Éxito', 'Departamento eliminado exitosamente')
@@ -43,13 +72,12 @@ export default function DepartmentActionsMenu({
     } finally {
       setLoading(false)
     }
-  }, [departmentId, departmentName, onUpdate])
+  }, [department, onUpdate, toast])
 
   const handleEdit = useCallback(() => {
-    // For now, we'll just show a toast. In the future, this could open an edit modal
-    toast.info('Info', 'Función de edición próximamente disponible')
     setIsOpen(false)
-  }, [toast])
+    onEdit(department)
+  }, [department, onEdit])
 
   return (
     <div className="relative">
