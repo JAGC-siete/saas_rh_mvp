@@ -4,7 +4,7 @@
 import React, { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
-import { Icon } from './Icon'
+import { Icon, IconName } from './Icon'
 import { formatCurrency } from '../lib/utils/currency'
 import { UnifiedRow, UnifiedResumen } from '../lib/payroll-unified'
 
@@ -76,7 +76,14 @@ export default function UnifiedPayrollTable({
   }
 
   // Función para determinar el estado del botón de autorización
-  const getAuthorizationButtonState = () => {
+  const getAuthorizationButtonState = (): {
+    text: string;
+    icon: IconName;
+    className: string;
+    disabled: boolean;
+    showAnimation: boolean;
+    showSuccessEffect: boolean;
+  } => {
     const isAuthorized = status === 'authorized'
     const isAuthorizing = loading && status === 'authorizing'
     
@@ -94,7 +101,7 @@ export default function UnifiedPayrollTable({
     if (isAuthorizing) {
       return {
         text: 'Autorizando...',
-        icon: 'loading',
+        icon: 'refresh',
         className: 'bg-green-600 hover:bg-green-700 text-white',
         disabled: true,
         showAnimation: true,
