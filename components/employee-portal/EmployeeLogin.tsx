@@ -76,20 +76,20 @@ export default function EmployeeLogin({ onLoginSuccess }: EmployeeLoginProps) {
       const data = await response.json()
 
       if (response.ok && data.success) {
-        // Store session token in localStorage and cookie
-        localStorage.setItem('employee_session_token', data.sessionToken)
-        localStorage.setItem('employee_session_expires', data.expiresAt)
+        // Supabase Auth handles session management automatically via cookies
+        // We only store employee data for UI purposes
         localStorage.setItem('employee_data', JSON.stringify(data.employee))
-        
-        // Set cookie for API requests
-        document.cookie = `employee_session_token=${data.sessionToken}; path=/; max-age=28800; secure; samesite=strict`
 
         clientLogger.info('Employee login successful', {
           employeeId: data.employee.id,
           employeeName: data.employee.name
         })
 
-        onLoginSuccess(data)
+        onLoginSuccess({
+          sessionToken: data.session?.access_token || 'supabase_managed',
+          employee: data.employee,
+          expiresAt: data.session?.expires_at || new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString()
+        })
       } else {
         setError(data.error || 'Error en el inicio de sesión')
         setAttempts(prev => prev + 1)

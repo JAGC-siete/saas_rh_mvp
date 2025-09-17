@@ -45,9 +45,8 @@ const PUBLIC_ROUTES = new Set([
   '/api/health',
   '/api/env',          // Environment variables endpoint - PÚBLICO
   '/api/cron/*',       // Cron jobs para mantenimiento del sistema
-  '/api/employees/auth/login',          // Employee portal login (legacy) - PÚBLICO
-  '/api/employees/auth/login-supabase', // Employee portal login (Supabase) - PÚBLICO
-  '/api/employees/auth/logout'          // Employee portal logout - PÚBLICO
+  '/api/employees/auth/login',    // Employee portal login - PÚBLICO
+  '/api/employees/auth/logout'    // Employee portal logout - PÚBLICO
 ])
 
 // Static assets that should be publicly accessible

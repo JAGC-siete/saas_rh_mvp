@@ -1,9 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createAdminClient } from '../../../../lib/supabase/server'
+import { createClient } from '../../../../lib/supabase/server'
 import { logger } from '../../../../lib/logger'
-
-// TIMING ATTACK PROTECTION: Always delay response by this amount
-const RESPONSE_DELAY_MS = 500
 
 interface LoginRequest {
   last5: string
@@ -12,7 +9,8 @@ interface LoginRequest {
 
 interface LoginResponse {
   success: boolean
-  sessionToken?: string
+  user?: any
+  session?: any
   employee?: {
     id: string
     name: string
@@ -20,126 +18,110 @@ interface LoginResponse {
     role: string
     department?: string
   }
-  expiresAt?: string
   error?: string
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse<LoginResponse>) {
-  const startTime = Date.now()
-  
-  // UNIFORM RESPONSE: Always return same structure and timing
-  const sendUniformResponse = async (response: LoginResponse, statusCode: number = 401) => {
-    const elapsed = Date.now() - startTime
-    const remainingDelay = Math.max(0, RESPONSE_DELAY_MS - elapsed)
-    
-    if (remainingDelay > 0) {
-      await new Promise(resolve => setTimeout(resolve, remainingDelay))
-    }
-    
-    return res.status(statusCode).json(response)
-  }
-
   if (req.method !== 'POST') {
-    return sendUniformResponse({ success: false, error: 'Method not allowed' }, 405)
-  }
-
-  const { last5, pin }: LoginRequest = req.body
-  
-  // FIXED: Handle multiple IPs in x-forwarded-for (proxy chain)
-  const forwardedFor = req.headers['x-forwarded-for'] as string
-  const clientIP = forwardedFor 
-    ? forwardedFor.split(',')[0].trim() // Take first IP only
-    : req.connection.remoteAddress || '127.0.0.1'
-    
-  const userAgent = req.headers['user-agent'] || 'unknown'
-
-  // Input validation - SAME error message for all cases
-  if (!last5 || !pin || !/^\d{5}$/.test(last5) || !/^\d{4}$/.test(pin)) {
-    return sendUniformResponse({ 
+    return res.status(405).json({ 
       success: false, 
-      error: 'Credenciales inválidas' 
+      error: 'Method not allowed' 
     })
   }
 
   try {
-    const supabase = createAdminClient()
+    const { last5, pin }: LoginRequest = req.body
 
-    // SECURE: Get peppers from environment (NOT from DB session)
-    const pinPepper = process.env.EMPLOYEE_PIN_PEPPER
-    const last5Pepper = process.env.EMPLOYEE_LAST5_PEPPER
-    
-    if (!pinPepper || pinPepper.length < 32) {
-      logger.error('PIN pepper not configured or too short')
-      return sendUniformResponse({
-        success: false,
-        error: 'Configuración de seguridad inválida'
-      }, 500)
-    }
-    
-    if (!last5Pepper || last5Pepper.length < 32) {
-      logger.error('Last5 pepper not configured or too short')
-      return sendUniformResponse({
-        success: false,
-        error: 'Configuración de seguridad inválida'
-      }, 500)
+    // Input validation
+    if (!last5 || !pin || !/^\d{5}$/.test(last5) || !/^\d{4}$/.test(pin)) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Credenciales inválidas' 
+      })
     }
 
-    // MIGRATED: Use Supabase Auth with synthetic email
+    const supabase = createClient(req, res)
+    
+    // PURE SUPABASE AUTH: Use synthetic email format
     const syntheticEmail = `${last5}@paragon.employee.local`
     
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+    // Authenticate using Supabase's built-in auth
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: syntheticEmail,
       password: pin
     })
 
-    if (authError) {
-      logger.error('Employee auth function error', authError)
-      return sendUniformResponse({
-        success: false,
-        error: 'Credenciales inválidas'
+    if (error || !data.user) {
+      logger.warn('Employee login failed', {
+        last5,
+        error: error?.message,
+        ip: req.headers['x-forwarded-for'] || req.connection.remoteAddress
       })
-    }
-
-    // Handle different auth results with UNIFORM timing
-    const result = authResult as any
-    
-    if (!result.success) {
-      if (result.locked_until) {
-        const lockMinutes = Math.ceil((new Date(result.locked_until).getTime() - Date.now()) / 60000)
-        return sendUniformResponse({
-          success: false,
-          error: `Cuenta bloqueada. Intente en ${lockMinutes} minutos.`
-        }, 429)
-      }
       
-      return sendUniformResponse({
+      return res.status(401).json({
         success: false,
         error: 'Credenciales inválidas'
       })
     }
 
-    // SUCCESS: Log and return session data
-    logger.info('Employee authentication successful', {
-      employeeId: result.employee_data.id,
-      employeeName: result.employee_data.name,
-      clientIP,
-      sessionTokenPrefix: result.session_token.substring(0, 8) + '...'
+    // Get employee data from user metadata
+    const employeeId = data.user.user_metadata?.employee_id
+    if (!employeeId) {
+      return res.status(401).json({
+        success: false,
+        error: 'Datos de empleado no encontrados'
+      })
+    }
+
+    // Fetch employee details (RLS will automatically filter by authenticated user)
+    const { data: employee, error: employeeError } = await supabase
+      .from('employees')
+      .select(`
+        id, 
+        name, 
+        dni, 
+        role,
+        departments:department_id(name)
+      `)
+      .eq('id', employeeId)
+      .single()
+
+    if (employeeError || !employee) {
+      logger.error('Employee data fetch failed', {
+        employeeId,
+        error: employeeError
+      })
+      
+      return res.status(404).json({
+        success: false,
+        error: 'Empleado no encontrado'
+      })
+    }
+
+    logger.info('Employee login successful', {
+      employeeId: employee.id,
+      employeeName: employee.name,
+      method: 'supabase_auth'
     })
 
-    return sendUniformResponse({
+    return res.status(200).json({
       success: true,
-      sessionToken: result.session_token,
-      expiresAt: result.expires_at,
-      employee: result.employee_data
-    }, 200)
+      user: data.user,
+      session: data.session,
+      employee: {
+        id: employee.id,
+        name: employee.name,
+        dni_masked: employee.dni.replace(/\d(?=\d{5})/g, '*'),
+        role: employee.role || 'Empleado',
+        department: (employee.departments as any)?.name
+      }
+    })
 
   } catch (error) {
-    logger.error('Employee auth unexpected error', error)
-    return sendUniformResponse({
+    logger.error('Employee login error', error)
+    return res.status(500).json({
       success: false,
-      error: 'Credenciales inválidas'
+      error: 'Error interno del servidor'
     })
   }
 }
-
-// All auth logic now handled by the SECURITY DEFINER function in the database

@@ -79,26 +79,28 @@ export default function EmployeePortal() {
     }
   }, [session])
 
-  const checkExistingSession = () => {
+  const checkExistingSession = async () => {
     try {
-      const sessionToken = localStorage.getItem('employee_session_token')
-      const expiresAt = localStorage.getItem('employee_session_expires')
-      const employeeData = localStorage.getItem('employee_data')
+      // Check if we have a Supabase session
+      const response = await fetch('/api/employees/me', {
+        credentials: 'include' // Include cookies for Supabase Auth
+      })
 
-      if (sessionToken && expiresAt && employeeData) {
-        const expires = new Date(expiresAt)
-        const now = new Date()
-
-        if (expires > now) {
-          setSession({
-            sessionToken,
-            expiresAt,
-            employee: JSON.parse(employeeData)
-          })
-        } else {
-          // Session expired, clear storage
-          clearSession()
-        }
+      if (response.ok) {
+        const data = await response.json()
+        const employeeData = data.employee
+        
+        // Store employee data and create session object
+        localStorage.setItem('employee_data', JSON.stringify(employeeData))
+        
+        setSession({
+          sessionToken: 'supabase_managed',
+          employee: employeeData,
+          expiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString() // 8 hours from now
+        })
+      } else {
+        // No valid session, clear any stored data
+        clearSession()
       }
     } catch (error) {
       console.error('Error checking session:', error)
@@ -112,11 +114,9 @@ export default function EmployeePortal() {
     if (!session) return
 
     try {
-      // Fetch profile
+      // Fetch profile (Supabase Auth handles authentication via cookies)
       const profileResponse = await fetch('/api/employees/me', {
-        headers: {
-          'Authorization': `Bearer ${session.sessionToken}`
-        }
+        credentials: 'include'
       })
 
       if (profileResponse.ok) {
@@ -126,9 +126,7 @@ export default function EmployeePortal() {
 
       // Fetch attendance summary
       const attendanceResponse = await fetch('/api/employees/me/attendance?limit=1', {
-        headers: {
-          'Authorization': `Bearer ${session.sessionToken}`
-        }
+        credentials: 'include'
       })
 
       if (attendanceResponse.ok) {
@@ -151,15 +149,11 @@ export default function EmployeePortal() {
 
   const handleLogout = async () => {
     try {
-      if (session) {
-        // Call logout API
-        await fetch('/api/employees/auth/logout', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${session.sessionToken}`
-          }
-        })
-      }
+      // Call logout API (Supabase Auth handles session cleanup)
+      await fetch('/api/employees/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+      })
     } catch (error) {
       console.error('Logout error:', error)
     } finally {
@@ -169,10 +163,8 @@ export default function EmployeePortal() {
   }
 
   const clearSession = () => {
-    localStorage.removeItem('employee_session_token')
-    localStorage.removeItem('employee_session_expires')
+    // Only clear employee data - Supabase Auth handles its own cookies
     localStorage.removeItem('employee_data')
-    document.cookie = 'employee_session_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
     setSession(null)
     setProfile(null)
     setAttendanceSummary(null)
