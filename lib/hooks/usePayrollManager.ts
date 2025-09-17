@@ -324,11 +324,20 @@ export const usePayrollManager = () => {
         console.error('❌ No se encontraron datos de planilla en la respuesta')
       }
       
-      toast.success(
-        'Preview Generado',
-        `${response.empleados} empleados procesados exitosamente`,
-        5000
-      )
+      // Mostrar mensaje apropiado según si es regeneración o no
+      if (response?.warning) {
+        toast.warning(
+          'Preview Regenerado',
+          response.warning,
+          8000
+        )
+      } else {
+        toast.success(
+          'Preview Generado',
+          `${response.empleados} empleados procesados exitosamente`,
+          5000
+        )
+      }
 
       return response
     } catch (error: any) {
@@ -425,7 +434,16 @@ export const usePayrollManager = () => {
         // No fallar la autorización por error de recarga
       }
       
-      toast.success('Nómina Autorizada', 'La nómina ha sido autorizada exitosamente', 6000)
+      // Mostrar mensaje apropiado según si es re-autorización o no
+      if (response?.warning) {
+        toast.warning(
+          'Nómina Re-autorizada',
+          response.warning,
+          8000
+        )
+      } else {
+        toast.success('Nómina Autorizada', 'La nómina ha sido autorizada exitosamente', 6000)
+      }
       
       console.log('🔍 DEBUG - Autorización completada exitosamente')
 

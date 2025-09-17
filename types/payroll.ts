@@ -26,6 +26,7 @@ export interface PreviewResponse {
   totalDeducciones: number;
   totalNeto: number;
   planilla: PayrollLine[];
+  warning?: string | null;
 }
 
 export interface EditRequest {
@@ -74,6 +75,7 @@ export interface AuthorizeResponse {
     employee_id: string;
     url: string;
   }>;
+  warning?: string | null;
   summary: {
     total_lines: number;
     edited_lines: number;

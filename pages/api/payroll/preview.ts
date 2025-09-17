@@ -77,16 +77,40 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let runId: string
 
     if (existingRun) {
-      // Si ya existe una corrida, verificar su estado
+      // Si ya existe una corrida, verificar su estado y manejar según el caso
       console.log('🔍 DEBUG - Existing run found:', { id: existingRun.id, status: existingRun.status })
       
       if (existingRun.status === 'authorized') {
-        return res.status(400).json({
-          error: 'Corrida ya autorizada',
-          message: 'Ya existe una corrida autorizada para este período. No se puede generar un nuevo preview.',
-          run_id: existingRun.id,
-          status: existingRun.status
-        })
+        console.log('⚠️ WARNING - Regenerating preview for authorized run')
+        // UPSERT LOGIC: En lugar de error, permitir regenerar con advertencia
+        // Cambiar estado a 'draft' para permitir ediciones
+        const { error: resetError } = await supabase
+          .from('payroll_runs')
+          .update({ 
+            status: 'draft',
+            updated_at: nowInHonduras().toISOString()
+          })
+          .eq('id', existingRun.id)
+          .eq('company_uuid', companyId)
+
+        if (resetError) {
+          console.error('Error resetting run status:', resetError)
+          return res.status(500).json({ error: 'Error actualizando estado de corrida' })
+        }
+
+        // Eliminar líneas existentes para regenerar
+        const { error: deleteError } = await supabase
+          .from('payroll_run_lines')
+          .delete()
+          .eq('run_id', existingRun.id)
+          .eq('company_uuid', companyId)
+
+        if (deleteError) {
+          console.error('Error deleting existing lines:', deleteError)
+          return res.status(500).json({ error: 'Error eliminando líneas existentes' })
+        }
+
+        console.log('✅ Run reset to draft and lines cleared for regeneration')
       }
       
       runId = existingRun.id
@@ -244,8 +268,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         total = total_earnings
       }
 
-      // Preview no necesita insertar en payroll_run_lines
-      // Solo generar los datos para mostrar
+      // Insertar línea en payroll_run_lines para que la autorización funcione
+      const { data: insertedLine, error: lineError } = await supabase
+        .from('payroll_run_lines')
+        .insert({
+          run_id: runId,
+          company_uuid: companyId,
+          employee_id: emp.id,
+          calc_hours: days_worked,
+          calc_bruto: total_earnings,
+          calc_ihss: IHSS,
+          calc_rap: RAP,
+          calc_isr: ISR,
+          calc_neto: total,
+          eff_hours: days_worked,
+          eff_bruto: total_earnings,
+          eff_ihss: IHSS,
+          eff_rap: RAP,
+          eff_isr: ISR,
+          eff_neto: total,
+          edited: false
+        })
+        .select('id')
+        .single()
+
+      if (lineError) {
+        console.error('Error insertando línea de nómina:', lineError)
+        // Continuar sin fallar - el preview puede funcionar sin líneas
+      }
 
       planilla.push({
         employee_id: emp.id,
@@ -264,7 +314,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         ISR: Math.round(ISR * 100) / 100,
         total_deducciones: Math.round(total_deductions * 100) / 100,
         total: Math.round(total * 100) / 100,
-        line_id: null // Preview no tiene line_id
+        line_id: insertedLine?.id || null // ID de la línea insertada
       })
     }
 
@@ -286,8 +336,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const currentStatus = currentRun?.status || 'draft'
     console.log('🔍 DEBUG - Estado actual de la corrida:', { runId, status: currentStatus })
 
+    // Determinar si es una regeneración
+    const isRegeneration = existingRun && existingRun.status === 'authorized'
+    
     return res.status(200).json({
-      message: 'Preview de nómina generado exitosamente',
+      message: isRegeneration 
+        ? 'Preview regenerado - se actualizó el registro existente'
+        : 'Preview de nómina generado exitosamente',
       run_id: runId,
       status: currentStatus,
       year: yearNum,
@@ -298,7 +353,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       totalBruto: planilla.reduce((sum: number, row: any) => sum + row.total_earnings, 0),
       totalDeducciones: planilla.reduce((sum: number, row: any) => sum + row.total_deducciones, 0),
       totalNeto: planilla.reduce((sum: number, row: any) => sum + row.total, 0),
-      planilla
+      planilla,
+      warning: isRegeneration ? 'Ya existía un registro generado para el período seleccionado. Esta acción actualizó el registro.' : null
     })
 
   } catch (error: any) {

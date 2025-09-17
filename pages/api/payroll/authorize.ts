@@ -57,7 +57,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Verificar que la corrida esté en estado editable
-    if (!['draft', 'edited'].includes(run.status)) {
+    // Permitir re-autorización si ya estaba autorizada (UPSERT logic)
+    if (!['draft', 'edited', 'authorized'].includes(run.status)) {
       return res.status(400).json({ 
         error: 'Corrida no autorizable',
         message: `La corrida está en estado '${run.status}' y no se puede autorizar`
@@ -134,20 +135,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       url: `/api/payroll/generate-voucher?run_line_id=${line.id}`
     }))
 
+    const wasAlreadyAuthorized = run.status === 'authorized'
+    
     console.log('Corrida de planilla autorizada exitosamente:', {
       run_id,
       status: 'authorized',
       pdf_url: pdfUrl,
-      vouchers_count: vouchers.length
+      vouchers_count: vouchers.length,
+      was_reauthorized: wasAlreadyAuthorized
     })
 
     return res.status(200).json({
-      message: 'Corrida de planilla autorizada exitosamente',
+      message: wasAlreadyAuthorized 
+        ? 'Corrida de planilla re-autorizada exitosamente'
+        : 'Corrida de planilla autorizada exitosamente',
       ok: true,
       run_id,
       status: 'authorized',
       artifact_url: pdfUrl,
       vouchers,
+      warning: wasAlreadyAuthorized ? 'La nómina ya estaba autorizada. Se actualizó el registro existente.' : null,
       summary: {
         total_lines: lines.length,
         edited_lines: lines.filter((l: any) => l.edited).length,
