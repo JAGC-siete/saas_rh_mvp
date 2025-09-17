@@ -19,6 +19,7 @@ interface UnifiedPayrollTableProps {
   canAuthorize?: boolean
   canSend?: boolean
   runId?: string
+  status?: string
   period: {
     year: number
     month: number
@@ -37,6 +38,7 @@ export default function UnifiedPayrollTable({
   canAuthorize = false,
   canSend = false,
   runId,
+  status,
   period
 }: UnifiedPayrollTableProps) {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
@@ -72,6 +74,45 @@ export default function UnifiedPayrollTable({
       </span>
     )
   }
+
+  // Función para determinar el estado del botón de autorización
+  const getAuthorizationButtonState = () => {
+    const isAuthorized = status === 'authorized'
+    const isAuthorizing = loading && status === 'authorizing'
+    
+    if (isAuthorized) {
+      return {
+        text: 'Nómina Autorizada',
+        icon: 'check',
+        className: 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-default shadow-lg shadow-emerald-500/25 ring-2 ring-emerald-400/20',
+        disabled: true,
+        showAnimation: false,
+        showSuccessEffect: true
+      }
+    }
+    
+    if (isAuthorizing) {
+      return {
+        text: 'Autorizando...',
+        icon: 'loading',
+        className: 'bg-green-600 hover:bg-green-700 text-white',
+        disabled: true,
+        showAnimation: true,
+        showSuccessEffect: false
+      }
+    }
+    
+    return {
+      text: 'Autorizar Nómina',
+      icon: 'check',
+      className: 'bg-green-600 hover:bg-green-700 text-white transform hover:scale-105 transition-all duration-200 hover:shadow-lg hover:shadow-green-500/25',
+      disabled: !canAuthorize || loading,
+      showAnimation: false,
+      showSuccessEffect: false
+    }
+  }
+
+  const buttonState = getAuthorizationButtonState()
 
   const monthName = new Date(period.year, period.month - 1).toLocaleDateString('es-HN', { month: 'long' })
 
@@ -280,11 +321,18 @@ export default function UnifiedPayrollTable({
         <div className="flex items-center gap-4 mt-6 pt-6 border-t border-white/20">
           <Button
             onClick={onAuthorize}
-            disabled={!canAuthorize || loading}
-            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
+            disabled={buttonState.disabled}
+            className={`flex items-center gap-2 ${buttonState.className} relative overflow-hidden`}
           >
-            <Icon name="check" className="h-4 w-4" />
-            {loading ? 'Autorizando...' : 'Autorizar Nómina'}
+            {buttonState.showAnimation ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+            ) : (
+              <Icon name={buttonState.icon} className={`h-4 w-4 ${buttonState.showSuccessEffect ? 'animate-pulse' : ''}`} />
+            )}
+            {buttonState.text}
+            {buttonState.showSuccessEffect && (
+              <div className="absolute inset-0 bg-gradient-to-r from-emerald-400/20 to-green-400/20 animate-pulse"></div>
+            )}
           </Button>
 
           <Button

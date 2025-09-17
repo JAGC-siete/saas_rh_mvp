@@ -233,6 +233,7 @@ export default function PayrollManagerNew() {
           canAuthorize={payroll.canAuthorize}
           canSend={payroll.canSend}
           runId={payroll.runId}
+          status={payroll.status}
           period={payroll.currentPeriod}
         />
       )}
