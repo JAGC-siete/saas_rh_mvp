@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../../lib/supabase/server'
 import { logger } from '../../../../lib/logger'
+import { sendOtp, verifyOtp } from '../../../../lib/employee-otp'
 
 interface LoginRequest {
   email: string
@@ -46,51 +47,119 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     
     // Step 1: Send OTP code to email (if no code provided)
     if (!code) {
-      // Delegate to send-otp endpoint
-      const otpResponse = await fetch(`${req.headers.host}/api/employees/auth/send-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      })
+      // Verify the email belongs to an active employee
+      const { data: employee, error: employeeError } = await supabase
+        .from('employees')
+        .select('id, name, email, company_id')
+        .eq('email', email)
+        .eq('company_id', '00000000-0000-0000-0000-000000000001') // Paragon
+        .eq('status', 'active')
+        .single()
 
-      const otpData = await otpResponse.json()
+      if (employeeError || !employee) {
+        logger.warn('Employee email not found', {
+          email,
+          error: employeeError?.message
+        })
+        
+        return res.status(401).json({
+          success: false,
+          error: 'Email no encontrado o empleado inactivo'
+        })
+      }
+
+      // Send OTP using direct function call
+      const otpResult = await sendOtp(email, employee.id, employee.name)
       
-      return res.status(otpResponse.status).json({
-        success: otpData.success,
+      return res.status(otpResult.success ? 200 : 500).json({
+        success: otpResult.success,
         step: 'send_code',
-        message: otpData.message,
-        error: otpData.error
+        message: otpResult.message,
+        error: otpResult.error
       })
     }
 
-    // Step 2: Verify OTP code using custom endpoint
-    const verifyResponse = await fetch(`${req.headers.host}/api/employees/auth/verify-otp`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, code })
-    })
-
-    const verifyData = await verifyResponse.json()
+    // Step 2: Verify OTP code
+    const otpVerification = verifyOtp(email, code)
     
-    if (!verifyResponse.ok || !verifyData.success) {
-      return res.status(verifyResponse.status).json({
+    if (!otpVerification.success) {
+      return res.status(401).json({
         success: false,
-        error: verifyData.error
+        error: otpVerification.error
       })
     }
 
-    // Copy session cookies from verify response
-    const cookies = verifyResponse.headers.get('set-cookie')
-    if (cookies) {
-      res.setHeader('Set-Cookie', cookies)
+    // Get employee data after successful OTP verification
+    const { data: employee, error: employeeError } = await supabase
+      .from('employees')
+      .select(`
+        id, 
+        name, 
+        dni, 
+        role,
+        company_id,
+        departments:department_id(name)
+      `)
+      .eq('email', email)
+      .eq('company_id', '00000000-0000-0000-0000-000000000001')
+      .eq('status', 'active')
+      .single()
+
+    if (employeeError || !employee) {
+      logger.error('Employee data fetch failed after OTP verification', {
+        email,
+        error: employeeError
+      })
+      
+      return res.status(404).json({
+        success: false,
+        error: 'Empleado no encontrado'
+      })
     }
+
+    // Create custom session
+    const sessionData = {
+      access_token: `emp_${employee.id}_${Date.now()}`,
+      refresh_token: `ref_${employee.id}_${Date.now()}`,
+      expires_in: 28800, // 8 hours
+      expires_at: Math.floor(Date.now() / 1000) + 28800,
+      user: {
+        id: employee.id,
+        email: email,
+        user_metadata: {
+          employee_id: employee.id,
+          company_id: employee.company_id,
+          full_name: employee.name,
+          role: employee.role,
+          is_employee_portal: true
+        }
+      }
+    }
+
+    // Set session cookies
+    res.setHeader('Set-Cookie', [
+      `sb-access-token=${sessionData.access_token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=28800`,
+      `sb-refresh-token=${sessionData.refresh_token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=28800`,
+    ])
+
+    logger.info('Employee login successful via OTP + Resend', {
+      employeeId: employee.id,
+      employeeName: employee.name,
+      email: email
+    })
 
     return res.status(200).json({
       success: true,
       step: 'verify_code',
-      user: verifyData.user,
-      session: verifyData.session,
-      employee: verifyData.employee
+      user: sessionData.user,
+      session: sessionData,
+      employee: {
+        id: employee.id,
+        name: employee.name,
+        dni_masked: employee.dni ? employee.dni.replace(/\d(?=\d{5})/g, '*') : 'N/A',
+        role: employee.role || 'Empleado',
+        department: (employee.departments as any)?.name
+      }
     })
 
   } catch (error) {
