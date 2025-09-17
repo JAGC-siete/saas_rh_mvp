@@ -45,15 +45,23 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       
       try {
         setLoadingPermissions(true)
+        console.log('🔍 Fetching permissions for user:', user.id, user.email)
+        
         const { data, error } = await supabase
           .from('user_profiles')
           .select('permissions')
           .eq('id', user.id)
           .single()
+        
+        console.log('📋 Permissions query result:', { data, error })
 
-        if (error) {
-          console.error('Error fetching user permissions:', error)
-          // Usar permisos por defecto si hay error
+        if (error || !data) {
+          if (error) {
+            console.error('Error fetching user permissions:', error)
+          } else {
+            console.warn('No user profile data found, using default permissions')
+          }
+          // Usar permisos por defecto si hay error o no hay data
           setUserPermissions({
             dashboard: true,
             employees: true,
@@ -66,7 +74,19 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             settings: false
           })
         } else {
-          setUserPermissions(data.permissions || {})
+          // Verificar que data.permissions existe antes de usarlo
+          const permissions = data.permissions || {
+            dashboard: true,
+            employees: true,
+            departments: true,
+            attendance: true,
+            leave: true,
+            payroll: true,
+            reports: true,
+            gamification: true,
+            settings: false
+          }
+          setUserPermissions(permissions)
         }
       } catch (error) {
         console.error('Error in fetchUserPermissions:', error)
