@@ -30,6 +30,7 @@ const PUBLIC_ROUTES = new Set([
   '/politicadeprivacidad', // Política de privacidad - PÚBLICO
   '/app/demo/pin',     // PIN de demo - PÚBLICO
   '/app/attendance/register', // Registro de asistencia - PÚBLICO
+  '/employees/portal',        // Employee portal - PÚBLICO
   '/registrodeasistencia',
   '/attendance/public',
   '/attendance/register', // Legacy route - mantenida por compatibilidad
@@ -43,7 +44,9 @@ const PUBLIC_ROUTES = new Set([
   '/api/trial/*',      // Sub-APIs del trial - PÚBLICO
   '/api/health',
   '/api/env',          // Environment variables endpoint - PÚBLICO
-  '/api/cron/*'        // Cron jobs para mantenimiento del sistema
+  '/api/cron/*',       // Cron jobs para mantenimiento del sistema
+  '/api/employees/auth/login',    // Employee portal login - PÚBLICO
+  '/api/employees/auth/logout'    // Employee portal logout - PÚBLICO
 ])
 
 // Static assets that should be publicly accessible
