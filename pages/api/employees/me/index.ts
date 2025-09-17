@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { requireEmployeeAuth } from '../../../../lib/auth/employee-auth'
+import { createClient } from '../../../../lib/supabase/server'
 import { logger } from '../../../../lib/logger'
 
 interface EmployeeProfileResponse {
@@ -44,8 +44,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Authenticate employee
-    const { supabase, employee } = await requireEmployeeAuth(req, res)
+    // Create Supabase client (handles auth automatically via cookies)
+    const supabase = createClient(req, res)
+    
+    // Get current user from Supabase Auth
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
+      return res.status(401).json({ error: 'No autorizado' })
+    }
+    
+    // Get employee ID from user metadata
+    const employeeId = user.user_metadata?.employee_id
+    if (!employeeId) {
+      return res.status(401).json({ error: 'Datos de empleado no encontrados' })
+    }
 
     // Get detailed employee information
     const { data: employeeDetails, error: detailsError } = await supabase
@@ -83,7 +96,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           sunday_end
         )
       `)
-      .eq('id', employee.id)
+      .eq('id', employeeId)
       .single()
 
     if (detailsError || !employeeDetails) {

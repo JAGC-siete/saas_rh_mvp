@@ -62,7 +62,7 @@ export default function EmployeeLogin({ onLoginSuccess }: EmployeeLoginProps) {
     setError('')
 
     try {
-      const response = await fetch('/api/employees/auth/login', {
+      const response = await fetch('/api/employees/auth/login-supabase', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

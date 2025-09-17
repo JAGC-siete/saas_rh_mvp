@@ -84,18 +84,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       }, 500)
     }
 
-    // HARDENED: Use SECURITY DEFINER function with app-provided peppers
-    const { data: authResult, error: authError } = await supabase
-      .rpc('authenticate_employee', {
-        p_company_id: '00000000-0000-0000-0000-000000000001', // Paragon company ID
-        p_last5: last5,
-        p_pin: pin,
-        p_pin_pepper: pinPepper,
-        p_last5_pepper: last5Pepper,
-        p_ip_address: clientIP, // Ya parseado en línea 50-52
-        p_user_agent: userAgent
-      })
-      .single()
+    // MIGRATED: Use Supabase Auth with synthetic email
+    const syntheticEmail = `${last5}@paragon.employee.local`
+    
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email: syntheticEmail,
+      password: pin
+    })
 
     if (authError) {
       logger.error('Employee auth function error', authError)
