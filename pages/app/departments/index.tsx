@@ -4,6 +4,8 @@ import ProtectedRoute from '../../../components/ProtectedRoute'
 import DashboardLayout from '../../../components/DashboardLayout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card'
 import { Button } from '../../../components/ui/button'
+import CreateDepartmentModal from '../../../components/CreateDepartmentModal'
+import DepartmentActionsMenu from '../../../components/DepartmentActionsMenu'
 
 interface Department {
   id: string
@@ -53,6 +55,7 @@ export default function DepartmentsPage() {
   })
   const [loading, setLoading] = useState(true)
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null)
+  const [showCreateModal, setShowCreateModal] = useState(false)
   const router = useRouter()
 
   // Memo del formateador para evitar recrearlo por render
@@ -122,6 +125,12 @@ export default function DepartmentsPage() {
               <p className="text-gray-300">Administración y análisis de departamentos</p>
             </div>
             <div className="flex gap-2">
+              <Button 
+                onClick={() => setShowCreateModal(true)}
+                className="bg-brand-600 hover:bg-brand-700 text-white"
+              >
+                ➕ Nuevo Departamento
+              </Button>
               <Button onClick={() => router.push('/dashboard')}>
                 📊 Dashboard
               </Button>
@@ -198,33 +207,58 @@ export default function DepartmentsPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {Object.entries(data.departmentStats).map(([deptName, stats]) => (
+                  {Object.keys(data.departmentStats).length === 0 ? (
+                    <div className="text-center py-8">
+                      <div className="text-4xl mb-4">🏢</div>
+                      <div className="text-gray-300 mb-4">No hay departamentos registrados</div>
+                      <Button 
+                        onClick={() => setShowCreateModal(true)}
+                        className="bg-brand-600 hover:bg-brand-700 text-white"
+                      >
+                        ➕ Crear Primer Departamento
+                      </Button>
+                    </div>
+                  ) : (
+                    Object.entries(data.departmentStats).map(([deptName, stats]) => (
                     <div 
                       key={stats.id}
-                      className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                      className={`p-4 border rounded-lg transition-colors ${
                         selectedDepartment === deptName 
                           ? 'border-brand-500 bg-brand-900/20' 
                           : 'border-white/20 hover:border-white/30 hover:bg-white/5'
                       }`}
-                      onClick={() => setSelectedDepartment(deptName)}
                     >
                       <div className="flex items-center justify-between">
-                        <div>
+                        <div 
+                          className="flex-1 cursor-pointer"
+                          onClick={() => setSelectedDepartment(deptName)}
+                        >
                           <h3 className="font-semibold text-lg text-white">{deptName}</h3>
                           <p className="text-sm text-gray-300">{stats.description}</p>
                         </div>
-                        <div className="text-right">
-                          <div className="font-medium text-white">{stats.employeeCount} empleados</div>
-                          <div className="text-sm text-gray-300">
-                            {formatCurrency(stats.totalSalary)}
+                        <div className="flex items-center space-x-3">
+                          <div className="text-right">
+                            <div className="font-medium text-white">{stats.employeeCount} empleados</div>
+                            <div className="text-sm text-gray-300">
+                              {formatCurrency(stats.totalSalary)}
+                            </div>
                           </div>
+                          <DepartmentActionsMenu
+                            departmentId={stats.id}
+                            departmentName={deptName}
+                            onUpdate={fetchDepartmentsData}
+                          />
                         </div>
                       </div>
-                      <div className="mt-2 text-xs text-gray-300">
+                      <div 
+                        className="mt-2 text-xs text-gray-300 cursor-pointer"
+                        onClick={() => setSelectedDepartment(deptName)}
+                      >
                         Salario promedio: {formatCurrency(stats.averageSalary)}
                       </div>
                     </div>
-                  ))}
+                  ))
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -352,6 +386,13 @@ export default function DepartmentsPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Create Department Modal */}
+          <CreateDepartmentModal
+            isOpen={showCreateModal}
+            onClose={() => setShowCreateModal(false)}
+            onSuccess={fetchDepartmentsData}
+          />
         </div>
       </DashboardLayout>
     </ProtectedRoute>
