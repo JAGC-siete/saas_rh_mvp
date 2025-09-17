@@ -111,8 +111,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Log access for audit
     logger.info('Employee accessed own profile', {
-      employeeId: employee.id,
-      employeeName: employee.name,
+      employeeId: employeeId,
+      employeeName: employeeDetails.name,
       action: 'view_profile'
     })
 
@@ -125,27 +125,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         email: employeeDetails.email || undefined,
         phone: employeeDetails.phone || undefined,
         hire_date: employeeDetails.hire_date || undefined,
-        department: employeeDetails.departments ? {
-          id: employeeDetails.departments.id,
-          name: employeeDetails.departments.name
+        department: (employeeDetails.departments as any) ? {
+          id: (employeeDetails.departments as any).id,
+          name: (employeeDetails.departments as any).name
         } : undefined,
-        work_schedule: employeeDetails.work_schedules ? {
-          id: employeeDetails.work_schedules.id,
-          name: employeeDetails.work_schedules.name,
-          monday_start: employeeDetails.work_schedules.monday_start,
-          monday_end: employeeDetails.work_schedules.monday_end,
-          tuesday_start: employeeDetails.work_schedules.tuesday_start,
-          tuesday_end: employeeDetails.work_schedules.tuesday_end,
-          wednesday_start: employeeDetails.work_schedules.wednesday_start,
-          wednesday_end: employeeDetails.work_schedules.wednesday_end,
-          thursday_start: employeeDetails.work_schedules.thursday_start,
-          thursday_end: employeeDetails.work_schedules.thursday_end,
-          friday_start: employeeDetails.work_schedules.friday_start,
-          friday_end: employeeDetails.work_schedules.friday_end,
-          saturday_start: employeeDetails.work_schedules.saturday_start,
-          saturday_end: employeeDetails.work_schedules.saturday_end,
-          sunday_start: employeeDetails.work_schedules.sunday_start,
-          sunday_end: employeeDetails.work_schedules.sunday_end
+        work_schedule: (employeeDetails.work_schedules as any) ? {
+          id: (employeeDetails.work_schedules as any).id,
+          name: (employeeDetails.work_schedules as any).name,
+          monday_start: (employeeDetails.work_schedules as any).monday_start,
+          monday_end: (employeeDetails.work_schedules as any).monday_end,
+          tuesday_start: (employeeDetails.work_schedules as any).tuesday_start,
+          tuesday_end: (employeeDetails.work_schedules as any).tuesday_end,
+          wednesday_start: (employeeDetails.work_schedules as any).wednesday_start,
+          wednesday_end: (employeeDetails.work_schedules as any).wednesday_end,
+          thursday_start: (employeeDetails.work_schedules as any).thursday_start,
+          thursday_end: (employeeDetails.work_schedules as any).thursday_end,
+          friday_start: (employeeDetails.work_schedules as any).friday_start,
+          friday_end: (employeeDetails.work_schedules as any).friday_end,
+          saturday_start: (employeeDetails.work_schedules as any).saturday_start,
+          saturday_end: (employeeDetails.work_schedules as any).saturday_end,
+          sunday_start: (employeeDetails.work_schedules as any).sunday_start,
+          sunday_end: (employeeDetails.work_schedules as any).sunday_end
         } : undefined,
         base_salary_masked: true, // Indicate salary is not exposed
         status: employeeDetails.status

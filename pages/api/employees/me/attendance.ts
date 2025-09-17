@@ -105,7 +105,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         status,
         justification
       `)
-      .eq('employee_id', employee.id)
+      .eq('employee_id', employeeId)
       .gte('date', finalStartDate)
       .lte('date', finalEndDate)
       .order('date', { ascending: false })
@@ -119,7 +119,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { count: totalCount, error: countError } = await supabase
       .from('attendance_records')
       .select('*', { count: 'exact', head: true })
-      .eq('employee_id', employee.id)
+      .eq('employee_id', employeeId)
       .gte('date', finalStartDate)
       .lte('date', finalEndDate)
 
@@ -145,7 +145,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         total_hours,
         late_minutes
       `)
-      .eq('employee_id', employee.id)
+      .eq('employee_id', employeeId)
       .gte('date', finalStartDate)
       .lte('date', finalEndDate)
 
@@ -179,8 +179,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Log access for audit
     logger.info('Employee accessed own attendance', {
-      employeeId: employee.id,
-      employeeName: employee.name,
+      employeeId: employeeId,
       action: 'view_attendance',
       dateRange: `${finalStartDate} to ${finalEndDate}`,
       recordCount: formattedRecords.length
