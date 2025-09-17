@@ -92,7 +92,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         p_pin: pin,
         p_pin_pepper: pinPepper,
         p_last5_pepper: last5Pepper,
-        p_ip_address: clientIP,
+        p_ip_address: clientIP.split(',')[0].trim(), // FIXED: Solo primera IP para INET
         p_user_agent: userAgent
       })
       .single()
