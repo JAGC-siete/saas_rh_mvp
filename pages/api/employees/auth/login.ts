@@ -44,7 +44,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
   }
 
   const { last5, pin }: LoginRequest = req.body
-  const clientIP = req.headers['x-forwarded-for'] as string || req.connection.remoteAddress || 'unknown'
+  
+  // FIXED: Handle multiple IPs in x-forwarded-for (proxy chain)
+  const forwardedFor = req.headers['x-forwarded-for'] as string
+  const clientIP = forwardedFor 
+    ? forwardedFor.split(',')[0].trim() // Take first IP only
+    : req.connection.remoteAddress || '127.0.0.1'
+    
   const userAgent = req.headers['user-agent'] || 'unknown'
 
   // Input validation - SAME error message for all cases
