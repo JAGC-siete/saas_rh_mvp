@@ -128,12 +128,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           manager_id: manager_id || null
         }, companyId)
 
-
         const { data: newDept, error: createError } = await supabase
           .from('departments')
           .insert(insertData)
           .select()
           .single()
+
         if (createError) {
           console.error('Department creation error:', createError)
           
