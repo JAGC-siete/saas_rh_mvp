@@ -46,152 +46,51 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     
     // Step 1: Send OTP code to email (if no code provided)
     if (!code) {
-      // First verify the email belongs to an active employee
-      const { data: employee, error: employeeError } = await supabase
-        .from('employees')
-        .select('id, name, email, company_id')
-        .eq('email', email)
-        .eq('company_id', '00000000-0000-0000-0000-000000000001') // Paragon
-        .eq('status', 'active')
-        .single()
-
-      if (employeeError || !employee) {
-        logger.warn('Employee email not found', {
-          email,
-          error: employeeError?.message
-        })
-        
-        return res.status(401).json({
-          success: false,
-          error: 'Email no encontrado o empleado inactivo'
-        })
-      }
-
-      // Send OTP using Supabase Auth
-      const { error: otpError } = await supabase.auth.signInWithOtp({
-        email: email,
-        options: {
-          shouldCreateUser: false, // Don't create user if doesn't exist
-          data: {
-            employee_id: employee.id,
-            company_id: employee.company_id,
-            full_name: employee.name,
-            is_employee_portal: true
-          }
-        }
+      // Delegate to send-otp endpoint
+      const otpResponse = await fetch(`${req.headers.host}/api/employees/auth/send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
       })
 
-      if (otpError) {
-        logger.error('OTP send failed', {
-          email,
-          error: otpError.message
-        })
-        
-        return res.status(500).json({
-          success: false,
-          error: 'Error enviando código. Intente nuevamente.'
-        })
-      }
-
-      logger.info('OTP code sent to employee', {
-        employeeId: employee.id,
-        email: email
-      })
-
-      return res.status(200).json({
-        success: true,
+      const otpData = await otpResponse.json()
+      
+      return res.status(otpResponse.status).json({
+        success: otpData.success,
         step: 'send_code',
-        message: 'Código enviado a su email. Revise su bandeja de entrada.'
+        message: otpData.message,
+        error: otpData.error
       })
     }
 
-    // Step 2: Verify OTP code
-    const { data, error } = await supabase.auth.verifyOtp({
-      email: email,
-      token: code,
-      type: 'email'
+    // Step 2: Verify OTP code using custom endpoint
+    const verifyResponse = await fetch(`${req.headers.host}/api/employees/auth/verify-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, code })
     })
 
-    if (error || !data.user) {
-      logger.warn('OTP verification failed', {
-        email,
-        error: error?.message,
-        ip: req.headers['x-forwarded-for'] || req.connection.remoteAddress
-      })
-      
-      return res.status(401).json({
-        success: false,
-        error: 'Código inválido o expirado'
-      })
-    }
-
-    // Get employee data from user metadata or database
-    let employeeId = data.user.user_metadata?.employee_id
+    const verifyData = await verifyResponse.json()
     
-    // If not in metadata, fetch from database by email
-    if (!employeeId) {
-      const { data: employee } = await supabase
-        .from('employees')
-        .select('id')
-        .eq('email', email)
-        .eq('company_id', '00000000-0000-0000-0000-000000000001')
-        .eq('status', 'active')
-        .single()
-      
-      employeeId = employee?.id
-    }
-
-    if (!employeeId) {
-      return res.status(401).json({
+    if (!verifyResponse.ok || !verifyData.success) {
+      return res.status(verifyResponse.status).json({
         success: false,
-        error: 'Datos de empleado no encontrados'
+        error: verifyData.error
       })
     }
 
-    // Fetch employee details
-    const { data: employee, error: employeeError } = await supabase
-      .from('employees')
-      .select(`
-        id, 
-        name, 
-        dni, 
-        role,
-        departments:department_id(name)
-      `)
-      .eq('id', employeeId)
-      .single()
-
-    if (employeeError || !employee) {
-      logger.error('Employee data fetch failed', {
-        employeeId,
-        error: employeeError
-      })
-      
-      return res.status(404).json({
-        success: false,
-        error: 'Empleado no encontrado'
-      })
+    // Copy session cookies from verify response
+    const cookies = verifyResponse.headers.get('set-cookie')
+    if (cookies) {
+      res.setHeader('Set-Cookie', cookies)
     }
-
-    logger.info('Employee login successful via OTP', {
-      employeeId: employee.id,
-      employeeName: employee.name,
-      email: email,
-      method: 'supabase_otp'
-    })
 
     return res.status(200).json({
       success: true,
       step: 'verify_code',
-      user: data.user,
-      session: data.session,
-      employee: {
-        id: employee.id,
-        name: employee.name,
-        dni_masked: employee.dni ? employee.dni.replace(/\d(?=\d{5})/g, '*') : 'N/A',
-        role: employee.role || 'Empleado',
-        department: (employee.departments as any)?.name
-      }
+      user: verifyData.user,
+      session: verifyData.session,
+      employee: verifyData.employee
     })
 
   } catch (error) {
