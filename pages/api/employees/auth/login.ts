@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../../lib/supabase/server'
+import { createClient, createAdminClient } from '../../../../lib/supabase/server'
 import { logger } from '../../../../lib/logger'
 
 interface LoginRequest {
@@ -46,11 +46,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     
     // Step 1: Send OTP (if no code provided) - USAR CUSTOM OTP PARA NO JODER MAGIC LINKS
     if (!code) {
-      // Verificar que el usuario existe en auth.users
-      const { data: existingUser, error: userError } = await supabase.auth.admin.getUserByEmail(email)
-      
-      if (userError || !existingUser) {
-        logger.warn('Employee user not found', { email, error: userError?.message })
+      // Verificar que el empleado existe y obtener sus datos
+      const adminSupabase = createAdminClient()
+      const { data: employee, error: employeeError } = await adminSupabase
+        .from('employees')
+        .select('id, name, email, company_id')
+        .eq('email', email)
+        .eq('company_id', '00000000-0000-0000-0000-000000000001')
+        .eq('status', 'active')
+        .single()
+
+      if (employeeError || !employee) {
+        logger.warn('Employee not found', { email, error: employeeError?.message })
         return res.status(400).json({
           success: false,
           error: 'Email no encontrado o empleado inactivo'
@@ -59,17 +66,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
       // Usar el sistema OTP anterior que YA FUNCIONABA
       const { sendOtp } = await import('../../../../lib/employee-otp')
-      const employeeId = existingUser.user.user_metadata?.employee_id
-      const employeeName = existingUser.user.user_metadata?.full_name
-      
-      if (!employeeId) {
-        return res.status(400).json({
-          success: false,
-          error: 'Datos de empleado no encontrados'
-        })
-      }
-
-      const otpResult = await sendOtp(email, employeeId, employeeName)
+      const otpResult = await sendOtp(email, employee.id, employee.name)
       
       return res.status(otpResult.success ? 200 : 500).json({
         success: otpResult.success,
@@ -90,58 +87,83 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       })
     }
 
-    // OTP válido, ahora crear sesión Supabase manualmente
-    const { data: existingUser, error: userError } = await supabase.auth.admin.getUserByEmail(email)
+    // OTP válido, buscar usuario en auth.users por email
+    const adminSupabase = createAdminClient()
+    const { data: authUsers, error: listError } = await adminSupabase.auth.admin.listUsers()
     
-    if (userError || !existingUser) {
-      return res.status(400).json({
+    if (listError) {
+      logger.error('Failed to list users', listError)
+      return res.status(500).json({
         success: false,
-        error: 'Usuario no encontrado'
+        error: 'Error interno del servidor'
       })
     }
 
-    // Crear sesión usando admin API
-    const { data: sessionData, error: sessionError } = await supabase.auth.admin.generateLink({
-      type: 'magiclink',
-      email: email,
-      options: {
-        redirectTo: 'https://humanosisu.net/employees/portal'
-      }
-    })
+    const existingUser = authUsers.users.find(user => user.email === email)
+    
+    if (!existingUser) {
+      return res.status(400).json({
+        success: false,
+        error: 'Usuario no encontrado en auth'
+      })
+    }
 
-    if (sessionError) {
-      logger.error('Failed to create session', sessionError)
+    // Crear sesión manual usando signInWithPassword con password temporal
+    const tempPassword = `temp_${existingUser.user_metadata?.employee_id}_login`
+    
+    try {
+      // Primero actualizar password temporalmente
+      await adminSupabase.auth.admin.updateUserById(existingUser.id, {
+        password: tempPassword
+      })
+
+      // Luego hacer sign in para crear sesión
+      const { data: sessionData, error: sessionError } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: tempPassword
+      })
+
+      if (sessionError || !sessionData.session) {
+        logger.error('Failed to create session', sessionError)
+        return res.status(500).json({
+          success: false,
+          error: 'Error creando sesión'
+        })
+      }
+
+      // Get employee data from user metadata
+      const employeeId = existingUser.user_metadata?.employee_id
+      const employeeName = existingUser.user_metadata?.full_name
+      const companyId = existingUser.user_metadata?.company_id
+
+      logger.info('Employee login successful via Custom OTP + Supabase Session', {
+        employeeId,
+        employeeName,
+        email,
+        userId: existingUser.id
+      })
+
+      return res.status(200).json({
+        success: true,
+        step: 'verify_code',
+        user: sessionData.user,
+        session: sessionData.session,
+        employee: {
+          id: employeeId,
+          name: employeeName,
+          dni_masked: 'Protected',
+          role: 'Empleado',
+          department: 'N/A'
+        }
+      })
+
+    } catch (sessionError) {
+      logger.error('Session creation error', sessionError)
       return res.status(500).json({
         success: false,
         error: 'Error creando sesión'
       })
     }
-
-    // Get employee data from user metadata
-    const employeeId = existingUser.user.user_metadata?.employee_id
-    const employeeName = existingUser.user.user_metadata?.full_name
-    const companyId = existingUser.user.user_metadata?.company_id
-
-    logger.info('Employee login successful via Custom OTP + Supabase Session', {
-      employeeId,
-      employeeName,
-      email,
-      userId: existingUser.user.id
-    })
-
-    return res.status(200).json({
-      success: true,
-      step: 'verify_code',
-      user: existingUser.user,
-      session: sessionData,
-      employee: {
-        id: employeeId,
-        name: employeeName,
-        dni_masked: 'Protected',
-        role: 'Empleado',
-        department: 'N/A'
-      }
-    })
 
   } catch (error) {
     logger.error('Employee login error', error)
