@@ -249,19 +249,11 @@ function PayrollSection({ employeeId }: { employeeId?: string }) {
       } else {
         const errorData = await response.json()
         console.error('Error generando PDF:', errorData)
-        addNotification({
-          type: 'error',
-          title: 'Error al generar PDF',
-          message: errorData.message || 'Error desconocido'
-        })
+        alert('Error al generar el PDF: ' + (errorData.message || 'Error desconocido'))
       }
     } catch (error) {
       console.error('Error generando PDF:', error)
-      addNotification({
-        type: 'error',
-        title: 'Error al generar PDF',
-        message: 'Ocurrió un error inesperado'
-      })
+      alert('Error al generar el PDF')
     } finally {
       setGeneratingPDF(false)
     }
@@ -527,7 +519,6 @@ interface AttendanceSummary {
 export default function EmployeePortal() {
   // Use same auth system as admin portal
   const { user, session, logout } = useAuth()
-  const { addNotification } = useNotificationContext()
   const [profile, setProfile] = useState<EmployeeProfile | null>(null)
   const [attendanceSummary, setAttendanceSummary] = useState<AttendanceSummary | null>(null)
   const [loading, setLoading] = useState(true)
