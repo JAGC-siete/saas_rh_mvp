@@ -222,41 +222,9 @@ function PayrollSection({ employeeId }: { employeeId?: string }) {
   }, [employeeId])
 
   const generatePDF = async (periodo: string, quincena: number) => {
-    setGeneratingPDF(true)
-    try {
-      const response = await fetch('/api/employees/me/payroll-pdf', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          periodo,
-          quincena
-        })
-      })
-
-      if (response.ok) {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `recibo_nomina_${periodo}_q${quincena}.pdf`
-        document.body.appendChild(a)
-        a.click()
-        window.URL.revokeObjectURL(url)
-        document.body.removeChild(a)
-      } else {
-        const errorData = await response.json()
-        console.error('Error generando PDF:', errorData)
-        alert('Error al generar el PDF: ' + (errorData.message || 'Error desconocido'))
-      }
-    } catch (error) {
-      console.error('Error generando PDF:', error)
-      alert('Error al generar el PDF')
-    } finally {
-      setGeneratingPDF(false)
-    }
+    // Mostrar mensaje de funcionalidad en desarrollo
+    alert('🚧 Funcionalidad en desarrollo\n\nLa generación de recibos de nómina en PDF estará disponible próximamente.')
+    return
   }
 
   if (loading) {
