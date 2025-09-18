@@ -1,4 +1,4 @@
 {
-  "*.{ts,tsx,js,jsx,md,html}": "node scripts/no-emoji.js"
+  "*.{ts,tsx,js,jsx}": "eslint --fix"
 }
 
