@@ -104,7 +104,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       const resend = new Resend(resendApiKey)
       
       const { data, error: resendError } = await resend.emails.send({
-        from: 'Portal de Empleados <noreply@paragon.hn>',
+        from: 'Portal de Empleados <noreply@humanosisu.net>',
         to: [email],
         subject: 'Código de Acceso - Portal de Empleados',
         html: `

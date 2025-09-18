@@ -181,7 +181,7 @@ export default function EmployeeLogin({ onLoginSuccess }: EmployeeLoginProps) {
                     type="email"
                     value={formData.email}
                     onChange={(e) => handleInputChange('email', e.target.value)}
-                    placeholder="nombre@paragon.hn"
+                    placeholder="nombre@humanosisu.net"
                     className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white text-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent"
                     autoComplete="email"
                   />
@@ -262,7 +262,7 @@ export default function EmployeeLogin({ onLoginSuccess }: EmployeeLoginProps) {
               </p>
               <p className="text-xs text-gray-400">
                 Contacte a Recursos Humanos: <br />
-                <span className="text-brand-400 font-medium">rrhh@paragon.hn</span>
+                <span className="text-brand-400 font-medium">rrhh@humanosisu.net</span>
               </p>
             </div>
           </div>
