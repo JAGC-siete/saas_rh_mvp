@@ -124,10 +124,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       }
     }
 
-    // Set session cookies
+    // Set session cookies with proper security flags
+    const isProduction = process.env.NODE_ENV === 'production'
     res.setHeader('Set-Cookie', [
-      `sb-access-token=${sessionData.access_token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=28800`,
-      `sb-refresh-token=${sessionData.refresh_token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=28800`,
+      `sb-access-token=${sessionData.access_token}; Path=/; HttpOnly; ${isProduction ? 'Secure;' : ''} SameSite=Lax; Max-Age=28800`,
+      `sb-refresh-token=${sessionData.refresh_token}; Path=/; HttpOnly; ${isProduction ? 'Secure;' : ''} SameSite=Lax; Max-Age=28800`,
     ])
 
     logger.info('Employee login successful via OTP + Resend', {

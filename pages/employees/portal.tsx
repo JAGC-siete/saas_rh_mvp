@@ -234,9 +234,25 @@ export default function EmployeePortal() {
 
   const checkExistingSession = async () => {
     try {
+      // First debug the session
+      const debugResponse = await fetch('/api/employees/debug-session', {
+        credentials: 'include'
+      })
+      
+      if (debugResponse.ok) {
+        const debugData = await debugResponse.json()
+        console.log('🔍 Session Debug:', debugData.debug)
+      }
+
       // Check if we have an employee session using the dashboard endpoint
       const response = await fetch('/api/employees/dashboard', {
         credentials: 'include'
+      })
+
+      console.log('🔍 Dashboard Response:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok
       })
 
       if (response.ok) {
