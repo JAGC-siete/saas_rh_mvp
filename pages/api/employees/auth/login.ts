@@ -98,6 +98,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       .select(`
         id, 
         name, 
+        email,
         dni, 
         role,
         company_id,
@@ -120,50 +121,94 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       })
     }
 
-    // Create custom session
-    const sessionData = {
-      access_token: `emp_${employee.id}_${Date.now()}`,
-      refresh_token: `ref_${employee.id}_${Date.now()}`,
-      expires_in: 28800, // 8 hours
-      expires_at: Math.floor(Date.now() / 1000) + 28800,
-      user: {
-        id: employee.id,
-        email: email,
-        user_metadata: {
-          employee_id: employee.id,
-          company_id: employee.company_id,
-          full_name: employee.name,
-          role: employee.role,
-          is_employee_portal: true
+    // Create a temporary password for this employee (deterministic but secure)
+    const tempPassword = `emp_${employee.id}_${employee.company_id}`.slice(0, 32)
+    
+    try {
+      // Try to sign in first (user might already exist)
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: employee.email || email,
+        password: tempPassword
+      })
+      
+      let sessionUser = signInData?.user
+      
+      // If sign in failed, try to create the user
+      if (signInError || !sessionUser) {
+        const { data: signUpData, error: signUpError } = await adminSupabase.auth.admin.createUser({
+          email: employee.email || email,
+          password: tempPassword,
+          user_metadata: {
+            employee_id: employee.id,
+            company_id: employee.company_id,
+            full_name: employee.name,
+            role: 'employee'
+          },
+          email_confirm: true // Auto-confirm email
+        })
+        
+        if (signUpError) {
+          logger.error('Failed to create employee user', signUpError)
+          return res.status(500).json({
+            success: false,
+            error: 'Error creando usuario'
+          })
         }
+        
+        sessionUser = signUpData.user
       }
+      
+      // Create/update user profile
+      await adminSupabase
+        .from('user_profiles')
+        .upsert({
+          id: sessionUser!.id,
+          role: 'employee',
+          employee_id: employee.id,
+          company_id: employee.company_id
+        })
+      
+      // Now sign in with the regular client to set cookies
+      const { data: sessionData, error: sessionError } = await supabase.auth.signInWithPassword({
+        email: employee.email || email,
+        password: tempPassword
+      })
+      
+      if (sessionError || !sessionData.session) {
+        logger.error('Failed to create session', sessionError)
+        return res.status(500).json({
+          success: false,
+          error: 'Error creando sesión'
+        })
+      }
+
+      logger.info('Employee login successful', {
+        employeeId: employee.id,
+        employeeName: employee.name,
+        email: email
+      })
+
+      return res.status(200).json({
+        success: true,
+        step: 'verify_code',
+        user: sessionData.user,
+        session: sessionData.session,
+        employee: {
+          id: employee.id,
+          name: employee.name,
+          dni_masked: employee.dni ? employee.dni.replace(/\d(?=\d{5})/g, '*') : 'N/A',
+          role: employee.role || 'Empleado',
+          department: (employee.departments as any)?.name
+        }
+      })
+      
+    } catch (authError) {
+      logger.error('Employee authentication error', authError)
+      return res.status(500).json({
+        success: false,
+        error: 'Error de autenticación'
+      })
     }
-
-    // Set session cookies
-    res.setHeader('Set-Cookie', [
-      `sb-access-token=${sessionData.access_token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=28800`,
-      `sb-refresh-token=${sessionData.refresh_token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=28800`,
-    ])
-
-    logger.info('Employee login successful via OTP + Resend', {
-      employeeId: employee.id,
-      employeeName: employee.name,
-      email: email
-    })
-
-    return res.status(200).json({
-      success: true,
-      step: 'verify_code',
-      user: sessionData.user,
-      session: sessionData,
-      employee: {
-        id: employee.id,
-        name: employee.name,
-        dni_masked: employee.dni ? employee.dni.replace(/\d(?=\d{5})/g, '*') : 'N/A',
-        role: employee.role || 'Empleado',
-        department: (employee.departments as any)?.name
-      }
-    })
 
   } catch (error) {
     logger.error('Employee login error', error)

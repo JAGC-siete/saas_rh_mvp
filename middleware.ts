@@ -86,6 +86,7 @@ const PROTECTED_APP_ROUTES = new Set([
   '/app/notifications',   // Notificaciones
   // Legacy attendance dashboard outside /app
   '/attendance/dashboard',
+  '/employees/portal',
 ])
 
 // API routes that require authentication and specific permissions
@@ -438,6 +439,33 @@ export async function middleware(request: NextRequest) {
           path: pathname, 
           userId: user?.id,
           userRole: profile.role 
+        })
+      }
+
+      // Check employee role for /employees/portal
+      if (pathname === '/employees/portal') {
+        logger.debug('Employee portal accessed, checking role', {
+          path: pathname,
+          userId: user?.id
+        })
+        const { data: profile, error: profileError } = await supabase
+          .from('user_profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single()
+
+        if (profileError || !profile || profile.role !== 'employee') {
+          logger.warn('Unauthorized employee portal access', {
+            path: pathname,
+            userId: user?.id,
+            userRole: profile?.role
+          })
+          return NextResponse.redirect(new URL('/unauthorized', request.url));
+        }
+        logger.debug('Employee portal access granted', {
+          path: pathname,
+          userId: user?.id,
+          userRole: profile.role
         })
       }
       
