@@ -19,11 +19,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    console.log('Usuario autenticado para autorización de nómina:', { 
-      userId: user.id, 
-      role: role,
-      companyId: companyId 
-    })
+    // User authenticated for payroll authorization
 
     const { run_id } = req.body || {}
     
