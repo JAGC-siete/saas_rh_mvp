@@ -59,10 +59,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'No autorizado' })
     }
     
-    // Extract employee ID from token
-    const employeeId = accessToken.split('_')[1]
-    if (!employeeId) {
-      return res.status(401).json({ error: 'Token inválido' })
+    // Extract employee ID from token (format: emp_${employeeId}_${timestamp})
+    const tokenParts = accessToken.split('_')
+    const employeeId = tokenParts[1] // Should be the UUID
+    
+    // Debug token parsing
+    logger.info('Token parsing debug', {
+      accessToken: accessToken.substring(0, 20) + '...',
+      tokenParts: tokenParts.length,
+      employeeId: employeeId,
+      isValidUUID: employeeId && employeeId.length === 36
+    })
+    
+    if (!employeeId || employeeId.length !== 36) {
+      return res.status(401).json({ 
+        error: 'Token inválido',
+        debug: {
+          tokenFormat: accessToken.substring(0, 20) + '...',
+          extractedId: employeeId,
+          expectedFormat: 'emp_uuid_timestamp'
+        }
+      })
     }
 
     // Get employee profile
@@ -104,8 +121,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .single()
 
     if (profileError || !employeeDetails) {
-      logger.error('Failed to get employee details', profileError)
-      return res.status(404).json({ error: 'Empleado no encontrado' })
+      logger.error('Failed to get employee details', {
+        employeeId,
+        error: profileError,
+        query: 'employees table lookup'
+      })
+      return res.status(404).json({ 
+        error: 'Empleado no encontrado',
+        debug: {
+          employeeId: employeeId,
+          queryError: profileError?.message,
+          hint: 'Verificar que el empleado existe en la tabla employees'
+        }
+      })
     }
 
     // Get attendance data for current month

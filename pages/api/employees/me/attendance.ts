@@ -51,10 +51,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'No autorizado' })
     }
     
-    // Get employee ID from user metadata
-    const employeeId = user.user_metadata?.employee_id
-    if (!employeeId) {
-      return res.status(401).json({ error: 'Datos de empleado no encontrados' })
+    // Extract employee ID from token (format: emp_${employeeId}_${timestamp})
+    const authHeader = req.headers.authorization || req.headers.Authorization as string
+    const accessToken = req.cookies['sb-access-token'] || authHeader?.replace('Bearer ', '')
+    
+    if (!accessToken || !accessToken.startsWith('emp_')) {
+      return res.status(401).json({ error: 'No autorizado' })
+    }
+    
+    const tokenParts = accessToken.split('_')
+    const employeeId = tokenParts[1] // Should be the UUID
+    
+    if (!employeeId || employeeId.length !== 36) {
+      return res.status(401).json({ 
+        error: 'Token inválido',
+        debug: {
+          tokenFormat: accessToken.substring(0, 20) + '...',
+          extractedId: employeeId
+        }
+      })
     }
 
     // Get query parameters
