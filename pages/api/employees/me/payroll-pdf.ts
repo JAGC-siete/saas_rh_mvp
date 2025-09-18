@@ -1,0 +1,110 @@
+import type { NextApiRequest, NextApiResponse } from 'next'
+import { requireUser } from '../../../../lib/auth/requireUser'
+import { generateEmployeeReceiptPDF } from '../../../../lib/payroll/receipt'
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
+
+  try {
+    // AUTENTICACIÓN - Solo empleados pueden acceder
+    const { supabase, userProfile } = await requireUser(req, res)
+    
+    if (!userProfile?.employee_id) {
+      return res.status(403).json({ 
+        error: 'Acceso denegado',
+        message: 'Solo los empleados pueden acceder a esta funcionalidad'
+      })
+    }
+
+    const { periodo, quincena } = req.body
+
+    if (!periodo || !/^[0-9]{4}-[0-9]{2}$/.test(periodo)) {
+      return res.status(400).json({ error: 'Periodo inválido (YYYY-MM)' })
+    }
+    if (![1, 2].includes(Number(quincena))) {
+      return res.status(400).json({ error: 'Quincena inválida (1 o 2)' })
+    }
+
+    const employeeId = userProfile.employee_id
+    const [year, month] = periodo.split('-').map(Number)
+    const ultimoDia = new Date(year, month, 0).getDate()
+    const fechaInicio = Number(quincena) === 1 ? `${periodo}-01` : `${periodo}-16`
+    const fechaFin = Number(quincena) === 1 ? `${periodo}-15` : `${periodo}-${ultimoDia}`
+
+    // Buscar el registro de nómina del empleado
+    const { data: record, error } = await supabase
+      .from('payroll_records')
+      .select(`
+        *,
+        employees:employee_id (
+          name,
+          employee_code,
+          department,
+          position,
+          bank_name,
+          bank_account,
+          company_id
+        )
+      `)
+      .eq('employee_id', employeeId)
+      .eq('period_start', fechaInicio)
+      .eq('period_end', fechaFin)
+      .single()
+
+    if (error || !record) {
+      return res.status(404).json({ 
+        error: 'Registro no encontrado',
+        message: 'No se encontró información de nómina para el período especificado'
+      })
+    }
+
+    // Verificar que el empleado solo pueda ver su propia información
+    if (record.employee_id !== employeeId) {
+      return res.status(403).json({ 
+        error: 'Acceso denegado',
+        message: 'No tiene permisos para acceder a esta información'
+      })
+    }
+
+    // Generar PDF del recibo individual
+    const pdf = await generateEmployeeReceiptPDF({
+      employee_code: record.employees?.employee_code,
+      employee_name: record.employees?.name,
+      department: record.employees?.department,
+      position: record.employees?.position,
+      period_start: record.period_start,
+      period_end: record.period_end,
+      days_worked: Number(record.days_worked) || 0,
+      base_salary: Number(record.base_salary) / 2 || 0, // Dividir por 2 para quincenal
+      income_tax: Number(record.income_tax) || 0,
+      professional_tax: Number(record.professional_tax) || 0,
+      social_security: Number(record.social_security) || 0,
+      total_deductions: Number(record.total_deductions) || 0,
+      net_salary: Number(record.net_salary) || 0,
+      bank_name: record.employees?.bank_name,
+      bank_account: record.employees?.bank_account
+    }, periodo, Number(quincena))
+
+    res.setHeader('Content-Type', 'application/pdf')
+    res.setHeader('Content-Disposition', `attachment; filename=recibo_nomina_${record.employees?.employee_code || 'empleado'}_${periodo}_q${quincena}.pdf`)
+    return res.send(pdf)
+
+  } catch (error: any) {
+    console.error('Error generando PDF de nómina para empleado:', error)
+    
+    if (error.message === 'UNAUTHORIZED') {
+      return res.status(401).json({ error: 'No autorizado' })
+    }
+    
+    if (error.message === 'PROFILE_REQUIRED') {
+      return res.status(403).json({ error: 'Perfil de empleado requerido' })
+    }
+
+    return res.status(500).json({ 
+      error: 'Error interno del servidor',
+      message: error.message || 'Error desconocido'
+    })
+  }
+}
