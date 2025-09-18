@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/router'
 import EmployeeLogin from '../../components/employee-portal/EmployeeLogin'
+import { useAuth } from '../../lib/auth'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { 
@@ -213,12 +214,16 @@ interface AttendanceSummary {
 }
 
 export default function EmployeePortal() {
-  const [session, setSession] = useState<EmployeeSession | null>(null)
+  // Use same auth system as admin portal
+  const { user, session, loading: authLoading } = useAuth()
   const [profile, setProfile] = useState<EmployeeProfile | null>(null)
   const [attendanceSummary, setAttendanceSummary] = useState<AttendanceSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'profile' | 'attendance' | 'payroll'>('profile')
   const router = useRouter()
+  
+  // Check if user is employee
+  const isEmployee = user?.user_metadata?.role === 'employee'
 
   // Check for existing session on load
   useEffect(() => {
@@ -233,63 +238,12 @@ export default function EmployeePortal() {
   }, [session])
 
   const checkExistingSession = async () => {
-    try {
-      // First debug the session
-      const debugResponse = await fetch('/api/employees/debug-session', {
-        credentials: 'include'
-      })
-      
-      if (debugResponse.ok) {
-        const debugData = await debugResponse.json()
-        console.log('🔍 Session Debug:', debugData.debug)
-      }
-
-      // Check if we have an employee session using the dashboard endpoint
-      const response = await fetch('/api/employees/dashboard', {
-        credentials: 'include'
-      })
-
-      console.log('🔍 Dashboard Response:', {
-        status: response.status,
-        statusText: response.statusText,
-        ok: response.ok
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        const employeeData = data.employee
-        
-        // Store employee data and create session object
-        localStorage.setItem('employee_data', JSON.stringify(employeeData))
-        
-        setSession({
-          sessionToken: 'employee_authenticated',
-          employee: employeeData,
-          expiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString() // 8 hours from now
-        })
-        
-        // Set profile and attendance data immediately
-        setProfile({ employee: employeeData })
-        setAttendanceSummary(data.attendance_summary)
-        
-        console.log('Session restored from existing cookies:', {
-          hasProfile: !!employeeData,
-          hasAttendance: !!data.attendance_summary
-        })
-      } else {
-        // No valid session, clear any stored data
-        clearSession()
-      }
-    } catch (error) {
-      console.error('Error checking session:', error)
-      clearSession()
-    } finally {
-      setLoading(false)
-    }
+    // No need for custom session checking - useAuth handles this
+    setLoading(false)
   }
 
-  const fetchEmployeeData = async () => {
-    if (!session) return
+  const fetchEmployeeData = useCallback(async () => {
+    if (!user || !isEmployee) return
 
     try {
       // Fetch all dashboard data in one unified call
@@ -303,7 +257,7 @@ export default function EmployeePortal() {
       if (dashboardResponse.ok) {
         const dashboardData = await dashboardResponse.json()
         
-        console.log('Raw dashboard data received:', dashboardData)
+        console.log('Dashboard data loaded:', dashboardData)
         
         // Set profile data with proper structure
         setProfile({
@@ -313,18 +267,10 @@ export default function EmployeePortal() {
         // Set attendance summary with proper structure
         setAttendanceSummary(dashboardData.attendance_summary)
         
-        console.log('Dashboard data processed:', {
-          profileSet: !!dashboardData.employee,
-          attendanceSet: !!dashboardData.attendance_summary,
-          employeeName: dashboardData.employee?.name,
-          attendanceStats: dashboardData.attendance_summary?.summary,
-          recentRecords: dashboardData.recent_attendance?.length || 0
-        })
       } else {
         const errorData = await dashboardResponse.text()
         console.error('Failed to fetch dashboard data:', {
           status: dashboardResponse.status,
-          statusText: dashboardResponse.statusText,
           error: errorData
         })
       }
@@ -332,43 +278,38 @@ export default function EmployeePortal() {
     } catch (error) {
       console.error('Error fetching employee data:', error)
     }
-  }
+  }, [user, isEmployee])
 
-  const handleLoginSuccess = (sessionData: EmployeeSession) => {
-    setSession(sessionData)
+  const handleLoginSuccess = useCallback((sessionData: EmployeeSession) => {
     clientLogger.info('Employee portal access', {
       employeeId: sessionData.employee.id,
       employeeName: sessionData.employee.name
     })
     
-    // Wait a bit for cookies to be set, then fetch data
-    setTimeout(() => {
-      fetchEmployeeData()
-    }, 1000)
-  }
+    // Reload page to let useAuth pick up the new Supabase session
+    window.location.reload()
+  }, [])
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     try {
-      // Call logout API (Supabase Auth handles session cleanup)
-      await fetch('/api/employees/auth/logout', {
-        method: 'POST',
-        credentials: 'include'
-      })
+      // Use useAuth logout (same as admin portal)
+      const { logout } = useAuth()
+      await logout()
+      clearSession()
+      router.push('/employees/portal')
     } catch (error) {
       console.error('Logout error:', error)
-    } finally {
       clearSession()
       router.reload()
     }
-  }
+  }, [router, clearSession])
 
-  const clearSession = () => {
-    // Only clear employee data - Supabase Auth handles its own cookies
+  const clearSession = useCallback(() => {
+    // Clear employee data - useAuth handles Supabase logout
     localStorage.removeItem('employee_data')
-    setSession(null)
     setProfile(null)
     setAttendanceSummary(null)
-  }
+  }, [])
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'No especificado'
@@ -414,8 +355,8 @@ export default function EmployeePortal() {
             
             <div className="flex items-center space-x-4">
               <div className="text-right">
-                <p className="text-sm font-medium text-white">{session.employee.name}</p>
-                <p className="text-xs text-gray-300">{session.employee.role}</p>
+                <p className="text-sm font-medium text-white">{user?.user_metadata?.full_name || 'Empleado'}</p>
+                <p className="text-xs text-gray-300">{user?.user_metadata?.role || 'employee'}</p>
               </div>
               <Button
                 onClick={handleLogout}
@@ -436,7 +377,7 @@ export default function EmployeePortal() {
         {/* Welcome Section */}
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-white mb-2">
-            Bienvenido, {session.employee.name.split(' ')[0]}
+            Bienvenido, {user?.user_metadata?.full_name?.split(' ')[0] || 'Empleado'}
           </h2>
           <p className="text-gray-300">
             Acceda a su información personal, asistencia y más.
@@ -651,7 +592,7 @@ export default function EmployeePortal() {
                       <h4 className="text-white font-medium">Registros Recientes</h4>
                       <div className="space-y-2 max-h-64 overflow-y-auto">
                         {/* Show actual attendance records if available */}
-                        <AttendanceRecordsList employeeId={session?.employee.id} />
+                        <AttendanceRecordsList employeeId={user?.user_metadata?.employee_id} />
                       </div>
                     </div>
                   </div>
@@ -673,7 +614,7 @@ export default function EmployeePortal() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <PayrollSection employeeId={session?.employee.id} />
+                <PayrollSection employeeId={user?.user_metadata?.employee_id} />
               </CardContent>
             </Card>
           )}

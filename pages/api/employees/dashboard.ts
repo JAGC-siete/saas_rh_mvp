@@ -51,74 +51,123 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const supabase = createClient(req, res)
     
-    // Check for employee session token (custom auth)
-    const authHeader = req.headers.authorization || req.headers.Authorization as string
-    const accessToken = req.cookies['sb-access-token'] || authHeader?.replace('Bearer ', '')
+    // Use standard Supabase Auth like admin portal
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
     
-    if (!accessToken || !accessToken.startsWith('emp_')) {
+    if (authError || !user) {
       return res.status(401).json({ error: 'No autorizado' })
     }
     
-    // Extract employee ID from token (format: emp_${employeeId}_${timestamp})
-    const tokenParts = accessToken.split('_')
-    const employeeId = tokenParts[1] // Should be the UUID
+    // Get employee ID from user metadata (same as admin portal)
+    const employeeId = user.user_metadata?.employee_id
+    if (!employeeId) {
+      return res.status(401).json({ error: 'Datos de empleado no encontrados' })
+    }
     
-    // Debug token parsing
-    logger.info('Token parsing debug', {
-      accessToken: accessToken.substring(0, 20) + '...',
-      tokenParts: tokenParts.length,
+    logger.info('Employee dashboard access', {
+      supabaseUserId: user.id,
       employeeId: employeeId,
-      isValidUUID: employeeId && employeeId.length === 36
+      email: user.email
     })
-    
-    if (!employeeId || employeeId.length !== 36) {
-      return res.status(401).json({ 
-        error: 'Token inválido',
-        debug: {
-          tokenFormat: accessToken.substring(0, 20) + '...',
-          extractedId: employeeId,
-          expectedFormat: 'emp_uuid_timestamp'
-        }
+
+    // First, let's check if employee exists at all
+    const { data: employeeCheck, error: checkError } = await supabase
+      .from('employees')
+      .select('id, name, email, status, company_id')
+      .eq('id', employeeId)
+
+    logger.info('Employee existence check', {
+      employeeId,
+      found: employeeCheck?.length || 0,
+      employee: employeeCheck?.[0],
+      error: checkError
+    })
+
+    // If not found by ID, try by email (maybe ID mismatch)
+    if (!employeeCheck || employeeCheck.length === 0) {
+      const { data: emailCheck, error: emailError } = await supabase
+        .from('employees')
+        .select('id, name, email, status, company_id')
+        .eq('email', 'jorge7gomez@gmail.com')
+        .eq('company_id', '00000000-0000-0000-0000-000000000001')
+
+      logger.info('Employee email fallback check', {
+        emailFound: emailCheck?.length || 0,
+        employee: emailCheck?.[0],
+        error: emailError
       })
+
+      if (emailCheck && emailCheck.length > 0) {
+        return res.status(400).json({
+          error: 'ID mismatch detected',
+          debug: {
+            tokenEmployeeId: employeeId,
+            actualEmployeeId: emailCheck[0].id,
+            employeeName: emailCheck[0].name,
+            hint: 'El token tiene un employee_id diferente al de la base de datos'
+          }
+        })
+      }
     }
 
-    // Get employee profile
-    const { data: employeeDetails, error: profileError } = await supabase
+    // Get employee profile - try direct query first (RLS might be blocking JOINs)
+    let employeeDetails: any = null
+    let profileError: any = null
+
+    // Try simple query first
+    const { data: simpleEmployee, error: simpleError } = await supabase
       .from('employees')
-      .select(`
-        id,
-        name,
-        dni,
-        role,
-        email,
-        phone,
-        hire_date,
-        status,
-        departments:department_id(
-          id,
-          name
-        ),
-        work_schedules:work_schedule_id(
-          id,
-          name,
-          monday_start,
-          monday_end,
-          tuesday_start,
-          tuesday_end,
-          wednesday_start,
-          wednesday_end,
-          thursday_start,
-          thursday_end,
-          friday_start,
-          friday_end,
-          saturday_start,
-          saturday_end,
-          sunday_start,
-          sunday_end
-        )
-      `)
+      .select('*')
       .eq('id', employeeId)
       .single()
+
+    if (simpleError) {
+      logger.error('Simple employee query failed', {
+        employeeId,
+        error: simpleError,
+        errorCode: simpleError.code,
+        errorMessage: simpleError.message
+      })
+
+      // Try without .single() to check if RLS is blocking
+      const { data: employeeArray, error: arrayError } = await supabase
+        .from('employees')
+        .select('*')
+        .eq('id', employeeId)
+
+      if (arrayError || !employeeArray || employeeArray.length === 0) {
+        return res.status(404).json({
+          error: 'Employee not accessible',
+          debug: {
+            employeeId,
+            simpleError: simpleError?.message,
+            arrayError: arrayError?.message,
+            hint: 'RLS policies might be blocking access to this employee'
+          }
+        })
+      }
+
+      employeeDetails = employeeArray[0]
+    } else {
+      employeeDetails = simpleEmployee
+    }
+
+    // Get related data separately (avoid JOIN issues with RLS)
+    const { data: department } = await supabase
+      .from('departments')
+      .select('id, name')
+      .eq('id', employeeDetails.department_id)
+      .single()
+
+    const { data: workSchedule } = await supabase
+      .from('work_schedules')
+      .select('*')
+      .eq('id', employeeDetails.work_schedule_id)
+      .single()
+
+    // Add related data to employee object
+    employeeDetails.departments = department
+    employeeDetails.work_schedules = workSchedule
 
     if (profileError || !employeeDetails) {
       logger.error('Failed to get employee details', {

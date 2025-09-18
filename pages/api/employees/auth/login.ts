@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient, createAdminClient } from '../../../../lib/supabase/server'
 import { logger } from '../../../../lib/logger'
+import { sendOtp, verifyOtp } from '../../../../lib/employee-otp'
 
 interface LoginRequest {
   email: string
@@ -43,14 +44,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     }
 
     const supabase = createClient(req, res)
+    const adminSupabase = createAdminClient()
     
-    // Step 1: Send OTP (if no code provided) - USAR CUSTOM OTP PARA NO JODER MAGIC LINKS
+    // Step 1: Send OTP (if no code provided)
     if (!code) {
-      // Verificar que el empleado existe y obtener sus datos
-      const adminSupabase = createAdminClient()
+      // Verificar que el empleado existe
       const { data: employee, error: employeeError } = await adminSupabase
         .from('employees')
-        .select('id, name, email, company_id')
+        .select('id, name, email, company_id, dni')
         .eq('email', email)
         .eq('company_id', '00000000-0000-0000-0000-000000000001')
         .eq('status', 'active')
@@ -64,8 +65,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         })
       }
 
-      // Usar el sistema OTP anterior que YA FUNCIONABA
-      const { sendOtp } = await import('../../../../lib/employee-otp')
+      // Enviar OTP usando el sistema que ya funcionaba
       const otpResult = await sendOtp(email, employee.id, employee.name)
       
       return res.status(otpResult.success ? 200 : 500).json({
@@ -76,8 +76,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       })
     }
 
-    // Step 2: Verify OTP - USAR CUSTOM VERIFICATION + SUPABASE SESSION
-    const { verifyOtp } = await import('../../../../lib/employee-otp')
+    // Step 2: Verify OTP y crear sesión Supabase estándar
     const otpVerification = verifyOtp(email, code)
     
     if (!otpVerification.success) {
@@ -87,11 +86,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       })
     }
 
-    // OTP válido, obtener datos del empleado y crear sesión simple
-    const adminSupabase = createAdminClient()
+    // OTP válido, obtener datos del empleado
     const { data: employee, error: employeeError } = await adminSupabase
       .from('employees')
-      .select('id, name, email, company_id, role, departments:department_id(name)')
+      .select('id, name, email, company_id, role, dni, departments:department_id(name)')
       .eq('email', email)
       .eq('company_id', '00000000-0000-0000-0000-000000000001')
       .eq('status', 'active')
@@ -105,47 +103,42 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       })
     }
 
-    // Crear sesión custom simple (como antes, que funcionaba)
-    const sessionData = {
-      access_token: `emp_${employee.id}_${Date.now()}`,
-      refresh_token: `ref_${employee.id}_${Date.now()}`,
-      expires_in: 28800, // 8 hours
-      expires_at: Math.floor(Date.now() / 1000) + 28800,
-      user: {
-        id: employee.id,
-        email: email,
-        user_metadata: {
-          employee_id: employee.id,
-          company_id: employee.company_id,
-          full_name: employee.name,
-          role: employee.role,
-          is_employee_portal: true
-        }
-      }
+    // Crear sesión Supabase estándar usando password determinista
+    const deterministic_password = `emp_${employee.id.toString().substring(0, 8)}_paragon`
+    
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email: email,
+      password: deterministic_password
+    })
+
+    if (authError || !authData.user) {
+      logger.error('Failed to create Supabase session', { 
+        email, 
+        error: authError,
+        hint: 'User might not exist in auth.users or password mismatch'
+      })
+      return res.status(500).json({
+        success: false,
+        error: 'Error creando sesión de autenticación'
+      })
     }
 
-    // Set session cookies with proper security flags
-    const isProduction = process.env.NODE_ENV === 'production'
-    res.setHeader('Set-Cookie', [
-      `sb-access-token=${sessionData.access_token}; Path=/; HttpOnly; ${isProduction ? 'Secure;' : ''} SameSite=Lax; Max-Age=28800`,
-      `sb-refresh-token=${sessionData.refresh_token}; Path=/; HttpOnly; ${isProduction ? 'Secure;' : ''} SameSite=Lax; Max-Age=28800`,
-    ])
-
-    logger.info('Employee login successful via Custom OTP', {
+    logger.info('Employee login successful via OTP + Supabase Auth', {
       employeeId: employee.id,
       employeeName: employee.name,
-      email: email
+      email: email,
+      supabaseUserId: authData.user.id
     })
 
     return res.status(200).json({
       success: true,
       step: 'verify_code',
-      user: sessionData.user,
-      session: sessionData,
+      user: authData.user,
+      session: authData.session,
       employee: {
         id: employee.id,
         name: employee.name,
-        dni_masked: 'Protected',
+        dni_masked: employee.dni ? employee.dni.replace(/\d(?=\d{5})/g, '*') : 'N/A',
         role: employee.role || 'Empleado',
         department: (employee.departments as any)?.name || 'N/A'
       }
