@@ -290,6 +290,13 @@ export default function EmployeePortal() {
     window.location.reload()
   }, [])
 
+  const clearSession = useCallback(() => {
+    // Clear employee data - useAuth handles Supabase logout
+    localStorage.removeItem('employee_data')
+    setProfile(null)
+    setAttendanceSummary(null)
+  }, [])
+
   const handleLogout = useCallback(async () => {
     try {
       // Use useAuth logout (same as admin portal)
@@ -303,13 +310,6 @@ export default function EmployeePortal() {
       router.reload()
     }
   }, [router, clearSession])
-
-  const clearSession = useCallback(() => {
-    // Clear employee data - useAuth handles Supabase logout
-    localStorage.removeItem('employee_data')
-    setProfile(null)
-    setAttendanceSummary(null)
-  }, [])
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'No especificado'
