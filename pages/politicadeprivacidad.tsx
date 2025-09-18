@@ -34,7 +34,7 @@ export default function PoliticaPrivacidad() {
               <p className="text-slate-300">
                 <strong>Humano SISU</strong> (&quot;nosotros&quot;), <strong>Honduras</strong>.
                 <br />
-                Contacto: <strong>jorge7gomez@gmail.comt</strong> | <strong>+504 9470-7007</strong>
+                Contacto: <strong>user@example.comt</strong> | <strong>+504 9470-7007</strong>
               </p>
             </section>
 

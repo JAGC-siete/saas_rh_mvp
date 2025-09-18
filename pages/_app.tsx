@@ -2,6 +2,7 @@ import { AppProps } from 'next/app'
 import { createClient } from '../lib/supabase/client'
 import { createContext, useState, useEffect } from 'react'
 import { AuthProvider } from '../lib/auth'
+import { NotificationProvider } from '../components/NotificationProvider'
 import { refreshEnvFromWindow } from '../lib/env'
 import '../styles/globals.css'
 import '../styles/landing.css'
@@ -25,7 +26,6 @@ async function loadEnvironmentVariables() {
       // Inject environment variables into global scope for client-side access
       if (typeof window !== 'undefined') {
         (window as any).__ENV__ = envData
-        console.log('✅ Environment variables loaded from API:', envData)
         
         // Refresh the env object with the loaded variables
         refreshEnvFromWindow()
@@ -52,7 +52,6 @@ export default function App({ Component, pageProps }: AppProps) {
         const client = await createClient()
         if (client) {
           setSupabaseClient(client)
-          console.log('✅ Supabase client initialized successfully')
         }
       } catch (error) {
         console.error('❌ Failed to create Supabase client:', error)
@@ -74,9 +73,11 @@ export default function App({ Component, pageProps }: AppProps) {
   return (
     <SupabaseContext.Provider value={supabaseClient}>
       <AuthProvider>
-        <div className="min-h-screen bg-app">
-          <Component {...pageProps} />
-        </div>
+        <NotificationProvider>
+          <div className="min-h-screen bg-app">
+            <Component {...pageProps} />
+          </div>
+        </NotificationProvider>
       </AuthProvider>
     </SupabaseContext.Provider>
   )

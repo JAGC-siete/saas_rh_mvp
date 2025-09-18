@@ -88,7 +88,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const { data: emailCheck, error: emailError } = await supabase
         .from('employees')
         .select('id, name, email, status, company_id')
-        .eq('email', 'jorge7gomez@gmail.com')
+        .eq('email', 'user@example.com')
         .eq('company_id', '00000000-0000-0000-0000-000000000001')
 
       logger.info('Employee email fallback check', {

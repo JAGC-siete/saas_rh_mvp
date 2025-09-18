@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/router'
 import EmployeeLogin from '../../components/employee-portal/EmployeeLogin'
 import { useAuth } from '../../lib/auth'
+import { useNotificationContext } from '../../components/NotificationProvider'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { 
@@ -248,11 +249,19 @@ function PayrollSection({ employeeId }: { employeeId?: string }) {
       } else {
         const errorData = await response.json()
         console.error('Error generando PDF:', errorData)
-        alert('Error al generar el PDF: ' + (errorData.message || 'Error desconocido'))
+        addNotification({
+          type: 'error',
+          title: 'Error al generar PDF',
+          message: errorData.message || 'Error desconocido'
+        })
       }
     } catch (error) {
       console.error('Error generando PDF:', error)
-      alert('Error al generar el PDF')
+      addNotification({
+        type: 'error',
+        title: 'Error al generar PDF',
+        message: 'Ocurrió un error inesperado'
+      })
     } finally {
       setGeneratingPDF(false)
     }
@@ -518,6 +527,7 @@ interface AttendanceSummary {
 export default function EmployeePortal() {
   // Use same auth system as admin portal
   const { user, session, logout } = useAuth()
+  const { addNotification } = useNotificationContext()
   const [profile, setProfile] = useState<EmployeeProfile | null>(null)
   const [attendanceSummary, setAttendanceSummary] = useState<AttendanceSummary | null>(null)
   const [loading, setLoading] = useState(true)
@@ -552,7 +562,6 @@ export default function EmployeePortal() {
       if (dashboardResponse.ok) {
         const dashboardData = await dashboardResponse.json()
         
-        console.log('Dashboard data loaded:', dashboardData)
         
         // Set profile data with proper structure
         setProfile({
