@@ -51,17 +51,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const supabase = createClient(req, res)
     
-    // Get current user from Supabase Auth
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Check for employee session token (custom auth)
+    const authHeader = req.headers.authorization || req.headers.Authorization as string
+    const accessToken = req.cookies['sb-access-token'] || authHeader?.replace('Bearer ', '')
     
-    if (authError || !user) {
+    if (!accessToken || !accessToken.startsWith('emp_')) {
       return res.status(401).json({ error: 'No autorizado' })
     }
     
-    // Get employee ID from user metadata
-    const employeeId = user.user_metadata?.employee_id
+    // Extract employee ID from token
+    const employeeId = accessToken.split('_')[1]
     if (!employeeId) {
-      return res.status(401).json({ error: 'Datos de empleado no encontrados' })
+      return res.status(401).json({ error: 'Token inválido' })
     }
 
     // Get employee profile
@@ -149,7 +150,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     logger.info('Employee accessed dashboard', {
       employeeId: employeeId,
       employeeName: employeeDetails.name,
-      userId: user.id,
       action: 'view_dashboard'
     })
 
