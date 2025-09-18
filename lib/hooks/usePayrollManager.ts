@@ -13,7 +13,7 @@ import { PayrollFilters, UIRunStatus } from '../../types/payroll'
 // Unified State Interface
 export interface PayrollManagerState {
   // Data
-  unifiedData: { rows: UnifiedRow[]; resumen: UnifiedResumen } | null
+  unifiedData: { rows: UnifiedRow[]; resumen: UnifiedResumen; runId?: string; status?: string } | null
   currentPeriod: { year: number; month: number; quincena: 1 | 2 }
   
   // UI State
@@ -227,14 +227,35 @@ export const usePayrollManager = () => {
       )
 
       dispatch({ type: 'SET_DATA', payload: data })
+      
+      // Si hay un runId en la respuesta, actualizarlo
+      if (data.runId) {
+        dispatch({ type: 'SET_RUN_ID', payload: data.runId })
+        console.log('🔍 DEBUG - Run ID set from data:', data.runId)
+      }
+      
+      // Si hay un status en la respuesta, actualizar el estado
+      if (data.status) {
+        dispatch({ type: 'SET_STATUS', payload: data.status as UIRunStatus })
+        console.log('🔍 DEBUG - Status set from data:', data.status)
+      }
+      
       dispatch({ type: 'SET_LOADED_INITIAL', payload: true })
 
       // Unified payroll data loaded successfully
 
     } catch (error: any) {
-      const errorMessage = error?.message || 'Error desconocido'
-      dispatch({ type: 'SET_ERROR', payload: `Error cargando datos: ${errorMessage}` })
-      toast.error('Error', 'No se pudieron cargar los datos del período actual', 5000)
+      console.error('🔍 DEBUG - Error in loadInitialData:', error)
+      
+      // Manejar error específico de corrida ya autorizada
+      if (error.message && error.message.includes('ya autorizada')) {
+        dispatch({ type: 'SET_ERROR', payload: 'Ya existe una nómina autorizada para este período. No se puede generar un nuevo preview.' })
+        toast.error('Corrida Ya Autorizada', 'Ya existe una nómina autorizada para este período', 8000)
+      } else {
+        const errorMessage = error?.message || 'Error desconocido'
+        dispatch({ type: 'SET_ERROR', payload: `Error cargando datos: ${errorMessage}` })
+        toast.error('Error', 'No se pudieron cargar los datos del período actual', 5000)
+      }
     }
   }, [companyId, state.currentPeriod, toast])
 
@@ -303,11 +324,20 @@ export const usePayrollManager = () => {
         console.error('❌ No se encontraron datos de planilla en la respuesta')
       }
       
-      toast.success(
-        'Preview Generado',
-        `${response.empleados} empleados procesados exitosamente`,
-        5000
-      )
+      // Mostrar mensaje apropiado según si es regeneración o no
+      if (response?.warning) {
+        toast.warning(
+          'Preview Regenerado',
+          response.warning,
+          8000
+        )
+      } else {
+        toast.success(
+          'Preview Generado',
+          `${response.empleados} empleados procesados exitosamente`,
+          5000
+        )
+      }
 
       return response
     } catch (error: any) {
@@ -358,13 +388,11 @@ export const usePayrollManager = () => {
       runId: state.runId,
       status: state.status,
       hasUnifiedData: !!state.unifiedData,
-      unifiedDataRows: state.unifiedData?.rows?.length || 0
+      canAuthorize: canAuthorize
     })
 
     if (!state.runId) {
-      const errorMsg = 'No hay una corrida de nómina activa para autorizar'
-      console.log('❌ DEBUG - Error:', errorMsg)
-      throw new Error(errorMsg)
+      throw new Error('No hay una corrida de nómina activa')
     }
 
     setStatus('authorizing')
@@ -372,52 +400,64 @@ export const usePayrollManager = () => {
     clearError()
 
     try {
-      console.log('📤 DEBUG - Enviando request de autorización:', { run_id: state.runId })
-      
       const response = await payrollApi.authorize({ run_id: state.runId })
       
-      console.log('✅ DEBUG - Respuesta de autorización recibida:', response)
+      console.log('🔍 DEBUG - Respuesta de autorización:', response)
       
+      // Actualizar estado a autorizado
       setStatus('authorized')
       
-      // Mostrar mensaje de éxito con detalles
-      const message = response.summary 
-        ? `Nómina autorizada: ${response.summary.total_lines} empleados, Total Neto: L ${response.summary.total_neto.toLocaleString()}`
-        : 'La nómina ha sido autorizada exitosamente'
+      // Recargar los datos para reflejar el estado actualizado
+      console.log('🔍 DEBUG - Recargando datos después de autorización...')
       
-      toast.success('Nómina Autorizada', message, 8000)
-
-      // Recargar datos para reflejar el nuevo estado
-      if (companyId) {
-        console.log('🔄 DEBUG - Recargando datos después de autorización...')
-        try {
-          const data = await fetchUnifiedPayroll(
-            companyId,
-            state.currentPeriod.year,
-            state.currentPeriod.month,
-            state.currentPeriod.quincena,
-            state.filters.tipo
-          )
-          dispatch({ type: 'SET_DATA', payload: data })
-          console.log('✅ DEBUG - Datos recargados después de autorización')
-        } catch (reloadError) {
-          console.error('⚠️ DEBUG - Error recargando datos (no crítico):', reloadError)
+      try {
+        const refreshedData = await fetchUnifiedPayroll(
+          companyId || '',
+          state.currentPeriod.year,
+          state.currentPeriod.month,
+          state.currentPeriod.quincena,
+          state.filters.tipo
+        )
+        
+        console.log('🔍 DEBUG - Datos recargados:', refreshedData)
+        
+        // Actualizar los datos unificados con el runId si está disponible
+        dispatch({ type: 'SET_DATA', payload: refreshedData })
+        
+        if (refreshedData.runId) {
+          dispatch({ type: 'SET_RUN_ID', payload: refreshedData.runId })
+          console.log('🔍 DEBUG - Run ID actualizado:', refreshedData.runId)
         }
+        
+      } catch (refreshError) {
+        console.error('🔍 DEBUG - Error recargando datos:', refreshError)
+        // No fallar la autorización por error de recarga
       }
+      
+      // Mostrar mensaje apropiado según si es re-autorización o no
+      if (response?.warning) {
+        toast.warning(
+          'Nómina Re-autorizada',
+          response.warning,
+          8000
+        )
+      } else {
+        toast.success('Nómina Autorizada', 'La nómina ha sido autorizada exitosamente', 6000)
+      }
+      
+      console.log('🔍 DEBUG - Autorización completada exitosamente')
 
       return response
     } catch (error: any) {
-      console.error('❌ DEBUG - Error en autorización:', error)
+      console.error('🔍 DEBUG - Error en autorización:', error)
       const errorMessage = mapPayrollError(error)
       setError(errorMessage)
-      setStatus('error')
-      toast.error('Error Autorizando', errorMessage, 10000)
+      toast.error('Error Autorizando', errorMessage, 8000)
       throw error
     } finally {
       setLoading(false)
-      console.log('🏁 DEBUG - authorizeRun FINALIZADO')
     }
-  }, [state.runId, state.status, state.unifiedData, companyId, state.currentPeriod, state.filters.tipo, setStatus, setLoading, clearError, setError, toast])
+  }, [state.runId, state.status, state.unifiedData, state.currentPeriod, state.filters.tipo, companyId, setStatus, setLoading, clearError, setError, toast])
 
   const sendEmail = useCallback(async (employeeId?: string) => {
     if (!state.runId) {
@@ -521,11 +561,11 @@ export const usePayrollManager = () => {
     loadData()
   }, [state.hasLoadedInitialData, companyId, state.currentPeriod.year, state.currentPeriod.month, state.currentPeriod.quincena])
 
-  // Computed Properties - Mejoradas para mejor UX
+  // Computed Properties
   const canPreview = state.status === 'idle' || state.status === 'draft' || state.status === 'error'
-  const canEdit = state.status === 'draft' && !!state.runId && !state.loading
-  const canAuthorize = (state.status === 'draft' || state.status === 'edited') && !!state.runId && !state.loading && (state.unifiedData?.rows?.length || 0) > 0
-  const canSend = state.status === 'authorized' && !!state.runId && !state.loading
+  const canEdit = state.status === 'draft' && !!state.runId
+  const canAuthorize = state.status === 'draft' && !!state.runId
+  const canSend = state.status === 'authorized' && !!state.runId
   const canReset = state.status !== 'idle'
   
   // DEBUG: Log current state for debugging

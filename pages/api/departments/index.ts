@@ -74,15 +74,58 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         })
 
       case 'POST':
-        const { name, description } = req.body
+        const { name, description, manager_id } = req.body
         
-        if (!name) {
-          return res.status(400).json({ error: 'Department name is required' })
+        if (!name || !name.trim()) {
+          return res.status(400).json({ error: 'El nombre del departamento es requerido' })
+        }
+
+        const trimmedName = name.trim()
+
+        // Validate name length
+        if (trimmedName.length < 2) {
+          return res.status(400).json({ error: 'El nombre debe tener al menos 2 caracteres' })
+        }
+
+        if (trimmedName.length > 100) {
+          return res.status(400).json({ error: 'El nombre no puede exceder 100 caracteres' })
+        }
+
+        // Validate description length
+        if (description && description.length > 500) {
+          return res.status(400).json({ error: 'La descripción no puede exceder 500 caracteres' })
+        }
+
+        // Check for duplicate department names within the company
+        const { data: existingDept } = await getCompanyData(
+          supabase,
+          'departments',
+          companyId,
+          'id, name'
+        ).ilike('name', trimmedName)
+
+        if (existingDept && existingDept.length > 0) {
+          return res.status(409).json({ error: 'Ya existe un departamento con este nombre' })
+        }
+
+        // Validate manager exists if provided
+        if (manager_id) {
+          const { data: manager } = await getCompanyData(
+            supabase,
+            'employees',
+            companyId,
+            'id, name, status'
+          ).eq('id', manager_id).eq('status', 'active')
+
+          if (!manager || manager.length === 0) {
+            return res.status(400).json({ error: 'El manager seleccionado no existe o no está activo' })
+          }
         }
 
         const insertData = addCompanyToInsertData({
-          name,
-          description: description || null
+          name: trimmedName,
+          description: description?.trim() || null,
+          manager_id: manager_id || null
         }, companyId)
 
         const { data: newDept, error: createError } = await supabase
@@ -91,7 +134,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           .select()
           .single()
 
-        if (createError) throw createError
+        if (createError) {
+          console.error('Department creation error:', createError)
+          
+          // Handle specific database errors
+          if (createError.code === '23505') {
+            return res.status(409).json({ error: 'Ya existe un departamento con este nombre' })
+          }
+          
+          throw createError
+        }
+        
         return res.status(201).json({ department: newDept })
 
       default:

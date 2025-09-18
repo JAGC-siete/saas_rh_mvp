@@ -1,0 +1,1211 @@
+{
+  "authentication": {
+    "Health Check": {
+      "available": true,
+      "status": 200,
+      "response": {
+        "status": "healthy",
+        "timestamp": "2025-09-18T15:19:24.000Z",
+        "uptime": 290.326237628,
+        "environment": "production",
+        "version": "unknown"
+      }
+    },
+    "Admin Login API": {
+      "available": true,
+      "status": 400,
+      "response": {
+        "error": "Email y contraseña son requeridos"
+      }
+    },
+    "Employee Portal Login": {
+      "available": true,
+      "status": 400,
+      "response": {
+        "success": false,
+        "error": "Email inválido"
+      }
+    },
+    "User Profiles API": {
+      "available": false,
+      "status": 401,
+      "response": {
+        "error": "Unauthorized"
+      }
+    },
+    "Auth Start Page": {
+      "available": true,
+      "status": 200,
+      "response": "<!DOCTYPE html><html lang=\"es\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><link rel=\"icon\" href=\"/logo-humano-sisu.png\"/><link rel=\"shortcut icon\" href=\"/logo-humano-sisu.png\"/><link rel=\"apple-touch-icon\" href=\"/logo-humano-sisu.png\"/><link rel=\"preload\" href=\"/_next/static/css/221fea4ad5c54713.css\" as=\"style\"/><link rel=\"stylesheet\" href=\"/_next/static/css/221fea4ad5c54713.css\" data-n-g=\"\"/><noscript data-n-css=\"\"></noscript><script defer=\"\" noModule=\"\" src=\"/_next/static/chunks/polyfills-42372ed130431b0a.js\"></script><script src=\"/_next/static/chunks/webpack-06e4e7c3d484279c.js\" defer=\"\"></script><script src=\"/_next/static/chunks/framework-4a99af1472046e21.js\" defer=\"\"></script><script src=\"/_next/static/chunks/main-a16c3594c8f80332.js\" defer=\"\"></script><script src=\"/_next/static/chunks/pages/_app-9bd5106f5ef361d9.js\" defer=\"\"></script><script src=\"/_next/static/chunks/2749-c220afa1da976889.js\" defer=\"\"></script><script src=\"/_next/static/chunks/8230-290ec8bd26c09398.js\" defer=\"\"></script><script src=\"/_next/static/chunks/3774-1e849bbde381644d.js\" defer=\"\"></script><script src=\"/_next/static/chunks/pages/auth/start-b6302dd4cf1b6050.js\" defer=\"\"></script><script src=\"/_next/static/v0ebOdD3YpS1WJuyR8bes/_buildManifest.js\" defer=\"\"></script><script src=\"/_next/static/v0ebOdD3YpS1WJuyR8bes/_ssgManifest.js\" defer=\"\"></script></head><body><div id=\"__next\"><div class=\"min-h-screen bg-app flex items-center justify-center\"><div class=\"animate-spin rounded-full h-12 w-12 border-b-2 border-white\"></div></div></div><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\":{\"pageProps\":{}},\"page\":\"/auth/start\",\"query\":{},\"buildId\":\"v0ebOdD3YpS1WJuyR8bes\",\"nextExport\":true,\"autoExport\":true,\"isFallback\":false,\"scriptLoader\":[]}</script></body></html>"
+    },
+    "Employee Portal Page": {
+      "available": true,
+      "status": 200,
+      "response": "<!DOCTYPE html><html lang=\"es\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><link rel=\"icon\" href=\"/logo-humano-sisu.png\"/><link rel=\"shortcut icon\" href=\"/logo-humano-sisu.png\"/><link rel=\"apple-touch-icon\" href=\"/logo-humano-sisu.png\"/><link rel=\"preload\" href=\"/_next/static/css/221fea4ad5c54713.css\" as=\"style\"/><link rel=\"stylesheet\" href=\"/_next/static/css/221fea4ad5c54713.css\" data-n-g=\"\"/><noscript data-n-css=\"\"></noscript><script defer=\"\" noModule=\"\" src=\"/_next/static/chunks/polyfills-42372ed130431b0a.js\"></script><script src=\"/_next/static/chunks/webpack-06e4e7c3d484279c.js\" defer=\"\"></script><script src=\"/_next/static/chunks/framework-4a99af1472046e21.js\" defer=\"\"></script><script src=\"/_next/static/chunks/main-a16c3594c8f80332.js\" defer=\"\"></script><script src=\"/_next/static/chunks/pages/_app-9bd5106f5ef361d9.js\" defer=\"\"></script><script src=\"/_next/static/chunks/2749-c220afa1da976889.js\" defer=\"\"></script><script src=\"/_next/static/chunks/pages/employees/portal-c773d41b1a735e27.js\" defer=\"\"></script><script src=\"/_next/static/v0ebOdD3YpS1WJuyR8bes/_buildManifest.js\" defer=\"\"></script><script src=\"/_next/static/v0ebOdD3YpS1WJuyR8bes/_ssgManifest.js\" defer=\"\"></script></head><body><div id=\"__next\"><div class=\"min-h-screen bg-app flex items-center justify-center\"><div class=\"animate-spin rounded-full h-12 w-12 border-b-2 border-white\"></div></div></div><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\":{\"pageProps\":{}},\"page\":\"/employees/portal\",\"query\":{},\"buildId\":\"v0ebOdD3YpS1WJuyR8bes\",\"nextExport\":true,\"autoExport\":true,\"isFallback\":false,\"scriptLoader\":[]}</script></body></html>"
+    }
+  },
+  "employeePortal": {
+    "Portal Main Page": {
+      "available": true,
+      "status": 200,
+      "response": "<!DOCTYPE html><html lang=\"es\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><link rel=\"icon\" href=\"/logo-humano-sisu.png\"/><link rel=\"shortcut icon\" href=\"/logo-humano-sisu.png\"/><link rel=\"apple-touch-icon\" href=\"/logo-humano-sisu.png\"/><link rel=\"preload\" href=\"/_next/static/css/221fea4ad5c54713.css\" as=\"style\"/><link rel=\"stylesheet\" href=\"/_next/static/css/221fea4ad5c54713.css\" data-n-g=\"\"/><noscript data-n-css=\"\"></noscript><script defer=\"\" noModule=\"\" src=\"/_next/static/chunks/polyfills-42372ed130431b0a.js\"></script><script src=\"/_next/static/chunks/webpack-06e4e7c3d484279c.js\" defer=\"\"></script><script src=\"/_next/static/chunks/framework-4a99af1472046e21.js\" defer=\"\"></script><script src=\"/_next/static/chunks/main-a16c3594c8f80332.js\" defer=\"\"></script><script src=\"/_next/static/chunks/pages/_app-9bd5106f5ef361d9.js\" defer=\"\"></script><script src=\"/_next/static/chunks/2749-c220afa1da976889.js\" defer=\"\"></script><script src=\"/_next/static/chunks/pages/employees/portal-c773d41b1a735e27.js\" defer=\"\"></script><script src=\"/_next/static/v0ebOdD3YpS1WJuyR8bes/_buildManifest.js\" defer=\"\"></script><script src=\"/_next/static/v0ebOdD3YpS1WJuyR8bes/_ssgManifest.js\" defer=\"\"></script></head><body><div id=\"__next\"><div class=\"min-h-screen bg-app flex items-center justify-center\"><div class=\"animate-spin rounded-full h-12 w-12 border-b-2 border-white\"></div></div></div><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\":{\"pageProps\":{}},\"page\":\"/employees/portal\",\"query\":{},\"buildId\":\"v0ebOdD3YpS1WJuyR8bes\",\"nextExport\":true,\"autoExport\":true,\"isFallback\":false,\"scriptLoader\":[]}</script></body></html>"
+    },
+    "Employee Me API": {
+      "available": false,
+      "status": 401,
+      "response": {
+        "error": "Credenciales inválidas"
+      }
+    },
+    "Employee Attendance API": {
+      "available": false,
+      "status": 401,
+      "response": {
+        "error": "Credenciales inválidas"
+      }
+    },
+    "OTP Send API": {
+      "available": true,
+      "status": 400,
+      "response": {
+        "success": false,
+        "error": "Email inválido"
+      }
+    },
+    "OTP Verify API": {
+      "available": true,
+      "status": 400,
+      "response": {
+        "success": false,
+        "error": "Email o código inválido"
+      }
+    }
+  },
+  "adminPanel": {
+    "App Dashboard": {
+      "available": false,
+      "status": 307,
+      "response": "/auth/start"
+    },
+    "Employees Management": {
+      "available": false,
+      "status": 307,
+      "response": "/auth/start"
+    },
+    "Departments Management": {
+      "available": false,
+      "status": 307,
+      "response": "/auth/start"
+    },
+    "Attendance Dashboard": {
+      "available": false,
+      "status": 307,
+      "response": "/auth/start"
+    },
+    "Payroll Management": {
+      "available": false,
+      "status": 307,
+      "response": "/auth/start"
+    },
+    "Reports Section": {
+      "available": false,
+      "status": 307,
+      "response": "/auth/start"
+    },
+    "Settings Page": {
+      "available": false,
+      "status": 307,
+      "response": "/auth/start"
+    },
+    "Gamification": {
+      "available": false,
+      "status": 307,
+      "response": "/auth/start"
+    },
+    "Leave Management": {
+      "available": false,
+      "status": 307,
+      "response": "/auth/start"
+    }
+  },
+  "attendance": {
+    "Public Registration": {
+      "available": true,
+      "status": 200,
+      "response": "<!DOCTYPE html><html lang=\"es\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><link rel=\"icon\" href=\"/logo-humano-sisu.png\"/><link rel=\"shortcut icon\" href=\"/logo-humano-sisu.png\"/><link rel=\"apple-touch-icon\" href=\"/logo-humano-sisu.png\"/><link rel=\"preload\" href=\"/_next/static/css/221fea4ad5c54713.css\" as=\"style\"/><link rel=\"stylesheet\" href=\"/_next/static/css/221fea4ad5c54713.css\" data-n-g=\"\"/><noscript data-n-css=\"\"></noscript><script defer=\"\" noModule=\"\" src=\"/_next/static/chunks/polyfills-42372ed130431b0a.js\"></script><script src=\"/_next/static/chunks/webpack-06e4e7c3d484279c.js\" defer=\"\"></script><script src=\"/_next/static/chunks/framework-4a99af1472046e21.js\" defer=\"\"></script><script src=\"/_next/static/chunks/main-a16c3594c8f80332.js\" defer=\"\"></script><script src=\"/_next/static/chunks/pages/_app-9bd5106f5ef361d9.js\" defer=\"\"></script><script src=\"/_next/static/chunks/2749-c220afa1da976889.js\" defer=\"\"></script><script src=\"/_next/static/chunks/8230-290ec8bd26c09398.js\" defer=\"\"></script><script src=\"/_next/static/chunks/pages/attendance/public-63d5810f074f1d00.js\" defer=\"\"></script><script src=\"/_next/static/v0ebOdD3YpS1WJuyR8bes/_buildManifest.js\" defer=\"\"></script><script src=\"/_next/static/v0ebOdD3YpS1WJuyR8bes/_ssgManifest.js\" defer=\"\"></script></head><body><div id=\"__next\"><div class=\"min-h-screen bg-app flex items-center justify-center\"><div class=\"animate-spin rounded-full h-12 w-12 border-b-2 border-white\"></div></div></div><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\":{\"pageProps\":{}},\"page\":\"/attendance/public\",\"query\":{},\"buildId\":\"v0ebOdD3YpS1WJuyR8bes\",\"nextExport\":true,\"autoExport\":true,\"isFallback\":false,\"scriptLoader\":[]}</script></body></html>"
+    },
+    "Register API": {
+      "available": true,
+      "status": 400,
+      "response": {
+        "error": "Debe enviar dni o last5"
+      }
+    },
+    "Dashboard Stats API": {
+      "available": true,
+      "status": 200,
+      "response": {
+        "totalEmployees": 46,
+        "presentToday": 30,
+        "absentToday": 16,
+        "lateToday": 4,
+        "onTimeToday": 26,
+        "employeesWithApprovedLeave": 0,
+        "dailyCost": 15000,
+        "dailyStats": [
+          {
+            "date": "2025-09-12",
+            "attendanceCount": 33,
+            "attendanceRate": 71.74
+          },
+          {
+            "date": "2025-09-13",
+            "attendanceCount": 0,
+            "attendanceRate": 0
+          },
+          {
+            "date": "2025-09-14",
+            "attendanceCount": 0,
+            "attendanceRate": 0
+          },
+          {
+            "date": "2025-09-15",
+            "attendanceCount": 26,
+            "attendanceRate": 56.52
+          },
+          {
+            "date": "2025-09-16",
+            "attendanceCount": 31,
+            "attendanceRate": 67.39
+          },
+          {
+            "date": "2025-09-17",
+            "attendanceCount": 30,
+            "attendanceRate": 65.22
+          },
+          {
+            "date": "2025-09-18",
+            "attendanceCount": 30,
+            "attendanceRate": 65.22
+          }
+        ],
+        "departmentStats": {
+          "67d423cf-fb63-43d5-82a8-3bd6db463c7f": {
+            "present": 5,
+            "total": 6
+          },
+          "195a8002-c437-47f4-8119-9f5065b3bb65": {
+            "present": 9,
+            "total": 10
+          },
+          "0f02d71d-70ca-4ce9-b9a6-837cc365f75f": {
+            "present": 2,
+            "total": 2
+          },
+          "Sin Departamento": {
+            "present": 0,
+            "total": 10
+          },
+          "1c3d375b-9501-487a-8cf5-c6f8c34496fe": {
+            "present": 7,
+            "total": 9
+          },
+          "908ccd3b-84f7-42df-bbfb-301a8fbc654c": {
+            "present": 1,
+            "total": 2
+          },
+          "6cd68954-9619-4af7-9ee4-53f0fa575227": {
+            "present": 0,
+            "total": 1
+          },
+          "cf39d9a2-4912-4745-8f61-7605a659dbf5": {
+            "present": 1,
+            "total": 1
+          },
+          "7344dc9e-424b-41c9-9f77-247fb6535f1a": {
+            "present": 5,
+            "total": 5
+          }
+        },
+        "todayAttendance": [
+          {
+            "id": "23a94280-c227-4742-a5a2-6fe40e2fbb92",
+            "employee_id": "c966497b-3216-4eb7-8eeb-c6ab8d5b7ae1",
+            "employee_name": "Emely Rachel Romero Cabrera",
+            "employee_code": "EMP005",
+            "team": "COMPLIANCE",
+            "check_in": "2025-09-18T14:50:31+00:00",
+            "check_out": null,
+            "late_minutes": -10,
+            "status": "early",
+            "justification": ""
+          },
+          {
+            "id": "c64b706a-0e67-496f-9d4c-aa1b48474d7f",
+            "employee_id": "bab6837c-6a80-4f9f-8c65-1c477573019e",
+            "employee_name": "Amsi Abigail Urquía Durón",
+            "employee_code": "EMP025",
+            "team": "DATA ENTRY",
+            "check_in": "2025-09-18T14:57:55+00:00",
+            "check_out": null,
+            "late_minutes": -3,
+            "status": "present",
+            "justification": ""
+          },
+          {
+            "id": "6727f542-83cc-4efb-bf0a-ff50eec4e0f6",
+            "employee_id": "429f83ce-e440-4dc8-b348-035b93c7dcfa",
+            "employee_name": "Yorleny Paveth Oliva Maldonado",
+            "employee_code": "EMP006",
+            "team": "COMPLIANCE",
+            "check_in": "2025-09-18T14:58:03+00:00",
+            "check_out": null,
+            "late_minutes": -2,
+            "status": "present",
+            "justification": ""
+          },
+          {
+            "id": "c94d544a-c36c-4aa5-b834-0540357d76f4",
+            "employee_id": "ded7f77f-2864-46e7-83a4-141f4852c7fa",
+            "employee_name": "Lourdes Raquel Aguirre",
+            "employee_code": "EMP014",
+            "team": "DATA ENTRY",
+            "check_in": "2025-09-18T14:58:12+00:00",
+            "check_out": null,
+            "late_minutes": -92,
+            "status": "early",
+            "justification": ""
+          },
+          {
+            "id": "62f3c152-38a6-4490-a9ca-fcaca4c222cc",
+            "employee_id": "8bfebd34-474e-49cc-b740-af5b27e5da8e",
+            "employee_name": "David Gonzales Maldonado",
+            "employee_code": "EMP008",
+            "team": "DATA ENTRY",
+            "check_in": "2025-09-18T15:03:27+00:00",
+            "check_out": null,
+            "late_minutes": -87,
+            "status": "early",
+            "justification": ""
+          },
+          {
+            "id": "faab0afe-a532-40de-b3db-b089bd87154a",
+            "employee_id": "4892d559-f9e4-4cf0-82ed-1cfb072a309c",
+            "employee_name": "Astrid Mariela Colindres Zelaya",
+            "employee_code": "EMP003",
+            "team": "PROCESSING",
+            "check_in": "2025-09-18T13:34:32+00:00",
+            "check_out": null,
+            "late_minutes": -26,
+            "status": "early",
+            "justification": ""
+          },
+          {
+            "id": "e4599727-f02c-4118-81c9-710d5bc072ba",
+            "employee_id": "86ea4bca-c296-46b4-a3fd-eac2a904f418",
+            "employee_name": "Fabiola Yadira Castillo Moncada",
+            "employee_code": "EMP026",
+            "team": "COMPLIANCE",
+            "check_in": "2025-09-18T13:50:46+00:00",
+            "check_out": null,
+            "late_minutes": -10,
+            "status": "early",
+            "justification": ""
+          },
+          {
+            "id": "63b12af0-da6d-4690-b0a8-2c18be5c3572",
+            "employee_id": "693968bd-de01-4e98-9183-b1db7d6d07b1",
+            "employee_name": "Gerardo Leonel Fernandez Martinez",
+            "employee_code": "EMP031",
+            "team": "INSURANCE",
+            "check_in": "2025-09-18T13:50:56+00:00",
+            "check_out": null,
+            "late_minutes": -10,
+            "status": "early",
+            "justification": ""
+          },
+          {
+            "id": "d638e345-2ff9-4830-9124-8a644a972d09",
+            "employee_id": "4b18bc4d-3119-44e9-afb5-8918be160a2d",
+            "employee_name": "Wolfang Andre Sosa Lanza",
+            "employee_code": "EMP017",
+            "team": "Customer Service",
+            "check_in": "2025-09-18T13:51:18+00:00",
+            "check_out": null,
+            "late_minutes": -9,
+            "status": "early",
+            "justification": ""
+          },
+          {
+            "id": "251f411f-1389-4127-a983-f4a603af1050",
+            "employee_id": "198a0df3-440b-49fb-9a44-3ae6cd9616b9",
+            "employee_name": "Helen Daniela Matute Zambrano",
+            "employee_code": "EMP004",
+            "team": "COMPLIANCE",
+            "check_in": "2025-09-18T13:52:14+00:00",
+            "check_out": null,
+            "late_minutes": -8,
+            "status": "early",
+            "justification": ""
+          },
+          {
+            "id": "a792211f-7712-47da-800b-a32adae79883",
+            "employee_id": "d70f412b-6525-49b0-847b-6095fc28929c",
+            "employee_name": "David Alejandro Santos Ordoñez",
+            "employee_code": "EMP024",
+            "team": "Customer Service",
+            "check_in": "2025-09-18T13:54:05+00:00",
+            "check_out": null,
+            "late_minutes": -6,
+            "status": "early",
+            "justification": ""
+          },
+          {
+            "id": "96debc30-9e6f-4d91-880e-0744f054445d",
+            "employee_id": "681fefe0-afd7-4051-9551-b23fdfcb7b44",
+            "employee_name": "Kenia Isabel Zambrano Molina",
+            "employee_code": "EMP016",
+            "team": "Customer Service",
+            "check_in": "2025-09-18T13:54:19+00:00",
+            "check_out": null,
+            "late_minutes": -6,
+            "status": "early",
+            "justification": ""
+          },
+          {
+            "id": "1475ff07-4a53-4006-9030-0db8afa2a546",
+            "employee_id": "7e24539f-3cc7-4a5c-a345-27a9b8be9215",
+            "employee_name": "Seth Isaí Godoy Cantarero",
+            "employee_code": "EMP032",
+            "team": "INSURANCE",
+            "check_in": "2025-09-18T13:55:06+00:00",
+            "check_out": null,
+            "late_minutes": -5,
+            "status": "present",
+            "justification": ""
+          },
+          {
+            "id": "350c5874-4507-421e-93d4-c4da65104633",
+            "employee_id": "92474e14-8ae6-4659-a66d-dc138a86ead9",
+            "employee_name": "Ericka Daniela Martinez",
+            "employee_code": "EMP001",
+            "team": "PROCESSING",
+            "check_in": "2025-09-18T13:55:51+00:00",
+            "check_out": null,
+            "late_minutes": -35,
+            "status": "early",
+            "justification": ""
+          },
+          {
+            "id": "9a23bd06-6c21-478c-89f6-ce8e77b49857",
+            "employee_id": "c60845ad-ac6a-425c-ade3-b2daddd5aa10",
+            "employee_name": "Luis Eduardo Rojas Escalada",
+            "employee_code": "C-0099",
+            "team": "Customer Service",
+            "check_in": "2025-09-18T13:56:14+00:00",
+            "check_out": null,
+            "late_minutes": -4,
+            "status": "present",
+            "justification": ""
+          },
+          {
+            "id": "c6d3cb67-495e-4f8e-9ad9-0818218d4326",
+            "employee_id": "9d151ee8-e517-4118-ae62-d83f185734bc",
+            "employee_name": "Angel David Alvarenga Martinez",
+            "employee_code": "EMP013",
+            "team": "DATA ENTRY",
+            "check_in": "2025-09-18T13:56:45+00:00",
+            "check_out": null,
+            "late_minutes": -34,
+            "status": "early",
+            "justification": ""
+          },
+          {
+            "id": "e28feef2-d44d-47a9-a98d-431ee4d5c66e",
+            "employee_id": "6be0d7fc-1ca3-4612-b2c8-b5bf88e20676",
+            "employee_name": "Francisco Javier Mendez Montenegro",
+            "employee_code": "EMP012",
+            "team": "Customer Service",
+            "check_in": "2025-09-18T13:57:34+00:00",
+            "check_out": null,
+            "late_minutes": -3,
+            "status": "present",
+            "justification": ""
+          },
+          {
+            "id": "16ed7370-ff21-4321-bd8a-ebdb37f591e3",
+            "employee_id": "67795976-4e11-48c7-8f60-2ed35f5579db",
+            "employee_name": "Daniel Vladimir Hernadez Salgado",
+            "employee_code": "EMP029",
+            "team": "INSURANCE",
+            "check_in": "2025-09-18T13:57:41+00:00",
+            "check_out": null,
+            "late_minutes": -3,
+            "status": "present",
+            "justification": ""
+          },
+          {
+            "id": "ee25e2ff-9cd6-4826-a3d8-e833c7ed3839",
+            "employee_id": "fb039dca-11f1-46de-8de5-c5da7825855d",
+            "employee_name": "Marcelo Alejandro Folgar Bonilla",
+            "employee_code": "EMP022",
+            "team": "Customer Service",
+            "check_in": "2025-09-18T13:58:42+00:00",
+            "check_out": null,
+            "late_minutes": -2,
+            "status": "present",
+            "justification": ""
+          },
+          {
+            "id": "15a7fc16-3c50-40bb-98d3-41ec4cfb4ffc",
+            "employee_id": "b4e40bf3-44e4-41c1-b7ec-984aae20dcb8",
+            "employee_name": "Gerson Enoc Zuniga Chang",
+            "employee_code": "EMP034",
+            "team": "INSURANCE",
+            "check_in": "2025-09-18T13:58:48+00:00",
+            "check_out": null,
+            "late_minutes": -2,
+            "status": "present",
+            "justification": ""
+          },
+          {
+            "id": "fad5630d-6228-4fd6-8028-daac814905b4",
+            "employee_id": "747a460b-b279-4f86-be4e-46c356a961be",
+            "employee_name": "Jonny Omar Salinas Rosales",
+            "employee_code": "EMP011",
+            "team": "Customer Service",
+            "check_in": "2025-09-18T13:58:58+00:00",
+            "check_out": null,
+            "late_minutes": -2,
+            "status": "present",
+            "justification": ""
+          },
+          {
+            "id": "1b4fbbf4-ee09-4680-9adf-1296abcf8be8",
+            "employee_id": "af5156dc-d60d-490e-b928-a14627948cea",
+            "employee_name": "Raúl Eduardo Espinoza Núñez",
+            "employee_code": "EMP033",
+            "team": "INSURANCE",
+            "check_in": "2025-09-18T13:59:07+00:00",
+            "check_out": null,
+            "late_minutes": -1,
+            "status": "present",
+            "justification": ""
+          },
+          {
+            "id": "9eaf8060-21c5-4d0f-a9dd-4816e9999e38",
+            "employee_id": "b99f98a9-f7ef-4ae3-83fc-7ed9b76fe919",
+            "employee_name": "Evelin Daniela Oseguera Aguilar",
+            "employee_code": "EMP002",
+            "team": "DATA ENTRY",
+            "check_in": "2025-09-18T13:59:17+00:00",
+            "check_out": null,
+            "late_minutes": -1,
+            "status": "present",
+            "justification": ""
+          },
+          {
+            "id": "dcae6da9-4258-466d-8ec4-111eb1000c23",
+            "employee_id": "d540fc24-3174-458a-92eb-4e2126136c14",
+            "employee_name": "Isis Amaleth Ardon Maradiaga",
+            "employee_code": "EMP007",
+            "team": "COMPLIANCE",
+            "check_in": "2025-09-18T13:59:28+00:00",
+            "check_out": null,
+            "late_minutes": -1,
+            "status": "present",
+            "justification": ""
+          },
+          {
+            "id": "6d974e93-d0ce-4da3-b969-0ce781c8c7fd",
+            "employee_id": "a5d8d5f4-504a-44d4-b5c0-163220055c94",
+            "employee_name": "Katerin Elizabeth Hernandez Martinez",
+            "employee_code": "EMP100",
+            "team": null,
+            "check_in": "2025-09-18T13:59:37+00:00",
+            "check_out": null,
+            "late_minutes": -1,
+            "status": "present",
+            "justification": ""
+          },
+          {
+            "id": "c84ee087-086b-4a6e-a097-b1f8d180d143",
+            "employee_id": "0879e591-4350-4e3f-8e30-f373ce64b6cd",
+            "employee_name": "Victor Enrique Maldonado Zelaya",
+            "employee_code": "C-0098",
+            "team": "COMPLIANCE",
+            "check_in": "2025-09-18T14:01:13+00:00",
+            "check_out": null,
+            "late_minutes": 1,
+            "status": "present",
+            "justification": ""
+          },
+          {
+            "id": "86cd53ef-7ffe-454d-b121-9b9ffdcd1aeb",
+            "employee_id": "f1514b79-2333-44a5-a4ad-63f233de9c87",
+            "employee_name": "Alejandro José Salgado Girón",
+            "employee_code": "EMP028",
+            "team": "Customer Services",
+            "check_in": "2025-09-18T14:01:49+00:00",
+            "check_out": null,
+            "late_minutes": 1,
+            "status": "present",
+            "justification": ""
+          },
+          {
+            "id": "71eec270-bb35-424f-a417-6a3f156db32f",
+            "employee_id": "1d70fa20-612c-4d71-a5d3-2348885e09c1",
+            "employee_name": "Claudette Desiree Rollings Martinez",
+            "employee_code": "EMP020",
+            "team": "NEGOTIATION",
+            "check_in": "2025-09-18T14:03:48+00:00",
+            "check_out": null,
+            "late_minutes": 3,
+            "status": "present",
+            "justification": ""
+          },
+          {
+            "id": "99cdccfd-9c3c-480a-97f3-a2ececb2ae7b",
+            "employee_id": "b9bd5632-67d8-4bf5-b546-48ea59d29319",
+            "employee_name": "André Alexander García Laínez",
+            "employee_code": "EMP023",
+            "team": "Customer Service",
+            "check_in": "2025-09-18T14:08:27+00:00",
+            "check_out": null,
+            "late_minutes": 8,
+            "status": "late_in",
+            "justification": "Trafico tremendo"
+          },
+          {
+            "id": "dc61683a-d909-4c3d-8787-c0a3a3d5c358",
+            "employee_id": "3eb9c0f8-7321-47ab-b33d-9181cbca23bc",
+            "employee_name": "Jorge Arturo Gómez Coello",
+            "employee_code": "EMP018",
+            "team": "HR",
+            "check_in": "2025-09-18T14:19:24+00:00",
+            "check_out": null,
+            "late_minutes": -41,
+            "status": "early",
+            "justification": ""
+          }
+        ],
+        "absentList": [
+          {
+            "id": "5df7d863-dd84-4552-bc90-02013298b8a8",
+            "name": "Enrique Alejandro Casco Murillo",
+            "team": "INSURANCE"
+          },
+          {
+            "id": "2130cffa-84c9-4f40-b6eb-4138dfa35fa0",
+            "name": "María Magdalena González",
+            "team": null
+          },
+          {
+            "id": "c35fab0f-1098-4345-98d9-85099c5b4c86",
+            "name": "Luis Francisco Murillo Carcamo",
+            "team": "NEGOTIATION"
+          },
+          {
+            "id": "bdd43fda-0d5b-4ee3-bc52-4931559f5474",
+            "name": "Gustavo Noel Argueta Zelaya",
+            "team": "MANAGER"
+          },
+          {
+            "id": "451acad7-7e73-4fa8-8d27-e829988e7b21",
+            "name": "Rebeca Ana Morales",
+            "team": null
+          },
+          {
+            "id": "1e2129e8-a8d9-410e-8de8-2c05acc5f4fb",
+            "name": "Esther Gabriela Flores",
+            "team": null
+          },
+          {
+            "id": "5d35b63a-6aaa-4dd4-b51b-c3cc828d3b73",
+            "name": "José Benjamín Martínez",
+            "team": null
+          },
+          {
+            "id": "65476f8e-c92d-4b1c-8aae-1deec4af414a",
+            "name": "Ruth Patricia Castro",
+            "team": null
+          },
+          {
+            "id": "b23e03fd-cff9-474a-abaf-7a924ced9388",
+            "name": "Sara Elizabeth López",
+            "team": null
+          },
+          {
+            "id": "ceea9777-13a6-422b-b580-26018d3fc253",
+            "name": "Samuel Roberto Herrera",
+            "team": null
+          },
+          {
+            "id": "0c05c442-72a2-47dd-86df-bdfd7664d251",
+            "name": "David Alejandro Pérez",
+            "team": null
+          },
+          {
+            "id": "cd5ec718-ea98-4352-8e83-d510248a2cbc",
+            "name": "Isaac Daniel Ramírez",
+            "team": null
+          },
+          {
+            "id": "b3e9e679-0305-4b2b-9be7-077bbed13e0b",
+            "name": "Daniel Ezequiel Torres",
+            "team": null
+          },
+          {
+            "id": "84e32b47-f331-40ae-ba91-bc92e95402e5",
+            "name": "Jorge Luis Rodriguez Macedo",
+            "team": "COMPLIANCE"
+          },
+          {
+            "id": "a393890f-3135-4b4e-b8e4-62232cc674c7",
+            "name": "Roberto Carlos Meraz Canales",
+            "team": "COMPLIANCE"
+          },
+          {
+            "id": "c607d3c6-60b7-4433-9eb4-edd2ebdac7cc",
+            "name": "Jesús Alcides Sagastume Martínez",
+            "team": "Customer Service"
+          }
+        ],
+        "earlyList": [
+          {
+            "id": "ded7f77f-2864-46e7-83a4-141f4852c7fa",
+            "name": "Lourdes Raquel Aguirre",
+            "team": "DATA ENTRY",
+            "delta_min": 92,
+            "check_in_time": "2025-09-18T14:58:12+00:00"
+          },
+          {
+            "id": "8bfebd34-474e-49cc-b740-af5b27e5da8e",
+            "name": "David Gonzales Maldonado",
+            "team": "DATA ENTRY",
+            "delta_min": 87,
+            "check_in_time": "2025-09-18T15:03:27+00:00"
+          },
+          {
+            "id": "3eb9c0f8-7321-47ab-b33d-9181cbca23bc",
+            "name": "Jorge Arturo Gómez Coello",
+            "team": "HR",
+            "delta_min": 41,
+            "check_in_time": "2025-09-18T14:19:24+00:00"
+          },
+          {
+            "id": "92474e14-8ae6-4659-a66d-dc138a86ead9",
+            "name": "Ericka Daniela Martinez",
+            "team": "PROCESSING",
+            "delta_min": 35,
+            "check_in_time": "2025-09-18T13:55:51+00:00"
+          },
+          {
+            "id": "9d151ee8-e517-4118-ae62-d83f185734bc",
+            "name": "Angel David Alvarenga Martinez",
+            "team": "DATA ENTRY",
+            "delta_min": 34,
+            "check_in_time": "2025-09-18T13:56:45+00:00"
+          },
+          {
+            "id": "4892d559-f9e4-4cf0-82ed-1cfb072a309c",
+            "name": "Astrid Mariela Colindres Zelaya",
+            "team": "PROCESSING",
+            "delta_min": 26,
+            "check_in_time": "2025-09-18T13:34:32+00:00"
+          },
+          {
+            "id": "c966497b-3216-4eb7-8eeb-c6ab8d5b7ae1",
+            "name": "Emely Rachel Romero Cabrera",
+            "team": "COMPLIANCE",
+            "delta_min": 10,
+            "check_in_time": "2025-09-18T14:50:31+00:00"
+          },
+          {
+            "id": "86ea4bca-c296-46b4-a3fd-eac2a904f418",
+            "name": "Fabiola Yadira Castillo Moncada",
+            "team": "COMPLIANCE",
+            "delta_min": 10,
+            "check_in_time": "2025-09-18T13:50:46+00:00"
+          },
+          {
+            "id": "693968bd-de01-4e98-9183-b1db7d6d07b1",
+            "name": "Gerardo Leonel Fernandez Martinez",
+            "team": "INSURANCE",
+            "delta_min": 10,
+            "check_in_time": "2025-09-18T13:50:56+00:00"
+          },
+          {
+            "id": "4b18bc4d-3119-44e9-afb5-8918be160a2d",
+            "name": "Wolfang Andre Sosa Lanza",
+            "team": "Customer Service",
+            "delta_min": 9,
+            "check_in_time": "2025-09-18T13:51:18+00:00"
+          },
+          {
+            "id": "198a0df3-440b-49fb-9a44-3ae6cd9616b9",
+            "name": "Helen Daniela Matute Zambrano",
+            "team": "COMPLIANCE",
+            "delta_min": 8,
+            "check_in_time": "2025-09-18T13:52:14+00:00"
+          },
+          {
+            "id": "d70f412b-6525-49b0-847b-6095fc28929c",
+            "name": "David Alejandro Santos Ordoñez",
+            "team": "Customer Service",
+            "delta_min": 6,
+            "check_in_time": "2025-09-18T13:54:05+00:00"
+          },
+          {
+            "id": "681fefe0-afd7-4051-9551-b23fdfcb7b44",
+            "name": "Kenia Isabel Zambrano Molina",
+            "team": "Customer Service",
+            "delta_min": 6,
+            "check_in_time": "2025-09-18T13:54:19+00:00"
+          },
+          {
+            "id": "7e24539f-3cc7-4a5c-a345-27a9b8be9215",
+            "name": "Seth Isaí Godoy Cantarero",
+            "team": "INSURANCE",
+            "delta_min": 5,
+            "check_in_time": "2025-09-18T13:55:06+00:00"
+          },
+          {
+            "id": "c60845ad-ac6a-425c-ade3-b2daddd5aa10",
+            "name": "Luis Eduardo Rojas Escalada",
+            "team": "Customer Service",
+            "delta_min": 4,
+            "check_in_time": "2025-09-18T13:56:14+00:00"
+          },
+          {
+            "id": "bab6837c-6a80-4f9f-8c65-1c477573019e",
+            "name": "Amsi Abigail Urquía Durón",
+            "team": "DATA ENTRY",
+            "delta_min": 3,
+            "check_in_time": "2025-09-18T14:57:55+00:00"
+          },
+          {
+            "id": "6be0d7fc-1ca3-4612-b2c8-b5bf88e20676",
+            "name": "Francisco Javier Mendez Montenegro",
+            "team": "Customer Service",
+            "delta_min": 3,
+            "check_in_time": "2025-09-18T13:57:34+00:00"
+          },
+          {
+            "id": "67795976-4e11-48c7-8f60-2ed35f5579db",
+            "name": "Daniel Vladimir Hernadez Salgado",
+            "team": "INSURANCE",
+            "delta_min": 3,
+            "check_in_time": "2025-09-18T13:57:41+00:00"
+          },
+          {
+            "id": "429f83ce-e440-4dc8-b348-035b93c7dcfa",
+            "name": "Yorleny Paveth Oliva Maldonado",
+            "team": "COMPLIANCE",
+            "delta_min": 2,
+            "check_in_time": "2025-09-18T14:58:03+00:00"
+          },
+          {
+            "id": "fb039dca-11f1-46de-8de5-c5da7825855d",
+            "name": "Marcelo Alejandro Folgar Bonilla",
+            "team": "Customer Service",
+            "delta_min": 2,
+            "check_in_time": "2025-09-18T13:58:42+00:00"
+          },
+          {
+            "id": "b4e40bf3-44e4-41c1-b7ec-984aae20dcb8",
+            "name": "Gerson Enoc Zuniga Chang",
+            "team": "INSURANCE",
+            "delta_min": 2,
+            "check_in_time": "2025-09-18T13:58:48+00:00"
+          },
+          {
+            "id": "747a460b-b279-4f86-be4e-46c356a961be",
+            "name": "Jonny Omar Salinas Rosales",
+            "team": "Customer Service",
+            "delta_min": 2,
+            "check_in_time": "2025-09-18T13:58:58+00:00"
+          },
+          {
+            "id": "af5156dc-d60d-490e-b928-a14627948cea",
+            "name": "Raúl Eduardo Espinoza Núñez",
+            "team": "INSURANCE",
+            "delta_min": 1,
+            "check_in_time": "2025-09-18T13:59:07+00:00"
+          },
+          {
+            "id": "b99f98a9-f7ef-4ae3-83fc-7ed9b76fe919",
+            "name": "Evelin Daniela Oseguera Aguilar",
+            "team": "DATA ENTRY",
+            "delta_min": 1,
+            "check_in_time": "2025-09-18T13:59:17+00:00"
+          },
+          {
+            "id": "d540fc24-3174-458a-92eb-4e2126136c14",
+            "name": "Isis Amaleth Ardon Maradiaga",
+            "team": "COMPLIANCE",
+            "delta_min": 1,
+            "check_in_time": "2025-09-18T13:59:28+00:00"
+          },
+          {
+            "id": "a5d8d5f4-504a-44d4-b5c0-163220055c94",
+            "name": "Katerin Elizabeth Hernandez Martinez",
+            "team": null,
+            "delta_min": 1,
+            "check_in_time": "2025-09-18T13:59:37+00:00"
+          }
+        ],
+        "lateList": [
+          {
+            "id": "b9bd5632-67d8-4bf5-b546-48ea59d29319",
+            "name": "André Alexander García Laínez",
+            "team": "Customer Service",
+            "delta_min": 8,
+            "check_in_time": "2025-09-18T14:08:27+00:00"
+          },
+          {
+            "id": "1d70fa20-612c-4d71-a5d3-2348885e09c1",
+            "name": "Claudette Desiree Rollings Martinez",
+            "team": "NEGOTIATION",
+            "delta_min": 3,
+            "check_in_time": "2025-09-18T14:03:48+00:00"
+          },
+          {
+            "id": "0879e591-4350-4e3f-8e30-f373ce64b6cd",
+            "name": "Victor Enrique Maldonado Zelaya",
+            "team": "COMPLIANCE",
+            "delta_min": 1,
+            "check_in_time": "2025-09-18T14:01:13+00:00"
+          },
+          {
+            "id": "f1514b79-2333-44a5-a4ad-63f233de9c87",
+            "name": "Alejandro José Salgado Girón",
+            "team": "Customer Services",
+            "delta_min": 1,
+            "check_in_time": "2025-09-18T14:01:49+00:00"
+          }
+        ]
+      }
+    },
+    "Employee Lists API": {
+      "available": false,
+      "status": 401,
+      "response": {
+        "error": "Unauthorized"
+      }
+    },
+    "Export API": {
+      "available": false,
+      "status": 401,
+      "response": {
+        "error": "Error de autenticación",
+        "message": "No se pudo verificar la autenticación"
+      }
+    },
+    "KPIs API": {
+      "available": false,
+      "status": 401,
+      "response": {
+        "error": "Unauthorized"
+      }
+    },
+    "Attendance Records": {
+      "available": false,
+      "status": 401,
+      "response": {
+        "error": "Unauthorized"
+      }
+    }
+  },
+  "payroll": {
+    "Payroll Calculate API": {
+      "available": false,
+      "status": 401,
+      "response": {
+        "error": "Authentication required"
+      }
+    },
+    "Payroll Preview API": {
+      "available": false,
+      "status": 401,
+      "response": {
+        "error": "Authentication required"
+      }
+    },
+    "Payroll Records API": {
+      "available": false,
+      "status": 401,
+      "response": {
+        "error": "Authentication required"
+      }
+    },
+    "Generate PDF API": {
+      "available": false,
+      "status": 401,
+      "response": {
+        "error": "Authentication required"
+      }
+    },
+    "Send Vouchers API": {
+      "available": false,
+      "status": 401,
+      "response": {
+        "error": "Authentication required"
+      }
+    },
+    "Export API": {
+      "available": false,
+      "status": 401,
+      "response": {
+        "error": "Authentication required"
+      }
+    },
+    "Trend Analysis API": {
+      "available": false,
+      "status": 401,
+      "response": {
+        "error": "Authentication required"
+      }
+    }
+  },
+  "reports": {
+    "Dashboard Stats API": {
+      "available": false,
+      "status": 401,
+      "response": {
+        "error": "Authentication required"
+      }
+    },
+    "Attendance Trends API": {
+      "available": false,
+      "status": 401,
+      "response": {
+        "error": "Authentication required"
+      }
+    },
+    "Export Reports API": {
+      "available": false,
+      "status": 401,
+      "response": {
+        "error": "Authentication required"
+      }
+    },
+    "Export Attendance": {
+      "available": false,
+      "status": 401,
+      "response": {
+        "error": "Authentication required"
+      }
+    },
+    "Export Employees": {
+      "available": false,
+      "status": 401,
+      "response": {
+        "error": "Authentication required"
+      }
+    },
+    "Export Payroll": {
+      "available": false,
+      "status": 401,
+      "response": {
+        "error": "Authentication required"
+      }
+    },
+    "Work Certificates": {
+      "available": false,
+      "status": 401,
+      "response": {
+        "error": "Authentication required"
+      }
+    }
+  },
+  "integrations": {
+    "Notifications Test": {
+      "available": false,
+      "status": 401,
+      "response": {
+        "error": "Authentication required"
+      }
+    },
+    "Voucher Send API": {
+      "available": false,
+      "status": 401,
+      "response": {
+        "error": "Unauthorized"
+      }
+    },
+    "WhatsApp Send API": {
+      "available": false,
+      "status": 401,
+      "response": {
+        "error": "Authentication required"
+      }
+    },
+    "Email Send API": {
+      "available": false,
+      "status": 401,
+      "response": {
+        "error": "Authentication required"
+      }
+    }
+  },
+  "security": {
+    "Admin Logs API": {
+      "available": false,
+      "status": 401,
+      "response": {
+        "error": "Authentication required"
+      }
+    },
+    "Admin Jobs API": {
+      "available": false,
+      "status": 401,
+      "response": {
+        "error": "Authentication required"
+      }
+    },
+    "Cron Daily API": {
+      "available": true,
+      "status": 401,
+      "response": {
+        "error": "Unauthorized"
+      }
+    },
+    "Backup Critical Data": {
+      "available": true,
+      "status": 401,
+      "response": {
+        "error": "Unauthorized"
+      }
+    },
+    "Cleanup Logs": {
+      "available": true,
+      "status": 401,
+      "response": {
+        "error": "Unauthorized"
+      }
+    },
+    "Environment API": {
+      "available": true,
+      "status": 200,
+      "response": {
+        "NEXT_PUBLIC_SUPABASE_URL": "https://fwyxmovfrzauebiqxchz.supabase.co",
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_K5XwWr0RPK7mq2L2z0TZfA_u6ZreOF7",
+        "NEXT_PUBLIC_SITE_URL": "https://humanosisu.net",
+        "NODE_ENV": "production"
+      }
+    }
+  },
+  "configuration": {
+    "Demo Page": {
+      "available": true,
+      "status": 200,
+      "response": "<!DOCTYPE html><html lang=\"es\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><link rel=\"icon\" href=\"/logo-humano-sisu.png\"/><link rel=\"shortcut icon\" href=\"/logo-humano-sisu.png\"/><link rel=\"apple-touch-icon\" href=\"/logo-humano-sisu.png\"/><link rel=\"preload\" href=\"/_next/static/css/221fea4ad5c54713.css\" as=\"style\"/><link rel=\"stylesheet\" href=\"/_next/static/css/221fea4ad5c54713.css\" data-n-g=\"\"/><noscript data-n-css=\"\"></noscript><script defer=\"\" noModule=\"\" src=\"/_next/static/chunks/polyfills-42372ed130431b0a.js\"></script><script src=\"/_next/static/chunks/webpack-06e4e7c3d484279c.js\" defer=\"\"></script><script src=\"/_next/static/chunks/framework-4a99af1472046e21.js\" defer=\"\"></script><script src=\"/_next/static/chunks/main-a16c3594c8f80332.js\" defer=\"\"></script><script src=\"/_next/static/chunks/pages/_app-9bd5106f5ef361d9.js\" defer=\"\"></script><script src=\"/_next/static/chunks/2749-c220afa1da976889.js\" defer=\"\"></script><script src=\"/_next/static/chunks/8230-290ec8bd26c09398.js\" defer=\"\"></script><script src=\"/_next/static/chunks/pages/demo-67f4dc40e083ab7f.js\" defer=\"\"></script><script src=\"/_next/static/v0ebOdD3YpS1WJuyR8bes/_buildManifest.js\" defer=\"\"></script><script src=\"/_next/static/v0ebOdD3YpS1WJuyR8bes/_ssgManifest.js\" defer=\"\"></script></head><body><div id=\"__next\"><div class=\"min-h-screen bg-app flex items-center justify-center\"><div class=\"animate-spin rounded-full h-12 w-12 border-b-2 border-white\"></div></div></div><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\":{\"pageProps\":{}},\"page\":\"/demo\",\"query\":{},\"buildId\":\"v0ebOdD3YpS1WJuyR8bes\",\"nextExport\":true,\"autoExport\":true,\"isFallback\":false,\"scriptLoader\":[]}</script></body></html>"
+    },
+    "App Demo": {
+      "available": false,
+      "status": 307,
+      "response": "/app/demo/pin?next=%2Fapp%2Fdemo"
+    },
+    "Trial Dashboard": {
+      "available": true,
+      "status": 200,
+      "response": "<!DOCTYPE html><html lang=\"es\"><head><meta charSet=\"utf-8\" data-next-head=\"\"/><meta name=\"viewport\" content=\"width=device-width\" data-next-head=\"\"/><link rel=\"icon\" href=\"/logo-humano-sisu.png\"/><link rel=\"shortcut icon\" href=\"/logo-humano-sisu.png\"/><link rel=\"apple-touch-icon\" href=\"/logo-humano-sisu.png\"/><link rel=\"preload\" href=\"/_next/static/css/221fea4ad5c54713.css\" as=\"style\"/><link rel=\"stylesheet\" href=\"/_next/static/css/221fea4ad5c54713.css\" data-n-g=\"\"/><noscript data-n-css=\"\"></noscript><script defer=\"\" noModule=\"\" src=\"/_next/static/chunks/polyfills-42372ed130431b0a.js\"></script><script src=\"/_next/static/chunks/webpack-06e4e7c3d484279c.js\" defer=\"\"></script><script src=\"/_next/static/chunks/framework-4a99af1472046e21.js\" defer=\"\"></script><script src=\"/_next/static/chunks/main-a16c3594c8f80332.js\" defer=\"\"></script><script src=\"/_next/static/chunks/pages/_app-9bd5106f5ef361d9.js\" defer=\"\"></script><script src=\"/_next/static/chunks/2749-c220afa1da976889.js\" defer=\"\"></script><script src=\"/_next/static/chunks/pages/trial-dashboard-0fb05e86d6819c80.js\" defer=\"\"></script><script src=\"/_next/static/v0ebOdD3YpS1WJuyR8bes/_buildManifest.js\" defer=\"\"></script><script src=\"/_next/static/v0ebOdD3YpS1WJuyR8bes/_ssgManifest.js\" defer=\"\"></script></head><body><div id=\"__next\"><div class=\"min-h-screen bg-app flex items-center justify-center\"><div class=\"animate-spin rounded-full h-12 w-12 border-b-2 border-white\"></div></div></div><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"props\":{\"pageProps\":{}},\"page\":\"/trial-dashboard\",\"query\":{},\"buildId\":\"v0ebOdD3YpS1WJuyR8bes\",\"nextExport\":true,\"autoExport\":true,\"isFallback\":false,\"scriptLoader\":[]}</script></body></html>"
+    },
+    "Trial Start API": {
+      "available": false,
+      "status": 401,
+      "response": {
+        "error": "Unauthorized"
+      }
+    },
+    "Trial Employees API": {
+      "available": false,
+      "status": 400,
+      "response": {
+        "error": "Tenant requerido"
+      }
+    },
+    "Trial Attendance API": {
+      "available": false,
+      "status": 400,
+      "response": {
+        "error": "Tenant requerido"
+      }
+    },
+    "Trial Payroll API": {
+      "available": false,
+      "status": 400,
+      "response": {
+        "error": "Tenant requerido"
+      }
+    },
+    "Demo Verify PIN": {
+      "available": true,
+      "status": 400,
+      "response": {
+        "error": "PIN debe ser de 4 dígitos numéricos"
+      }
+    }
+  },
+  "database": {},
+  "apis": {
+    "Employees API": {
+      "available": false,
+      "status": 401,
+      "response": {
+        "error": "Credenciales inválidas"
+      }
+    },
+    "Departments API": {
+      "available": false,
+      "status": 401,
+      "response": {
+        "error": "Authentication required"
+      }
+    },
+    "Work Schedules API": {
+      "available": false,
+      "status": 401,
+      "response": {
+        "error": "Unauthorized"
+      }
+    },
+    "Leave Management API": {
+      "available": false,
+      "status": 401,
+      "response": {
+        "error": "Authentication required"
+      }
+    },
+    "Leave Types API": {
+      "available": false,
+      "status": 401,
+      "response": {
+        "error": "Authentication required"
+      }
+    },
+    "Gamification API": {
+      "available": false,
+      "status": 401,
+      "response": {
+        "error": "Authentication required"
+      }
+    },
+    "Achievements API": {
+      "available": false,
+      "status": 401,
+      "response": {
+        "error": "Authentication required"
+      }
+    },
+    "Leaderboard API": {
+      "available": false,
+      "status": 401,
+      "response": {
+        "error": "Authentication required"
+      }
+    }
+  },
+  "notifications": {}
+}

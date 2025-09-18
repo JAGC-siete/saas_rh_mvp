@@ -1,6 +1,6 @@
 {
   "name": "hr-saas-frontend",
-  "version": "0.3.0",
+  "version": "1.5.0",
   "private": true,
   "engines": {
     "node": ">=20.0.0",
@@ -38,6 +38,7 @@
     "@supabase/supabase-js": "^2.52.1",
     "@tailwindcss/forms": "^0.5.10",
     "@tailwindcss/typography": "^0.5.16",
+    "@types/bcrypt": "^6.0.0",
     "@types/formidable": "^3.4.5",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/lodash": "^4.17.20",
@@ -52,6 +53,7 @@
     "@types/winston": "^2.4.4",
     "autoprefixer": "^10.4.21",
     "axios": "^1.7.9",
+    "bcrypt": "^6.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
@@ -73,7 +75,7 @@
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.6.2",
     "recharts": "^3.1.0",
-    "resend": "^6.0.1",
+    "resend": "^6.1.0",
     "tailwind-merge": "^3.3.1",
     "typescript": "5.8.3",
     "winston": "^3.17.0",

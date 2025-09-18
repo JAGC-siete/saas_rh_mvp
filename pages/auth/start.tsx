@@ -4,10 +4,10 @@ import Head from 'next/head'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
 const CloudBackground = dynamic(() => import('../../components/CloudBackground'), { ssr: false })
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
+import { Card, CardContent } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
-import { Mail, Phone, /* Facebook, */ ArrowRight, Loader2 } from 'lucide-react'
+import { Mail, Phone, /* Facebook, */ Loader2 } from 'lucide-react'
 import Image from 'next/image'
 import { createClient as createSupabaseBrowserClient } from '../../lib/supabase/client'
 
@@ -32,7 +32,7 @@ export default function AuthStart() {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/confirm?next=/onboarding`
+          emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net'}/auth/confirm?next=/onboarding`
         }
       })
       
@@ -339,7 +339,7 @@ export default function AuthStart() {
                 <div className="space-y-4">
                   <div className="text-center">
                     <div className="text-green-400 text-sm glass-strong p-3 rounded-md">
-                      Revisá tu bandeja (o spam). Asunto: "Tu acceso a Humano SISU". Válido por 10 minutos.
+                      Revisá tu bandeja (o spam). Asunto: &quot;Tu acceso a Humano SISU&quot;. Válido por 10 minutos.
                     </div>
                   </div>
 

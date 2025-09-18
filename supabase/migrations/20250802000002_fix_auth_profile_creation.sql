@@ -117,10 +117,33 @@ USING (
 -- 4. Función para crear perfil automáticamente
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
+DECLARE
+  default_company_id UUID;
 BEGIN
-  INSERT INTO public.user_profiles (id, role, is_active, permissions, created_at, updated_at)
+  -- Obtener o crear una empresa por defecto para nuevos usuarios
+  SELECT id INTO default_company_id 
+  FROM companies 
+  WHERE name = 'Default Company' 
+  LIMIT 1;
+  
+  -- Si no existe, crear una empresa por defecto
+  IF default_company_id IS NULL THEN
+    INSERT INTO companies (id, name, subdomain, plan_type, is_active)
+    VALUES (
+      uuid_generate_v4(),
+      'Default Company',
+      'default',
+      'basic',
+      true
+    )
+    RETURNING id INTO default_company_id;
+  END IF;
+
+  -- Crear perfil de usuario con company_id
+  INSERT INTO public.user_profiles (id, company_id, role, is_active, permissions, created_at, updated_at)
   VALUES (
     NEW.id,
+    default_company_id,
     'super_admin',
     true,
     '{
@@ -139,6 +162,11 @@ BEGIN
     NOW()
   );
   RETURN NEW;
+EXCEPTION
+  WHEN OTHERS THEN
+    -- Log error but don't fail the user creation
+    RAISE WARNING 'Error creating user profile for user %: %', NEW.id, SQLERRM;
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 

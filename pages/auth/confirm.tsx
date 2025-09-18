@@ -52,6 +52,25 @@ export default function AuthConfirm() {
           setStatus('success')
           setMessage('¡Acceso verificado! Te estamos redirigiendo...')
           
+          // Create user profile if it doesn't exist
+          try {
+            const response = await fetch('/api/auth/fix-user-creation', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ userId: data.user.id })
+            })
+            
+            if (!response.ok) {
+              const errorData = await response.json()
+              console.warn('Could not create user profile:', errorData)
+            } else {
+              console.log('User profile created successfully')
+            }
+          } catch (error) {
+            console.warn('Could not create user profile:', error)
+            // Don't fail the auth process if profile creation fails
+          }
+          
           // Redirigir después de un breve delay
           setTimeout(() => {
             const next = router.query.next as string || '/onboarding'
@@ -73,7 +92,7 @@ export default function AuthConfirm() {
     if (router.isReady && router.query.token_hash) {
       handleMagicLink()
     }
-  }, [router.isReady, router.query])
+  }, [router.isReady, router.query, router])
 
   const getStatusIcon = () => {
     switch (status) {
