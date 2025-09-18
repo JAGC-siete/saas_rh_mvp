@@ -532,13 +532,6 @@ export default function EmployeePortal() {
     checkExistingSession()
   }, [])
 
-  // Fetch data when session is available
-  useEffect(() => {
-    if (session) {
-      fetchEmployeeData()
-    }
-  }, [session, fetchEmployeeData])
-
   const checkExistingSession = async () => {
     // No need for custom session checking - useAuth handles this
     setLoading(false)
@@ -581,6 +574,13 @@ export default function EmployeePortal() {
       console.error('Error fetching employee data:', error)
     }
   }, [user, isEmployee])
+
+  // Fetch data when session is available
+  useEffect(() => {
+    if (session) {
+      fetchEmployeeData()
+    }
+  }, [session, fetchEmployeeData])
 
   const handleLoginSuccess = useCallback((sessionData: EmployeeSession) => {
     clientLogger.info('Employee portal access', {
