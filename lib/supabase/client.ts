@@ -25,31 +25,28 @@ export function createClient(): SupabaseClient {
 
   // Check if environment variables are available
   if (!supabaseUrl || !supabaseAnonKey) {
-    // During build time, use hardcoded values for development
+    const errorMessage = `❌ CRITICAL: Supabase environment variables not configured
+    
+    Required variables:
+    - NEXT_PUBLIC_SUPABASE_URL: ${supabaseUrl ? '✅ Set' : '❌ Missing'}
+    - NEXT_PUBLIC_SUPABASE_ANON_KEY: ${supabaseAnonKey ? '✅ Set' : '❌ Missing'}
+    
+    Please ensure these are set in:
+    1. .env file (for development)
+    2. Railway/Vercel dashboard (for production)
+    3. Docker environment (for containers)
+    
+    Current environment: ${process.env.NODE_ENV || 'unknown'}
+    `
+    
+    console.error(errorMessage)
+    
     if (typeof window === 'undefined') {
-      console.warn('⚠️ Supabase environment variables not available during build time, using fallback')
-      supabaseUrl = 'https://fwyxmovfrzauebiqxchz.supabase.co'
-      supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ3eXhtb3ZmcnphdWViaXF4Y2h6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIxODk5MjEsImV4cCI6MjA2Nzc2NTkyMX0.K5XwWr0RPK7mq2L2z0TZfA_u6ZreOF7Qfj0cYYKkQzI'
+      // Server-side: Fail fast during build
+      throw new Error('Supabase environment variables must be configured before build')
     } else {
-      // For client-side, check if we have cached environment variables in window
-      if ((window as any).__ENV__) {
-        const windowEnv = (window as any).__ENV__
-        if (windowEnv.NEXT_PUBLIC_SUPABASE_URL && windowEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-          console.log('🔄 Using cached environment variables from window')
-          supabaseUrl = windowEnv.NEXT_PUBLIC_SUPABASE_URL
-          supabaseAnonKey = windowEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY
-        } else {
-          // Use hardcoded values as fallback
-          console.warn('⚠️ Using hardcoded Supabase values as fallback')
-          supabaseUrl = 'https://fwyxmovfrzauebiqxchz.supabase.co'
-          supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ3eXhtb3ZmcnphdWViaXF4Y2h6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIxODk5MjEsImV4cCI6MjA2Nzc2NTkyMX0.K5XwWr0RPK7mq2L2z0TZfA_u6ZreOF7Qfj0cYYKkQzI'
-        }
-      } else {
-        // Use hardcoded values as final fallback
-        console.warn('⚠️ No environment variables found, using hardcoded values')
-        supabaseUrl = 'https://fwyxmovfrzauebiqxchz.supabase.co'
-        supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ3eXhtb3ZmcnphdWViaXF4Y2h6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIxODk5MjEsImV4cCI6MjA2Nzc2NTkyMX0.K5XwWr0RPK7mq2L2z0TZfA_u6ZreOF7Qfj0cYYKkQzI'
-      }
+      // Client-side: Show user-friendly error
+      throw new Error('Application configuration error. Please contact system administrator.')
     }
   }
 
