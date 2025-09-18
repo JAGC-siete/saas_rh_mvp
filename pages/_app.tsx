@@ -17,6 +17,7 @@ if (typeof window === 'undefined') {
 export const SupabaseContext = createContext<any>(null)
 
 // Function to load environment variables from API
+// eslint-disable-next-line no-unused-vars
 async function loadEnvironmentVariables() {
   try {
     const response = await fetch('/api/env')

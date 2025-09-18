@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/router'
 import EmployeeLogin from '../../components/employee-portal/EmployeeLogin'
 import { useAuth } from '../../lib/auth'
-import { useNotificationContext } from '../../components/NotificationProvider'
+// import { useNotificationContext } from '../../components/NotificationProvider'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { 
@@ -193,6 +193,7 @@ function AttendanceRecordsList({ employeeId }: { employeeId?: string }) {
 function PayrollSection({ employeeId }: { employeeId?: string }) {
   const [payrollData, setPayrollData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  // eslint-disable-next-line no-unused-vars
   const [generatingPDF, setGeneratingPDF] = useState(false)
 
   useEffect(() => {
@@ -221,6 +222,7 @@ function PayrollSection({ employeeId }: { employeeId?: string }) {
     fetchPayroll()
   }, [employeeId])
 
+  // eslint-disable-next-line no-unused-vars
   const generatePDF = async (periodo: string, quincena: number) => {
     // Mostrar mensaje de funcionalidad en desarrollo
     alert('🚧 Funcionalidad en desarrollo\n\nLa generación de recibos de nómina en PDF estará disponible próximamente.')

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
 import { Button } from './ui/button'
@@ -32,8 +32,8 @@ const CONFIRMATION_MESSAGE = '¿Estás seguro de que quieres eliminar este depar
 const NO_MANAGER_TEXT = 'Sin asignar'
 const NO_DEPARTMENTS_TEXT = 'No hay departamentos registrados'
 
-export default function DepartmentManager() {
-  const { user } = useAuth()
+export default function DepartmentManager({ companyId }: { companyId?: string }) {
+  const { userProfile } = useAuth()
   const [departments, setDepartments] = useState<Department[]>([])
   const [employees, setEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(false)
@@ -44,13 +44,16 @@ export default function DepartmentManager() {
   const fetchDepartments = useCallback(async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase
-        .from('departments')
-        .select(`
+      let query = supabase.from('departments').select(`
           *,
           employees:employees(id, name, email)
         `)
-        .order('name')
+      if (companyId) {
+        query = query.eq('company_id', companyId)
+      }
+      query = query.order('name')
+
+      const { data, error } = await query
 
       if (error) throw error
       setDepartments(data || [])
@@ -59,7 +62,7 @@ export default function DepartmentManager() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [companyId])
 
   const fetchEmployees = useCallback(async () => {
     try {
@@ -108,7 +111,7 @@ export default function DepartmentManager() {
       } else {
         const { error } = await supabase
           .from('departments')
-          .insert([departmentData])
+          .insert([{ ...departmentData, company_id: companyId || userProfile?.company_id }])
 
         if (error) throw error
       }
@@ -120,7 +123,7 @@ export default function DepartmentManager() {
     } finally {
       setLoading(false)
     }
-  }, [formData, editingDepartment, resetForm, fetchDepartments])
+  }, [formData, editingDepartment, resetForm, fetchDepartments, companyId, userProfile?.company_id])
 
   const handleEdit = useCallback((department: Department) => {
     setEditingDepartment(department)
@@ -163,11 +166,11 @@ export default function DepartmentManager() {
   const isLoadingInitial = loading && departments.length === 0
 
   useEffect(() => {
-    if (user) {
+    if (userProfile) {
       fetchDepartments()
       fetchEmployees()
     }
-  }, [user, fetchDepartments, fetchEmployees])
+  }, [userProfile, fetchDepartments, fetchEmployees])
 
   if (isLoadingInitial) {
     return (

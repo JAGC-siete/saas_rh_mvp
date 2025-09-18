@@ -4,6 +4,7 @@ import { Notification } from '../lib/hooks/useNotifications'
 
 interface NotificationToastProps {
   notification: Notification
+  // eslint-disable-next-line no-unused-vars
   onRemove: (id: string) => void
 }
 

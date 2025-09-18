@@ -3,7 +3,9 @@ import { useNotifications, Notification } from '../lib/hooks/useNotifications'
 import NotificationToast from './NotificationToast'
 
 interface NotificationContextType {
+  // eslint-disable-next-line no-unused-vars
   addNotification: (notification: Omit<Notification, 'id'>) => string
+  // eslint-disable-next-line no-unused-vars
   removeNotification: (id: string) => void
   clearAll: () => void
 }

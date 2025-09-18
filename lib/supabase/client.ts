@@ -32,29 +32,38 @@ export function createClient(): SupabaseClient {
     // For client-side, try to load environment variables from API
     console.warn('⚠️ Supabase environment variables not available, trying to load from API...')
     
-    try {
-      // Try to load environment variables from API
-      fetch('/api/env')
-        .then(response => response.json())
-        .then(envData => {
-          if (envData.NEXT_PUBLIC_SUPABASE_URL && envData.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-            // Inject environment variables into global scope
-            if (typeof window !== 'undefined') {
-              (window as any).__ENV__ = envData
-              // Refresh the env object
-              refreshEnvFromWindow()
+    // Check if we have cached environment variables in window
+    if ((window as any).__ENV__) {
+      const windowEnv = (window as any).__ENV__
+      if (windowEnv.NEXT_PUBLIC_SUPABASE_URL && windowEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+        console.log('🔄 Using cached environment variables from window')
+        return createBrowserClient(
+          windowEnv.NEXT_PUBLIC_SUPABASE_URL,
+          windowEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+          {
+            auth: {
+              autoRefreshToken: true,
+              persistSession: true,
+              detectSessionInUrl: true
+            },
+            global: {
+              headers: {
+                'X-Client-Info': 'hr-saas-frontend'
+              }
             }
           }
-        })
-        .catch(error => {
-          console.error('❌ Failed to load environment variables from API:', error)
-        })
-      
-      throw new Error('Supabase environment variables are not configured')
-    } catch (error) {
-      console.error('❌ Failed to load environment variables from API:', error)
-      throw new Error('Supabase environment variables are not configured')
+        )
+      }
     }
+    
+    // If no cached variables, throw error with helpful message
+    console.error('❌ Missing Supabase environment variables:', {
+      supabaseUrl: supabaseUrl ? 'Present' : 'Missing',
+      supabaseAnonKey: supabaseAnonKey ? 'Present' : 'Missing',
+      windowEnv: (window as any).__ENV__ ? 'Present' : 'Missing'
+    })
+    
+    throw new Error('Supabase environment variables are not configured. Please refresh the page.')
   }
 
   try {

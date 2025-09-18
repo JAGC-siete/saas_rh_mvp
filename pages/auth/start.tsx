@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
 import Link from 'next/link'
@@ -18,7 +18,41 @@ export default function AuthStart() {
   const [step, setStep] = useState<'method' | 'email' | 'phone' | 'otp'>('method')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [envLoaded, setEnvLoaded] = useState(false)
   const router = useRouter()
+
+  // Load environment variables on client side
+  useEffect(() => {
+    const loadEnvVars = async () => {
+      try {
+        // Check if we already have environment variables
+        if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+          setEnvLoaded(true)
+          return
+        }
+
+        // Try to load from API
+        const response = await fetch('/api/env')
+        if (response.ok) {
+          const envData = await response.json()
+          if (envData.NEXT_PUBLIC_SUPABASE_URL && envData.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+            // Cache in window for Supabase client
+            if (typeof window !== 'undefined') {
+              (window as any).__ENV__ = envData
+            }
+            setEnvLoaded(true)
+            console.log('✅ Environment variables loaded from API')
+          }
+        }
+      } catch (error) {
+        console.error('❌ Failed to load environment variables:', error)
+        // Still set envLoaded to true to allow user to try
+        setEnvLoaded(true)
+      }
+    }
+
+    loadEnvVars()
+  }, [])
 
   const handleEmailMagicLink = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -26,28 +60,49 @@ export default function AuthStart() {
     setError('')
 
     try {
-      const supabase = await createSupabaseBrowserClient()
+      const supabase = createSupabaseBrowserClient()
       if (!supabase) throw new Error('Error inicializando Supabase')
+      
+      console.log('📧 Enviando magic link a:', email)
+      
+      // Get the correct site URL
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 
+                     (window as any).__ENV__?.NEXT_PUBLIC_SITE_URL || 
+                     'https://humanosisu.net'
+      
+      const redirectUrl = `${siteUrl}/auth/confirm?next=/onboarding`
+      console.log('🔗 Redirect URL:', redirectUrl)
       
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net'}/auth/confirm?next=/onboarding`
+          emailRedirectTo: redirectUrl
         }
       })
       
-      if (error) throw error
+      if (error) {
+        console.error('❌ Error magic link:', error)
+        throw error
+      }
       
-      // Mostrar mensaje de éxito
+      console.log('✅ Magic link enviado exitosamente')
       setError('')
       setStep('email')
     } catch (err: any) {
+      console.error('❌ Error en handleEmailMagicLink:', err)
+      
       if (err.message?.includes('Invalid email')) {
-        setError('Revisá el formato del correo.')
+        setError('Revisá el formato del correo. Debe ser válido (ej: tu@empresa.com).')
       } else if (err.message?.includes('rate limit')) {
-        setError('Demasiados intentos. Volvé en 15 minutos.')
+        setError('Demasiados intentos. Esperá 15 minutos antes de intentar de nuevo.')
+      } else if (err.message?.includes('Supabase environment variables are not configured')) {
+        setError('Error de configuración. Recargá la página e intentá de nuevo.')
+      } else if (err.message?.includes('User already registered')) {
+        setError('Ya existe una cuenta con este correo. Usá "¿Ya tenés cuenta? Entrá acá" para iniciar sesión.')
+      } else if (err.message?.includes('Email not confirmed')) {
+        setError('El correo no está confirmado. Revisá tu bandeja de entrada.')
       } else {
-        setError(err.message || 'Error enviando enlace mágico')
+        setError(err.message || 'Error enviando enlace mágico. Verificá tu conexión e intentá de nuevo.')
       }
     } finally {
       setLoading(false)
@@ -339,7 +394,12 @@ export default function AuthStart() {
                 <div className="space-y-4">
                   <div className="text-center">
                     <div className="text-green-400 text-sm glass-strong p-3 rounded-md">
-                      Revisá tu bandeja (o spam). Asunto: &quot;Tu acceso a Humano SISU&quot;. Válido por 10 minutos.
+                      <div className="font-semibold mb-2">¡Enlace enviado exitosamente!</div>
+                      <div>Revisá tu bandeja de entrada (o carpeta de spam).</div>
+                      <div className="mt-1 text-xs">Asunto: "Tu acceso a Humano SISU" - Válido por 1 hora</div>
+                      <div className="mt-2 text-xs text-green-300">
+                        Si no recibís el correo en 5 minutos, verificá tu conexión e intentá de nuevo.
+                      </div>
                     </div>
                   </div>
 
@@ -368,9 +428,10 @@ export default function AuthStart() {
                     <Button
                       type="submit"
                       className="w-full h-12 bg-brand-900 hover:bg-brand-800 text-white"
-                      disabled={loading || !email}
+                      disabled={loading || !email || !envLoaded}
                     >
-                      {loading ? 'Mandando tu enlace seguro…' : 'Enviar Enlace Mágico'}
+                      {!envLoaded ? 'Cargando configuración...' : 
+                       loading ? 'Mandando tu enlace seguro…' : 'Reenviar Enlace Mágico'}
                     </Button>
 
                     <Button
