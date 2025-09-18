@@ -99,7 +99,9 @@ export default function ReportsAndAnalytics() {
 
       console.log('Fetching dashboard stats for company:', companyId, 'period:', { monthStart, monthEnd })
 
-      const response = await fetch(`/api/reports/dashboard-stats?startDate=${monthStart}&endDate=${monthEnd}`)
+      const response = await fetch(`/api/reports/dashboard-stats?startDate=${monthStart}&amp;endDate=${monthEnd}`, {
+        credentials: 'include'
+      })
       
       if (!response.ok) {
         const errorData = await response.json()
@@ -149,7 +151,8 @@ export default function ReportsAndAnalytics() {
           format: format,
           dateFilter: { startDate: dateRange.startDate, endDate: dateRange.endDate }
           // company_id now comes from auth context
-        })
+        }),
+        credentials: 'include'
       })
 
       if (!response.ok) {

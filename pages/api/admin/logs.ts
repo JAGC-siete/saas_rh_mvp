@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { logger } from '../../../lib/logger'
-import { createAdminClient } from '../../../lib/supabase/server'
+import { requireAdmin } from '../../../lib/auth/api-auth'
 import { nowInHonduras } from '../../../lib/timezone'
 
 interface LogsResponse {
@@ -14,66 +14,25 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<LogsResponse>
 ) {
-  let user: any = null
-  
-  // Verificar autenticación y autorización
   try {
-    const supabase = createAdminClient()
-    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
+    // Use standardized admin authentication
+    const { supabase, user } = await requireAdmin(req, res)
     
-    if (authError || !authUser) {
-      logger.error('logs_api_unauthorized', { error: authError?.message })
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-        error: 'Authentication required'
-      })
-    }
-
-    user = authUser
-
-    // Verificar si el usuario es admin
-    const { data: profile, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (profileError || !profile || profile.role !== 'admin') {
-      logger.error('logs_api_forbidden', { userId: user.id, role: profile?.role })
-      return res.status(403).json({
-        success: false,
-        message: 'Forbidden',
-        error: 'Admin privileges required'
-      })
-    }
-
     logger.info('logs_api_access', { userId: user.id, method: req.method })
 
-  } catch (error) {
-    logger.error('Logs API authentication error', { error })
-    return res.status(500).json({
-      success: false,
-      message: 'Internal server error',
-      error: 'Authentication failed'
-    })
-  }
+    // Solo permitir GET para logs
+    if (req.method !== 'GET') {
+      res.setHeader('Allow', ['GET'])
+      return res.status(405).json({
+        success: false,
+        message: 'Method not allowed',
+        error: `Method ${req.method} not allowed`
+      })
+    }
 
-  // Solo permitir GET para logs
-  if (req.method !== 'GET') {
-    res.setHeader('Allow', ['GET'])
-    return res.status(405).json({
-      success: false,
-      message: 'Method not allowed',
-      error: `Method ${req.method} not allowed`
-    })
-  }
-
-  try {
     const { level, limit = 100, startDate, endDate } = req.query
 
     // Obtener logs desde Supabase (asumiendo que tienes una tabla de logs)
-    const supabase = createAdminClient()
     
     let query = supabase
       .from('system_logs')
@@ -146,8 +105,25 @@ export default async function handler(
       }
     })
 
-  } catch (error) {
+  } catch (error: any) {
     logger.error('Error in logs API', { error })
+    
+    // Handle specific authentication errors
+    if (error.message === 'UNAUTHORIZED') {
+      return res.status(401).json({ 
+        success: false,
+        message: 'Unauthorized',
+        error: 'Authentication required'
+      })
+    }
+    if (error.message === 'ADMIN_REQUIRED') {
+      return res.status(403).json({ 
+        success: false,
+        message: 'Forbidden',
+        error: 'Admin privileges required'
+      })
+    }
+    
     return res.status(500).json({
       success: false,
       message: 'Failed to retrieve logs',

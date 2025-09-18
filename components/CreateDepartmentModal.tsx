@@ -39,7 +39,9 @@ export default function CreateDepartmentModal({
   const fetchEmployees = useCallback(async () => {
     try {
       setLoadingEmployees(true)
-      const response = await fetch('/api/employees/search?limit=100&status=active')
+      const response = await fetch('/api/employees/search?limit=100&status=active', {
+        credentials: 'include'
+      })
       
       if (response.ok) {
         const data = await response.json()
@@ -91,7 +93,8 @@ export default function CreateDepartmentModal({
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(departmentData)
+        body: JSON.stringify(departmentData),
+        credentials: 'include'
       })
 
       if (!response.ok) {

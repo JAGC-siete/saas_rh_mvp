@@ -91,16 +91,23 @@ const PROTECTED_APP_ROUTES = new Set([
 // API routes that require authentication and specific permissions
 const PROTECTED_API_ROUTES = new Set([
   '/api/employees',
+  '/api/employees/*',
   '/api/payroll',
+  '/api/payroll/*',
   '/api/reports',
+  '/api/reports/*',
   '/api/departments',
+  '/api/departments/*',
+  '/api/attendance/*',
   '/api/leave',
+  '/api/leave/*',
   '/api/gamification',
-  '/api/admin',           // APIs de administración
-  '/api/admin/*',         // Sub-APIs de administración
-  '/api/profile',         // APIs de perfil
-  '/api/notifications',   // APIs de notificaciones
-])
+  '/api/gamification/*',
+  '/api/admin',           
+  '/api/admin/*',         
+  '/api/profile',         
+  '/api/notifications',   
+]);
 
 // Admin-only routes that require elevated permissions
 const ADMIN_ONLY_ROUTES = new Set([
@@ -215,31 +222,58 @@ export async function middleware(request: NextRequest) {
     
     // 🔒 PROTECCIÓN ESPECÍFICA PARA ENDPOINTS CRÍTICOS
     if (isProtectedApiRoute(pathname)) {
-      logger.debug('Protected API route accessed', { path: pathname })
+      logger.debug('Protected API route accessed', { path: pathname });
       
-      // Verificar autenticación básica (las APIs manejan su propia autorización)
-      const authHeader = request.headers.get('authorization')
-      const cookieHeader = request.headers.get('cookie')
-      
-      if (!authHeader && !cookieHeader) {
-        logger.warn('Unauthorized API access attempt', { 
-          path: pathname, 
-          ip: request.headers.get('x-forwarded-for') || 'unknown',
-          userAgent: request.headers.get('user-agent')
-        })
-        // Use Spanish for employee routes, English for admin routes
-        const errorMessage = pathname.startsWith('/api/employees') ? 'Credenciales inválidas' : 'Authentication required'
-        return NextResponse.json({ error: errorMessage }, { status: 401 })
+      try {
+        // Create Supabase client
+        const supabaseUrl = process.env['NEXT_PUBLIC_SUPABASE_URL'];
+        const anon = process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY'];
+        
+        if (!supabaseUrl || !anon) {
+          logger.error('Missing Supabase environment variables');
+          return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+        }
+        
+        const supabase = createServerClient(supabaseUrl, anon, {
+          cookies: {
+            get(name: string) {
+              return request.cookies.get(name)?.value;
+            },
+          },
+        });
+        
+        // Get user
+        const { data: { user }, error } = await supabase.auth.getUser();
+        
+        if (error || !user) {
+          logger.warn('Unauthorized API access attempt', { path: pathname });
+          return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+        }
+        
+        // If admin route, check role (similar to app routes)
+        if (isAdminRoute(pathname)) {
+          const { data: profile, error: profileError } = await supabase
+            .from('user_profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+          
+          if (profileError || !profile || !['super_admin', 'company_admin', 'hr_manager'].includes(profile.role)) {
+            logger.warn('Unauthorized admin API access', { path: pathname, userId: user.id });
+            return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+          }
+        }
+        
+        // Valid, proceed
+        const response = NextResponse.next();
+        const duration = Date.now() - startTime;
+        logger.api(request.method, pathname, 200, duration, { type: 'protected_api' });
+        return response;
+        
+      } catch (error) {
+        logger.error('Authentication error in protected API', error);
+        return NextResponse.json({ error: 'Authentication error' }, { status: 401 });
       }
-      
-      // Permitir que la API maneje la validación detallada
-      const response = NextResponse.next()
-      
-      // Log response time para APIs protegidas
-      const duration = Date.now() - startTime
-      logger.api(request.method, pathname, 200, duration, { type: 'protected_api' })
-      
-      return response
     }
     
     // For other API routes, let them handle their own authentication
@@ -391,7 +425,7 @@ export async function middleware(request: NextRequest) {
           .eq('id', user.id)
           .single()
         
-        if (profileError || !profile || !['admin', 'super_admin'].includes(profile.role)) {
+        if (profileError || !profile || !['super_admin', 'company_admin', 'hr_manager'].includes(profile.role)) {
           logger.warn('Unauthorized admin access attempt', { 
             path: pathname, 
             userId: user?.id,

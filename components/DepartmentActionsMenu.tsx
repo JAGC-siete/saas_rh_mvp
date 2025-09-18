@@ -48,6 +48,7 @@ Escribe "ELIMINAR" para confirmar:`
       
       const response = await fetch(`/api/departments/${department.id}`, {
         method: 'DELETE',
+        credentials: 'include'
       })
 
       if (!response.ok) {

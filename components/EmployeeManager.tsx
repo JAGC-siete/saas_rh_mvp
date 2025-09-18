@@ -127,7 +127,9 @@ export default function EmployeeManager() {
     
     try {
       console.log('🔍 Fetching departments...')
-      const response = await fetch('/api/departments')
+      const response = await fetch('/api/departments', {
+        credentials: 'include'
+      })
       
       if (!response.ok) {
         throw new Error(`Error fetching departments: ${response.status}`)
@@ -161,7 +163,9 @@ export default function EmployeeManager() {
     
     try {
       console.log('🔍 Fetching work schedules...')
-      const response = await fetch('/api/work-schedules')
+      const response = await fetch('/api/work-schedules', {
+        credentials: 'include'
+      })
       
       if (!response.ok) {
         throw new Error(`Error fetching work schedules: ${response.status}`)
@@ -301,6 +305,7 @@ export default function EmployeeManager() {
           status: 'inactive',
           termination_date: finalTerminationDate
         }),
+        credentials: 'include'
       })
 
       if (!response.ok) {
