@@ -30,7 +30,7 @@ const PUBLIC_ROUTES = new Set([
   '/politicadeprivacidad', // Política de privacidad - PÚBLICO
   '/app/demo/pin',     // PIN de demo - PÚBLICO
   '/app/attendance/register', // Registro de asistencia - PÚBLICO
-  '/employees/portal',        // Employee portal - PÚBLICO
+  '/employees/portal',        // Employee portal - PÚBLICO (handles own auth)
   '/registrodeasistencia',
   '/attendance/public',
   '/attendance/register', // Legacy route - mantenida por compatibilidad
@@ -86,7 +86,6 @@ const PROTECTED_APP_ROUTES = new Set([
   '/app/notifications',   // Notificaciones
   // Legacy attendance dashboard outside /app
   '/attendance/dashboard',
-  '/employees/portal',
 ])
 
 // API routes that require authentication and specific permissions
@@ -442,31 +441,32 @@ export async function middleware(request: NextRequest) {
         })
       }
 
-      // Check employee role for /employees/portal
+      // Special handling for employee portal
       if (pathname === '/employees/portal') {
-        logger.debug('Employee portal accessed, checking role', {
-          path: pathname,
-          userId: user?.id
+        logger.debug('Employee portal accessed, checking session', {
+          path: pathname
         })
-        const { data: profile, error: profileError } = await supabase
-          .from('user_profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single()
-
-        if (profileError || !profile || profile.role !== 'employee') {
-          logger.warn('Unauthorized employee portal access', {
-            path: pathname,
-            userId: user?.id,
-            userRole: profile?.role
-          })
-          return NextResponse.redirect(new URL('/unauthorized', request.url));
+        
+        // Check for employee session token instead of Supabase user
+        const accessToken = request.cookies.get('sb-access-token')?.value
+        
+        if (!accessToken || !accessToken.startsWith('emp_')) {
+          logger.debug('No employee session found, allowing access to login page')
+          const response = NextResponse.next()
+          const duration = Date.now() - startTime
+          logger.api(request.method, pathname, 200, duration, { type: 'employee_portal_login' })
+          return response
         }
+        
         logger.debug('Employee portal access granted', {
           path: pathname,
-          userId: user?.id,
-          userRole: profile.role
+          hasEmployeeToken: true
         })
+        
+        const response = NextResponse.next()
+        const duration = Date.now() - startTime
+        logger.api(request.method, pathname, 200, duration, { type: 'employee_portal_authenticated' })
+        return response
       }
       
       logger.debug('Valid user found for protected app route', { 

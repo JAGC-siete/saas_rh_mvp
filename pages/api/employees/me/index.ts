@@ -47,26 +47,113 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Create Supabase client (handles auth automatically via cookies)
     const supabase = createClient(req, res)
     
-    // Agregar filtro por employee_id de la sesión
-    const { data: { user } } = await supabase.auth.getUser();
+    // Check for employee session token
+    const authHeader = req.headers.authorization || req.headers.Authorization as string
+    const accessToken = req.cookies['sb-access-token'] || authHeader?.replace('Bearer ', '')
+    
+    if (!accessToken || !accessToken.startsWith('emp_')) {
+      return res.status(401).json({ error: 'No autorizado' })
+    }
+    
+    // Extract employee ID from token
+    const employeeId = accessToken.split('_')[1]
+    if (!employeeId) {
+      return res.status(401).json({ error: 'Token inválido' })
+    }
 
-    if (!user) return res.status(401).json({ error: 'Unauthorized' });
-
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('employee_id')
-      .eq('id', user.id)
-      .single();
-
-    if (!profile?.employee_id) return res.status(403).json({ error: 'No employee linked' });
-
-    const { data } = await supabase
+    // Get detailed employee information
+    const { data: employeeDetails, error: detailsError } = await supabase
       .from('employees')
-      .select('*')
-      .eq('id', profile.employee_id)
-      .single();
+      .select(`
+        id,
+        name,
+        dni,
+        role,
+        email,
+        phone,
+        hire_date,
+        base_salary,
+        status,
+        departments:department_id(
+          id,
+          name
+        ),
+        work_schedules:work_schedule_id(
+          id,
+          name,
+          monday_start,
+          monday_end,
+          tuesday_start,
+          tuesday_end,
+          wednesday_start,
+          wednesday_end,
+          thursday_start,
+          thursday_end,
+          friday_start,
+          friday_end,
+          saturday_start,
+          saturday_end,
+          sunday_start,
+          sunday_end
+        )
+      `)
+      .eq('id', employeeId)
+      .single()
 
-    return res.status(200).json(data);
+    if (detailsError || !employeeDetails) {
+      logger.error('Failed to get employee details', detailsError)
+      return res.status(404).json({ error: 'Empleado no encontrado' })
+    }
+
+    // Mask sensitive information
+    const dniMasked = employeeDetails.dni?.length > 9 
+      ? `${employeeDetails.dni.substring(0, 4)}****${employeeDetails.dni.slice(-5)}`
+      : `****${employeeDetails.dni?.slice(-5) || ''}`
+
+    // Log access for audit
+    logger.info('Employee accessed own profile', {
+      employeeId: employeeId,
+      employeeName: employeeDetails.name,
+      action: 'view_profile'
+    })
+
+    const response: EmployeeProfileResponse = {
+      employee: {
+        id: employeeDetails.id,
+        name: employeeDetails.name,
+        dni_masked: dniMasked,
+        role: employeeDetails.role || 'Empleado',
+        email: employeeDetails.email || undefined,
+        phone: employeeDetails.phone || undefined,
+        hire_date: employeeDetails.hire_date || undefined,
+        department: (employeeDetails.departments as any) ? {
+          id: (employeeDetails.departments as any).id,
+          name: (employeeDetails.departments as any).name
+        } : undefined,
+        work_schedule: (employeeDetails.work_schedules as any) ? {
+          id: (employeeDetails.work_schedules as any).id,
+          name: (employeeDetails.work_schedules as any).name,
+          monday_start: (employeeDetails.work_schedules as any).monday_start,
+          monday_end: (employeeDetails.work_schedules as any).monday_end,
+          tuesday_start: (employeeDetails.work_schedules as any).tuesday_start,
+          tuesday_end: (employeeDetails.work_schedules as any).tuesday_end,
+          wednesday_start: (employeeDetails.work_schedules as any).wednesday_start,
+          wednesday_end: (employeeDetails.work_schedules as any).wednesday_end,
+          thursday_start: (employeeDetails.work_schedules as any).thursday_start,
+          thursday_end: (employeeDetails.work_schedules as any).thursday_end,
+          friday_start: (employeeDetails.work_schedules as any).friday_start,
+          friday_end: (employeeDetails.work_schedules as any).friday_end,
+          saturday_start: (employeeDetails.work_schedules as any).saturday_start,
+          saturday_end: (employeeDetails.work_schedules as any).saturday_end,
+          sunday_start: (employeeDetails.work_schedules as any).sunday_start,
+          sunday_end: (employeeDetails.work_schedules as any).sunday_end
+        } : undefined,
+        base_salary_masked: true, // Indicate salary is not exposed
+        status: employeeDetails.status
+      }
+    }
+
+    return res.status(200).json(response)
 
   } catch (error) {
     if (error instanceof Error && error.message.startsWith('EMPLOYEE_')) {
