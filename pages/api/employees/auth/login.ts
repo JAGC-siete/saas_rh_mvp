@@ -44,66 +44,96 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
     const supabase = createClient(req, res)
     
-    // Step 1: Send OTP (if no code provided)
+    // Step 1: Send OTP (if no code provided) - USAR CUSTOM OTP PARA NO JODER MAGIC LINKS
     if (!code) {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: { 
-          shouldCreateUser: false // No crear usuario si no existe
-        }
-      })
+      // Verificar que el usuario existe en auth.users
+      const { data: existingUser, error: userError } = await supabase.auth.admin.getUserByEmail(email)
       
-      if (error) {
-        logger.warn('Failed to send OTP', { email, error: error.message })
+      if (userError || !existingUser) {
+        logger.warn('Employee user not found', { email, error: userError?.message })
         return res.status(400).json({
           success: false,
-          error: error.message.includes('User not found') 
-            ? 'Email no encontrado o empleado inactivo'
-            : error.message
+          error: 'Email no encontrado o empleado inactivo'
         })
       }
 
-      logger.info('OTP sent successfully', { email })
+      // Usar el sistema OTP anterior que YA FUNCIONABA
+      const { sendOtp } = await import('../../../../lib/employee-otp')
+      const employeeId = existingUser.user.user_metadata?.employee_id
+      const employeeName = existingUser.user.user_metadata?.full_name
       
-      return res.status(200).json({
-        success: true,
+      if (!employeeId) {
+        return res.status(400).json({
+          success: false,
+          error: 'Datos de empleado no encontrados'
+        })
+      }
+
+      const otpResult = await sendOtp(email, employeeId, employeeName)
+      
+      return res.status(otpResult.success ? 200 : 500).json({
+        success: otpResult.success,
         step: 'send_code',
-        message: 'Código enviado a su email'
+        message: otpResult.message,
+        error: otpResult.error
       })
     }
 
-    // Step 2: Verify OTP
-    const { data, error } = await supabase.auth.verifyOtp({
-      email,
-      token: code,
-      type: 'email'
-    })
-
-    if (error || !data.user) {
-      logger.warn('OTP verification failed', { email, error: error?.message })
+    // Step 2: Verify OTP - USAR CUSTOM VERIFICATION + SUPABASE SESSION
+    const { verifyOtp } = await import('../../../../lib/employee-otp')
+    const otpVerification = verifyOtp(email, code)
+    
+    if (!otpVerification.success) {
       return res.status(401).json({
         success: false,
-        error: 'Código inválido o expirado'
+        error: otpVerification.error
+      })
+    }
+
+    // OTP válido, ahora crear sesión Supabase manualmente
+    const { data: existingUser, error: userError } = await supabase.auth.admin.getUserByEmail(email)
+    
+    if (userError || !existingUser) {
+      return res.status(400).json({
+        success: false,
+        error: 'Usuario no encontrado'
+      })
+    }
+
+    // Crear sesión usando admin API
+    const { data: sessionData, error: sessionError } = await supabase.auth.admin.generateLink({
+      type: 'magiclink',
+      email: email,
+      options: {
+        redirectTo: 'https://humanosisu.net/employees/portal'
+      }
+    })
+
+    if (sessionError) {
+      logger.error('Failed to create session', sessionError)
+      return res.status(500).json({
+        success: false,
+        error: 'Error creando sesión'
       })
     }
 
     // Get employee data from user metadata
-    const employeeId = data.user.user_metadata?.employee_id
-    const employeeName = data.user.user_metadata?.full_name
-    const companyId = data.user.user_metadata?.company_id
+    const employeeId = existingUser.user.user_metadata?.employee_id
+    const employeeName = existingUser.user.user_metadata?.full_name
+    const companyId = existingUser.user.user_metadata?.company_id
 
-    logger.info('Employee login successful via Supabase OTP', {
+    logger.info('Employee login successful via Custom OTP + Supabase Session', {
       employeeId,
       employeeName,
       email,
-      userId: data.user.id
+      userId: existingUser.user.id
     })
 
     return res.status(200).json({
       success: true,
       step: 'verify_code',
-      user: data.user,
-      session: data.session,
+      user: existingUser.user,
+      session: sessionData,
       employee: {
         id: employeeId,
         name: employeeName,
