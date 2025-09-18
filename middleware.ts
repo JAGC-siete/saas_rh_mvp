@@ -47,7 +47,8 @@ const PUBLIC_ROUTES = new Set([
   '/api/employees/auth/login',      // Employee portal login - PÚBLICO
   '/api/employees/auth/send-otp',   // Send OTP code - PÚBLICO
   '/api/employees/auth/verify-otp', // Verify OTP code - PÚBLICO
-  '/api/employees/auth/logout'      // Employee portal logout - PÚBLICO
+  '/api/employees/auth/logout',     // Employee portal logout - PÚBLICO
+  '/employees/portal'               // Employee portal page - PÚBLICO
 ])
 
 // Static assets that should be publicly accessible
@@ -85,7 +86,6 @@ const PROTECTED_APP_ROUTES = new Set([
   '/app/notifications',   // Notificaciones
   // Legacy attendance dashboard outside /app
   '/attendance/dashboard',
-  '/employees/portal',
 ])
 
 // API routes that require authentication and specific permissions
