@@ -48,18 +48,17 @@ export default function App({ Component, pageProps }: AppProps) {
     setIsClient(true)
     
     // Initialize Supabase client
-    const initClient = async () => {
-      try {
-        const client = await createClient()
-        if (client) {
-          setSupabaseClient(client)
-        }
-      } catch (error) {
-        console.error('❌ Failed to create Supabase client:', error)
+    try {
+      const client = createClient()
+      if (client) {
+        setSupabaseClient(client)
+        console.log('✅ Supabase client initialized successfully')
       }
+    } catch (error) {
+      console.error('❌ Failed to create Supabase client:', error)
+      // Still set a mock client to prevent app from breaking
+      setSupabaseClient({})
     }
-    
-    initClient()
   }, [])
 
   // Show loading state during hydration
