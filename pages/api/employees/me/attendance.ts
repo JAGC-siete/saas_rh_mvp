@@ -9,7 +9,13 @@ interface AttendanceResponse {
   limit: number
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse<AttendanceResponse | { error: string, debug?: any }>) {
+interface ErrorResponse {
+  error: string
+  debug?: any
+  details?: any
+}
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse<AttendanceResponse | ErrorResponse>) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' })
   }

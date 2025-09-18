@@ -18,7 +18,13 @@ interface PayrollResponse {
   }
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse<PayrollResponse | { error: string, debug?: any }>) {
+interface ErrorResponse {
+  error: string
+  debug?: any
+  details?: any
+}
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse<PayrollResponse | ErrorResponse>) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
