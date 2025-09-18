@@ -18,19 +18,22 @@ import { clientLogger } from '../../lib/logger-client'
 function AttendanceRecordsList({ employeeId }: { employeeId?: string }) {
   const [records, setRecords] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalRecords, setTotalRecords] = useState(0)
 
   useEffect(() => {
     if (!employeeId) return
 
     const fetchRecords = async () => {
       try {
-        const response = await fetch('/api/employees/me/attendance?limit=10', {
+        const response = await fetch(`/api/employees/me/attendance?limit=20&page=${currentPage}`, {
           credentials: 'include'
         })
-        
+
         if (response.ok) {
           const data = await response.json()
           setRecords(data.records || [])
+          setTotalRecords(data.total || 0)
         }
       } catch (error) {
         console.error('Error fetching attendance records:', error)
@@ -40,7 +43,33 @@ function AttendanceRecordsList({ employeeId }: { employeeId?: string }) {
     }
 
     fetchRecords()
-  }, [employeeId])
+  }, [employeeId, currentPage])
+
+  const formatTime = (timeString: string) => {
+    if (!timeString) return 'N/A'
+    try {
+      const date = new Date(timeString)
+      return date.toLocaleTimeString('es-HN', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: true 
+      })
+    } catch {
+      return timeString
+    }
+  }
+
+  const calculateHours = (checkIn: string, checkOut: string) => {
+    if (!checkIn || !checkOut) return null
+    try {
+      const start = new Date(checkIn)
+      const end = new Date(checkOut)
+      const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60)
+      return hours.toFixed(1)
+    } catch {
+      return null
+    }
+  }
 
   if (loading) {
     return (
@@ -52,44 +81,109 @@ function AttendanceRecordsList({ employeeId }: { employeeId?: string }) {
 
   if (records.length === 0) {
     return (
-      <div className="text-center py-4 text-gray-400">
-        <p>No hay registros de asistencia este mes</p>
+      <div className="text-center py-8">
+        <ClockIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-white mb-2">
+          Sin Registros de Asistencia
+        </h3>
+        <p className="text-gray-300">
+          No hay registros de asistencia disponibles
+        </p>
       </div>
     )
   }
 
   return (
-    <div className="space-y-2">
-      {records.map((record, index) => (
-        <div key={record.id || index} className="flex justify-between items-center p-3 bg-white/5 rounded-lg">
-          <div>
-            <p className="text-white font-medium">
-              {new Date(record.date).toLocaleDateString('es-HN', {
-                weekday: 'short',
-                month: 'short',
-                day: 'numeric'
-              })}
-            </p>
-            <p className="text-sm text-gray-400">
-              {record.check_in ? `Entrada: ${record.check_in}` : 'Sin entrada'}
-              {record.check_out ? ` • Salida: ${record.check_out}` : ''}
-            </p>
-          </div>
-          <div className="text-right">
-            <span className={`px-2 py-1 rounded-full text-xs ${
-              record.status === 'present' ? 'bg-green-500/20 text-green-400' :
-              record.status === 'late' ? 'bg-yellow-500/20 text-yellow-400' :
-              'bg-red-500/20 text-red-400'
-            }`}>
-              {record.status === 'present' ? 'Presente' :
-               record.status === 'late' ? 'Tardanza' : 'Ausente'}
+    <div className="space-y-4">
+      {/* Records List */}
+      <div className="space-y-2">
+        {records.map((record, index) => {
+          const calculatedHours = calculateHours(record.check_in, record.check_out)
+          
+          return (
+            <div key={record.id || index} className="bg-white/5 rounded-lg p-4">
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <p className="text-white font-medium">
+                    {new Date(record.date).toLocaleDateString('es-HN', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </p>
+                  <div className="flex items-center space-x-4 mt-1">
+                    {record.check_in && (
+                      <span className="text-sm text-gray-400">
+                        Entrada: <span className="text-green-400">{formatTime(record.check_in)}</span>
+                      </span>
+                    )}
+                    {record.check_out && (
+                      <span className="text-sm text-gray-400">
+                        Salida: <span className="text-red-400">{formatTime(record.check_out)}</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className={`px-2 py-1 rounded-full text-xs ${
+                    record.status === 'present' ? 'bg-green-500/20 text-green-400' :
+                    record.status === 'late' ? 'bg-yellow-500/20 text-yellow-400' :
+                    record.status === 'absent' ? 'bg-red-500/20 text-red-400' :
+                    'bg-gray-500/20 text-gray-400'
+                  }`}>
+                    {record.status === 'present' ? 'Presente' :
+                     record.status === 'late' ? 'Tardanza' :
+                     record.status === 'absent' ? 'Ausente' : 
+                     record.status || 'Sin estado'}
+                  </span>
+                  {calculatedHours && (
+                    <p className="text-sm text-blue-400 mt-1 font-medium">{calculatedHours}h</p>
+                  )}
+                  {record.late_minutes > 0 && (
+                    <p className="text-xs text-yellow-400 mt-1">+{record.late_minutes}min tarde</p>
+                  )}
+                </div>
+              </div>
+              
+              {record.justification && (
+                <div className="mt-2 p-2 bg-white/5 rounded text-sm">
+                  <span className="text-gray-400">Justificación: </span>
+                  <span className="text-white">{record.justification}</span>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Pagination */}
+      {totalRecords > 20 && (
+        <div className="flex justify-between items-center pt-4">
+          <p className="text-sm text-gray-400">
+            Mostrando {records.length} de {totalRecords} registros
+          </p>
+          <div className="flex space-x-2">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1 bg-white/10 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Anterior
+            </button>
+            <span className="px-3 py-1 text-white">
+              Página {currentPage}
             </span>
-            {record.hours_worked && (
-              <p className="text-sm text-gray-400 mt-1">{record.hours_worked}h</p>
-            )}
+            <button
+              onClick={() => setCurrentPage(prev => prev + 1)}
+              disabled={records.length < 20}
+              className="px-3 py-1 bg-white/10 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Siguiente
+            </button>
           </div>
         </div>
-      ))}
+      )}
     </div>
   )
 }
@@ -107,7 +201,7 @@ function PayrollSection({ employeeId }: { employeeId?: string }) {
         const response = await fetch('/api/employees/me/payroll', {
           credentials: 'include'
         })
-        
+
         if (response.ok) {
           const data = await response.json()
           setPayrollData(data)
@@ -133,7 +227,7 @@ function PayrollSection({ employeeId }: { employeeId?: string }) {
     )
   }
 
-  if (!payrollData) {
+  if (!payrollData || payrollData.summary.totalRecords === 0) {
     return (
       <div className="text-center py-8">
         <CurrencyDollarIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
@@ -141,7 +235,7 @@ function PayrollSection({ employeeId }: { employeeId?: string }) {
           Sin Información de Nómina
         </h3>
         <p className="text-gray-300">
-          No hay registros de nómina disponibles para este mes
+          No hay registros de nómina disponibles para este período
         </p>
       </div>
     )
@@ -149,20 +243,134 @@ function PayrollSection({ employeeId }: { employeeId?: string }) {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className="text-sm font-medium text-gray-400">Salario Base</label>
-          <p className="text-white font-medium">Información protegida</p>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white/5 rounded-lg p-4">
+          <div className="text-sm text-gray-400 mb-1">Período Actual</div>
+          <div className="text-white font-medium">
+            {payrollData.currentPeriod.month.toString().padStart(2, '0')}/{payrollData.currentPeriod.year}
+          </div>
         </div>
-        <div>
-          <label className="text-sm font-medium text-gray-400">Último Pago</label>
-          <p className="text-white font-medium">{payrollData.lastPayment || 'No disponible'}</p>
+        <div className="bg-white/5 rounded-lg p-4">
+          <div className="text-sm text-gray-400 mb-1">Último Pago</div>
+          <div className="text-white font-medium">
+            {payrollData.summary.lastPayment 
+              ? new Date(payrollData.summary.lastPayment).toLocaleDateString('es-HN')
+              : 'No disponible'
+            }
+          </div>
+        </div>
+        <div className="bg-white/5 rounded-lg p-4">
+          <div className="text-sm text-gray-400 mb-1">Último Monto</div>
+          <div className="text-white font-medium">
+            {payrollData.summary.lastAmount 
+              ? `L. ${Number(payrollData.summary.lastAmount).toLocaleString('es-HN', { minimumFractionDigits: 2 })}`
+              : 'No disponible'
+            }
+          </div>
         </div>
       </div>
-      
-      <div className="text-center py-4 text-gray-400">
-        <p>Funcionalidad completa de nómina próximamente</p>
-      </div>
+
+      {/* Payroll Records */}
+      {payrollData.records && payrollData.records.length > 0 && (
+        <div className="space-y-4">
+          <h4 className="text-white font-medium">Registros de Nómina</h4>
+          <div className="space-y-2">
+            {payrollData.records.map((record: any, index: number) => (
+              <div key={record.id || index} className="bg-white/5 rounded-lg p-4">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <div className="text-white font-medium">
+                      {new Date(record.period_start).toLocaleDateString('es-HN')} - 
+                      {new Date(record.period_end).toLocaleDateString('es-HN')}
+                    </div>
+                    <div className="text-sm text-gray-400">
+                      {record.days_worked} días trabajados
+                    </div>
+                  </div>
+                  <span className={`px-2 py-1 rounded-full text-xs ${
+                    record.status === 'paid' ? 'bg-green-500/20 text-green-400' :
+                    record.status === 'approved' ? 'bg-blue-500/20 text-blue-400' :
+                    'bg-yellow-500/20 text-yellow-400'
+                  }`}>
+                    {record.status === 'paid' ? 'Pagado' :
+                     record.status === 'approved' ? 'Aprobado' : 'Pendiente'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <div className="text-gray-400">Salario Bruto</div>
+                    <div className="text-white">L. {Number(record.gross_salary || 0).toLocaleString('es-HN')}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-400">Deducciones</div>
+                    <div className="text-red-300">-L. {Number(record.total_deductions || 0).toLocaleString('es-HN')}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-400">Salario Neto</div>
+                    <div className="text-green-300 font-medium">L. {Number(record.net_salary || 0).toLocaleString('es-HN')}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-400">Fecha Pago</div>
+                    <div className="text-white">
+                      {record.paid_at ? new Date(record.paid_at).toLocaleDateString('es-HN') : 'Pendiente'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Run Lines (if no records available) */}
+      {payrollData.runLines && payrollData.runLines.length > 0 && (!payrollData.records || payrollData.records.length === 0) && (
+        <div className="space-y-4">
+          <h4 className="text-white font-medium">Cálculos de Nómina</h4>
+          <div className="space-y-2">
+            {payrollData.runLines.map((line: any, index: number) => (
+              <div key={line.id || index} className="bg-white/5 rounded-lg p-4">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <div className="text-white font-medium">
+                      {line.payroll_runs.month}/{line.payroll_runs.year} - Q{line.payroll_runs.quincena}
+                    </div>
+                    <div className="text-sm text-gray-400">
+                      {Number(line.eff_hours || 0).toFixed(1)} horas
+                    </div>
+                  </div>
+                  <span className={`px-2 py-1 rounded-full text-xs ${
+                    line.payroll_runs.status === 'authorized' ? 'bg-green-500/20 text-green-400' :
+                    line.payroll_runs.status === 'edited' ? 'bg-blue-500/20 text-blue-400' :
+                    'bg-yellow-500/20 text-yellow-400'
+                  }`}>
+                    {line.payroll_runs.status === 'authorized' ? 'Autorizado' :
+                     line.payroll_runs.status === 'edited' ? 'Editado' : 'Borrador'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <div className="text-gray-400">Bruto</div>
+                    <div className="text-white">L. {Number(line.eff_bruto || 0).toLocaleString('es-HN')}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-400">IHSS</div>
+                    <div className="text-red-300">-L. {Number(line.eff_ihss || 0).toLocaleString('es-HN')}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-400">RAP</div>
+                    <div className="text-red-300">-L. {Number(line.eff_rap || 0).toLocaleString('es-HN')}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-400">Neto</div>
+                    <div className="text-green-300 font-medium">L. {Number(line.eff_neto || 0).toLocaleString('es-HN')}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

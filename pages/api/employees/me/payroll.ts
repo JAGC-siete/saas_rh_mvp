@@ -10,26 +10,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const supabase = createClient(req, res)
     
-    // Check for employee session token (custom auth)
-    const authHeader = req.headers.authorization || req.headers.Authorization as string
-    const accessToken = req.cookies['sb-access-token'] || authHeader?.replace('Bearer ', '')
+    // Use standard Supabase Auth like admin portal
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
     
-    if (!accessToken || !accessToken.startsWith('emp_')) {
+    if (authError || !user) {
       return res.status(401).json({ error: 'No autorizado' })
     }
     
-    // Extract employee ID from token (format: emp_${employeeId}_${timestamp})
-    const tokenParts = accessToken.split('_')
-    const employeeId = tokenParts[1] // Should be the UUID
-    
-    if (!employeeId || employeeId.length !== 36) {
-      return res.status(401).json({ 
-        error: 'Token inválido',
-        debug: {
-          tokenFormat: accessToken.substring(0, 20) + '...',
-          extractedId: employeeId
-        }
-      })
+    // Get employee ID from user metadata (same as admin portal)
+    const employeeId = user.user_metadata?.employee_id
+    if (!employeeId) {
+      return res.status(401).json({ error: 'Datos de empleado no encontrados' })
     }
 
     // Get current month for payroll data
