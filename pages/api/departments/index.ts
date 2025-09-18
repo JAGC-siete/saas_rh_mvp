@@ -1,4 +1,4 @@
-git pushimport { NextApiRequest, NextApiResponse } from 'next'
+import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from '../../../lib/auth/api-auth'
 import { getCompanyData, addCompanyToInsertData } from '../../../lib/helpers/company-filter'
 
