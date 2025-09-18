@@ -114,24 +114,29 @@ export default function EmployeePortal() {
     if (!session) return
 
     try {
-      // Fetch profile (Supabase Auth handles authentication via cookies)
-      const profileResponse = await fetch('/api/employees/me', {
+      // Fetch all dashboard data in one call
+      const dashboardResponse = await fetch('/api/employees/dashboard', {
         credentials: 'include'
       })
 
-      if (profileResponse.ok) {
-        const profileData = await profileResponse.json()
-        setProfile(profileData)
-      }
-
-      // Fetch attendance summary
-      const attendanceResponse = await fetch('/api/employees/me/attendance?limit=1', {
-        credentials: 'include'
-      })
-
-      if (attendanceResponse.ok) {
-        const attendanceData = await attendanceResponse.json()
-        setAttendanceSummary(attendanceData)
+      if (dashboardResponse.ok) {
+        const dashboardData = await dashboardResponse.json()
+        
+        // Set profile data
+        setProfile({
+          employee: dashboardData.employee
+        })
+        
+        // Set attendance summary
+        setAttendanceSummary(dashboardData.attendance_summary)
+        
+        console.log('Dashboard data loaded:', {
+          hasProfile: !!dashboardData.employee,
+          hasAttendance: !!dashboardData.attendance_summary,
+          attendanceRecords: dashboardData.recent_attendance?.length || 0
+        })
+      } else {
+        console.error('Failed to fetch dashboard data:', dashboardResponse.status)
       }
 
     } catch (error) {
@@ -334,53 +339,71 @@ export default function EmployeePortal() {
               <CardContent>
                 {profile ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                      <div>
-                        <label className="text-sm font-medium text-gray-400">Nombre Completo</label>
-                        <p className="text-white font-medium">{profile.employee.name}</p>
-                      </div>
-                      
-                      <div>
-                        <label className="text-sm font-medium text-gray-400">DNI</label>
-                        <p className="text-white font-medium">{profile.employee.dni_masked}</p>
-                      </div>
-                      
-                      <div>
-                        <label className="text-sm font-medium text-gray-400">Cargo</label>
-                        <p className="text-white font-medium">{profile.employee.role}</p>
-                      </div>
-                      
-                      <div>
-                        <label className="text-sm font-medium text-gray-400">Departamento</label>
-                        <p className="text-white font-medium">
-                          {profile.employee.department?.name || 'Sin asignar'}
-                        </p>
-                      </div>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-400">Nombre Completo</label>
+                      <p className="text-white font-medium">{profile.employee.name}</p>
                     </div>
                     
-                    <div className="space-y-4">
-                      <div>
-                        <label className="text-sm font-medium text-gray-400">Email</label>
-                        <p className="text-white font-medium">{profile.employee.email || 'No especificado'}</p>
-                      </div>
-                      
-                      <div>
-                        <label className="text-sm font-medium text-gray-400">Teléfono</label>
-                        <p className="text-white font-medium">{profile.employee.phone || 'No especificado'}</p>
-                      </div>
-                      
-                      <div>
-                        <label className="text-sm font-medium text-gray-400">Fecha de Contratación</label>
-                        <p className="text-white font-medium">{formatDate(profile.employee.hire_date)}</p>
-                      </div>
-                      
-                      <div>
-                        <label className="text-sm font-medium text-gray-400">Horario de Trabajo</label>
-                        <p className="text-white font-medium">
-                          {profile.employee.work_schedule?.name || 'Sin asignar'}
-                        </p>
-                      </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-400">DNI</label>
+                      <p className="text-white font-medium">{profile.employee.dni_masked}</p>
                     </div>
+                    
+                    <div>
+                      <label className="text-sm font-medium text-gray-400">Cargo</label>
+                      <p className="text-white font-medium">{profile.employee.role}</p>
+                    </div>
+                    
+                    <div>
+                      <label className="text-sm font-medium text-gray-400">Departamento</label>
+                      <p className="text-white font-medium">
+                        {profile.employee.department?.name || 'Sin asignar'}
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <label className="text-sm font-medium text-gray-400">Estado</label>
+                      <p className="text-white font-medium">
+                        <span className={`px-2 py-1 rounded-full text-xs ${
+                          profile.employee.status === 'active' 
+                            ? 'bg-green-500/20 text-green-400' 
+                            : 'bg-red-500/20 text-red-400'
+                        }`}>
+                          {profile.employee.status === 'active' ? 'Activo' : 'Inactivo'}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-400">Email</label>
+                      <p className="text-white font-medium">{profile.employee.email || 'No especificado'}</p>
+                    </div>
+                    
+                    <div>
+                      <label className="text-sm font-medium text-gray-400">Teléfono</label>
+                      <p className="text-white font-medium">{profile.employee.phone || 'No especificado'}</p>
+                    </div>
+                    
+                    <div>
+                      <label className="text-sm font-medium text-gray-400">Fecha de Contratación</label>
+                      <p className="text-white font-medium">{formatDate(profile.employee.hire_date)}</p>
+                    </div>
+                    
+                    <div>
+                      <label className="text-sm font-medium text-gray-400">Horario de Trabajo</label>
+                      <p className="text-white font-medium">
+                        {profile.employee.work_schedule?.name || 'Sin asignar'}
+                      </p>
+                      {profile.employee.work_schedule && (
+                        <div className="mt-2 text-sm text-gray-400">
+                          <p>Lun-Vie: {profile.employee.work_schedule.monday_start} - {profile.employee.work_schedule.monday_end}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                   </div>
                 ) : (
                   <div className="flex justify-center py-8">
@@ -400,15 +423,52 @@ export default function EmployeePortal() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8">
-                  <ClockIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-white mb-2">
-                    Funcionalidad en Desarrollo
-                  </h3>
-                  <p className="text-gray-300">
-                    Pronto podrá ver su historial detallado de asistencia
-                  </p>
-                </div>
+                {attendanceSummary ? (
+                  <div className="space-y-6">
+                    {/* Summary Stats */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-green-400">
+                          {attendanceSummary.summary.presentDays}
+                        </div>
+                        <div className="text-sm text-gray-400">Días Presentes</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-red-400">
+                          {attendanceSummary.summary.absentDays}
+                        </div>
+                        <div className="text-sm text-gray-400">Ausencias</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-yellow-400">
+                          {attendanceSummary.summary.lateDays}
+                        </div>
+                        <div className="text-sm text-gray-400">Tardanzas</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-blue-400">
+                          {Math.round(attendanceSummary.summary.averageHours * 10) / 10}h
+                        </div>
+                        <div className="text-sm text-gray-400">Promedio Diario</div>
+                      </div>
+                    </div>
+                    
+                    {/* Recent Records */}
+                    <div className="space-y-2">
+                      <h4 className="text-white font-medium">Registros Recientes</h4>
+                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                        {/* Placeholder for recent attendance records */}
+                        <div className="text-center py-4 text-gray-400">
+                          <p>Registros de asistencia se mostrarán aquí</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-400"></div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
