@@ -13,6 +13,159 @@ import {
 } from '@heroicons/react/24/outline'
 import { clientLogger } from '../../lib/logger-client'
 
+// Component for attendance records list
+function AttendanceRecordsList({ employeeId }: { employeeId?: string }) {
+  const [records, setRecords] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!employeeId) return
+
+    const fetchRecords = async () => {
+      try {
+        const response = await fetch('/api/employees/me/attendance?limit=10', {
+          credentials: 'include'
+        })
+        
+        if (response.ok) {
+          const data = await response.json()
+          setRecords(data.records || [])
+        }
+      } catch (error) {
+        console.error('Error fetching attendance records:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchRecords()
+  }, [employeeId])
+
+  if (loading) {
+    return (
+      <div className="text-center py-4">
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-brand-400 mx-auto"></div>
+      </div>
+    )
+  }
+
+  if (records.length === 0) {
+    return (
+      <div className="text-center py-4 text-gray-400">
+        <p>No hay registros de asistencia este mes</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-2">
+      {records.map((record, index) => (
+        <div key={record.id || index} className="flex justify-between items-center p-3 bg-white/5 rounded-lg">
+          <div>
+            <p className="text-white font-medium">
+              {new Date(record.date).toLocaleDateString('es-HN', {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric'
+              })}
+            </p>
+            <p className="text-sm text-gray-400">
+              {record.check_in ? `Entrada: ${record.check_in}` : 'Sin entrada'}
+              {record.check_out ? ` • Salida: ${record.check_out}` : ''}
+            </p>
+          </div>
+          <div className="text-right">
+            <span className={`px-2 py-1 rounded-full text-xs ${
+              record.status === 'present' ? 'bg-green-500/20 text-green-400' :
+              record.status === 'late' ? 'bg-yellow-500/20 text-yellow-400' :
+              'bg-red-500/20 text-red-400'
+            }`}>
+              {record.status === 'present' ? 'Presente' :
+               record.status === 'late' ? 'Tardanza' : 'Ausente'}
+            </span>
+            {record.hours_worked && (
+              <p className="text-sm text-gray-400 mt-1">{record.hours_worked}h</p>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// Component for payroll section
+function PayrollSection({ employeeId }: { employeeId?: string }) {
+  const [payrollData, setPayrollData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!employeeId) return
+
+    const fetchPayroll = async () => {
+      try {
+        const response = await fetch('/api/employees/me/payroll', {
+          credentials: 'include'
+        })
+        
+        if (response.ok) {
+          const data = await response.json()
+          setPayrollData(data)
+        } else if (response.status === 404) {
+          // No payroll data available
+          setPayrollData(null)
+        }
+      } catch (error) {
+        console.error('Error fetching payroll:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchPayroll()
+  }, [employeeId])
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-400"></div>
+      </div>
+    )
+  }
+
+  if (!payrollData) {
+    return (
+      <div className="text-center py-8">
+        <CurrencyDollarIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-white mb-2">
+          Sin Información de Nómina
+        </h3>
+        <p className="text-gray-300">
+          No hay registros de nómina disponibles para este mes
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label className="text-sm font-medium text-gray-400">Salario Base</label>
+          <p className="text-white font-medium">Información protegida</p>
+        </div>
+        <div>
+          <label className="text-sm font-medium text-gray-400">Último Pago</label>
+          <p className="text-white font-medium">{payrollData.lastPayment || 'No disponible'}</p>
+        </div>
+      </div>
+      
+      <div className="text-center py-4 text-gray-400">
+        <p>Funcionalidad completa de nómina próximamente</p>
+      </div>
+    </div>
+  )
+}
+
 interface EmployeeSession {
   sessionToken: string
   employee: {
@@ -81,9 +234,9 @@ export default function EmployeePortal() {
 
   const checkExistingSession = async () => {
     try {
-      // Check if we have a Supabase session
-      const response = await fetch('/api/employees/me', {
-        credentials: 'include' // Include cookies for Supabase Auth
+      // Check if we have an employee session using the dashboard endpoint
+      const response = await fetch('/api/employees/dashboard', {
+        credentials: 'include'
       })
 
       if (response.ok) {
@@ -94,9 +247,18 @@ export default function EmployeePortal() {
         localStorage.setItem('employee_data', JSON.stringify(employeeData))
         
         setSession({
-          sessionToken: 'supabase_managed',
+          sessionToken: 'employee_authenticated',
           employee: employeeData,
           expiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString() // 8 hours from now
+        })
+        
+        // Set profile and attendance data immediately
+        setProfile({ employee: employeeData })
+        setAttendanceSummary(data.attendance_summary)
+        
+        console.log('Session restored from existing cookies:', {
+          hasProfile: !!employeeData,
+          hasAttendance: !!data.attendance_summary
         })
       } else {
         // No valid session, clear any stored data
@@ -114,29 +276,41 @@ export default function EmployeePortal() {
     if (!session) return
 
     try {
-      // Fetch all dashboard data in one call
+      // Fetch all dashboard data in one unified call
       const dashboardResponse = await fetch('/api/employees/dashboard', {
-        credentials: 'include'
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
       })
 
       if (dashboardResponse.ok) {
         const dashboardData = await dashboardResponse.json()
         
-        // Set profile data
+        console.log('Raw dashboard data received:', dashboardData)
+        
+        // Set profile data with proper structure
         setProfile({
           employee: dashboardData.employee
         })
         
-        // Set attendance summary
+        // Set attendance summary with proper structure
         setAttendanceSummary(dashboardData.attendance_summary)
         
-        console.log('Dashboard data loaded:', {
-          hasProfile: !!dashboardData.employee,
-          hasAttendance: !!dashboardData.attendance_summary,
-          attendanceRecords: dashboardData.recent_attendance?.length || 0
+        console.log('Dashboard data processed:', {
+          profileSet: !!dashboardData.employee,
+          attendanceSet: !!dashboardData.attendance_summary,
+          employeeName: dashboardData.employee?.name,
+          attendanceStats: dashboardData.attendance_summary?.summary,
+          recentRecords: dashboardData.recent_attendance?.length || 0
         })
       } else {
-        console.error('Failed to fetch dashboard data:', dashboardResponse.status)
+        const errorData = await dashboardResponse.text()
+        console.error('Failed to fetch dashboard data:', {
+          status: dashboardResponse.status,
+          statusText: dashboardResponse.statusText,
+          error: errorData
+        })
       }
 
     } catch (error) {
@@ -342,23 +516,23 @@ export default function EmployeePortal() {
                   <div className="space-y-4">
                     <div>
                       <label className="text-sm font-medium text-gray-400">Nombre Completo</label>
-                      <p className="text-white font-medium">{profile.employee.name}</p>
+                      <p className="text-white font-medium">{profile.employee?.name || 'No disponible'}</p>
                     </div>
                     
                     <div>
                       <label className="text-sm font-medium text-gray-400">DNI</label>
-                      <p className="text-white font-medium">{profile.employee.dni_masked}</p>
+                      <p className="text-white font-medium">{profile.employee?.dni_masked || 'No disponible'}</p>
                     </div>
                     
                     <div>
                       <label className="text-sm font-medium text-gray-400">Cargo</label>
-                      <p className="text-white font-medium">{profile.employee.role}</p>
+                      <p className="text-white font-medium">{profile.employee?.role || 'No especificado'}</p>
                     </div>
                     
                     <div>
                       <label className="text-sm font-medium text-gray-400">Departamento</label>
                       <p className="text-white font-medium">
-                        {profile.employee.department?.name || 'Sin asignar'}
+                        {profile.employee?.department?.name || 'Sin asignar'}
                       </p>
                     </div>
                     
@@ -366,11 +540,11 @@ export default function EmployeePortal() {
                       <label className="text-sm font-medium text-gray-400">Estado</label>
                       <p className="text-white font-medium">
                         <span className={`px-2 py-1 rounded-full text-xs ${
-                          profile.employee.status === 'active' 
+                          profile.employee?.status === 'active' 
                             ? 'bg-green-500/20 text-green-400' 
                             : 'bg-red-500/20 text-red-400'
                         }`}>
-                          {profile.employee.status === 'active' ? 'Activo' : 'Inactivo'}
+                          {profile.employee?.status === 'active' ? 'Activo' : 'Inactivo'}
                         </span>
                       </p>
                     </div>
@@ -379,27 +553,30 @@ export default function EmployeePortal() {
                   <div className="space-y-4">
                     <div>
                       <label className="text-sm font-medium text-gray-400">Email</label>
-                      <p className="text-white font-medium">{profile.employee.email || 'No especificado'}</p>
+                      <p className="text-white font-medium">{profile.employee?.email || 'No especificado'}</p>
                     </div>
                     
                     <div>
                       <label className="text-sm font-medium text-gray-400">Teléfono</label>
-                      <p className="text-white font-medium">{profile.employee.phone || 'No especificado'}</p>
+                      <p className="text-white font-medium">{profile.employee?.phone || 'No especificado'}</p>
                     </div>
                     
                     <div>
                       <label className="text-sm font-medium text-gray-400">Fecha de Contratación</label>
-                      <p className="text-white font-medium">{formatDate(profile.employee.hire_date)}</p>
+                      <p className="text-white font-medium">{formatDate(profile.employee?.hire_date)}</p>
                     </div>
                     
                     <div>
                       <label className="text-sm font-medium text-gray-400">Horario de Trabajo</label>
                       <p className="text-white font-medium">
-                        {profile.employee.work_schedule?.name || 'Sin asignar'}
+                        {profile.employee?.work_schedule?.name || 'Sin asignar'}
                       </p>
-                      {profile.employee.work_schedule && (
+                      {profile.employee?.work_schedule && (
                         <div className="mt-2 text-sm text-gray-400">
-                          <p>Lun-Vie: {profile.employee.work_schedule.monday_start} - {profile.employee.work_schedule.monday_end}</p>
+                          <p>Lun-Vie: {profile.employee.work_schedule.monday_start || 'N/A'} - {profile.employee.work_schedule.monday_end || 'N/A'}</p>
+                          {profile.employee.work_schedule.saturday_start && (
+                            <p>Sáb: {profile.employee.work_schedule.saturday_start} - {profile.employee.work_schedule.saturday_end}</p>
+                          )}
                         </div>
                       )}
                     </div>
@@ -457,10 +634,8 @@ export default function EmployeePortal() {
                     <div className="space-y-2">
                       <h4 className="text-white font-medium">Registros Recientes</h4>
                       <div className="space-y-2 max-h-64 overflow-y-auto">
-                        {/* Placeholder for recent attendance records */}
-                        <div className="text-center py-4 text-gray-400">
-                          <p>Registros de asistencia se mostrarán aquí</p>
-                        </div>
+                        {/* Show actual attendance records if available */}
+                        <AttendanceRecordsList employeeId={session?.employee.id} />
                       </div>
                     </div>
                   </div>
@@ -482,15 +657,7 @@ export default function EmployeePortal() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8">
-                  <CurrencyDollarIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-white mb-2">
-                    Funcionalidad en Desarrollo
-                  </h3>
-                  <p className="text-gray-300">
-                    Pronto podrá consultar sus recibos de pago
-                  </p>
-                </div>
+                <PayrollSection employeeId={session?.employee.id} />
               </CardContent>
             </Card>
           )}
