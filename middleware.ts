@@ -48,7 +48,8 @@ const PUBLIC_ROUTES = new Set([
   '/api/employees/auth/send-otp',   // Send OTP code - PÚBLICO
   '/api/employees/auth/verify-otp', // Verify OTP code - PÚBLICO
   '/api/employees/auth/logout',     // Employee portal logout - PÚBLICO
-  '/employees/portal'               // Employee portal page - PÚBLICO
+  '/employees/portal',              // Employee portal page - PÚBLICO
+  '/api/employees/debug-session'    // Employee debug endpoint - PÚBLICO
 ])
 
 // Static assets that should be publicly accessible
@@ -242,7 +243,19 @@ export async function middleware(request: NextRequest) {
           },
         });
         
-         // Get user from Supabase Auth
+         // Check for employee token first (for employee APIs)
+         const accessToken = request.cookies.get('sb-access-token')?.value
+         
+         if (accessToken && accessToken.startsWith('emp_')) {
+           // Employee API access - let the API handle validation
+           logger.debug('Employee API access detected', { path: pathname })
+           const response = NextResponse.next();
+           const duration = Date.now() - startTime;
+           logger.api(request.method, pathname, 200, duration, { type: 'employee_api' });
+           return response;
+         }
+         
+         // For admin APIs, use Supabase Auth
          const { data: { user }, error } = await supabase.auth.getUser();
          
          if (error || !user) {
