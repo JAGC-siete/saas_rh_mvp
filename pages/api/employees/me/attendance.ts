@@ -41,7 +41,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Create Supabase client (handles auth automatically via cookies)
+    // Create Supabase client for database queries
     const supabase = createClient(req, res)
     
     // Get current user from Supabase Auth

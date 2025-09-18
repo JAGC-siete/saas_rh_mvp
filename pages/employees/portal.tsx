@@ -145,6 +145,11 @@ export default function EmployeePortal() {
       employeeId: sessionData.employee.id,
       employeeName: sessionData.employee.name
     })
+    
+    // Wait a bit for cookies to be set, then fetch data
+    setTimeout(() => {
+      fetchEmployeeData()
+    }, 1000)
   }
 
   const handleLogout = async () => {

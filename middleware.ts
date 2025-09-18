@@ -30,7 +30,6 @@ const PUBLIC_ROUTES = new Set([
   '/politicadeprivacidad', // Política de privacidad - PÚBLICO
   '/app/demo/pin',     // PIN de demo - PÚBLICO
   '/app/attendance/register', // Registro de asistencia - PÚBLICO
-  '/employees/portal',        // Employee portal - PÚBLICO (handles own auth)
   '/registrodeasistencia',
   '/attendance/public',
   '/attendance/register', // Legacy route - mantenida por compatibilidad
@@ -86,6 +85,7 @@ const PROTECTED_APP_ROUTES = new Set([
   '/app/notifications',   // Notificaciones
   // Legacy attendance dashboard outside /app
   '/attendance/dashboard',
+  '/employees/portal',
 ])
 
 // API routes that require authentication and specific permissions
@@ -242,13 +242,13 @@ export async function middleware(request: NextRequest) {
           },
         });
         
-        // Get user
-        const { data: { user }, error } = await supabase.auth.getUser();
-        
-        if (error || !user) {
-          logger.warn('Unauthorized API access attempt', { path: pathname });
-          return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-        }
+         // Get user from Supabase Auth
+         const { data: { user }, error } = await supabase.auth.getUser();
+         
+         if (error || !user) {
+           logger.warn('Unauthorized API access attempt', { path: pathname });
+           return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+         }
         
         // If admin route, check role (similar to app routes)
         if (isAdminRoute(pathname)) {
@@ -441,33 +441,8 @@ export async function middleware(request: NextRequest) {
         })
       }
 
-      // Special handling for employee portal
-      if (pathname === '/employees/portal') {
-        logger.debug('Employee portal accessed, checking session', {
-          path: pathname
-        })
-        
-        // Check for employee session token instead of Supabase user
-        const accessToken = request.cookies.get('sb-access-token')?.value
-        
-        if (!accessToken || !accessToken.startsWith('emp_')) {
-          logger.debug('No employee session found, allowing access to login page')
-          const response = NextResponse.next()
-          const duration = Date.now() - startTime
-          logger.api(request.method, pathname, 200, duration, { type: 'employee_portal_login' })
-          return response
-        }
-        
-        logger.debug('Employee portal access granted', {
-          path: pathname,
-          hasEmployeeToken: true
-        })
-        
-        const response = NextResponse.next()
-        const duration = Date.now() - startTime
-        logger.api(request.method, pathname, 200, duration, { type: 'employee_portal_authenticated' })
-        return response
-      }
+      // Employee portal uses standard Supabase Auth now
+      // No special handling needed - it will be processed like any other protected route
       
       logger.debug('Valid user found for protected app route', { 
         path: pathname, 

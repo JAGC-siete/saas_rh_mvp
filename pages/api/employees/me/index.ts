@@ -47,21 +47,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Create Supabase client (handles auth automatically via cookies)
     const supabase = createClient(req, res)
     
-    // Check for employee session token
-    const authHeader = req.headers.authorization || req.headers.Authorization as string
-    const accessToken = req.cookies['sb-access-token'] || authHeader?.replace('Bearer ', '')
+    // Get current user from Supabase Auth
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
     
-    if (!accessToken || !accessToken.startsWith('emp_')) {
+    if (authError || !user) {
       return res.status(401).json({ error: 'No autorizado' })
     }
     
-    // Extract employee ID from token
-    const employeeId = accessToken.split('_')[1]
+    // Get employee ID from user metadata
+    const employeeId = user.user_metadata?.employee_id
     if (!employeeId) {
-      return res.status(401).json({ error: 'Token inválido' })
+      return res.status(401).json({ error: 'Datos de empleado no encontrados' })
     }
 
-    // Get detailed employee information
+    // Get detailed employee information (RLS will filter automatically)
     const { data: employeeDetails, error: detailsError } = await supabase
       .from('employees')
       .select(`
@@ -114,6 +113,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     logger.info('Employee accessed own profile', {
       employeeId: employeeId,
       employeeName: employeeDetails.name,
+      userId: user.id,
       action: 'view_profile'
     })
 

@@ -1,7 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient, createAdminClient } from '../../../../lib/supabase/server'
+import { createClient } from '../../../../lib/supabase/server'
 import { logger } from '../../../../lib/logger'
-import { sendOtp, verifyOtp } from '../../../../lib/employee-otp'
 
 interface LoginRequest {
   email: string
@@ -43,126 +42,74 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       })
     }
 
-    // Use admin client for employee lookup (no authentication required yet)
-    const adminSupabase = createAdminClient()
-    // Use regular client for session management
     const supabase = createClient(req, res)
     
-    // Step 1: Send OTP code to email (if no code provided)
+    // Step 1: Send OTP (if no code provided)
     if (!code) {
-      // Verify the email belongs to an active employee
-      const { data: employee, error: employeeError } = await adminSupabase
-        .from('employees')
-        .select('id, name, email, company_id')
-        .eq('email', email)
-        .eq('company_id', '00000000-0000-0000-0000-000000000001') // Paragon
-        .eq('status', 'active')
-        .single()
-
-      if (employeeError || !employee) {
-        logger.warn('Employee email not found', {
-          email,
-          error: employeeError?.message
-        })
-        
-        return res.status(401).json({
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { 
+          shouldCreateUser: false // No crear usuario si no existe
+        }
+      })
+      
+      if (error) {
+        logger.warn('Failed to send OTP', { email, error: error.message })
+        return res.status(400).json({
           success: false,
-          error: 'Email no encontrado o empleado inactivo'
+          error: error.message.includes('User not found') 
+            ? 'Email no encontrado o empleado inactivo'
+            : error.message
         })
       }
 
-      // Send OTP using direct function call
-      const otpResult = await sendOtp(email, employee.id, employee.name)
+      logger.info('OTP sent successfully', { email })
       
-      return res.status(otpResult.success ? 200 : 500).json({
-        success: otpResult.success,
+      return res.status(200).json({
+        success: true,
         step: 'send_code',
-        message: otpResult.message,
-        error: otpResult.error
+        message: 'Código enviado a su email'
       })
     }
 
-    // Step 2: Verify OTP code
-    const otpVerification = verifyOtp(email, code)
-    
-    if (!otpVerification.success) {
+    // Step 2: Verify OTP
+    const { data, error } = await supabase.auth.verifyOtp({
+      email,
+      token: code,
+      type: 'email'
+    })
+
+    if (error || !data.user) {
+      logger.warn('OTP verification failed', { email, error: error?.message })
       return res.status(401).json({
         success: false,
-        error: otpVerification.error
+        error: 'Código inválido o expirado'
       })
     }
 
-    // Get employee data after successful OTP verification
-    const { data: employee, error: employeeError } = await adminSupabase
-      .from('employees')
-      .select(`
-        id, 
-        name, 
-        email,
-        dni, 
-        role,
-        company_id,
-        departments:department_id(name)
-      `)
-      .eq('email', email)
-      .eq('company_id', '00000000-0000-0000-0000-000000000001')
-      .eq('status', 'active')
-      .single()
+    // Get employee data from user metadata
+    const employeeId = data.user.user_metadata?.employee_id
+    const employeeName = data.user.user_metadata?.full_name
+    const companyId = data.user.user_metadata?.company_id
 
-    if (employeeError || !employee) {
-      logger.error('Employee data fetch failed after OTP verification', {
-        email,
-        error: employeeError
-      })
-      
-      return res.status(404).json({
-        success: false,
-        error: 'Empleado no encontrado'
-      })
-    }
-
-    // Create custom session for employee (simpler approach)
-    const sessionData = {
-      access_token: `emp_${employee.id}_${Date.now()}`,
-      refresh_token: `ref_${employee.id}_${Date.now()}`,
-      expires_in: 28800, // 8 hours
-      expires_at: Math.floor(Date.now() / 1000) + 28800,
-      user: {
-        id: employee.id,
-        email: email,
-        user_metadata: {
-          employee_id: employee.id,
-          company_id: employee.company_id,
-          full_name: employee.name,
-          role: employee.role,
-          is_employee_portal: true
-        }
-      }
-    }
-
-    // Set session cookies
-    res.setHeader('Set-Cookie', [
-      `sb-access-token=${sessionData.access_token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=28800`,
-      `sb-refresh-token=${sessionData.refresh_token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=28800`,
-    ])
-
-    logger.info('Employee login successful via OTP', {
-      employeeId: employee.id,
-      employeeName: employee.name,
-      email: email
+    logger.info('Employee login successful via Supabase OTP', {
+      employeeId,
+      employeeName,
+      email,
+      userId: data.user.id
     })
 
     return res.status(200).json({
       success: true,
       step: 'verify_code',
-      user: sessionData.user,
-      session: sessionData,
+      user: data.user,
+      session: data.session,
       employee: {
-        id: employee.id,
-        name: employee.name,
-        dni_masked: employee.dni ? employee.dni.replace(/\d(?=\d{5})/g, '*') : 'N/A',
-        role: employee.role || 'Empleado',
-        department: (employee.departments as any)?.name
+        id: employeeId,
+        name: employeeName,
+        dni_masked: 'Protected',
+        role: 'Empleado',
+        department: 'N/A'
       }
     })
 
