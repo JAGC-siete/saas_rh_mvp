@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../../lib/supabase/server'
+import { createClient, createAdminClient } from '../../../../lib/supabase/server'
 import { logger } from '../../../../lib/logger'
 import { sendOtp, verifyOtp } from '../../../../lib/employee-otp'
 
@@ -43,12 +43,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       })
     }
 
+    // Use admin client for employee lookup (no authentication required yet)
+    const adminSupabase = createAdminClient()
+    // Use regular client for session management
     const supabase = createClient(req, res)
     
     // Step 1: Send OTP code to email (if no code provided)
     if (!code) {
       // Verify the email belongs to an active employee
-      const { data: employee, error: employeeError } = await supabase
+      const { data: employee, error: employeeError } = await adminSupabase
         .from('employees')
         .select('id, name, email, company_id')
         .eq('email', email)
@@ -90,7 +93,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     }
 
     // Get employee data after successful OTP verification
-    const { data: employee, error: employeeError } = await supabase
+    const { data: employee, error: employeeError } = await adminSupabase
       .from('employees')
       .select(`
         id, 
