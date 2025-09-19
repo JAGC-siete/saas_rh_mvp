@@ -58,98 +58,60 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'No autorizado' })
     }
     
-    // Get employee ID from user metadata (same as admin portal)
-    const employeeId = user.user_metadata?.employee_id
-    if (!employeeId) {
-      return res.status(401).json({ error: 'Datos de empleado no encontrados' })
+    // First, get user profile to find employee_id
+    const { data: userProfile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('employee_id, company_id, role')
+      .eq('id', user.id)
+      .single()
+    
+    if (profileError || !userProfile?.employee_id) {
+      logger.error('User profile not found or missing employee_id', {
+        userId: user.id,
+        email: user.email,
+        profileError: profileError?.message,
+        userProfile
+      })
+      return res.status(404).json({ 
+        error: 'Perfil de empleado no encontrado',
+        debug: {
+          userId: user.id,
+          email: user.email,
+          hint: 'El usuario no tiene un employee_id asociado en user_profiles'
+        }
+      })
     }
+    
+    const employeeId = userProfile.employee_id
     
     logger.info('Employee dashboard access', {
       supabaseUserId: user.id,
       employeeId: employeeId,
-      email: user.email
+      email: user.email,
+      companyId: userProfile.company_id
     })
 
-    // First, let's check if employee exists at all
-    const { data: employeeCheck, error: checkError } = await supabase
-      .from('employees')
-      .select('id, name, email, status, company_id')
-      .eq('id', employeeId)
-
-    logger.info('Employee existence check', {
-      employeeId,
-      found: employeeCheck?.length || 0,
-      employee: employeeCheck?.[0],
-      error: checkError
-    })
-
-    // If not found by ID, try by email (maybe ID mismatch)
-    if (!employeeCheck || employeeCheck.length === 0) {
-      const { data: emailCheck, error: emailError } = await supabase
-        .from('employees')
-        .select('id, name, email, status, company_id')
-        .eq('email', 'jorge7gomez@gmail.com')
-        .eq('company_id', '00000000-0000-0000-0000-000000000001')
-
-      logger.info('Employee email fallback check', {
-        emailFound: emailCheck?.length || 0,
-        employee: emailCheck?.[0],
-        error: emailError
-      })
-
-      if (emailCheck && emailCheck.length > 0) {
-        return res.status(400).json({
-          error: 'ID mismatch detected',
-          debug: {
-            tokenEmployeeId: employeeId,
-            actualEmployeeId: emailCheck[0].id,
-            employeeName: emailCheck[0].name,
-            hint: 'El token tiene un employee_id diferente al de la base de datos'
-          }
-        })
-      }
-    }
-
-    // Get employee profile - try direct query first (RLS might be blocking JOINs)
-    let employeeDetails: any = null
-    let profileError: any = null
-
-    // Try simple query first
-    const { data: simpleEmployee, error: simpleError } = await supabase
+    // Get employee details using the employee_id from user_profile
+    const { data: employeeDetails, error: employeeError } = await supabase
       .from('employees')
       .select('*')
       .eq('id', employeeId)
       .single()
 
-    if (simpleError) {
-      logger.error('Simple employee query failed', {
+    if (employeeError || !employeeDetails) {
+      logger.error('Failed to fetch employee details', {
         employeeId,
-        error: simpleError,
-        errorCode: simpleError.code,
-        errorMessage: simpleError.message
+        error: employeeError,
+        hint: 'Employee not found or RLS blocking access'
       })
-
-      // Try without .single() to check if RLS is blocking
-      const { data: employeeArray, error: arrayError } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('id', employeeId)
-
-      if (arrayError || !employeeArray || employeeArray.length === 0) {
-        return res.status(404).json({
-          error: 'Employee not accessible',
-          debug: {
-            employeeId,
-            simpleError: simpleError?.message,
-            arrayError: arrayError?.message,
-            hint: 'RLS policies might be blocking access to this employee'
-          }
-        })
-      }
-
-      employeeDetails = employeeArray[0]
-    } else {
-      employeeDetails = simpleEmployee
+      return res.status(404).json({
+        error: 'Empleado no encontrado',
+        debug: {
+          employeeId,
+          errorMessage: employeeError?.message,
+          hint: 'Verificar políticas RLS y que el empleado existe'
+        }
+      })
     }
 
     // Get related data separately (avoid JOIN issues with RLS)
@@ -168,22 +130,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Add related data to employee object
     employeeDetails.departments = department
     employeeDetails.work_schedules = workSchedule
-
-    if (profileError || !employeeDetails) {
-      logger.error('Failed to get employee details', {
-        employeeId,
-        error: profileError,
-        query: 'employees table lookup'
-      })
-      return res.status(404).json({ 
-        error: 'Empleado no encontrado',
-        debug: {
-          employeeId: employeeId,
-          queryError: profileError?.message,
-          hint: 'Verificar que el empleado existe en la tabla employees'
-        }
-      })
-    }
 
     // Get attendance data for current month
     const now = new Date()
