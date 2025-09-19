@@ -1,4 +1,4 @@
--- 🔧 FIX: Employee Portal RLS Policies
+-- 🔧 FIX: Employee Portal RLS Policies (CORRECTED VERSION)
 -- Soluciona los problemas de acceso en el portal de empleados
 
 -- 1. Agregar política para que empleados puedan ver su propio perfil
@@ -59,7 +59,7 @@ DO $$
 DECLARE
     jorge_user_id uuid;
     jorge_employee_id uuid;
-    company_id uuid := '00000000-0000-0000-0000-000000000001';
+    target_company_id uuid := '00000000-0000-0000-0000-000000000001';
 BEGIN
     -- Buscar el usuario de Jorge en auth.users
     SELECT id INTO jorge_user_id 
@@ -71,13 +71,13 @@ BEGIN
     SELECT id INTO jorge_employee_id 
     FROM employees 
     WHERE email = 'jorge7gomez@gmail.com' 
-    AND company_id = company_id
+    AND company_id = target_company_id
     LIMIT 1;
     
     -- Si ambos existen, asegurar que el user_profile esté correcto
     IF jorge_user_id IS NOT NULL AND jorge_employee_id IS NOT NULL THEN
         INSERT INTO user_profiles (id, company_id, employee_id, role, is_active)
-        VALUES (jorge_user_id, company_id, jorge_employee_id, 'employee', true)
+        VALUES (jorge_user_id, target_company_id, jorge_employee_id, 'employee', true)
         ON CONFLICT (id) DO UPDATE SET
             employee_id = EXCLUDED.employee_id,
             company_id = EXCLUDED.company_id,
