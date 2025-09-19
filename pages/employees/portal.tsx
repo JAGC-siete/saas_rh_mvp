@@ -219,6 +219,12 @@ function PayrollSection({ employeeId }: { employeeId?: string }) {
     fetchPayroll()
   }, [employeeId])
 
+  const generatePDF = async (periodo: string, quincena: number) => {
+    // Mostrar mensaje de funcionalidad en desarrollo
+    alert('🚧 Funcionalidad en desarrollo\n\nLa generación de recibos de nómina en PDF estará disponible próximamente.')
+    return
+  }
+
   if (loading) {
     return (
       <div className="flex justify-center py-8">
@@ -317,6 +323,17 @@ function PayrollSection({ employeeId }: { employeeId?: string }) {
                     </div>
                   </div>
                 </div>
+                <div className="mt-4 flex justify-end">
+                  <button
+                    onClick={() => generatePDF(
+                      `${new Date(record.period_start).getFullYear()}-${String(new Date(record.period_start).getMonth() + 1).padStart(2, '0')}`,
+                      new Date(record.period_start).getDate() <= 15 ? 1 : 2
+                    )}
+                    className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded"
+                  >
+                    📄 PDF
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -365,6 +382,17 @@ function PayrollSection({ employeeId }: { employeeId?: string }) {
                     <div className="text-gray-400">Neto</div>
                     <div className="text-green-300 font-medium">L. {Number(line.eff_neto || 0).toLocaleString('es-HN')}</div>
                   </div>
+                </div>
+                <div className="mt-4 flex justify-end">
+                  <button
+                    onClick={() => generatePDF(
+                      `${line.payroll_runs.year}-${String(line.payroll_runs.month).padStart(2, '0')}`,
+                      line.payroll_runs.quincena
+                    )}
+                    className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded"
+                  >
+                    📄 PDF
+                  </button>
                 </div>
               </div>
             ))}
@@ -423,7 +451,7 @@ interface AttendanceSummary {
 
 export default function EmployeePortal() {
   // Use same auth system as admin portal
-  const { user, session, loading: authLoading } = useAuth()
+  const { user, session, logout } = useAuth()
   const [profile, setProfile] = useState<EmployeeProfile | null>(null)
   const [attendanceSummary, setAttendanceSummary] = useState<AttendanceSummary | null>(null)
   const [loading, setLoading] = useState(true)
@@ -432,23 +460,6 @@ export default function EmployeePortal() {
   
   // Check if user is employee
   const isEmployee = user?.user_metadata?.role === 'employee'
-
-  // Check for existing session on load
-  useEffect(() => {
-    checkExistingSession()
-  }, [])
-
-  // Fetch data when session is available
-  useEffect(() => {
-    if (session) {
-      fetchEmployeeData()
-    }
-  }, [session])
-
-  const checkExistingSession = async () => {
-    // No need for custom session checking - useAuth handles this
-    setLoading(false)
-  }
 
   const fetchEmployeeData = useCallback(async () => {
     if (!user || !isEmployee) return
@@ -488,6 +499,23 @@ export default function EmployeePortal() {
     }
   }, [user, isEmployee])
 
+  // Check for existing session on load
+  useEffect(() => {
+    checkExistingSession()
+  }, [])
+
+  // Fetch data when session is available
+  useEffect(() => {
+    if (session) {
+      fetchEmployeeData()
+    }
+  }, [session, fetchEmployeeData])
+
+  const checkExistingSession = async () => {
+    // No need for custom session checking - useAuth handles this
+    setLoading(false)
+  }
+
   const handleLoginSuccess = useCallback((sessionData: EmployeeSession) => {
     clientLogger.info('Employee portal access', {
       employeeId: sessionData.employee.id,
@@ -507,8 +535,7 @@ export default function EmployeePortal() {
 
   const handleLogout = useCallback(async () => {
     try {
-      // Use useAuth logout (same as admin portal)
-      const { logout } = useAuth()
+      // Use logout from useAuth hook
       await logout()
       clearSession()
       router.push('/employees/portal')
@@ -517,7 +544,7 @@ export default function EmployeePortal() {
       clearSession()
       router.reload()
     }
-  }, [router, clearSession])
+  }, [logout, router, clearSession])
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'No especificado'
