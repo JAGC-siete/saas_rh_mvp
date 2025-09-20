@@ -65,7 +65,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { data: existingRun, error: checkError } = await supabase
       .from('payroll_runs')
       .select('id, status')
-      .eq('company_uuid', companyId)
+      .eq('company_id', companyId)
       .eq('year', yearNum)
       .eq('month', monthNum)
       .eq('quincena', quincenaNum)
@@ -91,7 +91,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             updated_at: nowInHonduras().toISOString()
           })
           .eq('id', existingRun.id)
-          .eq('company_uuid', companyId)
+          .eq('company_id', companyId)
 
         if (resetError) {
           console.error('Error resetting run status:', resetError)
@@ -103,7 +103,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           .from('payroll_run_lines')
           .delete()
           .eq('run_id', existingRun.id)
-          .eq('company_uuid', companyId)
+          .eq('company_id', companyId)
 
         if (deleteError) {
           console.error('Error deleting existing lines:', deleteError)
@@ -119,7 +119,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const { data: newRun, error: createError } = await supabase
         .from('payroll_runs')
         .insert({
-          company_uuid: companyId,
+          company_id: companyId,
           year: yearNum,
           month: monthNum,
           quincena: quincenaNum,
@@ -273,7 +273,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .from('payroll_run_lines')
         .insert({
           run_id: runId,
-          company_uuid: companyId,
+          company_id: companyId,
           employee_id: emp.id,
           calc_hours: days_worked,
           calc_bruto: total_earnings,
