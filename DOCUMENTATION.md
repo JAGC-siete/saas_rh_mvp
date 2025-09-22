@@ -210,28 +210,28 @@ work_schedules (1) → (*) employees
 ### Variables de Entorno Críticas
 ```env
 # Supabase
-NEXT_PUBLIC_SUPABASE_URL=https://fwyxmovfrzauebiqxchz.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_...
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiI...
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key_here
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key_here
 
 # Base de Datos
-DATABASE_URL=postgresql://postgres...
+DATABASE_URL=postgresql://postgres:password@host:port/database
 
 # Seguridad
-JWT_SECRET=/15iXueZ210eRrXhvZMzjeuBULAujPNXcOwzCJ2MUKc=
-SESSION_SECRET=J52Eqd7eVy/c4Iu3rgT0sPaF9vXNJQ0l1WjPwMVygzw=
+JWT_SECRET=your_jwt_secret_here
+SESSION_SECRET=your_session_secret_here
 
 # Aplicación
 TZ=America/Tegucigalpa
 DEFAULT_TIMEZONE=America/Tegucigalpa
 DEFAULT_CURRENCY=HNL
-NEXT_PUBLIC_SITE_URL=https://humanosisu.net
+NEXT_PUBLIC_SITE_URL=https://your-domain.com
 
 # Email
-RESEND_API_KEY=re_GdYYzVjo_8A9q3pPmWzJV2r3aYJ3Yp6mW
+RESEND_API_KEY=your_resend_api_key_here
 
 # Cron Jobs
-CRON_SECRET=hr-saas-cron-2025-fwyxmovfrzauebiqxchz-secure-key
+CRON_SECRET=your_cron_secret_here
 ```
 
 ### Configuración de Next.js
