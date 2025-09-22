@@ -133,7 +133,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Get employee profile - try direct query first (RLS might be blocking JOINs)
     let employeeDetails: any = null
-    let profileError: any = null
+    let employeeError: any = null
 
     // Try simple query first
     const { data: simpleEmployee, error: simpleError } = await supabase
