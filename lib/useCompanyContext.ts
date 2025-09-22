@@ -49,6 +49,12 @@ export function useCompanyContext() {
         const currentCompanyId = userProfile.company_id
         console.log('🏢 Buscando empresa con ID:', currentCompanyId)
         
+        if (!currentCompanyId) {
+          setError('No se pudo obtener el ID de la empresa')
+          setLoading(false)
+          return
+        }
+        
         const { data: companyData, error: companyError } = await supabase
           .from('companies')
           .select('id, name, settings')

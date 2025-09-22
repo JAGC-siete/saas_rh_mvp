@@ -1,55 +1,58 @@
 import { createBrowserClient } from '@supabase/ssr'
-import { env, refreshEnvFromWindow } from '../env'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database } from '../database.types'
 
-export function createClient(): SupabaseClient {
-  // In production, use the hardcoded values since they're already configured in Railway
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://fwyxmovfrzauebiqxchz.supabase.co'
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_K5XwWr0RPK7mq2L2z0TZfA_u6ZreOF7'
+// Singleton instance for browser client
+let browserClient: SupabaseClient<Database> | null = null
 
-  // Debug logging
-  console.log('🔍 Supabase client initialization:', {
-    supabaseUrl: supabaseUrl ? '✅ Set' : '❌ Missing',
-    supabaseAnonKey: supabaseAnonKey ? '✅ Set' : '❌ Missing',
-    processEnv: {
-      NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ? '✅ Set' : '❌ Missing',
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '✅ Set' : '❌ Missing',
-    }
-  })
+/**
+ * Creates a Supabase client for browser usage only.
+ * This should NEVER be used in server-side code or middleware.
+ * 
+ * @returns SupabaseClient<Database> - Typed Supabase client
+ */
+export function createClient(): SupabaseClient<Database> {
+  // Return singleton if already created
+  if (browserClient) {
+    return browserClient
+  }
 
-  // Check if environment variables are available
+  // Validate we're in browser environment
+  if (typeof window === 'undefined') {
+    throw new Error('createClient() should only be called in browser environment. Use createServerClient() for server-side code.')
+  }
+
+  // Get environment variables (only available in browser for NEXT_PUBLIC_ vars)
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  // Debug logging only in development
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🔍 Supabase browser client initialization:', {
+      supabaseUrl: supabaseUrl ? '✅ Set' : '❌ Missing',
+      supabaseAnonKey: supabaseAnonKey ? '✅ Set' : '❌ Missing',
+    })
+  }
+
+  // Validate required environment variables
   if (!supabaseUrl || !supabaseAnonKey) {
-    const errorMessage = `❌ CRITICAL: Supabase environment variables not configured
+    const errorMessage = `Supabase environment variables not configured:
+    - NEXT_PUBLIC_SUPABASE_URL: ${supabaseUrl ? 'Set' : 'Missing'}
+    - NEXT_PUBLIC_SUPABASE_ANON_KEY: ${supabaseAnonKey ? 'Set' : 'Missing'}
     
-    Required variables:
-    - NEXT_PUBLIC_SUPABASE_URL: ${supabaseUrl ? '✅ Set' : '❌ Missing'}
-    - NEXT_PUBLIC_SUPABASE_ANON_KEY: ${supabaseAnonKey ? '✅ Set' : '❌ Missing'}
-    
-    Please ensure these are set in:
-    1. .env file (for development)
-    2. Railway/Vercel dashboard (for production)
-    3. Docker environment (for containers)
-    
-    Current environment: ${process.env.NODE_ENV || 'unknown'}
-    `
+    Please ensure these are set in your deployment environment.`
     
     console.error(errorMessage)
-    
-    if (typeof window === 'undefined') {
-      // Server-side: Fail fast during build
-      throw new Error('Supabase environment variables must be configured before build')
-    } else {
-      // Client-side: Show user-friendly error
-      throw new Error('Application configuration error. Please contact system administrator.')
-    }
+    throw new Error('Application configuration error. Please contact system administrator.')
   }
 
   try {
-    const client = createBrowserClient(supabaseUrl, supabaseAnonKey, {
+    // Create browser client with proper configuration
+    browserClient = createBrowserClient<Database>(supabaseUrl, supabaseAnonKey, {
       auth: {
         autoRefreshToken: true,
         persistSession: true,
-        detectSessionInUrl: true
+        detectSessionInUrl: false // Only enable in callback routes
       },
       global: {
         headers: {
@@ -58,15 +61,51 @@ export function createClient(): SupabaseClient {
       }
     })
     
-    console.log('✅ Supabase browser client created successfully')
-    return client
+    if (process.env.NODE_ENV === 'development') {
+      console.log('✅ Supabase browser client created successfully')
+    }
+    
+    return browserClient
   } catch (error) {
     console.error('❌ Failed to create Supabase browser client:', error)
     throw error
   }
 }
 
+/**
+ * Creates a Supabase client for callback routes only.
+ * This enables detectSessionInUrl for OAuth callbacks.
+ * 
+ * @returns SupabaseClient<Database> - Typed Supabase client for callbacks
+ */
+export function createCallbackClient(): SupabaseClient<Database> {
+  // Validate we're in browser environment
+  if (typeof window === 'undefined') {
+    throw new Error('createCallbackClient() should only be called in browser environment.')
+  }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Supabase environment variables not configured')
+  }
+
+  return createBrowserClient<Database>(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true // Enable for callback routes
+    },
+    global: {
+      headers: {
+        'X-Client-Info': 'hr-saas-frontend-callback'
+      }
+    }
+  })
+}
+
 // Async version for backward compatibility
-export async function createClientAsync(): Promise<SupabaseClient> {
+export async function createClientAsync(): Promise<SupabaseClient<Database>> {
   return createClient()
 }
