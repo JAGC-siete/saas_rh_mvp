@@ -194,8 +194,8 @@ export async function middleware(request: NextRequest) {
   }
   
   if (pathname === '/login') {
-    logger.info('Redirecting legacy /login to /auth/start', { path: pathname })
-    return NextResponse.redirect(new URL('/auth/start', request.url))
+    logger.info('Redirecting legacy /login to /app/login', { path: pathname })
+    return NextResponse.redirect(new URL('/app/login', request.url))
   }
 
   // Log all requests with structured logging
@@ -365,8 +365,10 @@ export async function middleware(request: NextRequest) {
           hasUrl: !!supabaseUrl,
           hasAnon: !!anon
         })
-        return NextResponse.redirect(new URL('/auth/start', request.url))
+        return NextResponse.redirect(new URL('/app/login', request.url))
       }
+      
+      const response = NextResponse.next()
       
       const supabase = createServerClient(supabaseUrl, anon as string, {
         cookies: {
@@ -374,10 +376,10 @@ export async function middleware(request: NextRequest) {
             return request.cookies.get(name)?.value
           },
           set(name: string, value: string, options: any) {
-            // Don't set cookies in middleware, just read them
+            response.cookies.set(name, value, options)
           },
           remove(name: string, options: any) {
-            // Don't remove cookies in middleware, just read them
+            response.cookies.set(name, '', { ...options, maxAge: 0 })
           },
         },
       })
@@ -397,31 +399,24 @@ export async function middleware(request: NextRequest) {
         }))
       })
       
-      // Get session from Supabase (better for middleware)
-      const { data: { session }, error } = await supabase.auth.getSession()
-      const user = session?.user
+      // SECURITY FIX: Use getUser() instead of getSession() for authentication
+      const { data: { user }, error } = await supabase.auth.getUser()
       
-      logger.info('Session debug', {
+      logger.info('User debug', {
         path: pathname,
-        hasSession: !!session,
         hasUser: !!user,
         userId: user?.id,
         error: error?.message
       })
       
       if (error) {
-        const isMissing = (error as any)?.message?.toLowerCase?.().includes('auth session missing')
-        if (isMissing) {
-          logger.info('No session for protected app route', { path: pathname })
-        } else {
-          logger.error('Error getting session', error)
-        }
-        return NextResponse.redirect(new URL('/auth/start', request.url))
+        logger.error('Error getting user', error)
+        return NextResponse.redirect(new URL('/app/login', request.url))
       }
       
       if (!user) {
         logger.info('No user found for protected app route', { path: pathname })
-        return NextResponse.redirect(new URL('/auth/start', request.url))
+        return NextResponse.redirect(new URL('/app/login', request.url))
       }
 
       // Check admin privileges for admin routes
@@ -463,8 +458,6 @@ export async function middleware(request: NextRequest) {
         email: user?.email 
       })
       
-      const response = NextResponse.next()
-      
       // Log successful auth
       const duration = Date.now() - startTime
       logger.api(request.method, pathname, 200, duration, { 
@@ -494,16 +487,18 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/auth/start', request.url))
     }
     
+    const response = NextResponse.next()
+    
     const supabase = createServerClient(supabaseUrl, anon as string, {
       cookies: {
         get(name: string) {
           return request.cookies.get(name)?.value
         },
         set(name: string, value: string, options: any) {
-          // Don't set cookies in middleware, just read them
+          response.cookies.set(name, value, options)
         },
         remove(name: string, options: any) {
-          // Don't remove cookies in middleware, just read them
+          response.cookies.set(name, '', { ...options, maxAge: 0 })
         },
       },
     })
@@ -512,12 +507,7 @@ export async function middleware(request: NextRequest) {
     const { data: { user }, error } = await supabase.auth.getUser()
     
     if (error) {
-      const isMissing = (error as any)?.message?.toLowerCase?.().includes('auth session missing')
-      if (isMissing) {
-        logger.info('No session for private route', { path: pathname })
-      } else {
-        logger.error('Error getting user', error)
-      }
+      logger.error('Error getting user', error)
       return NextResponse.redirect(new URL('/auth/start', request.url))
     }
     
@@ -531,8 +521,6 @@ export async function middleware(request: NextRequest) {
       userId: user?.id,
       email: user?.email 
     })
-    
-    const response = NextResponse.next()
     
     // Log successful auth
     const duration = Date.now() - startTime
