@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 import { useAuth } from '../../lib/auth'
-import { supabase } from '../../lib/supabase'
+import { createClient } from '../../lib/supabase/client'
 import ProtectedRoute from '../../components/ProtectedRoute'
 import DashboardLayout from '../../components/DashboardLayout'
 
@@ -9,6 +9,7 @@ export default function AttendanceIndex() {
   const router = useRouter()
   const { user, loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(true)
+  const supabase = createClient()
 
   useEffect(() => {
     const checkUserRole = async () => {

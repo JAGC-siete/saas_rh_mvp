@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createAdminClient } from '../../../lib/supabase/server'
+import { createServiceRoleClient } from '../../../lib/supabase/server'
 import { getHondurasTimestamp, nowInHonduras } from '../../../lib/timezone'
 
 /**
@@ -20,7 +20,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('🔍 Validando trial para tenant:', tenant)
 
     // Crear cliente Supabase con permisos de admin
-    const supabase = createAdminClient()
+    const supabase = createServiceRoleClient()
     if (!supabase) {
       console.error('❌ Error creando cliente Supabase')
       return res.status(500).json({ error: 'Error de conexión con la base de datos' })
@@ -53,7 +53,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Verificar que el trial no haya expirado (30 días desde creación)
-    const trialExpiresAt = new Date(trialUser.created_at)
+    const trialExpiresAt = new Date(trialUser.created_at || new Date())
     trialExpiresAt.setDate(trialExpiresAt.getDate() + 30)
     const now = nowInHonduras()
 

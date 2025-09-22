@@ -1,4 +1,4 @@
-import { createAdminClient } from '../../lib/supabase/server'
+import { createServiceRoleClient, createServerSupabaseClient } from '../../lib/supabase/server'
 import { getTodayInHonduras, getHondurasTime, nowInHonduras } from '../../lib/timezone'
 import { incrementUsage } from '../../lib/billing/enforce'
 
@@ -15,7 +15,7 @@ async function calculateAttendancePoints(employeeId: string, lateMinutes: number
 }
 
 async function updateEmployeeScore(employeeId: string, companyId: string, points: number, reason: string, actionType: string) {
-  const supabase = createAdminClient()
+  const supabase = createServiceRoleClient()
   
   // Update or insert employee score
   const { data: existingScore } = await supabase
@@ -28,9 +28,9 @@ async function updateEmployeeScore(employeeId: string, companyId: string, points
     await supabase
       .from('employee_scores')
       .update({
-        total_points: existingScore.total_points + points,
-        weekly_points: existingScore.weekly_points + points,
-        monthly_points: existingScore.monthly_points + points,
+        total_points: (existingScore.total_points ?? 0) + points,
+        weekly_points: (existingScore.weekly_points ?? 0) + points,
+        monthly_points: (existingScore.monthly_points ?? 0) + points,
         updated_at: getHondurasTime().toISOString()
       })
       .eq('employee_id', employeeId)
@@ -59,7 +59,7 @@ async function updateEmployeeScore(employeeId: string, companyId: string, points
 }
 
 async function checkForAchievements(employeeId: string, companyId: string): Promise<any[]> {
-  const supabase = createAdminClient()
+  const supabase = createServiceRoleClient()
   
   // This is a simplified version - would need more complex logic for real achievements
   const achievements: any[] = []
@@ -134,7 +134,7 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
 
     // For public attendance registration, we don't require authentication
     // Use admin client to access the database
-    const supabase = createAdminClient()
+    const supabase = createServiceRoleClient()
 
     // Find employee by last 5 digits of DNI or employee_id
     let employee
@@ -180,14 +180,14 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
       const { data: schedule } = await supabase
         .from('work_schedules')
         .select('*')
-        .eq('id', employee.work_schedule_id)
+        .eq('id', employee.work_schedule_id ?? '')
         .single()
 
       // Get today's expected start time based on day of week
       const dayOfWeek = now.getDay() // 0 = Sunday, 1 = Monday, etc.
       const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
       const todayName = dayNames[dayOfWeek]
-      const expectedCheckIn = schedule?.[`${todayName}_start`] || schedule?.monday_start || '08:00'
+      const expectedCheckIn = (schedule as Record<string, any>)?.[`${todayName}_start`] || (schedule as Record<string, any>)?.monday_start || '08:00'
       
       const currentTime = now.toTimeString().slice(0, 5)
       
@@ -227,7 +227,7 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
 
       // Increment usage meter for attendance recording
       try {
-        await incrementUsage(supabase, employee.company_id, 'create_employee') // Using create_employee as closest action
+        await incrementUsage(supabase, employee.company_id ?? '', 'create_employee') // Using create_employee as closest action
       } catch (error) {
         console.warn('Failed to increment usage meter:', error)
         // Don't fail the request if usage tracking fails
@@ -292,7 +292,7 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
       if (pointsEarned > 0) {
         await updateEmployeeScore(
           employee.id, 
-          employee.company_id, 
+          employee.company_id ?? '', 
           pointsEarned,
           `Check-in: ${punctualityStatus}`,
           'check_in'
@@ -300,7 +300,7 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
       }
 
       // Check for new achievements
-      const newAchievements = await checkForAchievements(employee.id, employee.company_id)
+      const newAchievements = await checkForAchievements(employee.id, employee.company_id ?? '')
 
       const message = lateMinutes <= 5 
         ? '✅ Check-in recorded successfully'
@@ -335,14 +335,14 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
       const { data: schedule } = await supabase
         .from('work_schedules')
         .select('*')
-        .eq('id', employee.work_schedule_id)
+        .eq('id', employee.work_schedule_id ?? '')
         .single()
 
       // Get today's expected end time based on day of week
       const dayOfWeek = now.getDay() // 0 = Sunday, 1 = Monday, etc.
       const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
       const todayName = dayNames[dayOfWeek]
-      const expectedCheckOut = schedule?.[`${todayName}_end`] || schedule?.monday_end || '17:00'
+      const expectedCheckOut = (schedule as Record<string, any>)?.[`${todayName}_end`] || (schedule as Record<string, any>)?.monday_end || '17:00'
       
       const currentTime = now.toTimeString().slice(0, 5)
       
@@ -372,7 +372,7 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
 
       // Increment usage meter for attendance recording
       try {
-        await incrementUsage(supabase, employee.company_id, 'create_employee') // Using create_employee as closest action
+        await incrementUsage(supabase, employee.company_id ?? '', 'create_employee') // Using create_employee as closest action
       } catch (error) {
         console.warn('Failed to increment usage meter:', error)
         // Don't fail the request if usage tracking fails
@@ -403,8 +403,7 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
 async function getAttendanceRecords(req: NextApiRequest, res: NextApiResponse) {
   try {
     // Validar autenticación para obtener registros
-    const { createClient } = await import('../../lib/supabase/server')
-    const supabase = createClient(req, res)
+    const supabase = createServerSupabaseClient()
     
     // ✅ Get user with getUser() to validate token with Supabase server
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -441,7 +440,7 @@ async function getAttendanceRecords(req: NextApiRequest, res: NextApiResponse) {
       .order('date', { ascending: false })
 
     if (employee_id) {
-      query = query.eq('employee_id', employee_id)
+      query = query.eq('employee_id', Array.isArray(employee_id) ? employee_id[0] : employee_id as string)
     }
 
     if (start_date) {

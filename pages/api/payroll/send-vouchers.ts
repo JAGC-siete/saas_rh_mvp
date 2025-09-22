@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../lib/supabase/server'
+import { createServerSupabaseClient } from '../../../lib/supabase/server'
 import { authenticateUser } from '../../../lib/auth-helpers'
 import { notificationManager } from '../../../lib/notification-providers'
 import { emailService } from '../../../lib/email-service'
@@ -27,7 +27,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Delivery debe ser: email, whatsapp, o both' })
     }
 
-    const supabase = createClient(req, res)
+    const supabase = createServerSupabaseClient()
     const companyId = auth.userProfile.company_id
 
     if (!companyId) {
@@ -108,10 +108,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         // Aplicar overrides del draft si existen
-        if (draftOverride) {
+        if (draftOverride && payrollData) {
           payrollData.gross_salary += (draftOverride.adj_bonus || 0)
-          payrollData.total_deductions += (draftOverride.adj_discount || 0)
-          payrollData.net_salary = payrollData.gross_salary - payrollData.total_deductions
+          payrollData.total_deductions = (payrollData.total_deductions ?? 0) + (draftOverride.adj_discount || 0)
+          payrollData.net_salary = payrollData.gross_salary - (payrollData.total_deductions ?? 0)
         }
 
         // Generar PDF del recibo - removed unused variable
@@ -148,9 +148,9 @@ Estimado/a ${employee.name},
 Adjunto encontrará su recibo de nómina para el período ${periodo} Q${quincena}.
 
 Resumen:
-• Salario Bruto: L. ${payrollData.gross_salary.toFixed(2)}
-• Total Deducciones: L. ${payrollData.total_deductions.toFixed(2)}
-• Salario Neto: L. ${payrollData.net_salary.toFixed(2)}
+• Salario Bruto: L. ${payrollData?.gross_salary?.toFixed(2) || '0.00'}
+• Total Deducciones: L. ${payrollData?.total_deductions?.toFixed(2) || '0.00'}
+• Salario Neto: L. ${payrollData?.net_salary?.toFixed(2) || '0.00'}
 
 Saludos,
 Departamento de Recursos Humanos
@@ -162,9 +162,9 @@ Paragon Honduras
                 <p>Adjunto encontrará su recibo de nómina para el período ${periodo} Q${quincena}.</p>
                 <p><strong>Resumen:</strong></p>
                 <ul>
-                  <li>Salario Bruto: L. ${payrollData.gross_salary.toFixed(2)}</li>
-                  <li>Total Deducciones: L. ${payrollData.total_deductions.toFixed(2)}</li>
-                  <li>Salario Neto: L. ${payrollData.net_salary.toFixed(2)}</li>
+                  <li>Salario Bruto: L. ${payrollData?.gross_salary?.toFixed(2) || '0.00'}</li>
+                  <li>Total Deducciones: L. ${payrollData?.total_deductions?.toFixed(2) || '0.00'}</li>
+                  <li>Salario Neto: L. ${payrollData?.net_salary?.toFixed(2) || '0.00'}</li>
                 </ul>
                 <p>Saludos,<br>Departamento de Recursos Humanos<br>Paragon Honduras</p>
               `

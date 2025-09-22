@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createAdminClient } from '../../../lib/supabase/server'
+import { createServiceRoleClient } from '../../../lib/supabase/server'
 import { logger } from '../../../lib/logger'
 import { 
    toHN, overrideIfSaturdayHalfDay, decideCheckInRule, mapRule, distanceMeters, isDayOpenForPublic, nowInHonduras, getHondurasTimestamp } from '../../../lib/timezone'
@@ -41,13 +41,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Debe enviar dni o last5' })
     }
 
-    const supabase = createAdminClient()
+    const supabase = createServiceRoleClient()
 
     // PASO 1: Verificar existencia de tablas requeridas
     logger.debug('Verifying required tables')
     const requiredTables = ['employees', 'work_schedules', 'attendance_records', 'companies']
     for (const table of requiredTables) {
-      const { error: tableError } = await supabase.from(table).select('id').limit(1)
+      const { error: tableError } = await supabase.from(table as any).select('id').limit(1)
       if (tableError) {
         logger.error('Required table missing or inaccessible', tableError, { table })
         return res.status(500).json({ 
@@ -121,7 +121,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { data: company, error: compError } = await supabase
       .from('companies')
       .select('geofence_center_lat, geofence_center_lon, geofence_radius_m')
-      .eq('id', employee.company_id)
+      .eq('id', employee.company_id ?? '')
       .single()
 
     if (compError || !company) {
@@ -168,8 +168,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // PASO 7: Obtener horario esperado para el día actual
     const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
     const todayName = dayNames[nowLocal.dow]
-    const expectedIn = schedule[`${todayName}_start`] || schedule.monday_start || '08:00'
-    const expectedOut = schedule[`${todayName}_end`] || schedule.monday_end || '17:00'
+    const expectedIn = (schedule as Record<string, any>)[`${todayName}_start`] || (schedule as Record<string, any>).monday_start || '08:00'
+    const expectedOut = (schedule as Record<string, any>)[`${todayName}_end`] || (schedule as Record<string, any>).monday_end || '17:00'
 
     // Aplicar override para sábado (medio día 08:00-12:00)
     const adjustedExpectedIn = overrideIfSaturdayHalfDay(expectedIn, schedule, nowLocal)
@@ -313,8 +313,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .from('attendance_records')
         .upsert({
           employee_id: employee.id,
-          date: nowLocal.date, // Corregido: usar 'date' no 'local_date'
-          check_in: nowUtc,
+          date: nowLocal.date, // Already in YYYY-MM-DD format
+          check_in: nowUtc.toISOString(),
           expected_check_in: adjustedExpectedIn,
           status: rule === 'early' ? 'early' : (rule === 'late' || rule === 'oor' ? 'late_in' : 'present'),
           rule_applied_in: mapRule(rule),
@@ -340,7 +340,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .insert({
           employee_id: employee.id,
           event_type: 'check_in',
-          ts_utc: nowUtc,
+          ts_utc: nowUtc.toISOString(),
           rule_applied: rule,
           justification: justification || null,
           justification_category: justification_category || null,
@@ -419,7 +419,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             employee_id: employee.id,
             date: nowLocal.date,
             check_in: null, // Sin check-in previo
-            check_out: nowUtc,
+            check_out: nowUtc.toISOString(),
             expected_check_in: adjustedExpectedIn,
             expected_check_out: adjustedExpectedOut,
             status: 'simple_checkout', // Estado simplificado
@@ -446,10 +446,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const { data: updatedRecord, error: updateError } = await supabase
           .from('attendance_records')
           .update({
-            check_out: nowUtc,
+            check_out: nowUtc.toISOString(),
             expected_check_out: adjustedExpectedOut,
             rule_applied_out: 'simple_checkout',
-            updated_at: nowUtc
+            updated_at: nowUtc.toISOString()
           })
           .eq('id', existingRecord.id)
           .select()
@@ -475,7 +475,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .insert({
           employee_id: employee.id,
           event_type: 'check_out',
-          ts_utc: nowUtc,
+          ts_utc: nowUtc.toISOString(),
           rule_applied: 'simple_checkout',
           source,
           ip: (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.socket.remoteAddress,

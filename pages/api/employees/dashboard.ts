@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../lib/supabase/server'
+import { createServerSupabaseClient } from '../../../lib/supabase/server'
 import { logger } from '../../../lib/logger'
 
 interface EmployeeDashboardResponse {
@@ -36,10 +36,9 @@ interface EmployeeDashboardResponse {
   recent_attendance: Array<{
     id: string
     date: string
-    check_in?: string
-    check_out?: string
-    status: string
-    hours_worked?: number
+    check_in: string | null
+    check_out: string | null
+    status: string | null
   }>
 }
 
@@ -49,7 +48,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const supabase = createClient(req, res)
+    const supabase = createServerSupabaseClient()
     
     // Use standard Supabase Auth like admin portal
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -187,8 +186,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         date,
         check_in,
         check_out,
-        status,
-        hours_worked
+        status
       `)
       .eq('employee_id', employeeId)
       .gte('date', startOfMonth)
@@ -205,7 +203,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const presentDays = records.filter(r => r.status === 'present').length
     const absentDays = records.filter(r => r.status === 'absent').length
     const lateDays = records.filter(r => r.status === 'late').length
-    const totalHours = records.reduce((sum, r) => sum + (r.hours_worked || 0), 0)
+    // Calculate total hours from check-in/check-out times
+    const totalHours = records.reduce((sum, r) => {
+      if (r.check_in && r.check_out) {
+        const checkIn = new Date(r.check_in)
+        const checkOut = new Date(r.check_out)
+        const hours = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60)
+        return sum + Math.max(0, hours)
+      }
+      return sum
+    }, 0)
     const averageHours = totalDays > 0 ? totalHours / totalDays : 0
 
     // Mask sensitive information
@@ -270,7 +277,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         check_in: record.check_in,
         check_out: record.check_out,
         status: record.status,
-        hours_worked: record.hours_worked
       }))
     }
 

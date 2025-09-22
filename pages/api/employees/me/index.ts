@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../../lib/supabase/server'
+import { createServerSupabaseClient } from '../../../../lib/supabase/server'
 import { logger } from '../../../../lib/logger'
 
 interface EmployeeProfileResponse {
@@ -45,7 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // Create Supabase client (handles auth automatically via cookies)
-    const supabase = createClient(req, res)
+    const supabase = createServerSupabaseClient()
     
     // Get current user from Supabase Auth
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -149,7 +149,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           sunday_end: (employeeDetails.work_schedules as any).sunday_end
         } : undefined,
         base_salary_masked: true, // Indicate salary is not exposed
-        status: employeeDetails.status
+        status: employeeDetails.status ?? 'active'
       }
     }
 

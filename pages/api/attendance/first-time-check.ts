@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createAdminClient } from '../../../lib/supabase/server'
+import { createServiceRoleClient } from '../../../lib/supabase/server'
 import {  getTodayInHonduras, nowInHonduras } from '../../../lib/timezone'
 
 // Horarios por defecto por departamento
@@ -33,7 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Either last5 or employee_id required' })
     }
 
-    const supabase = createAdminClient()
+    const supabase = createServiceRoleClient()
 
     // Find employee
     let employee
@@ -102,11 +102,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Get current work schedule if exists
     let currentSchedule = null
-    if (employee.work_schedule_id) {
+    if ((employee as Record<string, any>).work_schedule_id) {
       const { data: schedule } = await supabase
         .from('work_schedules')
         .select('*')
-        .eq('id', employee.work_schedule_id)
+        .eq('id', (employee as Record<string, any>).work_schedule_id)
         .single()
       
       currentSchedule = schedule

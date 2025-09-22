@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { createAdminClient } from '../../../lib/supabase/server'
+import { createServiceRoleClient } from '../../../lib/supabase/server'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -15,11 +15,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     company_id = '00000000-0000-0000-0000-000000000001'
   } = req.query
 
-  const supabase = createAdminClient()
+  const supabase = createServiceRoleClient()
   
   const rpcArgs = {
     _company_id: company_id as string,
-    _employee_id: (typeof employee_id === 'string' && employee_id.trim() !== '') ? employee_id.trim() : null,
+    _employee_id: (typeof employee_id === 'string' && employee_id.trim() !== '') ? employee_id.trim() : undefined,
     _preset: preset as string,
     _tz: tz as string,
     _week_start: parseInt(week_start as string, 10)

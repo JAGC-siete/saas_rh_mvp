@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../lib/auth'
-import { supabase } from '../../lib/supabase'
+import { createClient } from '../../lib/supabase/client'
 import DashboardLayout from '../../components/DashboardLayout'
 import EmployeeManager from '../../components/EmployeeManager'
 import DepartmentManager from '../../components/DepartmentManager'
@@ -9,6 +9,9 @@ import PayrollManagerNew from '../../components/PayrollManagerNew'
 
 export default function SuperAdminDashboard() {
   const { userProfile, loading } = useAuth()
+    // Create Supabase client
+  const supabase = createClient()
+
   const [companies, setCompanies] = useState<any[]>([])
   const [selectedCompany, setSelectedCompany] = useState('')
   const [activeTab, setActiveTab] = useState('companies')
@@ -22,7 +25,7 @@ export default function SuperAdminDashboard() {
   const fetchCompanies = async () => {
     const { data } = await supabase.from('companies').select('*')
     setCompanies(data || [])
-    if (data?.length > 0) setSelectedCompany(data[0].id)
+    if ((data?.length ?? 0) > 0) setSelectedCompany(data?.[0]?.id ?? '')
   }
 
   if (loading) return <div>Loading...</div>

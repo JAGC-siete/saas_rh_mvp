@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createAdminClient } from '../../../lib/supabase/server'
+import { createServiceRoleClient } from '../../../lib/supabase/server'
 import { getHondurasTimeISO } from '../../../lib/timezone'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -14,7 +14,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'employee_id, start_time, and end_time are required' })
     }
 
-    const supabase = createAdminClient()
+    const supabase = createServiceRoleClient()
 
     // First, check if employee exists
     const { data: employee, error: empError } = await supabase
@@ -106,8 +106,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         company_id: employee.company_id,
         user_id: employee_id,
         action: 'schedule_updated',
-        table_name: 'work_schedules',
-        record_id: workScheduleId,
+        resource_type: 'work_schedules',
+        resource_id: workScheduleId,
         old_values: employee.work_schedule_id ? { 
           start: employee.work_schedule_id ? 'existing' : 'none',
           end: employee.work_schedule_id ? 'existing' : 'none'
