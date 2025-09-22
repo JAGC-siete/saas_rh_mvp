@@ -44,9 +44,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Verificar que la corrida pertenezca a la empresa del usuario
     const { data: run, error: runError } = await supabase
       .from('payroll_runs')
-      .select('id, company_uuid, status, year, month, quincena, tipo')
+      .select('id, company_id, status, year, month, quincena, tipo')
       .eq('id', run_id)
-      .eq('company_uuid', companyId)
+      .eq('company_id', companyId)
       .single()
 
     if (runError || !run) {
@@ -70,7 +70,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .from('payroll_run_lines')
       .select('id, employee_id, eff_hours, eff_bruto, eff_ihss, eff_rap, eff_isr, eff_neto, edited')
       .eq('run_id', run_id)
-      .eq('company_uuid', companyId)
+      .eq('company_id', companyId)
 
     if (linesError) {
       console.error('Error obteniendo líneas de planilla:', linesError)
@@ -100,7 +100,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         updated_at: getHondurasTimestamp()
       })
       .eq('id', run_id)
-      .eq('company_uuid', companyId)
+      .eq('company_id', companyId)
 
     if (updateError) {
       console.error('Error actualizando estado de corrida:', updateError)
