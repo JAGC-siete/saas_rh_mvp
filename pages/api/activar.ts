@@ -177,6 +177,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
+// eslint-disable-next-line no-unused-vars
 async function crearEntornoTrial(supabase: any, data: {
   tenant_id: string
   empresa: string

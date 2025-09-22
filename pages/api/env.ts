@@ -1,23 +1,27 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Only allow GET requests
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  // Expose only the necessary public environment variables
-  const publicEnv = {
+  // Only return public environment variables
+  const publicEnvVars = {
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
-    NODE_ENV: process.env.NODE_ENV,
   }
 
-  // Set cache headers to prevent caching of sensitive data
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
-  res.setHeader('Pragma', 'no-cache')
-  res.setHeader('Expires', '0')
+  // Filter out undefined values
+  const filteredEnvVars = Object.fromEntries(
+    Object.entries(publicEnvVars).filter(([_, value]) => value !== undefined)
+  )
 
-  res.status(200).json(publicEnv)
+  console.log('🔍 API /env endpoint called, returning:', {
+    NEXT_PUBLIC_SUPABASE_URL: filteredEnvVars.NEXT_PUBLIC_SUPABASE_URL ? '✅ Set' : '❌ Missing',
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: filteredEnvVars.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '✅ Set' : '❌ Missing',
+    NEXT_PUBLIC_SITE_URL: filteredEnvVars.NEXT_PUBLIC_SITE_URL ? '✅ Set' : '❌ Missing',
+  })
+
+  res.status(200).json(filteredEnvVars)
 }

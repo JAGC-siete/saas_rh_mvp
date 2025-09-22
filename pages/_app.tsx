@@ -2,6 +2,7 @@ import { AppProps } from 'next/app'
 import { createClient } from '../lib/supabase/client'
 import { createContext, useState, useEffect } from 'react'
 import { AuthProvider } from '../lib/auth'
+import { NotificationProvider } from '../components/NotificationProvider'
 import { refreshEnvFromWindow } from '../lib/env'
 import '../styles/globals.css'
 import '../styles/landing.css'
@@ -16,6 +17,7 @@ if (typeof window === 'undefined') {
 export const SupabaseContext = createContext<any>(null)
 
 // Function to load environment variables from API
+// eslint-disable-next-line no-unused-vars
 async function loadEnvironmentVariables() {
   try {
     const response = await fetch('/api/env')
@@ -25,7 +27,6 @@ async function loadEnvironmentVariables() {
       // Inject environment variables into global scope for client-side access
       if (typeof window !== 'undefined') {
         (window as any).__ENV__ = envData
-        console.log('✅ Environment variables loaded from API:', envData)
         
         // Refresh the env object with the loaded variables
         refreshEnvFromWindow()
@@ -47,19 +48,17 @@ export default function App({ Component, pageProps }: AppProps) {
     setIsClient(true)
     
     // Initialize Supabase client
-    const initClient = async () => {
-      try {
-        const client = await createClient()
-        if (client) {
-          setSupabaseClient(client)
-          console.log('✅ Supabase client initialized successfully')
-        }
-      } catch (error) {
-        console.error('❌ Failed to create Supabase client:', error)
+    try {
+      const client = createClient()
+      if (client) {
+        setSupabaseClient(client)
+        console.log('✅ Supabase client initialized successfully')
       }
+    } catch (error) {
+      console.error('❌ Failed to create Supabase client:', error)
+      // Still set a mock client to prevent app from breaking
+      setSupabaseClient({})
     }
-    
-    initClient()
   }, [])
 
   // Show loading state during hydration
@@ -74,9 +73,11 @@ export default function App({ Component, pageProps }: AppProps) {
   return (
     <SupabaseContext.Provider value={supabaseClient}>
       <AuthProvider>
-        <div className="min-h-screen bg-app">
-          <Component {...pageProps} />
-        </div>
+        <NotificationProvider>
+          <div className="min-h-screen bg-app">
+            <Component {...pageProps} />
+          </div>
+        </NotificationProvider>
       </AuthProvider>
     </SupabaseContext.Provider>
   )

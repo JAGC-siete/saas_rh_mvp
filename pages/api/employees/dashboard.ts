@@ -91,8 +91,52 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       companyId: userProfile.company_id
     })
 
-    // Get employee details using the employee_id from user_profile
-    const { data: employeeDetails, error: employeeError } = await supabase
+    // First, let's check if employee exists at all
+    const { data: employeeCheck, error: checkError } = await supabase
+      .from('employees')
+      .select('id, name, email, status, company_id')
+      .eq('id', employeeId)
+
+    logger.info('Employee existence check', {
+      employeeId,
+      found: employeeCheck?.length || 0,
+      employee: employeeCheck?.[0],
+      error: checkError
+    })
+
+    // If not found by ID, try by email (maybe ID mismatch)
+    if (!employeeCheck || employeeCheck.length === 0) {
+      const { data: emailCheck, error: emailError } = await supabase
+        .from('employees')
+        .select('id, name, email, status, company_id')
+        .eq('email', 'user@example.com')
+        .eq('company_id', '00000000-0000-0000-0000-000000000001')
+
+      logger.info('Employee email fallback check', {
+        emailFound: emailCheck?.length || 0,
+        employee: emailCheck?.[0],
+        error: emailError
+      })
+
+      if (emailCheck && emailCheck.length > 0) {
+        return res.status(400).json({
+          error: 'ID mismatch detected',
+          debug: {
+            tokenEmployeeId: employeeId,
+            actualEmployeeId: emailCheck[0].id,
+            employeeName: emailCheck[0].name,
+            hint: 'El token tiene un employee_id diferente al de la base de datos'
+          }
+        })
+      }
+    }
+
+    // Get employee profile - try direct query first (RLS might be blocking JOINs)
+    let employeeDetails: any = null
+    let profileError: any = null
+
+    // Try simple query first
+    const { data: simpleEmployee, error: simpleError } = await supabase
       .from('employees')
       .select('*')
       .eq('id', employeeId)

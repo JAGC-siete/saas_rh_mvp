@@ -3,9 +3,15 @@ import { env, refreshEnvFromWindow } from '../env'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 export function createClient(): SupabaseClient {
-  // Get environment variables from centralized config
-  const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseAnonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  // Try to get environment variables directly from process.env first
+  let supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  let supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  // If not available, try from centralized config
+  if (!supabaseUrl || !supabaseAnonKey) {
+    supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL
+    supabaseAnonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  }
 
   // Debug logging
   console.log('🔍 Supabase client initialization:', {
@@ -14,47 +20,39 @@ export function createClient(): SupabaseClient {
     processEnv: {
       NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ? '✅ Set' : '❌ Missing',
       NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '✅ Set' : '❌ Missing',
-    },
-    env: {
-      NEXT_PUBLIC_SUPABASE_URL: env.NEXT_PUBLIC_SUPABASE_URL ? '✅ Set' : '❌ Missing',
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '✅ Set' : '❌ Missing',
     }
   })
 
   // Check if environment variables are available
   if (!supabaseUrl || !supabaseAnonKey) {
-    // During build time, return a mock client to prevent build failures
+    const errorMessage = `❌ CRITICAL: Supabase environment variables not configured
+    
+    Required variables:
+    - NEXT_PUBLIC_SUPABASE_URL: ${supabaseUrl ? '✅ Set' : '❌ Missing'}
+    - NEXT_PUBLIC_SUPABASE_ANON_KEY: ${supabaseAnonKey ? '✅ Set' : '❌ Missing'}
+    
+    Please ensure these are set in:
+    1. .env file (for development)
+    2. Railway/Vercel dashboard (for production)
+    3. Docker environment (for containers)
+    
+    Current environment: ${process.env.NODE_ENV || 'unknown'}
+    `
+    
+    console.error(errorMessage)
+    
     if (typeof window === 'undefined') {
-      console.warn('⚠️ Supabase environment variables not available during build time')
-      throw new Error('Supabase environment variables are not configured')
+      // Server-side: Fail fast during build
+      throw new Error('Supabase environment variables must be configured before build')
+    } else {
+      // Client-side: Show user-friendly error
+      throw new Error('Application configuration error. Please contact system administrator.')
     }
-    
-    // For client-side, try to load environment variables from API
-    console.warn('⚠️ Supabase environment variables not available, trying to load from API...')
-    
-    try {
-      // Try to load environment variables from API
-      fetch('/api/env')
-        .then(response => response.json())
-        .then(envData => {
-          if (envData.NEXT_PUBLIC_SUPABASE_URL && envData.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-            // Inject environment variables into global scope
-            if (typeof window !== 'undefined') {
-              (window as any).__ENV__ = envData
-              // Refresh the env object
-              refreshEnvFromWindow()
-            }
-          }
-        })
-        .catch(error => {
-          console.error('❌ Failed to load environment variables from API:', error)
-        })
-      
-      throw new Error('Supabase environment variables are not configured')
-    } catch (error) {
-      console.error('❌ Failed to load environment variables from API:', error)
-      throw new Error('Supabase environment variables are not configured')
-    }
+  }
+
+  // Ensure we have valid strings before creating client
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Supabase URL and Anon Key are required')
   }
 
   try {

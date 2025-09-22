@@ -124,7 +124,7 @@ export default function ActivarPage() {
                   </div>
                   <div className="text-center">
                     <p className="text-sm text-brand-300">Email</p>
-                    <p className="text-xs text-brand-400">jorge7gomez@gmail.com</p>
+                    <p className="text-xs text-brand-400">user@example.com</p>
                   </div>
                 </div>
                 <p className="text-sm text-brand-400 text-center mt-6">

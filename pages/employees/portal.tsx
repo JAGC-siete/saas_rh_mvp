@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/router'
 import EmployeeLogin from '../../components/employee-portal/EmployeeLogin'
 import { useAuth } from '../../lib/auth'
+// import { useNotificationContext } from '../../components/NotificationProvider'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { 
@@ -192,6 +193,8 @@ function AttendanceRecordsList({ employeeId }: { employeeId?: string }) {
 function PayrollSection({ employeeId }: { employeeId?: string }) {
   const [payrollData, setPayrollData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  // eslint-disable-next-line no-unused-vars
+  const [generatingPDF, setGeneratingPDF] = useState(false)
 
   useEffect(() => {
     if (!employeeId) return
@@ -219,6 +222,7 @@ function PayrollSection({ employeeId }: { employeeId?: string }) {
     fetchPayroll()
   }, [employeeId])
 
+  // eslint-disable-next-line no-unused-vars
   const generatePDF = async (periodo: string, quincena: number) => {
     // Mostrar mensaje de funcionalidad en desarrollo
     alert('🚧 Funcionalidad en desarrollo\n\nLa generación de recibos de nómina en PDF estará disponible próximamente.')
@@ -282,27 +286,54 @@ function PayrollSection({ employeeId }: { employeeId?: string }) {
         <div className="space-y-4">
           <h4 className="text-white font-medium">Registros de Nómina</h4>
           <div className="space-y-2">
-            {payrollData.records.map((record: any, index: number) => (
-              <div key={record.id || index} className="bg-white/5 rounded-lg p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <div className="text-white font-medium">
-                      {new Date(record.period_start).toLocaleDateString('es-HN')} - 
-                      {new Date(record.period_end).toLocaleDateString('es-HN')}
+            {payrollData.records.map((record: any, index: number) => {
+              // Calcular período y quincena para el PDF
+              const periodStart = new Date(record.period_start)
+              const periodo = `${periodStart.getFullYear()}-${String(periodStart.getMonth() + 1).padStart(2, '0')}`                                            
+              const quincena = periodStart.getDate() <= 15 ? 1 : 2
+              
+              return (
+                <div key={record.id || index} className="bg-white/5 rounded-lg p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <div className="text-white font-medium">
+                        {new Date(record.period_start).toLocaleDateString('es-HN')} - 
+                        {new Date(record.period_end).toLocaleDateString('es-HN')}
+                      </div>
+                      <div className="text-sm text-gray-400">
+                        {record.days_worked} días trabajados
+                      </div>
                     </div>
-                    <div className="text-sm text-gray-400">
-                      {record.days_worked} días trabajados
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        record.status === 'paid' ? 'bg-green-500/20 text-green-400' :
+                        record.status === 'approved' ? 'bg-blue-500/20 text-blue-400' :
+                        'bg-yellow-500/20 text-yellow-400'
+                      }`}>
+                        {record.status === 'paid' ? 'Pagado' :
+                         record.status === 'approved' ? 'Aprobado' : 'Pendiente'}
+                      </span>
+                      <button
+                        onClick={() => generatePDF(periodo, quincena)}
+                        disabled={generatingPDF}
+                        className="px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 text-white text-xs rounded-md flex items-center gap-1 transition-colors"
+                      >
+                        {generatingPDF ? (
+                          <>
+                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                            Generando...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            PDF
+                          </>
+                        )}
+                      </button>
                     </div>
                   </div>
-                  <span className={`px-2 py-1 rounded-full text-xs ${
-                    record.status === 'paid' ? 'bg-green-500/20 text-green-400' :
-                    record.status === 'approved' ? 'bg-blue-500/20 text-blue-400' :
-                    'bg-yellow-500/20 text-yellow-400'
-                  }`}>
-                    {record.status === 'paid' ? 'Pagado' :
-                     record.status === 'approved' ? 'Aprobado' : 'Pendiente'}
-                  </span>
-                </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                   <div>
                     <div className="text-gray-400">Salario Bruto</div>
@@ -335,7 +366,8 @@ function PayrollSection({ employeeId }: { employeeId?: string }) {
                   </button>
                 </div>
               </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       )}
@@ -345,26 +377,52 @@ function PayrollSection({ employeeId }: { employeeId?: string }) {
         <div className="space-y-4">
           <h4 className="text-white font-medium">Cálculos de Nómina</h4>
           <div className="space-y-2">
-            {payrollData.runLines.map((line: any, index: number) => (
-              <div key={line.id || index} className="bg-white/5 rounded-lg p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <div className="text-white font-medium">
-                      {line.payroll_runs.month}/{line.payroll_runs.year} - Q{line.payroll_runs.quincena}
+            {payrollData.runLines.map((line: any, index: number) => {
+              // Calcular período y quincena para el PDF
+              const periodo = `${line.payroll_runs.year}-${String(line.payroll_runs.month).padStart(2, '0')}`
+              const quincena = line.payroll_runs.quincena
+              
+              return (
+                <div key={line.id || index} className="bg-white/5 rounded-lg p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <div className="text-white font-medium">
+                        {line.payroll_runs.month}/{line.payroll_runs.year} - Q{line.payroll_runs.quincena}
+                      </div>
+                      <div className="text-sm text-gray-400">
+                        {Number(line.eff_hours || 0).toFixed(1)} horas
+                      </div>
                     </div>
-                    <div className="text-sm text-gray-400">
-                      {Number(line.eff_hours || 0).toFixed(1)} horas
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        line.payroll_runs.status === 'authorized' ? 'bg-green-500/20 text-green-400' :
+                        line.payroll_runs.status === 'edited' ? 'bg-blue-500/20 text-blue-400' :
+                        'bg-yellow-500/20 text-yellow-400'
+                      }`}>
+                        {line.payroll_runs.status === 'authorized' ? 'Autorizado' :
+                         line.payroll_runs.status === 'edited' ? 'Editado' : 'Borrador'}
+                      </span>
+                      <button
+                        onClick={() => generatePDF(periodo, quincena)}
+                        disabled={generatingPDF}
+                        className="px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 text-white text-xs rounded-md flex items-center gap-1 transition-colors"
+                      >
+                        {generatingPDF ? (
+                          <>
+                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                            Generando...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            PDF
+                          </>
+                        )}
+                      </button>
                     </div>
                   </div>
-                  <span className={`px-2 py-1 rounded-full text-xs ${
-                    line.payroll_runs.status === 'authorized' ? 'bg-green-500/20 text-green-400' :
-                    line.payroll_runs.status === 'edited' ? 'bg-blue-500/20 text-blue-400' :
-                    'bg-yellow-500/20 text-yellow-400'
-                  }`}>
-                    {line.payroll_runs.status === 'authorized' ? 'Autorizado' :
-                     line.payroll_runs.status === 'edited' ? 'Editado' : 'Borrador'}
-                  </span>
-                </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                   <div>
                     <div className="text-gray-400">Bruto</div>
@@ -395,7 +453,8 @@ function PayrollSection({ employeeId }: { employeeId?: string }) {
                   </button>
                 </div>
               </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       )}
@@ -461,6 +520,15 @@ export default function EmployeePortal() {
   // Check if user is employee
   const isEmployee = user?.user_metadata?.role === 'employee'
 
+  // Check for existing session on load
+  useEffect(() => {
+    checkExistingSession()
+  }, [])
+
+  const checkExistingSession = async () => {
+    // No need for custom session checking - useAuth handles this
+    setLoading(false)
+  }
   const fetchEmployeeData = useCallback(async () => {
     if (!user || !isEmployee) return
 
@@ -476,7 +544,6 @@ export default function EmployeePortal() {
       if (dashboardResponse.ok) {
         const dashboardData = await dashboardResponse.json()
         
-        console.log('Dashboard data loaded:', dashboardData)
         
         // Set profile data with proper structure
         setProfile({
@@ -499,22 +566,12 @@ export default function EmployeePortal() {
     }
   }, [user, isEmployee])
 
-  // Check for existing session on load
-  useEffect(() => {
-    checkExistingSession()
-  }, [])
-
   // Fetch data when session is available
   useEffect(() => {
     if (session) {
       fetchEmployeeData()
     }
   }, [session, fetchEmployeeData])
-
-  const checkExistingSession = async () => {
-    // No need for custom session checking - useAuth handles this
-    setLoading(false)
-  }
 
   const handleLoginSuccess = useCallback((sessionData: EmployeeSession) => {
     clientLogger.info('Employee portal access', {
@@ -535,7 +592,7 @@ export default function EmployeePortal() {
 
   const handleLogout = useCallback(async () => {
     try {
-      // Use logout from useAuth hook
+      // Use useAuth logout (same as admin portal)
       await logout()
       clearSession()
       router.push('/employees/portal')

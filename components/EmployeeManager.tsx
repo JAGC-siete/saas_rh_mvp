@@ -40,7 +40,7 @@ const INITIAL_FORM_DATA = {
   metadata: ''
 }
 
-export default function EmployeeManager() {
+export default function EmployeeManager({ companyId }: { companyId?: string }) {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
   const [workSchedules, setWorkSchedules] = useState<WorkSchedule[]>([])
@@ -85,41 +85,20 @@ export default function EmployeeManager() {
     try {
       console.log('🔍 Fetching employees for user:', user.id)
       
-      const response = await fetch('/api/employees/search?limit=50', {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      })
-      console.log('📡 API Response status:', response.status)
-      
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error('❌ API Error:', errorText)
-        throw new Error(`API Error: ${response.status} - ${errorText}`)
+      let query = supabase.from('employees').select('*')
+      if (companyId) {
+        query = query.eq('company_id', companyId)
       }
-      
-      const data = await response.json()
-      console.log('✅ API Data received:', data)
-      
-      if (data.employees && data.employees.length > 0) {
-        console.log('📋 Sample employee data:', {
-          name: data.employees[0].name,
-          departments: data.employees[0].departments,
-          work_schedules: data.employees[0].work_schedules,
-          role: data.employees[0].role
-        })
-      }
-      
-      setEmployees(data.employees || [])
+      const { data, error } = await query
+      if (error) throw error
+      setEmployees(data || [])
     } catch (err) {
-      console.error('💥 Fetch error:', err)
+      console.error('Fetch error:', err)
       setEmployeesError(getErrorMessage(err))
     } finally {
       setEmployeesLoading(false)
     }
-  }, [user?.id, getErrorMessage])
+  }, [user?.id, getErrorMessage, companyId])
 
   const fetchDepartments = useCallback(async () => {
     setDepartmentsLoading(true)

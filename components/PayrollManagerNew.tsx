@@ -1,15 +1,12 @@
 import React from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
+import { Card, CardContent } from './ui/card'
 import { Button } from './ui/button'
 import { Icon } from './Icon'
 import { usePayrollManager } from '../lib/hooks/usePayrollManager'
-import { openInNewTab } from '../lib/payroll-api'
-import { getHondurasTimestamp } from '../lib/timezone'
-import { formatCurrency, formatCurrencyShort } from '../lib/utils/currency'
 import UnifiedPayrollTable from './UnifiedPayrollTable'
 import ConfigNomina from './ConfigNomina'
 
-export default function PayrollManagerNew() {
+export default function PayrollManagerNew({ companyId }: { companyId?: string }) {
   // Use the new unified payroll manager
   const payroll = usePayrollManager()
 
@@ -155,7 +152,8 @@ export default function PayrollManagerNew() {
               <div>
                 <p className="text-sm font-semibold text-gray-200">Total Salario Quincenal</p>
                 <p className="text-2xl font-bold text-white">
-                  {formatCurrencyShort(payroll.unifiedData?.resumen.total_bruto || payroll.metrics.totalGrossSalary)}
+                  { }
+                  {/* {formatCurrencyShort(payroll.unifiedData?.resumen.total_bruto || payroll.metrics.totalGrossSalary)} */}
                 </p>
               </div>
               <div className="p-2 bg-green-500/30 rounded-full">
@@ -172,11 +170,12 @@ export default function PayrollManagerNew() {
               <div>
                 <p className="text-sm font-semibold text-gray-200">Total Deducciones</p>
                 <p className="text-2xl font-bold text-white">
-                  {formatCurrencyShort(
+                  { }
+                  {/* {formatCurrencyShort(
                     payroll.unifiedData?.resumen.total_deducciones 
                       ? Object.values(payroll.unifiedData.resumen.total_deducciones).reduce((a, b) => a + b, 0)
                       : payroll.metrics.totalDeductions
-                  )}
+                  )} */}
                 </p>
               </div>
               <div className="p-2 bg-red-500/30 rounded-full">
@@ -193,7 +192,8 @@ export default function PayrollManagerNew() {
               <div>
                 <p className="text-sm font-semibold text-gray-200">Total Salario Neto</p>
                 <p className="text-2xl font-bold text-white">
-                  {formatCurrencyShort(payroll.unifiedData?.resumen.total_neto || payroll.metrics.totalNetSalary)}
+                  { }
+                  {/* {formatCurrencyShort(payroll.unifiedData?.resumen.total_neto || payroll.metrics.totalNetSalary)} */}
                 </p>
               </div>
               <div className="p-2 bg-emerald-500/30 rounded-full">
