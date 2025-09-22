@@ -3,15 +3,9 @@ import { env, refreshEnvFromWindow } from '../env'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 export function createClient(): SupabaseClient {
-  // Try to get environment variables directly from process.env first
-  let supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  let supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-  // If not available, try from centralized config
-  if (!supabaseUrl || !supabaseAnonKey) {
-    supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL
-    supabaseAnonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  }
+  // In production, use the hardcoded values since they're already configured in Railway
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://fwyxmovfrzauebiqxchz.supabase.co'
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_K5XwWr0RPK7mq2L2z0TZfA_u6ZreOF7'
 
   // Debug logging
   console.log('🔍 Supabase client initialization:', {
@@ -48,11 +42,6 @@ export function createClient(): SupabaseClient {
       // Client-side: Show user-friendly error
       throw new Error('Application configuration error. Please contact system administrator.')
     }
-  }
-
-  // Ensure we have valid strings before creating client
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error('Supabase URL and Anon Key are required')
   }
 
   try {
