@@ -14,7 +14,7 @@ const app = next({ dev, hostname, port })
 const handle = app.getRequestHandler()
 
 app.prepare().then(() => {
-  createServer(async (req, res) => {
+  const server = createServer(async (req, res) => {
     try {
       const parsedUrl = parse(req.url, true)
       await handle(req, res, parsedUrl)
@@ -24,11 +24,30 @@ app.prepare().then(() => {
       res.end('internal server error')
     }
   })
-    .once('error', (err) => {
-      console.error(err)
-      process.exit(1)
+
+  server.once('error', (err) => {
+    console.error(err)
+    process.exit(1)
+  })
+
+  server.listen(port, () => {
+    console.log(`> Ready on http://${hostname}:${port}`)
+  })
+
+  // Graceful shutdown
+  process.on('SIGTERM', () => {
+    console.log('SIGTERM received, shutting down gracefully')
+    server.close(() => {
+      console.log('Process terminated')
+      process.exit(0)
     })
-    .listen(port, () => {
-      console.log(`> Ready on http://${hostname}:${port}`)
+  })
+
+  process.on('SIGINT', () => {
+    console.log('SIGINT received, shutting down gracefully')
+    server.close(() => {
+      console.log('Process terminated')
+      process.exit(0)
     })
+  })
 })

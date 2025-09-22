@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createServiceRoleClient } from '../../../lib/supabase/server'
+import { createAdminClient } from '../../../lib/supabase/server'
 import {  getTodayInHonduras, nowInHonduras } from '../../../lib/timezone'
 
 // Horarios por defecto por departamento
@@ -33,7 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Either last5 or employee_id required' })
     }
 
-    const supabase = createServiceRoleClient()
+    const supabase = createAdminClient()
 
     // Find employee
     let employee

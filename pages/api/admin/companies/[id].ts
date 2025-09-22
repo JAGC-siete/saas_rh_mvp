@@ -1,11 +1,11 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createServerSupabaseClient } from '../../../../lib/supabase/server'
+import { createClient } from '../../../../lib/supabase/server'
 import { logger } from '../../../../lib/logger'
 import { createSecureErrorResponse, createAuthErrorResponse } from '../../../../lib/security/error-handling'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const supabase = createServerSupabaseClient()
+    const supabase = createClient(req, res)
     const { id } = req.query
 
     if (!id || typeof id !== 'string') {

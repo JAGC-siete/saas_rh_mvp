@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createServerSupabaseClient, createServiceRoleClient } from '../../../../lib/supabase/server'
+import { createClient, createAdminClient } from '../../../../lib/supabase/server'
 import { logger } from '../../../../lib/logger'
 import { sendOtp, verifyOtp } from '../../../../lib/employee-otp'
 
@@ -43,8 +43,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       })
     }
 
-    const supabase = createServerSupabaseClient()
-    const adminSupabase = createServiceRoleClient()
+    const supabase = createClient(req, res)
+    const adminSupabase = createAdminClient()
     
     // Step 1: Send OTP (if no code provided)
     if (!code) {

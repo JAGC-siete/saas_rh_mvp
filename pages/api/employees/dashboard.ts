@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createServerSupabaseClient } from '../../../lib/supabase/server'
+import { createClient } from '../../../lib/supabase/server'
 import { logger } from '../../../lib/logger'
 
 interface EmployeeDashboardResponse {
@@ -48,7 +48,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const supabase = createServerSupabaseClient()
+    const supabase = createClient(req, res)
     
     // Use standard Supabase Auth like admin portal
     const { data: { user }, error: authError } = await supabase.auth.getUser()

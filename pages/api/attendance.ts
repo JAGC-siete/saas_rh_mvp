@@ -1,4 +1,4 @@
-import { createServiceRoleClient, createServerSupabaseClient } from '../../lib/supabase/server'
+import { createAdminClient, createClient } from '../../lib/supabase/server'
 import { getTodayInHonduras, getHondurasTime, nowInHonduras } from '../../lib/timezone'
 import { incrementUsage } from '../../lib/billing/enforce'
 
@@ -15,7 +15,7 @@ async function calculateAttendancePoints(employeeId: string, lateMinutes: number
 }
 
 async function updateEmployeeScore(employeeId: string, companyId: string, points: number, reason: string, actionType: string) {
-  const supabase = createServiceRoleClient()
+  const supabase = createAdminClient()
   
   // Update or insert employee score
   const { data: existingScore } = await supabase
@@ -59,7 +59,7 @@ async function updateEmployeeScore(employeeId: string, companyId: string, points
 }
 
 async function checkForAchievements(employeeId: string, companyId: string): Promise<any[]> {
-  const supabase = createServiceRoleClient()
+  const supabase = createAdminClient()
   
   // This is a simplified version - would need more complex logic for real achievements
   const achievements: any[] = []
@@ -134,7 +134,7 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
 
     // For public attendance registration, we don't require authentication
     // Use admin client to access the database
-    const supabase = createServiceRoleClient()
+    const supabase = createAdminClient()
 
     // Find employee by last 5 digits of DNI or employee_id
     let employee
@@ -403,7 +403,7 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
 async function getAttendanceRecords(req: NextApiRequest, res: NextApiResponse) {
   try {
     // Validar autenticación para obtener registros
-    const supabase = createServerSupabaseClient()
+    const supabase = createClient(req, res)
     
     // ✅ Get user with getUser() to validate token with Supabase server
     const { data: { user }, error: authError } = await supabase.auth.getUser()

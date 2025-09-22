@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createServerSupabaseClient } from '../../../lib/supabase/server'
+import { createClient } from '../../../lib/supabase/server'
 import { authenticateUser } from '../../../lib/auth-helpers'
 import { notificationManager } from '../../../lib/notification-providers'
 import { emailService } from '../../../lib/email-service'
@@ -27,7 +27,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Delivery debe ser: email, whatsapp, o both' })
     }
 
-    const supabase = createServerSupabaseClient()
+    const supabase = createClient(req, res)
     const companyId = auth.userProfile.company_id
 
     if (!companyId) {

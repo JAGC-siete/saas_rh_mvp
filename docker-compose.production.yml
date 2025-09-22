@@ -40,7 +40,7 @@ services:
   # Redis for production caching
   redis:
     image: redis:7-alpine
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-secure_redis_password_required}
     ports:
       - "6379:6379"
     volumes:

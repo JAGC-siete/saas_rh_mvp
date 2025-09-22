@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createServerSupabaseClient } from '../../../../lib/supabase/server'
+import { createClient } from '../../../../lib/supabase/server'
 import { logger } from '../../../../lib/logger'
 
 interface EmployeeProfileResponse {
@@ -45,7 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // Create Supabase client (handles auth automatically via cookies)
-    const supabase = createServerSupabaseClient()
+    const supabase = createClient(req, res)
     
     // Get current user from Supabase Auth
     const { data: { user }, error: authError } = await supabase.auth.getUser()
