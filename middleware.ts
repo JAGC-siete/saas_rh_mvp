@@ -28,6 +28,8 @@ const PUBLIC_ROUTES = new Set([
   '/trial/gamification', // Gamificación del trial - PÚBLICO
   '/auth/auth-code-error', // OAuth error page - PÚBLICO
   '/politicadeprivacidad', // Política de privacidad - PÚBLICO
+  '/test-client-env',      // Debug environment variables - PÚBLICO
+  '/debug-env',            // Debug environment page - PÚBLICO
   '/app/demo/pin',     // PIN de demo - PÚBLICO
   '/app/attendance/register', // Registro de asistencia - PÚBLICO
   '/registrodeasistencia',
