@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { TrophyIcon, StarIcon } from '@heroicons/react/24/solid'
 import { AcademicCapIcon } from '@heroicons/react/24/outline'
+import { useCompanyContext } from '../lib/useCompanyContext'
 
 interface LeaderboardEntry {
   id: number
@@ -21,11 +22,15 @@ interface LeaderboardEntry {
 }
 
 interface GamificationLeaderboardProps {
-  companyId: string
+  companyId?: string
   limit?: number
 }
 
-export default function GamificationLeaderboard({ companyId, limit = 20 }: GamificationLeaderboardProps) {
+export default function GamificationLeaderboard({ companyId: propCompanyId, limit = 20 }: GamificationLeaderboardProps) {
+  const { companyId: contextCompanyId, loading: companyLoading } = useCompanyContext()
+  
+  // Usar companyId de props si está disponible, sino del contexto
+  const companyId = propCompanyId || contextCompanyId
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

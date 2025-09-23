@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Card, CardContent } from './ui/card'
 import { Button } from './ui/button'
 import { Icon } from './Icon'
@@ -6,9 +6,14 @@ import { usePayrollManager } from '../lib/hooks/usePayrollManager'
 import UnifiedPayrollTable from './UnifiedPayrollTable'
 import ConfigNomina from './ConfigNomina'
 
-export default function PayrollManagerNew({ companyId }: { companyId?: string }) {
+export default function PayrollManagerNew({ companyId: propCompanyId }: { companyId?: string }) {
   // Use the new unified payroll manager
   const payroll = usePayrollManager()
+  
+  // Debug logging para verificar el companyId
+  useEffect(() => {
+    console.log('🔍 PayrollManagerNew - companyId from context:', payroll.companyId, 'loading:', payroll.companyLoading)
+  }, [payroll.companyId, payroll.companyLoading])
 
   // Loading state while company is being loaded
   if (payroll.companyLoading) {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
+import { useCompanyContext } from '../lib/useCompanyContext'
 
 interface Achievement {
   id: number
@@ -17,12 +18,16 @@ interface Achievement {
 }
 
 interface EmployeeAchievementsProps {
-  companyId: string
+  companyId?: string
   employeeId?: string
   limit?: number
 }
 
-export default function EmployeeAchievements({ companyId, employeeId, limit = 10 }: EmployeeAchievementsProps) {
+export default function EmployeeAchievements({ companyId: propCompanyId, employeeId, limit = 10 }: EmployeeAchievementsProps) {
+  const { companyId: contextCompanyId, loading: companyLoading } = useCompanyContext()
+  
+  // Usar companyId de props si está disponible, sino del contexto
+  const companyId = propCompanyId || contextCompanyId
   const [achievements, setAchievements] = useState<Achievement[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

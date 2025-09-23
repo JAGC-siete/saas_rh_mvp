@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/auth'
+import { useCompanyContext } from '../lib/useCompanyContext'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card'
@@ -32,8 +33,12 @@ const CONFIRMATION_MESSAGE = '¿Estás seguro de que quieres eliminar este depar
 const NO_MANAGER_TEXT = 'Sin asignar'
 const NO_DEPARTMENTS_TEXT = 'No hay departamentos registrados'
 
-export default function DepartmentManager({ companyId }: { companyId?: string }) {
+export default function DepartmentManager({ companyId: propCompanyId }: { companyId?: string }) {
   const { userProfile } = useAuth()
+  const { companyId: contextCompanyId, loading: companyLoading } = useCompanyContext()
+  
+  // Usar companyId de props si está disponible, sino del contexto
+  const companyId = propCompanyId || contextCompanyId
   const [departments, setDepartments] = useState<Department[]>([])
   const [employees, setEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(false)

@@ -1,7 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import { useCompanyContext } from '../lib/useCompanyContext'
 
-export default function UserManager({ companyId }: { companyId: string }) {
+export default function UserManager({ companyId: propCompanyId }: { companyId?: string }) {
+  const { companyId: contextCompanyId, loading: companyLoading } = useCompanyContext()
+  
+  // Usar companyId de props si está disponible, sino del contexto
+  const companyId = propCompanyId || contextCompanyId
   const [users, setUsers] = useState<any[]>([])
   // Form states, etc.
 
