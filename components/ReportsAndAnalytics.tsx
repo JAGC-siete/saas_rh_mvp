@@ -104,7 +104,7 @@ export default function ReportsAndAnalytics() {
 
       console.log('Fetching dashboard stats for company:', companyId, 'period:', { monthStart, monthEnd })
 
-      const response = await fetch(`/api/reports/dashboard-stats?startDate=${monthStart}&amp;endDate=${monthEnd}`, {
+      const response = await fetch(`/api/reports/dashboard-stats?startDate=${monthStart}&endDate=${monthEnd}`, {
         credentials: 'include'
       })
       
@@ -153,8 +153,9 @@ export default function ReportsAndAnalytics() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          format: format,
-          dateFilter: { startDate: dateRange.startDate, endDate: dateRange.endDate }
+          formato: format,
+          startDate: dateRange.startDate,
+          endDate: dateRange.endDate
           // company_id now comes from auth context
         }),
         credentials: 'include'
