@@ -12,6 +12,9 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Fix the apply_payroll_adjustment function parameter name
+-- First drop the existing function to avoid return type conflicts
+DROP FUNCTION IF EXISTS apply_payroll_adjustment(uuid,uuid,text,numeric,text,uuid);
+
 CREATE OR REPLACE FUNCTION apply_payroll_adjustment(
   p_run_line_id UUID,
   p_company_id UUID,  -- Changed from p_company_uuid
