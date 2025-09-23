@@ -107,26 +107,9 @@ export function validateEnv() {
   return true
 }
 
-// Function to refresh environment variables from window.__ENV__
-export function refreshEnvFromWindow() {
-  if (typeof window !== 'undefined' && (window as any).__ENV__) {
-    const windowEnv = (window as any).__ENV__
-    
-    // Update the env object with values from window
-    Object.keys(windowEnv).forEach(key => {
-      if (key in env) {
-        (env as any)[key] = windowEnv[key]
-      }
-    })
-    
-    console.log('🔄 Environment variables refreshed from window:', {
-      NEXT_PUBLIC_SUPABASE_URL: env.NEXT_PUBLIC_SUPABASE_URL ? '✅ Set' : '❌ Missing',
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '✅ Set' : '❌ Missing',
-    })
-    
-    return true
-  }
-  return false
+// Simplified function to check if environment variables are available
+export function areEnvVarsAvailable(): boolean {
+  return !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
 }
 
 // Don't validate immediately on import - wait for variables to be loaded

@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { createClient } from './supabase/client'
 import { User, Session } from '@supabase/supabase-js'
-import { env, refreshEnvFromWindow } from './env'
+import { env, areEnvVarsAvailable } from './env'
 
 interface UserProfile {
   id: string
@@ -82,40 +82,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsClient(true)
   }, [])
 
-  // Wait for environment variables to be loaded
+  // Initialize Supabase client directly - NEXT_PUBLIC_ variables are available immediately
   useEffect(() => {
     if (!isClient) return
 
-    const waitForEnv = async () => {
-      let attempts = 0
-      const maxAttempts = 20 // Increased attempts
-      
-      console.log('🔄 Waiting for environment variables to load...')
-      
-      while (attempts < maxAttempts) {
-        // Try to refresh environment variables
-        if (refreshEnvFromWindow()) {
-          console.log('✅ Environment variables loaded, proceeding with Supabase initialization')
-          break
-        }
+    const initializeSupabase = async () => {
+      try {
+        console.log('🔧 Initializing Supabase client...')
         
-        // Wait a bit before trying again
-        await new Promise(resolve => setTimeout(resolve, 1000)) // Increased wait time
-        attempts++
+        // Check if environment variables are available
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+        const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
         
-        console.log(`⏳ Attempt ${attempts}/${maxAttempts} - Waiting for environment variables...`)
-        
-        if (attempts >= maxAttempts) {
-          console.error('❌ Failed to load environment variables after multiple attempts')
-          setError('Failed to initialize authentication - environment not ready')
+        if (!supabaseUrl || !supabaseKey) {
+          console.error('❌ Supabase environment variables not available:', {
+            url: !!supabaseUrl,
+            key: !!supabaseKey
+          })
+          setError('Supabase configuration missing')
           setLoading(false)
           return
         }
-      }
-      
-      // Now initialize Supabase client
-      try {
-        console.log('🔧 Initializing Supabase client...')
+        
+        console.log('✅ Environment variables available, creating Supabase client')
         const client = await createClient()
         setSupabase(client)
         console.log('✅ Supabase client initialized successfully')
@@ -126,7 +115,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    waitForEnv()
+    initializeSupabase()
   }, [isClient])
 
   useEffect(() => {

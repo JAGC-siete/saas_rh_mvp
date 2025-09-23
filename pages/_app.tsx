@@ -3,7 +3,7 @@ import { createClient } from '../lib/supabase/client'
 import { createContext, useState, useEffect } from 'react'
 import { AuthProvider } from '../lib/auth'
 import { NotificationProvider } from '../components/NotificationProvider'
-import { refreshEnvFromWindow } from '../lib/env'
+import { areEnvVarsAvailable } from '../lib/env'
 import '../styles/globals.css'
 import '../styles/landing.css'
 
@@ -16,28 +16,14 @@ if (typeof window === 'undefined') {
 // Create a context for Supabase client (using new SSR client)
 export const SupabaseContext = createContext<any>(null)
 
-// Function to load environment variables from API
-// eslint-disable-next-line no-unused-vars
-async function loadEnvironmentVariables() {
-  try {
-    const response = await fetch('/api/env')
-    if (response.ok) {
-      const envData = await response.json()
-      
-      // Inject environment variables into global scope for client-side access
-      if (typeof window !== 'undefined') {
-        (window as any).__ENV__ = envData
-        
-        // Refresh the env object with the loaded variables
-        refreshEnvFromWindow()
-      }
-      
-      return envData
-    }
-  } catch (error) {
-    console.error('❌ Failed to load environment variables from API:', error)
+// Simplified environment variable check
+function checkEnvironmentVariables() {
+  if (typeof window !== 'undefined') {
+    console.log('🔍 Client-side environment check:', {
+      NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ? '✅ Set' : '❌ Missing',
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '✅ Set' : '❌ Missing',
+    })
   }
-  return null
 }
 
 export default function App({ Component, pageProps }: AppProps) {
