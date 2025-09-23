@@ -53,7 +53,9 @@ const PUBLIC_ROUTES = new Set([
   '/api/employees/auth/logout',     // Employee portal logout - PÚBLICO
   '/employees/portal',              // Employee portal page - PÚBLICO
   '/api/employees/debug-session',    // Employee debug endpoint - PÚBLICO
-  '/api/debug/payroll-run'           // Payroll debug endpoint - PÚBLICO
+  '/api/debug/payroll-run',           // Payroll debug endpoint - PÚBLICO
+  '/api/debug/test-line-insert',      // Test line insert endpoint - PÚBLICO
+  '/api/debug/simple-test'            // Simple debug test endpoint - PÚBLICO
 ])
 
 // Static assets that should be publicly accessible
