@@ -67,6 +67,11 @@ export default function ReportsAndAnalytics() {
   const session = useSession()
   const { companyId, loading: companyLoading } = useCompanyContext()
   
+  // Debug logging para verificar el companyId
+  useEffect(() => {
+    console.log('🔍 ReportsAndAnalytics - companyId:', companyId, 'loading:', companyLoading)
+  }, [companyId, companyLoading])
+  
   // Estado local para datos
   const [stats, setStats] = useState<DashboardStats | null>(null)
   // const [attendanceTrends, setAttendanceTrends] = useState<AttendanceTrend[]>([])

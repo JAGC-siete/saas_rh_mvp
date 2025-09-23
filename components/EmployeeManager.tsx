@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { Button } from './ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { useAuth } from '../lib/auth'
+import { useCompanyContext } from '../lib/useCompanyContext'
 import { Employee } from '../lib/types/employee'
 import AddEmployeeForm from './AddEmployeeForm'
 import { PlusIcon, PencilIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline'
@@ -40,7 +41,13 @@ const INITIAL_FORM_DATA = {
   metadata: ''
 }
 
-export default function EmployeeManager({ companyId }: { companyId?: string }) {
+export default function EmployeeManager({ companyId: propCompanyId }: { companyId?: string }) {
+  const { user, loading: sessionLoading } = useAuth()
+  const { companyId: contextCompanyId, loading: companyLoading } = useCompanyContext()
+  
+  // Usar companyId de props si está disponible, sino del contexto
+  const companyId = propCompanyId || contextCompanyId
+  
   const [employees, setEmployees] = useState<Employee[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
   const [workSchedules, setWorkSchedules] = useState<WorkSchedule[]>([])
@@ -59,7 +66,6 @@ export default function EmployeeManager({ companyId }: { companyId?: string }) {
   const [terminationDate, setTerminationDate] = useState('')
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
-  const { user, loading: sessionLoading } = useAuth()
 
   const getErrorMessage = useCallback((error: unknown) => {
     if (error instanceof Error) {
