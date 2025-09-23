@@ -10,19 +10,9 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   
-  // Environment variables configuration
-  env: {
-    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
-  },
-  
-  // Ensure environment variables are available at build time
-  publicRuntimeConfig: {
-    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
-  },
+  // Environment variables configuration - Simplified for Next.js 13+
+  // NEXT_PUBLIC_ variables are automatically available in the browser
+  // No need for manual env or publicRuntimeConfig configuration
   
   // Configuración para rutas internas (no subdominios)
   async rewrites() {

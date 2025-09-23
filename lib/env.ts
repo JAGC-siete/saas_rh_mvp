@@ -10,29 +10,16 @@ if (typeof window === 'undefined') {
   }
 }
 
-// For Railway deployment, we need to handle runtime environment variables
+// Simplified environment variable getter
 function getEnvVar(key: string, fallback: string = ''): string {
-  // First try to get from process.env (build time)
+  // For NEXT_PUBLIC_ variables, they should be available in both server and client
   if (process.env[key]) {
     return process.env[key]!
   }
   
-  // For client-side, try to get from window.__ENV__ if available
-  if (typeof window !== 'undefined' && (window as any).__ENV__) {
-    return (window as any).__ENV__[key] || fallback
-  }
-  
-  // For Railway runtime, try to get from global scope
-  if (typeof global !== 'undefined' && (global as any)[key]) {
-    return (global as any)[key]
-  }
-  
-  // For Next.js, try to get from process.env with NEXT_PUBLIC_ prefix
-  if (key.startsWith('NEXT_PUBLIC_')) {
-    const nextKey = key
-    if (process.env[nextKey]) {
-      return process.env[nextKey]!
-    }
+  // For client-side, NEXT_PUBLIC_ variables are automatically available
+  if (typeof window !== 'undefined' && process.env[key]) {
+    return process.env[key]!
   }
   
   return fallback
