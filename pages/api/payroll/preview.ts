@@ -9,7 +9,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // Use the new authentication method that handles company context properly
-    const { supabase, companyId } = await requireCompanyAccess(req, res)
+    const { supabase, companyId, user } = await requireCompanyAccess(req, res)
     
     if (!companyId) {
       return res.status(400).json({ error: 'Company ID is required' })
@@ -125,7 +125,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           quincena: quincenaNum,
           tipo: tipoParam,
           status: 'draft',
-          created_by: companyId
+          created_by: user.id
         })
         .select('id')
         .single()
