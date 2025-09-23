@@ -109,7 +109,24 @@ export function validateEnv() {
 
 // Simplified function to check if environment variables are available
 export function areEnvVarsAvailable(): boolean {
-  return !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+  // Check process.env first (server-side or if Next.js injected them)
+  if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    return true
+  }
+  
+  // For client-side, check if our client env system has loaded them
+  if (typeof window !== 'undefined') {
+    try {
+      // Import dynamically to avoid circular dependencies
+      const { areClientEnvVarsAvailable } = require('./env-client')
+      return areClientEnvVarsAvailable()
+    } catch (error) {
+      // Fallback to process.env check
+      return false
+    }
+  }
+  
+  return false
 }
 
 // Don't validate immediately on import - wait for variables to be loaded
