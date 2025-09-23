@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { supabase } from '../lib/supabase'
+import { createClient } from '../lib/supabase/client'
 import { Button } from './ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { useAuth } from '../lib/auth'
@@ -91,7 +91,8 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
     try {
       console.log('🔍 Fetching employees for user:', user.id)
       
-      let query = supabase.from('employees').select('*')
+      const supabaseClient = createClient()
+      let query = supabaseClient.from('employees').select('*')
       if (companyId) {
         query = query.eq('company_id', companyId)
       }

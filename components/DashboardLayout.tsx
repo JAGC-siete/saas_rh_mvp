@@ -13,7 +13,7 @@ import {
   UsersIcon
 } from '@heroicons/react/24/outline'
 import { TrophyIcon } from '@heroicons/react/24/solid'
-import { supabase } from '../lib/supabase'
+import { createClient } from '../lib/supabase/client'
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -47,19 +47,26 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         setLoadingPermissions(true)
         console.log('🔍 Fetching permissions for user:', user.id, user.email)
         
-        const { data, error } = await supabase
+        const supabaseClient = createClient()
+        const { data, error } = await supabaseClient
           .from('user_profiles')
           .select('permissions')
           .eq('id', user.id)
           .single()
         
-        console.log('📋 Permissions query result:', { data, error })
+        console.log('📋 Permissions query result:', { data, error, userId: user.id })
 
         if (error || !data) {
           if (error) {
-            console.error('Error fetching user permissions:', error)
+            console.error('❌ Error fetching user permissions:', error)
+            console.error('❌ Error details:', {
+              message: error.message,
+              code: error.code,
+              details: error.details,
+              hint: error.hint
+            })
           } else {
-            console.warn('No user profile data found, using default permissions')
+            console.warn('⚠️ No user profile data found for user:', user.id, 'using default permissions')
           }
           // Usar permisos por defecto si hay error o no hay data
           setUserPermissions({

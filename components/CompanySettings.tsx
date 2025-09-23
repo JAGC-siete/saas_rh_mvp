@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '../lib/supabase'
+import { createClient } from '../lib/supabase/client'
 import { useSession } from '@supabase/auth-helpers-react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -85,7 +85,8 @@ export default function CompanySettings() {
   const fetchCompany = useCallback(async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase
+      const supabaseClient = createClient()
+      const { data, error } = await supabaseClient
         .from('user_profiles')
         .select(`
           company_id,
@@ -119,7 +120,8 @@ export default function CompanySettings() {
 
   const fetchWorkSchedules = useCallback(async () => {
     try {
-      const { data, error } = await supabase
+      const supabaseClient = createClient()
+      const { data, error } = await supabaseClient
         .from('work_schedules')
         .select('*')
         .order('name')
@@ -144,7 +146,8 @@ export default function CompanySettings() {
 
     try {
       setLoading(true)
-      const { error } = await supabase
+      const supabaseClient = createClient()
+      const { error } = await supabaseClient
         .from('companies')
         .update({
           name: companyForm.name,
@@ -170,15 +173,16 @@ export default function CompanySettings() {
     try {
       setLoading(true)
       
+      const supabaseClient = createClient()
       if (editingSchedule) {
-        const { error } = await supabase
+        const { error } = await supabaseClient
           .from('work_schedules')
           .update(scheduleForm)
           .eq('id', editingSchedule.id)
 
         if (error) throw error
       } else {
-        const { error } = await supabase
+        const { error } = await supabaseClient
           .from('work_schedules')
           .insert([{ ...scheduleForm, company_id: company?.id }])
 
@@ -245,7 +249,8 @@ export default function CompanySettings() {
 
     try {
       setLoading(true)
-      const { error } = await supabase
+      const supabaseClient = createClient()
+      const { error } = await supabaseClient
         .from('work_schedules')
         .delete()
         .eq('id', id)

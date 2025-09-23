@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '../lib/supabase'
+import { createClient } from '../lib/supabase/client'
 import { useCompanyContext } from '../lib/useCompanyContext'
 
 export default function UserManager({ companyId: propCompanyId }: { companyId?: string }) {
@@ -11,7 +11,8 @@ export default function UserManager({ companyId: propCompanyId }: { companyId?: 
   // Form states, etc.
 
   const fetchUsers = useCallback(async () => {
-    const { data } = await supabase.from('user_profiles').select('*').eq('company_id', companyId)
+    const supabaseClient = createClient()
+    const { data } = await supabaseClient.from('user_profiles').select('*').eq('company_id', companyId)
     setUsers(data || [])
   }, [companyId])
 

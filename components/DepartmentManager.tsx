@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '../lib/supabase'
+import { createClient } from '../lib/supabase/client'
 import { useAuth } from '../lib/auth'
 import { useCompanyContext } from '../lib/useCompanyContext'
 import { Button } from './ui/button'
@@ -49,7 +49,8 @@ export default function DepartmentManager({ companyId: propCompanyId }: { compan
   const fetchDepartments = useCallback(async () => {
     try {
       setLoading(true)
-      let query = supabase.from('departments').select(`
+      const supabaseClient = createClient()
+      let query = supabaseClient.from('departments').select(`
           *,
           employees:employees(id, name, email)
         `)
@@ -71,7 +72,8 @@ export default function DepartmentManager({ companyId: propCompanyId }: { compan
 
   const fetchEmployees = useCallback(async () => {
     try {
-      const { data, error } = await supabase
+      const supabaseClient = createClient()
+      const { data, error } = await supabaseClient
         .from('employees')
         .select('id, name, email')
         .eq('status', 'active')
@@ -106,15 +108,16 @@ export default function DepartmentManager({ companyId: propCompanyId }: { compan
         manager_id: formData.manager_id || null
       }
 
+      const supabaseClient = createClient()
       if (editingDepartment) {
-        const { error } = await supabase
+        const { error } = await supabaseClient
           .from('departments')
           .update(departmentData)
           .eq('id', editingDepartment.id)
 
         if (error) throw error
       } else {
-        const { error } = await supabase
+        const { error } = await supabaseClient
           .from('departments')
           .insert([{ ...departmentData, company_id: companyId || userProfile?.company_id }])
 
@@ -147,7 +150,8 @@ export default function DepartmentManager({ companyId: propCompanyId }: { compan
 
     try {
       setLoading(true)
-      const { error } = await supabase
+      const supabaseClient = createClient()
+      const { error } = await supabaseClient
         .from('departments')
         .delete()
         .eq('id', id)
