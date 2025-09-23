@@ -283,7 +283,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       const { data: insertedLine, error: lineError } = await supabase
         .from('payroll_run_lines')
-        .insert({
+        .upsert({
           run_id: runId,
           company_id: companyId,
           employee_id: emp.id,
@@ -300,6 +300,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           eff_isr: ISR,
           eff_neto: total,
           edited: false
+        }, {
+          onConflict: 'run_id,employee_id',
+          ignoreDuplicates: false
         })
         .select('id')
         .single()
