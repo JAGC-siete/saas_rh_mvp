@@ -52,7 +52,8 @@ const PUBLIC_ROUTES = new Set([
   '/api/employees/auth/verify-otp', // Verify OTP code - PÚBLICO
   '/api/employees/auth/logout',     // Employee portal logout - PÚBLICO
   '/employees/portal',              // Employee portal page - PÚBLICO
-  '/api/employees/debug-session'    // Employee debug endpoint - PÚBLICO
+  '/api/employees/debug-session',    // Employee debug endpoint - PÚBLICO
+  '/api/debug/payroll-run'           // Payroll debug endpoint - PÚBLICO
 ])
 
 // Static assets that should be publicly accessible
