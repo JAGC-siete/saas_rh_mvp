@@ -269,6 +269,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       // Insertar línea en payroll_run_lines para que la autorización funcione
+      console.log(`🔍 DEBUG - Insertando línea para empleado ${emp.name}:`, {
+        run_id: runId,
+        company_id: companyId,
+        employee_id: emp.id,
+        calc_hours: days_worked,
+        calc_bruto: total_earnings,
+        calc_ihss: IHSS,
+        calc_rap: RAP,
+        calc_isr: ISR,
+        calc_neto: total
+      })
+      
       const { data: insertedLine, error: lineError } = await supabase
         .from('payroll_run_lines')
         .insert({
@@ -291,10 +303,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         })
         .select('id')
         .single()
+        
+      console.log(`🔍 DEBUG - Resultado inserción línea para ${emp.name}:`, {
+        insertedLine,
+        lineError,
+        success: !!insertedLine && !lineError
+      })
 
       if (lineError) {
         console.error('Error insertando línea de nómina:', lineError)
-        // Continuar sin fallar - el preview puede funcionar sin líneas
+        return res.status(500).json({ 
+          error: 'Error insertando línea de nómina',
+          message: `No se pudo insertar la línea para el empleado ${emp.name}: ${lineError.message}`,
+          details: lineError
+        })
       }
 
       planilla.push({
