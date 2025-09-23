@@ -28,9 +28,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Obtener información de la corrida de nómina
     const { data: payrollRun, error: runError } = await supabase
       .from('payroll_runs')
-      .select('id, company_uuid, year, month, quincena, tipo, status')
+      .select('id, company_id, year, month, quincena, tipo, status')
       .eq('id', run_id)
-      .eq('company_uuid', companyId)
+      .eq('company_id', companyId)
       .single()
 
     if (runError) {
@@ -53,7 +53,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         )
       `)
       .eq('run_id', run_id)
-      .eq('company_uuid', companyId)
+      .eq('company_id', companyId)
 
     if (linesError) {
       console.error('Error obteniendo líneas de nómina:', linesError)

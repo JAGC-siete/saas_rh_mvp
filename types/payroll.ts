@@ -125,7 +125,7 @@ export interface PayrollLine {
 
 export interface PayrollRun {
   id: string;
-  company_uuid: string;
+  company_id: string;
   year: number;
   month: number;
   quincena: Quincena;
@@ -139,7 +139,7 @@ export interface PayrollRun {
 export interface PayrollRunLine {
   id: string;
   run_id: string;
-  company_uuid: string;
+  company_id: string;
   employee_id: string;
   calc_hours: number;
   calc_bruto: number;
@@ -161,7 +161,7 @@ export interface PayrollRunLine {
 export interface PayrollAdjustment {
   id: string;
   run_line_id: string;
-  company_uuid: string;
+  company_id: string;
   field: EditField;
   old_value: number;
   reason: string;

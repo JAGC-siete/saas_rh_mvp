@@ -48,9 +48,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Verificar que la corrida pertenezca a la empresa del usuario
     const { data: run, error: runError } = await supabase
       .from('payroll_runs')
-      .select('id, company_uuid, year, month, quincena, tipo')
+      .select('id, company_id, year, month, quincena, tipo')
       .eq('id', run_id)
-      .eq('company_uuid', userProfile.company_id)
+      .eq('company_id', userProfile.company_id)
       .single()
 
     if (runError || !run) {
@@ -91,7 +91,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         )
       `)
       .eq('run_id', run_id)
-      .eq('company_uuid', userProfile.company_id)
+      .eq('company_id', userProfile.company_id)
 
     // Si se especifica un empleado, filtrar solo ese
     if (employee_id) {

@@ -43,9 +43,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Verificar que la línea pertenezca a la empresa del usuario
     const { data: line, error: lineError } = await supabase
       .from('payroll_run_lines')
-      .select('id, company_uuid, run_id, edited')
+      .select('id, company_id, run_id, edited')
       .eq('id', run_line_id)
-      .eq('company_uuid', companyId)
+      .eq('company_id', companyId)
       .single()
 
     if (lineError || !line) {
@@ -88,7 +88,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Aplicar ajuste usando la función helper
     const { data: adjustmentResult, error: adjustmentError } = await supabase.rpc('apply_payroll_adjustment', {
       p_run_line_id: run_line_id,
-      p_company_uuid: companyId,
+      p_company_id: companyId,
       p_field: field,
       p_new_value: Number(new_value),
       p_reason: reason || `Ajuste manual de ${field}`,
