@@ -30,6 +30,7 @@ const PUBLIC_ROUTES = new Set([
   '/politicadeprivacidad', // Política de privacidad - PÚBLICO
   '/test-client-env',      // Debug environment variables - PÚBLICO
   '/debug-env',            // Debug environment page - PÚBLICO
+  '/railway-debug',        // Railway environment debug - PÚBLICO
   '/app/demo/pin',     // PIN de demo - PÚBLICO
   '/app/attendance/register', // Registro de asistencia - PÚBLICO
   '/registrodeasistencia',
