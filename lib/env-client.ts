@@ -28,7 +28,7 @@ async function loadClientEnv(): Promise<ClientEnv> {
   }
 
   // Create new loading promise
-  envPromise = (async () => {
+  envPromise = (async (): Promise<ClientEnv> => {
     try {
       // First, try to get from process.env (should work in Next.js)
       if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
@@ -57,11 +57,11 @@ async function loadClientEnv(): Promise<ClientEnv> {
       clientEnv = await response.json()
       
       console.log('✅ Environment variables loaded from server:', {
-        NEXT_PUBLIC_SUPABASE_URL: clientEnv.NEXT_PUBLIC_SUPABASE_URL ? '✅ Set' : '❌ Missing',
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: clientEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '✅ Set' : '❌ Missing',
+        NEXT_PUBLIC_SUPABASE_URL: clientEnv?.NEXT_PUBLIC_SUPABASE_URL ? '✅ Set' : '❌ Missing',
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: clientEnv?.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '✅ Set' : '❌ Missing',
       })
 
-      return clientEnv
+      return clientEnv || {}
     } catch (error) {
       console.error('❌ Failed to load environment variables:', error)
       
