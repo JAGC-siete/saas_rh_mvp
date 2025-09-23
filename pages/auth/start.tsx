@@ -25,14 +25,14 @@ export default function AuthStart() {
   useEffect(() => {
     const loadEnvVars = async () => {
       try {
-        // Check if we already have environment variables
+        // First check if we already have environment variables
         if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
           setEnvLoaded(true)
           return
         }
 
-        // Try to load from API
-        const response = await fetch('/api/env')
+        // Try to load from our new client-env API endpoint
+        const response = await fetch('/api/client-env')
         if (response.ok) {
           const envData = await response.json()
           if (envData.NEXT_PUBLIC_SUPABASE_URL && envData.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
@@ -41,9 +41,28 @@ export default function AuthStart() {
               (window as any).__ENV__ = envData
             }
             setEnvLoaded(true)
-            console.log('✅ Environment variables loaded from API')
+            console.log('✅ Environment variables loaded from client-env API')
+            return
           }
         }
+
+        // Fallback to old /api/env endpoint
+        const fallbackResponse = await fetch('/api/env')
+        if (fallbackResponse.ok) {
+          const envData = await fallbackResponse.json()
+          if (envData.NEXT_PUBLIC_SUPABASE_URL && envData.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+            // Cache in window for Supabase client
+            if (typeof window !== 'undefined') {
+              (window as any).__ENV__ = envData
+            }
+            setEnvLoaded(true)
+            console.log('✅ Environment variables loaded from fallback API')
+            return
+          }
+        }
+
+        console.warn('⚠️ Could not load environment variables, proceeding anyway')
+        setEnvLoaded(true)
       } catch (error) {
         console.error('❌ Failed to load environment variables:', error)
         // Still set envLoaded to true to allow user to try
