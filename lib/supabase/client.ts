@@ -1,6 +1,7 @@
 import { createBrowserClient } from '@supabase/ssr'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '../supabase'
+import { getClientEnvSync, areClientEnvVarsAvailable } from '../env-client'
 
 // Singleton instance for browser client
 let browserClient: SupabaseClient<Database> | null = null
@@ -22,11 +23,18 @@ export function createClient(): SupabaseClient<Database> {
     throw new Error('createClient() should only be called in browser environment. Use createServerClient() for server-side code.')
   }
 
-  // Get environment variables (only available in browser for NEXT_PUBLIC_ vars)
-  let supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  let supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  // Get environment variables using our client-side loader
+  const clientEnv = getClientEnvSync()
+  let supabaseUrl = clientEnv.NEXT_PUBLIC_SUPABASE_URL
+  let supabaseAnonKey = clientEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY
   
-  // Fallback to window.__ENV__ if process.env is not available
+  // Fallback to process.env if client env is not loaded yet
+  if (!supabaseUrl || !supabaseAnonKey) {
+    supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  }
+  
+  // Final fallback to window.__ENV__ if available
   if ((!supabaseUrl || !supabaseAnonKey) && (window as any).__ENV__) {
     supabaseUrl = (window as any).__ENV__.NEXT_PUBLIC_SUPABASE_URL || supabaseUrl
     supabaseAnonKey = (window as any).__ENV__.NEXT_PUBLIC_SUPABASE_ANON_KEY || supabaseAnonKey
@@ -38,9 +46,8 @@ export function createClient(): SupabaseClient<Database> {
     console.log('🔍 Supabase browser client initialization:', {
       supabaseUrl: supabaseUrl ? '✅ Set' : '❌ Missing',
       supabaseAnonKey: supabaseAnonKey ? '✅ Set' : '❌ Missing',
+      clientEnvLoaded: areClientEnvVarsAvailable(),
       hasWindowEnv: !!(window as any).__ENV__,
-      windowEnvUrl: (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_URL ? '✅ Set' : '❌ Missing',
-      windowEnvKey: (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '✅ Set' : '❌ Missing',
       processEnvUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ? '✅ Set' : '❌ Missing',
       processEnvKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '✅ Set' : '❌ Missing',
     })
@@ -51,6 +58,7 @@ export function createClient(): SupabaseClient<Database> {
     const errorMessage = `Supabase environment variables not configured:
     - NEXT_PUBLIC_SUPABASE_URL: ${supabaseUrl ? 'Set' : 'Missing'}
     - NEXT_PUBLIC_SUPABASE_ANON_KEY: ${supabaseAnonKey ? 'Set' : 'Missing'}
+    - Client env loaded: ${areClientEnvVarsAvailable() ? 'Yes' : 'No'}
     
     Please ensure these are set in your deployment environment.`
     

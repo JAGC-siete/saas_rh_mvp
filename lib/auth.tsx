@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import { createClient } from './supabase/client'
 import { User, Session } from '@supabase/supabase-js'
 import { env, areEnvVarsAvailable } from './env'
+import { initializeClientEnv } from './env-client'
 
 interface UserProfile {
   id: string
@@ -48,6 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isClient, setIsClient] = useState(false)
+  const [envInitialized, setEnvInitialized] = useState(false)
   
   // Create Supabase client with error handling
   const [supabase, setSupabase] = useState<any>(null)
@@ -82,7 +84,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsClient(true)
   }, [])
 
-  // Initialize Supabase client directly - NEXT_PUBLIC_ variables are available immediately
+  // Initialize Supabase client with environment variable loading
   useEffect(() => {
     if (!isClient) return
 
@@ -90,22 +92,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         console.log('🔧 Initializing Supabase client...')
         
-        // Check if environment variables are available (with fallback to window.__ENV__)
-        let supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-        let supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        // First, initialize client environment variables
+        console.log('🔍 Loading client environment variables...')
+        await initializeClientEnv()
+        setEnvInitialized(true)
+        console.log('✅ Client environment variables loaded')
         
-        // Fallback to window.__ENV__ if process.env is not available
-        if ((!supabaseUrl || !supabaseKey) && typeof window !== 'undefined' && (window as any).__ENV__) {
-          supabaseUrl = (window as any).__ENV__.NEXT_PUBLIC_SUPABASE_URL || supabaseUrl
-          supabaseKey = (window as any).__ENV__.NEXT_PUBLIC_SUPABASE_ANON_KEY || supabaseKey
-        }
-        
-        if (!supabaseUrl || !supabaseKey) {
-          console.error('❌ Supabase environment variables not available:', {
-            url: !!supabaseUrl,
-            key: !!supabaseKey,
-            windowEnv: typeof window !== 'undefined' ? !!(window as any).__ENV__ : 'N/A'
-          })
+        // Check if environment variables are available
+        if (!areEnvVarsAvailable()) {
+          console.error('❌ Supabase environment variables not available after loading')
           setError('Supabase configuration missing')
           setLoading(false)
           return
