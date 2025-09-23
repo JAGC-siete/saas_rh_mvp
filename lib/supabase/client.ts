@@ -23,14 +23,26 @@ export function createClient(): SupabaseClient<Database> {
   }
 
   // Get environment variables (only available in browser for NEXT_PUBLIC_ vars)
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  let supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  let supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  
+  // Fallback to window.__ENV__ if process.env is not available
+  if ((!supabaseUrl || !supabaseAnonKey) && (window as any).__ENV__) {
+    supabaseUrl = (window as any).__ENV__.NEXT_PUBLIC_SUPABASE_URL || supabaseUrl
+    supabaseAnonKey = (window as any).__ENV__.NEXT_PUBLIC_SUPABASE_ANON_KEY || supabaseAnonKey
+  }
 
-  // Debug logging only in development
-  if (process.env.NODE_ENV === 'development') {
+  // Debug logging (always show in development, show errors in production)
+  const isDev = process.env.NODE_ENV === 'development'
+  if (isDev || (!supabaseUrl || !supabaseAnonKey)) {
     console.log('🔍 Supabase browser client initialization:', {
       supabaseUrl: supabaseUrl ? '✅ Set' : '❌ Missing',
       supabaseAnonKey: supabaseAnonKey ? '✅ Set' : '❌ Missing',
+      hasWindowEnv: !!(window as any).__ENV__,
+      windowEnvUrl: (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_URL ? '✅ Set' : '❌ Missing',
+      windowEnvKey: (window as any).__ENV__?.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '✅ Set' : '❌ Missing',
+      processEnvUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ? '✅ Set' : '❌ Missing',
+      processEnvKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '✅ Set' : '❌ Missing',
     })
   }
 
@@ -84,8 +96,14 @@ export function createCallbackClient(): SupabaseClient<Database> {
     throw new Error('createCallbackClient() should only be called in browser environment.')
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  let supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  let supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  
+  // Fallback to window.__ENV__ if process.env is not available
+  if ((!supabaseUrl || !supabaseAnonKey) && (window as any).__ENV__) {
+    supabaseUrl = (window as any).__ENV__.NEXT_PUBLIC_SUPABASE_URL || supabaseUrl
+    supabaseAnonKey = (window as any).__ENV__.NEXT_PUBLIC_SUPABASE_ANON_KEY || supabaseAnonKey
+  }
 
   if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error('Supabase environment variables not configured')
