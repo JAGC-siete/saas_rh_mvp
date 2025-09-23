@@ -22,6 +22,20 @@ const nextConfig = {
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   },
   
+  // Webpack configuration to ensure environment variables are available
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      // Force environment variables to be available on client-side
+      config.plugins.push(
+        new (require('webpack')).DefinePlugin({
+          'process.env.NEXT_PUBLIC_SUPABASE_URL': JSON.stringify(process.env.NEXT_PUBLIC_SUPABASE_URL),
+          'process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY': JSON.stringify(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
+        })
+      )
+    }
+    return config
+  },
+  
   // Configuración para rutas internas (no subdominios)
   async rewrites() {
     return [

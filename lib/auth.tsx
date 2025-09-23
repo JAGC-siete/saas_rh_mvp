@@ -90,14 +90,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         console.log('🔧 Initializing Supabase client...')
         
-        // Check if environment variables are available
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-        const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        // Check if environment variables are available (with fallback to window.__ENV__)
+        let supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+        let supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        
+        // Fallback to window.__ENV__ if process.env is not available
+        if ((!supabaseUrl || !supabaseKey) && typeof window !== 'undefined' && (window as any).__ENV__) {
+          supabaseUrl = (window as any).__ENV__.NEXT_PUBLIC_SUPABASE_URL || supabaseUrl
+          supabaseKey = (window as any).__ENV__.NEXT_PUBLIC_SUPABASE_ANON_KEY || supabaseKey
+        }
         
         if (!supabaseUrl || !supabaseKey) {
           console.error('❌ Supabase environment variables not available:', {
             url: !!supabaseUrl,
-            key: !!supabaseKey
+            key: !!supabaseKey,
+            windowEnv: typeof window !== 'undefined' ? !!(window as any).__ENV__ : 'N/A'
           })
           setError('Supabase configuration missing')
           setLoading(false)
