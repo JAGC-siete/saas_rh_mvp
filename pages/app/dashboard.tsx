@@ -58,7 +58,10 @@ export default function Dashboard() {
   // useCallback con soporte para AbortSignal; no cambia firma pública del componente
   const fetchDashboardData = useCallback(async (signal?: AbortSignal) => {
     try {
-      const response = await fetch('/api/dashboard/executive-stats', { signal })
+      const response = await fetch('/api/dashboard/executive-stats', { 
+        signal,
+        credentials: 'include'
+      })
       if (response.ok) {
         const data = await response.json()
         setStats({

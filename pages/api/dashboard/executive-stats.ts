@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createAdminClient } from '../../../lib/supabase/server'
+import { requireCompanyAccess } from '../../../lib/auth/api-auth'
 import { getHondurasTimestamp, nowInHonduras } from '../../../lib/timezone'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -8,7 +8,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const supabase = createAdminClient()
+    const { supabase, companyId } = await requireCompanyAccess(req, res)
+    
+    if (!companyId) {
+      return res.status(400).json({ error: 'Company ID is required' })
+    }
     
     console.log('🔍 Executive Dashboard stats: Iniciando...')
     console.log('📅 Timestamp:', getHondurasTimestamp())
@@ -20,14 +24,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log('📅 Fechas calculadas:', { today, sevenDaysAgo })
 
-    // 1. Obtener total de empleados activos - SOLO DE PARAGON
-    console.log('👥 PASO 1: Obteniendo empleados activos de Paragon...')
-    const PARAGON_COMPANY_ID = '00000000-0000-0000-0000-000000000001'
+    // 1. Obtener total de empleados activos - DE LA EMPRESA DEL USUARIO
+    console.log('👥 PASO 1: Obteniendo empleados activos de la empresa:', companyId)
     const { data: employees, error: empError } = await supabase
       .from('employees')
       .select('id, name, employee_code, base_salary, department_id, status')
       .eq('status', 'active')
-      .eq('company_id', PARAGON_COMPANY_ID)
+      .eq('company_id', companyId)
 
     if (empError) {
       console.error('❌ Error fetching employees:', empError)
@@ -37,9 +40,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('✅ Empleados obtenidos:', employees?.length || 0)
     const totalEmployees = employees?.length || 0
 
-    // 2. Obtener registros de asistencia de hoy - SOLO DE EMPLEADOS DE PARAGON
-    console.log('📊 PASO 2: Obteniendo registros de asistencia de hoy de Paragon...')
-    const employeeIds = (employees || []).map(e => e.id)
+    // 2. Obtener registros de asistencia de hoy - DE EMPLEADOS DE LA EMPRESA
+    console.log('📊 PASO 2: Obteniendo registros de asistencia de hoy de la empresa...')
+    const employeeIds = (employees || []).map((e: any) => e.id)
     let attendanceQuery = supabase
       .from('attendance_records')
       .select('*')
