@@ -12,6 +12,7 @@ import { useCompanyContext } from '../../../lib/useCompanyContext'
 import { formatTimeDisplay } from '../../../lib/timezone'
 import EmployeeDrawer from '../../../components/attendance/EmployeeDrawer'
 import { useAttendanceData, calculateAttendanceRates, getSeverityFromDelta } from '../../../lib/hooks/useAttendanceData'
+import { attendanceApi, mapAttendanceError } from '../../../lib/attendance-api'
 
 export default function AttendanceDashboardApp() {
   const [preset, setPreset] = useState('today')
@@ -59,39 +60,34 @@ export default function AttendanceDashboardApp() {
 
   const handleExport = async (format: string) => {
     try {
-      // Construir URL de exportación con parámetros usando preset
-      const exportUrl = `/api/attendance/export?preset=${preset}&formato=${format}${selectedEmployeeId ? `&employee_id=${selectedEmployeeId}` : ''}${selectedRole ? `&role=${encodeURIComponent(selectedRole)}` : ''}`
-      
-      // Realizar petición
-      const response = await fetch(exportUrl)
-      
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`)
+      // Usar API client (como payroll)
+      const params = {
+        preset,
+        formato: format as 'excel' | 'csv' | 'pdf',
+        employee_id: selectedEmployeeId || undefined,
+        role: selectedRole || undefined
       }
       
-      // Obtener el contenido del archivo
-      const blob = await response.blob()
+      const response = await attendanceApi.export(params)
+      
+      // Descargar archivo directamente (como payroll)
+      const link = document.createElement('a')
+      link.href = response.url
       
       // Determinar el nombre del archivo basado en preset y empleado (usando timezone de Honduras)
       const employeePart = selectedEmployeeId ? '_empleado' : ''
       const datePart = new Date().toLocaleString('sv-SE', { timeZone: 'America/Tegucigalpa' }).split(' ')[0]
       const fileName = `asistencia_${preset}${employeePart}_${datePart}.${format}`
-      
-      // Crear enlace de descarga
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
       link.download = fileName
+      
       document.body.appendChild(link)
       link.click()
-      
-      // Limpiar
       document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error al exportar:', error)
-      alert('Error al exportar datos. Por favor intente nuevamente.')
+      const errorMessage = mapAttendanceError(error)
+      alert(`Error al exportar: ${errorMessage}`)
     }
   }
 

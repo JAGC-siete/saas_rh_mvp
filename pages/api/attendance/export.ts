@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../lib/supabase/server'
-import { authenticateUser } from '../../../lib/auth-helpers'
+import { requireCompanyAccess } from '../../../lib/auth/api-auth'
 import { validateAttendanceExport } from '../../../lib/security/schema-validation'
 import { createSecureQueryBuilder } from '../../../lib/security/secure-queries'
 import { withExportRateLimit } from '../../../lib/security/rate-limiting'
@@ -14,21 +13,36 @@ export default handlerWithSecurity
 
 async function attendanceExportHandler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    // AUTENTICACIÓN REQUERIDA
-    const authResult = await authenticateUser(req, res, ['can_view_reports', 'can_export_payroll'])
+    // AUTENTICACIÓN ESTANDARIZADA - Usar requireCompanyAccess (como payroll)
+    const { supabase, companyId, role, user } = await requireCompanyAccess(req, res)
     
-    if (!authResult.success) {
-      return res.status(401).json({ 
-        error: authResult.error,
-        message: authResult.message
+    // Verificar roles específicos para exportar asistencia (como payroll)
+    if (!['super_admin', 'company_admin', 'hr_manager', 'manager'].includes(role)) {
+      return res.status(403).json({ 
+        error: 'Permisos insuficientes',
+        message: 'No tiene permisos para exportar datos de asistencia'
       })
     }
 
-    const { user, userProfile } = authResult
-    const supabase = createClient(req, res)
-
-    // Obtener parámetros de query (preset o fechas específicas)
-    const { preset, formato, role, employee_id } = req.query
+    // VALIDACIÓN DE PARÁMETROS DE QUERY (como payroll)
+    const { preset, formato, role: roleFilter, employee_id } = req.query
+    
+    // Validar formato requerido
+    if (!formato || typeof formato !== 'string') {
+      return res.status(400).json({ 
+        error: 'Formato requerido',
+        message: 'Debe especificar un formato de exportación (excel, csv, pdf)'
+      })
+    }
+    
+    // Validar formato válido
+    const validFormats = ['excel', 'csv', 'pdf', 'xlsx']
+    if (!validFormats.includes(formato.toLowerCase())) {
+      return res.status(400).json({ 
+        error: 'Formato inválido',
+        message: `Formato debe ser uno de: ${validFormats.join(', ')}`
+      })
+    }
     
     // Usar preset si está disponible, sino usar fechas del body
     let exportData: any
@@ -38,7 +52,7 @@ async function attendanceExportHandler(req: NextApiRequest, res: NextApiResponse
         startDate: range.from.split('T')[0],
         endDate: range.to.split('T')[0],
         formato: formato || 'excel',
-        role: role || null,
+        role: roleFilter || null,
         employee_id: employee_id || null
       }
     } else {
@@ -54,7 +68,7 @@ async function attendanceExportHandler(req: NextApiRequest, res: NextApiResponse
       }
       exportData = {
         ...validation.data!,
-        role: role || null,
+        role: roleFilter || null,
         employee_id: employee_id || null
       }
     }
@@ -64,12 +78,16 @@ async function attendanceExportHandler(req: NextApiRequest, res: NextApiResponse
 
     console.log('Usuario autenticado para exportación de asistencia:', { 
       userId: user.id.substring(0, 8) + '...', // Ocultar ID completo
-      role: userProfile?.role,
+      role: role,
       companyId: '***' // Ocultar company_id
     })
 
-    // USAR QUERY BUILDER SEGURO
-    const queryBuilder = createSecureQueryBuilder(supabase, userProfile!)
+    // USAR QUERY BUILDER SEGURO (como payroll)
+    const queryBuilder = createSecureQueryBuilder(supabase, { 
+      id: user.id, 
+      company_id: companyId, 
+      role: role 
+    } as any)
     const attendanceRecords = await queryBuilder.getAttendanceRecords(exportData)
 
     if (!attendanceRecords || attendanceRecords.length === 0) {
@@ -88,7 +106,12 @@ async function attendanceExportHandler(req: NextApiRequest, res: NextApiResponse
       case 'csv':
         return exportToCSV(attendanceRecords, startDate, endDate, res)
       case 'pdf':
-        return res.status(400).json({ error: 'El PDF consolidado ahora está en /api/attendance/generate-pdf' })
+        // Redirigir al endpoint específico de PDF (como payroll)
+        const pdfUrl = `/api/attendance/generate-pdf?preset=${preset}${employee_id ? `&employee_id=${Array.isArray(employee_id) ? employee_id[0] : employee_id}` : ''}${roleFilter ? `&role=${encodeURIComponent(Array.isArray(roleFilter) ? roleFilter[0] : roleFilter)}` : ''}`
+        return res.status(302).json({ 
+          redirect: pdfUrl,
+          message: 'Redirigiendo al generador de PDF'
+        })
       default:
         return res.status(400).json({ error: 'Formato no soportado. Use "excel", "xlsx" o "csv"' })
     }
