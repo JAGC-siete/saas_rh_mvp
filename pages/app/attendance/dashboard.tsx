@@ -60,7 +60,7 @@ export default function AttendanceDashboardApp() {
   const handleExport = async (format: string) => {
     try {
       // Construir URL de exportación con parámetros usando preset
-      const exportUrl = `/api/attendance/export?preset=${preset}&formato=${format}${selectedEmployeeId ? `&employee_id=${selectedEmployeeId}` : ''}`
+      const exportUrl = `/api/attendance/export?preset=${preset}&formato=${format}${selectedEmployeeId ? `&employee_id=${selectedEmployeeId}` : ''}${selectedRole ? `&role=${encodeURIComponent(selectedRole)}` : ''}`
       
       // Realizar petición
       const response = await fetch(exportUrl)

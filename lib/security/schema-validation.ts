@@ -44,7 +44,8 @@ export const attendanceExportSchema = z.object({
   endDate: dateSchema,
   formato: fileFormatSchema,
   employee_id: uuidSchema.optional(),
-  company_id: uuidSchema.optional()
+  company_id: uuidSchema.optional(),
+  role: safeStringSchema.optional()
 }).refine((data) => {
   // Validar rango de fechas
   const startDate = new Date(data.startDate + 'T00:00:00.000Z')

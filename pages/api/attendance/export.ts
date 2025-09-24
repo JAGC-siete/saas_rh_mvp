@@ -28,7 +28,7 @@ async function attendanceExportHandler(req: NextApiRequest, res: NextApiResponse
     const supabase = createClient(req, res)
 
     // Obtener parámetros de query (preset o fechas específicas)
-    const { preset, formato } = req.query
+    const { preset, formato, role, employee_id } = req.query
     
     // Usar preset si está disponible, sino usar fechas del body
     let exportData: any
@@ -37,7 +37,9 @@ async function attendanceExportHandler(req: NextApiRequest, res: NextApiResponse
       exportData = {
         startDate: range.from.split('T')[0],
         endDate: range.to.split('T')[0],
-        formato: formato || 'excel'
+        formato: formato || 'excel',
+        role: role || null,
+        employee_id: employee_id || null
       }
     } else {
       // VALIDACIÓN SEGURA CON ZOD para fechas específicas
@@ -50,7 +52,11 @@ async function attendanceExportHandler(req: NextApiRequest, res: NextApiResponse
           timestamp: new Date().toISOString()
         })
       }
-      exportData = validation.data!
+      exportData = {
+        ...validation.data!,
+        role: role || null,
+        employee_id: employee_id || null
+      }
     }
 
     const { startDate, endDate, formato: format } = exportData
