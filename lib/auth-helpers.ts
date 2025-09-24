@@ -55,6 +55,14 @@ export async function getOrCreateProfile(supabase: any, userId: string): Promise
       // No existe el perfil, crearlo
       console.log('🔧 Perfil no encontrado, creando...')
       
+      // ⚠️ CRÍTICO: No crear perfiles con company_id hardcodeado
+      console.error('❌ CRITICAL: Attempting to create profile with hardcoded company_id')
+      console.error('❌ This should not happen in production. User needs to be assigned to a company first.')
+      
+      throw new Error('PROFILE_CREATION_BLOCKED: No se puede crear perfil sin company_id válido. Contacte al administrador.')
+      
+      // CÓDIGO COMENTADO - NO USAR EN PRODUCCIÓN
+      /*
       const { data: newProfile, error: insertError } = await supabase
         .from('user_profiles')
         .insert({
@@ -87,6 +95,7 @@ export async function getOrCreateProfile(supabase: any, userId: string): Promise
 
       console.log('✅ Perfil creado exitosamente:', newProfile)
       return newProfile
+      */
     }
 
     if (error) {

@@ -108,10 +108,37 @@ async function attendanceExportHandler(req: NextApiRequest, res: NextApiResponse
         return exportToCSV(attendanceRecords, startDate, endDate, res)
       case 'pdf':
         // Generar PDF directamente (sin redirección)
-        const pdf = await generateAttendancePDF(attendanceRecords, startDate, endDate, user.email, Array.isArray(preset) ? preset[0] : preset, Array.isArray(roleFilter) ? roleFilter[0] : roleFilter, Array.isArray(employee_id) ? employee_id[0] : employee_id)
-        res.setHeader('Content-Type', 'application/pdf')
-        res.setHeader('Content-Disposition', `attachment; filename=asistencia_${startDate}_${endDate}.pdf`)
-        return res.send(pdf)
+        try {
+          console.log('🔍 PDF Generation Debug:', {
+            attendanceRecordsLength: attendanceRecords.length,
+            startDate,
+            endDate,
+            preset: Array.isArray(preset) ? preset[0] : preset,
+            roleFilter: Array.isArray(roleFilter) ? roleFilter[0] : roleFilter,
+            employee_id: Array.isArray(employee_id) ? employee_id[0] : employee_id,
+            userEmail: user.email
+          })
+          
+          const pdf = await generateAttendancePDF(attendanceRecords, startDate, endDate, user.email, Array.isArray(preset) ? preset[0] : preset, Array.isArray(roleFilter) ? roleFilter[0] : roleFilter, Array.isArray(employee_id) ? employee_id[0] : employee_id)
+          
+          console.log('✅ PDF Generated Successfully:', { size: pdf.length })
+          res.setHeader('Content-Type', 'application/pdf')
+          res.setHeader('Content-Disposition', `attachment; filename=asistencia_${startDate}_${endDate}.pdf`)
+          return res.send(pdf)
+        } catch (error: any) {
+          console.error('❌ PDF Generation Error:', {
+            message: error?.message,
+            stack: error?.stack,
+            attendanceRecordsLength: attendanceRecords?.length,
+            startDate,
+            endDate
+          })
+          return res.status(500).json({ 
+            error: 'Error generando PDF',
+            message: 'No se pudo generar el documento PDF',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+          })
+        }
       default:
         return res.status(400).json({ error: 'Formato no soportado. Use "excel", "xlsx" o "csv"' })
     }

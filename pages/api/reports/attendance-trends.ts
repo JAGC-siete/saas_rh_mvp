@@ -1,235 +1,205 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../lib/supabase/server'
-import { authenticateUser } from '../../../lib/auth-helpers'
-import { withInputValidation, createSecureErrorResponse } from '../../../lib/security/input-validation'
+import { requireCompanyAccess } from '../../../lib/auth/api-auth'
 import { withReportsRateLimit } from '../../../lib/security/rate-limiting'
 import { getDateRange } from '../../../lib/attendance'
 
-// Aplicar rate limiting y validación de entrada
-const handlerWithSecurity = withReportsRateLimit()(
-  withInputValidation(attendanceTrendsHandler)
-)
+// Aplicar rate limiting
+const handlerWithSecurity = withReportsRateLimit()(attendanceTrendsHandler)
 
 export default handlerWithSecurity
 
 async function attendanceTrendsHandler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    // 🔒 AUTENTICACIÓN REQUERIDA CON PERMISOS DE REPORTS
-    const authResult = await authenticateUser(req, res, ['can_view_reports'])
+    // 🔒 AUTENTICACIÓN ESTANDARIZADA (como otros endpoints)
+    const { supabase, companyId, role, user } = await requireCompanyAccess(req, res)
     
-    if (!authResult.success) {
-      return res.status(401).json({ 
-        error: authResult.error,
-        message: authResult.message
+    // Normalizar parámetros de query (manejar arrays)
+    const normalizeParam = (param: string | string[] | undefined): string | undefined => {
+      if (Array.isArray(param)) return param[0]
+      return param
+    }
+    
+    const preset = normalizeParam(req.query.preset) || 'today'
+    const roleFilter = normalizeParam(req.query.role)
+    const employee_id = normalizeParam(req.query.employee_id)
+    
+    console.log('🔍 Trends API Debug:', { 
+      preset, 
+      roleFilter, 
+      employee_id,
+      companyId: companyId,
+      userEmail: user.email
+    })
+    
+    // Validar preset
+    const validPresets = ['today', 'week', 'fortnight', 'month', 'year']
+    if (!validPresets.includes(preset)) {
+      return res.status(400).json({
+        error: 'Preset inválido',
+        message: `Preset debe ser uno de: ${validPresets.join(', ')}`,
+        received: preset
       })
     }
 
-    const { user, userProfile } = authResult
-    const supabase = createClient(req, res)
-
-    console.log('🔐 Usuario autenticado para tendencias de asistencia:', { 
-      userId: user.id.substring(0, 8) + '...', // Ocultar ID completo
-      role: userProfile?.role,
-      companyId: '***' // Ocultar company_id
+    // 📅 CALCULAR RANGO DE FECHAS USANDO EL MISMO RESOLVER
+    const range = getDateRange(preset)
+    const startDate = range.from.split('T')[0]
+    const endDate = range.to.split('T')[0]
+    
+    console.log('📅 Date range calculated:', { 
+      preset, 
+      startDate, 
+      endDate,
+      from: range.from,
+      to: range.to
     })
 
-    // Obtener parámetros de query (preset o fechas específicas)
-    const { preset, startDate, endDate, employee_id, role } = req.query
-    
-    // Usar preset si está disponible, sino usar fechas específicas
-    let dateRange: { startDate: string; endDate: string }
-    if (preset && typeof preset === 'string') {
-      const range = getDateRange(preset)
-      dateRange = { startDate: range.from.split('T')[0], endDate: range.to.split('T')[0] }
-    } else {
-      dateRange = { 
-        startDate: (startDate as string) || new Date().toISOString().split('T')[0], 
-        endDate: (endDate as string) || new Date().toISOString().split('T')[0] 
-      }
+    // Obtener tendencias de asistencia con filtros
+    if (!companyId) {
+      return res.status(400).json({
+        error: 'Company access required',
+        message: 'No se encontró una empresa asociada a tu cuenta'
+      })
     }
-
-    // Obtener tendencias de asistencia con filtro de empleado y role
-    const trends = await getAttendanceTrends(supabase, userProfile, dateRange.startDate, dateRange.endDate, employee_id as string, role as string)
+    
+    const trends = await getAttendanceTrends(supabase, companyId, startDate, endDate, roleFilter || undefined, employee_id || undefined)
 
     return res.status(200).json({
       success: true,
-      data: trends
+      data: trends,
+      meta: {
+        preset,
+        dateRange: { startDate, endDate },
+        filters: { role: roleFilter, employee_id }
+      }
     })
 
   } catch (error) {
-    console.error('Error obteniendo tendencias de asistencia:', error)
-    return res.status(500).json(createSecureErrorResponse(error, 'obtener tendencias de asistencia'))
+    console.error('❌ Trends API Error:', error)
+    return res.status(500).json({ 
+      error: 'Error interno del servidor',
+      message: 'No se pudieron obtener las tendencias de asistencia'
+    })
   }
 }
 
-async function getAttendanceTrends(supabase: any, userProfile: any, startDate: string, endDate: string, employeeId?: string, role?: string) {
-  const companyId = userProfile?.company_id
+async function getAttendanceTrends(supabase: any, companyId: string, startDate: string, endDate: string, role?: string, employeeId?: string) {
+  try {
+    console.log('📊 Getting attendance trends:', {
+      companyId,
+      startDate,
+      endDate,
+      role,
+      employeeId
+    })
 
-  // Obtener registros de asistencia del período - FILTRADO POR COMPANY Y EMPLEADO
-  let attendanceQuery = supabase
-    .from('attendance_records')
-    .select(`
-      date, 
-      status, 
-      check_in, 
-      employee_id, 
-      late_minutes,
-      employees!attendance_records_employee_id_fkey(name, employee_code)
-    `)
-    .gte('date', startDate)
-    .lte('date', endDate)
-    .order('date')
-
-  if (companyId) {
-    // Obtener IDs de empleados de la empresa con filtro por role
-    let employeeQuery = supabase
+    // Obtener empleados filtrados por company_id y role
+    let employeesQuery = supabase
       .from('employees')
-      .select('id')
+      .select('id, name, role')
       .eq('company_id', companyId)
       .eq('status', 'active')
-    
-    // Aplicar filtro por role si se proporciona
-    if (role && role.trim() !== '') {
-      employeeQuery = employeeQuery.eq('role', role.trim())
-    }
-    
-    const { data: companyEmployees } = await employeeQuery
-    let employeeIds = (companyEmployees || []).map((e: any) => e.id)
-    
-    console.log('👥 Company employees found:', employeeIds.length)
-    console.log('🔍 Employee filter:', { employeeId, hasFilter: !!employeeId })
-    console.log('🔍 Role filter:', { role, hasFilter: !!role })
-    
-    // FILTRAR POR EMPLEADO ESPECÍFICO si se proporciona
-    if (employeeId && employeeId.trim() !== '') {
-      employeeIds = employeeIds.filter((id: string) => id === employeeId.trim())
-      console.log('🎯 Filtered to specific employee:', employeeIds)
-    }
-    
-    if (employeeIds.length > 0) {
-      attendanceQuery = attendanceQuery.in('employee_id', employeeIds)
-      console.log('✅ Query filtered to employee IDs:', employeeIds)
-    } else {
-      attendanceQuery = attendanceQuery.eq('employee_id', '__none__')
-      console.log('❌ No employees found, using fallback filter')
-    }
-  }
 
-  const { data, error } = await attendanceQuery
-
-  if (error) throw error
-
-  // Debug: Log exact data being returned for September 1st investigation
-  console.log('🔍 DEBUG - Attendance trends query results:')
-  console.log('📅 Date range:', { startDate, endDate })
-  console.log('📊 Total records found:', data?.length || 0)
-  
-  if (data && data.length > 0) {
-    // Filter for September 1st specifically
-    const sept1Records = data.filter((r: any) => r.date === '2025-09-01')
-    console.log('🚨 SEPTEMBER 1st RECORDS:', sept1Records.length)
-    if (sept1Records.length > 0) {
-      console.log('📋 September 1st data:', sept1Records.map((r: any) => ({
-        employee_id: r.employee_id,
-        employee_name: r.employees?.name,
-        check_in: r.check_in,
-        date: r.date
-      })))
-    }
-    
-    // Show all dates in the data
-    const allDates = [...new Set(data.map((r: any) => r.date))].sort()
-    console.log('📅 All dates in results:', allDates)
-    
-    // Show all records for debugging
-    console.log('📋 ALL RECORDS:', data.map((r: any) => ({
-      date: r.date,
-      employee: r.employees?.name,
-      check_in: r.check_in
-    })))
-  }
-
-  // Agrupar por fecha y contar presentes/tarde; ausentes = empleados_activos - (presentes + tarde)
-  const trendMap = new Map<string, { present: number; late: number; checkInTimes: Array<{time: string, employee: string}> }>()
-
-  data?.forEach((record: any) => {
-    const date = record.date
-    if (!trendMap.has(date)) {
-      trendMap.set(date, { present: 0, late: 0, checkInTimes: [] })
+    if (role) {
+      employeesQuery = employeesQuery.eq('role', role)
     }
 
-    const trend = trendMap.get(date)!
-    if (record.late_minutes !== null) {
-      if (record.late_minutes < -5) {
-        // Early - count as present
-        trend.present++
-      } else if (record.late_minutes > 5) {
-        trend.late++
-      } else {
-        // On time - count as present
-        trend.present++
-      }
+    if (employeeId) {
+      employeesQuery = employeesQuery.eq('id', employeeId)
     }
+
+    const { data: employees, error: employeesError } = await employeesQuery
+
+    if (employeesError) {
+      console.error('❌ Error fetching employees:', employeesError)
+      throw employeesError
+    }
+
+    if (!employees || employees.length === 0) {
+      console.log('⚠️ No employees found for trends')
+      return []
+    }
+
+    const employeeIds = employees.map((emp: any) => emp.id)
+    console.log('👥 Employees for trends:', { count: employeeIds.length })
+
+    // Obtener registros de asistencia del período
+    const { data: attendanceRecords, error: attendanceError } = await supabase
+      .from('attendance_records')
+      .select(`
+        date, 
+        status, 
+        check_in, 
+        employee_id, 
+        late_minutes,
+        employees!attendance_records_employee_id_fkey(name, employee_code, role)
+      `)
+      .in('employee_id', employeeIds)
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .order('date', { ascending: true })
+
+    if (attendanceError) {
+      console.error('❌ Error fetching attendance records:', attendanceError)
+      throw attendanceError
+    }
+
+    console.log('📈 Attendance records for trends:', { count: attendanceRecords?.length || 0 })
+
+    // Agrupar por fecha y calcular métricas
+    const trendsByDate = new Map()
+
+    // Inicializar todas las fechas del rango
+    const currentDate = new Date(startDate)
+    const endDateObj = new Date(endDate)
     
-    // Agregar hora de entrada con nombre del empleado si existe
-    if (record.check_in) {
-      trend.checkInTimes.push({
-        time: record.check_in,
-        employee: record.employees?.name || record.employees?.employee_code || 'Empleado'
+    while (currentDate <= endDateObj) {
+      const dateStr = currentDate.toISOString().split('T')[0]
+      trendsByDate.set(dateStr, {
+        date: dateStr,
+        present: 0,
+        late: 0,
+        absent: 0,
+        total: 0
+      })
+      currentDate.setDate(currentDate.getDate() + 1)
+    }
+
+    // Procesar registros de asistencia
+    if (attendanceRecords) {
+      attendanceRecords.forEach((record: any) => {
+        const dateStr = record.date
+        if (trendsByDate.has(dateStr)) {
+          const trend = trendsByDate.get(dateStr)
+          trend.total++
+          
+          if (record.status === 'present') {
+            trend.present++
+          } else if (record.status === 'late') {
+            trend.late++
+          } else {
+            trend.absent++
+          }
+        }
       })
     }
-  })
 
-  // Determinar base de empleados (ajustado para empleado específico)
-  let employeesCount = 0
-  if (employeeId && employeeId.trim() !== '') {
-    // Si filtramos por empleado específico, la base es el número de días laborales en el período
-    const start = new Date(startDate)
-    const end = new Date(endDate)
-    const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
-    employeesCount = Math.max(1, daysDiff) // Mínimo 1 día
-  } else if (companyId) {
-    let employeeCountQuery = supabase
-      .from('employees')
-      .select('id, status')
-      .eq('company_id', companyId)
-      .eq('status', 'active')
-    
-    // Aplicar filtro por role si se proporciona
-    if (role && role.trim() !== '') {
-      employeeCountQuery = employeeCountQuery.eq('role', role.trim())
-    }
-    
-    const { data: companyEmployees } = await employeeCountQuery
-    employeesCount = (companyEmployees || []).length
-  } else {
-    // Fallback: usar empleados observados en registros
-    employeesCount = new Set((data || []).map((r: any) => r.employee_id)).size
+    // Convertir a array y calcular porcentajes
+    const trends = Array.from(trendsByDate.values()).map(trend => ({
+      date: trend.date,
+      present: trend.present,
+      late: trend.late,
+      absent: trend.absent,
+      total: trend.total,
+      attendanceRate: trend.total > 0 ? ((trend.present + trend.late) / trend.total) * 100 : 0,
+      punctualityRate: trend.total > 0 ? (trend.present / trend.total) * 100 : 0
+    }))
+
+    console.log('✅ Trends calculated:', { trendsCount: trends.length })
+    return trends
+
+  } catch (error) {
+    console.error('❌ Error in getAttendanceTrends:', error)
+    throw error
   }
-
-  const trends = Array.from(trendMap.entries()).map(([date, counts]) => {
-    // Si no hay registros de asistencia para esta fecha, no asumir que todos estuvieron ausentes
-    // Podría ser un día no laboral (oficina cerrada, feriado, etc.)
-    const hasAttendanceRecords = counts.present > 0 || counts.late > 0 || counts.checkInTimes.length > 0
-    
-    // Solo calcular ausentes si hay registros de asistencia para esa fecha
-    // Esto evita mostrar "todos ausentes" en días no laborales
-    const absent = hasAttendanceRecords 
-      ? Math.max(0, employeesCount - (counts.present + counts.late))
-      : 0
-    
-    return {
-      date,
-      present: counts.present,
-      late: counts.late,
-      absent,
-      checkInTimes: counts.checkInTimes, // Incluir horas de entrada
-    }
-  }).filter(trend => {
-    // Filtrar fechas que no tienen registros de asistencia para evitar mostrar días no laborales
-    // Solo mostrar fechas donde realmente hubo actividad
-    return trend.present > 0 || trend.late > 0 || trend.checkInTimes.length > 0
-  })
-
-  return trends
 }
