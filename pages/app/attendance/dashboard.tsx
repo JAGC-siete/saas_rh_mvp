@@ -5,6 +5,8 @@ import HeaderBar from '../../../components/attendance/HeaderBar'
 import KpiCards from '../../../components/attendance/KpiCards'
 import AbsenceTable from '../../../components/attendance/AbsenceTable'
 import ArrivalTable from '../../../components/attendance/ArrivalTable'
+import TrendsChart from '../../../components/attendance/TrendsChart'
+import KpiBarsChart from '../../../components/attendance/KpiBarsChart'
 import { Card } from '../../../components/ui/card'
 import { useCompanyContext } from '../../../lib/useCompanyContext'
 import { formatTimeDisplay } from '../../../lib/timezone'
@@ -14,12 +16,13 @@ import { useAttendanceData, calculateAttendanceRates, getSeverityFromDelta } fro
 export default function AttendanceDashboardApp() {
   const [preset, setPreset] = useState('today')
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('')
+  const [selectedRole, setSelectedRole] = useState('')
   const [drawer, setDrawer] = useState<{open:boolean; name:string; events:any[]}>({open:false,name:'',events:[]})
   const { companyId } = useCompanyContext()
   const [trends, setTrends] = useState<{ date: string; present: number; absent: number; late: number; checkInTimes: Array<{time: string, employee: string}> }[]>([])
 
   // Hook unificado para datos de asistencia
-  const { kpis, absent, early, late, lastUpdated, loading, error } = useAttendanceData(preset, selectedEmployeeId)
+  const { kpis, absent, early, late, lastUpdated, loading, error } = useAttendanceData(preset, selectedEmployeeId, selectedRole)
 
   // Calcular tasas derivadas
   const { total, asistenciaPct, puntualidadPct } = calculateAttendanceRates(kpis)
@@ -30,7 +33,7 @@ export default function AttendanceDashboardApp() {
       try {
         if (!companyId) return
         // USAR PRESET en lugar de fechas fijas para sincronizar con KPIs
-        const trendsUrl = `/api/reports/attendance-trends?preset=${preset}${selectedEmployeeId ? `&employee_id=${selectedEmployeeId}` : ''}`
+        const trendsUrl = `/api/reports/attendance-trends?preset=${preset}${selectedEmployeeId ? `&employee_id=${selectedEmployeeId}` : ''}${selectedRole ? `&role=${encodeURIComponent(selectedRole)}` : ''}`
         console.log('🔍 Frontend - Loading trends from:', trendsUrl)
         const res = await fetch(trendsUrl)
         const json = await res.json()
@@ -45,7 +48,7 @@ export default function AttendanceDashboardApp() {
       }
     }
     loadTrends()
-  }, [companyId, selectedEmployeeId, preset]) // Agregar preset como dependencia
+  }, [companyId, selectedEmployeeId, selectedRole, preset]) // Agregar preset y role como dependencias
 
   const handlePresetChange = (p: string) => setPreset(p)
   
@@ -127,8 +130,11 @@ export default function AttendanceDashboardApp() {
             onPresetChange={handlePresetChange}
             selectedEmployeeId={selectedEmployeeId}
             onEmployeeChange={handleEmployeeChange}
+            selectedRole={selectedRole}
+            onRoleChange={setSelectedRole}
             lastUpdated={lastUpdated}
             onExport={handleExport}
+            loading={loading}
           />
 
           {/* KPIs con tasas derivadas */}
@@ -144,6 +150,14 @@ export default function AttendanceDashboardApp() {
             loading={loading}
           />
 
+          {/* Gráfico de barras para distribución de asistencia */}
+          <Card variant="glass">
+            <div className="p-4">
+              <h3 className="text-lg font-semibold text-white mb-4">Distribución de Asistencia</h3>
+              <KpiBarsChart kpis={kpis} loading={loading} />
+            </div>
+          </Card>
+
           {/* Tablas de datos */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <AbsenceTable 
@@ -158,84 +172,43 @@ export default function AttendanceDashboardApp() {
               onSelect={handleEmployeeClick} 
             />
           </div>
-          {/* Tendencias de asistencia al final */}
-          <Card variant="glass" className="p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-white">
+          {/* Gráfico de tendencias de asistencia */}
+          <Card variant="glass">
+            <div className="p-4">
+              <h3 className="text-lg font-semibold text-white mb-4">
                 Tendencias de Asistencia {getPresetLabel(preset)}
                 {selectedEmployeeId && (
                   <span className="text-sm text-gray-400 ml-2">
                     - Empleado seleccionado
                   </span>
                 )}
+                {selectedRole && (
+                  <span className="text-sm text-gray-400 ml-2">
+                    - {selectedRole}
+                  </span>
+                )}
               </h3>
+              <TrendsChart trends={trends} loading={loading} />
+              {trends.length === 0 && !loading && (
+                <div className="text-center py-6">
+                  <p className="text-gray-400 mb-3">Sin datos en este rango.</p>
+                  <div className="flex justify-center gap-2">
+                    <button 
+                      className="px-3 py-1 bg-brand-600 text-white rounded text-sm hover:bg-brand-700 transition-colors"
+                      onClick={() => setPreset('week')}
+                    >
+                      Últimos 7 días
+                    </button>
+                    <button 
+                      className="px-3 py-1 bg-brand-600 text-white rounded text-sm hover:bg-brand-700 transition-colors"
+                      onClick={() => setPreset('month')}
+                    >
+                      Este mes
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
-            {trends.length > 0 ? (
-              <div className="space-y-2">
-                {/* Encabezados de la tabla */}
-                <div className="grid grid-cols-8 gap-2 text-sm py-2 border-b border-gray-600 font-semibold text-gray-300">
-                  <div>Fecha</div>
-                  <div>Presentes</div>
-                  <div>Ausentes</div>
-                  <div>Tarde</div>
-                  <div>Total</div>
-                  <div>Asistencia</div>
-                  <div>Puntualidad</div>
-                  <div>Horas de Entrada</div>
-                </div>
-                {(() => {
-                  console.log('🎨 Frontend - Rendering trends data:', trends)
-                  return trends.map((t) => {
-                  const total = t.present + t.late + t.absent
-                  const attendanceRate = total > 0 ? ((t.present + t.late) / total) * 100 : 0
-                  const punctualityRate = total > 0 ? (t.present / total) * 100 : 0
-                  return (
-                    <div key={t.date} className="grid grid-cols-8 gap-2 text-sm py-2 border-b border-gray-700">
-                      <div className="text-gray-300">{new Date(t.date + 'T00:00:00').toLocaleDateString('es-HN')}</div>
-                      <div className="text-emerald-400 font-medium">{t.present}</div>
-                      <div className="text-red-400 font-medium">{t.absent}</div>
-                      <div className="text-orange-400 font-medium">{t.late}</div>
-                      <div className="font-medium text-white">{total}</div>
-                      <div className="font-medium text-gray-200">{attendanceRate.toFixed(1)}%</div>
-                      <div className="font-medium text-gray-200">{punctualityRate.toFixed(1)}%</div>
-                      <div className="text-blue-400 font-medium">
-                        {t.checkInTimes && t.checkInTimes.length > 0 ? (
-                          <div className="max-h-20 overflow-y-auto">
-                            {t.checkInTimes.map((item, idx) => (
-                              <div key={idx} className="text-xs flex justify-between">
-                                <span>{formatTimeDisplay(item.time)}</span>
-                                <span className="text-gray-400 ml-2">{item.employee}</span>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-gray-500">Sin registro</span>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })
-                })()}
-              </div>
-            ) : (
-              <div className="text-center py-6">
-                <p className="text-gray-400 mb-3">Sin datos en este rango.</p>
-                <div className="flex justify-center gap-2">
-                  <button 
-                    className="px-3 py-1 bg-brand-600 text-white rounded text-sm hover:bg-brand-700 transition-colors"
-                    onClick={() => setPreset('week')}
-                  >
-                    Últimos 7 días
-                  </button>
-                  <button 
-                    className="px-3 py-1 bg-brand-600 text-white rounded text-sm hover:bg-brand-700 transition-colors"
-                    onClick={() => setPreset('month')}
-                  >
-                    Este mes
-                  </button>
-                </div>
-              </div>
-            )}
           </Card>
         </div>
         <EmployeeDrawer open={drawer.open} onClose={() => setDrawer({open:false,name:'',events:[]})} name={drawer.name} events={drawer.events} />

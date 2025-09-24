@@ -7,8 +7,11 @@ interface HeaderBarProps {
   onPresetChange: (preset: string) => void
   selectedEmployeeId: string
   onEmployeeChange: (employeeId: string) => void
+  selectedRole?: string
+  onRoleChange?: (role: string) => void
   lastUpdated: Date | null
   onExport: (format: string) => Promise<void>
+  loading?: boolean
 }
 
 export default function HeaderBar({
@@ -16,8 +19,11 @@ export default function HeaderBar({
   onPresetChange,
   selectedEmployeeId,
   onEmployeeChange,
+  selectedRole,
+  onRoleChange,
   lastUpdated,
-  onExport
+  onExport,
+  loading = false
 }: HeaderBarProps) {
   const [exporting, setExporting] = useState(false)
 
@@ -54,6 +60,9 @@ export default function HeaderBar({
         onPresetChange={onPresetChange}
         selectedEmployeeId={selectedEmployeeId}
         onEmployeeChange={onEmployeeChange}
+        selectedRole={selectedRole}
+        onRoleChange={onRoleChange}
+        loading={loading}
       />
 
       {/* Acciones del header */}

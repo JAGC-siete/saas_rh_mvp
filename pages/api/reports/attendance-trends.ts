@@ -34,7 +34,7 @@ async function attendanceTrendsHandler(req: NextApiRequest, res: NextApiResponse
     })
 
     // Obtener parámetros de query (preset o fechas específicas)
-    const { preset, startDate, endDate, employee_id } = req.query
+    const { preset, startDate, endDate, employee_id, role } = req.query
     
     // Usar preset si está disponible, sino usar fechas específicas
     let dateRange: { startDate: string; endDate: string }
@@ -48,8 +48,8 @@ async function attendanceTrendsHandler(req: NextApiRequest, res: NextApiResponse
       }
     }
 
-    // Obtener tendencias de asistencia con filtro de empleado
-    const trends = await getAttendanceTrends(supabase, userProfile, dateRange.startDate, dateRange.endDate, employee_id as string)
+    // Obtener tendencias de asistencia con filtro de empleado y role
+    const trends = await getAttendanceTrends(supabase, userProfile, dateRange.startDate, dateRange.endDate, employee_id as string, role as string)
 
     return res.status(200).json({
       success: true,
@@ -62,7 +62,7 @@ async function attendanceTrendsHandler(req: NextApiRequest, res: NextApiResponse
   }
 }
 
-async function getAttendanceTrends(supabase: any, userProfile: any, startDate: string, endDate: string, employeeId?: string) {
+async function getAttendanceTrends(supabase: any, userProfile: any, startDate: string, endDate: string, employeeId?: string, role?: string) {
   const companyId = userProfile?.company_id
 
   // Obtener registros de asistencia del período - FILTRADO POR COMPANY Y EMPLEADO
@@ -81,17 +81,24 @@ async function getAttendanceTrends(supabase: any, userProfile: any, startDate: s
     .order('date')
 
   if (companyId) {
-    // Obtener IDs de empleados de la empresa
-    const { data: companyEmployees } = await supabase
+    // Obtener IDs de empleados de la empresa con filtro por role
+    let employeeQuery = supabase
       .from('employees')
       .select('id')
       .eq('company_id', companyId)
       .eq('status', 'active')
     
+    // Aplicar filtro por role si se proporciona
+    if (role && role.trim() !== '') {
+      employeeQuery = employeeQuery.eq('role', role.trim())
+    }
+    
+    const { data: companyEmployees } = await employeeQuery
     let employeeIds = (companyEmployees || []).map((e: any) => e.id)
     
     console.log('👥 Company employees found:', employeeIds.length)
     console.log('🔍 Employee filter:', { employeeId, hasFilter: !!employeeId })
+    console.log('🔍 Role filter:', { role, hasFilter: !!role })
     
     // FILTRAR POR EMPLEADO ESPECÍFICO si se proporciona
     if (employeeId && employeeId.trim() !== '') {
@@ -182,11 +189,19 @@ async function getAttendanceTrends(supabase: any, userProfile: any, startDate: s
     const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
     employeesCount = Math.max(1, daysDiff) // Mínimo 1 día
   } else if (companyId) {
-    const { data: companyEmployees } = await supabase
+    let employeeCountQuery = supabase
       .from('employees')
       .select('id, status')
       .eq('company_id', companyId)
-    employeesCount = (companyEmployees || []).filter((e: any) => e.status === 'active').length
+      .eq('status', 'active')
+    
+    // Aplicar filtro por role si se proporciona
+    if (role && role.trim() !== '') {
+      employeeCountQuery = employeeCountQuery.eq('role', role.trim())
+    }
+    
+    const { data: companyEmployees } = await employeeCountQuery
+    employeesCount = (companyEmployees || []).length
   } else {
     // Fallback: usar empleados observados en registros
     employeesCount = new Set((data || []).map((r: any) => r.employee_id)).size

@@ -41,7 +41,7 @@ const DEFAULT_KPIS: AttendanceKPIs = {
   total_empleados: 0
 }
 
-export function useAttendanceData(preset: string, employeeId?: string): AttendanceData {
+export function useAttendanceData(preset: string, employeeId?: string, role?: string): AttendanceData {
   const [kpis, setKpis] = useState<AttendanceKPIs>(DEFAULT_KPIS)
   const [absent, setAbsent] = useState<AttendanceRow[]>([])
   const [early, setEarly] = useState<AttendanceRow[]>([])
@@ -53,7 +53,8 @@ export function useAttendanceData(preset: string, employeeId?: string): Attendan
   const fetchData = useCallback(async () => {
     const ac = new AbortController()
     const qEmp = employeeId ? `&employee_id=${employeeId}` : ''
-    const q = `?preset=${preset}${qEmp}`
+    const qRole = role ? `&role=${encodeURIComponent(role)}` : ''
+    const q = `?preset=${preset}${qEmp}${qRole}`
 
     try {
       setLoading(true)
@@ -97,7 +98,7 @@ export function useAttendanceData(preset: string, employeeId?: string): Attendan
     }
 
     return () => ac.abort()
-  }, [preset, employeeId])
+  }, [preset, employeeId, role])
 
   useEffect(() => {
     fetchData()

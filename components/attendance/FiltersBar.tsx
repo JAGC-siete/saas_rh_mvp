@@ -21,6 +21,10 @@ interface FiltersBarProps {
   // Nuevos props para empleados
   selectedEmployeeId?: string
   onEmployeeChange?: (employeeId: string) => void
+  // Nuevo prop para role/equipo
+  selectedRole?: string
+  onRoleChange?: (role: string) => void
+  loading?: boolean
 }
 
 const presets = [
@@ -43,7 +47,10 @@ export default function FiltersBar({
   endDate,
   onRangeChange,
   selectedEmployeeId = '',
-  onEmployeeChange
+  onEmployeeChange,
+  selectedRole = '',
+  onRoleChange,
+  loading = false
 }: FiltersBarProps) {
   const [localFrom, setLocalFrom] = useState(startDate || DateTime.now().toISODate())
   const [localTo, setLocalTo] = useState(endDate || DateTime.now().toISODate())
@@ -51,6 +58,10 @@ export default function FiltersBar({
   // Estado para empleados
   const [employees, setEmployees] = useState<Employee[]>([])
   const [loadingEmployees, setLoadingEmployees] = useState(false)
+  
+  // Estado para roles/equipos
+  const [roles, setRoles] = useState<string[]>([])
+  const [loadingRoles, setLoadingRoles] = useState(false)
 
   // Cargar lista de empleados activos
   useEffect(() => {
@@ -71,6 +82,29 @@ export default function FiltersBar({
     }
 
     loadEmployees()
+  }, [])
+
+  // Cargar lista de roles/equipos
+  useEffect(() => {
+    const loadRoles = async () => {
+      try {
+        setLoadingRoles(true)
+        const response = await fetch('/api/teams')
+        if (response.ok) {
+          const data = await response.json()
+          if (data?.success) {
+            setRoles(data.roles || [])
+          }
+        }
+      } catch (error) {
+        console.error('Error loading roles:', error)
+        setRoles([])
+      } finally {
+        setLoadingRoles(false)
+      }
+    }
+
+    loadRoles()
   }, [])
 
   const handleRangeChange = (from: string, to: string) => {
@@ -122,17 +156,24 @@ export default function FiltersBar({
         </div>
       )}
 
-      {/* Equipo - Mantener existente */}
-      {onTeamChange && (
-        <div>
-          <label className="block text-sm text-gray-300">Equipo</label>
-          <input
-            type="text"
-            value={team}
-            onChange={(e) => onTeamChange(e.target.value)}
-            className="bg-gray-800 text-white rounded p-2"
-            placeholder="Equipo"
-          />
+      {/* Nuevo: Select de Equipo (role) */}
+      {onRoleChange && (
+        <div className="min-w-[220px]">
+          <label className="block text-xs text-gray-400 mb-1">Equipo</label>
+          <select
+            value={selectedRole}
+            onChange={(e) => onRoleChange(e.target.value)}
+            className="w-full rounded-md bg-zinc-900/60 border border-zinc-700 px-3 py-2 text-sm"
+            disabled={loadingRoles || loading}
+          >
+            <option value="">Todos los equipos</option>
+            {roles.map(role => (
+              <option key={role} value={role}>{role}</option>
+            ))}
+          </select>
+          {loadingRoles && (
+            <div className="text-xs text-gray-400 mt-1">Cargando...</div>
+          )}
         </div>
       )}
 
