@@ -19,7 +19,25 @@ export class SecureQueryBuilder {
    * Obtener registros de asistencia con filtros de seguridad
    */
   async getAttendanceRecords(params: AttendanceExportInput) {
-    // Construir query con parámetros seguros
+    // PRIMERO: Obtener employee_ids de la empresa del usuario
+    let employeeIds: string[] = []
+    if (this.userProfile.company_id) {
+      const { data: employees, error: empError } = await this.supabase
+        .from('employees')
+        .select('id')
+        .eq('company_id', this.userProfile.company_id)
+        .eq('status', 'active')
+      
+      if (empError) {
+        console.error('❌ Error fetching employees for company:', empError)
+        throw new Error(`Error obteniendo empleados: ${empError.message}`)
+      }
+      
+      employeeIds = employees?.map((emp: any) => emp.id) || []
+      console.log('👥 Employees for company:', { count: employeeIds.length, companyId: this.userProfile.company_id })
+    }
+
+    // SEGUNDO: Construir query con parámetros seguros
     let query = this.supabase
       .from('attendance_records')
       .select(`
@@ -36,9 +54,13 @@ export class SecureQueryBuilder {
       .gte('date', params.startDate)
       .lte('date', params.endDate)
 
-    // Aplicar filtro de empresa (RLS ya debería hacer esto, pero por seguridad)
-    if (this.userProfile.company_id) {
-      query = query.eq('employees.company_id', this.userProfile.company_id)
+    // Filtrar por employee_ids de la empresa
+    if (employeeIds.length > 0) {
+      query = query.in('employee_id', employeeIds)
+    } else {
+      // Si no hay empleados, devolver array vacío
+      console.log('⚠️ No employees found for company, returning empty array')
+      return []
     }
 
     // Filtrar por empleado específico si se proporciona
