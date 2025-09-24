@@ -59,7 +59,8 @@ async function attendanceExportHandler(req: NextApiRequest, res: NextApiResponse
       }
     }
 
-    const { startDate, endDate, formato: format } = exportData
+    const { startDate, endDate, formato: rawFormat } = exportData
+    const format = String(rawFormat || 'excel').toLowerCase()
 
     console.log('Usuario autenticado para exportación de asistencia:', { 
       userId: user.id.substring(0, 8) + '...', // Ocultar ID completo
@@ -80,19 +81,23 @@ async function attendanceExportHandler(req: NextApiRequest, res: NextApiResponse
 
     console.log(`Exportando ${attendanceRecords.length} registros de asistencia para ${startDate} a ${endDate}`)
 
-    if (formato === 'excel') {
-      return exportToExcel(attendanceRecords, startDate, endDate, res)
-    } else if (formato === 'pdf') {
-      return res.status(400).json({ error: 'El PDF consolidado ahora está en /api/attendance/generate-pdf' })
-    } else {
-      return res.status(400).json({ error: 'Formato no soportado. Use "excel" o "pdf"' })
+    switch (format) {
+      case 'excel':
+      case 'xlsx':
+        return exportToExcel(attendanceRecords, startDate, endDate, res)
+      case 'csv':
+        return exportToCSV(attendanceRecords, startDate, endDate, res)
+      case 'pdf':
+        return res.status(400).json({ error: 'El PDF consolidado ahora está en /api/attendance/generate-pdf' })
+      default:
+        return res.status(400).json({ error: 'Formato no soportado. Use "excel", "xlsx" o "csv"' })
     }
 
   } catch (error) {
     console.error('Error en exportación de asistencia:', error)
     return res.status(500).json({
       error: 'Error interno del servidor',
-      message: 'Ha ocurrido un error inesperado',
+      message: error instanceof Error ? error.message : 'Ha ocurrido un error inesperado',
       timestamp: new Date().toISOString()
     })
   }
@@ -244,4 +249,69 @@ async function exportToExcel(attendanceRecords: any[], startDate: string, endDat
     console.error('Error generando Excel de asistencia:', error)
     return res.status(500).json({ error: 'Error generando archivo Excel' })
   }
+}
+
+function toCsvValue(value: any): string {
+  if (value === null || value === undefined) return ''
+  const str = String(value)
+  if (/[",\n]/.test(str)) {
+    return '"' + str.replace(/"/g, '""') + '"'
+  }
+  return str
+}
+
+async function exportToCSV(attendanceRecords: any[], startDate: string, endDate: string, res: NextApiResponse) {
+  // Encabezados (mismos campos clave usados en Excel)
+  const headers = [
+    'Código','Nombre','Departamento','Posición','Fecha','Día de la Semana','Hora de Entrada','Hora de Salida','Horas Trabajadas','Estado','Minutos de Tardanza','Horas Extra','Justificación','Categoría Justificación','Ubicación','Dispositivo','Registrado'
+  ]
+
+  const rows = attendanceRecords.map(record => {
+    const checkIn = record.check_in ? new Date(record.check_in) : null
+    const checkOut = record.check_out ? new Date(record.check_out) : null
+
+    let hoursWorked = 0
+    if (checkIn && checkOut) {
+      const diffMs = checkOut.getTime() - checkIn.getTime()
+      hoursWorked = diffMs / (1000 * 60 * 60)
+    }
+
+    let lateMinutes = 0
+    if (checkIn) {
+      const expectedTime = new Date(checkIn)
+      expectedTime.setHours(8, 0, 0, 0)
+      if (checkIn > expectedTime) {
+        lateMinutes = Math.floor((checkIn.getTime() - expectedTime.getTime()) / (1000 * 60))
+      }
+    }
+
+    const overtimeHours = Math.max(0, hoursWorked - 8)
+
+    return [
+      record.employees?.employee_code || '',
+      record.employees?.name || '',
+      record.employees?.department || '',
+      record.employees?.position || '',
+      new Date(record.date).toLocaleDateString('es-HN'),
+      new Date(record.date).toLocaleDateString('es-HN', { weekday: 'long' }),
+      checkIn ? checkIn.toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
+      checkOut ? checkOut.toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
+      hoursWorked.toFixed(2),
+      record.status === 'present' ? 'Presente' : record.status === 'late' ? 'Tardanza' : 'Ausente',
+      lateMinutes,
+      overtimeHours.toFixed(2),
+      record.justification || '',
+      record.justification_category || '',
+      record.location ? `${record.lat}, ${record.lon}` : 'N/A',
+      record.device_id || 'N/A',
+      new Date(record.created_at).toLocaleDateString('es-HN')
+    ]
+  })
+
+  const csv = [headers.map(toCsvValue).join(','), ...rows.map(r => r.map(toCsvValue).join(','))].join('\n')
+
+  const filename = `asistencia_paragon_${startDate}_${endDate}.csv`
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8')
+  res.setHeader('Content-Disposition', `attachment; filename=${filename}`)
+  res.send('\uFEFF' + csv) // BOM para Excel
 }
