@@ -22,7 +22,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     p_from: range.from,
     p_to: range.to,
     p_type: type as string,
-    p_role: (typeof role === 'string' && role.trim() !== '') ? role.trim() : null
+    p_role: (typeof role === 'string' && role.trim() !== '') ? role.trim() : null,
+    p_company_id: companyId
   }
 
   console.log('Lists RPC Args:', rpcArgs)

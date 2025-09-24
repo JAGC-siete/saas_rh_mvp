@@ -12,12 +12,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       : getDateRange(preset as string)
   
   // CORREGIR: Orden de parámetros según definición del RPC
-  // attendance_kpis_filtered(p_employee_id, p_from, p_role, p_to)
+  // attendance_kpis_filtered(p_employee_id, p_from, p_to, p_role, p_company_id)
   const rpcArgs = {
     p_employee_id: (typeof employee_id === 'string' && employee_id.trim() !== '') ? employee_id.trim() : null,
     p_from: range.from,
+    p_to: range.to,
     p_role: (typeof role === 'string' && role.trim() !== '') ? role : null,
-    p_to: range.to
+    p_company_id: companyId
   }
 
   console.log('RPC Args:', rpcArgs)

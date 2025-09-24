@@ -3,6 +3,7 @@ import { createClient } from '../../../lib/supabase/server'
 import { authenticateUser } from '../../../lib/auth-helpers'
 import { withInputValidation, createSecureErrorResponse } from '../../../lib/security/input-validation'
 import { withReportsRateLimit } from '../../../lib/security/rate-limiting'
+import { getDateRange } from '../../../lib/attendance'
 
 // Aplicar rate limiting y validación de entrada
 const handlerWithSecurity = withReportsRateLimit()(
@@ -32,11 +33,23 @@ async function attendanceTrendsHandler(req: NextApiRequest, res: NextApiResponse
       companyId: '***' // Ocultar company_id
     })
 
-    // Usar datos validados del middleware
-    const { startDate, endDate, employee_id } = req.validatedData
+    // Obtener parámetros de query (preset o fechas específicas)
+    const { preset, startDate, endDate, employee_id } = req.query
+    
+    // Usar preset si está disponible, sino usar fechas específicas
+    let dateRange: { startDate: string; endDate: string }
+    if (preset && typeof preset === 'string') {
+      const range = getDateRange(preset)
+      dateRange = { startDate: range.from.split('T')[0], endDate: range.to.split('T')[0] }
+    } else {
+      dateRange = { 
+        startDate: (startDate as string) || new Date().toISOString().split('T')[0], 
+        endDate: (endDate as string) || new Date().toISOString().split('T')[0] 
+      }
+    }
 
     // Obtener tendencias de asistencia con filtro de empleado
-    const trends = await getAttendanceTrends(supabase, userProfile, startDate, endDate, employee_id as string)
+    const trends = await getAttendanceTrends(supabase, userProfile, dateRange.startDate, dateRange.endDate, employee_id as string)
 
     return res.status(200).json({
       success: true,

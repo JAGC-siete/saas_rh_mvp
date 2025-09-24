@@ -4,6 +4,7 @@ import { authenticateUser } from '../../../lib/auth-helpers'
 import { validateAttendanceExport } from '../../../lib/security/schema-validation'
 import { createSecureQueryBuilder } from '../../../lib/security/secure-queries'
 import { withExportRateLimit } from '../../../lib/security/rate-limiting'
+import { getDateRange } from '../../../lib/attendance'
 import ExcelJS from 'exceljs'
 
 // Aplicar rate limiting
@@ -26,18 +27,33 @@ async function attendanceExportHandler(req: NextApiRequest, res: NextApiResponse
     const { user, userProfile } = authResult
     const supabase = createClient(req, res)
 
-    // VALIDACIÓN SEGURA CON ZOD
-    const validation = validateAttendanceExport(req.body)
-    if (!validation.success) {
-      return res.status(400).json({
-        error: 'Datos de entrada inválidos',
-        message: validation.error?.message,
-        details: validation.error?.details,
-        timestamp: new Date().toISOString()
-      })
+    // Obtener parámetros de query (preset o fechas específicas)
+    const { preset, formato } = req.query
+    
+    // Usar preset si está disponible, sino usar fechas del body
+    let exportData: any
+    if (preset && typeof preset === 'string') {
+      const range = getDateRange(preset)
+      exportData = {
+        startDate: range.from.split('T')[0],
+        endDate: range.to.split('T')[0],
+        formato: formato || 'excel'
+      }
+    } else {
+      // VALIDACIÓN SEGURA CON ZOD para fechas específicas
+      const validation = validateAttendanceExport(req.body)
+      if (!validation.success) {
+        return res.status(400).json({
+          error: 'Datos de entrada inválidos',
+          message: validation.error?.message,
+          details: validation.error?.details,
+          timestamp: new Date().toISOString()
+        })
+      }
+      exportData = validation.data!
     }
 
-    const { startDate, endDate, formato } = validation.data!
+    const { startDate, endDate, formato: format } = exportData
 
     console.log('Usuario autenticado para exportación de asistencia:', { 
       userId: user.id.substring(0, 8) + '...', // Ocultar ID completo
@@ -47,7 +63,7 @@ async function attendanceExportHandler(req: NextApiRequest, res: NextApiResponse
 
     // USAR QUERY BUILDER SEGURO
     const queryBuilder = createSecureQueryBuilder(supabase, userProfile!)
-    const attendanceRecords = await queryBuilder.getAttendanceRecords(validation.data!)
+    const attendanceRecords = await queryBuilder.getAttendanceRecords(exportData)
 
     if (!attendanceRecords || attendanceRecords.length === 0) {
       return res.status(404).json({ 
