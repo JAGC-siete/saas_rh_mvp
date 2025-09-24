@@ -27,9 +27,10 @@ export class SecureQueryBuilder {
         employees!attendance_records_employee_id_fkey(
           name,
           employee_code,
-          department,
+          role,
           position,
-          company_id
+          company_id,
+          department_id
         )
       `)
       .gte('date', params.startDate)
@@ -123,7 +124,7 @@ export class SecureQueryBuilder {
         employees!attendance_records_employee_id_fkey(
           name,
           employee_code,
-          department
+          role
         )
       `)
       .gte('date', params.startDate)

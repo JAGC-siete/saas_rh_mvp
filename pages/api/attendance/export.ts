@@ -183,7 +183,7 @@ async function exportToExcel(attendanceRecords: any[], startDate: string, endDat
       return {
         'Código': record.employees?.employee_code || '',
         'Nombre': record.employees?.name || '',
-        'Departamento': record.employees?.department || '',
+        'Departamento': record.employees?.role || '',
         'Posición': record.employees?.position || '',
         'Fecha': new Date(record.date).toLocaleDateString('es-HN'),
         'Día de la Semana': new Date(record.date).toLocaleDateString('es-HN', { weekday: 'long' }),
@@ -340,7 +340,7 @@ async function exportToCSV(attendanceRecords: any[], startDate: string, endDate:
     return [
       record.employees?.employee_code || '',
       record.employees?.name || '',
-      record.employees?.department || '',
+      record.employees?.role || '',
       record.employees?.position || '',
       new Date(record.date).toLocaleDateString('es-HN'),
       new Date(record.date).toLocaleDateString('es-HN', { weekday: 'long' }),
