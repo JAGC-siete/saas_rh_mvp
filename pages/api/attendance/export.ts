@@ -5,7 +5,7 @@ import { createSecureQueryBuilder } from '../../../lib/security/secure-queries'
 import { withExportRateLimit } from '../../../lib/security/rate-limiting'
 import { getDateRange } from '../../../lib/attendance'
 import ExcelJS from 'exceljs'
-import { generateAttendancePDF } from './generate-pdf'
+import { generateAttendancePDF } from '../../../lib/pdf/attendance-pdf-generator'
 
 // Aplicar rate limiting
 const handlerWithSecurity = withExportRateLimit()(attendanceExportHandler)
@@ -119,7 +119,15 @@ async function attendanceExportHandler(req: NextApiRequest, res: NextApiResponse
             userEmail: user.email
           })
           
-          const pdf = await generateAttendancePDF(attendanceRecords, startDate, endDate, user.email, Array.isArray(preset) ? preset[0] : preset, Array.isArray(roleFilter) ? roleFilter[0] : roleFilter, Array.isArray(employee_id) ? employee_id[0] : employee_id)
+          const pdf = await generateAttendancePDF({
+            attendanceRecords,
+            startDate,
+            endDate,
+            userEmail: user.email,
+            preset: Array.isArray(preset) ? preset[0] : preset,
+            role: Array.isArray(roleFilter) ? roleFilter[0] : roleFilter,
+            employeeName: Array.isArray(employee_id) ? employee_id[0] : employee_id
+          })
           
           console.log('✅ PDF Generated Successfully:', { size: pdf.length })
           res.setHeader('Content-Type', 'application/pdf')
