@@ -82,7 +82,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 // Función para generar PDF de asistencia ejecutivo (modo gerencia)
-async function generateAttendancePDF(attendanceRecords: any[], startDate: string, endDate: string, userEmail: string, preset?: string, role?: string, employeeName?: string): Promise<Buffer> {
+export async function generateAttendancePDF(attendanceRecords: any[], startDate: string, endDate: string, userEmail: string, preset?: string, role?: string, employeeName?: string): Promise<Buffer> {
   const PDFDocument = require('pdfkit')
   const doc = new PDFDocument({ margin: 50, bufferPages: true })
   

@@ -5,6 +5,7 @@ import { createSecureQueryBuilder } from '../../../lib/security/secure-queries'
 import { withExportRateLimit } from '../../../lib/security/rate-limiting'
 import { getDateRange } from '../../../lib/attendance'
 import ExcelJS from 'exceljs'
+import { generateAttendancePDF } from './generate-pdf'
 
 // Aplicar rate limiting
 const handlerWithSecurity = withExportRateLimit()(attendanceExportHandler)
@@ -106,12 +107,11 @@ async function attendanceExportHandler(req: NextApiRequest, res: NextApiResponse
       case 'csv':
         return exportToCSV(attendanceRecords, startDate, endDate, res)
       case 'pdf':
-        // Redirigir al endpoint específico de PDF (como payroll)
-        const pdfUrl = `/api/attendance/generate-pdf?preset=${preset}${employee_id ? `&employee_id=${Array.isArray(employee_id) ? employee_id[0] : employee_id}` : ''}${roleFilter ? `&role=${encodeURIComponent(Array.isArray(roleFilter) ? roleFilter[0] : roleFilter)}` : ''}`
-        return res.status(302).json({ 
-          redirect: pdfUrl,
-          message: 'Redirigiendo al generador de PDF'
-        })
+        // Generar PDF directamente (sin redirección)
+        const pdf = await generateAttendancePDF(attendanceRecords, startDate, endDate, user.email, Array.isArray(preset) ? preset[0] : preset, Array.isArray(roleFilter) ? roleFilter[0] : roleFilter, Array.isArray(employee_id) ? employee_id[0] : employee_id)
+        res.setHeader('Content-Type', 'application/pdf')
+        res.setHeader('Content-Disposition', `attachment; filename=asistencia_${startDate}_${endDate}.pdf`)
+        return res.send(pdf)
       default:
         return res.status(400).json({ error: 'Formato no soportado. Use "excel", "xlsx" o "csv"' })
     }

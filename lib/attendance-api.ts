@@ -55,7 +55,7 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
 // Attendance API endpoints
 export const attendanceApi = {
   // Export attendance data
-  export: (params: AttendanceExportParams): Promise<AttendanceExportResponse> => {
+  export: async (params: AttendanceExportParams): Promise<AttendanceExportResponse> => {
     const searchParams = new URLSearchParams()
     
     if (params.preset) searchParams.set('preset', params.preset)
@@ -66,7 +66,22 @@ export const attendanceApi = {
     if (params.endDate) searchParams.set('endDate', params.endDate)
     
     const url = `/api/attendance/export?${searchParams.toString()}`
-    return Promise.resolve({ url })
+    
+    // Para PDF, manejar descarga directa
+    if (params.formato === 'pdf') {
+      const response = await fetch(url)
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+      
+      // Crear blob y URL para descarga
+      const blob = await response.blob()
+      const downloadUrl = window.URL.createObjectURL(blob)
+      
+      return { url: downloadUrl }
+    }
+    
+    return { url }
   },
 
   // Generate PDF (when implemented)
