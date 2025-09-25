@@ -134,12 +134,12 @@ export default function LoginExisting() {
                 </Button>
 
                 <div className="text-center">
-                  <Link 
-                    href="/auth/start" 
+                  <button 
+                    onClick={() => window.location.href = '/activar'}
                     className="text-sm text-brand-300 hover:text-white transition-colors"
                   >
                     ¿No tenés cuenta? Creá una acá
-                  </Link>
+                  </button>
                 </div>
               </form>
             </CardContent>

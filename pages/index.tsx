@@ -101,12 +101,12 @@ export default function LandingPage() {
                   >
                     Servicios
                   </a>
-                  <Link
-                    href="/auth/start"
+                  <button
+                    onClick={() => window.location.href = '/activar'}
                     className="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 shadow-lg shadow-black/20 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap min-w-[160px] text-center"
                   >
                     Crea tu departamento
-                  </Link>
+                  </button>
                   <Link
                     href="/app/login"
                     className="bg-brand-600 hover:bg-brand-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 shadow-lg shadow-black/20 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap min-w-[140px] text-center"
@@ -158,13 +158,15 @@ export default function LandingPage() {
                 >
                   Servicios
                 </a>
-                <Link
-                  href="/register"
+                <button
+                  onClick={() => {
+                    setIsMobileMenuOpen(false)
+                    window.location.href = '/activar'
+                  }}
                   className="bg-green-600 hover:bg-green-700 text-white w-full text-center block py-2 px-4 rounded-lg transition-colors mb-2"
-                  onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Crea tu departamento
-                </Link>
+                </button>
                 <Link
                   href="/app/login"
                   className="bg-brand-900 hover:bg-brand-800 text-white w-full text-center block py-2 px-4 rounded-lg transition-colors"
