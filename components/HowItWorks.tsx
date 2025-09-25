@@ -7,11 +7,11 @@ export default function HowItWorks() {
       desc: 'Con PIN o QR, el sistema detecta retrasos y pide justificación automáticamente.' 
     },
     { 
-      title: '🤖 El robot hace la magia', 
+      title: '🤖 Pulso Laboral hace la magia', 
       desc: 'Convierte horas, ausencias y extras en planillas legales listas con IHSS, RAP e ISR.' 
     },
     { 
-      title: '📑 Recibís la planilla y comprobantes en segundos', 
+      title: '📑 Nómina PRO genera la planilla y comprobantes 24/7', 
       desc: 'Un PDF para tu gerencia y comprobantes automáticos en email o WhatsApp para cada empleado.' 
     },
     { 
@@ -19,8 +19,8 @@ export default function HowItWorks() {
       desc: 'Dashboard con métricas de asistencia, costos y desempeño.' 
     },
     { 
-      title: '✅ Siempre en regla con la ley hondureña', 
-      desc: 'Olvidate de multas o auditorías: todo trazado y auditable.' 
+      title: '✅ Cumplimiento con la ley hondureña', 
+      desc: 'Olvidate de cálculos manuales y deducciones: seguro y escalable.' 
     }
   ]
 
@@ -36,9 +36,9 @@ export default function HowItWorks() {
             CÓMO FUNCIONA
           </div>
           <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-8">
-            <span className="text-white">Reemplazá equipos internos costosos y consultores poco confiables</span>
+            <span className="text-white">Automatizá el 80% de las tareas de tu Recursos Humanos</span>
             <span className="hidden sm:inline"> </span>
-            <span className="text-brand-300">por una tarifa mensual fija</span>
+            <span className="text-brand-300">con tus robots de RRHH 100% hondureños</span>
           </h2>
         </div>
 
