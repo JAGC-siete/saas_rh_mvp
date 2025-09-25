@@ -373,11 +373,11 @@ export default function TrialDashboard() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <h4 className="font-semibold text-white mb-2">📧 Email de Soporte</h4>
-                  <p className="text-gray-300">soporte@humanosisu.net</p>
+                  <p className="text-gray-300">jorge7gomez@gmail.com</p>
                 </div>
                 <div>
                   <h4 className="font-semibold text-white mb-2">📱 WhatsApp</h4>
-                  <p className="text-gray-300">+504 9999-9999</p>
+                  <p className="text-gray-300">(+504)94707007</p>
                 </div>
               </div>
             </CardContent>
