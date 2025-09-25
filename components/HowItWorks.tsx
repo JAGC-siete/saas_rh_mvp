@@ -2,9 +2,26 @@ import { CheckCircleIcon } from '@heroicons/react/24/outline'
 
 export default function HowItWorks() {
   const steps = [
-    { title: 'No más contratar, gestionar o lidiar con personal de RH', desc: 'Automatizamos el 80% de las operaciones de Recursos Humanos por vos.' },
-    { title: 'Extraordinariamente simple de usar', desc: 'Agregá los parámetros específicos de tu caso de uso y nosotros nos encargamos del resto.' },
-    { title: 'Completamente libre de riesgo con empleados ilimitados', desc: '¿No te gusta tu dashboard? Podemos construir tu propio sistema.' }
+    { 
+      title: '⏱️ Tus empleados marcan asistencia sin excusas', 
+      desc: 'Con PIN o QR, el sistema detecta retrasos y pide justificación automáticamente.' 
+    },
+    { 
+      title: '🤖 El robot hace la magia', 
+      desc: 'Convierte horas, ausencias y extras en planillas legales listas con IHSS, RAP e ISR.' 
+    },
+    { 
+      title: '📑 Recibís la planilla y comprobantes en segundos', 
+      desc: 'Un PDF para tu gerencia y comprobantes automáticos en email o WhatsApp para cada empleado.' 
+    },
+    { 
+      title: '📊 Tenés control total en tiempo real', 
+      desc: 'Dashboard con métricas de asistencia, costos y desempeño.' 
+    },
+    { 
+      title: '✅ Siempre en regla con la ley hondureña', 
+      desc: 'Olvidate de multas o auditorías: todo trazado y auditable.' 
+    }
   ]
 
   return (
