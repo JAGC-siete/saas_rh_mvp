@@ -3,15 +3,15 @@ import { CheckCircleIcon } from '@heroicons/react/24/outline'
 export default function HowItWorks() {
   const steps = [
     { 
-      title: '⏱️ Tus empleados marcan asistencia sin excusas', 
-      desc: 'Con PIN o QR, el sistema detecta retrasos y pide justificación automáticamente.' 
+      title: '⏱️ Tus empleados marcan asistencia con PIN o QR', 
+      desc: 'Pulso-Loboral guarda registros, detecta patrones y pide justificación.' 
     },
     { 
-      title: '🤖 Pulso Laboral hace la magia', 
+      title: '🤖 Pulso-Laboral hace la magia', 
       desc: 'Convierte horas, ausencias y extras en planillas legales listas con IHSS, RAP e ISR.' 
     },
     { 
-      title: '📑 Nómina PRO genera la planilla y comprobantes 24/7', 
+      title: '📑 Nómina-PRO genera la planilla y comprobantes 24/7', 
       desc: 'Un PDF para tu gerencia y comprobantes automáticos en email o WhatsApp para cada empleado.' 
     },
     { 
