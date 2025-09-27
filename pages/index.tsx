@@ -92,7 +92,7 @@ export default function LandingPage() {
                     className="text-brand-200 hover:text-white px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap"
                     onClick={scrollToSection}
                   >
-                    Como funciona
+                    Cómo funciona
                   </a>
                   <a
                     href="#servicios"
@@ -105,7 +105,7 @@ export default function LandingPage() {
                     onClick={() => window.location.href = '/activar'}
                     className="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 shadow-lg shadow-black/20 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap min-w-[160px] text-center"
                   >
-                    Crea tu departamento
+                    Activar demostración gratuita
                   </button>
                   <Link
                     href="/app/login"
@@ -149,7 +149,7 @@ export default function LandingPage() {
                   className="block px-3 py-2 text-base font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  Como funciona
+                  Cómo funciona
                 </a>
                 <a
                   href="#servicios"
@@ -165,7 +165,7 @@ export default function LandingPage() {
                   }}
                   className="bg-green-600 hover:bg-green-700 text-white w-full text-center block py-2 px-4 rounded-lg transition-colors mb-2"
                 >
-                  Crea tu departamento
+                  Activar demostración gratuita
                 </button>
                 <Link
                   href="/app/login"
@@ -196,7 +196,7 @@ export default function LandingPage() {
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight">
               <span className="text-white">Recursos Humanos 100% digital y automático</span>
               <span className="hidden sm:inline"> </span>
-              <span className="text-brand-300">activa, cumplí y olvidate de las tareas repetitivas para siempre</span>
+              <span className="text-brand-300">activa, cumple y olvídate de las tareas repetitivas para siempre</span>
             </h1>
           </div>
 
@@ -228,7 +228,7 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-3 gap-8">
             {[
               { name: 'Felix Garcia', company: 'Tony\'s Mar Restaurant', employees: '40 empleados', quote: 'Ya no pierdo domingos haciendo planilla. 4 horas ahora son 4 minutos.' },
-              { name: 'Gustavo Argueta', company: 'Paragon Honduras', employees: '37 empleados', quote: 'Antes llevavamos la asistencia en un libro rojo, ahora tneemos dashboard interactivo.' },
+              { name: 'Gustavo Argueta', company: 'Paragon Honduras', employees: '37 empleados', quote: 'Antes llevábamos la asistencia en un libro rojo, ahora tenemos dashboard interactivo.' },
               { name: 'Luis Diego Maradiaga', company: 'AFI & Asociados', employees: '15 empleados', quote: 'Cero errores en IHSS desde que lo uso. Mi contador está feliz.' }
             ].map((testimonial, i) => (
               <div key={`testimonial-${i}`} className="bg-white/5 border border-white/10 rounded-xl p-6">
@@ -259,7 +259,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-4 py-12">
           <div className="text-center">
             <p className="text-slate-400 mb-4">
-              Protegemos tu información. <strong>Solo será utilizadapara contactarte</strong>.
+              Protegemos tu información. <strong>Solo será utilizada para contactarte</strong>.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center text-sm">
               <Link 
