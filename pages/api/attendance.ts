@@ -5,7 +5,8 @@ import {
   getAchievementTypeByName, 
   validateAchievementRequirements, 
   calculateAttendancePoints,
-  updateEmployeeScoreAtomic 
+  updateEmployeeScoreAtomic,
+  evaluateAndAwardAchievements
 } from '../../lib/gamification-utils'
 
 // Legacy function - now using gamification-utils
@@ -277,8 +278,8 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
         )
       }
 
-      // Check for new achievements
-      const newAchievements = await checkForAchievements(employee.id, employee.company_id ?? '')
+      // Check for new achievements across all types
+      const newAchievements = await evaluateAndAwardAchievements(employee.id, employee.company_id ?? '')
 
       const message = lateMinutes <= 5 
         ? '✅ Check-in recorded successfully'
