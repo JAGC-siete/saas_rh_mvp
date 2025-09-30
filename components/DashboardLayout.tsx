@@ -158,10 +158,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   onClick={() => {
                     // Forzar navegación con refresh para asegurar que la página se actualice
                     if (router.pathname === item.href) {
-                      // Si ya estamos en la misma página, forzar recarga
-                      window.location.reload()
+                      // Si ya estamos en la misma página, forzar recarga usando router.replace
+                      router.replace(router.asPath)
                     } else {
-                      // Navegar a la nueva página
+                      // Navegar a la nueva página con router.push
                       router.push(item.href)
                     }
                   }}
