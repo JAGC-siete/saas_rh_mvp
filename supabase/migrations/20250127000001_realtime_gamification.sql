@@ -1,7 +1,7 @@
 -- Enable realtime for gamification tables
 -- This migration adds real-time capabilities to the gamification system
 
--- 1. Enable realtime for gamification tables
+-- 1. Enable realtime for gamification tables (only actual tables, not views)
 ALTER PUBLICATION supabase_realtime ADD TABLE employee_scores;
 ALTER PUBLICATION supabase_realtime ADD TABLE employee_achievements;
 ALTER PUBLICATION supabase_realtime ADD TABLE point_history;
@@ -116,7 +116,7 @@ CREATE INDEX IF NOT EXISTS idx_employee_achievements_employee_id ON employee_ach
 CREATE INDEX IF NOT EXISTS idx_point_history_company_id ON point_history(company_id);
 CREATE INDEX IF NOT EXISTS idx_point_history_employee_id ON point_history(employee_id);
 
--- 9. Create a view for realtime leaderboard data
+-- 9. Create a view for optimized leaderboard queries (not for realtime)
 CREATE OR REPLACE VIEW realtime_leaderboard AS
 SELECT 
     es.employee_id,
@@ -134,9 +134,6 @@ SELECT
 FROM employee_scores es
 JOIN employees e ON es.employee_id = e.id
 WHERE e.status = 'active';
-
--- Enable realtime for the view
-ALTER PUBLICATION supabase_realtime ADD TABLE realtime_leaderboard;
 
 -- Grant permissions for the view
 GRANT SELECT ON realtime_leaderboard TO authenticated;

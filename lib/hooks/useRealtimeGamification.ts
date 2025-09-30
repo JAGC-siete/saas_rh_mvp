@@ -2,6 +2,9 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { createClient } from '../supabase/client'
 import { RealtimeChannel } from '@supabase/supabase-js'
 
+// Singleton channel registry by companyId to avoid duplicate subscriptions
+const channelRegistry: Map<string, { channel: RealtimeChannel; refCount: number }> = new Map()
+
 interface RealtimeGamificationConfig {
   companyId: string
   employeeId?: string
@@ -62,13 +65,71 @@ export function useRealtimeGamification(config: RealtimeGamificationConfig) {
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const maxRetries = 5
 
+  const establishChannel = useCallback((): RealtimeChannel => {
+    const channelName = `gamification_${config.companyId}`
+
+    // Create new channel with listeners
+    const newChannel = supabase
+      .channel(channelName)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'employee_scores',
+        filter: `company_id=eq.${config.companyId}`
+      }, (payload) => {
+        config.onScoreUpdate?.(payload.new as ScoreUpdateData)
+      })
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'employee_achievements',
+        filter: `company_id=eq.${config.companyId}`
+      }, (payload) => {
+        config.onAchievementUnlock?.(payload.new as AchievementData)
+      })
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'point_history',
+        filter: `company_id=eq.${config.companyId}`
+      }, (payload) => {
+        config.onPointHistory?.(payload.new as PointHistoryData)
+      })
+      .subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') {
+          setConnectionState({ status: 'connected', retryCount: 0 })
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          setConnectionState(prev => ({
+            status: 'error',
+            retryCount: prev.retryCount + 1,
+            lastError: err?.message || 'Connection error'
+          }))
+
+          if (connectionState.retryCount < maxRetries) {
+            const delay = Math.pow(2, connectionState.retryCount) * 1000
+            retryTimeoutRef.current = setTimeout(() => {
+              // Re-subscribe by re-establishing the channel
+              try {
+                supabase.removeChannel(newChannel)
+              } catch {}
+              const reChannel = establishChannel()
+              setChannel(reChannel)
+            }, delay)
+          }
+        } else if (status === 'CLOSED') {
+          setConnectionState(prev => ({ ...prev, status: 'disconnected' }))
+        }
+      })
+
+    return newChannel
+  }, [config.companyId, config.onScoreUpdate, config.onAchievementUnlock, config.onPointHistory, supabase, connectionState.retryCount])
+
   const connect = useCallback(() => {
     if (!config.companyId) {
       console.warn('useRealtimeGamification: companyId is required')
       return
     }
 
-    // Clear any existing retry timeout
     if (retryTimeoutRef.current) {
       clearTimeout(retryTimeoutRef.current)
       retryTimeoutRef.current = null
@@ -77,89 +138,27 @@ export function useRealtimeGamification(config: RealtimeGamificationConfig) {
     setConnectionState(prev => ({ ...prev, status: 'connecting' }))
 
     try {
-      const channelName = `gamification_${config.companyId}`
-      const realtimeChannel = supabase
-        .channel(channelName)
-        .on('postgres_changes', {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'employee_scores',
-          filter: `company_id=eq.${config.companyId}`
-        }, (payload) => {
-          console.log('🔔 Score update received:', payload)
-          config.onScoreUpdate?.(payload.new as ScoreUpdateData)
-        })
-        .on('postgres_changes', {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'employee_achievements',
-          filter: `company_id=eq.${config.companyId}`
-        }, (payload) => {
-          console.log('🏆 Achievement unlock received:', payload)
-          config.onAchievementUnlock?.(payload.new as AchievementData)
-        })
-        .on('postgres_changes', {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'realtime_leaderboard',
-          filter: `company_id=eq.${config.companyId}`
-        }, (payload) => {
-          console.log('📊 Leaderboard update received:', payload)
-          config.onLeaderboardUpdate?.(payload.new as LeaderboardData)
-        })
-        .on('postgres_changes', {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'point_history',
-          filter: `company_id=eq.${config.companyId}`
-        }, (payload) => {
-          console.log('💰 Point history received:', payload)
-          config.onPointHistory?.(payload.new as PointHistoryData)
-        })
-        .subscribe((status, err) => {
-          console.log('🔌 Realtime status:', status, err ? `Error: ${err.message}` : '')
-          
-          if (status === 'SUBSCRIBED') {
-            setConnectionState({
-              status: 'connected',
-              retryCount: 0
-            })
-          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-            setConnectionState(prev => ({
-              status: 'error',
-              retryCount: prev.retryCount + 1,
-              lastError: err?.message || 'Connection error'
-            }))
-            
-            // Retry with exponential backoff
-            if (connectionState.retryCount < maxRetries) {
-              const delay = Math.pow(2, connectionState.retryCount) * 1000
-              console.log(`🔄 Retrying connection in ${delay}ms (attempt ${connectionState.retryCount + 1}/${maxRetries})`)
-              
-              retryTimeoutRef.current = setTimeout(() => {
-                connect()
-              }, delay)
-            } else {
-              console.error('❌ Max retries reached, giving up')
-            }
-          } else if (status === 'CLOSED') {
-            setConnectionState(prev => ({
-              ...prev,
-              status: 'disconnected'
-            }))
-          }
-        })
+      const existing = channelRegistry.get(config.companyId)
+      if (existing) {
+        // Reuse existing channel
+        channelRegistry.set(config.companyId, { channel: existing.channel, refCount: existing.refCount + 1 })
+        setChannel(existing.channel)
+        setConnectionState({ status: 'connected', retryCount: 0 })
+        return
+      }
 
-      setChannel(realtimeChannel)
+      // Create and register a new shared channel
+      const newChannel = establishChannel()
+      channelRegistry.set(config.companyId, { channel: newChannel, refCount: 1 })
+      setChannel(newChannel)
     } catch (error) {
-      console.error('❌ Failed to create realtime channel:', error)
       setConnectionState(prev => ({
         status: 'error',
         retryCount: prev.retryCount + 1,
         lastError: error instanceof Error ? error.message : 'Unknown error'
       }))
     }
-  }, [config.companyId, supabase, connectionState.retryCount])
+  }, [config.companyId, establishChannel])
 
   const disconnect = useCallback(() => {
     if (retryTimeoutRef.current) {
@@ -167,29 +166,36 @@ export function useRealtimeGamification(config: RealtimeGamificationConfig) {
       retryTimeoutRef.current = null
     }
 
-    if (channel) {
-      console.log('🔌 Disconnecting realtime channel')
-      supabase.removeChannel(channel)
-      setChannel(null)
-      setConnectionState({
-        status: 'disconnected',
-        retryCount: 0
-      })
-    }
-  }, [channel, supabase])
+    if (!config.companyId) return
 
-  // Auto-connect on mount and when companyId changes
+    const reg = channelRegistry.get(config.companyId)
+    if (reg) {
+      const newCount = reg.refCount - 1
+      if (newCount <= 0) {
+        try {
+          // Remove and clean up the shared channel
+          supabase.removeChannel(reg.channel)
+        } catch {}
+        channelRegistry.delete(config.companyId)
+      } else {
+        channelRegistry.set(config.companyId, { channel: reg.channel, refCount: newCount })
+      }
+    }
+
+    setChannel(null)
+    setConnectionState({ status: 'disconnected', retryCount: 0 })
+  }, [config.companyId, supabase])
+
   useEffect(() => {
     if (config.companyId) {
       connect()
     }
-    
+
     return () => {
       disconnect()
     }
   }, [config.companyId, connect, disconnect])
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (retryTimeoutRef.current) {
@@ -208,7 +214,6 @@ export function useRealtimeGamification(config: RealtimeGamificationConfig) {
   }
 }
 
-// Hook for individual employee real-time updates
 export function useRealtimeEmployeeUpdates(employeeId: string, companyId: string) {
   const [employeeData, setEmployeeData] = useState<{
     scores?: ScoreUpdateData
@@ -239,7 +244,7 @@ export function useRealtimeEmployeeUpdates(employeeId: string, companyId: string
       if (data.employee_id === employeeId) {
         setEmployeeData(prev => ({
           ...prev,
-          pointHistory: [data, ...prev.pointHistory.slice(0, 9)] // Keep last 10
+          pointHistory: [data, ...prev.pointHistory.slice(0, 9)]
         }))
       }
     }
@@ -251,7 +256,6 @@ export function useRealtimeEmployeeUpdates(employeeId: string, companyId: string
   }
 }
 
-// Hook for company-wide real-time updates
 export function useRealtimeCompanyUpdates(companyId: string) {
   const [companyData, setCompanyData] = useState<{
     leaderboardUpdates: LeaderboardData[]
@@ -265,22 +269,16 @@ export function useRealtimeCompanyUpdates(companyId: string) {
 
   const { isConnected } = useRealtimeGamification({
     companyId,
-    onLeaderboardUpdate: (data) => {
-      setCompanyData(prev => ({
-        ...prev,
-        leaderboardUpdates: [data, ...prev.leaderboardUpdates.slice(0, 19)] // Keep last 20
-      }))
-    },
     onAchievementUnlock: (data) => {
       setCompanyData(prev => ({
         ...prev,
-        recentAchievements: [data, ...prev.recentAchievements.slice(0, 9)] // Keep last 10
+        recentAchievements: [data, ...prev.recentAchievements.slice(0, 9)]
       }))
     },
     onPointHistory: (data) => {
       setCompanyData(prev => ({
         ...prev,
-        recentPoints: [data, ...prev.recentPoints.slice(0, 19)] // Keep last 20
+        recentPoints: [data, ...prev.recentPoints.slice(0, 19)]
       }))
     }
   })
