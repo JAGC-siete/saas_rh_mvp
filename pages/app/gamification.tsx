@@ -4,8 +4,8 @@ import ProtectedRoute from '../../components/ProtectedRoute'
 import DashboardLayout from '../../components/DashboardLayout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
-import GamificationLeaderboard from '../../components/GamificationLeaderboard'
-import EmployeeAchievements from '../../components/EmployeeAchievements'
+import GamificationLeaderboard from '../../components/RealtimeGamificationLeaderboard'
+import EmployeeAchievements from '../../components/RealtimeEmployeeAchievements'
 import { useCompanyContext } from '../../lib/useCompanyContext'
 
 interface GamificationStats {
