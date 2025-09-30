@@ -27,6 +27,11 @@ export interface PreviewResponse {
   totalNeto: number;
   planilla: PayrollLine[];
   warning?: string | null;
+  noAttendanceWarning?: {
+    message: string;
+    detail: string;
+    action: string;
+  } | null;
 }
 
 export interface EditRequest {
