@@ -2,6 +2,8 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../lib/supabase/server'
 import { authenticateUser } from '../../../lib/auth-helpers'
 import { formatDateForHonduras, nowInHonduras, formatDateTimeForHonduras } from '../../../lib/timezone'
+import { withExportRateLimit } from '../../../lib/security/rate-limiting'
+import ExcelJS from 'exceljs'
 
 interface ReportData {
   employees: any[]
@@ -17,7 +19,7 @@ interface ReportData {
   }
 }
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
@@ -45,8 +47,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { format, dateFilter, reportType } = req.body
     
     // Validaciones
-    if (!format || !['pdf', 'csv'].includes(format)) {
-      return res.status(400).json({ error: 'Formato inválido (debe ser pdf o csv)' })
+    const allowedFormats = reportType === 'attendance' ? ['pdf', 'csv', 'excel'] : ['pdf', 'csv']
+    if (!format || !allowedFormats.includes(format)) {
+      return res.status(400).json({ error: `Formato inválido (permitidos: ${allowedFormats.join(', ')})` })
     }
     
     if (!dateFilter || !dateFilter.startDate || !dateFilter.endDate) {
@@ -63,6 +66,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Obtener datos del reporte
     const reportData = await generateReportData(supabase, dateFilter, userProfile)
 
+    if (format === 'excel' && reportType === 'attendance') {
+      return generateAttendanceExcel(res, reportData, dateFilter)
+    }
+
     if (format === 'pdf') {
       return generatePDFReport(res, reportData, dateFilter)
     } else {
@@ -77,6 +84,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
   }
 }
+
+export default withExportRateLimit()(handler)
 
 async function generateReportData(supabase: any, dateFilter: any, userProfile: any): Promise<ReportData> {
   // Obtener empleados activos
@@ -456,3 +465,46 @@ function generateCSVReport(res: NextApiResponse, reportData: ReportData, dateFil
     throw error
   }
 } 
+
+async function generateAttendanceExcel(res: NextApiResponse, reportData: ReportData, dateFilter: any) {
+  try {
+    const workbook = new ExcelJS.Workbook()
+    const sheet = workbook.addWorksheet('Asistencia')
+
+    sheet.columns = [
+      { header: 'Empleado', key: 'employee', width: 25 },
+      { header: 'Fecha', key: 'date', width: 14 },
+      { header: 'Estado', key: 'status', width: 12 },
+      { header: 'Entrada', key: 'check_in', width: 18 },
+      { header: 'Salida', key: 'check_out', width: 18 },
+      { header: 'Min Tardanza', key: 'late_minutes', width: 14 }
+    ]
+
+    const employeeById = new Map<string, any>()
+    for (const emp of reportData.employees) {
+      employeeById.set(emp.id, emp)
+    }
+
+    for (const r of reportData.attendance) {
+      const emp = employeeById.get(r.employee_id)
+      sheet.addRow({
+        employee: emp?.name || r.employee_id,
+        date: new Date(r.date + 'T00:00:00').toLocaleDateString('es-HN'),
+        status: r.status,
+        check_in: r.check_in ? new Date(r.check_in).toLocaleString('es-HN', { timeZone: 'America/Tegucigalpa' }) : '',
+        check_out: r.check_out ? new Date(r.check_out).toLocaleString('es-HN', { timeZone: 'America/Tegucigalpa' }) : '',
+        late_minutes: r.late_minutes || ''
+      })
+    }
+
+    sheet.getRow(1).font = { bold: true }
+
+    const buffer = await workbook.xlsx.writeBuffer()
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    res.setHeader('Content-Disposition', `attachment; filename=asistencia_${dateFilter.startDate}_${dateFilter.endDate}.xlsx`)
+    res.send(Buffer.from(buffer))
+  } catch (error) {
+    console.error('Error generando Excel de asistencia:', error)
+    throw error
+  }
+}

@@ -136,10 +136,11 @@ work_schedules (1) → (*) employees
 - `GET /api/attendance/kpis` - KPIs de asistencia
 
 ### Reportes
-- `GET /api/reports/dashboard-stats` - Estadísticas dashboard
-- `GET /api/reports/export-attendance` - Exportar asistencia
-- `GET /api/reports/export-payroll` - Exportar nómina
-- `POST /api/reports/export-work-certificate` - Certificado laboral
+- `GET /api/reports` - Resumen de reportes y estadísticas básicas de la empresa
+- `POST /api/reports/export` - Exportar reportes usando cuerpo:
+  - `format`: `csv` | `pdf` | `excel` (Excel actualmente soportado para `reportType = attendance`)
+  - `dateFilter`: `{ startDate, endDate }`
+  - `reportType`: `attendance` | `payroll` | `employees`
 
 ### Gamificación
 - `GET /api/gamification/leaderboard` - Tabla de clasificación

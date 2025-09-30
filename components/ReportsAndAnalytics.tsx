@@ -102,9 +102,9 @@ export default function ReportsAndAnalytics() {
       setLoading(true)
       setError(null)
 
-      console.log('Fetching dashboard stats for company:', companyId, 'period:', { monthStart, monthEnd })
+      console.log('Fetching reports summary for company:', companyId)
 
-      const response = await fetch(`/api/reports/dashboard-stats?startDate=${monthStart}&endDate=${monthEnd}`, {
+      const response = await fetch(`/api/reports`, {
         credentials: 'include'
       })
       
@@ -115,19 +115,33 @@ export default function ReportsAndAnalytics() {
       
       const result = await response.json()
       
-      console.log('Dashboard stats response:', result)
+      console.log('Reports summary response:', result)
       
-      if (result.success) {
-        setStats(result.data)
-        console.log('Dashboard stats loaded successfully:', result.data)
+      if (result.success && result.reports && result.reports.stats) {
+        const apiStats = result.reports.stats as { employees?: number; attendance_records?: number; payroll_records?: number }
+        const mapped: DashboardStats = {
+          totalEmployees: apiStats.employees || 0,
+          activeEmployees: apiStats.employees || 0,
+          totalAttendance: apiStats.attendance_records || 0,
+          presentDays: 0,
+          lateDays: 0,
+          absentDays: 0,
+          attendanceRate: 0,
+          punctualityRate: 0,
+          pendingPayrolls: apiStats.payroll_records || 0,
+          thisPeriodLeaves: 0,
+          period: { startDate: monthStart, endDate: monthEnd }
+        }
+        setStats(mapped)
+        console.log('Reports stats mapped successfully:', mapped)
       } else {
-        throw new Error(result.error || 'Error en la respuesta del servidor')
+        throw new Error(result.error || 'Respuesta de reportes inválida')
       }
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error desconocido'
       setError(errorMessage)
-      console.error('Error fetching dashboard stats:', err)
+      console.error('Error fetching reports summary:', err)
     } finally {
       setLoading(false)
     }
@@ -137,7 +151,7 @@ export default function ReportsAndAnalytics() {
   // Tendencias movidas al dashboard de asistencia
 
   // Función para exportar reportes
-  const exportReport = useCallback(async (type: 'attendance' | 'payroll' | 'employees', format: 'csv' | 'excel' | 'pdf' = 'csv') => {
+  const exportReport = useCallback(async (type: 'attendance' | 'payroll' | 'employees', format: 'csv' | 'pdf' | 'excel' = 'csv') => {
     if (!companyId) {
       setError('No hay empresa seleccionada')
       return
@@ -147,16 +161,18 @@ export default function ReportsAndAnalytics() {
       setLoading(true)
       setError(null)
 
-      const response = await fetch(`/api/reports/export-${type}`, {
+      const response = await fetch(`/api/reports/export`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          formato: format,
-          startDate: dateRange.startDate,
-          endDate: dateRange.endDate
-          // company_id now comes from auth context
+          format,
+          dateFilter: {
+            startDate: dateRange.startDate,
+            endDate: dateRange.endDate
+          },
+          reportType: type
         }),
         credentials: 'include'
       })
@@ -173,7 +189,7 @@ export default function ReportsAndAnalytics() {
       a.href = url
       
       // Determinar extensión del archivo
-      const extension = format === 'excel' ? 'xlsx' : format === 'pdf' ? 'pdf' : 'csv'
+      const extension = format === 'pdf' ? 'pdf' : 'csv'
       a.download = `${type}_report_${dateRange.startDate}_${dateRange.endDate}.${extension}`
       a.click()
       window.URL.revokeObjectURL(url)
@@ -374,14 +390,16 @@ export default function ReportsAndAnalytics() {
               >
                 CSV
               </Button>
+              {/* Excel no soportado actualmente por el backend */}
               <Button
-                onClick={() => exportReport('attendance', 'excel')}
+                onClick={() => exportReport('attendance', 'excel' as any)}
                 variant="outline"
                 size="sm"
                 className="bg-white/5 border-white/20 text-white hover:bg-white/10"
               >
                 Excel
               </Button>
+              {/* PDF no soportado actualmente por el backend */}
               <Button
                 onClick={() => exportReport('attendance', 'pdf')}
                 variant="outline"

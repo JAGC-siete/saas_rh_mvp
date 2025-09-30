@@ -60,7 +60,7 @@ export function useReports(): UseReportsReturn {
       setLoading(true)
       setError(null)
 
-      const response = await fetch(`/api/reports/dashboard-stats?startDate=${startDate}&endDate=${endDate}`)
+      const response = await fetch(`/api/reports`, { credentials: 'include' })
       
       if (!response.ok) {
         const errorData = await response.json()
@@ -69,8 +69,22 @@ export function useReports(): UseReportsReturn {
       
       const result = await response.json()
       
-      if (result.success) {
-        setStats(result.data)
+      if (result.success && result.reports && result.reports.stats) {
+        const apiStats = result.reports.stats as { employees?: number; attendance_records?: number; payroll_records?: number }
+        const mapped: DashboardStats = {
+          totalEmployees: apiStats.employees || 0,
+          activeEmployees: apiStats.employees || 0,
+          totalAttendance: apiStats.attendance_records || 0,
+          presentDays: 0,
+          lateDays: 0,
+          absentDays: 0,
+          attendanceRate: 0,
+          punctualityRate: 0,
+          pendingPayrolls: apiStats.payroll_records || 0,
+          thisPeriodLeaves: 0,
+          period: { startDate, endDate }
+        }
+        setStats(mapped)
       } else {
         throw new Error(result.error || 'Error en la respuesta del servidor')
       }
@@ -128,15 +142,17 @@ export function useReports(): UseReportsReturn {
       setLoading(true)
       setError(null)
 
-      const response = await fetch(`/api/reports/export-${type}`, {
+      const response = await fetch(`/api/reports/export`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           format: 'csv',
-          dateFilter: { startDate, endDate }
-        })
+          dateFilter: { startDate, endDate },
+          reportType: type
+        }),
+        credentials: 'include'
       })
 
       if (!response.ok) {
