@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { useAuth } from '../lib/auth'
@@ -38,92 +38,79 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [loadingPermissions, setLoadingPermissions] = useState(true)
   const router = useRouter()
 
-  // Obtener permisos del usuario
-  useEffect(() => {
-    const fetchUserPermissions = async () => {
-      if (!user?.id) return
-      
-      try {
-        setLoadingPermissions(true)
-        console.log('🔍 Fetching permissions for user:', user.id, user.email)
-        
-        const supabaseClient = createClient()
-        const { data, error } = await supabaseClient
-          .from('user_profiles')
-          .select('permissions')
-          .eq('id', user.id)
-          .single()
-        
-        console.log('📋 Permissions query result:', { data, error, userId: user.id })
+  // Memoizar permisos por defecto para evitar recreación
+  const defaultPermissions = useMemo(() => ({
+    dashboard: true,
+    employees: true,
+    departments: true,
+    attendance: true,
+    leave: true,
+    payroll: true,
+    reports: true,
+    gamification: true,
+    settings: false
+  }), [])
 
-        if (error || !data) {
-          if (error) {
-            console.error('❌ Error fetching user permissions:', error)
-            console.error('❌ Error details:', {
-              message: error.message,
-              code: error.code,
-              details: error.details,
-              hint: error.hint
-            })
-          } else {
-            console.warn('⚠️ No user profile data found for user:', user.id, 'using default permissions')
-          }
-          // Usar permisos por defecto si hay error o no hay data
-          setUserPermissions({
-            dashboard: true,
-            employees: true,
-            departments: true,
-            attendance: true,
-            leave: true,
-            payroll: true,
-            reports: true,
-            gamification: true,
-            settings: false
+  // Obtener permisos del usuario - solo cuando cambie el usuario
+  const fetchUserPermissions = useCallback(async () => {
+    if (!user?.id) {
+      setUserPermissions(defaultPermissions)
+      setLoadingPermissions(false)
+      return
+    }
+    
+    try {
+      setLoadingPermissions(true)
+      console.log('🔍 Fetching permissions for user:', user.id, user.email)
+      
+      const supabaseClient = createClient()
+      const { data, error } = await supabaseClient
+        .from('user_profiles')
+        .select('permissions')
+        .eq('id', user.id)
+        .single()
+      
+      console.log('📋 Permissions query result:', { data, error, userId: user.id })
+
+      if (error || !data) {
+        if (error) {
+          console.error('❌ Error fetching user permissions:', error)
+          console.error('❌ Error details:', {
+            message: error.message,
+            code: error.code,
+            details: error.details,
+            hint: error.hint
           })
         } else {
-          // Verificar que data.permissions existe antes de usarlo
-          const permissions = data.permissions || {
-            dashboard: true,
-            employees: true,
-            departments: true,
-            attendance: true,
-            leave: true,
-            payroll: true,
-            reports: true,
-            gamification: true,
-            settings: false
-          }
-          setUserPermissions(permissions)
+          console.warn('⚠️ No user profile data found for user:', user.id, 'using default permissions')
         }
-      } catch (error) {
-        console.error('Error in fetchUserPermissions:', error)
-        // Usar permisos por defecto si hay error
-        setUserPermissions({
-          dashboard: true,
-          employees: true,
-          departments: true,
-          attendance: true,
-          leave: true,
-          payroll: true,
-          reports: true,
-          gamification: true,
-          settings: false
-        })
-      } finally {
-        setLoadingPermissions(false)
+        // Usar permisos por defecto si hay error o no hay data
+        setUserPermissions(defaultPermissions)
+      } else {
+        // Verificar que data.permissions existe antes de usarlo
+        const permissions = data.permissions || defaultPermissions
+        setUserPermissions(permissions)
       }
+    } catch (error) {
+      console.error('Error in fetchUserPermissions:', error)
+      // Usar permisos por defecto si hay error
+      setUserPermissions(defaultPermissions)
+    } finally {
+      setLoadingPermissions(false)
     }
+  }, [user?.id, defaultPermissions])
 
+  useEffect(() => {
     fetchUserPermissions()
-  }, [user?.id])
+  }, [fetchUserPermissions])
 
-  const handleSignOut = async () => {
+  const handleSignOut = useCallback(async () => {
     await logout()
     router.push('/app/login')
-  }
+  }, [logout, router])
 
-  // Definir navegación con permisos
-  const navigationItems = [
+  // Definir navegación con permisos - memoizada para evitar recreación
+  const navigationItems = useMemo(() => [
     { name: 'Dashboard', href: '/app/dashboard', icon: ChartBarIcon, permission: 'dashboard' },
     { name: 'Empleados', href: '/app/employees', icon: UsersIcon, permission: 'employees' },
     { name: 'Departamentos', href: '/app/departments', icon: UsersIcon, permission: 'departments' },
@@ -133,13 +120,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Reportes', href: '/app/reports', icon: ChartBarIcon, permission: 'reports' },
     { name: 'Gamificación', href: '/app/gamification', icon: TrophyIcon, permission: 'gamification' },
     { name: 'Configuración', href: '/app/settings', icon: Cog6ToothIcon, permission: 'settings' },
-  ]
+  ], [])
 
-  // Filtrar navegación basada en permisos
-  const filteredNavigation = navigationItems.filter(item => {
-    if (loadingPermissions) return true // Mostrar todo mientras carga
-    return userPermissions[item.permission as keyof UserPermissions] !== false
-  })
+  // Filtrar navegación basada en permisos - memoizada
+  const filteredNavigation = useMemo(() => {
+    return navigationItems.filter(item => {
+      if (loadingPermissions) return true // Mostrar todo mientras carga
+      return userPermissions[item.permission as keyof UserPermissions] !== false
+    })
+  }, [navigationItems, loadingPermissions, userPermissions])
 
   return (
     <div className="h-screen flex overflow-hidden bg-app">
