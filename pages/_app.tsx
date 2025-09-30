@@ -1,4 +1,5 @@
 import { AppProps } from 'next/app'
+import Head from 'next/head'
 import { createClient } from '../lib/supabase/client'
 import { createContext, useState, useEffect } from 'react'
 import { AuthProvider } from '../lib/auth'
@@ -61,6 +62,12 @@ export default function App({ Component, pageProps }: AppProps) {
       <AuthProvider>
         <NotificationProvider>
           <div className="min-h-screen bg-app">
+            <Head>
+              <title>Servicio Hondureño de Recursos Humanos | Digital & Automatizado</title>
+              <meta name="title" content="Servicio Hondureño de Recursos Humanos | Digital & Automatizado" />
+              <meta name="twitter:title" content="Servicio Hondureño de Recursos Humanos | Digital & Automatizado" />
+              <meta property="og:title" content="Servicio Hondureño de Recursos Humanos | Digital & Automatizado" />
+            </Head>
             <Component {...pageProps} />
           </div>
         </NotificationProvider>

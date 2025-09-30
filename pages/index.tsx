@@ -36,7 +36,7 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-app pt-20 relative">
       <Head>
-        <title>Software de Recursos Humanos en Honduras | Asistencia & Nómina</title>
+        <title>Servicio Hondureño de Recursos Humanos | Digital & Automatizado</title>
         <link rel="icon" href="/logo-humano-sisu.png" />
         <meta
           name="description"
@@ -45,13 +45,13 @@ export default function LandingPage() {
         <meta name="keywords" content="planilla Honduras, IHSS, RAP, ISR, automatización RH, STSS, Humano SISU, innovación" />
         <meta name="author" content="Humano SISU" />
         <meta name="robots" content="index, follow" />
-        <meta property="og:title" content="Software de Recursos Humanos en Honduras | Asistencia & Nómina" />
+        <meta property="og:title" content="Servicio Hondureño de Recursos Humanos | Digital & Automatizado" />
         <meta property="og:description" content="RH en automático y digital: asistencia, nómina con deducciones IHSS, RAP, ISR exactas, comprobantes de pago enviados directo a tus empleados." />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://humano-sisu.com" />
         <meta property="og:image" content="/logo-humano-sisu.png" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Software de Recursos Humanos en Honduras | Asistencia & Nómina" />
+        <meta name="twitter:title" content="Servicio Hondureño de Recursos Humanos | Digital & Automatizado" />
         <meta name="twitter:description" content="RH en automático y digital: asistencia, nómina con deducciones IHSS, RAP, ISR exactas, comprobantes de pago enviados directo a tus empleados." />
         <link rel="canonical" href="https://humano-sisu.com" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
