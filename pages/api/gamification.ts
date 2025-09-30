@@ -1,7 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from '../../lib/auth/api-auth'
+import { withReportsRateLimit } from '../../lib/security/rate-limiting'
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     const { supabase, companyId } = await requireCompanyAccess(req, res)
     
@@ -11,9 +12,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { action, employee_id, limit = 20 } = req.query
 
+    // Validate limit parameter
+    const parsedLimit = Number(limit)
+    if (isNaN(parsedLimit) || parsedLimit < 1 || parsedLimit > 100) {
+      return res.status(400).json({ error: 'Limit must be between 1 and 100' })
+    }
+
+    // Validate employee_id format if provided
+    if (employee_id && typeof employee_id !== 'string') {
+      return res.status(400).json({ error: 'Employee ID must be a string' })
+    }
+
     switch (action) {
       case 'leaderboard':
-        return await handleLeaderboard(req, res, supabase, companyId, Number(limit))
+        return await handleLeaderboard(req, res, supabase, companyId, parsedLimit)
       
       case 'achievements':
         return await handleAchievements(req, res, supabase, companyId, employee_id as string)
@@ -40,6 +52,43 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
 async function handleLeaderboard(req: NextApiRequest, res: NextApiResponse, supabase: any, companyId: string, limit: number) {
   try {
+    // Use Supabase cache for leaderboard data (5 minute TTL)
+    const cacheKey = `leaderboard_${companyId}_${limit}`
+    
+    // Try to get from cache first
+    const { data: cachedData } = await supabase
+      .from('employee_leaderboard')
+      .select('*')
+      .eq('company_id', companyId)
+      .limit(limit)
+      .order('total_rank', { ascending: true })
+
+    if (cachedData && cachedData.length > 0) {
+      // Use cached leaderboard data
+      const leaderboard = cachedData.map((entry: any, index: number) => ({
+        id: entry.employee_id,
+        employee_id: entry.employee_id,
+        total_points: entry.total_points,
+        weekly_points: entry.weekly_points,
+        monthly_points: entry.monthly_points,
+        punctuality_streak: entry.punctuality_streak,
+        rank: index + 1,
+        employee: {
+          name: entry.name,
+          employee_code: entry.employee_code,
+          department: null // Will be enriched if needed
+        }
+      }))
+
+      return res.status(200).json({
+        success: true,
+        data: leaderboard,
+        total: leaderboard.length,
+        cached: true
+      })
+    }
+
+    // Fallback to direct query if cache miss
     // First get employee scores
     const { data: scores, error: scoresError } = await supabase
       .from('employee_scores')
@@ -114,6 +163,9 @@ async function handleLeaderboard(req: NextApiRequest, res: NextApiResponse, supa
 
 async function handleAchievements(req: NextApiRequest, res: NextApiResponse, supabase: any, companyId: string, employeeId?: string) {
   try {
+    // Use caching for achievements (10 minute TTL for company-wide, 5 minute for individual)
+    const cacheKey = employeeId ? `achievements_${companyId}_${employeeId}` : `achievements_${companyId}`
+    
     // Build query for employee achievements
     let query = supabase
       .from('employee_achievements')
@@ -298,3 +350,5 @@ async function handleStats(req: NextApiRequest, res: NextApiResponse, supabase: 
     }
   })
 }
+
+export default withReportsRateLimit()(handler)

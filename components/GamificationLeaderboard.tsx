@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, memo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { TrophyIcon, StarIcon } from '@heroicons/react/24/solid'
 import { AcademicCapIcon } from '@heroicons/react/24/outline'
@@ -26,7 +26,7 @@ interface GamificationLeaderboardProps {
   limit?: number
 }
 
-export default function GamificationLeaderboard({ companyId: propCompanyId, limit = 20 }: GamificationLeaderboardProps) {
+export default memo(function GamificationLeaderboard({ companyId: propCompanyId, limit = 20 }: GamificationLeaderboardProps) {
   const { companyId: contextCompanyId, loading: companyLoading } = useCompanyContext()
   
   // Usar companyId de props si está disponible, sino del contexto
@@ -197,4 +197,4 @@ export default function GamificationLeaderboard({ companyId: propCompanyId, limi
       </CardContent>
     </Card>
   )
-}
+})

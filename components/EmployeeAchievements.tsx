@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, memo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { useCompanyContext } from '../lib/useCompanyContext'
 
@@ -23,7 +23,7 @@ interface EmployeeAchievementsProps {
   limit?: number
 }
 
-export default function EmployeeAchievements({ companyId: propCompanyId, employeeId, limit = 10 }: EmployeeAchievementsProps) {
+export default memo(function EmployeeAchievements({ companyId: propCompanyId, employeeId, limit = 10 }: EmployeeAchievementsProps) {
   const { companyId: contextCompanyId, loading: companyLoading } = useCompanyContext()
   
   // Usar companyId de props si está disponible, sino del contexto
@@ -184,4 +184,4 @@ export default function EmployeeAchievements({ companyId: propCompanyId, employe
       </CardContent>
     </Card>
   )
-}
+})

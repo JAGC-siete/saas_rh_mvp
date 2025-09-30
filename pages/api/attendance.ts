@@ -1,116 +1,94 @@
 import { createAdminClient, createClient } from '../../lib/supabase/server'
 import { getTodayInHonduras, getHondurasTime, nowInHonduras } from '../../lib/timezone'
 import { incrementUsage } from '../../lib/billing/enforce'
+import { 
+  getAchievementTypeByName, 
+  validateAchievementRequirements, 
+  calculateAttendancePoints,
+  updateEmployeeScoreAtomic 
+} from '../../lib/gamification-utils'
 
-// Gamification helper functions
-async function calculateAttendancePoints(employeeId: string, lateMinutes: number, isEarly: boolean): Promise<number> {
-  let points = 5 // Base points for attendance
-  
-  if (isEarly) points += 3 // Early arrival bonus
-  if (lateMinutes <= 5) points += 2 // Punctuality bonus
-  if (lateMinutes === 0) points += 5 // Perfect attendance bonus
-  if (lateMinutes > 5) points -= Math.min(10, Math.floor(lateMinutes / 5)) // Late penalty
-  
-  return Math.max(0, points)
+// Legacy function - now using gamification-utils
+async function calculateAttendancePointsLegacy(employeeId: string, lateMinutes: number, isEarly: boolean): Promise<number> {
+  return calculateAttendancePoints(lateMinutes, isEarly, lateMinutes === 0)
 }
 
-async function updateEmployeeScore(employeeId: string, companyId: string, points: number, reason: string, actionType: string) {
-  const supabase = createAdminClient()
-  
-  // Update or insert employee score
-  const { data: existingScore } = await supabase
-    .from('employee_scores')
-    .select('*')
-    .eq('employee_id', employeeId)
-    .single()
-  
-  if (existingScore) {
-    await supabase
-      .from('employee_scores')
-      .update({
-        total_points: (existingScore.total_points ?? 0) + points,
-        weekly_points: (existingScore.weekly_points ?? 0) + points,
-        monthly_points: (existingScore.monthly_points ?? 0) + points,
-        updated_at: getHondurasTime().toISOString()
-      })
-      .eq('employee_id', employeeId)
-  } else {
-    await supabase
-      .from('employee_scores')
-      .insert({
-        employee_id: employeeId,
-        company_id: companyId,
-        total_points: points,
-        weekly_points: points,
-        monthly_points: points
-      })
-  }
-  
-  // Record in point history
-  await supabase
-    .from('point_history')
-    .insert({
-      employee_id: employeeId,
-      company_id: companyId,
-      points_earned: points,
-      reason,
-      action_type: actionType
-    })
+// Legacy function - now using gamification-utils
+async function updateEmployeeScoreLegacy(employeeId: string, companyId: string, points: number, reason: string, actionType: string) {
+  return await updateEmployeeScoreAtomic(employeeId, companyId, points, reason, actionType)
 }
 
 async function checkForAchievements(employeeId: string, companyId: string): Promise<any[]> {
   const supabase = createAdminClient()
-  
-  // This is a simplified version - would need more complex logic for real achievements
   const achievements: any[] = []
   
-  // Check for "Perfect Week" achievement (5 days punctual this week)
-  const startOfWeek = nowInHonduras()
-  startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay())
-  startOfWeek.setHours(0, 0, 0, 0)
-  
-  const { data: weeklyRecords } = await supabase
-    .from('attendance_records')
-    .select('late_minutes')
-    .eq('employee_id', employeeId)
-    .gte('date', startOfWeek.toISOString().split('T')[0])
-            .lte('date', getTodayInHonduras())
-  
-  if (weeklyRecords && weeklyRecords.length >= 5) {
-    const punctualDays = weeklyRecords.filter(r => (r.late_minutes || 0) <= 5).length
-    if (punctualDays >= 5) {
-      // Check if achievement already exists
-      const { data: existingAchievement } = await supabase
-        .from('employee_achievements')
-        .select('id')
-        .eq('employee_id', employeeId)
-        .eq('achievement_type_id', 1) // Perfect Week achievement
-        .gte('earned_at', startOfWeek.toISOString())
-        .single()
+  try {
+    // Get achievement types dynamically
+    const perfectWeekType = await getAchievementTypeByName('Perfect Week')
+    if (!perfectWeekType) {
+      console.warn('Perfect Week achievement type not found')
+      return achievements
+    }
+
+    // Check for "Perfect Week" achievement (5 days punctual this week)
+    const startOfWeek = nowInHonduras()
+    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay())
+    startOfWeek.setHours(0, 0, 0, 0)
+    
+    const { data: weeklyRecords } = await supabase
+      .from('attendance_records')
+      .select('late_minutes, date, status')
+      .eq('employee_id', employeeId)
+      .gte('date', startOfWeek.toISOString().split('T')[0])
+      .lte('date', getTodayInHonduras())
+    
+    if (weeklyRecords && weeklyRecords.length >= 5) {
+      // Use utility function to validate achievement
+      const isValid = validateAchievementRequirements(perfectWeekType, weeklyRecords)
       
-      if (!existingAchievement) {
-        const { data: newAchievement } = await supabase
+      if (isValid) {
+        // Check if achievement already exists for this week
+        const { data: existingAchievement } = await supabase
           .from('employee_achievements')
-          .insert({
-            employee_id: employeeId,
-            achievement_type_id: 1,
-            company_id: companyId,
-            points_earned: 50
-          })
-          .select('*, achievement_types(*)')
+          .select('id')
+          .eq('employee_id', employeeId)
+          .eq('achievement_type_id', perfectWeekType.id)
+          .gte('earned_at', startOfWeek.toISOString())
           .single()
         
-        if (newAchievement) {
-          achievements.push(newAchievement)
-          // Award bonus points
-          await updateEmployeeScore(employeeId, companyId, 50, 'Perfect Week Achievement', 'achievement')
+        if (!existingAchievement) {
+          const { data: newAchievement } = await supabase
+            .from('employee_achievements')
+            .insert({
+              employee_id: employeeId,
+              achievement_type_id: perfectWeekType.id,
+              company_id: companyId,
+              points_earned: perfectWeekType.points_reward
+            })
+            .select('*, achievement_types(*)')
+            .single()
+          
+          if (newAchievement) {
+            achievements.push(newAchievement)
+            // Award bonus points using atomic update
+            await updateEmployeeScoreAtomic(
+              employeeId, 
+              companyId, 
+              perfectWeekType.points_reward, 
+              'Perfect Week Achievement', 
+              'achievement'
+            )
+          }
         }
       }
     }
+  } catch (error) {
+    console.error('Error checking achievements:', error)
   }
   
   return achievements
 }
+
 import { NextApiRequest, NextApiResponse } from 'next'
 
 // Attendance API Handler
@@ -287,10 +265,10 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
 
       // Calculate and award points for gamification
       const isEarly = currentMinutes <= expectedMinutes - 5
-      const pointsEarned = await calculateAttendancePoints(employee.id, lateMinutes, isEarly)
+      const pointsEarned = await calculateAttendancePointsLegacy(employee.id, lateMinutes, isEarly)
       
       if (pointsEarned > 0) {
-        await updateEmployeeScore(
+        await updateEmployeeScoreLegacy(
           employee.id, 
           employee.company_id ?? '', 
           pointsEarned,
