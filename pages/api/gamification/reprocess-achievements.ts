@@ -79,6 +79,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         results.push({
           employee_id: employee.id,
           employee_name: employee.name,
+          achievements_awarded: 0,
           error: error instanceof Error ? error.message : 'Error desconocido'
         })
       }
