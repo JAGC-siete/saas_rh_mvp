@@ -322,6 +322,12 @@ ENV TZ=America/Tegucigalpa
   - Autorización por administrador
   - Generación de vouchers PDF
   - Envío masivo por email
+- **Política de Deducciones**:
+  - Las deducciones (IHSS, RAP, ISR) se aplican **completas** en la quincena seleccionada
+  - No se prorratean: si se genera nómina para quincena 1, se deducen los montos mensuales completos
+  - Esto significa que en quincena 1 se descuenta el IHSS/RAP/ISR del mes completo
+  - En quincena 2 se vuelven a aplicar las mismas deducciones mensuales completas
+  - Esta política está diseñada para cumplir con regulaciones hondureñas donde las deducciones se calculan sobre el salario mensual completo
 
 ### 3. Control de Asistencia
 - **Registro público** sin autenticación

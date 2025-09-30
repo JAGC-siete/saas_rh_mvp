@@ -1,8 +1,9 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from '../../../lib/auth/api-auth'
 import { nowInHonduras } from '../../../lib/timezone'
+import { withReportsRateLimit } from '../../../lib/security/rate-limiting'
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
@@ -188,6 +189,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Filtrar empleados según criterio de asistencia
     let empleadosParaNomina = employees
+    let noAttendanceWarning = null
     
     // Si hay registros de asistencia, filtrar por empleados con asistencia
     // Si no hay registros de asistencia, incluir todos los empleados activos
@@ -202,6 +204,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } else {
       // Si no hay registros de asistencia, incluir todos los empleados activos
       empleadosParaNomina = employees
+      noAttendanceWarning = {
+        message: 'No se encontraron registros de asistencia para el período seleccionado.',
+        detail: 'Se incluirán todos los empleados activos en la nómina.',
+        action: 'confirm'
+      }
     }
 
     if (empleadosParaNomina.length === 0) {
@@ -379,7 +386,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       totalDeducciones: planilla.reduce((sum: number, row: any) => sum + row.total_deducciones, 0),
       totalNeto: planilla.reduce((sum: number, row: any) => sum + row.total, 0),
       planilla,
-      warning: isRegeneration ? 'Ya existía un registro generado para el período seleccionado. Esta acción actualizó el registro.' : null
+      warning: isRegeneration ? 'Ya existía un registro generado para el período seleccionado. Esta acción actualizó el registro.' : null,
+      noAttendanceWarning
     })
 
   } catch (error: any) {
@@ -389,3 +397,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
   }
 }
+
+export default withReportsRateLimit()(handler)

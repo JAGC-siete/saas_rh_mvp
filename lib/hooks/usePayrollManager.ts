@@ -331,6 +331,12 @@ export const usePayrollManager = () => {
           response.warning,
           8000
         )
+      } else if (response?.noAttendanceWarning) {
+        toast.warning(
+          'Sin Registros de Asistencia',
+          `${response.noAttendanceWarning.message} ${response.noAttendanceWarning.detail}`,
+          10000
+        )
       } else {
         toast.success(
           'Preview Generado',

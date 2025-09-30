@@ -157,8 +157,11 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
               <div>
                 <p className="text-sm font-semibold text-gray-200">Total Salario Quincenal</p>
                 <p className="text-2xl font-bold text-white">
-                  { }
-                  {/* {formatCurrencyShort(payroll.unifiedData?.resumen.total_bruto || payroll.metrics.totalGrossSalary)} */}
+                  {payroll.loading ? (
+                    <div className="animate-pulse bg-white/20 h-8 w-16 rounded"></div>
+                  ) : (
+                    payroll.unifiedData?.resumen.total_bruto ? `L. ${payroll.unifiedData.resumen.total_bruto.toLocaleString('es-HN')}` : 'L. 0'
+                  )}
                 </p>
               </div>
               <div className="p-2 bg-green-500/30 rounded-full">
@@ -175,12 +178,13 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
               <div>
                 <p className="text-sm font-semibold text-gray-200">Total Deducciones</p>
                 <p className="text-2xl font-bold text-white">
-                  { }
-                  {/* {formatCurrencyShort(
-                    payroll.unifiedData?.resumen.total_deducciones 
-                      ? Object.values(payroll.unifiedData.resumen.total_deducciones).reduce((a, b) => a + b, 0)
-                      : payroll.metrics.totalDeductions
-                  )} */}
+                  {payroll.loading ? (
+                    <div className="animate-pulse bg-white/20 h-8 w-16 rounded"></div>
+                  ) : (
+                    payroll.unifiedData?.resumen.total_deducciones ? 
+                      `L. ${Object.values(payroll.unifiedData.resumen.total_deducciones).reduce((a, b) => a + b, 0).toLocaleString('es-HN')}` : 
+                      'L. 0'
+                  )}
                 </p>
               </div>
               <div className="p-2 bg-red-500/30 rounded-full">
@@ -197,8 +201,11 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
               <div>
                 <p className="text-sm font-semibold text-gray-200">Total Salario Neto</p>
                 <p className="text-2xl font-bold text-white">
-                  { }
-                  {/* {formatCurrencyShort(payroll.unifiedData?.resumen.total_neto || payroll.metrics.totalNetSalary)} */}
+                  {payroll.loading ? (
+                    <div className="animate-pulse bg-white/20 h-8 w-16 rounded"></div>
+                  ) : (
+                    payroll.unifiedData?.resumen.total_neto ? `L. ${payroll.unifiedData.resumen.total_neto.toLocaleString('es-HN')}` : 'L. 0'
+                  )}
                 </p>
               </div>
               <div className="p-2 bg-emerald-500/30 rounded-full">
