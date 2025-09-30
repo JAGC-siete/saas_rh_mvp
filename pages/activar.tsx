@@ -146,7 +146,10 @@ export default function ActivarPage() {
   return (
     <div className="min-h-screen bg-app relative">
       <Head>
-        <title>Automatizo tu planilla en 24 horas (o trabajo gratis hasta lograrlo) - HUMANO SISU</title>
+        <title>Servicio Hondureño de Recursos Humanos | Digital & Automatizado</title>
+        <meta name="title" content="Servicio Hondureño de Recursos Humanos | Digital & Automatizado" />
+        <meta property="og:title" content="Servicio Hondureño de Recursos Humanos | Digital & Automatizado" />
+        <meta name="twitter:title" content="Servicio Hondureño de Recursos Humanos | Digital & Automatizado" />
         <meta
           name="description"
           content="Automatizo tu asistencia y planilla en 24 horas o trabajo gratis hasta dejarlo funcionando. Solo email para empezar. Sin tarjeta."
