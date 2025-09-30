@@ -153,10 +153,19 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             {filteredNavigation.map((item, index) => {
               const isActive = router.pathname === item.href
               return (
-                <Link
+                <button
                   key={`nav-${index}`}
-                  href={item.href}
-                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors ${
+                  onClick={() => {
+                    // Forzar navegación con refresh para asegurar que la página se actualice
+                    if (router.pathname === item.href) {
+                      // Si ya estamos en la misma página, forzar recarga
+                      window.location.reload()
+                    } else {
+                      // Navegar a la nueva página
+                      router.push(item.href)
+                    }
+                  }}
+                  className={`group flex items-center w-full px-2 py-2 text-sm font-medium rounded-md transition-colors ${
                     isActive
                       ? 'bg-brand-900 text-white'
                       : 'text-gray-200 hover:bg-white/10 hover:text-white'
@@ -168,7 +177,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                     }`}
                   />
                   {sidebarOpen && item.name}
-                </Link>
+                </button>
               )
             })}
           </nav>
