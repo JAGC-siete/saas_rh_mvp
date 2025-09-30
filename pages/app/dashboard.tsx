@@ -4,8 +4,6 @@ import ProtectedRoute from '../../components/ProtectedRoute'
 import DashboardLayout from '../../components/DashboardLayout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
-import GamificationLeaderboard from '../../components/RealtimeGamificationLeaderboard'
-import EmployeeAchievements from '../../components/RealtimeEmployeeAchievements'
 import { useCompanyContext } from '../../lib/useCompanyContext'
 
 interface DashboardStats {
@@ -211,18 +209,6 @@ export default function Dashboard() {
             </Card>
           </div>
 
-          {/* Gamification Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Employee Leaderboard */}
-            {companyId && (
-              <GamificationLeaderboard companyId={companyId} limit={5} />
-            )}
-
-            {/* Employee Achievements */}
-            {companyId && (
-              <EmployeeAchievements companyId={companyId} limit={3} />
-            )}
-          </div>
 
           {/* Quick Actions */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
