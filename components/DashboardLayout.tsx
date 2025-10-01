@@ -151,21 +151,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           {/* Navigation */}
           <nav className="flex-1 px-2 py-4 space-y-1">
             {filteredNavigation.map((item, index) => {
-              const isActive = router.pathname === item.href
+              const isActive = router.asPath === item.href
               return (
-                <button
+                <Link
                   key={`nav-${index}`}
-                  onClick={() => {
-                    // Forzar navegación con refresh para asegurar que la página se actualice
-                    if (router.pathname === item.href) {
-                      // Si ya estamos en la misma página, forzar recarga usando router.replace
-                      router.replace(router.asPath)
-                    } else {
-                      // Navegar a la nueva página con router.push
-                      router.push(item.href)
-                    }
-                  }}
-                  className={`group flex items-center w-full px-2 py-2 text-sm font-medium rounded-md transition-colors ${
+                  href={item.href}
+                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors ${
                     isActive
                       ? 'bg-brand-900 text-white'
                       : 'text-gray-200 hover:bg-white/10 hover:text-white'
@@ -177,7 +168,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                     }`}
                   />
                   {sidebarOpen && item.name}
-                </button>
+                </Link>
               )
             })}
           </nav>
@@ -216,7 +207,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Main content */}
       <div className="flex-1 overflow-auto">
-        <main className="h-full">
+        <main className="h-full" key={router.asPath}>
           {children}
         </main>
       </div>
