@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient, createAdminClient } from '../../../../lib/supabase/server'
 import { logger } from '../../../../lib/logger'
+import { sendInviteEmail } from '../../../../lib/emails/invite'
 import crypto from 'crypto'
 
 interface SendInvitationRequest {
@@ -148,19 +149,49 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       })
     }
 
-    // Aquí normalmente enviarías un email con el link de invitación
-    // Por ahora, logueamos la información para que puedas probar
+    // Enviar email de invitación
     const invitationUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net'}/employees/invitation?token=${token}`
     
-    logger.info('Employee invitation created', {
-      invitationId: invitation.id,
-      employeeId: employeeId,
-      employeeName: employee.name,
-      email: email,
-      token: token,
-      expiresAt: expiresAt.toISOString(),
-      invitationUrl: invitationUrl
-    })
+    try {
+      // Obtener nombre de la empresa
+      const { data: company } = await adminSupabase
+        .from('companies')
+        .select('name')
+        .eq('id', employee.company_id)
+        .single()
+      
+      const companyName = company?.name || 'Paragon Financial Corp'
+      
+      // Enviar email de invitación
+      await sendInviteEmail({
+        to: email,
+        inviteUrl: invitationUrl,
+        companyName: companyName,
+        role: employee.role || 'employee'
+      })
+      
+      logger.info('Employee invitation email sent successfully', {
+        invitationId: invitation.id,
+        employeeId: employeeId,
+        employeeName: employee.name,
+        email: email,
+        token: token,
+        expiresAt: expiresAt.toISOString(),
+        invitationUrl: invitationUrl,
+        companyName: companyName
+      })
+      
+    } catch (emailError: any) {
+      logger.error('Failed to send invitation email', {
+        invitationId: invitation.id,
+        employeeId: employeeId,
+        email: email,
+        error: emailError.message
+      })
+      
+      // Aunque el email falle, la invitación se creó correctamente
+      // El usuario puede usar el token directamente
+    }
 
     return res.status(200).json({
       success: true,

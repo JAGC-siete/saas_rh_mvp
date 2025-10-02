@@ -58,51 +58,26 @@ export class NotificationProviderManager {
     }
 
     try {
-      const supabase = createAdminClient()
-      
-      // Buscar configuración específica de la empresa
-      const { data: companyConfig, error: companyError } = await supabase
-        .from('company_notification_configs')
-        .select('*')
-        .eq('company_id', companyId)
-        .single()
-
-      if (companyError && companyError.code !== 'PGRST116') {
-        console.error('Error obteniendo configuración de empresa:', companyError)
+      // Configuración por defecto usando Resend
+      const defaultEmailProvider: EmailProvider = {
+        type: 'resend',
+        apiKey: process.env.RESEND_API_KEY,
+        fromEmail: 'noreply@humanosisu.net',
+        fromName: 'Humano SISU'
       }
 
-      // Si no hay configuración específica, usar configuración por defecto
-      if (!companyConfig) {
-        const { data: defaultConfig, error: defaultError } = await supabase
-          .from('default_notification_configs')
-          .select('*')
-          .single()
-
-        if (defaultError) {
-          console.error('Error obteniendo configuración por defecto:', defaultError)
-          return null
-        }
-
-        const config: NotificationConfig = {
-          companyId,
-          emailProvider: this.parseEmailProvider(defaultConfig.email_provider),
-          whatsappProvider: this.parseWhatsAppProvider(defaultConfig.whatsapp_provider),
-          retryAttempts: defaultConfig.retry_attempts || 1,
-          retryDelay: defaultConfig.retry_delay || 1000
-        }
-
-        this.configCache.set(companyId, config)
-        this.cacheExpiry.set(companyId, now + this.CACHE_TTL)
-        return config
+      const defaultWhatsAppProvider: WhatsAppProvider = {
+        type: 'twilio',
+        accountSid: process.env.SUPABASE_AUTH_SMS_TWILIO_ACCOUNT_SID,
+        authToken: process.env.SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN
       }
 
-      // Usar configuración específica de la empresa
       const config: NotificationConfig = {
         companyId,
-        emailProvider: this.parseEmailProvider(companyConfig.email_provider),
-        whatsappProvider: this.parseWhatsAppProvider(companyConfig.whatsapp_provider),
-        retryAttempts: companyConfig.retry_attempts || 1,
-        retryDelay: companyConfig.retry_delay || 1000
+        emailProvider: defaultEmailProvider,
+        whatsappProvider: defaultWhatsAppProvider,
+        retryAttempts: 3,
+        retryDelay: 1000
       }
 
       this.configCache.set(companyId, config)
