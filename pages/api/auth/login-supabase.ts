@@ -13,6 +13,7 @@ interface LoginResponse {
   error?: string
   user?: any
   session?: any
+  userProfile?: any
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse<LoginResponse>) {
