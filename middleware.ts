@@ -102,7 +102,13 @@ const PROTECTED_APP_ROUTES = new Set([
 // API routes that require authentication and specific permissions
 const PROTECTED_API_ROUTES = new Set([
   '/api/employees',
-  '/api/employees/*',
+  '/api/employees/[id]',           // Specific employee endpoints
+  '/api/employees/create',         // Create employee
+  '/api/employees/update',         // Update employee
+  '/api/employees/search',         // Search employees
+  '/api/employees/list',           // List employees
+  '/api/employees/dashboard',      // Employee dashboard
+  '/api/employees/me',             // Employee profile
   '/api/payroll',
   '/api/payroll/*',
   '/api/reports',
@@ -143,22 +149,28 @@ function isProtectedAppRoute(pathname: string): boolean {
 
 // Helper function to check if API route is protected
 function isProtectedApiRoute(pathname: string): boolean {
-  // FIXED: Check if route is explicitly public first
+  // PRIORITY 1: Check if route is explicitly public first (exact match)
   if (PUBLIC_ROUTES.has(pathname)) return false
   
-  // Check for public routes with wildcards
+  // PRIORITY 2: Check for public routes with wildcards
   for (const publicRoute of Array.from(PUBLIC_ROUTES)) {
     if (publicRoute.endsWith('/*') && pathname.startsWith(publicRoute.slice(0, -2))) {
       return false
     }
   }
   
-  // Check exact match for protected routes
+  // PRIORITY 3: Check exact match for protected routes
   if (PROTECTED_API_ROUTES.has(pathname)) return true
   
-  // Check for routes starting with protected API paths
+  // PRIORITY 4: Check for routes starting with protected API paths (but not wildcards)
   for (const route of Array.from(PROTECTED_API_ROUTES)) {
-    if (pathname.startsWith(route + '/')) return true
+    // Skip wildcard routes as they're handled above
+    if (route.endsWith('/*')) continue
+    
+    // Check if pathname starts with this route followed by a slash
+    if (pathname.startsWith(route + '/')) {
+      return true
+    }
   }
   
   return false
@@ -219,7 +231,11 @@ export async function middleware(request: NextRequest) {
 
   // Handle API routes
   if (pathname.startsWith('/api/')) {
-    logger.debug('API route accessed', { path: pathname })
+    logger.debug('API route accessed', { 
+      path: pathname,
+      isPublic: PUBLIC_ROUTES.has(pathname),
+      isProtected: isProtectedApiRoute(pathname)
+    })
     
     // Handle CORS preflight requests
     if (request.method === 'OPTIONS') {
@@ -229,6 +245,15 @@ export async function middleware(request: NextRequest) {
       response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-nextjs-data')
       response.headers.set('Access-Control-Allow-Credentials', 'true')
       return response
+    }
+    
+    // Special handling for invitation routes
+    if (pathname.includes('/invitations/')) {
+      logger.debug('Invitation route accessed', { 
+        path: pathname,
+        isPublic: PUBLIC_ROUTES.has(pathname),
+        isProtected: isProtectedApiRoute(pathname)
+      })
     }
     
     // 🔒 PROTECCIÓN ESPECÍFICA PARA ENDPOINTS CRÍTICOS
