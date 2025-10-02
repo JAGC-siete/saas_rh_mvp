@@ -1,25 +1,26 @@
 export interface Employee {
   id: string
   company_id: string
-  employee_code: string
+  employee_code: string | null
   dni: string
   name: string
-  email: string
-  phone: string
-  role: string
-  team: string
+  email: string | null
+  phone: string | null
+  role: string | null
+  team: string | null
   base_salary: number
-  hire_date: string
-  termination_date: string
-  status: string
-  bank_name: string
-  bank_account: string
-  emergency_contact_name: string
-  emergency_contact_phone: string
-  address: string
-  metadata: string
-  department_id: string
-  work_schedule_id: string
+  hire_date: string | null
+  termination_date: string | null
+  status: 'active' | 'inactive'
+  bank_name: string | null
+  bank_account: string | null
+  emergency_contact_name: string | null
+  emergency_contact_phone: string | null
+  address: string | null
+  metadata: Record<string, any> | null
+  department_id: string | null
+  work_schedule_id: string | null
+  employee_pin_hash: string | null
   created_at: string
   updated_at: string
   

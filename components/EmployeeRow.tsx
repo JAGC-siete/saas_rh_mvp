@@ -25,7 +25,7 @@ export default function EmployeeRow({
         <div>
           <div className="font-medium">{employee.name}</div>
           <div className="text-sm text-gray-500">
-            {employee.employee_code} • DNI: {employee.dni}
+            {employee.employee_code || 'Sin código'} • DNI: {employee.dni}
           </div>
           <div className="text-sm text-gray-500">
             {employee.email || 'Sin email'} • {employee.phone || 'Sin teléfono'}
@@ -33,8 +33,8 @@ export default function EmployeeRow({
         </div>
       </td>
       <td className="py-3 px-4">
-        <div className="font-medium">{employee.team}</div>
-        <div className="text-sm text-gray-500 capitalize">{employee.role}</div>
+        <div className="font-medium">{employee.team || 'Sin equipo'}</div>
+        <div className="text-sm text-gray-500 capitalize">{employee.role || 'Sin rol'}</div>
       </td>
       <td className="py-3 px-4">{employee.departments?.name || 'N/A'}</td>
       <td className="py-3 px-4 font-mono">

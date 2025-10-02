@@ -92,17 +92,13 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       console.log('🔍 Fetching employees for user:', user.id)
       
       const supabaseClient = createClient()
-      let query = supabaseClient.from('employees').select(`
-        *,
-        departments!employees_department_id_fkey(name),
-        work_schedules!employees_work_schedule_id_fkey(
-          id,
-          name,
-          monday_start,
-          monday_end,
-          timezone
-        )
-      `)
+      let query = supabaseClient
+        .from('employees')
+        .select(`
+          *,
+          departments!employees_department_id_fkey(name),
+          work_schedules!employees_work_schedule_id_fkey(name, monday_start, monday_end)
+        `)
       if (companyId) {
         query = query.eq('company_id', companyId)
       }
@@ -255,7 +251,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       email: employee.email || '',
       phone: employee.phone || '',
       role: employee.role || '',
-      team: employee.team || '', // Usar team que sí existe en la BD
+      team: employee.team || '',
       department_id: employee.department_id || '',
       work_schedule_id: employee.work_schedule_id || '',
       base_salary: employee.base_salary?.toString() || '',
@@ -266,8 +262,8 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       bank_account: employee.bank_account || '',
       emergency_contact_name: employee.emergency_contact_name || '',
       emergency_contact_phone: employee.emergency_contact_phone || '',
-      address: employee.address || '',
-      metadata: employee.metadata || ''
+      address: typeof employee.address === 'string' ? employee.address : JSON.stringify(employee.address || {}),
+      metadata: typeof employee.metadata === 'object' ? JSON.stringify(employee.metadata || {}) : (employee.metadata || '')
     })
     setShowForm(true)
   }, [])
@@ -503,12 +499,13 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-300">
                         <div>
                           <p><span className="font-medium text-gray-200">DNI:</span> {employee.dni}</p>
-                          <p><span className="font-medium text-gray-200">Código:</span> {employee.employee_code}</p>
+                          <p><span className="font-medium text-gray-200">Código:</span> {employee.employee_code || 'Sin asignar'}</p>
                           <p><span className="font-medium text-gray-200">Email:</span> {employee.email || 'No especificado'}</p>
                           <p><span className="font-medium text-gray-200">Teléfono:</span> {employee.phone || 'No especificado'}</p>
                         </div>
                         <div>
                           <p><span className="font-medium text-gray-200">Posición:</span> {employee.role || 'No especificada'}</p>
+                          <p><span className="font-medium text-gray-200">Equipo:</span> {employee.team || 'Sin asignar'}</p>
                           <p><span className="font-medium text-gray-200">Departamento:</span> {employee.departments?.name || 'Sin asignar'}</p>
                           <p><span className="font-medium text-gray-200">Horario:</span> {employee.work_schedules?.name || 'Sin asignar'}</p>
                           {employee.check_in_time && (

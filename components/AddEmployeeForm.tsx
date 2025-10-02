@@ -43,7 +43,15 @@ function AddEmployeeForm({
     typeof formData?.metadata === 'string'
       ? formData.metadata
       : formData?.metadata
-      ? JSON.stringify(formData.metadata)
+      ? JSON.stringify(formData.metadata, null, 2)
+      : ''
+
+  // Address can be string or object; normalize to string
+  const addressValue =
+    typeof formData?.address === 'string'
+      ? formData.address
+      : formData?.address
+      ? JSON.stringify(formData.address, null, 2)
       : ''
 
   return (
@@ -390,9 +398,9 @@ function AddEmployeeForm({
                   id="address"
                   name="address"
                   disabled={loading}
-                  value={v(formData?.address)}
+                  value={addressValue}
                   onChange={(e) => onFormChange('address', e.target.value)}
-                  placeholder="Colonia Los Laureles, Calle Principal #123, Tegucigalpa, Honduras"
+                  placeholder='{"street": "Calle Principal #123", "neighborhood": "Colonia Los Laureles", "city": "Tegucigalpa", "country": "Honduras"}'
                   rows={3}
                   className="w-full p-2 border border-white/20 rounded-md focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white/10 text-white placeholder-gray-400"
                 />
@@ -413,11 +421,20 @@ function AddEmployeeForm({
                 disabled={loading}
                 value={metadataValue}
                 onChange={(e) => onFormChange('metadata', e.target.value)}
-                placeholder='{"skills": ["React", "Node.js"], "certifications": ["AWS"]}'
-                rows={3}
-                className="w-full p-2 border border-white/20 rounded-md focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white/10 text-white placeholder-gray-400"
+                placeholder='{
+  "skills": ["React", "Node.js", "TypeScript"],
+  "certifications": ["AWS", "Google Cloud"],
+  "languages": ["Spanish", "English"],
+  "notes": "Información adicional del empleado"
+}'
+                rows={4}
+                className="w-full p-2 border border-white/20 rounded-md focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white/10 text-white placeholder-gray-400 font-mono text-sm"
               />
-              <p className="text-xs text-gray-400 mt-1">Información adicional en formato JSON</p>
+              <p className="text-xs text-gray-400 mt-1">
+                Información adicional en formato JSON. 
+                <br />
+                <strong>Tip:</strong> Usa JSON.stringify() y JSON.parse() para manejar objetos complejos.
+              </p>
             </div>
           </div>
 

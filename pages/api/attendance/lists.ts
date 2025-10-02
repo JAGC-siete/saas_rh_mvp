@@ -36,13 +36,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: error.message })
   }
   
-    // Map RPC fields to match UI expectations
+    // Map RPC field team_out -> team and check_in -> check_in_time to match UI expectation
     const mapped = Array.isArray(data)
       ? data.map((row: any) => ({ 
           ...row, 
+          team: row.role ?? row.team_out ?? null,
           check_in_time: row.check_in, // Map check_in to check_in_time for UI compatibility
           delta_min: row.late_minutes || 0 // Map late_minutes to delta_min for UI compatibility
-          // ✅ team field now comes correctly from RPC, no mapping needed
         }))
       : []
     res.status(200).json(mapped)
