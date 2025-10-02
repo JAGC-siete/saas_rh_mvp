@@ -11,6 +11,7 @@ interface InvitationData {
   employees: {
     name: string
     email: string
+    role?: string  // Optional to maintain backward compatibility
   }
 }
 

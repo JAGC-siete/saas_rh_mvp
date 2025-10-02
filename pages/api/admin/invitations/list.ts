@@ -52,7 +52,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         expires_at,
         created_at,
         accepted_at,
-        employees!inner(
+        employee_id,
+        employees(
           name,
           email,
           role
