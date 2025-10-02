@@ -108,11 +108,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       employeeId: userMetadata?.employee_id || null
     })
 
+    // Obtener información adicional del perfil de usuario
+    let userProfile = null
+    if (userType === 'admin') {
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', authData.user.id)
+        .single()
+      userProfile = profile
+    }
+
     return res.status(200).json({
       success: true,
       message: 'Login exitoso',
-      user: authData.user,
-      session: authData.session
+      user: {
+        ...authData.user,
+        company_id: userProfile?.company_id || userMetadata?.company_id || null,
+        role: userProfile?.role || userMetadata?.role || null,
+        user_type: userType
+      },
+      session: authData.session,
+      userProfile: userProfile
     })
 
   } catch (error) {
