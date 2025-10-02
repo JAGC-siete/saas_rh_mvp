@@ -57,24 +57,55 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       })
     }
 
-    // Verificar que el usuario tiene los metadatos correctos para empleados
+    // Verificar el tipo de usuario y permisos
     const userMetadata = authData.user.user_metadata
-    if (!userMetadata?.employee_id || !userMetadata?.is_employee_portal) {
-      logger.warn('User login successful but not an employee portal user', { 
+    
+    // Verificar si es un usuario admin o empleado válido
+    let userType = 'unknown'
+    let hasValidAccess = false
+    
+    // Verificar si es empleado (tiene employee_id y is_employee_portal)
+    if (userMetadata?.employee_id && userMetadata?.is_employee_portal) {
+      userType = 'employee'
+      hasValidAccess = true
+    } 
+    // Verificar si es admin (buscar en user_profiles)
+    else {
+      const { data: userProfile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('role, permissions')
+        .eq('id', authData.user.id)
+        .single()
+      
+      if (!profileError && userProfile) {
+        if (['super_admin', 'admin'].includes(userProfile.role)) {
+          userType = 'admin'
+          hasValidAccess = true
+        } else if (userProfile.role === 'employee') {
+          userType = 'employee'
+          hasValidAccess = true
+        }
+      }
+    }
+    
+    if (!hasValidAccess) {
+      logger.warn('User login successful but no valid access permissions', { 
         email, 
         userId: authData.user.id,
-        userMetadata 
+        userMetadata,
+        userType
       })
       return res.status(403).json({
         success: false,
-        error: 'Acceso denegado. Este portal es solo para empleados.'
+        error: 'Acceso denegado. Usuario sin permisos válidos.'
       })
     }
 
-    logger.info('Employee login successful', {
+    logger.info(`${userType} login successful`, {
       email,
       userId: authData.user.id,
-      employeeId: userMetadata.employee_id
+      userType,
+      employeeId: userMetadata?.employee_id || null
     })
 
     return res.status(200).json({
