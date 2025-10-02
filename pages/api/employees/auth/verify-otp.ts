@@ -13,6 +13,8 @@ interface VerifyOtpResponse {
   message?: string
   error?: string
   sessionData?: any
+  session?: any
+  user?: any
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse<VerifyOtpResponse>) {
@@ -124,7 +126,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
     // Crear sesión con el cliente que maneja cookies
     const supabase = createClient(req, res)
-    const deterministic_password = `emp_${employee.id.toString().substring(0, 8)}_paragon`
     
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email: email,
