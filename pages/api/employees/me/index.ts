@@ -54,8 +54,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'No autorizado' })
     }
     
-    // Get employee ID from user metadata
-    const employeeId = user.user_metadata?.employee_id
+    // Get employee ID from user metadata (primary) or user_profiles (fallback)
+    let employeeId = user.user_metadata?.employee_id
+    
+    if (!employeeId) {
+      const { data: userProfile } = await supabase
+        .from('user_profiles')
+        .select('employee_id')
+        .eq('id', user.id)
+        .single()
+      
+      employeeId = userProfile?.employee_id
+    }
+    
     if (!employeeId) {
       return res.status(401).json({ error: 'Datos de empleado no encontrados' })
     }

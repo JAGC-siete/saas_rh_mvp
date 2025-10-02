@@ -57,85 +57,48 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'No autorizado' })
     }
     
-    // First, get user profile to find employee_id
-    const { data: userProfile, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('employee_id, company_id, role')
-      .eq('id', user.id)
-      .single()
+    // Get employee_id from user_metadata (primary) or user_profiles (fallback)
+    let employeeId = user.user_metadata?.employee_id
+    let companyId = user.user_metadata?.company_id
     
-    if (profileError || !userProfile?.employee_id) {
-      logger.error('User profile not found or missing employee_id', {
-        userId: user.id,
-        email: user.email,
-        profileError: profileError?.message,
-        userProfile
-      })
-      return res.status(404).json({ 
-        error: 'Perfil de empleado no encontrado',
-        debug: {
+    // Fallback: buscar en user_profiles si no está en user_metadata
+    if (!employeeId) {
+      const { data: userProfile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('employee_id, company_id, role')
+        .eq('id', user.id)
+        .single()
+      
+      if (profileError || !userProfile?.employee_id) {
+        logger.error('User profile not found or missing employee_id', {
           userId: user.id,
           email: user.email,
-          hint: 'El usuario no tiene un employee_id asociado en user_profiles'
-        }
-      })
+          profileError: profileError?.message,
+          userMetadata: user.user_metadata
+        })
+        return res.status(404).json({ 
+          error: 'Perfil de empleado no encontrado',
+          debug: {
+            userId: user.id,
+            email: user.email,
+            hint: 'El usuario no tiene un employee_id en user_metadata ni en user_profiles'
+          }
+        })
+      }
+      
+      employeeId = userProfile.employee_id
+      companyId = userProfile.company_id
     }
-    
-    const employeeId = userProfile.employee_id
     
     logger.info('Employee dashboard access', {
       supabaseUserId: user.id,
       employeeId: employeeId,
       email: user.email,
-      companyId: userProfile.company_id
+      companyId: companyId
     })
-
-    // First, let's check if employee exists at all
-    const { data: employeeCheck, error: checkError } = await supabase
-      .from('employees')
-      .select('id, name, email, status, company_id')
-      .eq('id', employeeId)
-
-    logger.info('Employee existence check', {
-      employeeId,
-      found: employeeCheck?.length || 0,
-      employee: employeeCheck?.[0],
-      error: checkError
-    })
-
-    // If not found by ID, try by email (maybe ID mismatch)
-    if (!employeeCheck || employeeCheck.length === 0) {
-      const { data: emailCheck, error: emailError } = await supabase
-        .from('employees')
-        .select('id, name, email, status, company_id')
-        .eq('email', 'user@example.com')
-        .eq('company_id', '00000000-0000-0000-0000-000000000001')
-
-      logger.info('Employee email fallback check', {
-        emailFound: emailCheck?.length || 0,
-        employee: emailCheck?.[0],
-        error: emailError
-      })
-
-      if (emailCheck && emailCheck.length > 0) {
-        return res.status(400).json({
-          error: 'ID mismatch detected',
-          debug: {
-            tokenEmployeeId: employeeId,
-            actualEmployeeId: emailCheck[0].id,
-            employeeName: emailCheck[0].name,
-            hint: 'El token tiene un employee_id diferente al de la base de datos'
-          }
-        })
-      }
-    }
 
     // Get employee profile - try direct query first (RLS might be blocking JOINs)
-    let employeeDetails: any = null
-    let employeeError: any = null
-
-    // Try simple query first
-    const { data: simpleEmployee, error: simpleError } = await supabase
+    const { data: employeeDetails, error: employeeError } = await supabase
       .from('employees')
       .select('*')
       .eq('id', employeeId)
