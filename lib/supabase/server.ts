@@ -1,4 +1,5 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { serialize } from 'cookie'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { cookies } from 'next/headers'
@@ -131,11 +132,11 @@ export function createAdminClient() {
     console.warn('⚠️ SUPABASE_SERVICE_ROLE_KEY is missing. Falling back to anon key for server client.')
   }
 
-  return createServerClient(supabaseUrl, keyToUse, {
-    cookies: {
-      get() { return undefined },
-      set() {},
-      remove() {},
-    },
+  // Use the standard client for admin operations instead of server client
+  return createSupabaseClient(supabaseUrl, keyToUse, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
   })
 }

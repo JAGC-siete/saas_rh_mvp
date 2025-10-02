@@ -82,15 +82,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     }
 
     // Verificar que no existe ya un usuario con este email
-    const { data: existingAuthUsers } = await adminSupabase.auth.admin.listUsers()
-    const existingAuthUser = existingAuthUsers?.users?.find((u: any) => u.email === invitation.email)
-
-    if (existingAuthUser) {
-      return res.status(400).json({
-        success: false,
-        error: 'Ya existe una cuenta con este email'
-      })
-    }
+    // Nota: Saltamos esta verificación por problemas con la API de admin
+    // La verificación se hará en el momento de crear el usuario
 
     // Crear usuario en Supabase Auth
     const { data: newUser, error: createUserError } = await adminSupabase.auth.admin.createUser({
@@ -112,9 +105,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         error: createUserError,
         employeeId: invitation.employee_id
       })
+      
+      // Manejar errores específicos
+      if (createUserError?.message?.includes('already been registered')) {
+        return res.status(400).json({
+          success: false,
+          error: 'Ya existe una cuenta con este email'
+        })
+      }
+      
       return res.status(500).json({
         success: false,
-        error: 'Error creando cuenta de usuario'
+        error: `Error creando cuenta de usuario: ${createUserError?.message || 'Error desconocido'}`
       })
     }
 
