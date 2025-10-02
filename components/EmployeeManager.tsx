@@ -92,7 +92,17 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       console.log('🔍 Fetching employees for user:', user.id)
       
       const supabaseClient = createClient()
-      let query = supabaseClient.from('employees').select('*')
+      let query = supabaseClient.from('employees').select(`
+        *,
+        departments!employees_department_id_fkey(name),
+        work_schedules!employees_work_schedule_id_fkey(
+          id,
+          name,
+          monday_start,
+          monday_end,
+          timezone
+        )
+      `)
       if (companyId) {
         query = query.eq('company_id', companyId)
       }
