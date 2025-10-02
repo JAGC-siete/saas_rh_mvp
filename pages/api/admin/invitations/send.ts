@@ -74,7 +74,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     // Verificar que el empleado existe y pertenece a la misma empresa
     const { data: employee, error: employeeError } = await adminSupabase
       .from('employees')
-      .select('id, name, email, status, company_id')
+      .select('id, name, email, status, company_id, role')
       .eq('id', employeeId)
       .eq('status', 'active')
       .single()
