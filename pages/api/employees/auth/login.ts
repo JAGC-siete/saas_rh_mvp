@@ -106,7 +106,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     
     // Primero intentar buscar si ya existe un usuario de Supabase Auth con este email
     const { data: existingAuthUsers } = await adminSupabase.auth.admin.listUsers()
-    const existingAuthUser = existingAuthUsers?.users?.find(u => u.email === email)
+    const existingAuthUser = existingAuthUsers?.users?.find((u: any) => u.email === email)
     
     if (existingAuthUser) {
       authUserId = existingAuthUser.id
