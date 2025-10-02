@@ -51,7 +51,10 @@ const PUBLIC_ROUTES = new Set([
   '/api/employees/auth/send-otp',   // Send OTP code - PÚBLICO
   '/api/employees/auth/verify-otp', // Verify OTP code - PÚBLICO
   '/api/employees/auth/logout',     // Employee portal logout - PÚBLICO
+  '/api/employees/invitations/accept', // Accept invitation - PÚBLICO
+  '/api/employees/invitations/validate', // Validate invitation - PÚBLICO
   '/employees/portal',              // Employee portal page - PÚBLICO
+  '/employees/invitation',          // Employee invitation page - PÚBLICO
   '/api/employees/debug-session',    // Employee debug endpoint - PÚBLICO
   '/api/debug/payroll-run',           // Payroll debug endpoint - PÚBLICO
   '/api/debug/test-line-insert',      // Test line insert endpoint - PÚBLICO

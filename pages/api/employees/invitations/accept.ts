@@ -46,20 +46,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     // Buscar la invitación válida
     const { data: invitation, error: invitationError } = await adminSupabase
       .from('employee_invitations')
-      .select(`
-        id,
-        email,
-        employee_id,
-        company_id,
-        status,
-        expires_at,
-        employees!inner(
-          id,
-          name,
-          email,
-          status
-        )
-      `)
+      .select('id, email, employee_id, company_id, status, expires_at')
       .eq('token', token)
       .eq('status', 'pending')
       .gt('expires_at', new Date().toISOString())
@@ -73,8 +60,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       })
     }
 
-    // Verificar que el empleado está activo
-    if (invitation.employees[0].status !== 'active') {
+    // Buscar información del empleado por separado
+    const { data: employee, error: employeeError } = await adminSupabase
+      .from('employees')
+      .select('id, name, email, status')
+      .eq('id', invitation.employee_id)
+      .single()
+
+    if (employeeError || !employee) {
+      logger.warn('Employee not found for invitation', { 
+        invitationId: invitation.id, 
+        employeeId: invitation.employee_id,
+        error: employeeError?.message
+      })
+      return res.status(400).json({
+        success: false,
+        error: 'Empleado no encontrado'
+      })
+    }
+
+    if (employee.status !== 'active') {
       return res.status(400).json({
         success: false,
         error: 'El empleado no está activo'
@@ -93,7 +98,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       user_metadata: {
         employee_id: invitation.employee_id,
         company_id: invitation.company_id,
-        full_name: invitation.employees[0].name,
+        full_name: employee.name,
         role: 'employee',
         is_employee_portal: true
       }
@@ -186,7 +191,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     logger.info('Employee invitation accepted successfully', {
       email: invitation.email,
       employeeId: invitation.employee_id,
-      employeeName: invitation.employees[0].name,
+      employeeName: employee.name,
       userId: newUser.user.id,
       invitationId: invitation.id
     })
