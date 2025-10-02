@@ -43,16 +43,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
     const adminSupabase = createAdminClient()
     
-    // Verificar que el empleado existe
+    // Verificar que el empleado existe - usar maybeSingle para evitar errores de múltiples filas
     const { data: employee, error: employeeError } = await adminSupabase
       .from('employees')
       .select('id, name, email, status, company_id')
       .eq('email', email)
       .eq('status', 'active')
-      .single()
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
 
-    if (employeeError || !employee) {
-      logger.warn('Employee not found for OTP verification', { email, error: employeeError?.message })
+    if (employeeError) {
+      logger.error('Error querying employee for OTP verification', { email, error: employeeError?.message })
+      return res.status(500).json({
+        success: false,
+        error: 'Error interno del servidor al buscar empleado'
+      })
+    }
+
+    if (!employee) {
+      logger.warn('Employee not found for OTP verification', { email })
       return res.status(400).json({
         success: false,
         error: 'Email no encontrado o empleado inactivo'
@@ -73,55 +83,42 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     // Buscar o crear usuario en auth.users
     let authUserId: string | null = null
     
-    // Primero intentar buscar si ya existe un usuario de Supabase Auth con este email
-    const { data: existingAuthUsers } = await adminSupabase.auth.admin.listUsers()
-    const existingAuthUser = existingAuthUsers?.users?.find((u: any) => u.email === email)
+    // Crear usuario en auth.users usando Admin API
+    // Nota: Saltamos la verificación de usuarios existentes por problemas con la API de admin
+    // La verificación se hará en el momento de crear el usuario
+    const deterministic_password = `emp_${employee.id.toString().substring(0, 8)}_paragon`
     
-    if (existingAuthUser) {
-      authUserId = existingAuthUser.id
+    const { data: newUser, error: createUserError } = await adminSupabase.auth.admin.createUser({
+      email: email,
+      password: deterministic_password,
+      email_confirm: true,
+      user_metadata: {
+        employee_id: employee.id,
+        company_id: employee.company_id,
+        full_name: employee.name,
+        role: 'employee',
+        is_employee_portal: true
+      }
+    })
+    
+    if (createUserError || !newUser.user) {
+      logger.error('Failed to create auth user via OTP recovery', { 
+        email, 
+        error: createUserError,
+        employeeId: employee.id
+      })
       
-      // Actualizar user_metadata si no tiene employee_id
-      if (!existingAuthUser.user_metadata?.employee_id) {
-        await adminSupabase.auth.admin.updateUserById(authUserId, {
-          user_metadata: {
-            ...existingAuthUser.user_metadata,
-            employee_id: employee.id,
-            company_id: employee.company_id,
-            full_name: employee.name,
-            role: 'employee',
-            is_employee_portal: true
-          }
+      // Manejar errores específicos
+      if (createUserError?.message?.includes('already been registered')) {
+        // Usuario ya existe, intentar login directo
+        logger.info('User already exists, attempting direct login', { email })
+      } else {
+        return res.status(500).json({
+          success: false,
+          error: `Error creando usuario de autenticación: ${createUserError?.message || 'Error desconocido'}`
         })
       }
     } else {
-      // Crear usuario en auth.users usando Admin API
-      const deterministic_password = `emp_${employee.id.toString().substring(0, 8)}_paragon`
-      
-      const { data: newUser, error: createUserError } = await adminSupabase.auth.admin.createUser({
-        email: email,
-        password: deterministic_password,
-        email_confirm: true,
-        user_metadata: {
-          employee_id: employee.id,
-          company_id: employee.company_id,
-          full_name: employee.name,
-          role: 'employee',
-          is_employee_portal: true
-        }
-      })
-      
-      if (createUserError || !newUser.user) {
-        logger.error('Failed to create auth user via OTP recovery', { 
-          email, 
-          error: createUserError,
-          employeeId: employee.id
-        })
-        return res.status(500).json({
-          success: false,
-          error: 'Error creando usuario de autenticación'
-        })
-      }
-      
       authUserId = newUser.user.id
     }
 
@@ -192,6 +189,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     return res.status(200).json({
       success: true,
       message: 'Acceso recuperado exitosamente',
+      session: authData.session,
+      user: authData.user,
       sessionData: {
         user: authData.user,
         session: authData.session

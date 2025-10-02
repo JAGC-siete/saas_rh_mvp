@@ -34,16 +34,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
     const adminSupabase = createAdminClient()
     
-    // Verificar que el empleado existe
+    // Verificar que el empleado existe - usar maybeSingle para evitar errores de múltiples filas
     const { data: employee, error: employeeError } = await adminSupabase
       .from('employees')
       .select('id, name, email, status')
       .eq('email', email)
       .eq('status', 'active')
-      .single()
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
 
-    if (employeeError || !employee) {
-      logger.warn('Employee not found for OTP recovery', { email, error: employeeError?.message })
+    if (employeeError) {
+      logger.error('Error querying employee for OTP recovery', { email, error: employeeError?.message })
+      return res.status(500).json({
+        success: false,
+        error: 'Error interno del servidor al buscar empleado'
+      })
+    }
+
+    if (!employee) {
+      logger.warn('Employee not found for OTP recovery', { email })
       return res.status(400).json({
         success: false,
         error: 'Email no encontrado o empleado inactivo'

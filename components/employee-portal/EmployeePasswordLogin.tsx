@@ -69,7 +69,8 @@ export default function EmployeePasswordLogin({ onLoginSuccess }: EmployeePasswo
           email: formData.email
         })
 
-        onLoginSuccess(data)
+        // Pasar session si está disponible, sino pasar la data completa
+        onLoginSuccess(data.session || data)
       } else {
         setError(data.error || 'Credenciales inválidas')
       }
@@ -147,7 +148,8 @@ export default function EmployeePasswordLogin({ onLoginSuccess }: EmployeePasswo
           email: formData.email
         })
 
-        onLoginSuccess(data)
+        // Pasar sessionData si está disponible, sino pasar la data completa
+        onLoginSuccess(data.sessionData || data)
       } else {
         setError(data.error || 'Código inválido')
       }
