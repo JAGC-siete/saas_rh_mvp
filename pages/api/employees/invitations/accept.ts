@@ -43,17 +43,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
     const adminSupabase = createAdminClient()
 
-    // Buscar la invitación válida
+    // Buscar la invitación válida - usar maybeSingle para evitar errores de múltiples filas
+    // Agregar orden para asegurar consistencia
     const { data: invitation, error: invitationError } = await adminSupabase
       .from('employee_invitations')
       .select('id, email, employee_id, company_id, status, expires_at')
       .eq('token', token)
       .eq('status', 'pending')
       .gt('expires_at', new Date().toISOString())
-      .single()
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
 
-    if (invitationError || !invitation) {
-      logger.warn('Invalid or expired invitation token', { token, error: invitationError?.message })
+    if (invitationError) {
+      logger.error('Error querying invitation', { token, error: invitationError?.message })
+      return res.status(500).json({
+        success: false,
+        error: 'Error interno del servidor al buscar invitación'
+      })
+    }
+
+    if (!invitation) {
+      logger.warn('Invalid or expired invitation token', { token })
       return res.status(400).json({
         success: false,
         error: 'Invitación inválida o expirada'
@@ -65,13 +76,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       .from('employees')
       .select('id, name, email, status')
       .eq('id', invitation.employee_id)
-      .single()
+      .maybeSingle()
 
-    if (employeeError || !employee) {
-      logger.warn('Employee not found for invitation', { 
+    if (employeeError) {
+      logger.error('Error querying employee', { 
         invitationId: invitation.id, 
         employeeId: invitation.employee_id,
         error: employeeError?.message
+      })
+      return res.status(500).json({
+        success: false,
+        error: 'Error interno del servidor al buscar empleado'
+      })
+    }
+
+    if (!employee) {
+      logger.warn('Employee not found for invitation', { 
+        invitationId: invitation.id, 
+        employeeId: invitation.employee_id
       })
       return res.status(400).json({
         success: false,
