@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/router'
-import EmployeeLogin from '../../components/employee-portal/EmployeeLogin'
+import EmployeePasswordLogin from '../../components/employee-portal/EmployeePasswordLogin'
 import { useAuth } from '../../lib/auth'
 // import { useNotificationContext } from '../../components/NotificationProvider'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
@@ -626,7 +626,7 @@ export default function EmployeePortal() {
   }
 
   if (!session) {
-    return <EmployeeLogin onLoginSuccess={handleLoginSuccess} />
+    return <EmployeePasswordLogin onLoginSuccess={handleLoginSuccess} />
   }
 
   return (

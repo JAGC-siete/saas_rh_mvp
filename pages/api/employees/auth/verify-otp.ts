@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../../lib/supabase/server'
+import { createClient, createAdminClient } from '../../../../lib/supabase/server'
 import { logger } from '../../../../lib/logger'
-import { otpStore } from './send-otp'
+import { verifyOtp } from '../../../../lib/employee-otp'
 
 interface VerifyOtpRequest {
   email: string
@@ -10,16 +10,9 @@ interface VerifyOtpRequest {
 
 interface VerifyOtpResponse {
   success: boolean
-  user?: any
-  session?: any
-  employee?: {
-    id: string
-    name: string
-    dni_masked: string
-    role: string
-    department?: string
-  }
+  message?: string
   error?: string
+  sessionData?: any
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse<VerifyOtpResponse>) {
@@ -33,125 +26,180 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
   try {
     const { email, code }: VerifyOtpRequest = req.body
 
-    // Input validation
-    if (!email || !code || !/^\d{6}$/.test(code)) {
+    // Validación de entrada
+    if (!email || !code) {
       return res.status(400).json({ 
         success: false, 
-        error: 'Email o código inválido' 
+        error: 'Email y código son requeridos' 
       })
     }
 
-    // Verify OTP from store
-    const storedOtp = otpStore.get(email)
+    if (!/^[0-9]{6}$/.test(code)) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Código debe ser de 6 dígitos' 
+      })
+    }
+
+    const adminSupabase = createAdminClient()
     
-    if (!storedOtp) {
-      return res.status(401).json({
-        success: false,
-        error: 'Código no encontrado o expirado'
-      })
-    }
-
-    if (storedOtp.expires < Date.now()) {
-      otpStore.delete(email)
-      return res.status(401).json({
-        success: false,
-        error: 'Código expirado'
-      })
-    }
-
-    if (storedOtp.code !== code) {
-      logger.warn('Invalid OTP attempt', {
-        email,
-        ip: req.headers['x-forwarded-for'] || req.connection.remoteAddress
-      })
-      
-      return res.status(401).json({
-        success: false,
-        error: 'Código inválido'
-      })
-    }
-
-    // OTP verified successfully, clear from store
-    otpStore.delete(email)
-
-    const supabase = createClient(req, res)
-
-    // Get employee data
-    const { data: employee, error: employeeError } = await supabase
+    // Verificar que el empleado existe
+    const { data: employee, error: employeeError } = await adminSupabase
       .from('employees')
-      .select(`
-        id, 
-        name, 
-        dni, 
-        role,
-        company_id,
-        departments:department_id(name)
-      `)
+      .select('id, name, email, status, company_id')
       .eq('email', email)
-      .eq('company_id', '00000000-0000-0000-0000-000000000001')
       .eq('status', 'active')
       .single()
 
     if (employeeError || !employee) {
-      logger.error('Employee data fetch failed after OTP verification', {
-        email,
-        error: employeeError
-      })
-      
-      return res.status(404).json({
+      logger.warn('Employee not found for OTP verification', { email, error: employeeError?.message })
+      return res.status(400).json({
         success: false,
-        error: 'Empleado no encontrado'
+        error: 'Email no encontrado o empleado inactivo'
       })
     }
 
-    // Create a custom session using Supabase Auth
-    // Since we can't create auth.users directly, we'll create a custom session
-    const sessionData = {
-      access_token: `emp_${employee.id}_${Date.now()}`,
-      refresh_token: `ref_${employee.id}_${Date.now()}`,
-      expires_in: 28800, // 8 hours
-      expires_at: Math.floor(Date.now() / 1000) + 28800,
-      user: {
-        id: employee.id,
+    // Verificar OTP
+    const otpResult = await verifyOtp(email, code)
+    
+    if (!otpResult.success) {
+      logger.warn('OTP verification failed for password recovery', { email, error: otpResult.error })
+      return res.status(400).json({
+        success: false,
+        error: otpResult.error || 'Código inválido o expirado'
+      })
+    }
+
+    // Buscar o crear usuario en auth.users
+    let authUserId: string | null = null
+    
+    // Primero intentar buscar si ya existe un usuario de Supabase Auth con este email
+    const { data: existingAuthUsers } = await adminSupabase.auth.admin.listUsers()
+    const existingAuthUser = existingAuthUsers?.users?.find((u: any) => u.email === email)
+    
+    if (existingAuthUser) {
+      authUserId = existingAuthUser.id
+      
+      // Actualizar user_metadata si no tiene employee_id
+      if (!existingAuthUser.user_metadata?.employee_id) {
+        await adminSupabase.auth.admin.updateUserById(authUserId, {
+          user_metadata: {
+            ...existingAuthUser.user_metadata,
+            employee_id: employee.id,
+            company_id: employee.company_id,
+            full_name: employee.name,
+            role: 'employee',
+            is_employee_portal: true
+          }
+        })
+      }
+    } else {
+      // Crear usuario en auth.users usando Admin API
+      const deterministic_password = `emp_${employee.id.toString().substring(0, 8)}_paragon`
+      
+      const { data: newUser, error: createUserError } = await adminSupabase.auth.admin.createUser({
         email: email,
+        password: deterministic_password,
+        email_confirm: true,
         user_metadata: {
           employee_id: employee.id,
           company_id: employee.company_id,
           full_name: employee.name,
-          role: employee.role,
+          role: 'employee',
           is_employee_portal: true
         }
+      })
+      
+      if (createUserError || !newUser.user) {
+        logger.error('Failed to create auth user via OTP recovery', { 
+          email, 
+          error: createUserError,
+          employeeId: employee.id
+        })
+        return res.status(500).json({
+          success: false,
+          error: 'Error creando usuario de autenticación'
+        })
+      }
+      
+      authUserId = newUser.user.id
+    }
+
+    // Crear sesión con el cliente que maneja cookies
+    const supabase = createClient(req, res)
+    const deterministic_password = `emp_${employee.id.toString().substring(0, 8)}_paragon`
+    
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email: email,
+      password: deterministic_password
+    })
+
+    if (authError || !authData.user) {
+      logger.error('Failed to create session via OTP recovery', { 
+        email, 
+        error: authError?.message,
+        employeeId: employee.id
+      })
+      return res.status(500).json({
+        success: false,
+        error: 'Error creando sesión de autenticación'
+      })
+    }
+
+    // Verificar si existe user_profile, si no, crearlo
+    const { data: existingProfile } = await adminSupabase
+      .from('user_profiles')
+      .select('id')
+      .eq('id', authUserId)
+      .single()
+    
+    if (!existingProfile) {
+      const { error: profileError } = await adminSupabase
+        .from('user_profiles')
+        .insert({
+          id: authUserId,
+          email: email,
+          role: 'employee',
+          company_id: employee.company_id,
+          employee_id: employee.id,
+          permissions: {
+            dashboard: true,
+            employees: false,
+            departments: false,
+            attendance: true,
+            leave: true,
+            payroll: true,
+            reports: false,
+            gamification: false,
+            settings: false
+          }
+        })
+      
+      if (profileError) {
+        logger.warn('Failed to create user profile via OTP recovery', { 
+          userId: authUserId, 
+          error: profileError 
+        })
       }
     }
 
-    // Set session cookies with proper security flags
-    const isProduction = process.env.NODE_ENV === 'production'
-    res.setHeader('Set-Cookie', [
-      `sb-access-token=${sessionData.access_token}; Path=/; HttpOnly; ${isProduction ? 'Secure;' : ''} SameSite=Lax; Max-Age=28800`,
-      `sb-refresh-token=${sessionData.refresh_token}; Path=/; HttpOnly; ${isProduction ? 'Secure;' : ''} SameSite=Lax; Max-Age=28800`,
-    ])
-
-    logger.info('Employee login successful via OTP + Resend', {
+    logger.info('Employee login successful via OTP recovery', {
+      email,
       employeeId: employee.id,
-      employeeName: employee.name,
-      email: email
+      supabaseUserId: authData.user.id
     })
 
     return res.status(200).json({
       success: true,
-      user: sessionData.user,
-      session: sessionData,
-      employee: {
-        id: employee.id,
-        name: employee.name,
-        dni_masked: employee.dni ? employee.dni.replace(/\d(?=\d{5})/g, '*') : 'N/A',
-        role: employee.role || 'Empleado',
-        department: (employee.departments as any)?.name
+      message: 'Acceso recuperado exitosamente',
+      sessionData: {
+        user: authData.user,
+        session: authData.session
       }
     })
 
   } catch (error) {
-    logger.error('Verify OTP error', error)
+    logger.error('Verify OTP for recovery error', error)
     return res.status(500).json({
       success: false,
       error: 'Error interno del servidor'
