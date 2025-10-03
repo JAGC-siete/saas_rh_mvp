@@ -158,21 +158,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     employeeDetails.work_schedules = workSchedule
 
     // Get attendance data for current month (dates already calculated above)
-    // Query attendance_events instead of attendance_records for actual data
 
-    const { data: attendanceEvents, error: attendanceError } = await supabase
-      .from('attendance_events')
+    const { data: attendanceRecords, error: attendanceError } = await supabase
+      .from('attendance_records')
       .select(`
         id,
-        event_type,
-        ts_utc,
-        ts_local,
-        ref_record_id
+        date,
+        check_in,
+        check_out,
+        status
       `)
       .eq('employee_id', employeeId)
-      .gte('ts_local', startOfMonth)
-      .lte('ts_local', endOfMonth)
-      .order('ts_local', { ascending: false })
+      .gte('date', startOfMonth)
+      .lte('date', endOfMonth)
+      .order('date', { ascending: false })
 
     if (attendanceError) {
       logger.error('Failed to get attendance records', attendanceError)
