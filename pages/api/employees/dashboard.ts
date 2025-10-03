@@ -160,12 +160,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       logger.error('Failed to get attendance records', attendanceError)
     }
 
-    // Calculate attendance summary
+    // Calculate attendance summary with proper working days calculation
     const records = attendanceRecords || []
-    const totalDays = records.length
+    
+    // Calculate total working days in current month (excluding weekends)
+    const getWorkingDaysInMonth = (year: number, month: number) => {
+      const firstDay = new Date(year, month, 1)
+      const lastDay = new Date(year, month + 1, 0)
+      let workingDays = 0
+      
+      for (let day = firstDay; day <= lastDay; day.setDate(day.getDate() + 1)) {
+        const dayOfWeek = day.getDay()
+        // Count Monday (1) through Friday (5) as working days
+        if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+          workingDays++
+        }
+      }
+      
+      return workingDays
+    }
+    
+    const now = new Date()
+    const totalWorkingDays = getWorkingDaysInMonth(now.getFullYear(), now.getMonth())
+    
+    // Count attendance by status
     const presentDays = records.filter(r => r.status === 'present').length
-    const absentDays = records.filter(r => r.status === 'absent').length
     const lateDays = records.filter(r => r.status === 'late').length
+    const absentDays = records.filter(r => r.status === 'absent').length
+    
+    // Calculate actual absent days (working days without any attendance record)
+    const daysWithRecords = new Set(records.map(r => r.date))
+    const actualAbsentDays = totalWorkingDays - daysWithRecords.size
+    
     // Calculate total hours from check-in/check-out times
     const totalHours = records.reduce((sum, r) => {
       if (r.check_in && r.check_out) {
@@ -176,7 +202,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
       return sum
     }, 0)
-    const averageHours = totalDays > 0 ? totalHours / totalDays : 0
+    
+    // Calculate average hours per working day (not per attendance record)
+    const averageHours = totalWorkingDays > 0 ? totalHours / totalWorkingDays : 0
 
     // Mask sensitive information
     const dniMasked = employeeDetails.dni?.length > 9 
@@ -226,9 +254,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
       attendance_summary: {
         summary: {
-          totalDays,
+          totalDays: totalWorkingDays,
           presentDays,
-          absentDays,
+          absentDays: actualAbsentDays,
           lateDays,
           totalHours,
           averageHours
