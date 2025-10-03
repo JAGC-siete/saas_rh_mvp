@@ -180,8 +180,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return workingDays
     }
     
-    const now = new Date()
-    const totalWorkingDays = getWorkingDaysInMonth(now.getFullYear(), now.getMonth())
+    const currentDate = new Date()
+    const totalWorkingDays = getWorkingDaysInMonth(currentDate.getFullYear(), currentDate.getMonth())
     
     // Count attendance by status
     const presentDays = records.filter(r => r.status === 'present').length
