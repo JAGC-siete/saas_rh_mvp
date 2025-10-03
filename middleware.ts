@@ -308,8 +308,24 @@ export async function middleware(request: NextRequest) {
             .eq('id', user.id)
             .single();
           
-          if (profileError || !profile || !['super_admin', 'company_admin', 'hr_manager'].includes(profile.role)) {
-            logger.warn('Unauthorized admin API access', { path: pathname, userId: user.id });
+          // Super admin APIs require super_admin role only
+          const requiredRole = pathname.startsWith('/api/admin/') && (
+            pathname === '/api/admin/users' || 
+            pathname === '/api/admin/companies' ||
+            pathname.includes('super-admin')
+          ) ? 'super_admin' : ['super_admin', 'company_admin', 'hr_manager']
+          
+          const hasPermission = requiredRole === 'super_admin' 
+            ? profile?.role === 'super_admin'
+            : profile ? ['super_admin', 'company_admin', 'hr_manager'].includes(profile.role) : false
+          
+          if (profileError || !profile || !hasPermission) {
+            logger.warn('Unauthorized admin API access', { 
+              path: pathname, 
+              userId: user.id,
+              userRole: profile?.role,
+              requiredRole: Array.isArray(requiredRole) ? 'admin roles' : requiredRole
+            });
             return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
           }
         }
@@ -470,11 +486,18 @@ export async function middleware(request: NextRequest) {
           .eq('id', user.id)
           .single()
         
-        if (profileError || !profile || !['super_admin', 'company_admin', 'hr_manager'].includes(profile.role)) {
+        // Super admin route requires super_admin role only
+        const requiredRole = pathname === '/app/admin/super-admin' ? 'super_admin' : ['super_admin', 'company_admin', 'hr_manager']
+        const hasPermission = pathname === '/app/admin/super-admin' 
+          ? profile?.role === 'super_admin'
+          : profile ? ['super_admin', 'company_admin', 'hr_manager'].includes(profile.role) : false
+          
+        if (profileError || !profile || !hasPermission) {
           logger.warn('Unauthorized admin access attempt', { 
             path: pathname, 
             userId: user?.id,
-            userRole: profile?.role 
+            userRole: profile?.role,
+            requiredRole: pathname === '/app/admin/super-admin' ? 'super_admin only' : 'admin roles'
           })
           return NextResponse.redirect(new URL('/app/dashboard', request.url))
         }
