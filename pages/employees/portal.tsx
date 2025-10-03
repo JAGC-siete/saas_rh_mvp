@@ -11,9 +11,12 @@ import {
   CurrencyDollarIcon, 
   ArrowRightOnRectangleIcon,
   CalendarDaysIcon,
-  ChartBarIcon
+  ChartBarIcon,
+  DocumentTextIcon
 } from '@heroicons/react/24/outline'
 import { clientLogger } from '../../lib/logger-client'
+import EmployeePermissionForm from '../../components/employee-portal/EmployeePermissionForm'
+import EmployeePermissionHistory from '../../components/employee-portal/EmployeePermissionHistory'
 
 // Component for attendance records list
 function AttendanceRecordsList({ employeeId }: { employeeId?: string }) {
@@ -508,13 +511,25 @@ interface AttendanceSummary {
   }
 }
 
+interface PermissionsSummary {
+  summary: {
+    totalPermissions: number
+    permissionsThisMonth: number
+    hoursUsed: number
+    daysUsed: number
+  }
+}
+
 export default function EmployeePortal() {
   // Use same auth system as admin portal
   const { user, session, logout } = useAuth()
   const [profile, setProfile] = useState<EmployeeProfile | null>(null)
   const [attendanceSummary, setAttendanceSummary] = useState<AttendanceSummary | null>(null)
+  const [permissionsSummary, setPermissionsSummary] = useState<PermissionsSummary | null>(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'profile' | 'attendance' | 'payroll'>('profile')
+  const [activeTab, setActiveTab] = useState<'profile' | 'attendance' | 'permissions' | 'payroll'>('profile')
+  const [showPermissionForm, setShowPermissionForm] = useState(false)
+  const [isSubmittingPermission, setIsSubmittingPermission] = useState(false)
   const router = useRouter()
   
   // Check if user is employee
@@ -553,6 +568,9 @@ export default function EmployeePortal() {
         // Set attendance summary with proper structure
         setAttendanceSummary(dashboardData.attendance_summary)
         
+        // Set permissions summary with proper structure
+        setPermissionsSummary(dashboardData.permissions_summary)
+        
       } else {
         const errorData = await dashboardResponse.text()
         console.error('Failed to fetch dashboard data:', {
@@ -588,6 +606,7 @@ export default function EmployeePortal() {
     localStorage.removeItem('employee_data')
     setProfile(null)
     setAttendanceSummary(null)
+    setPermissionsSummary(null)
   }, [])
 
   const handleLogout = useCallback(async () => {
@@ -615,6 +634,38 @@ export default function EmployeePortal() {
   const getAttendancePercentage = () => {
     if (!attendanceSummary?.summary.totalDays) return 0
     return Math.round((attendanceSummary.summary.presentDays / attendanceSummary.summary.totalDays) * 100)
+  }
+
+  const handlePermissionSubmit = async (formData: any) => {
+    try {
+      setIsSubmittingPermission(true)
+      
+      const response = await fetch('/api/employees/me/permissions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(formData)
+      })
+
+      if (response.ok) {
+        // Refresh dashboard data to update permissions summary
+        await fetchEmployeeData()
+        setShowPermissionForm(false)
+        
+        // Show success message (you could add a toast notification here)
+        alert('✅ Permiso registrado exitosamente')
+      } else {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Error al registrar el permiso')
+      }
+    } catch (error) {
+      console.error('Error submitting permission:', error)
+      alert(`❌ Error: ${error instanceof Error ? error.message : 'Error desconocido'}`)
+    } finally {
+      setIsSubmittingPermission(false)
+    }
   }
 
   if (loading) {
@@ -677,7 +728,7 @@ export default function EmployeePortal() {
         </div>
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card className="glass-strong">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -714,6 +765,22 @@ export default function EmployeePortal() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
+                  <p className="text-sm text-gray-300">Permisos del Mes</p>
+                  <p className="text-2xl font-bold text-white">
+                    {permissionsSummary?.summary.permissionsThisMonth || 0}
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-orange-500/20 rounded-full flex items-center justify-center">
+                  <DocumentTextIcon className="h-6 w-6 text-orange-400" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-strong">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
                   <p className="text-sm text-gray-300">Horas Totales</p>
                   <p className="text-2xl font-bold text-white">
                     {Math.round((attendanceSummary?.summary.totalHours || 0) * 10) / 10}
@@ -732,6 +799,7 @@ export default function EmployeePortal() {
           {[
             { id: 'profile', label: 'Mi Perfil', icon: UserIcon },
             { id: 'attendance', label: 'Mi Asistencia', icon: ClockIcon },
+            { id: 'permissions', label: 'Mi Permisos', icon: DocumentTextIcon },
             { id: 'payroll', label: 'Mi Nómina', icon: CurrencyDollarIcon }
           ].map((tab) => (
             <button
@@ -891,6 +959,75 @@ export default function EmployeePortal() {
                 ) : (
                   <div className="flex justify-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-400"></div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {activeTab === 'permissions' && (
+            <Card className="glass-strong">
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle className="text-white">Mi Permisos</CardTitle>
+                    <CardDescription className="text-gray-300">
+                      Registre permisos pre-autorizados y consulte su historial
+                    </CardDescription>
+                  </div>
+                  <Button
+                    onClick={() => setShowPermissionForm(true)}
+                    className="bg-brand-600 hover:bg-brand-700"
+                  >
+                    <DocumentTextIcon className="h-4 w-4 mr-2" />
+                    Nueva Solicitud
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {showPermissionForm ? (
+                  <EmployeePermissionForm
+                    onSubmit={handlePermissionSubmit}
+                    onCancel={() => setShowPermissionForm(false)}
+                    isLoading={isSubmittingPermission}
+                  />
+                ) : (
+                  <div className="space-y-6">
+                    {/* Permissions Summary */}
+                    {permissionsSummary && (
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-orange-400">
+                            {permissionsSummary.summary.totalPermissions}
+                          </div>
+                          <div className="text-sm text-gray-400">Total Permisos</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-blue-400">
+                            {permissionsSummary.summary.permissionsThisMonth}
+                          </div>
+                          <div className="text-sm text-gray-400">Este Mes</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-green-400">
+                            {permissionsSummary.summary.hoursUsed}h
+                          </div>
+                          <div className="text-sm text-gray-400">Horas Usadas</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-purple-400">
+                            {permissionsSummary.summary.daysUsed}
+                          </div>
+                          <div className="text-sm text-gray-400">Días Usados</div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Permission History */}
+                    <div className="space-y-2">
+                      <h4 className="text-white font-medium">Historial de Permisos</h4>
+                      <EmployeePermissionHistory employeeId={user?.user_metadata?.employee_id} />
+                    </div>
                   </div>
                 )}
               </CardContent>

@@ -33,6 +33,14 @@ interface EmployeeDashboardResponse {
       averageHours: number
     }
   }
+  permissions_summary: {
+    summary: {
+      totalPermissions: number
+      permissionsThisMonth: number
+      hoursUsed: number
+      daysUsed: number
+    }
+  }
   recent_attendance: Array<{
     id: string
     date: string
@@ -206,6 +214,49 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Calculate average hours per working day (not per attendance record)
     const averageHours = totalWorkingDays > 0 ? totalHours / totalWorkingDays : 0
 
+    // Get permissions data for current month
+    const { data: permissionsRecords, error: permissionsError } = await supabase
+      .from('leave_requests')
+      .select(`
+        id,
+        start_date,
+        end_date,
+        days_requested,
+        status
+      `)
+      .eq('employee_id', employeeId)
+      .gte('start_date', startOfMonth)
+      .lte('end_date', endOfMonth)
+      .eq('status', 'approved')
+
+    if (permissionsError) {
+      logger.error('Failed to get permissions records', permissionsError)
+    }
+
+    // Calculate permissions summary
+    const permissions = permissionsRecords || []
+    const permissionsThisMonth = permissions.length
+    const hoursUsed = permissions.reduce((sum, p) => {
+      // Convert days_requested back to hours for hourly permissions
+      // If days_requested is less than 1, it's likely an hourly permission
+      if (p.days_requested < 1) {
+        return sum + (p.days_requested * 8) // Convert fractional days back to hours
+      }
+      return sum
+    }, 0)
+    const daysUsed = permissions.reduce((sum, p) => {
+      return sum + (p.days_requested || 0)
+    }, 0)
+
+    // Get total permissions (all time)
+    const { data: totalPermissionsRecords } = await supabase
+      .from('leave_requests')
+      .select('id')
+      .eq('employee_id', employeeId)
+      .eq('status', 'approved')
+
+    const totalPermissions = totalPermissionsRecords?.length || 0
+
     // Mask sensitive information
     const dniMasked = employeeDetails.dni?.length > 9 
       ? `${employeeDetails.dni.substring(0, 4)}****${employeeDetails.dni.slice(-5)}`
@@ -260,6 +311,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           lateDays,
           totalHours,
           averageHours
+        }
+      },
+      permissions_summary: {
+        summary: {
+          totalPermissions,
+          permissionsThisMonth,
+          hoursUsed,
+          daysUsed
         }
       },
       recent_attendance: records.slice(0, 10).map(record => ({
