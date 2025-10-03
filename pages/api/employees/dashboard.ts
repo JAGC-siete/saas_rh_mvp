@@ -158,20 +158,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     employeeDetails.work_schedules = workSchedule
 
     // Get attendance data for current month (dates already calculated above)
+    // Query attendance_events instead of attendance_records for actual data
 
-    const { data: attendanceRecords, error: attendanceError } = await supabase
-      .from('attendance_records')
+    const { data: attendanceEvents, error: attendanceError } = await supabase
+      .from('attendance_events')
       .select(`
         id,
-        date,
-        check_in,
-        check_out,
-        status
+        event_type,
+        ts_utc,
+        ts_local,
+        ref_record_id
       `)
       .eq('employee_id', employeeId)
-      .gte('date', startOfMonth)
-      .lte('date', endOfMonth)
-      .order('date', { ascending: false })
+      .gte('ts_local', startOfMonth)
+      .lte('ts_local', endOfMonth)
+      .order('ts_local', { ascending: false })
 
     if (attendanceError) {
       logger.error('Failed to get attendance records', attendanceError)
@@ -209,8 +210,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const currentDate = new Date()
     const totalWorkingDays = getWorkingDaysInMonth(currentDate.getFullYear(), currentDate.getMonth())
     
-    // Count attendance by status
-    const presentDays = records.filter(r => r.status === 'present').length
+    // Count attendance by status - FIXED LOGIC
+    // presentDays = todos los que tienen check_in (no importa el status)
+    const presentDays = records.filter(r => r.check_in !== null).length
     const lateDays = records.filter(r => r.status === 'late').length
     const absentDays = records.filter(r => r.status === 'absent').length
     
