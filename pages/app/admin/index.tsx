@@ -265,22 +265,24 @@ export default function AdminDashboard() {
             </Card>
 
             {userProfile.role === 'super_admin' && (
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Database className="h-5 w-5 text-red-600" />
-                    Administración Avanzada
-                  </CardTitle>
-                  <CardDescription>
-                    Herramientas de super administrador
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button variant="outline" className="w-full">
-                    Herramientas Avanzadas
-                  </Button>
-                </CardContent>
-              </Card>
+              <Link href="/app/admin/super-admin">
+                <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Database className="h-5 w-5 text-red-600" />
+                      Administración Avanzada
+                    </CardTitle>
+                    <CardDescription>
+                      Herramientas de super administrador
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button variant="outline" className="w-full">
+                      Super Admin Panel
+                    </Button>
+                  </CardContent>
+                </Card>
+              </Link>
             )}
           </div>
 
