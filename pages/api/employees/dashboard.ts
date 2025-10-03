@@ -105,6 +105,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       companyId: companyId
     })
 
+    // Debug: Log the date range being used
+    const now = new Date()
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
+    
+    logger.info('Dashboard date range', {
+      employeeId,
+      startOfMonth,
+      endOfMonth,
+      currentDate: now.toISOString()
+    })
+
     // Get employee profile - try direct query first (RLS might be blocking JOINs)
     const { data: employeeDetails, error: employeeError } = await supabase
       .from('employees')
@@ -145,10 +157,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     employeeDetails.departments = department
     employeeDetails.work_schedules = workSchedule
 
-    // Get attendance data for current month
-    const now = new Date()
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
+    // Get attendance data for current month (dates already calculated above)
 
     const { data: attendanceRecords, error: attendanceError } = await supabase
       .from('attendance_records')
@@ -167,6 +176,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (attendanceError) {
       logger.error('Failed to get attendance records', attendanceError)
     }
+
+    // Debug: Log attendance query results
+    logger.info('Attendance query results', {
+      employeeId,
+      dateRange: { startOfMonth, endOfMonth },
+      recordsFound: attendanceRecords?.length || 0,
+      records: attendanceRecords?.slice(0, 3), // First 3 records for debugging
+      error: attendanceError?.message
+    })
 
     // Calculate attendance summary with proper working days calculation
     const records = attendanceRecords || []
@@ -214,6 +232,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Calculate average hours per working day (not per attendance record)
     const averageHours = totalWorkingDays > 0 ? totalHours / totalWorkingDays : 0
 
+    // Debug: Log attendance calculations
+    logger.info('Attendance calculations', {
+      employeeId,
+      totalWorkingDays,
+      recordsLength: records.length,
+      presentDays,
+      lateDays,
+      absentDays,
+      actualAbsentDays,
+      totalHours,
+      averageHours
+    })
+
     // Get permissions data for current month
     const { data: permissionsRecords, error: permissionsError } = await supabase
       .from('leave_requests')
@@ -232,6 +263,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (permissionsError) {
       logger.error('Failed to get permissions records', permissionsError)
     }
+
+    // Debug: Log permissions query results
+    logger.info('Permissions query results', {
+      employeeId,
+      dateRange: { startOfMonth, endOfMonth },
+      recordsFound: permissionsRecords?.length || 0,
+      records: permissionsRecords?.slice(0, 3), // First 3 records for debugging
+      error: permissionsError?.message
+    })
 
     // Calculate permissions summary
     const permissions = permissionsRecords || []
