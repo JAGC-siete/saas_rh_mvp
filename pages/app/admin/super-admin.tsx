@@ -78,7 +78,17 @@ export default function SuperAdminPanel() {
       router.push('/app/login')
       return
     }
-  }, [user, loading, router])
+    
+    // Super admin role check
+    if (!loading && user && userProfile && userProfile.role !== 'super_admin') {
+      console.warn('Non-super-admin user attempted to access super-admin panel', {
+        userId: user.id,
+        userRole: userProfile.role
+      })
+      router.push('/app/dashboard')
+      return
+    }
+  }, [user, loading, router, userProfile])
 
   // Load data - same as employees dashboard
   useEffect(() => {

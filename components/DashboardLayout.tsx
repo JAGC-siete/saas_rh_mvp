@@ -10,7 +10,8 @@ import {
   ChartBarIcon,
   Cog6ToothIcon,
   ArrowLeftOnRectangleIcon,
-  UsersIcon
+  UsersIcon,
+  ShieldCheckIcon
 } from '@heroicons/react/24/outline'
 import { TrophyIcon } from '@heroicons/react/24/solid'
 import { supabase } from '../lib/supabase'
@@ -29,6 +30,7 @@ interface UserPermissions {
   reports?: boolean
   gamification?: boolean
   settings?: boolean
+  admin?: boolean
 }
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
@@ -49,7 +51,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         
         const { data, error } = await supabase
           .from('user_profiles')
-          .select('permissions')
+          .select('permissions, role')
           .eq('id', user.id)
           .single()
         
@@ -71,7 +73,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             payroll: true,
             reports: true,
             gamification: true,
-            settings: false
+            settings: false,
+            admin: false
           })
         } else {
           // Verificar que data.permissions existe antes de usarlo
@@ -84,8 +87,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             payroll: true,
             reports: true,
             gamification: true,
-            settings: false
+            settings: false,
+            admin: false
           }
+          
+          // Determinar permiso de admin basado en el rol
+          const isAdmin = ['super_admin', 'company_admin', 'hr_manager'].includes(data.role || '')
+          permissions.admin = isAdmin
+          
           setUserPermissions(permissions)
         }
       } catch (error) {
@@ -125,6 +134,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Nómina', href: '/app/payroll', icon: CurrencyDollarIcon, permission: 'payroll' },
     { name: 'Reportes', href: '/app/reports', icon: ChartBarIcon, permission: 'reports' },
     { name: 'Gamificación', href: '/app/gamification', icon: TrophyIcon, permission: 'gamification' },
+    { name: 'Administración', href: '/app/admin', icon: ShieldCheckIcon, permission: 'admin' },
     { name: 'Configuración', href: '/app/settings', icon: Cog6ToothIcon, permission: 'settings' },
   ]
 

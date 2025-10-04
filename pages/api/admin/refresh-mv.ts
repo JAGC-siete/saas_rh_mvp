@@ -36,8 +36,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(403).json({ error: 'User profile not found' })
     }
 
-    if (!['super_admin', 'company_admin', 'hr_manager'].includes(profile.role)) {
-      return res.status(403).json({ error: 'Insufficient permissions' })
+    if (profile.role !== 'super_admin') {
+      return res.status(403).json({ error: 'Super admin access required' })
     }
 
     logger.info('Starting materialized view refresh', { userId: user.id, role: profile.role })
