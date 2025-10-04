@@ -4,6 +4,7 @@ import { useRouter } from 'next/router'
 import Head from 'next/head'
 import SuperAdminLayout from '../../../components/SuperAdminLayout'
 import SuperAdminStats from '../../../components/SuperAdminStats'
+import EnvironmentError from '../../../components/EnvironmentError'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card'
 import { Button } from '../../../components/ui/button'
 import { 
@@ -60,6 +61,7 @@ export default function SuperAdminDashboard() {
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([])
   const [loadingData, setLoadingData] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [envError, setEnvError] = useState(false)
 
   // Load dashboard data
   useEffect(() => {
@@ -72,6 +74,7 @@ export default function SuperAdminDashboard() {
     try {
       setLoadingData(true)
       setError(null)
+      setEnvError(false)
 
       // Load system stats and recent activity in parallel
       const [statsRes, activityRes] = await Promise.all([
@@ -82,6 +85,10 @@ export default function SuperAdminDashboard() {
       if (statsRes.ok) {
         const statsData = await statsRes.json()
         setSystemOverview(statsData.stats)
+      } else if (statsRes.status === 500) {
+        // Likely environment variable issue
+        setEnvError(true)
+        return
       }
 
       if (activityRes.ok) {
@@ -91,6 +98,10 @@ export default function SuperAdminDashboard() {
     } catch (error) {
       console.error('Error loading dashboard data:', error)
       setError('Error al cargar datos del dashboard')
+      // Check if it's an environment variable issue
+      if (error instanceof Error && error.message.includes('configuration')) {
+        setEnvError(true)
+      }
     } finally {
       setLoadingData(false)
     }
@@ -115,6 +126,15 @@ export default function SuperAdminDashboard() {
 
   if (!user || userProfile?.role !== 'super_admin') {
     return null
+  }
+
+  // Show environment error if detected
+  if (envError) {
+    return (
+      <SuperAdminLayout>
+        <EnvironmentError />
+      </SuperAdminLayout>
+    )
   }
 
   const getHealthIcon = (health: string) => {
