@@ -5,6 +5,7 @@ import Head from 'next/head'
 import SuperAdminLayout from '../../../components/SuperAdminLayout'
 import SuperAdminStats from '../../../components/SuperAdminStats'
 import EnvironmentError from '../../../components/EnvironmentError'
+import ClientEnvDebug from '../../../components/ClientEnvDebug'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card'
 import { Button } from '../../../components/ui/button'
 import { 
@@ -132,7 +133,10 @@ export default function SuperAdminDashboard() {
   if (envError) {
     return (
       <SuperAdminLayout>
-        <EnvironmentError />
+        <div className="space-y-6">
+          <EnvironmentError />
+          <ClientEnvDebug />
+        </div>
       </SuperAdminLayout>
     )
   }
