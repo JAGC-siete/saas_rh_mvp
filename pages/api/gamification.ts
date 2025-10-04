@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
+import { requireCompanyAccess } from "../../lib/auth/api-auth-fixed"
 import { withReportsRateLimit } from '../../lib/security/rate-limiting'
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {

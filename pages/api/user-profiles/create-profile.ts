@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { authenticateUser } from '../../../lib/auth/api-auth'
+import { authenticateUser } from "../../../lib/auth/api-auth-fixed"
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {

@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { logger } from '../../../lib/logger'
-import { requireAdmin } from '../../../lib/auth/api-auth'
+import { requireAdmin } from "../../../lib/auth/api-auth-fixed"
 import { nowInHonduras } from '../../../lib/timezone'
 
 interface LogsResponse {
