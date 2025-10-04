@@ -134,7 +134,7 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
             {superAdminNavigation.map((item, index) => {
               const isActive = router.pathname === item.href
               return (
-                <Link key={index} href={item.href}>
+                <Link key={index} href={item.href} prefetch={false}>
                   <div
                     className={`group flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                       isActive
