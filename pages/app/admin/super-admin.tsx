@@ -3,6 +3,7 @@ import { useAuth } from '../../../lib/auth'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
 import DashboardLayout from '../../../components/DashboardLayout'
+import SuperAdminStats from '../../../components/SuperAdminStats'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card'
 import { Button } from '../../../components/ui/button'
 import { 
@@ -254,6 +255,12 @@ export default function SuperAdminPanel() {
                  userProfile?.role === 'employee' ? 'Empleado' : userProfile?.role || 'Usuario'}
               </span>
             </div>
+          </div>
+
+          {/* System Statistics */}
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold text-gray-900">Estadísticas del Sistema</h2>
+            <SuperAdminStats />
           </div>
 
           {/* Alerts */}

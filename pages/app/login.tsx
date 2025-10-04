@@ -39,11 +39,15 @@ export default function LoginExisting() {
       // Guardar datos del usuario en localStorage (sin JWT personalizado)
       localStorage.setItem('user', JSON.stringify(data.user))
       
-      // Check if user has a profile, if not redirect to profile creation
-      if (!data.user.company_id) {
+      // Check user role and redirect accordingly
+      if (data.user.role === 'super_admin') {
+        // Super admin goes to super admin panel
+        window.location.href = '/app/admin/super-admin'
+      } else if (!data.user.company_id) {
+        // Other users without company_id go to onboarding
         window.location.href = '/onboarding'
       } else {
-        // Forzar recarga de la página para sincronizar el contexto
+        // Regular users go to dashboard
         window.location.href = '/app/dashboard'
       }
     } catch (err: any) {

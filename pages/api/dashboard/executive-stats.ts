@@ -8,9 +8,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { supabase, companyId } = await requireCompanyAccess(req, res)
+    const { supabase, companyId, role } = await requireCompanyAccess(req, res)
     
-    if (!companyId) {
+    // Para super_admin, companyId puede ser null - no es error
+    // Solo validar companyId para otros roles
+    if (!companyId && role !== 'super_admin') {
       return res.status(400).json({ error: 'Company ID is required' })
     }
     
