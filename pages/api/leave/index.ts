@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '@supabase/supabase-js'
 import formidable from 'formidable'
-import { requireCompanyAccess } from '../../../lib/auth/api-auth'
+import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { logger } from '../../../lib/logger'
 import { nowInHonduras } from '../../../lib/timezone'
 

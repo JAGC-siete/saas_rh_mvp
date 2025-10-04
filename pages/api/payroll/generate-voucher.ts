@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { requireCompanyAccess } from '../../../lib/auth/api-auth'
+import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { generateEmployeeReceiptPDF } from '../../../lib/payroll/receipt'
 import { getHondurasTimestamp } from '../../../lib/timezone'
 

@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { requireCompanyAccess } from '../../../lib/auth/api-auth'
+import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { getCompanyData } from '../../../lib/helpers/company-filter'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {

@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { requireCompanyAccess } from '../../../lib/auth/api-auth'
+import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { getCompanyData } from '../../../lib/helpers/company-filter'
 import { formatDateForHonduras, nowInHonduras, formatDateTimeForHonduras } from '../../../lib/timezone'
 import { 

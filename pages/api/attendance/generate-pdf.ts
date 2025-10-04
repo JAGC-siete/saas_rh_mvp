@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { requireCompanyAccess } from '../../../lib/auth/api-auth'
+import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { getDateRange } from '../../../lib/attendance'
 import { createSecureQueryBuilder } from '../../../lib/security/secure-queries'
 import { generateAttendancePDF } from '../../../lib/pdf/attendance-pdf-generator'

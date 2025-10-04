@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { requireCompanyAccess } from '../../../lib/auth/api-auth'
+import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { validatePayrollExport, sanitizeFilename } from '../../../lib/security/payroll-validation'
 import { createSecurePayrollQueryBuilder } from '../../../lib/security/payroll-queries'
 import { withExportRateLimit } from '../../../lib/security/rate-limiting'

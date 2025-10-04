@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { requireCompanyAccess, requireAdmin } from '../../../lib/auth/api-auth'
+import { requireCompanyAccess, requireAdmin } from "../../../lib/auth/api-auth-fixed"
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {

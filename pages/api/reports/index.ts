@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { requireCompanyAccess } from '../../../lib/auth/api-auth'
+import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { requirePlanAndQuota } from '../../../lib/billing/enforce'
 import { withReportsRateLimit } from '../../../lib/security/rate-limiting'
 

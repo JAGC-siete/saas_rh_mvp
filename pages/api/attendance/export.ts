@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { requireCompanyAccess } from '../../../lib/auth/api-auth'
+import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { validateAttendanceExport } from '../../../lib/security/schema-validation'
 import { createSecureQueryBuilder } from '../../../lib/security/secure-queries'
 import { withExportRateLimit } from '../../../lib/security/rate-limiting'

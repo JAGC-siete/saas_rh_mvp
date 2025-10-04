@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { requireCompanyAccess } from '../../../lib/auth/api-auth'
+import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { nowInHonduras } from '../../../lib/timezone'
 import { withReportsRateLimit } from '../../../lib/security/rate-limiting'
 
