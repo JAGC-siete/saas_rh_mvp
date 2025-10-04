@@ -41,8 +41,8 @@ export default function LoginExisting() {
       
       // Check user role and redirect accordingly
       if (data.user.role === 'super_admin') {
-        // Super admin goes to super admin panel
-        window.location.href = '/app/admin/super-admin'
+        // Super admin goes to super admin dashboard
+        window.location.href = '/app/admin/super-admin-dashboard'
       } else if (!data.user.company_id) {
         // Other users without company_id go to onboarding
         window.location.href = '/onboarding'
