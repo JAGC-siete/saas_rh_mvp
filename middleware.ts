@@ -9,6 +9,7 @@ function validateUserPermissionsInline(profile: any, pathname: string) {
   const superAdminOnlyPaths = [
     '/api/admin/users',
     '/api/admin/companies',
+    '/api/admin/companies-improved',
     '/api/admin/stats',
     '/api/admin/recent-activity'
   ]

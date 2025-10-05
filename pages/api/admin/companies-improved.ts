@@ -10,9 +10,17 @@ const companiesHandler: AdminApiHandler = {
   GET: async (req: NextApiRequest, res: NextApiResponse, context: AdminApiContext) => {
     try {
       const { supabase, userProfile } = context
-      
-      // Get all companies with employee count
-      const { data: companies, error } = await supabase
+
+      // Query params
+      const q = (req.query.q as string | undefined)?.trim() || ''
+      const activeParam = req.query.active as string | undefined
+      const page = Math.max(1, parseInt((req.query.page as string) || '1', 10))
+      const pageSize = Math.min(100, Math.max(1, parseInt((req.query.pageSize as string) || '12', 10)))
+      const from = (page - 1) * pageSize
+      const to = from + pageSize - 1
+
+      // Base query with count
+      let query = supabase
         .from('companies')
         .select(`
           id,
@@ -23,8 +31,26 @@ const companiesHandler: AdminApiHandler = {
           created_at,
           updated_at,
           employees:employees(count)
-        `)
-        .order('created_at', { ascending: false })
+        `, { count: 'exact' })
+
+      // Filters
+      if (q) {
+        // ilike on multiple columns via or()
+        query = query.or(
+          `name.ilike.%${q}%,subdomain.ilike.%${q}%,plan_type.ilike.%${q}%`
+        )
+      }
+
+      if (activeParam === 'true') {
+        query = query.eq('is_active', true)
+      } else if (activeParam === 'false') {
+        query = query.eq('is_active', false)
+      }
+
+      // Order newest first and range for pagination
+      query = query.order('created_at', { ascending: false }).range(from, to)
+
+      const { data: companies, error, count } = await query
 
       if (error) {
         throw error
@@ -48,7 +74,11 @@ const companiesHandler: AdminApiHandler = {
         success: true,
         companies: companiesWithCount || [],
         metadata: {
-          total: companiesWithCount?.length || 0,
+          total: count || 0,
+          page,
+          pageSize,
+          query: q,
+          active: activeParam ?? null,
           retrievedBy: userProfile.id,
           retrievedAt: new Date().toISOString()
         }
