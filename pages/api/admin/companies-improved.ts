@@ -88,7 +88,7 @@ const companiesHandler: AdminApiHandler = {
         userId: context.userProfile.id,
         error: error instanceof Error ? error.message : String(error)
       })
-      throw error
+      return res.status(500).json({ success: false, error: 'Failed to retrieve companies', message: error instanceof Error ? error.message : 'Unknown error' })
     }
   },
 
@@ -230,7 +230,7 @@ const companiesHandler: AdminApiHandler = {
           adminEmail: req.body.admin_email
         }
       })
-      throw error
+      return res.status(500).json({ success: false, error: 'Failed to create company', message: error instanceof Error ? error.message : 'Unknown error' })
     }
   }
 }

@@ -42,8 +42,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(405).json({ error: 'Method not allowed' })
     }
   } catch (error) {
-    logger.error('Error in company admin API', error)
-    return res.status(500).json(createSecureErrorResponse(error))
+    logger.error('Error in company admin API', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      id
+    })
+    return res.status(500).json({ success: false, error: 'Internal server error', message: error instanceof Error ? error.message : 'Unknown error' })
   }
 }
 
@@ -99,8 +103,11 @@ async function getCompany(supabase: any, id: string, res: NextApiResponse) {
       company: companyData
     })
   } catch (error) {
-    logger.error('Error fetching company', error)
-    return res.status(500).json(createSecureErrorResponse(error))
+    logger.error('Error fetching company', {
+      error: error instanceof Error ? error.message : String(error),
+      id
+    })
+    return res.status(500).json({ success: false, error: 'Failed to fetch company', message: error instanceof Error ? error.message : 'Unknown error' })
   }
 }
 
@@ -174,8 +181,11 @@ async function updateCompany(supabase: any, id: string, req: NextApiRequest, res
       company
     })
   } catch (error) {
-    logger.error('Error updating company', error)
-    return res.status(500).json(createSecureErrorResponse(error))
+    logger.error('Error updating company', {
+      error: error instanceof Error ? error.message : String(error),
+      id
+    })
+    return res.status(500).json({ success: false, error: 'Failed to update company', message: error instanceof Error ? error.message : 'Unknown error' })
   }
 }
 
@@ -217,7 +227,10 @@ async function deleteCompany(supabase: any, id: string, res: NextApiResponse) {
       message: 'Company deleted successfully'
     })
   } catch (error) {
-    logger.error('Error deleting company', error)
-    return res.status(500).json(createSecureErrorResponse(error))
+    logger.error('Error deleting company', {
+      error: error instanceof Error ? error.message : String(error),
+      id
+    })
+    return res.status(500).json({ success: false, error: 'Failed to delete company', message: error instanceof Error ? error.message : 'Unknown error' })
   }
 }
