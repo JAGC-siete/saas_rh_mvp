@@ -4,7 +4,7 @@
  */
 
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../supabase/server'
+import { createClient, createAdminClient } from '../supabase/server'
 import { logger } from '../logger'
 import { 
   logAdminOperationStart, 
@@ -63,11 +63,12 @@ export function createAdminApiHandler(
         return res.status(405).json({ error: 'Method not allowed' })
       }
 
-      // Create Supabase client
-      const supabase = createClient(req, res)
+      // Create clients: auth (cookie-based) and admin (service role) for DB operations
+      const authClient = createClient(req, res)
+      const dbClient = config.requireSuperAdmin ? createAdminClient() : authClient
 
       // Get authenticated user
-      const { data: { user }, error: userError } = await supabase.auth.getUser()
+      const { data: { user }, error: userError } = await authClient.auth.getUser()
       
       if (userError || !user) {
         logger.warn('Unauthenticated admin API access attempt', { 
@@ -78,7 +79,7 @@ export function createAdminApiHandler(
       }
 
       // Get user profile with extended information
-      const { data: profile, error: profileError } = await supabase
+      const { data: profile, error: profileError } = await dbClient
         .from('user_profiles')
         .select('id, role, company_id, is_active')
         .eq('id', user.id)
@@ -127,7 +128,7 @@ export function createAdminApiHandler(
 
       // Create API context
       const apiContext: AdminApiContext = {
-        supabase,
+        supabase: dbClient,
         user,
         userProfile: profile,
         operation: config.operation,
