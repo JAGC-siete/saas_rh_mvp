@@ -42,7 +42,7 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
   // Navegación específica para Super Admin
   const superAdminNavigation = [
     {
-      name: 'Dashboard',
+      name: 'Super Admin Panel',
       href: '/app/admin/super-admin-dashboard',
       icon: BarChart3,
       description: 'Vista general del sistema'
