@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { useAuth } from '../../../lib/auth'
-import DashboardLayout from '../../../components/DashboardLayout'
+import SuperAdminLayout from '../../../components/SuperAdminLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card'
 import { Button } from '../../../components/ui/button'
 import { useNotificationContext } from '../../../components/NotificationProvider'
@@ -143,7 +143,7 @@ export default function CompaniesAdminPage() {
       <Head>
         <title>Empresas - Admin</title>
       </Head>
-      <DashboardLayout>
+      <SuperAdminLayout>
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold">Empresas</h1>
@@ -234,7 +234,7 @@ export default function CompaniesAdminPage() {
             </CardContent>
           </Card>
         </div>
-      </DashboardLayout>
+      </SuperAdminLayout>
     </>
   )
 }

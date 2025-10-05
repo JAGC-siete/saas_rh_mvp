@@ -27,7 +27,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     switch (req.method) {
       case 'GET':
-        return await getUsers(supabase, res)
+        return await getUsers(supabase, req, res)
       case 'POST':
         return await createUser(supabase, req, res)
       default:
@@ -40,10 +40,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-async function getUsers(supabase: any, res: NextApiResponse) {
+async function getUsers(supabase: any, req: NextApiRequest, res: NextApiResponse) {
   try {
-    // VERSIÓN SIMPLIFICADA - Solo obtener datos básicos de user_profiles
-    const { data: profiles, error } = await supabase
+    // Query params
+    const q = (req.query.q as string | undefined)?.trim() || ''
+    const role = (req.query.role as string | undefined) || ''
+    const state = (req.query.state as string | undefined) || ''
+    const page = Math.max(1, parseInt((req.query.page as string) || '1', 10))
+    const pageSize = Math.min(100, Math.max(1, parseInt((req.query.pageSize as string) || '12', 10)))
+    const from = (page - 1) * pageSize
+    const to = from + pageSize - 1
+
+    // Base query con count
+    let query = supabase
       .from('user_profiles')
       .select(`
         id,
@@ -52,8 +61,19 @@ async function getUsers(supabase: any, res: NextApiResponse) {
         last_login,
         created_at,
         company_id
-      `)
-      .order('created_at', { ascending: false })
+      `, { count: 'exact' })
+
+    if (role) {
+      query = query.eq('role', role)
+    }
+
+    if (state === 'active') query = query.eq('is_active', true)
+    if (state === 'inactive') query = query.eq('is_active', false)
+
+    // Order + range
+    query = query.order('created_at', { ascending: false }).range(from, to)
+
+    const { data: profiles, error, count } = await query
 
     if (error) {
       throw error
@@ -73,7 +93,15 @@ async function getUsers(supabase: any, res: NextApiResponse) {
 
     return res.status(200).json({
       success: true,
-      users: usersData
+      users: usersData,
+      metadata: {
+        total: count || 0,
+        page,
+        pageSize,
+        query: q,
+        role: role || null,
+        state: state || null
+      }
     })
   } catch (error) {
     logger.error('Error fetching users', error)

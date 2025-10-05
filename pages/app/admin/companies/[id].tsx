@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
-import DashboardLayout from '../../../../components/DashboardLayout'
+import SuperAdminLayout from '../../../../components/SuperAdminLayout'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card'
 import { Button } from '../../../../components/ui/button'
 
@@ -77,7 +77,7 @@ export default function CompanyDetailPage() {
       <Head>
         <title>Empresa - Admin</title>
       </Head>
-      <DashboardLayout>
+      <SuperAdminLayout>
         <div className="space-y-6">
           <Button variant="outline" onClick={() => router.back()}>← Volver</Button>
           {error && (
@@ -131,7 +131,7 @@ export default function CompanyDetailPage() {
             </Card>
           )}
         </div>
-      </DashboardLayout>
+      </SuperAdminLayout>
     </>
   )
 }
