@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
-import DashboardLayout from '../../../components/DashboardLayout'
-import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card'
-import { Button } from '../../../components/ui/button'
+import DashboardLayout from '../../../../components/DashboardLayout'
+import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card'
+import { Button } from '../../../../components/ui/button'
 
 export default function CompanyDetailPage() {
   const router = useRouter()

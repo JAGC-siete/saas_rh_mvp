@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
-import { useAuth } from '../../lib/auth'
-import DashboardLayout from '../../components/DashboardLayout'
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
-import { Button } from '../../components/ui/button'
-import { useNotificationContext } from '../../components/NotificationProvider'
+import { useAuth } from '../../../lib/auth'
+import DashboardLayout from '../../../components/DashboardLayout'
+import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card'
+import { Button } from '../../../components/ui/button'
+import { useNotificationContext } from '../../../components/NotificationProvider'
 
 interface Company {
   id: string
