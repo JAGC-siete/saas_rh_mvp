@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../../../lib/auth'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
-import DashboardLayout from '../../../components/DashboardLayout'
+import SuperAdminLayout from '../../../components/SuperAdminLayout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card'
 import { Button } from '../../../components/ui/button'
 import { Badge } from '../../../components/ui/badge'
@@ -139,7 +139,7 @@ export default function AdminLogs() {
         <meta name="description" content="Visualiza y analiza los logs del sistema" />
       </Head>
 
-      <DashboardLayout>
+      <SuperAdminLayout>
         <div className="space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
@@ -334,7 +334,7 @@ export default function AdminLogs() {
             </CardContent>
           </Card>
         </div>
-      </DashboardLayout>
+      </SuperAdminLayout>
     </>
   )
 }

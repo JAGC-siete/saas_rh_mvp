@@ -169,6 +169,15 @@ const ADMIN_ONLY_ROUTES = new Set([
   '/api/admin/*'
 ])
 
+// Super-admin only app routes (UI)
+const SUPER_ADMIN_ONLY_APP_ROUTES = new Set([
+  '/app/admin/super-admin',
+  '/app/admin/billing',
+  '/app/admin/security',
+  '/app/admin/backup',
+  '/app/admin/system'
+])
+
 // Helper function to check if route is protected app route
 function isProtectedAppRoute(pathname: string): boolean {
   // Check exact match first
@@ -530,9 +539,9 @@ export async function middleware(request: NextRequest) {
           .eq('id', user.id)
           .single()
         
-        // Super admin route requires super_admin role only
-        const requiredRole = pathname === '/app/admin/super-admin' ? 'super_admin' : ['super_admin', 'company_admin', 'hr_manager']
-        const hasPermission = pathname === '/app/admin/super-admin' 
+        // Super admin only routes (UI) require super_admin role
+        const isSuperAdminOnlyApp = SUPER_ADMIN_ONLY_APP_ROUTES.has(pathname)
+        const hasPermission = isSuperAdminOnlyApp
           ? profile?.role === 'super_admin'
           : profile ? ['super_admin', 'company_admin', 'hr_manager'].includes(profile.role) : false
           
@@ -541,7 +550,7 @@ export async function middleware(request: NextRequest) {
             path: pathname, 
             userId: user?.id,
             userRole: profile?.role,
-            requiredRole: pathname === '/app/admin/super-admin' ? 'super_admin only' : 'admin roles'
+            requiredRole: isSuperAdminOnlyApp ? 'super_admin only' : 'admin roles'
           })
           return NextResponse.redirect(new URL('/app/dashboard', request.url))
         }

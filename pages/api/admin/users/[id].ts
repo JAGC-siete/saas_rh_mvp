@@ -35,6 +35,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return await getUser(supabase, id, res)
       case 'PATCH':
         return await updateUser(supabase, id, req, res)
+      case 'POST':
+        // Custom actions via ?action=
+        return await postActions(supabase, id, req, res)
       case 'DELETE':
         return await deleteUser(supabase, id, res)
       default:
@@ -276,6 +279,24 @@ async function deleteUser(supabase: any, id: string, res: NextApiResponse) {
     })
   } catch (error) {
     logger.error('Error deleting user', error)
+    return res.status(500).json(createSecureErrorResponse(error))
+  }
+}
+
+async function postActions(supabase: any, id: string, req: NextApiRequest, res: NextApiResponse) {
+  try {
+    const action = (req.query.action as string) || ''
+    if (action === 'reset-password') {
+      const { new_password } = req.body as { new_password: string }
+      if (!new_password || new_password.length < 8) {
+        return res.status(400).json({ error: 'New password must be at least 8 characters' })
+      }
+      const { error } = await supabase.auth.admin.updateUserById(id, { password: new_password })
+      if (error) throw error
+      return res.status(200).json({ success: true, message: 'Password reset successfully' })
+    }
+    return res.status(400).json({ error: 'Unknown action' })
+  } catch (error) {
     return res.status(500).json(createSecureErrorResponse(error))
   }
 }

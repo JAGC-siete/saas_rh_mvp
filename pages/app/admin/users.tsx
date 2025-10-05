@@ -82,6 +82,41 @@ export default function UsersAdminPage() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const pageItems = useMemo(() => filtered, [filtered])
 
+  const toggleActive = async (u: UserRow) => {
+    try {
+      const res = await fetch(`/api/admin/users/${u.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ is_active: !u.is_active })
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.message || data?.error || 'No se pudo actualizar')
+      addNotification({ type: 'success', title: 'Usuario actualizado', message: data?.user?.email || u.email })
+      setUsers(prev => prev.map(x => x.id === u.id ? { ...x, is_active: !u.is_active } : x))
+    } catch (err: any) {
+      addNotification({ type: 'error', title: 'Error', message: err.message || 'No se pudo actualizar' })
+    }
+  }
+
+  const resetPassword = async (u: UserRow) => {
+    const newPass = prompt('Nueva contraseña (min 8 caracteres):')
+    if (!newPass) return
+    try {
+      const res = await fetch(`/api/admin/users/${u.id}?action=reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ new_password: newPass })
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.message || data?.error || 'No se pudo resetear')
+      addNotification({ type: 'success', title: 'Contraseña actualizada', message: u.email })
+    } catch (err: any) {
+      addNotification({ type: 'error', title: 'Error', message: err.message || 'No se pudo resetear' })
+    }
+  }
+
   useEffect(() => {
     if (page > totalPages) setPage(totalPages)
   }, [totalPages, page])
@@ -229,6 +264,10 @@ export default function UsersAdminPage() {
                             <div>Rol: {u.role}</div>
                             <div>Empresa: {u.company_name || u.company_id || '—'}</div>
                             <div>Último login: {u.last_login ? new Date(u.last_login).toLocaleString('es-HN') : '—'}</div>
+                          </div>
+                          <div className="mt-3 flex gap-2">
+                            <Button variant="outline" size="sm" onClick={() => toggleActive(u)}>{u.is_active ? 'Desactivar' : 'Activar'}</Button>
+                            <Button variant="outline" size="sm" onClick={() => resetPassword(u)}>Reset contraseña</Button>
                           </div>
                         </CardContent>
                       </Card>
