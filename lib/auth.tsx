@@ -144,8 +144,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setSession(session)
           setUser(session?.user ?? null)
           setError(null)
-          
-          // User profile will be loaded from login response data
+
+          // If we have a supabase session and no profile yet, try to refresh it
+          if (session?.user && !userProfile) {
+            await refreshUserProfile()
+          }
         }
         
         // Si no hay sesión de Supabase, verificar si hay datos de usuario en localStorage
@@ -183,6 +186,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('❌ Error getting initial session:', error)
         setError('Failed to get session')
       } finally {
+        // Defer loading=false until we at least attempted to populate userProfile
         setLoading(false)
       }
     }
@@ -195,6 +199,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('🔄 Auth state changed:', event, session?.user?.email)
         setSession(session)
         setUser(session?.user ?? null)
+        // Refresh profile on sign in
+        if (event === 'SIGNED_IN' && session?.user) {
+          await refreshUserProfile()
+        }
         setLoading(false)
         setError(null)
 

@@ -108,14 +108,14 @@ export default function SuperAdminDashboard() {
     }
   }
 
-  // Redirect if not super admin
+  // Redirect if not super admin (solo cuando el perfil ya está disponible)
   useEffect(() => {
-    if (!loading && userProfile && userProfile.role !== 'super_admin') {
+    if (!loading && userProfile && userProfile.role && userProfile.role !== 'super_admin') {
       router.push('/app/dashboard')
     }
   }, [loading, userProfile, router])
 
-  if (loading || loadingData) {
+  if (loading || loadingData || !userProfile) {
     return (
       <SuperAdminLayout>
         <div className="flex items-center justify-center h-64">
@@ -125,8 +125,14 @@ export default function SuperAdminDashboard() {
     )
   }
 
-  if (!user || userProfile?.role !== 'super_admin') {
-    return null
+  if (!user || userProfile.role !== 'super_admin') {
+    return (
+      <SuperAdminLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-sm text-gray-600">Acceso restringido</div>
+        </div>
+      </SuperAdminLayout>
+    )
   }
 
   // Show environment error if detected
