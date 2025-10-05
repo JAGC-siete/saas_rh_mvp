@@ -24,6 +24,15 @@ function validateUserPermissionsInline(profile: any, pathname: string) {
       reason: profile.role !== 'super_admin' ? 'Super admin access required' : undefined
     }
   }
+
+  // By default, all /api/admin/* endpoints require super_admin
+  if (pathname.startsWith('/api/admin')) {
+    return {
+      hasAccess: profile.role === 'super_admin',
+      requiredRoles: ['super_admin'],
+      reason: profile.role !== 'super_admin' ? 'Super admin access required' : undefined
+    }
+  }
   
   // Admin endpoints (super_admin, company_admin, hr_manager)
   const adminRoles = ['super_admin', 'company_admin', 'hr_manager']
@@ -235,6 +244,18 @@ function isAdminRoute(pathname: string): boolean {
 
 // Helper function to check if route is public
 function isPublicRoute(pathname: string): boolean {
+  // In production, do NOT treat env/debug pages and APIs as public
+  if (process.env.NODE_ENV === 'production') {
+    if (
+      pathname.startsWith('/api/debug') ||
+      pathname === '/api/env' ||
+      pathname === '/railway-debug' ||
+      pathname === '/debug-env' ||
+      pathname === '/test-client-env'
+    ) {
+      return false
+    }
+  }
   // Exact match
   if (PUBLIC_ROUTES.has(pathname)) return true
   

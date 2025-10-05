@@ -54,12 +54,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .from('companies')
         .update({ is_active: action === 'activate' })
         .in('id', ids)
-
       if (error) throw error
     } else if (action === 'delete') {
+      // Soft delete: mark deleted_at now and disable
       const { error } = await supabase
         .from('companies')
-        .delete()
+        .update({ deleted_at: new Date().toISOString(), is_active: false })
         .in('id', ids)
       if (error) throw error
     }

@@ -346,8 +346,8 @@ export default function TrialDashboard() {
                 <div className="flex items-start space-x-3">
                   <div className="bg-blue-500/20 text-blue-400 rounded-full p-2 text-sm font-bold">2</div>
                   <div>
-                    <h4 className="font-semibold text-white">Importa tus Empleados</h4>
-                    <p className="text-sm text-gray-300">Sube tu plantilla de empleados o pide que te carguemos datos de ejemplo.</p>
+                    <h4 className="font-semibold text-white">Envíanos tu Planilla Reciente</h4>
+                    <p className="text-sm text-gray-300">Envíanos una planilla reciente con deducciones para preparar un entorno con datos personalizados.</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">

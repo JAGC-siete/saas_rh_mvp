@@ -176,6 +176,21 @@ async function updateCompany(supabase: any, id: string, req: NextApiRequest, res
       updatedFields: Object.keys(updateData)
     })
 
+    // Audit log (best-effort)
+    try {
+      await supabase
+        .from('audit_logs')
+        .insert({
+          company_id: id,
+          action: updateData.is_active === false ? 'company_deactivated' : updateData.is_active === true ? 'company_activated' : 'company_updated',
+          resource_type: 'company',
+          resource_id: id,
+          new_values: updateData,
+        })
+    } catch (e) {
+      // ignore audit failures
+    }
+
     return res.status(200).json({
       success: true,
       message: 'Company updated successfully',
@@ -222,6 +237,18 @@ async function deleteCompany(supabase: any, id: string, res: NextApiResponse) {
     }
 
     logger.info('Company deleted successfully', { companyId: id })
+
+    // Audit log (best-effort)
+    try {
+      await supabase
+        .from('audit_logs')
+        .insert({
+          company_id: id,
+          action: 'company_deleted',
+          resource_type: 'company',
+          resource_id: id
+        })
+    } catch (e) {}
 
     return res.status(200).json({
       success: true,

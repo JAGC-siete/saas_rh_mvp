@@ -180,6 +180,24 @@ async function createCompany(supabase: any, req: NextApiRequest, res: NextApiRes
       adminEmail: admin_email
     })
 
+    // Audit log (best-effort)
+    try {
+      await supabase
+        .from('audit_logs')
+        .insert({
+          company_id: company.id,
+          user_id: authUser.user.id,
+          action: 'company_created',
+          resource_type: 'company',
+          resource_id: company.id,
+          new_values: { name, subdomain, plan_type: company.plan_type },
+          ip_address: (req.headers['x-forwarded-for'] as string) || undefined,
+          user_agent: req.headers['user-agent']
+        })
+    } catch (e) {
+      logger.warn('Failed to insert audit log for company create', { error: (e as any)?.message })
+    }
+
     return res.status(201).json({
       success: true,
       message: 'Company and admin user created successfully',

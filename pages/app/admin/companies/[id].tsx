@@ -64,6 +64,25 @@ export default function CompanyDetailPage() {
     }
   }
 
+  const toggleActive = async () => {
+    if (!id || typeof id !== 'string' || !company) return
+    try {
+      setError(null)
+      const next = !company.is_active
+      const res = await fetch(`/api/admin/companies/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ is_active: next })
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.message || data?.error || 'Error actualizando estado')
+      setCompany(data.company)
+    } catch (err: any) {
+      setError(err.message || 'Error actualizando estado')
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -118,13 +137,19 @@ export default function CompanyDetailPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="text-sm text-gray-700 space-y-1">
-                    <div><b>Nombre:</b> {company.name}</div>
-                    <div><b>Subdominio:</b> {company.subdomain || '—'}</div>
-                    <div><b>Plan:</b> {company.plan_type}</div>
-                    <div><b>Estado:</b> {company.is_active ? 'Activa' : 'Inactiva'}</div>
-                    <div><b>Empleados:</b> {company.employee_count ?? 0}</div>
-                    <div><b>Usuarios:</b> {company.user_count ?? 0}</div>
+                  <div>
+                    <div className="text-sm text-gray-700 space-y-1">
+                      <div><b>Nombre:</b> {company.name}</div>
+                      <div><b>Subdominio:</b> {company.subdomain || '—'}</div>
+                      <div><b>Plan:</b> {company.plan_type}</div>
+                      <div><b>Estado:</b> {company.is_active ? 'Activa' : 'Inactiva'}</div>
+                      <div><b>Empleados:</b> {company.employee_count ?? 0}</div>
+                      <div><b>Usuarios:</b> {company.user_count ?? 0}</div>
+                    </div>
+                    <div className="mt-4 flex gap-2">
+                      <Button variant="outline" onClick={() => router.push(`/app/admin/companies/${id}?edit=1`)}>Editar</Button>
+                      <Button variant="outline" onClick={toggleActive}>{company?.is_active ? 'Desactivar' : 'Activar'}</Button>
+                    </div>
                   </div>
                 )}
               </CardContent>

@@ -33,6 +33,14 @@ export default function CompaniesAdminPage() {
   const [showOnlyActive, setShowOnlyActive] = useState(false)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(12)
+  const [showCreate, setShowCreate] = useState(false)
+  const [createForm, setCreateForm] = useState({
+    name: '',
+    subdomain: '',
+    plan_type: 'basic',
+    admin_email: '',
+    admin_password: ''
+  })
 
   // Guard: only admins
   useEffect(() => {
@@ -122,6 +130,43 @@ export default function CompaniesAdminPage() {
     }
   }
 
+  const createCompany = async () => {
+    try {
+      if (!createForm.name || !createForm.subdomain || !createForm.admin_email || !createForm.admin_password) {
+        addNotification({ type: 'error', title: 'Campos requeridos', message: 'Completa todos los campos' })
+        return
+      }
+      setLoadingCompanies(true)
+      const res = await fetch('/api/admin/companies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(createForm)
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.message || data?.error || 'Error creando empresa')
+      addNotification({ type: 'success', title: 'Empresa creada', message: 'Se creó la empresa y el admin' })
+      setShowCreate(false)
+      setCreateForm({ name: '', subdomain: '', plan_type: 'basic', admin_email: '', admin_password: '' })
+      // reload list first page
+      setPage(1)
+      const params = new URLSearchParams()
+      if (search.trim()) params.set('q', search.trim())
+      if (showOnlyActive) params.set('active', 'true')
+      params.set('page', '1')
+      params.set('pageSize', String(pageSize))
+      const reload = await fetch(`/api/admin/companies-improved?${params.toString()}`, { credentials: 'include' })
+      const payload = await reload.json()
+      setCompanies(payload.companies || [])
+      setTotal(payload.metadata?.total || 0)
+    } catch (err: any) {
+      setError(err.message || 'Error creando empresa')
+      addNotification({ type: 'error', title: 'Error', message: err.message || 'Error creando empresa' })
+    } finally {
+      setLoadingCompanies(false)
+    }
+  }
+
   const totalPages = Math.max(1, Math.ceil((showOnlyActive || search ? filtered.length : total) / pageSize))
   const pageItems = useMemo(() => filtered, [filtered])
 
@@ -159,6 +204,7 @@ export default function CompaniesAdminPage() {
                 <input type="checkbox" checked={showOnlyActive} onChange={(e) => { setPage(1); setShowOnlyActive(e.target.checked) }} />
                 Sólo activas
               </label>
+              <Button onClick={() => setShowCreate(true)}>Nueva empresa</Button>
             </div>
           </div>
 
@@ -235,6 +281,44 @@ export default function CompaniesAdminPage() {
           </Card>
         </div>
       </SuperAdminLayout>
+
+      {showCreate && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6">
+            <h2 className="text-lg font-semibold mb-4">Crear empresa</h2>
+            <div className="grid grid-cols-1 gap-4">
+              <div>
+                <label className="block text-sm">Nombre</label>
+                <input className="w-full border rounded px-3 py-2" value={createForm.name} onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-sm">Subdominio</label>
+                <input className="w-full border rounded px-3 py-2" placeholder="ej: acme" value={createForm.subdomain} onChange={(e) => setCreateForm({ ...createForm, subdomain: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-sm">Plan</label>
+                <select className="w-full border rounded px-3 py-2" value={createForm.plan_type} onChange={(e) => setCreateForm({ ...createForm, plan_type: e.target.value })}>
+                  <option value="basic">basic</option>
+                  <option value="premium">premium</option>
+                  <option value="enterprise">enterprise</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm">Correo admin</label>
+                <input className="w-full border rounded px-3 py-2" type="email" value={createForm.admin_email} onChange={(e) => setCreateForm({ ...createForm, admin_email: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-sm">Contraseña admin</label>
+                <input className="w-full border rounded px-3 py-2" type="password" value={createForm.admin_password} onChange={(e) => setCreateForm({ ...createForm, admin_password: e.target.value })} />
+              </div>
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setShowCreate(false)}>Cancelar</Button>
+                <Button onClick={createCompany}>Crear</Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
