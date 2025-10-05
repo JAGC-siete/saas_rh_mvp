@@ -4,11 +4,12 @@ import { logger } from '../../../../lib/logger'
 import { createSecureErrorResponse, createAuthErrorResponse } from '../../../../lib/security/error-handling'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // Ensure id is available in catch scope
+  const id = typeof req.query.id === 'string' ? req.query.id : Array.isArray(req.query.id) ? req.query.id[0] : undefined
   try {
     const supabase = createClient(req, res)
-    const { id } = req.query
 
-    if (!id || typeof id !== 'string') {
+    if (!id) {
       return res.status(400).json({ error: 'Company ID is required' })
     }
     
