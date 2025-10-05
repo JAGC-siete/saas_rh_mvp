@@ -3,6 +3,38 @@ import type { NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { logger } from './lib/logger'
 
+// Inline role validation for middleware compatibility
+function validateUserPermissionsInline(profile: any, pathname: string) {
+  // Super admin only endpoints
+  const superAdminOnlyPaths = [
+    '/api/admin/users',
+    '/api/admin/companies',
+    '/api/admin/stats',
+    '/api/admin/recent-activity'
+  ]
+  
+  // Check if path requires super admin only
+  const isSuperAdminOnly = superAdminOnlyPaths.some(path => pathname.startsWith(path))
+  
+  if (isSuperAdminOnly) {
+    return {
+      hasAccess: profile.role === 'super_admin',
+      requiredRoles: ['super_admin'],
+      reason: profile.role !== 'super_admin' ? 'Super admin access required' : undefined
+    }
+  }
+  
+  // Admin endpoints (super_admin, company_admin, hr_manager)
+  const adminRoles = ['super_admin', 'company_admin', 'hr_manager']
+  const hasAdminAccess = adminRoles.includes(profile.role)
+  
+  return {
+    hasAccess: hasAdminAccess,
+    requiredRoles: adminRoles,
+    reason: !hasAdminAccess ? 'Admin access required' : undefined
+  }
+}
+
 // Cache public routes for better performance
 const PUBLIC_ROUTES = new Set([
   '/',                 // Landing principal (marketing)
@@ -300,34 +332,45 @@ export async function middleware(request: NextRequest) {
            return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
          }
         
-        // If admin route, check role (similar to app routes)
+        // If admin route, check role using centralized validation
         if (isAdminRoute(pathname)) {
           const { data: profile, error: profileError } = await supabase
             .from('user_profiles')
-            .select('role')
+            .select('role, company_id, is_active')
             .eq('id', user.id)
             .single();
           
-          // Super admin APIs require super_admin role only
-          const requiredRole = pathname.startsWith('/api/admin/') && (
-            pathname === '/api/admin/users' || 
-            pathname === '/api/admin/companies' ||
-            pathname.includes('super-admin')
-          ) ? 'super_admin' : ['super_admin', 'company_admin', 'hr_manager']
+          if (profileError || !profile) {
+            logger.warn('User profile not found for admin API access', { 
+              path: pathname, 
+              userId: user.id,
+              error: profileError?.message
+            });
+            return NextResponse.json({ error: 'User profile not found' }, { status: 403 });
+          }
           
-          const hasPermission = requiredRole === 'super_admin' 
-            ? profile?.role === 'super_admin'
-            : profile ? ['super_admin', 'company_admin', 'hr_manager'].includes(profile.role) : false
+          // Use simplified role validation (inline for middleware compatibility)
+          const validation = validateUserPermissionsInline(profile, pathname);
           
-          if (profileError || !profile || !hasPermission) {
+          if (!validation.hasAccess) {
             logger.warn('Unauthorized admin API access', { 
               path: pathname, 
               userId: user.id,
-              userRole: profile?.role,
-              requiredRole: Array.isArray(requiredRole) ? 'admin roles' : requiredRole
+              userRole: profile.role,
+              userCompany: profile.company_id,
+              requiredRoles: validation.requiredRoles,
+              reason: validation.reason
             });
             return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
           }
+          
+          // Log successful admin access
+          logger.info('Admin API access granted', {
+            path: pathname,
+            userId: user.id,
+            userRole: profile.role,
+            requiredRoles: validation.requiredRoles
+          });
         }
         
         // Valid, proceed
