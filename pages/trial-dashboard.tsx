@@ -299,13 +299,6 @@ export default function TrialDashboard() {
                   >
                     Explorar Empleados
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    className="w-full bg-green-600/20 border-green-500/50 text-green-400 hover:bg-green-600/30"
-                    onClick={() => setActiveView('upload')}
-                  >
-                    📄 Subir Planilla
-                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -462,13 +455,33 @@ export default function TrialDashboard() {
                   <h4 className="font-semibold text-white mb-2">📄 Carga directa</h4>
                   <p className="text-gray-300 text-sm mb-3">Activá tu entorno con tus datos reales (Excel o PDF).</p>
                   <div className="max-w-md">
-                    <PayrollUploadStorage 
-                      tenantId={getTenantFromUrl()} 
-                      variant="compact"
-                      onUploadComplete={() => {
-                        // No redirect; el usuario verá confirmación en la tarjeta
-                      }}
-                    />
+                    {/* Botón verde CTA */}
+                    <Button 
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                      onClick={() => setActiveView('upload')}
+                    >
+                      📄 Subir Planilla
+                    </Button>
+                    {/* Modal de carga: reutiliza la vista upload compacta */}
+                    {activeView === 'upload' && (
+                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+                        <div className="bg-slate-900 border border-white/10 rounded-xl shadow-2xl w-full max-w-2xl">
+                          <div className="flex items-center justify-between p-4 border-b border-white/10">
+                            <h3 className="text-white font-semibold">Subir Planilla</h3>
+                            <Button variant="outline" onClick={() => setActiveView('dashboard')}>Cerrar</Button>
+                          </div>
+                          <div className="p-4">
+                            <PayrollUploadStorage 
+                              tenantId={getTenantFromUrl()} 
+                              variant="compact"
+                              onUploadComplete={() => {
+                                // Mantener modal abierto para ver confirmación; el usuario puede cerrarlo
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
