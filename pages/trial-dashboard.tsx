@@ -329,32 +329,32 @@ export default function TrialDashboard() {
           {/* Next Steps */}
           <Card variant="glass" className="mb-8">
             <CardHeader>
-              <CardTitle className="text-white">🚀 Próximos Pasos</CardTitle>
+              <CardTitle className="text-white">🚀 Próximos pasos para automatizar tu RH (en menos de 24 h)</CardTitle>
               <CardDescription className="text-gray-300">
-                Para aprovechar al máximo tu trial, te recomendamos:
+                Sigue estos pasos para automatizar completamente tu gestión de recursos humanos
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div className="flex items-start space-x-3">
-                  <div className="bg-blue-500/20 text-blue-400 rounded-full p-2 text-sm font-bold">1</div>
+                  <div className="bg-blue-500/20 text-blue-400 rounded-full p-2 text-sm font-bold">1️⃣</div>
                   <div>
-                    <h4 className="font-semibold text-white">Explora las Funciones</h4>
-                    <p className="text-sm text-gray-300">Navega por todas las funcionalidades disponibles en tu trial.</p>
+                    <h4 className="font-semibold text-white">Activá tu entorno demo</h4>
+                    <p className="text-sm text-gray-300">Ya tenés los datos de prueba, probá cómo se genera asistencia y planilla real.</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
-                  <div className="bg-blue-500/20 text-blue-400 rounded-full p-2 text-sm font-bold">2</div>
+                  <div className="bg-blue-500/20 text-blue-400 rounded-full p-2 text-sm font-bold">2️⃣</div>
                   <div>
-                    <h4 className="font-semibold text-white">Envíanos tu Planilla Reciente</h4>
-                    <p className="text-sm text-gray-300">Envíanos una planilla reciente con deducciones para preparar un entorno con datos personalizados.</p>
+                    <h4 className="font-semibold text-white">Enviá tu planilla actual (Excel o PDF)</h4>
+                    <p className="text-sm text-gray-300">En 24 h te devolvemos tu mismo proceso automatizado.</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
-                  <div className="bg-blue-500/20 text-blue-400 rounded-full p-2 text-sm font-bold">3</div>
+                  <div className="bg-blue-500/20 text-blue-400 rounded-full p-2 text-sm font-bold">3️⃣</div>
                   <div>
-                    <h4 className="font-semibold text-white">Agenda una Demo</h4>
-                    <p className="text-sm text-gray-300">Reserva 15 minutos para que te expliquemos todas las funcionalidades.</p>
+                    <h4 className="font-semibold text-white">Revisá resultados</h4>
+                    <p className="text-sm text-gray-300">Si no automatizamos el 80% de tus tareas repetitivas, trabajamos gratis hasta lograrlo.</p>
                   </div>
                 </div>
               </div>
@@ -364,20 +364,32 @@ export default function TrialDashboard() {
           {/* Contact Info */}
           <Card variant="glass">
             <CardHeader>
-              <CardTitle className="text-white">📞 ¿Necesitas Ayuda?</CardTitle>
+              <CardTitle className="text-white">📞 ¿Listo para dejar de hacer planillas manuales?</CardTitle>
               <CardDescription className="text-gray-300">
-                Estamos aquí para ayudarte a aprovechar al máximo SISU
+                Contactanos ahora y automatizamos tu RH en menos de 24 horas
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <h4 className="font-semibold text-white mb-2">📧 Email de Soporte</h4>
-                  <p className="text-gray-300">jorge7gomez@gmail.com</p>
+                  <h4 className="font-semibold text-white mb-2">💬 WhatsApp</h4>
+                  <a 
+                    href="https://wa.me/50494707007" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-green-400 hover:text-green-300 transition-colors"
+                  >
+                    (+504) 9470-7007
+                  </a>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-white mb-2">📱 WhatsApp</h4>
-                  <p className="text-gray-300">(+504)94707007</p>
+                  <h4 className="font-semibold text-white mb-2">📧 Email</h4>
+                  <a 
+                    href="mailto:jorge7gomez@gmail.com"
+                    className="text-blue-400 hover:text-blue-300 transition-colors"
+                  >
+                    jorge7gomez@gmail.com
+                  </a>
                 </div>
               </div>
             </CardContent>
