@@ -4,6 +4,7 @@ import Head from 'next/head'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import TrialEmployeeManager from '../components/TrialEmployeeManager'
+import PayrollUploadStorage from '../components/PayrollUploadStorage'
 
 interface TrialData {
   empresa: string
@@ -18,7 +19,7 @@ export default function TrialDashboard() {
   const [trialData, setTrialData] = useState<TrialData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [activeView, setActiveView] = useState<'dashboard' | 'employees'>('dashboard')
+  const [activeView, setActiveView] = useState<'dashboard' | 'employees' | 'upload'>('dashboard')
   const router = useRouter()
 
   console.log('🎯 TrialDashboard renderizado')
@@ -143,7 +144,13 @@ export default function TrialDashboard() {
                   <h1 className="text-2xl font-bold text-white">👥 Gestión de Empleados (Trial)</h1>
                   <p className="text-gray-300">Empresa: <strong>{trialData.empresa}</strong></p>
                 </div>
-                <div>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setActiveView('upload')}
+                  >
+                    📄 Subir Planilla
+                  </Button>
                   <Button 
                     variant="outline" 
                     onClick={() => setActiveView('dashboard')}
@@ -158,6 +165,57 @@ export default function TrialDashboard() {
           {/* Main Content */}
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <TrialEmployeeManager tenant={getTenantFromUrl()} />
+          </main>
+        </div>
+      </>
+    )
+  }
+
+  // Si estamos en la vista de upload, mostrar el componente de carga
+  if (activeView === 'upload') {
+    return (
+      <>
+        <Head>
+          <title>Subir Planilla - {trialData.empresa} | SISU</title>
+          <meta name="description" content="Sube tu planilla para automatizar tu entorno de producción" />
+        </Head>
+
+        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900">
+          {/* Header */}
+          <header className="glass-strong border-b border-white/10 shadow-lg">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h1 className="text-2xl font-bold text-white">📄 Subir Planilla de Pago</h1>
+                  <p className="text-gray-300">Empresa: <strong>{trialData.empresa}</strong></p>
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setActiveView('employees')}
+                  >
+                    👥 Ver Empleados
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setActiveView('dashboard')}
+                  >
+                    ← Volver al Dashboard
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          {/* Main Content */}
+          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <PayrollUploadStorage 
+              tenantId={getTenantFromUrl()} 
+              onUploadComplete={(uploadId) => {
+                console.log('Upload completed:', uploadId)
+                // Optionally redirect or show success message
+              }}
+            />
           </main>
         </div>
       </>
@@ -233,13 +291,22 @@ export default function TrialDashboard() {
                 <p className="text-sm text-gray-300 mb-4">
                   Crea, edita y gestiona la información de tus empleados de manera eficiente.
                 </p>
-                <Button 
-                  variant="outline" 
-                  className="w-full"
-                  onClick={() => setActiveView('employees')}
-                >
-                  Explorar Empleados
-                </Button>
+                <div className="space-y-2">
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => setActiveView('employees')}
+                  >
+                    Explorar Empleados
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="w-full bg-green-600/20 border-green-500/50 text-green-400 hover:bg-green-600/30"
+                    onClick={() => setActiveView('upload')}
+                  >
+                    📄 Subir Planilla
+                  </Button>
+                </div>
               </CardContent>
             </Card>
 
