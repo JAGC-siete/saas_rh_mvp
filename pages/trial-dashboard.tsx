@@ -20,6 +20,7 @@ export default function TrialDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeView, setActiveView] = useState<'dashboard' | 'employees' | 'upload'>('dashboard')
+  const [showUploadModal, setShowUploadModal] = useState(false)
   const router = useRouter()
 
   console.log('🎯 TrialDashboard renderizado')
@@ -235,8 +236,8 @@ export default function TrialDashboard() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex justify-between items-center">
               <div>
-                <h1 className="text-2xl font-bold text-white">🎉 ¡Bienvenido a SISU!</h1>
-                <p className="text-gray-300">Empresa: <strong>{trialData.empresa}</strong></p>
+                <h1 className="text-2xl font-bold text-white">👋 Bienvenido a SISU — Tu RH Automatizado en 24 h o Menos</h1>
+                <p className="text-gray-300">Convertí tu planilla manual en un sistema automático que cumple la ley hondureña y se maneja solo</p>
               </div>
               <div className="text-right">
                 <p className="text-sm text-gray-400">Trial activado para</p>
@@ -251,9 +252,11 @@ export default function TrialDashboard() {
           {/* Trial Status */}
           <Card variant="glass" className="mb-8">
             <CardHeader>
-              <CardTitle className="text-white">🎯 Estado de tu Trial</CardTitle>
+              <CardTitle className="text-white">⏳ Tu demo ya está activa</CardTitle>
               <CardDescription className="text-gray-300">
-                Tu período de prueba está activo y funcionando
+                Tenés 30 días para ver cómo tu propio proceso se transforma.
+                <br />
+                <span className="text-emerald-400 font-semibold">🔥 Aprovechalo hoy mismo:</span> subí tu planilla y en 24 h te devolvemos tu entorno real automatizado.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -281,15 +284,15 @@ export default function TrialDashboard() {
             <Card variant="glass" className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <CardTitle className="flex items-center text-white">
-                  👥 Gestión de Empleados
+                  👩‍💼 Gestión de Empleados
                 </CardTitle>
                 <CardDescription className="text-gray-300">
-                  Administra tu plantilla de personal
+                  Explorá la modalidad planilla. SISU creará tu base de empleados automáticamente en 14 horas o menos.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-gray-300 mb-4">
-                  Crea, edita y gestiona la información de tus empleados de manera eficiente.
+                  Administra tu plantilla de personal
                 </p>
                 <div className="space-y-2">
                   <Button 
@@ -306,15 +309,15 @@ export default function TrialDashboard() {
             <Card variant="glass" className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <CardTitle className="flex items-center text-white">
-                  ⏰ Control de Asistencia
+                  🕒 Control de Asistencia
                 </CardTitle>
                 <CardDescription className="text-gray-300">
-                  Monitorea la asistencia en tiempo real
+                  Registro de entradas, salidas y ausencias automáticamente.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-gray-300 mb-4">
-                  Registra entradas, salidas y genera reportes de asistencia automáticamente.
+                  Monitorea la asistencia en tiempo real
                 </p>
                 <Button
                   variant="outline"
@@ -333,15 +336,15 @@ export default function TrialDashboard() {
             <Card variant="glass" className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <CardTitle className="flex items-center text-white">
-                  💰 Gestión de Nómina
+                  💸 Gestión de Nómina
                 </CardTitle>
                 <CardDescription className="text-gray-300">
-                  Calcula y administra salarios
+                  Generación planillas legales con deducciones IHSS, RAP e ISR en 1 clic.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-gray-300 mb-4">
-                  Genera nóminas, calcula deducciones y mantén el control de los pagos.
+                  Calcula y administra salarios
                 </p>
                 <Button
                   variant="outline"
@@ -389,9 +392,9 @@ export default function TrialDashboard() {
           {/* Next Steps */}
           <Card variant="glass" className="mb-8">
             <CardHeader>
-              <CardTitle className="text-white">🚀 Próximos pasos para automatizar tu RH (en menos de 24 h)</CardTitle>
+              <CardTitle className="text-white">⚡ Próximos pasos para automatizar tu RH (en menos de 24 h)</CardTitle>
               <CardDescription className="text-gray-300">
-                Sigue estos pasos para automatizar completamente tu gestión de recursos humanos
+                <span className="text-emerald-400 font-semibold">🧠 Sin tarjetas. Sin compromisos. Solo resultados.</span>
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -400,21 +403,21 @@ export default function TrialDashboard() {
                   <div className="bg-blue-500/20 text-blue-400 rounded-full p-2 text-sm font-bold">1️⃣</div>
                   <div>
                     <h4 className="font-semibold text-white">Activá tu entorno demo</h4>
-                    <p className="text-sm text-gray-300">Ya tenés los datos de prueba, probá cómo se genera asistencia y planilla real. <strong className="text-green-400">Es gratis 30 días.</strong></p>
+                    <p className="text-sm text-gray-300">Probá asistencia y planilla reales.</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
                   <div className="bg-blue-500/20 text-blue-400 rounded-full p-2 text-sm font-bold">2️⃣</div>
                   <div>
                     <h4 className="font-semibold text-white">Enviá tu planilla actual (Excel o PDF)</h4>
-                    <p className="text-sm text-gray-300">En 24 h te devolvemos tu mismo proceso automatizado. <strong className="text-green-400">Usalo sin tarjeta ni compromisos gratis por 30 días.</strong></p>
+                    <p className="text-sm text-gray-300">En 24 h te devolvemos tu proceso automatizado.</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
                   <div className="bg-blue-500/20 text-blue-400 rounded-full p-2 text-sm font-bold">3️⃣</div>
                   <div>
                     <h4 className="font-semibold text-white">Revisá resultados</h4>
-                    <p className="text-sm text-gray-300">Si no automatizamos el 80% de tus tareas repetitivas, trabajamos gratis hasta lograrlo.</p>
+                    <p className="text-sm text-gray-300">Si no liberamos el 80% de tus tareas, trabajamos gratis hasta lograrlo.</p>
                   </div>
                 </div>
               </div>
@@ -424,9 +427,11 @@ export default function TrialDashboard() {
           {/* Contact Info + Direct Upload CTA */}
           <Card variant="glass">
             <CardHeader>
-              <CardTitle className="text-white">📞 ¿Listo para dejar de hacer planillas manuales?</CardTitle>
+              <CardTitle className="text-white">🔑 ¿Listo para dejar de hacer planillas manuales?</CardTitle>
               <CardDescription className="text-gray-300">
-                Contactanos ahora y automatizamos tu RH en menos de 24 horas
+                Mandá tu planilla y automatizamos tu RH en menos de 24 h.
+                <br />
+                <span className="text-emerald-400 font-semibold">💡 Garantía SISU:</span> si no lo logramos, trabajamos gratis.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -452,23 +457,23 @@ export default function TrialDashboard() {
                   </a>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-white mb-2">📄 Carga directa</h4>
-                  <p className="text-gray-300 text-sm mb-3">Activá tu entorno con tus datos reales (Excel o PDF).</p>
+                  <h4 className="font-semibold text-white mb-2">📎 Subí tu planilla de pago (Excel o PDF)</h4>
+                  <p className="text-gray-300 text-sm mb-3">Activá tu entorno real con tus propios datos. El sistema procesa automáticamente todo por ti.</p>
                   <div className="max-w-md">
                     {/* Botón verde CTA */}
                     <Button 
                       className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
-                      onClick={() => setActiveView('upload')}
+                      onClick={() => setShowUploadModal(true)}
                     >
                       📄 Subir Planilla
                     </Button>
                     {/* Modal de carga: reutiliza la vista upload compacta */}
-                    {activeView === 'upload' && (
+                    {showUploadModal && (
                       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
                         <div className="bg-slate-900 border border-white/10 rounded-xl shadow-2xl w-full max-w-2xl">
                           <div className="flex items-center justify-between p-4 border-b border-white/10">
                             <h3 className="text-white font-semibold">Subir Planilla</h3>
-                            <Button variant="outline" onClick={() => setActiveView('dashboard')}>Cerrar</Button>
+                            <Button variant="outline" onClick={() => setShowUploadModal(false)}>Cerrar</Button>
                           </div>
                           <div className="p-4">
                             <PayrollUploadStorage 
