@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../lib/supabase/server'
+import { createAdminClient } from '../../../lib/supabase/server'
 import { logger } from '../../../lib/logger'
 
 interface UploadUrlResponse {
@@ -51,7 +51,8 @@ async function handleGetUploadUrl(
   res: NextApiResponse<UploadUrlResponse>
 ) {
   try {
-    const supabase = createClient(req, res)
+    // Use admin client so this validation and record creation works for unauthenticated trial users
+    const supabase = createAdminClient()
 
     const { tenant, filename, fileType, fileSize } = req.body
 
@@ -195,7 +196,7 @@ async function handleGetUploadStatus(
   res: NextApiResponse<StatusResponse>
 ) {
   try {
-    const supabase = createClient(req, res)
+    const supabase = createAdminClient()
     const { uploadId } = req.query
 
     if (!uploadId || typeof uploadId !== 'string') {
