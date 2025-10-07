@@ -7,6 +7,7 @@ import { createClient } from '../lib/supabase/client'
 interface PayrollUploadStorageProps {
   tenantId: string
   onUploadComplete?: (uploadId: string) => void
+  variant?: 'full' | 'compact'
 }
 
 interface UploadStatus {
@@ -17,7 +18,7 @@ interface UploadStatus {
   extractedEmployees?: any[]
 }
 
-export default function PayrollUploadStorage({ tenantId, onUploadComplete }: PayrollUploadStorageProps) {
+export default function PayrollUploadStorage({ tenantId, onUploadComplete, variant = 'full' }: PayrollUploadStorageProps) {
   const [uploadStatus, setUploadStatus] = useState<UploadStatus>({
     status: 'idle',
     progress: 0,
@@ -326,23 +327,31 @@ export default function PayrollUploadStorage({ tenantId, onUploadComplete }: Pay
             
             <div>
               <p className="text-white font-medium">
-                {uploadStatus.status === 'idle' && 'Arrastra tu planilla aquí o haz clic para seleccionar'}
+                {uploadStatus.status === 'idle' && (variant === 'compact' ? 'Cargá tu planilla para activar tu entorno real' : 'Arrastra tu planilla aquí o haz clic para seleccionar')}
                 {uploadStatus.status === 'requesting' && 'Solicitando permiso de carga...'}
                 {uploadStatus.status === 'uploading' && 'Subiendo a Supabase Storage...'}
-                {uploadStatus.status === 'processing' && 'Procesando planilla en Edge Function...'}
+                {uploadStatus.status === 'processing' && 'Procesando tu planilla...'}
                 {uploadStatus.status === 'completed' && '¡Procesado exitosamente!'}
                 {uploadStatus.status === 'error' && 'Error en el procesamiento'}
               </p>
-              <p className="text-sm text-gray-400 mt-1">
-                Formatos soportados: Excel (.xlsx, .xls) y PDF
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                Tamaño máximo: 50MB • Actualización en tiempo real via Realtime
-              </p>
+              {variant === 'full' && (
+                <>
+                  <p className="text-sm text-gray-400 mt-1">
+                    Formatos soportados: Excel (.xlsx, .xls) y PDF
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Tamaño máximo: 50MB • Actualización en tiempo real
+                  </p>
+                </>
+              )}
             </div>
 
             {uploadStatus.status === 'idle' && (
-              <Button variant="outline" className="mt-4">
+              <Button 
+                variant="outline" 
+                className="mt-4"
+                onClick={() => fileInputRef.current?.click()}
+              >
                 Seleccionar Archivo
               </Button>
             )}
@@ -457,16 +466,17 @@ export default function PayrollUploadStorage({ tenantId, onUploadComplete }: Pay
           )}
         </div>
 
-        {/* Instructions */}
-        <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
-          <h4 className="text-blue-400 font-medium mb-2">⚡ Características Supabase:</h4>
-          <ul className="text-sm text-gray-300 space-y-1">
-            <li>• Upload directo a Storage (sin pasar por Next.js API)</li>
-            <li>• Procesamiento en Edge Function (sin límites de tamaño)</li>
-            <li>• Actualización en tiempo real via Realtime (sin polling)</li>
-            <li>• RLS aplicado automáticamente en Storage y Database</li>
-          </ul>
-        </div>
+        {variant === 'full' && (
+          <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
+            <h4 className="text-blue-400 font-medium mb-2">⚡ ¿Qué pasa después?</h4>
+            <ul className="text-sm text-gray-300 space-y-1">
+              <li>• Cargás tu planilla (Excel o PDF)</li>
+              <li>• Detectamos nombres y salarios automáticamente</li>
+              <li>• Activamos tu entorno con datos reales</li>
+              <li>• Te avisamos cuando esté listo (en menos de 24 h)</li>
+            </ul>
+          </div>
+        )}
       </CardContent>
     </Card>
   )

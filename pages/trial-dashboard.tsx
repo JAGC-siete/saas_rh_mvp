@@ -428,7 +428,7 @@ export default function TrialDashboard() {
             </CardContent>
           </Card>
 
-          {/* Contact Info */}
+          {/* Contact Info + Direct Upload CTA */}
           <Card variant="glass">
             <CardHeader>
               <CardTitle className="text-white">📞 ¿Listo para dejar de hacer planillas manuales?</CardTitle>
@@ -437,7 +437,7 @@ export default function TrialDashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <h4 className="font-semibold text-white mb-2">💬 WhatsApp</h4>
                   <a 
@@ -457,6 +457,19 @@ export default function TrialDashboard() {
                   >
                     jorge7gomez@gmail.com
                   </a>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-white mb-2">📄 Carga directa</h4>
+                  <p className="text-gray-300 text-sm mb-3">Activá tu entorno con tus datos reales (Excel o PDF).</p>
+                  <div className="max-w-md">
+                    <PayrollUploadStorage 
+                      tenantId={getTenantFromUrl()} 
+                      variant="compact"
+                      onUploadComplete={() => {
+                        // No redirect; el usuario verá confirmación en la tarjeta
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
             </CardContent>
