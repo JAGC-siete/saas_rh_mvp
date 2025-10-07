@@ -340,14 +340,14 @@ export default function TrialDashboard() {
                   <div className="bg-blue-500/20 text-blue-400 rounded-full p-2 text-sm font-bold">1️⃣</div>
                   <div>
                     <h4 className="font-semibold text-white">Activá tu entorno demo</h4>
-                    <p className="text-sm text-gray-300">Ya tenés los datos de prueba, probá cómo se genera asistencia y planilla real.</p>
+                    <p className="text-sm text-gray-300">Ya tenés los datos de prueba, probá cómo se genera asistencia y planilla real. <strong className="text-green-400">Es gratis 30 días.</strong></p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
                   <div className="bg-blue-500/20 text-blue-400 rounded-full p-2 text-sm font-bold">2️⃣</div>
                   <div>
                     <h4 className="font-semibold text-white">Enviá tu planilla actual (Excel o PDF)</h4>
-                    <p className="text-sm text-gray-300">En 24 h te devolvemos tu mismo proceso automatizado.</p>
+                    <p className="text-sm text-gray-300">En 24 h te devolvemos tu mismo proceso automatizado. <strong className="text-green-400">Usalo sin tarjeta ni compromisos gratis por 30 días.</strong></p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
@@ -374,7 +374,7 @@ export default function TrialDashboard() {
                 <div>
                   <h4 className="font-semibold text-white mb-2">💬 WhatsApp</h4>
                   <a 
-                    href="https://wa.me/50494707007?text=Hola!%20Vi%20el%20trial%20de%20SISU%20y%20quiero%20automatizar%20mi%20gestión%20de%20RH.%20¿Podemos%20hablar%20sobre%20cómo%20implementar%20esto%20en%20menos%20de%2024%20horas?" 
+                    href="https://wa.me/50494707007?text=Hola%20Jorge,%20ya%20vi%20el%20demo%20de%20SISU.%0A%0AQuiero%20dejar%20de%20hacer%20planillas%20manuales%20y%20tener%20todo%20automatizado%20antes%20de%20mañana.%0A%0ADecime%20qué%20necesitás%20para%20arrancar." 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-green-400 hover:text-green-300 transition-colors"
@@ -385,7 +385,7 @@ export default function TrialDashboard() {
                 <div>
                   <h4 className="font-semibold text-white mb-2">📧 Email</h4>
                   <a 
-                    href="mailto:jorge7gomez@gmail.com?subject=Automatización%20RH%20-%20Trial%20SISU&body=Hola%20Jorge,%0A%0AVi%20el%20trial%20de%20SISU%20y%20quiero%20automatizar%20mi%20gestión%20de%20recursos%20humanos.%20¿Podemos%20hablar%20sobre%20cómo%20implementar%20esto%20en%20menos%20de%2024%20horas?%0A%0ASaludos"
+                    href="mailto:jorge7gomez@gmail.com?subject=Automatización%20RH%20-%20Trial%20SISU&body=Hola%20Jorge,%0A%0AYa%20vi%20el%20demo%20de%20SISU.%0A%0AQuiero%20dejar%20de%20hacer%20planillas%20manuales%20y%20tener%20todo%20automatizado%20antes%20de%20mañana.%0A%0ADecime%20qué%20necesitás%20para%20arrancar.%0A%0ASaludos"
                     className="text-blue-400 hover:text-blue-300 transition-colors"
                   >
                     jorge7gomez@gmail.com
