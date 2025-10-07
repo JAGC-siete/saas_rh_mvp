@@ -374,7 +374,7 @@ export default function TrialDashboard() {
                 <div>
                   <h4 className="font-semibold text-white mb-2">💬 WhatsApp</h4>
                   <a 
-                    href="https://wa.me/50494707007" 
+                    href="https://wa.me/50494707007?text=Hola!%20Vi%20el%20trial%20de%20SISU%20y%20quiero%20automatizar%20mi%20gestión%20de%20RH.%20¿Podemos%20hablar%20sobre%20cómo%20implementar%20esto%20en%20menos%20de%2024%20horas?" 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-green-400 hover:text-green-300 transition-colors"
@@ -385,7 +385,7 @@ export default function TrialDashboard() {
                 <div>
                   <h4 className="font-semibold text-white mb-2">📧 Email</h4>
                   <a 
-                    href="mailto:jorge7gomez@gmail.com"
+                    href="mailto:jorge7gomez@gmail.com?subject=Automatización%20RH%20-%20Trial%20SISU&body=Hola%20Jorge,%0A%0AVi%20el%20trial%20de%20SISU%20y%20quiero%20automatizar%20mi%20gestión%20de%20recursos%20humanos.%20¿Podemos%20hablar%20sobre%20cómo%20implementar%20esto%20en%20menos%20de%2024%20horas?%0A%0ASaludos"
                     className="text-blue-400 hover:text-blue-300 transition-colors"
                   >
                     jorge7gomez@gmail.com
