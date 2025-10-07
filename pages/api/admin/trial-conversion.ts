@@ -93,8 +93,8 @@ const conversionHandler: AdminApiHandler = {
         })
       }
 
-      // Start conversion process in background
-      processConversion(conversion.id, upload, originalCompany).catch(error => {
+      // Start conversion process in background (pass supabase client)
+      processConversion(conversion.id, upload, originalCompany, supabase).catch(error => {
         logger.error('Background conversion failed', { conversionId: conversion.id, error })
       })
 
@@ -175,8 +175,7 @@ const conversionHandler: AdminApiHandler = {
 }
 
 // Background conversion processing
-async function processConversion(conversionId: string, upload: any, originalCompany: any) {
-  const supabase = createClient()
+async function processConversion(conversionId: string, upload: any, originalCompany: any, supabase: any) {
   
   try {
     logger.info('Starting conversion process', { conversionId })

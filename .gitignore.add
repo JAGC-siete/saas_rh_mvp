@@ -1,0 +1,14 @@
+# Archivos de auditoría y desarrollo (opcional agregar a .gitignore)
+# Estos archivos documentan el proceso pero no son necesarios en el repo
+
+# Auditorías y evaluaciones
+COMPREHENSIVE_AUDIT_WITH_SUPABASE.md
+PAYROLL_SYSTEM_FINAL_ASSESSMENT.md
+PAYROLL_UPLOAD_FIXES.md
+
+# Implementaciones antiguas/descartadas
+components/PayrollUpload.tsx
+pages/api/trial/payroll-upload.ts
+
+# Scripts helper temporales
+APPLY_VIA_DASHBOARD.sql
