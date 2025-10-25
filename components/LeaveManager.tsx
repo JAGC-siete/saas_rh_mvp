@@ -58,7 +58,8 @@ export default function LeaveManager() {
       const response = await fetch('/api/employees')
       if (response.ok) {
         const data = await response.json()
-        setEmployees(data)
+        // El endpoint devuelve { employees: [...] }, no un array directo
+        setEmployees(data.employees || [])
       }
     } catch (error) {
       console.error('Error fetching employees:', error)
@@ -137,6 +138,10 @@ export default function LeaveManager() {
     }
 
     // Validate employee exists
+    if (!Array.isArray(employees)) {
+      alert('Error cargando lista de empleados')
+      return
+    }
     const employee = employees.find(emp => emp.dni === formData.employee_dni)
     if (!employee) {
       alert('DNI no encontrado en la base de datos')
@@ -178,6 +183,9 @@ export default function LeaveManager() {
   }
 
   const getEmployeeName = (dni: string) => {
+    if (!Array.isArray(employees)) {
+      return 'Empleado no encontrado'
+    }
     const employee = employees.find(emp => emp.dni === dni)
     return employee ? `${employee.first_name} ${employee.last_name}` : 'Empleado no encontrado'
   }
