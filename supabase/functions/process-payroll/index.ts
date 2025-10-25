@@ -30,6 +30,14 @@ interface ExtractedEmployee {
   position?: string
   department?: string
   confidence: number
+  // PROHALCA specific fields
+  overtimeHours?: number
+  overtimeRate?: number
+  holidayWork?: number
+  shift?: string
+  grossSalary?: number
+  deductions?: number
+  netSalary?: number
 }
 
 serve(async (req) => {
@@ -241,13 +249,22 @@ async function processExcelFile(file: Blob): Promise<{ employees: ExtractedEmplo
       return { employees: [], confidenceScore: 0 }
     }
 
-    // Detect columns
+    // Detect columns - Enhanced for PROHALCA and other clients
     const headers = data[0].map((h: any) => String(h).toLowerCase().trim())
     const nameCol = detectColumn(headers, ['nombre', 'name', 'empleado', 'employee', 'trabajador'])
     const dniCol = detectColumn(headers, ['dni', 'identidad', 'id', 'cedula', 'identificacion'])
-    const salaryCol = detectColumn(headers, ['salario', 'salary', 'sueldo', 'bruto', 'gross'])
+    const salaryCol = detectColumn(headers, ['salario', 'salary', 'sueldo', 'bruto', 'gross', 'sueldo_base'])
     const positionCol = detectColumn(headers, ['puesto', 'position', 'cargo', 'rol', 'role'])
-    const departmentCol = detectColumn(headers, ['departamento', 'department', 'dept', 'area'])
+    const departmentCol = detectColumn(headers, ['departamento', 'department', 'dept', 'area', 'area_funcional'])
+    
+    // PROHALCA specific columns
+    const overtimeHoursCol = detectColumn(headers, ['horas_extras', 'horas extra', 'overtime', 'extras'])
+    const overtimeRateCol = detectColumn(headers, ['valor_hora_extra', 'valor hora extra', 'rate_extra'])
+    const holidayWorkCol = detectColumn(headers, ['feriado_trabajado', 'feriado trabajado', 'holiday_work'])
+    const shiftCol = detectColumn(headers, ['turno', 'shift', 'horario'])
+    const grossSalaryCol = detectColumn(headers, ['sueldo_bruto', 'sueldo bruto', 'total_bruto', 'gross_salary'])
+    const deductionsCol = detectColumn(headers, ['deducciones', 'total_deducciones', 'total deducciones'])
+    const netSalaryCol = detectColumn(headers, ['sueldo_neto', 'sueldo neto', 'total_neto', 'net_salary'])
 
     const employees: ExtractedEmployee[] = []
     let totalConfidence = 0
@@ -265,14 +282,29 @@ async function processExcelFile(file: Blob): Promise<{ employees: ExtractedEmplo
       const salary = salaryCol >= 0 ? parseNumber(row[salaryCol]) : undefined
       const position = positionCol >= 0 ? cleanString(row[positionCol]) : undefined
       const department = departmentCol >= 0 ? cleanString(row[departmentCol]) : undefined
+      
+      // PROHALCA specific fields
+      const overtimeHours = overtimeHoursCol >= 0 ? parseNumber(row[overtimeHoursCol]) : undefined
+      const overtimeRate = overtimeRateCol >= 0 ? parseNumber(row[overtimeRateCol]) : undefined
+      const holidayWork = holidayWorkCol >= 0 ? parseNumber(row[holidayWorkCol]) : undefined
+      const shift = shiftCol >= 0 ? cleanString(row[shiftCol]) : undefined
+      const grossSalary = grossSalaryCol >= 0 ? parseNumber(row[grossSalaryCol]) : undefined
+      const deductions = deductionsCol >= 0 ? parseNumber(row[deductionsCol]) : undefined
+      const netSalary = netSalaryCol >= 0 ? parseNumber(row[netSalaryCol]) : undefined
 
-      // Calculate confidence
+      // Calculate confidence - Enhanced for PROHALCA
       let confidence = 0.5 // Base confidence
       if (name) confidence += 0.3
       if (salary && salary > 0) confidence += 0.2
       if (dni) confidence += 0.1
       if (department) confidence += 0.05
       if (position) confidence += 0.05
+      
+      // PROHALCA specific confidence boosters
+      if (grossSalary && grossSalary > 0) confidence += 0.1
+      if (netSalary && netSalary > 0) confidence += 0.1
+      if (overtimeHours && overtimeHours > 0) confidence += 0.05
+      if (shift) confidence += 0.05
 
       employees.push({
         name,
@@ -280,7 +312,15 @@ async function processExcelFile(file: Blob): Promise<{ employees: ExtractedEmplo
         salary,
         position,
         department,
-        confidence: Math.min(confidence, 1.0)
+        confidence: Math.min(confidence, 1.0),
+        // PROHALCA specific fields
+        overtimeHours,
+        overtimeRate,
+        holidayWork,
+        shift,
+        grossSalary,
+        deductions,
+        netSalary
       })
 
       totalConfidence += confidence

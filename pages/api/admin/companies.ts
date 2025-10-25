@@ -3,6 +3,23 @@ import { createClient } from '../../../lib/supabase/server'
 import { logger } from '../../../lib/logger'
 import { createSecureErrorResponse, createAuthErrorResponse } from '../../../lib/security/error-handling'
 
+// Function to detect client type based on company name
+function detectClientType(companyName: string): string {
+  const name = companyName.toLowerCase()
+  
+  // PROHALCA detection
+  if (name.includes('prohalca') || name.includes('procesadora') || name.includes('camaron')) {
+    return 'prohalca'
+  }
+  
+  // Add more client type detections here as needed
+  // if (name.includes('textil') || name.includes('maquila')) {
+  //   return 'textile'
+  // }
+  
+  return 'standard'
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     const supabase = createClient(req, res)
