@@ -240,11 +240,12 @@ export default function LeaveManager() {
       )}
 
       {showForm && (
-        <Card variant="glass" className="mb-6">
-          <CardHeader>
-            <CardTitle className="text-white text-xl">Registrar Permiso Pre-autorizado</CardTitle>
+        <Card variant="glass" className="mb-6 shadow-2xl border-white/20">
+          <CardHeader className="border-b border-white/10">
+            <CardTitle className="text-white text-xl font-bold">Registrar Permiso Pre-autorizado</CardTitle>
+            <p className="text-gray-300 text-sm mt-2">Complete los datos del empleado y el tipo de permiso solicitado</p>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-6">
           
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -259,13 +260,15 @@ export default function LeaveManager() {
                   value={formData.employee_dni}
                   onChange={handleInputChange}
                   placeholder="Ej: 0801-2003-14588"
-                  className="w-full px-3 py-2 border border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white/90 text-gray-800"
+                  className="w-full px-4 py-3 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white/10 backdrop-blur-sm text-white placeholder-gray-300 transition-all duration-200"
                   required
                 />
                 {formData.employee_dni && (
-                  <p className="text-sm text-gray-300 mt-1">
-                    Empleado: {getEmployeeName(formData.employee_dni)}
-                  </p>
+                  <div className="mt-2 p-2 bg-white/5 rounded-md border border-white/10">
+                    <p className="text-sm text-gray-300">
+                      <span className="text-blue-300 font-medium">Empleado:</span> {getEmployeeName(formData.employee_dni)}
+                    </p>
+                  </div>
                 )}
               </div>
 
@@ -278,12 +281,12 @@ export default function LeaveManager() {
                   name="leave_type_id"
                   value={formData.leave_type_id}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white/90 text-gray-800"
+                  className="w-full px-4 py-3 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white/10 backdrop-blur-sm text-white transition-all duration-200"
                   required
                 >
-                  <option value="">Seleccionar tipo</option>
+                  <option value="" className="bg-gray-800 text-white">Seleccionar tipo</option>
                   {leaveTypes.map((type) => (
-                    <option key={type.id} value={type.id}>
+                    <option key={type.id} value={type.id} className="bg-gray-800 text-white">
                       {type.name}
                     </option>
                   ))}
@@ -299,42 +302,45 @@ export default function LeaveManager() {
                   name="duration_type"
                   value={formData.duration_type}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white/90 text-gray-800"
+                  className="w-full px-4 py-3 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white/10 backdrop-blur-sm text-white transition-all duration-200"
                   required
                 >
-                  <option value="days">Días</option>
-                  <option value="hours">Horas</option>
+                  <option value="days" className="bg-gray-800 text-white">Días</option>
+                  <option value="hours" className="bg-gray-800 text-white">Horas</option>
                 </select>
               </div>
 
               {/* Duration Hours (for hourly permissions) */}
               {formData.duration_type === 'hours' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-white mb-3">
                     Duración en Horas
                   </label>
-                  <div className="space-y-2">
-                    <label className="flex items-center">
+                  <div className="bg-white/5 rounded-lg p-4 border border-white/10 space-y-3">
+                    <label className="flex items-center space-x-3 cursor-pointer">
                       <input
                         type="checkbox"
                         name="is_half_day"
                         checked={formData.is_half_day}
                         onChange={handleInputChange}
-                        className="mr-2"
+                        className="w-4 h-4 text-blue-600 bg-white/10 border-white/20 rounded focus:ring-blue-500 focus:ring-2"
                       />
-                      Medio día (4 horas)
+                      <span className="text-white font-medium">Medio día (4 horas)</span>
                     </label>
                     {!formData.is_half_day && (
-                      <input
-                        type="number"
-                        name="duration_hours"
-                        value={formData.duration_hours || ''}
-                        onChange={handleInputChange}
-                        min="1"
-                        max="24"
-                        placeholder="8"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
+                      <div>
+                        <label className="block text-sm text-gray-300 mb-2">Horas específicas:</label>
+                        <input
+                          type="number"
+                          name="duration_hours"
+                          value={formData.duration_hours || ''}
+                          onChange={handleInputChange}
+                          min="1"
+                          max="24"
+                          placeholder="8"
+                          className="w-full px-4 py-2 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white/10 backdrop-blur-sm text-white placeholder-gray-300 transition-all duration-200"
+                        />
+                      </div>
                     )}
                   </div>
                 </div>
@@ -342,7 +348,7 @@ export default function LeaveManager() {
 
               {/* Start Date */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-white mb-2">
                   Fecha de Inicio *
                 </label>
                 <input
@@ -350,14 +356,14 @@ export default function LeaveManager() {
                   name="start_date"
                   value={formData.start_date}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-3 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white/10 backdrop-blur-sm text-white transition-all duration-200"
                   required
                 />
               </div>
 
               {/* End Date */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-white mb-2">
                   Fecha de Fin *
                 </label>
                 <input
@@ -365,7 +371,7 @@ export default function LeaveManager() {
                   name="end_date"
                   value={formData.end_date}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-3 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white/10 backdrop-blur-sm text-white transition-all duration-200"
                   required
                 />
               </div>
@@ -373,7 +379,7 @@ export default function LeaveManager() {
 
             {/* Reason */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-white mb-2">
                 Motivo del Permiso
               </label>
               <textarea
@@ -382,16 +388,16 @@ export default function LeaveManager() {
                 onChange={handleInputChange}
                 rows={3}
                 placeholder="Describa el motivo del permiso..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-3 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white/10 backdrop-blur-sm text-white placeholder-gray-300 transition-all duration-200 resize-none"
               />
             </div>
 
             {/* File Attachment */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-white mb-3">
                 Archivo de Respaldo (PDF o JPG)
               </label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+              <div className="border-2 border-dashed border-white/30 rounded-xl p-8 text-center bg-white/5 backdrop-blur-sm hover:border-white/50 transition-all duration-200">
                 <input
                   id="file-input"
                   type="file"
@@ -400,38 +406,41 @@ export default function LeaveManager() {
                   className="hidden"
                 />
                 <label htmlFor="file-input" className="cursor-pointer">
-                  <div className="space-y-2">
-                    <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                      <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                    <div className="text-gray-600">
-                      <span className="font-medium">Haga clic para subir</span> o arrastre y suelte
+                  <div className="space-y-4">
+                    <div className="mx-auto w-16 h-16 bg-white/10 rounded-full flex items-center justify-center">
+                      <svg className="w-8 h-8 text-white/70" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
                     </div>
-                    <p className="text-xs text-gray-500">PDF o JPG hasta 5MB</p>
+                    <div className="text-white">
+                      <span className="font-medium text-lg">Haga clic para subir</span>
+                      <p className="text-sm text-gray-300 mt-1">o arrastre y suelte aquí</p>
+                    </div>
+                    <p className="text-xs text-gray-400">PDF o JPG hasta 5MB</p>
                   </div>
                 </label>
               </div>
               
               {selectedFile && (
-                <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                <div className="mt-4 p-4 bg-white/10 rounded-lg border border-white/20 backdrop-blur-sm">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                       {filePreview ? (
-                        <img src={filePreview} alt="Preview" className="w-10 h-10 object-cover rounded" />
+                        <img src={filePreview} alt="Preview" className="w-12 h-12 object-cover rounded-lg border border-white/20" />
                       ) : (
-                        <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center">
-                          <span className="text-xs text-gray-500">PDF</span>
+                        <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center border border-white/20">
+                          <span className="text-xs text-white font-medium">PDF</span>
                         </div>
                       )}
                       <div>
-                        <p className="text-sm font-medium text-gray-900">{selectedFile.name}</p>
-                        <p className="text-xs text-gray-500">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                        <p className="text-sm font-medium text-white">{selectedFile.name}</p>
+                        <p className="text-xs text-gray-300">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
                       </div>
                     </div>
                     <button
                       type="button"
                       onClick={removeFile}
-                      className="text-red-600 hover:text-red-800"
+                      className="text-red-400 hover:text-red-300 transition-colors p-1 rounded-full hover:bg-red-500/20"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -442,7 +451,7 @@ export default function LeaveManager() {
               )}
             </div>
 
-            <div className="flex justify-end space-x-3">
+            <div className="flex justify-end space-x-4 pt-6 border-t border-white/10">
               <button
                 type="button"
                 onClick={() => {
@@ -451,16 +460,23 @@ export default function LeaveManager() {
                   setFilePreview(null)
                   setShowForm(false)
                 }}
-                className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
+                className="px-6 py-3 text-gray-300 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg transition-all duration-200 font-medium"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                className="px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
               >
-                {isSubmitting ? 'Enviando...' : 'Enviar Solicitud'}
+                {isSubmitting ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Enviando...</span>
+                  </div>
+                ) : (
+                  'Enviar Solicitud'
+                )}
               </button>
             </div>
           </form>
