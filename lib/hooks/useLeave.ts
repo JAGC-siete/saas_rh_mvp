@@ -92,6 +92,11 @@ export function useLeave(): UseLeaveReturn {
       formData.append('leave_type_id', data.leave_type_id)
       formData.append('start_date', data.start_date)
       formData.append('end_date', data.end_date)
+      formData.append('duration_type', data.duration_type)
+      if (data.duration_hours) {
+        formData.append('duration_hours', data.duration_hours.toString())
+      }
+      formData.append('is_half_day', data.is_half_day?.toString() || 'false')
       if (data.reason) {
         formData.append('reason', data.reason)
       }
