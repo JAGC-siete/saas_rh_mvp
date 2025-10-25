@@ -1,12 +1,12 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../lib/supabase/server'
+import { createAdminClient } from '../../../lib/supabase/server'
 import { logger } from '../../../lib/logger'
 import { createSecureErrorResponse, createAuthErrorResponse } from '../../../lib/security/error-handling'
 
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const supabase = createClient(req, res)
+    const supabase = createAdminClient()
     
     // Get user and verify super admin role
     const { data: { user }, error: userError } = await supabase.auth.getUser()

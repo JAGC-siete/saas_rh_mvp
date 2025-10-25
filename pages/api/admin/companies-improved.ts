@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../lib/supabase/server'
+import { createAdminClient } from '../../../lib/supabase/server'
 import { logger } from '../../../lib/logger'
 
 interface ListResponse {
@@ -21,7 +21,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
   }
 
   try {
-    const supabase = createClient(req, res)
+    const supabase = createAdminClient()
 
     // Auth: require super_admin
     const { data: { user }, error: userError } = await supabase.auth.getUser()
