@@ -58,6 +58,7 @@ async function handleGetUploadUrl(
 
     // Validate required fields
     if (!tenant || typeof tenant !== 'string') {
+      logger.warn('Missing tenant in request', { body: req.body })
       return res.status(400).json({ success: false, error: 'Tenant ID is required' })
     }
 
@@ -84,6 +85,8 @@ async function handleGetUploadUrl(
       })
     }
 
+    logger.info('Validating trial tenant', { tenant })
+
     // Validate trial tenant
     const { data: trialAccess, error: trialError } = await supabase
       .from('trial_access_users')
@@ -92,16 +95,29 @@ async function handleGetUploadUrl(
       .eq('is_active', true)
       .single()
 
-    if (trialError || !trialAccess) {
-      logger.warn('Invalid or inactive trial tenant', { tenant, error: trialError })
+    if (trialError) {
+      logger.error('Trial validation query failed', { 
+        tenant, 
+        error: trialError,
+        code: trialError.code,
+        message: trialError.message,
+        details: trialError.details
+      })
+      return res.status(403).json({ success: false, error: 'Invalid trial access' })
+    }
+
+    if (!trialAccess) {
+      logger.warn('No trial access found for tenant', { tenant })
       return res.status(403).json({ success: false, error: 'Invalid trial access' })
     }
 
     const company = trialAccess.companies
     if (!company || !company.is_active) {
-      logger.warn('Trial company is inactive', { tenant, companyId: company?.id })
+      logger.warn('Trial company is inactive', { tenant, companyId: company?.id, companyActive: company?.is_active })
       return res.status(403).json({ success: false, error: 'Trial company is not active' })
     }
+
+    logger.info('Trial validation successful', { tenant, companyId: company.id })
 
     // Check for existing active uploads
     const { data: existingUpload } = await supabase
@@ -127,6 +143,8 @@ async function handleGetUploadUrl(
     // Storage path: payroll-uploads/{tenant_id}/{unique_filename}
     const storagePath = `payroll-uploads/${tenant}/${uniqueFilename}`
 
+    logger.info('Creating upload record', { tenant, companyId: company.id, storagePath })
+
     // Create upload record in database
     const { data: uploadRecord, error: uploadError } = await supabase
       .from('payroll_uploads')
@@ -145,9 +163,11 @@ async function handleGetUploadUrl(
       .single()
 
     if (uploadError) {
-      logger.error('Failed to create upload record', { error: uploadError })
+      logger.error('Failed to create upload record', { error: uploadError, tenant, companyId: company.id })
       return res.status(500).json({ success: false, error: 'Failed to create upload record' })
     }
+
+    logger.info('Generating signed URL', { uploadId: uploadRecord.id, storagePath })
 
     // Generate signed URL for upload (valid for 1 hour)
     const { data: urlData, error: urlError } = await supabase.storage
@@ -155,7 +175,7 @@ async function handleGetUploadUrl(
       .createSignedUploadUrl(storagePath)
 
     if (urlError || !urlData) {
-      logger.error('Failed to generate signed URL', { error: urlError })
+      logger.error('Failed to generate signed URL', { error: urlError, storagePath })
       // Cleanup upload record
       await supabase.from('payroll_uploads').delete().eq('id', uploadRecord.id)
       return res.status(500).json({ success: false, error: 'Failed to generate upload URL' })
@@ -179,7 +199,8 @@ async function handleGetUploadUrl(
 
   } catch (error) {
     logger.error('Error generating upload URL', {
-      error: error instanceof Error ? error.message : String(error)
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
     })
     return res.status(500).json({
       success: false,

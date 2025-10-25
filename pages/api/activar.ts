@@ -177,7 +177,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-// eslint-disable-next-line no-unused-vars
+ 
 async function crearEntornoTrial(supabase: any, data: {
   tenant_id: string
   empresa: string
@@ -244,6 +244,23 @@ async function crearEntornoTrial(supabase: any, data: {
       }
 
       console.log('✅ Entorno demo creado exitosamente')
+      
+      // Crear registro en trial_access_users para este tenant
+      const { error: trialAccessError } = await supabase
+        .from('trial_access_users')
+        .insert([{
+          tenant_id: data.tenant_id,
+          company_id: newDemoCompany[0].id,
+          is_active: true
+        }])
+
+      if (trialAccessError) {
+        console.error('⚠️ Error creando trial_access_users:', trialAccessError)
+        // No fallar todo el proceso
+      } else {
+        console.log('✅ trial_access_users creado exitosamente')
+      }
+      
       return {
         success: true,
         data: {
@@ -254,6 +271,23 @@ async function crearEntornoTrial(supabase: any, data: {
     }
 
     console.log('✅ Reutilizando entorno demo existente')
+    
+    // Crear registro en trial_access_users para este tenant (puede reutilizar la misma empresa demo)
+    const { error: trialAccessError } = await supabase
+      .from('trial_access_users')
+      .insert([{
+        tenant_id: data.tenant_id,
+        company_id: demoCompany.id,
+        is_active: true
+      }])
+
+    if (trialAccessError) {
+      console.error('⚠️ Error creando trial_access_users:', trialAccessError)
+      // No fallar todo el proceso
+    } else {
+      console.log('✅ trial_access_users creado exitosamente para tenant reutilizado')
+    }
+    
     return {
       success: true,
       data: {
