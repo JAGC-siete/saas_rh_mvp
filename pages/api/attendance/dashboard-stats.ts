@@ -46,7 +46,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('📊 PASO 2: Obteniendo registros de asistencia de hoy...')
     const { data: todayAttendance, error: attError } = await supabase
       .from('attendance_records')
-      .select('*, employee:employees!inner(company_id)')
+      .select('*, employee:employees!inner(company_id, name, team)')
       .eq('date', today)
       .eq('employee.company_id', companyId)
 
@@ -162,7 +162,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const earlyList = (todayAttendance || [])
       .filter((a: any) => a.check_in && a.expected_check_in)
       .map((a: any) => {
-        const e = employeeById.get(a.employee_id)
+        const e: any = employeeById.get(a.employee_id)
         const expMin = parseExpectedToMinutes(a.expected_check_in)
         const inMin = getCheckInMinutes(a.check_in)
         let delta = 0
@@ -183,7 +183,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const lateList = (todayAttendance || [])
       .filter((a: any) => (a.late_minutes || 0) > 0)
       .map((a: any) => {
-        const e = employeeById.get(a.employee_id)
+        const e: any = employeeById.get(a.employee_id)
         return {
           id: a.employee_id,
           name: e?.name || 'N/A',
