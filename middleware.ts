@@ -503,6 +503,10 @@ export async function middleware(request: NextRequest) {
             return request.cookies.get(name)?.value
           },
           set(name: string, value: string, options: any) {
+            // Set maxAge to 1 day for auth cookies to match JWT expiry
+            if (name.includes('sb-') && name.includes('auth-token') && !options?.maxAge) {
+              options = { ...options, maxAge: 24 * 60 * 60 } // 1 day in seconds
+            }
             response.cookies.set(name, value, options)
           },
           remove(name: string, options: any) {

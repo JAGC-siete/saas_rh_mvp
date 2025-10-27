@@ -24,13 +24,19 @@ export function createClient(req: NextApiRequest, res: NextApiResponse) {
       },
       set(name: string, value: string, options: CookieOptions) {
         try {
+          // Set maxAge to 1 day for auth cookies to match JWT expiry
+          const isAuthCookie = name.includes('sb-') && name.includes('auth-token')
+          const cookieMaxAge = isAuthCookie && !options?.maxAge 
+            ? 24 * 60 * 60 // 1 day in seconds
+            : options?.maxAge
+
           const cookie = serialize(name, value, {
             path: options?.path ?? '/',
             httpOnly: options?.httpOnly ?? true,
             secure: options?.secure ?? process.env.NODE_ENV === 'production',
             sameSite: (options?.sameSite as any) ?? 'lax',
             domain: options?.domain,
-            maxAge: options?.maxAge,
+            maxAge: cookieMaxAge,
             expires: options?.expires,
           })
 

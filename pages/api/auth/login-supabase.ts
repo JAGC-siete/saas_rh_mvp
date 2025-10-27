@@ -50,6 +50,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       password: password
     })
 
+    // CRITICAL: Wait for cookies to be set before proceeding
+    // This ensures the session is properly established
+    await new Promise(resolve => setTimeout(resolve, 100))
+
     if (authError || !authData.user) {
       logger.warn('Login failed', { email, error: authError?.message })
       return res.status(401).json({
