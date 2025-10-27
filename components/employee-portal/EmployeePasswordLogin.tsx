@@ -186,7 +186,7 @@ export default function EmployeePasswordLogin({ onLoginSuccess }: EmployeePasswo
               ? 'Ingrese el código enviado a su email'
               : forgotPassword
               ? 'Recuperar contraseña'
-              : 'Paragon Honduras - Ingrese sus credenciales'
+              : 'Humano SISU - Ingrese sus credenciales'
             }
           </CardDescription>
         </CardHeader>

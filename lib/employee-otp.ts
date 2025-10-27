@@ -58,7 +58,7 @@ export async function sendOtp(email: string, employeeId: string, employeeName: s
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="text-align: center; margin-bottom: 30px;">
             <h1 style="color: #1e293b; margin-bottom: 10px;">Portal de Empleados</h1>
-            <p style="color: #64748b; font-size: 16px;">Paragon Honduras</p>
+            <p style="color: #64748b; font-size: 16px;">Humano SISU</p>
           </div>
           
           <div style="background: #f8fafc; border-radius: 8px; padding: 30px; text-align: center; margin-bottom: 20px;">
@@ -80,7 +80,7 @@ export async function sendOtp(email: string, employeeId: string, employeeName: s
           </div>
           
           <div style="text-align: center; color: #64748b; font-size: 12px;">
-            <p>Paragon Honduras - Sistema de Recursos Humanos</p>
+            <p>Humano SISU - Sistema de Recursos Humanos</p>
             <p>Este es un mensaje automático, no responda a este email.</p>
           </div>
         </div>

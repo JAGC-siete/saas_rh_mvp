@@ -138,7 +138,7 @@ export default function InvitationAcceptance() {
             <span className="text-2xl font-bold text-white">P</span>
           </div>
           <CardTitle className="text-2xl font-bold text-white">
-            Bienvenido a Paragon Honduras
+            Bienvenido a Humano SISU
           </CardTitle>
           <CardDescription className="text-gray-300">
             Complete su registro estableciendo su contraseña

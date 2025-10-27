@@ -151,7 +151,7 @@ export default function EmployeeLogin({ onLoginSuccess }: EmployeeLoginProps) {
           </CardTitle>
           <CardDescription className="text-gray-300">
             {step === 'email' 
-              ? 'Paragon Honduras - Ingrese su email' 
+              ? 'Humano SISU - Ingrese su email' 
               : 'Ingrese el código enviado a su email'}
           </CardDescription>
         </CardHeader>

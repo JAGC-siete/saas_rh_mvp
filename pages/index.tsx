@@ -228,7 +228,7 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-3 gap-8">
             {[
               { name: 'Felix Garcia', company: 'Tony\'s Mar Restaurant', employees: '40 empleados', quote: 'Ya no pierdo domingos haciendo planilla. 4 horas ahora son 4 minutos.' },
-              { name: 'Gustavo Argueta', company: 'Paragon Honduras', employees: '37 empleados', quote: 'Antes llevábamos la asistencia en un libro rojo, ahora tenemos dashboard interactivo.' },
+              { name: 'Gustavo Argueta', company: 'Humano SISU', employees: '37 empleados', quote: 'Antes llevábamos la asistencia en un libro rojo, ahora tenemos dashboard interactivo.' },
               { name: 'Luis Diego Maradiaga', company: 'AFI & Asociados', employees: '15 empleados', quote: 'Cero errores en IHSS desde que lo uso. Mi contador está feliz.' }
             ].map((testimonial, i) => (
               <div key={`testimonial-${i}`} className="bg-white/5 border border-white/10 rounded-xl p-6">

@@ -692,7 +692,7 @@ export default function EmployeePortal() {
               </div>
               <div>
                 <h1 className="text-lg font-semibold text-white">Portal de Empleados</h1>
-                <p className="text-sm text-gray-300">Paragon Honduras</p>
+                <p className="text-sm text-gray-300">Humano SISU</p>
               </div>
             </div>
             

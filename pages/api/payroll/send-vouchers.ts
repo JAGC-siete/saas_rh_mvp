@@ -139,7 +139,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           try {
             const emailResult = await emailService.sendEmail(notificationConfig, {
               to: employee.email,
-              subject: `Recibo de Nómina - ${periodo} Q${quincena} - Paragon Honduras`,
+              subject: `Recibo de Nómina - ${periodo} Q${quincena} - Humano SISU`,
               text: `
 Recibo de Nómina Quincenal
 
@@ -154,7 +154,7 @@ Resumen:
 
 Saludos,
 Departamento de Recursos Humanos
-Paragon Honduras
+Humano SISU
               `,
               html: `
                 <h2>Recibo de Nómina Quincenal</h2>
@@ -166,7 +166,7 @@ Paragon Honduras
                   <li>Total Deducciones: L. ${payrollData?.total_deductions?.toFixed(2) || '0.00'}</li>
                   <li>Salario Neto: L. ${payrollData?.net_salary?.toFixed(2) || '0.00'}</li>
                 </ul>
-                <p>Saludos,<br>Departamento de Recursos Humanos<br>Paragon Honduras</p>
+                <p>Saludos,<br>Departamento de Recursos Humanos<br>Humano SISU</p>
               `
             })
 
@@ -203,7 +203,7 @@ Su recibo de nómina está listo:
 Para descargar el PDF completo, revise su email o contacte a RRHH.
 
 Saludos,
-Paragon Honduras`,
+Humano SISU`,
               type: 'text'
             })
 

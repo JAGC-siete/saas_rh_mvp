@@ -132,7 +132,7 @@ export default function Dashboard() {
           {/* Header */}
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold text-white">Dashboard Ejecutivo - Paragon Honduras</h1>
+              <h1 className="text-3xl font-bold text-white">Servicio Hondureño de Recursos Humanos</h1>
               <p className="text-gray-300">Vista general del sistema de recursos humanos</p>
             </div>
             <div className="flex gap-2">
