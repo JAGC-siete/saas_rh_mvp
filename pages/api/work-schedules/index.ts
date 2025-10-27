@@ -27,27 +27,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const { data: userProfile, error: profileError } = await supabase
         .from('user_profiles')
         .select('company_id')
-        .eq('user_id', user.id)
+        .eq('id', user.id)
         .single()
 
       if (!profileError && userProfile?.company_id) {
         companyId = userProfile.company_id
+        console.log('✅ Found company_id for user:', companyId)
+      } else {
+        console.log('⚠️ No user profile found or no company_id:', profileError)
       }
     } catch (error) {
-      console.log('⚠️ No user profile found, using default company ID')
+      console.log('⚠️ Error fetching user profile, using default company ID:', error)
     }
 
     // 1. Obtener todos los horarios de la compañía del usuario
-      const { data: schedules } = await supabase
+    const { data: schedules, error: schedError } = await supabase
       .from('work_schedules')
       .select('id, name')
       .eq('company_id', companyId)
       .order('name')
 
-    // if (schedError) {
-    //   console.error('❌ Error fetching work schedules:', schedError)
-    //   return res.status(500).json({ error: 'Error fetching work schedules' })
-    // }
+    if (schedError) {
+      console.error('❌ Error fetching work schedules:', schedError)
+      return res.status(500).json({ error: 'Error fetching work schedules', details: schedError.message })
+    }
 
     console.log('✅ Work schedules obtenidos:', schedules?.length || 0)
 
