@@ -175,6 +175,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                       ? 'bg-brand-900 text-white'
                       : 'text-gray-200 hover:bg-white/10 hover:text-white'
                   }`}
+                  onClick={(e) => {
+                    // Add explicit handling to ensure clicks are properly processed
+                    e.stopPropagation()
+                  }}
                 >
                   <item.icon
                     className={`mr-3 h-5 w-5 ${
