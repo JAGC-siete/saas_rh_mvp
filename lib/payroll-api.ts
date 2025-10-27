@@ -79,9 +79,34 @@ export const payrollApi = {
     return Promise.resolve({ url })
   },
 
-  // Generate voucher
-  generateVoucher: (runLineId: string): Promise<{ url: string }> =>
-    api<{ url: string }>(`/api/payroll/generate-voucher?run_line_id=${runLineId}`)
+  // Generate voucher from run_line_id
+  generateVoucher: async (runLineId: string): Promise<{ url: string }> => {
+    // Call the new voucher endpoint which gets all data from run_line_id
+    const response = await fetch(`/api/payroll/receipt-voucher?run_line_id=${runLineId}`, {
+      method: 'GET',
+      credentials: 'include'
+    })
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Failed to generate voucher' }))
+      throw new Error(error.error || error.message || 'Failed to generate voucher')
+    }
+    
+    // Create blob URL for PDF download
+    const blob = await response.blob()
+    const blobUrl = URL.createObjectURL(blob)
+    
+    // Trigger download
+    const link = document.createElement('a')
+    link.href = blobUrl
+    link.download = `voucher_${runLineId}.pdf`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(blobUrl)
+    
+    return { url: blobUrl }
+  }
 }
 
 // Error mapping for better UX
