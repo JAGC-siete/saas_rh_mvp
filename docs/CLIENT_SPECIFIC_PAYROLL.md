@@ -199,25 +199,44 @@ const processedLines = lines.map(line => {
 
 ### Display Custom Fields
 
+The frontend automatically displays custom fields for PROHALCA in the expanded row details.
+
+**File**: `components/UnifiedPayrollTable.tsx`
+
+**How it works**:
+1. Detects if company has custom fields
+2. Reads metadata from payroll lines
+3. Extracts and displays custom fields in the expanded section
+4. Shows earnings in green, deductions in red
+
+**Implementation**:
 ```typescript
-// components/UnifiedPayrollTable.tsx or similar
-
-import { extractCustomFields, getPayrollConfig } from '../../lib/payroll-client-specific'
-
-const config = getPayrollConfig(companyId)
-
-// In your component
-{config?.customFields && Object.keys(config.customFields).map(fieldName => {
-  const value = extractCustomFields(companyId, row.metadata)[fieldName]
-  
-  return (
-    <div key={fieldName}>
-      <span>{config.customFields![fieldName]}:</span>
-      <span>{value}</span>
-    </div>
-  )
-})}
+// Already implemented in UnifiedPayrollTable.tsx
+// Shows custom fields in the expanded row:
+{hasCustom && payrollConfig && (
+  <div className="mt-4 pt-4 border-t border-white/10">
+    <h4>Campos Específicos de PROHALCA</h4>
+    {/* Auto-displays all custom fields */}
+  </div>
+)}
 ```
+
+### How Each Field is Calculated
+
+#### 1. Earnings (Ingresos)
+- **horas_extras**: Stored directly in metadata
+- **feriado_trabajado**: Stored directly in metadata  
+- **estipendio_transporte**: Stored directly in metadata
+
+#### 2. Deductions (Deducciones)
+- **comedor**: Stored directly in metadata
+- **cooperativa_aportaciones**: Stored directly in metadata
+- **cooperativa_retirable**: Stored directly in metadata
+- **cooperativa_prestamo**: Stored directly in metadata
+- **embargo_alimentos**: Stored directly in metadata
+- **otras_deducciones_***: Stored directly in metadata
+
+These are manually entered or calculated from attendance data.
 
 ## Benefits
 

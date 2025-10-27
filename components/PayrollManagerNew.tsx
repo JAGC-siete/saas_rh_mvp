@@ -247,6 +247,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
           runId={payroll.runId}
           status={payroll.status}
           period={payroll.currentPeriod}
+          companyId={payroll.companyId}
         />
       )}
 

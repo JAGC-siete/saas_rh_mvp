@@ -7,6 +7,7 @@ import { Button } from './ui/button'
 import { Icon, IconName } from './Icon'
 import { formatCurrency } from '../lib/utils/currency'
 import { UnifiedRow, UnifiedResumen } from '../lib/payroll-unified'
+import { extractCustomFields, calculateProhalcaPayroll, hasCustomFields, getCustomFields, getPayrollConfig } from '../lib/payroll-client-specific'
 
 interface UnifiedPayrollTableProps {
   rows: UnifiedRow[]
@@ -25,6 +26,7 @@ interface UnifiedPayrollTableProps {
     month: number
     quincena: number
   }
+  companyId?: string
 }
 
 export default function UnifiedPayrollTable({
@@ -39,9 +41,14 @@ export default function UnifiedPayrollTable({
   canSend = false,
   runId,
   status,
-  period
+  period,
+  companyId
 }: UnifiedPayrollTableProps) {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
+  
+  // Get payroll configuration for this company
+  const payrollConfig = companyId ? getPayrollConfig(companyId) : null
+  const hasCustom = hasCustomFields(companyId || '')
 
   const toggleRow = (employeeId: string) => {
     const newExpanded = new Set(expandedRows)
@@ -308,6 +315,63 @@ export default function UnifiedPayrollTable({
                               </p>
                             </div>
                           </div>
+                          
+                          {/* Custom Fields (PROHALCA-specific) */}
+                          {hasCustom && payrollConfig && (
+                            <div className="mt-4 pt-4 border-t border-white/10">
+                              <h4 className="text-sm font-semibold text-white mb-2">Campos Específicos de PROHALCA</h4>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Get custom fields from metadata if available */}
+                                {(() => {
+                                  const metadata = (row as any).metadata
+                                  const customFields = metadata ? extractCustomFields(companyId || '', metadata) : {}
+                                  const calculatedFields = metadata && row.total_earnings ? calculateProhalcaPayroll(row.total_earnings, metadata) : null
+                                  
+                                  if (!customFields || Object.keys(customFields).length === 0) {
+                                    return (
+                                      <p className="text-sm text-gray-400">No hay campos adicionales</p>
+                                    )
+                                  }
+                                  
+                                  return (
+                                    <>
+                                      {/* Earnings */}
+                                      {payrollConfig.customFields && Object.keys(payrollConfig.customFields).map((fieldName) => {
+                                        if (fieldName.includes('horas_extras') || fieldName.includes('feriado') || fieldName.includes('transporte')) {
+                                          const value = customFields[fieldName] || calculatedFields?.[fieldName] || 0
+                                          const label = payrollConfig.customFields![fieldName]
+                                          return (
+                                            <div key={fieldName} className="flex justify-between text-sm text-gray-200">
+                                              <span>{label}:</span>
+                                              <span className="text-green-300">{formatCurrency(value)}</span>
+                                            </div>
+                                          )
+                                        }
+                                        return null
+                                      })}
+                                      
+                                      {/* Deductions */}
+                                      {payrollConfig.customFields && Object.keys(payrollConfig.customFields).map((fieldName) => {
+                                        if (!fieldName.includes('horas_extras') && !fieldName.includes('feriado') && !fieldName.includes('transporte') && !fieldName.includes('valor') && !fieldName.includes('descanso') && !fieldName.includes('doble') && !fieldName.includes('pausa')) {
+                                          const value = customFields[fieldName] || calculatedFields?.[fieldName] || 0
+                                          const label = payrollConfig.customFields![fieldName]
+                                          if (value > 0) {
+                                            return (
+                                              <div key={fieldName} className="flex justify-between text-sm text-gray-200">
+                                                <span>{label}:</span>
+                                                <span className="text-red-300">{formatCurrency(value)}</span>
+                                              </div>
+                                            )
+                                          }
+                                        }
+                                        return null
+                                      })}
+                                    </>
+                                  )
+                                })()}
+                              </div>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     )}
