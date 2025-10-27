@@ -96,9 +96,18 @@ const checkRateLimit = (key: string, limit: { windowMs: number; max: number }): 
 }
 
 // Middleware de rate limiting
-export const withRateLimit = (endpointType: 'export' | 'reports' | 'general' = 'general') => {
+export const withRateLimit = (endpointType: 'export' | 'reports' | 'general' = 'general', allowedMethods: string[] = ['GET', 'POST', 'PUT', 'DELETE']) => {
   return (handler: any) => {
     return async (req: NextApiRequest, res: NextApiResponse) => {
+      // Validar método HTTP permitido ANTES de verificar rate limit
+      if (!allowedMethods.includes(req.method || '')) {
+        res.setHeader('Allow', allowedMethods.join(', '))
+        return res.status(405).json({ 
+          error: 'Method not allowed',
+          allowed: allowedMethods 
+        })
+      }
+
       // Limpiar entradas expiradas
       cleanupExpiredEntries()
       
@@ -150,13 +159,13 @@ export const withRateLimit = (endpointType: 'export' | 'reports' | 'general' = '
 }
 
 // Rate limiting específico para exportaciones
-export const withExportRateLimit = () => withRateLimit('export')
+export const withExportRateLimit = (methods?: string[]) => withRateLimit('export', methods)
 
 // Rate limiting específico para reportes
-export const withReportsRateLimit = () => withRateLimit('reports')
+export const withReportsRateLimit = (methods?: string[]) => withRateLimit('reports', methods)
 
 // Rate limiting general
-export const withGeneralRateLimit = () => withRateLimit('general')
+export const withGeneralRateLimit = (methods?: string[]) => withRateLimit('general', methods)
 
 // Función para verificar rate limit sin middleware
 export const checkRateLimitStatus = (req: NextApiRequest, endpointType: 'export' | 'reports' | 'general' = 'general') => {

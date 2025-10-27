@@ -398,4 +398,4 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 }
 
-export default withReportsRateLimit()(handler)
+export default withReportsRateLimit(['GET'])(handler)
