@@ -43,9 +43,9 @@ const cookieMaxAge = isAuthCookie && !options?.maxAge
 ### 4. **`middleware.ts`**
 ```typescript
 set(name: string, value: string, options: any) {
-  // Set maxAge to 30 days for auth cookies to match JWT expiry
+  // Set maxAge to 1 day for auth cookies to match JWT expiry
   if (name.includes('sb-') && name.includes('auth-token') && !options?.maxAge) {
-    options = { ...options, maxAge: 30 * 24 * 60 * 60 } // 30 days in seconds
+    options = { ...options, maxAge: 24 * 60 * 60 } // 1 day in seconds
   }
   response.cookies.set(name, value, options)
 }
@@ -56,12 +56,12 @@ set(name: string, value: string, options: any) {
 
 ### **Login:**
 1. Usuario ingresa email y contraseña
-2. Se establecen cookies con `maxAge` de 30 días
+2. Se establecen cookies con `maxAge` de 1 día
 3. Redirección inmediata sin necesidad de refresh
-4. Sesión válida por 30 días
+4. Sesión válida por 1 día
 
 ### **Navegación:**
-1. Las cookies no expiran durante 30 días
+1. Las cookies no expiran durante 1 día
 2. No es necesario hacer refresh para navegar entre opciones
 3. La sesión se mantiene activa durante todo el período
 
@@ -84,8 +84,8 @@ set(name: string, value: string, options: any) {
 
 ## 🔒 Configuración de Seguridad:
 
-- **JWT Expiry:** 30 días (2592000 segundos)
-- **Cookie maxAge:** 30 días (2592000 segundos)
+- **JWT Expiry:** 1 día (86400 segundos)
+- **Cookie maxAge:** 1 día (86400 segundos)
 - **Cookie httpOnly:** Sí (previene XSS)
 - **Cookie secure:** Sí en producción (previene MITM)
 - **Cookie sameSite:** Lax (previene CSRF)
@@ -94,8 +94,8 @@ set(name: string, value: string, options: any) {
 
 | Aspecto | Antes | Después |
 |---------|-------|---------|
-| JWT Expiry | 1 hora | 30 días |
-| Cookie maxAge | No configurado | 30 días |
+| JWT Expiry | 1 hora | 1 día |
+| Cookie maxAge | No configurado | 1 día |
 | Login Redirect | Requiere refresh | Funciona inmediatamente |
 | Navegación | Requiere refresh frecuente | Funciona sin problemas |
 
