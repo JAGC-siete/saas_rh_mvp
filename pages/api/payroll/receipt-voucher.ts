@@ -51,7 +51,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           bank_name,
           bank_account,
           department_id,
-          position
+          role
         ),
         payroll_runs:run_id (
           year,
@@ -109,7 +109,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       employee_code: employee.employee_code || 'N/A',
       employee_name: employee.name,
       department: departmentName,
-      position: employee.position || 'N/A',
+      position: employee.role || 'N/A',
       period_start: fechaInicio,
       period_end: fechaFin,
       days_worked: Math.floor(lineData.eff_hours || 0),

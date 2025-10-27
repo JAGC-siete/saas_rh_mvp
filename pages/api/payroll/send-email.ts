@@ -47,23 +47,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     // Verificar que la corrida pertenezca a la empresa del usuario
-    // Check both company_id and company_uuid for compatibility during migration
     const { data: run, error: runError } = await supabase
       .from('payroll_runs')
-      .select('id, company_id, year, month, quincena, tipo, company_uuid')
+      .select('id, company_id, year, month, quincena, tipo')
       .eq('id', run_id)
+      .eq('company_id', userProfile.company_id)
       .single()
-
-    // Verify company access - check both columns for migration compatibility
-    if (run) {
-      const runCompanyId = run.company_id || (run as any).company_uuid
-      if (runCompanyId !== userProfile.company_id) {
-        return res.status(403).json({ 
-          error: 'Acceso no autorizado',
-          message: 'La corrida no pertenece a su empresa'
-        })
-      }
-    }
 
     if (runError || !run) {
       return res.status(404).json({ 
