@@ -524,11 +524,10 @@ export const usePayrollManager = () => {
 
   const generateVoucher = useCallback(async (runLineId: string) => {
     try {
-      const response = await payrollApi.generateVoucher(runLineId)
+      // The API function already handles the download
+      await payrollApi.generateVoucher(runLineId)
       
-      // Open in new tab
-      window.open(response.url, '_blank')
-      toast.success('Voucher Generado', 'El voucher se ha abierto en una nueva pestaña', 4000)
+      toast.success('Voucher Generado', 'El voucher se ha descargado correctamente', 4000)
     } catch (error: any) {
       toast.error('Error Generando Voucher', 'No se pudo generar el voucher', 6000)
     }
