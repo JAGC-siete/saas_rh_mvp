@@ -1,16 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '@supabase/supabase-js'
+import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
 import { getTodayInHonduras, getHondurasTime, getHondurasTimeISO } from '../../../lib/timezone'
-
-// Prefer service role; fall back to anon to avoid blocking commit and allow read-only in staging
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error('Missing required Supabase environment variables')
-}
-
-const supabase = createClient(supabaseUrl, supabaseKey)
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -18,6 +8,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    // Get authenticated user and company context
+    const { supabase, companyId } = await requireCompanyAccess(req, res)
+    
+    if (!companyId) {
+      return res.status(400).json({ error: 'Company ID is required' })
+    }
     console.log('🔍 Dashboard stats: Iniciando...')
     // 🌎 Obtener timestamp con zona horaria de Tegucigalpa
     console.log('📅 Timestamp:', getHondurasTimeISO())
@@ -34,6 +30,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { data: employees, error: empError } = await supabase
       .from('employees')
       .select('id, name, employee_code, base_salary, department_id, status, team')
+      .eq('company_id', companyId)
       .eq('status', 'active')
 
     if (empError) {
@@ -45,12 +42,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('📋 Ejemplos de empleados:', employees?.slice(0, 3).map((emp: any) => ({ name: emp.name, code: emp.employee_code })))
     const totalEmployees = employees?.length || 0
 
-    // 2. Obtener registros de asistencia de hoy
+    // 2. Obtener registros de asistencia de hoy (filtrando por company_id a través de employees)
     console.log('📊 PASO 2: Obteniendo registros de asistencia de hoy...')
     const { data: todayAttendance, error: attError } = await supabase
       .from('attendance_records')
-      .select('*')
+      .select('*, employee:employees!inner(company_id)')
       .eq('date', today)
+      .eq('employee.company_id', companyId)
 
     if (attError) {
       console.error('❌ Error fetching attendance:', attError)
@@ -65,13 +63,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       late_minutes: att.late_minutes 
     })))
 
-    // 3. Obtener registros de los últimos 7 días para estadísticas
+    // 3. Obtener registros de los últimos 7 días para estadísticas (filtrando por company_id)
     console.log('📈 PASO 3: Obteniendo estadísticas semanales...')
     const { data: weeklyAttendance, error: weekError } = await supabase
       .from('attendance_records')
-      .select('date, employee_id')
+      .select('date, employee_id, employee:employees!inner(company_id)')
       .gte('date', sevenDaysAgo)
       .lte('date', today)
+      .eq('employee.company_id', companyId)
 
     if (weekError) {
       console.error('❌ Error fetching weekly attendance:', weekError)
