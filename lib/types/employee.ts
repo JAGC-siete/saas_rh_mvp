@@ -16,7 +16,7 @@ export interface Employee {
   bank_account: string | null
   emergency_contact_name: string | null
   emergency_contact_phone: string | null
-  address: string | null
+  address: string | Record<string, any> | null
   metadata: Record<string, any> | null
   department_id: string | null
   work_schedule_id: string | null

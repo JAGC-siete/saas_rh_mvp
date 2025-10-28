@@ -701,7 +701,12 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                     {selectedEmployee.address && (
                       <div>
                         <label className="text-sm font-medium text-gray-400">Dirección</label>
-                        <div className="text-white font-medium">{selectedEmployee.address}</div>
+                        <div className="text-white font-medium">
+                          {typeof selectedEmployee.address === 'string' 
+                            ? selectedEmployee.address 
+                            : JSON.stringify(selectedEmployee.address, null, 2)
+                          }
+                        </div>
                       </div>
                     )}
                     {selectedEmployee.emergency_contact_name && (

@@ -1,14 +1,20 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Card, CardContent } from './ui/card'
 import { Button } from './ui/button'
 import { Icon } from './Icon'
 import { usePayrollManager } from '../lib/hooks/usePayrollManager'
 import UnifiedPayrollTable from './UnifiedPayrollTable'
 import ConfigNomina from './ConfigNomina'
+import CustomPayrollFieldsForm from './CustomPayrollFieldsForm'
 
 export default function PayrollManagerNew({ companyId: propCompanyId }: { companyId?: string }) {
   // Use the new unified payroll manager
   const payroll = usePayrollManager()
+  
+  // Modal state for editing custom fields
+  const [showCustomFieldsModal, setShowCustomFieldsModal] = useState(false)
+  const [selectedLineId, setSelectedLineId] = useState<string>('')
+  const [selectedMetadata, setSelectedMetadata] = useState<any>(null)
   
   // Debug logging para verificar el companyId
   useEffect(() => {
@@ -85,6 +91,39 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
          status === 'error' ? 'Error' : status}
       </span>
     )
+  }
+
+  // Handle edit custom fields
+  const handleEditCustomFields = (lineId: string, metadata: any) => {
+    setSelectedLineId(lineId)
+    setSelectedMetadata(metadata)
+    setShowCustomFieldsModal(true)
+  }
+
+  // Handle save custom fields
+  const handleSaveCustomFields = async (metadata: any) => {
+    try {
+      const response = await fetch('/api/payroll/update-custom-fields', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          run_line_id: selectedLineId,
+          custom_fields: metadata
+        })
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Error al guardar campos personalizados')
+      }
+
+      // Refresh payroll data
+      await payroll.loadUnifiedData()
+      setShowCustomFieldsModal(false)
+    } catch (error) {
+      console.error('Error saving custom fields:', error)
+      alert('Error al guardar campos personalizados')
+    }
   }
 
   return (
@@ -241,6 +280,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
           onAuthorize={payroll.authorizeRun}
           onGeneratePDF={payroll.generatePDF}
           onSendEmail={() => payroll.sendEmail()}
+          onEditCustomFields={handleEditCustomFields}
           loading={payroll.loading}
           canAuthorize={payroll.canAuthorize}
           canSend={payroll.canSend}
@@ -278,6 +318,23 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
             </Button>
           </CardContent>
         </Card>
+      )}
+
+      {/* Custom Fields Modal */}
+      {showCustomFieldsModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <CustomPayrollFieldsForm
+                companyId={payroll.companyId || ''}
+                runLineId={selectedLineId}
+                currentMetadata={selectedMetadata}
+                onSave={handleSaveCustomFields}
+                onCancel={() => setShowCustomFieldsModal(false)}
+              />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

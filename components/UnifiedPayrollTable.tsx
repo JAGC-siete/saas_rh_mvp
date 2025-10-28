@@ -16,6 +16,7 @@ interface UnifiedPayrollTableProps {
   onAuthorize: () => void
   onGeneratePDF: () => void
   onSendEmail: () => void
+  onEditCustomFields?: (lineId: string, metadata: any) => void
   loading?: boolean
   canAuthorize?: boolean
   canSend?: boolean
@@ -36,6 +37,7 @@ export default function UnifiedPayrollTable({
   onAuthorize,
   onGeneratePDF,
   onSendEmail,
+  onEditCustomFields,
   loading = false,
   canAuthorize = false,
   canSend = false,
@@ -259,9 +261,22 @@ export default function UnifiedPayrollTable({
                             onClick={() => onGenerateVoucher(row.line_id || row.employee_id)}
                             disabled={loading}
                             className="bg-white/10 border-white/30 text-white hover:bg-white/20"
+                            title="Descargar comprobante"
                           >
                             <Icon name="download" className="h-4 w-4" />
                           </Button>
+                          {hasCustom && onEditCustomFields && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => onEditCustomFields?.(row.line_id || row.employee_id, (row as any).metadata)}
+                              disabled={loading}
+                              className="bg-white/10 border-white/30 text-white hover:bg-white/20"
+                              title="Editar campos personalizados"
+                            >
+                              <Icon name="edit" className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -338,7 +353,7 @@ export default function UnifiedPayrollTable({
                                       {/* Earnings */}
                                       {payrollConfig.customFields && Object.keys(payrollConfig.customFields).map((fieldName) => {
                                         if (fieldName.includes('horas_extras') || fieldName.includes('feriado') || fieldName.includes('transporte')) {
-                                          const value = customFields[fieldName] || (calculatedFields as any)?.[fieldName] || 0
+                                          const value = customFields[fieldName] || calculatedFields?.[fieldName] || 0
                                           const label = payrollConfig.customFields![fieldName]
                                           return (
                                             <div key={fieldName} className="flex justify-between text-sm text-gray-200">
@@ -353,7 +368,7 @@ export default function UnifiedPayrollTable({
                                       {/* Deductions */}
                                       {payrollConfig.customFields && Object.keys(payrollConfig.customFields).map((fieldName) => {
                                         if (!fieldName.includes('horas_extras') && !fieldName.includes('feriado') && !fieldName.includes('transporte') && !fieldName.includes('valor') && !fieldName.includes('descanso') && !fieldName.includes('doble') && !fieldName.includes('pausa')) {
-                                          const value = customFields[fieldName] || (calculatedFields as any)?.[fieldName] || 0
+                                          const value = customFields[fieldName] || calculatedFields?.[fieldName] || 0
                                           const label = payrollConfig.customFields![fieldName]
                                           if (value > 0) {
                                             return (
