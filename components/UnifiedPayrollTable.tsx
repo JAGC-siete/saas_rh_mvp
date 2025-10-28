@@ -353,7 +353,7 @@ export default function UnifiedPayrollTable({
                                       {/* Earnings */}
                                       {payrollConfig.customFields && Object.keys(payrollConfig.customFields).map((fieldName) => {
                                         if (fieldName.includes('horas_extras') || fieldName.includes('feriado') || fieldName.includes('transporte')) {
-                                          const value = customFields[fieldName] || calculatedFields?.[fieldName] || 0
+                                          const value = customFields[fieldName] || (calculatedFields as any)?.[fieldName] || 0
                                           const label = payrollConfig.customFields![fieldName]
                                           return (
                                             <div key={fieldName} className="flex justify-between text-sm text-gray-200">
@@ -368,7 +368,7 @@ export default function UnifiedPayrollTable({
                                       {/* Deductions */}
                                       {payrollConfig.customFields && Object.keys(payrollConfig.customFields).map((fieldName) => {
                                         if (!fieldName.includes('horas_extras') && !fieldName.includes('feriado') && !fieldName.includes('transporte') && !fieldName.includes('valor') && !fieldName.includes('descanso') && !fieldName.includes('doble') && !fieldName.includes('pausa')) {
-                                          const value = customFields[fieldName] || calculatedFields?.[fieldName] || 0
+                                          const value = customFields[fieldName] || (calculatedFields as any)?.[fieldName] || 0
                                           const label = payrollConfig.customFields![fieldName]
                                           if (value > 0) {
                                             return (

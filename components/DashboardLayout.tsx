@@ -193,32 +193,47 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
           {/* User section */}
           <div className="flex-shrink-0 border-t border-white/10 p-4">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
+            {sidebarOpen ? (
+              <div className="space-y-3">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <div className="h-8 w-8 rounded-full bg-brand-900 flex items-center justify-center">
+                      <span className="text-sm font-medium text-white">
+                        {user?.email?.charAt(0).toUpperCase() || 'U'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="ml-3 flex-1">
+                    <p className="text-sm font-medium text-white truncate">{user?.email}</p>
+                    <p className="text-xs text-gray-300">Usuario</p>
+                  </div>
+                </div>
+                <Button
+                  onClick={handleSignOut}
+                  className="w-full flex items-center justify-center gap-2 text-white bg-red-600 hover:bg-red-700 border-red-600"
+                >
+                  <ArrowLeftOnRectangleIcon className="h-4 w-4" />
+                  Cerrar Sesión
+                </Button>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center space-y-2">
                 <div className="h-8 w-8 rounded-full bg-brand-900 flex items-center justify-center">
                   <span className="text-sm font-medium text-white">
                     {user?.email?.charAt(0).toUpperCase() || 'U'}
                   </span>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleSignOut}
+                  className="p-1 text-red-400 hover:text-red-300 hover:bg-red-500/20"
+                  title="Cerrar sesión"
+                >
+                  <ArrowLeftOnRectangleIcon className="h-5 w-5" />
+                </Button>
               </div>
-              {sidebarOpen && (
-                <div className="ml-3 flex-1">
-                  <p className="text-sm font-medium text-white">{user?.email}</p>
-                  <p className="text-xs text-gray-300">
-                    Usuario
-                  </p>
-                </div>
-              )}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleSignOut}
-                className="ml-2 p-1 text-gray-200 hover:text-white hover:bg-white/10"
-                title="Cerrar sesión"
-              >
-                <ArrowLeftOnRectangleIcon className="h-5 w-5" />
-              </Button>
-            </div>
+            )}
           </div>
         </div>
       </div>

@@ -29,6 +29,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'custom_fields debe ser un objeto' })
     }
 
+    if (!companyId) {
+      return res.status(400).json({ error: 'Company ID is required' })
+    }
+
     // Validate custom payroll data
     const validation = validateCustomPayrollData(companyId, custom_fields)
     
