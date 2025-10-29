@@ -83,6 +83,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         .eq('id', authData.user.id)
         .single()
       
+      // DEBUG: Log profile query results
+      logger.info('Profile query result', {
+        userId: authData.user.id,
+        email,
+        profileFound: !!userProfile,
+        profileError: profileError?.message,
+        profileRole: userProfile?.role,
+        profilePermissions: userProfile?.permissions
+      })
+      
       if (!profileError && userProfile) {
         // Admin roles include: super_admin, company_admin, hr_manager
         const adminRoles = ['super_admin', 'admin', 'company_admin', 'hr_manager']
@@ -93,6 +103,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
           userType = 'employee'
           hasValidAccess = true
         }
+      } else if (profileError) {
+        logger.error('Profile query failed', {
+          userId: authData.user.id,
+          email,
+          error: profileError.message
+        })
       }
     }
     
