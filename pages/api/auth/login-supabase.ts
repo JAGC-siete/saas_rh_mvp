@@ -206,6 +206,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         company_id: userProfile?.company_id || userMetadata?.company_id || null,
         role: userProfile?.role || userMetadata?.role || null,
         user_type: userType
+        // Note: 'name' field not included - not in user_profiles schema
+        // Frontend should use user.email or fetch full profile separately
       },
       session: authData.session,
       userProfile: userProfile
