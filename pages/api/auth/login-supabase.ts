@@ -15,6 +15,7 @@ interface LoginResponse {
   user?: any
   session?: any
   userProfile?: any
+  debug?: any
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse<LoginResponse>) {
