@@ -97,12 +97,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       })
       
       if (!profileError && userProfile) {
+        const normalizedRole = (userProfile.role || '').trim().toLowerCase()
         // Admin roles include: super_admin, company_admin, hr_manager
         const adminRoles = ['super_admin', 'admin', 'company_admin', 'hr_manager']
-        if (adminRoles.includes(userProfile.role)) {
+        if (adminRoles.includes(normalizedRole)) {
           userType = 'admin'
           hasValidAccess = true
-        } else if (userProfile.role === 'employee') {
+        } else if (normalizedRole === 'employee') {
           userType = 'employee'
           hasValidAccess = true
         }
@@ -172,12 +173,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         .eq('id', authData.user.id)
         .single()
       userProfile = profile
+      const normalizedRole = (userProfile?.role || '').trim().toLowerCase()
       
       logger.info('User profile retrieved for response', {
         userId: authData.user.id,
         email,
         companyId: profile?.company_id,
-        role: profile?.role
+        role: normalizedRole
       })
     }
 
@@ -204,7 +206,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       user: {
         ...authData.user,
         company_id: userProfile?.company_id || userMetadata?.company_id || null,
-        role: userProfile?.role || userMetadata?.role || null,
+        role: ((userProfile?.role || userMetadata?.role || '') as string).trim().toLowerCase() || null,
         user_type: userType
         // Note: 'name' field not included - not in user_profiles schema
         // Frontend should use user.email or fetch full profile separately

@@ -105,14 +105,16 @@ export async function authenticateUser(
       throw new Error('ACCOUNT_DEACTIVATED')
     }
 
+    const normalizedRole = (userProfile.role || '').trim().toLowerCase()
+
     // Check admin requirements
-    if (requireAdmin && !['super_admin', 'company_admin', 'hr_manager'].includes(userProfile.role)) {
+    if (requireAdmin && !['super_admin', 'company_admin', 'hr_manager'].includes(normalizedRole)) {
       res.status(403).json({ error: 'Admin privileges required' })
       throw new Error('ADMIN_REQUIRED')
     }
 
     // Check allowed roles
-    if (allowedRoles.length > 0 && !allowedRoles.includes(userProfile.role)) {
+    if (allowedRoles.length > 0 && !allowedRoles.map(r => r.trim().toLowerCase()).includes(normalizedRole)) {
       res.status(403).json({ error: 'Insufficient permissions' })
       throw new Error('INSUFFICIENT_PERMISSIONS')
     }
@@ -122,7 +124,7 @@ export async function authenticateUser(
       user, 
       userProfile, 
       companyId: userProfile.company_id, 
-      role: userProfile.role 
+      role: normalizedRole 
     }
   } catch (error) {
     console.error('Authentication error:', error)
