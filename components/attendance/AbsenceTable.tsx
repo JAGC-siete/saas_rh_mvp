@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { formatTimeDisplay } from '../../lib/timezone'
 import { UserCircleIcon } from '@heroicons/react/24/outline'
@@ -13,9 +14,20 @@ interface AbsenceTableProps {
   data: AbsenceRow[]
   title: string
   onSelect?: (id: string, name: string) => void
+  pageSize?: number
 }
 
-export default function AbsenceTable({ data, title, onSelect }: AbsenceTableProps) {
+export default function AbsenceTable({ data, title, onSelect, pageSize = 10 }: AbsenceTableProps) {
+  const [page, setPage] = useState(1)
+  const totalPages = Math.max(1, Math.ceil(data.length / pageSize))
+  const paged = useMemo(() => {
+    const start = (page - 1) * pageSize
+    return data.slice(start, start + pageSize)
+  }, [data, page, pageSize])
+  const canPrev = page > 1
+  const canNext = page < totalPages
+  const goPrev = () => setPage((p) => (p > 1 ? p - 1 : p))
+  const goNext = () => setPage((p) => (p < totalPages ? p + 1 : p))
   return (
     <Card variant="glass" className="border border-white/10">
       <CardHeader className="pb-3 border-b border-white/10">
@@ -32,7 +44,7 @@ export default function AbsenceTable({ data, title, onSelect }: AbsenceTableProp
           </div>
         ) : (
           <div className="space-y-2">
-            {data.map((row) => (
+            {paged.map((row) => (
               <button
                 key={row.id}
                 onClick={() => onSelect && onSelect(row.id, row.name)}
@@ -62,6 +74,14 @@ export default function AbsenceTable({ data, title, onSelect }: AbsenceTableProp
             </div>
               </button>
             ))}
+            {/* Pagination */}
+            <div className="flex items-center justify-between pt-3">
+              <span className="text-xs text-gray-400">Página {page} de {totalPages}</span>
+              <div className="flex gap-2">
+                <button onClick={goPrev} disabled={!canPrev} className={`px-3 py-1 rounded bg-white/10 text-xs ${canPrev ? 'hover:bg-white/20' : 'opacity-40 cursor-not-allowed'}`}>Anterior</button>
+                <button onClick={goNext} disabled={!canNext} className={`px-3 py-1 rounded bg-white/10 text-xs ${canNext ? 'hover:bg-white/20' : 'opacity-40 cursor-not-allowed'}`}>Siguiente</button>
+              </div>
+            </div>
           </div>
         )}
       </CardContent>

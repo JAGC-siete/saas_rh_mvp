@@ -18,6 +18,8 @@ export default function AttendanceDashboardApp() {
   const [preset, setPreset] = useState('today')
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('')
   const [selectedRole, setSelectedRole] = useState('')
+  const [from, setFrom] = useState<string | undefined>(undefined)
+  const [to, setTo] = useState<string | undefined>(undefined)
   const [drawer, setDrawer] = useState<{
     open: boolean
     name: string
@@ -30,7 +32,7 @@ export default function AttendanceDashboardApp() {
   const [trends, setTrends] = useState<{ date: string; present: number; absent: number; late: number; checkInTimes: Array<{time: string, employee: string}> }[]>([])
 
   // Hook unificado para datos de asistencia
-  const { kpis, absent, early, late, lastUpdated, loading, error } = useAttendanceData(preset, selectedEmployeeId, selectedRole)
+  const { kpis, absent, early, late, lastUpdated, loading, error } = useAttendanceData(preset, selectedEmployeeId, selectedRole, from, to)
 
   // Calcular tasas derivadas
   const { total, asistenciaPct, puntualidadPct } = calculateAttendanceRates(kpis)
@@ -40,8 +42,9 @@ export default function AttendanceDashboardApp() {
     const loadTrends = async () => {
       try {
         if (!companyId) return
-        // USAR PRESET en lugar de fechas fijas para sincronizar con KPIs
-        const trendsUrl = `/api/reports/attendance-trends?preset=${preset}${selectedEmployeeId ? `&employee_id=${selectedEmployeeId}` : ''}${selectedRole ? `&role=${encodeURIComponent(selectedRole)}` : ''}`
+        // Permitir rango personalizado si preset === 'custom'
+        const range = preset === 'custom' && from && to ? `&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}` : ''
+        const trendsUrl = `/api/reports/attendance-trends?preset=${preset}${selectedEmployeeId ? `&employee_id=${selectedEmployeeId}` : ''}${selectedRole ? `&role=${encodeURIComponent(selectedRole)}` : ''}${range}`
         console.log('🔍 Frontend - Loading trends from:', trendsUrl)
         const res = await fetch(trendsUrl)
         const json = await res.json()
@@ -56,9 +59,13 @@ export default function AttendanceDashboardApp() {
       }
     }
     loadTrends()
-  }, [companyId, selectedEmployeeId, selectedRole, preset]) // Agregar preset y role como dependencias
+  }, [companyId, selectedEmployeeId, selectedRole, preset, from, to]) // Agregar preset y rango como dependencias
 
   const handlePresetChange = (p: string) => setPreset(p)
+  const handleRangeChange = (f: string, t: string) => {
+    setFrom(f ? `${f}T00:00:00.000Z` : undefined)
+    setTo(t ? `${t}T23:59:59.999Z` : undefined)
+  }
   
   // Nuevo handler para cambio de empleado
   const handleEmployeeChange = (employeeId: string) => {
@@ -150,6 +157,9 @@ export default function AttendanceDashboardApp() {
             lastUpdated={lastUpdated}
             onExport={handleExport}
             loading={loading}
+            from={from}
+            to={to}
+            onRangeChange={handleRangeChange}
           />
 
           {/* KPIs con tasas derivadas */}

@@ -375,3 +375,4 @@ npm test -- tests/idle-timeout.test.ts
 3. **Tests manuales** de integración
 4. **Monitoreo** de sesiones en producción
 
+

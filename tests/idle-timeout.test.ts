@@ -176,3 +176,4 @@ async function getSessionActivity() {
  * ✅ 9. "Cerrar todas" revoca todas las sesiones
  */
 
+

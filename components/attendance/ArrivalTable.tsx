@@ -18,12 +18,14 @@ interface ArrivalTableProps {
   lateData: ArrivalRow[]
   title: string
   onSelect?: (id: string, name: string) => void
+  pageSize?: number
 }
 
 type SeverityFilter = 'all' | 'early' | 'on_time' | 'warn' | 'alert' | 'danger'
 
-export default function ArrivalTable({ earlyData, lateData, title, onSelect }: ArrivalTableProps) {
+export default function ArrivalTable({ earlyData, lateData, title, onSelect, pageSize = 10 }: ArrivalTableProps) {
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('all')
+  const [page, setPage] = useState(1)
 
   // Unificar y procesar datos con severidad
   const unifiedRows = useMemo(() => {
@@ -59,6 +61,16 @@ export default function ArrivalTable({ earlyData, lateData, title, onSelect }: A
       }
     })
   }, [unifiedRows, severityFilter])
+
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize))
+  const paged = useMemo(() => {
+    const start = (page - 1) * pageSize
+    return filteredRows.slice(start, start + pageSize)
+  }, [filteredRows, page, pageSize])
+  const canPrev = page > 1
+  const canNext = page < totalPages
+  const goPrev = () => setPage((p) => (p > 1 ? p - 1 : p))
+  const goNext = () => setPage((p) => (p < totalPages ? p + 1 : p))
 
   const severityFilters = [
     { key: 'all' as SeverityFilter, label: 'Todos', count: unifiedRows.length, icon: '🔍' },
@@ -106,7 +118,7 @@ export default function ArrivalTable({ earlyData, lateData, title, onSelect }: A
           </div>
         ) : (
           <div className="space-y-2">
-            {filteredRows.map((row) => (
+            {paged.map((row) => (
               <button
                 key={row.id}
                 onClick={() => onSelect && onSelect(row.id, row.name)}
@@ -141,6 +153,14 @@ export default function ArrivalTable({ earlyData, lateData, title, onSelect }: A
                 </div>
               </button>
             ))}
+            {/* Pagination */}
+            <div className="flex items-center justify-between pt-3">
+              <span className="text-xs text-gray-400">Página {page} de {totalPages}</span>
+              <div className="flex gap-2">
+                <button onClick={goPrev} disabled={!canPrev} className={`px-3 py-1 rounded bg-white/10 text-xs ${canPrev ? 'hover:bg-white/20' : 'opacity-40 cursor-not-allowed'}`}>Anterior</button>
+                <button onClick={goNext} disabled={!canNext} className={`px-3 py-1 rounded bg-white/10 text-xs ${canNext ? 'hover:bg-white/20' : 'opacity-40 cursor-not-allowed'}`}>Siguiente</button>
+              </div>
+            </div>
           </div>
         )}
       </CardContent>

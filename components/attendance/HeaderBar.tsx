@@ -12,6 +12,9 @@ interface HeaderBarProps {
   lastUpdated: Date | null
   onExport: (format: string) => Promise<void>
   loading?: boolean
+  from?: string
+  to?: string
+  onRangeChange?: (from: string, to: string) => void
 }
 
 export default function HeaderBar({
@@ -23,7 +26,10 @@ export default function HeaderBar({
   onRoleChange,
   lastUpdated,
   onExport,
-  loading = false
+  loading = false,
+  from,
+  to,
+  onRangeChange
 }: HeaderBarProps) {
   const [exporting, setExporting] = useState(false)
 
@@ -63,6 +69,9 @@ export default function HeaderBar({
         selectedRole={selectedRole}
         onRoleChange={onRoleChange}
         loading={loading}
+        from={from}
+        to={to}
+        onRangeChange={onRangeChange}
       />
 
       {/* Acciones del header */}

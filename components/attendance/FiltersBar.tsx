@@ -17,6 +17,10 @@ interface FiltersBarProps {
   selectedRole?: string
   onRoleChange?: (role: string) => void
   loading?: boolean
+  // Date range support
+  from?: string
+  to?: string
+  onRangeChange?: (from: string, to: string) => void
 }
 
 const presets = [
@@ -34,7 +38,10 @@ export default function FiltersBar({
   onEmployeeChange,
   selectedRole = '',
   onRoleChange,
-  loading = false
+  loading = false,
+  from,
+  to,
+  onRangeChange
 }: FiltersBarProps) {
   // Estado para empleados
   const [employees, setEmployees] = useState<Employee[]>([])
@@ -123,7 +130,7 @@ export default function FiltersBar({
       </div>
 
       {/* Filter Controls */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
         {/* Presets */}
         <div>
           <label className="block text-xs font-medium text-gray-400 mb-2">Período</label>
@@ -139,10 +146,35 @@ export default function FiltersBar({
                   {p.icon} {p.label}
                 </option>
               ))}
+              <option value="custom" className="bg-gray-800">🗓️ Rango personalizado</option>
             </select>
             <ChevronDownIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
           </div>
         </div>
+
+        {/* Date range (only if custom) */}
+        {preset === 'custom' && (
+          <>
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-2">Desde</label>
+              <input
+                type="date"
+                value={(from || '').slice(0, 10)}
+                onChange={(e) => onRangeChange && onRangeChange(e.target.value, to || e.target.value)}
+                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-2">Hasta</label>
+              <input
+                type="date"
+                value={(to || '').slice(0, 10)}
+                onChange={(e) => onRangeChange && onRangeChange(from || e.target.value, e.target.value)}
+                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
+              />
+            </div>
+          </>
+        )}
 
         {/* Employee Filter */}
         {onEmployeeChange && (

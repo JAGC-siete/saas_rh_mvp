@@ -22,6 +22,8 @@ async function attendanceTrendsHandler(req: NextApiRequest, res: NextApiResponse
     const preset = normalizeParam(req.query.preset) || 'today'
     const roleFilter = normalizeParam(req.query.role)
     const employee_id = normalizeParam(req.query.employee_id)
+    const from = normalizeParam(req.query.from)
+    const to = normalizeParam(req.query.to)
     
     console.log('🔍 Trends API Debug:', { 
       preset, 
@@ -41,8 +43,10 @@ async function attendanceTrendsHandler(req: NextApiRequest, res: NextApiResponse
       })
     }
 
-    // 📅 CALCULAR RANGO DE FECHAS USANDO EL MISMO RESOLVER
-    const range = getDateRange(preset)
+    // 📅 CALCULAR RANGO DE FECHAS O USAR PERSONALIZADO
+    const range = (preset === 'custom' && from && to)
+      ? { from, to }
+      : getDateRange(preset)
     const startDate = range.from.split('T')[0]
     const endDate = range.to.split('T')[0]
     
