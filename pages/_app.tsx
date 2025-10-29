@@ -1,10 +1,8 @@
+import React, { createContext } from 'react'
 import { AppProps } from 'next/app'
 import Head from 'next/head'
-import { createClient } from '../lib/supabase/client'
-import { createContext, useState, useEffect } from 'react'
 import { AuthProvider } from '../lib/auth'
 import { NotificationProvider } from '../components/NotificationProvider'
-import { areEnvVarsAvailable } from '../lib/env'
 import { SessionExpiryWarning } from '../components/SessionExpiryWarning'
 import '../styles/globals.css'
 import '../styles/landing.css'
@@ -29,24 +27,10 @@ function checkEnvironmentVariables() {
 }
 
 export default function App({ Component, pageProps }: AppProps) {
-  const [supabaseClient, setSupabaseClient] = useState<any>(null)
-  const [isClient, setIsClient] = useState(false)
+  const [isClient, setIsClient] = React.useState(false)
 
-  useEffect(() => {
+  React.useEffect(() => {
     setIsClient(true)
-    
-    // Initialize Supabase client
-    try {
-      const client = createClient()
-      if (client) {
-        setSupabaseClient(client)
-        console.log('✅ Supabase client initialized successfully')
-      }
-    } catch (error) {
-      console.error('❌ Failed to create Supabase client:', error)
-      // Still set a mock client to prevent app from breaking
-      setSupabaseClient({})
-    }
   }, [])
 
   // Show loading state during hydration
@@ -59,7 +43,7 @@ export default function App({ Component, pageProps }: AppProps) {
   }
 
   return (
-    <SupabaseContext.Provider value={supabaseClient}>
+    <SupabaseContext.Provider value={null}>
       <AuthProvider>
         <NotificationProvider>
           <div className="min-h-screen bg-app">

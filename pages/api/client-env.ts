@@ -17,6 +17,13 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     NODE_ENV: process.env.NODE_ENV,
   }
 
+  // Log for debugging in Railway
+  console.log('📋 Client env API called:', {
+    hasUrl: !!clientEnv.NEXT_PUBLIC_SUPABASE_URL,
+    hasKey: !!clientEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    nodeEnv: clientEnv.NODE_ENV
+  })
+
   // Set cache headers to avoid unnecessary requests
   res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=600')
   

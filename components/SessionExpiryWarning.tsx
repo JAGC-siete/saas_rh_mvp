@@ -4,8 +4,6 @@
  */
 
 import React, { useState, useEffect } from 'react'
-import { createClient } from '../lib/supabase/client'
-import { logger } from '../lib/logger'
 
 interface SessionExpiryWarningProps {
   onExpiry?: () => void
@@ -17,7 +15,6 @@ export function SessionExpiryWarning({ onExpiry }: SessionExpiryWarningProps) {
   const [isDismissed, setIsDismissed] = useState(false)
 
   useEffect(() => {
-    const supabase = createClient()
     let interval: NodeJS.Timeout | null = null
     let timeout: NodeJS.Timeout | null = null
 
@@ -53,7 +50,7 @@ export function SessionExpiryWarning({ onExpiry }: SessionExpiryWarningProps) {
           }
         }
       } catch (error) {
-        logger.error('Error checking session expiry', error)
+        console.error('Error checking session expiry', error)
       }
     }
 
@@ -73,8 +70,12 @@ export function SessionExpiryWarning({ onExpiry }: SessionExpiryWarningProps) {
   const handleKeepSession = async () => {
     try {
       // Make a valid authenticated request to update activity
-      const supabase = createClient()
-      await supabase.from('user_profiles').select('id').limit(1)
+      await fetch('/api/auth/heartbeat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
       
       setShowWarning(false)
       setIsDismissed(true)
@@ -82,7 +83,7 @@ export function SessionExpiryWarning({ onExpiry }: SessionExpiryWarningProps) {
       // Reset dismissed state after 5 minutes
       setTimeout(() => setIsDismissed(false), 5 * 60 * 1000)
     } catch (error) {
-      logger.error('Error keeping session active', error)
+      console.error('Error keeping session active', error)
     }
   }
 
@@ -164,7 +165,7 @@ export function useSessionExpiryMonitor(onExpiry?: () => void) {
           }
         }
       } catch (error) {
-        logger.error('Error monitoring session expiry', error)
+        console.error('Error monitoring session expiry', error)
       }
     }
 
