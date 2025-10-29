@@ -19,6 +19,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { 
       last5, 
       dni, 
+      company_id,  // Nuevo: para desambiguar en multi-cliente
       justification, 
       justification_category,
       lat, 
@@ -58,11 +59,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     logger.debug('All required tables are available')
 
-    // PASO 2: Validar existencia del empleado (público, sin company_id)
+    // PASO 2: Validar existencia del empleado con soporte multi-cliente
     console.log('🔍 Buscando empleado...', { dni, last5 })
     let employeeQuery = supabase
       .from('employees')
-      .select('id, work_schedule_id, dni, name, status, company_id')
+      .select('id, work_schedule_id, dni, name, status, company_id, employee_code, role, departments:department_id(name)')
       .eq('status', 'active')
 
     if (dni) {
@@ -72,21 +73,83 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       employeeQuery = employeeQuery.ilike('dni', `%${last5}`)
     }
 
-    const { data: employees, error: empError } = await employeeQuery
+    const { data: employeesData, error: empError } = await employeeQuery
 
     if (empError) {
       logger.error('Error searching for employee', empError)
       return res.status(500).json({ error: 'Error interno del servidor' })
     }
 
-    if (!employees || employees.length === 0) {
+    if (!employeesData || employeesData.length === 0) {
       logger.warn('No employee found with provided credentials')
       return res.status(404).json({ error: 'Empleado no encontrado o inactivo' })
     }
 
+    // MEJORA: Manejar múltiples empleados con el mismo last5 digits
+    let employees = employeesData
+    
     if (employees.length > 1) {
-      logger.warn('Multiple employees found with same credentials', { count: employees.length })
-      return res.status(400).json({ error: 'Múltiples empleados encontrados. Use DNI completo.' })
+      logger.warn('Multiple employees found with same credentials', { count: employees.length, company_id })
+      
+      // Si se proporcionó company_id, usar para filtrar
+      if (company_id) {
+        const filteredEmployees = employees.filter(e => e.company_id === company_id)
+        
+        if (filteredEmployees.length === 1) {
+          console.log('✅ Usando company_id para desambiguar:', { company_id, filteredCount: filteredEmployees.length })
+          // Continuar con el empleado filtrado reemplazando la lista
+          employees = filteredEmployees
+        } else if (filteredEmployees.length === 0) {
+          return res.status(404).json({ 
+            error: 'Empleado no encontrado en la empresa especificada',
+            company_id 
+          })
+        } else {
+          // Si aún hay múltiples, continuar con el filtrado
+          employees = filteredEmployees
+        }
+      }
+      
+      // Si aún hay múltiples, devolver sugerencias para que el usuario seleccione
+      if (employees.length > 1) {
+        // Obtener información de las empresas para ayudar a identificar
+        const companyIds = [...new Set(employees.map(e => e.company_id).filter(Boolean))]
+        let companyInfo: Record<string, any> = {}
+        
+        if (companyIds.length > 0) {
+          const { data: companies } = await supabase
+            .from('companies')
+            .select('id, name, subdomain')
+            .in('id', companyIds)
+          
+          if (companies) {
+            companies.forEach(c => {
+              companyInfo[c.id] = c
+            })
+          }
+        }
+
+        // Preparar sugerencias con información útil
+        const suggestions = employees.map(emp => ({
+          employee_id: emp.id,
+          dni: emp.dni,
+          name: emp.name,
+          employee_code: emp.employee_code,
+          role: emp.role,
+          company_name: companyInfo[emp.company_id]?.name || 'Empresa no identificada',
+          department_name: Array.isArray(emp.departments) ? emp.departments[0]?.name || 'Sin departamento' : 'Sin departamento',
+          company_id: emp.company_id
+        }))
+
+        return res.status(409).json({ 
+          error: 'Múltiples empleados encontrados',
+          message: `Se encontraron ${employees.length} empleados con los mismos últimos dígitos del DNI`,
+          suggestions: suggestions,
+          requireCompanySelection: true,
+          action: 'select_employee',
+          hint: 'Si trabajas en una empresa específica, puedes proporcionar su ID'
+        })
+      }
     }
 
     const employee = employees[0]

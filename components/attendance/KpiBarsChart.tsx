@@ -23,7 +23,7 @@ export default function KpiBarsChart({ kpis, loading = false }: KpiBarsChartProp
 
   if (loading) {
     return (
-      <div className="h-[180px] bg-gray-800/50 rounded-lg animate-pulse flex items-center justify-center">
+      <div className="h-[220px] bg-gradient-to-br from-white/5 to-white/0 rounded-xl border border-white/10 backdrop-blur-sm animate-pulse flex items-center justify-center">
         <div className="text-gray-400">Cargando datos...</div>
       </div>
     )
@@ -31,17 +31,18 @@ export default function KpiBarsChart({ kpis, loading = false }: KpiBarsChartProp
 
   if (chartData[0].total === 0) {
     return (
-      <div className="h-[180px] bg-gray-800/50 rounded-lg flex items-center justify-center">
+      <div className="h-[220px] bg-gradient-to-br from-white/5 to-white/0 rounded-xl border border-white/10 backdrop-blur-sm flex items-center justify-center">
         <div className="text-center">
-          <div className="text-gray-400 mb-2">Sin datos de asistencia</div>
-          <div className="text-sm text-gray-500">No hay registros para hoy</div>
+          <div className="text-4xl mb-3">📊</div>
+          <div className="text-gray-400 mb-2 font-medium">Sin datos de asistencia</div>
+          <div className="text-sm text-gray-500">No hay registros disponibles</div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="h-[180px] w-full">
+    <div className="h-[220px] w-full bg-gradient-to-br from-white/5 to-white/0 rounded-xl p-4">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#374151" />

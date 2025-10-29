@@ -18,7 +18,14 @@ export default function AttendanceDashboardApp() {
   const [preset, setPreset] = useState('today')
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('')
   const [selectedRole, setSelectedRole] = useState('')
-  const [drawer, setDrawer] = useState<{open:boolean; name:string; events:any[]}>({open:false,name:'',events:[]})
+  const [drawer, setDrawer] = useState<{
+    open: boolean
+    name: string
+    events: any[]
+    employeeData?: any
+    stats?: any
+    schedule?: any
+  }>({open:false, name:'', events:[], employeeData: undefined, stats: undefined, schedule: undefined})
   const { companyId } = useCompanyContext()
   const [trends, setTrends] = useState<{ date: string; present: number; absent: number; late: number; checkInTimes: Array<{time: string, employee: string}> }[]>([])
 
@@ -92,11 +99,23 @@ export default function AttendanceDashboardApp() {
   }
 
   const handleEmployeeClick = async (id: string, name: string) => {
-    // Agregar employee_id a la consulta del empleado
-    const employeeUrl = `/api/attendance/employee/${id}?preset=${preset}${selectedEmployeeId ? `&employee_id=${selectedEmployeeId}` : ''}`
-    const res = await fetch(employeeUrl)
-    const events = await res.json()
-    setDrawer({open:true, name, events})
+    try {
+      const employeeUrl = `/api/attendance/employee/${id}?preset=${preset}`
+      const res = await fetch(employeeUrl)
+      const data = await res.json()
+      
+      setDrawer({
+        open: true,
+        name: data.employee?.name || name,
+        events: data.timeline || [],
+        employeeData: data.employee,
+        stats: data.stats,
+        schedule: data.schedule
+      })
+    } catch (error) {
+      console.error('Error loading employee details:', error)
+      setDrawer({open: false, name: '', events: [], employeeData: undefined})
+    }
   }
 
   const getPresetLabel = (preset: string) => {
@@ -147,15 +166,18 @@ export default function AttendanceDashboardApp() {
           />
 
           {/* Gráfico de barras para distribución de asistencia */}
-          <Card variant="glass">
-            <div className="p-4">
-              <h3 className="text-lg font-semibold text-white mb-4">Distribución de Asistencia</h3>
+          <Card variant="glass" className="border border-white/10">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
+                <span className="text-2xl">📊</span>
+                Distribución de Asistencia
+              </h3>
               <KpiBarsChart kpis={kpis} loading={loading} />
             </div>
           </Card>
 
           {/* Tablas de datos */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <AbsenceTable 
               data={absent} 
               title={`Ausentes ${getPresetLabel(preset)}`} 
@@ -169,37 +191,38 @@ export default function AttendanceDashboardApp() {
             />
           </div>
           {/* Gráfico de tendencias de asistencia */}
-          <Card variant="glass">
-            <div className="p-4">
-              <h3 className="text-lg font-semibold text-white mb-4">
+          <Card variant="glass" className="border border-white/10">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
+                <span className="text-2xl">📈</span>
                 Tendencias de Asistencia {getPresetLabel(preset)}
                 {selectedEmployeeId && (
-                  <span className="text-sm text-gray-400 ml-2">
-                    - Empleado seleccionado
+                  <span className="text-sm text-gray-400 ml-2 font-normal">
+                    • Empleado seleccionado
                   </span>
                 )}
                 {selectedRole && (
-                  <span className="text-sm text-gray-400 ml-2">
-                    - {selectedRole}
+                  <span className="text-sm text-gray-400 ml-2 font-normal">
+                    • {selectedRole}
                   </span>
                 )}
               </h3>
               <TrendsChart trends={trends} loading={loading} />
               {trends.length === 0 && !loading && (
-                <div className="text-center py-6">
-                  <p className="text-gray-400 mb-3">Sin datos en este rango.</p>
-                  <div className="flex justify-center gap-2">
+                <div className="text-center py-8">
+                  <p className="text-gray-400 mb-4 font-medium">Sin datos en este rango.</p>
+                  <div className="flex justify-center gap-3">
                     <button 
-                      className="px-3 py-1 bg-brand-600 text-white rounded text-sm hover:bg-brand-700 transition-colors"
+                      className="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 transition-all hover:scale-105 shadow-lg shadow-brand-600/30"
                       onClick={() => setPreset('week')}
                     >
-                      Últimos 7 días
+                      📅 Últimos 7 días
                     </button>
                     <button 
-                      className="px-3 py-1 bg-brand-600 text-white rounded text-sm hover:bg-brand-700 transition-colors"
+                      className="px-4 py-2 bg-brand-600 text-white rounded-lg text-sm font-medium hover:bg-brand-700 transition-all hover:scale-105 shadow-lg shadow-brand-600/30"
                       onClick={() => setPreset('month')}
                     >
-                      Este mes
+                      🗓️ Este mes
                     </button>
                   </div>
                 </div>
@@ -207,7 +230,15 @@ export default function AttendanceDashboardApp() {
             </div>
           </Card>
         </div>
-        <EmployeeDrawer open={drawer.open} onClose={() => setDrawer({open:false,name:'',events:[]})} name={drawer.name} events={drawer.events} />
+        <EmployeeDrawer 
+          open={drawer.open} 
+          onClose={() => setDrawer({open:false, name:'', events:[], employeeData: undefined, stats: undefined, schedule: undefined})} 
+          name={drawer.name} 
+          events={drawer.events}
+          employeeData={drawer.employeeData}
+          stats={drawer.stats}
+          schedule={drawer.schedule}
+        />
       </DashboardLayout>
     </ProtectedRoute>
   )

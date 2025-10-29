@@ -33,7 +33,7 @@ export default function TrendsChart({ trends, loading = false }: TrendsChartProp
 
   if (loading) {
     return (
-      <div className="h-[220px] bg-gray-800/50 rounded-lg animate-pulse flex items-center justify-center">
+      <div className="h-[260px] bg-gradient-to-br from-white/5 to-white/0 rounded-xl border border-white/10 backdrop-blur-sm animate-pulse flex items-center justify-center">
         <div className="text-gray-400">Cargando tendencias...</div>
       </div>
     )
@@ -41,9 +41,10 @@ export default function TrendsChart({ trends, loading = false }: TrendsChartProp
 
   if (chartData.length === 0) {
     return (
-      <div className="h-[220px] bg-gray-800/50 rounded-lg flex items-center justify-center">
+      <div className="h-[260px] bg-gradient-to-br from-white/5 to-white/0 rounded-xl border border-white/10 backdrop-blur-sm flex items-center justify-center">
         <div className="text-center">
-          <div className="text-gray-400 mb-2">Sin datos de tendencias</div>
+          <div className="text-4xl mb-3">📈</div>
+          <div className="text-gray-400 mb-2 font-medium">Sin datos de tendencias</div>
           <div className="text-sm text-gray-500">Selecciona un rango de fechas con datos</div>
         </div>
       </div>
@@ -51,7 +52,7 @@ export default function TrendsChart({ trends, loading = false }: TrendsChartProp
   }
 
   return (
-    <div className="h-[220px] w-full">
+    <div className="h-[260px] w-full bg-gradient-to-br from-white/5 to-white/0 rounded-xl p-4">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#374151" />

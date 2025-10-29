@@ -326,12 +326,13 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
 
   // Filter and sort employees
   const filteredAndSortedEmployees = useMemo(() => {
-    let filtered = employees
+    // Start with a copy to avoid mutating the original array
+    let filtered = [...employees]
 
     // Filter by search term
     if (searchTerm.trim()) {
       const search = searchTerm.toLowerCase()
-      filtered = employees.filter(emp => 
+      filtered = filtered.filter(emp => 
         emp.name?.toLowerCase().includes(search) ||
         emp.employee_code?.toLowerCase().includes(search) ||
         emp.dni?.toLowerCase().includes(search) ||
@@ -342,8 +343,8 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       )
     }
 
-    // Sort alphabetically
-    filtered.sort((a, b) => {
+    // Sort alphabetically - create a new sorted array
+    const sorted = [...filtered].sort((a, b) => {
       const nameA = a.name?.toLowerCase() || ''
       const nameB = b.name?.toLowerCase() || ''
       
@@ -354,7 +355,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       }
     })
 
-    return filtered
+    return sorted
   }, [employees, searchTerm, sortOrder])
 
   // Paginate results

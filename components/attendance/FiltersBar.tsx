@@ -1,60 +1,41 @@
 import { useState, useEffect } from 'react'
-import { DateTime } from 'luxon'
+import { ChevronDownIcon, FunnelIcon, XMarkIcon } from '@heroicons/react/24/outline'
 
 interface Employee {
   id: string
   name: string
   dni: string
   employee_code?: string
+  department?: string
 }
 
 interface FiltersBarProps {
   preset: string
   onPresetChange: (p: string) => void
-  team?: string
-  onTeamChange?: (t: string) => void
-  search?: string
-  onSearchChange?: (s: string) => void
-  startDate?: string
-  endDate?: string
-  onRangeChange?: (from: string, to: string) => void
-  // Nuevos props para empleados
   selectedEmployeeId?: string
   onEmployeeChange?: (employeeId: string) => void
-  // Nuevo prop para role/equipo
   selectedRole?: string
   onRoleChange?: (role: string) => void
   loading?: boolean
 }
 
 const presets = [
-  { label: 'Hoy', value: 'today' },
-  { label: 'Esta Semana', value: 'week' },
-  { label: 'Esta Quincena', value: 'fortnight' },
-  { label: 'Este Mes', value: 'month' },
-  { label: 'Este Año', value: 'year' },
-  { label: 'Personalizado', value: 'custom' }
+  { label: 'Hoy', value: 'today', icon: '📅' },
+  { label: 'Esta Semana', value: 'week', icon: '📆' },
+  { label: 'Esta Quincena', value: 'fortnight', icon: '📋' },
+  { label: 'Este Mes', value: 'month', icon: '🗓️' },
+  { label: 'Este Año', value: 'year', icon: '📊' }
 ]
 
 export default function FiltersBar({
   preset,
   onPresetChange,
-  team = '',
-  onTeamChange,
-  search = '',
-  onSearchChange,
-  startDate,
-  endDate,
-  onRangeChange,
   selectedEmployeeId = '',
   onEmployeeChange,
   selectedRole = '',
   onRoleChange,
   loading = false
 }: FiltersBarProps) {
-  const [localFrom, setLocalFrom] = useState(startDate || DateTime.now().toISODate())
-  const [localTo, setLocalTo] = useState(endDate || DateTime.now().toISODate())
-  
   // Estado para empleados
   const [employees, setEmployees] = useState<Employee[]>([])
   const [loadingEmployees, setLoadingEmployees] = useState(false)
@@ -107,110 +88,139 @@ export default function FiltersBar({
     loadRoles()
   }, [])
 
-  const handleRangeChange = (from: string, to: string) => {
-    setLocalFrom(from)
-    setLocalTo(to)
-    onRangeChange && onRangeChange(from, to)
-  }
-
   const handleEmployeeChange = (employeeId: string) => {
     onEmployeeChange && onEmployeeChange(employeeId)
   }
 
+  const handleRoleChange = (role: string) => {
+    onRoleChange && onRoleChange(role)
+  }
+
+  const clearFilters = () => {
+    if (onEmployeeChange) onEmployeeChange('')
+    if (onRoleChange) onRoleChange('')
+  }
+
+  const hasActiveFilters = selectedEmployeeId || selectedRole
+
   return (
-    <div className="flex flex-col gap-4 md:flex-row md:items-end">
-      {/* Presets - Mantener existente */}
-      <div>
-        <label className="block text-sm text-gray-300">Presets</label>
-        <select
-          value={preset}
-          onChange={(e) => onPresetChange(e.target.value)}
-          className="bg-gray-800 text-white rounded p-2"
-        >
-          {presets.map((p) => (
-            <option key={p.value} value={p.value}>{p.label}</option>
-          ))}
-        </select>
+    <div className="bg-white/5 rounded-xl p-4 border border-white/10 backdrop-blur-sm">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <FunnelIcon className="h-5 w-5 text-gray-400" />
+          <h3 className="text-sm font-semibold text-white">Filtros</h3>
+        </div>
+        {hasActiveFilters && (
+          <button
+            onClick={clearFilters}
+            className="flex items-center gap-1 px-2 py-1 text-xs text-gray-400 hover:text-white transition-colors rounded hover:bg-white/10"
+          >
+            <XMarkIcon className="h-4 w-4" />
+            Limpiar
+          </button>
+        )}
       </div>
 
-      {/* Nuevo: Dropdown de Empleados */}
-      {onEmployeeChange && (
+      {/* Filter Controls */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {/* Presets */}
         <div>
-          <label className="block text-sm text-gray-300">Empleado</label>
-          <select
-            value={selectedEmployeeId}
-            onChange={(e) => handleEmployeeChange(e.target.value)}
-            className="bg-gray-800 text-white rounded p-2 min-w-[200px]"
-            disabled={loadingEmployees}
-          >
-            <option value="">Todos los empleados</option>
-            {employees.map((employee) => (
-              <option key={employee.id} value={employee.id}>
-                {employee.name} {employee.employee_code ? `(${employee.employee_code})` : ''}
-              </option>
-            ))}
-          </select>
-          {loadingEmployees && (
-            <div className="text-xs text-gray-400 mt-1">Cargando...</div>
-          )}
-        </div>
-      )}
-
-      {/* Nuevo: Select de Equipo (role) */}
-      {onRoleChange && (
-        <div className="min-w-[220px]">
-          <label className="block text-xs text-gray-400 mb-1">Equipo</label>
-          <select
-            value={selectedRole}
-            onChange={(e) => onRoleChange(e.target.value)}
-            className="w-full rounded-md bg-zinc-900/60 border border-zinc-700 px-3 py-2 text-sm"
-            disabled={loadingRoles || loading}
-          >
-            <option value="">Todos los equipos</option>
-            {roles.map(role => (
-              <option key={role} value={role}>{role}</option>
-            ))}
-          </select>
-          {loadingRoles && (
-            <div className="text-xs text-gray-400 mt-1">Cargando...</div>
-          )}
-        </div>
-      )}
-
-      {/* Búsqueda - Mantener existente */}
-      {onSearchChange && (
-        <div className="flex-1">
-          <label className="block text-sm text-gray-300">Empleado</label>
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="bg-gray-800 text-white rounded p-2 w-full"
-            placeholder="Buscar..."
-          />
-        </div>
-      )}
-
-      {/* Fechas personalizadas - Mantener existente */}
-      {preset === 'custom' && onRangeChange && (
-        <div className="flex gap-2">
-          <div>
-            <label className="block text-sm text-gray-300">Desde</label>
-            <input
-              type="date"
-              value={localFrom}
-              onChange={(e) => handleRangeChange(e.target.value, localTo)}
-              className="bg-gray-800 text-white rounded p-2"
-            />
+          <label className="block text-xs font-medium text-gray-400 mb-2">Período</label>
+          <div className="relative">
+            <select
+              value={preset}
+              onChange={(e) => onPresetChange(e.target.value)}
+              disabled={loading}
+              className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm font-medium cursor-pointer hover:bg-white/15 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 appearance-none pr-8"
+            >
+              {presets.map((p) => (
+                <option key={p.value} value={p.value} className="bg-gray-800">
+                  {p.icon} {p.label}
+                </option>
+              ))}
+            </select>
+            <ChevronDownIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
           </div>
+        </div>
+
+        {/* Employee Filter */}
+        {onEmployeeChange && (
           <div>
-            <label className="block text-sm text-gray-300">Hasta</label>
-            <input
-              type="date"
-              value={localTo}
-              onChange={(e) => handleRangeChange(localFrom, e.target.value)}
-              className="bg-gray-800 text-white rounded p-2"
-            />
+            <label className="block text-xs font-medium text-gray-400 mb-2">Empleado</label>
+            <div className="relative">
+              <select
+                value={selectedEmployeeId}
+                onChange={(e) => handleEmployeeChange(e.target.value)}
+                disabled={loadingEmployees || loading}
+                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm font-medium cursor-pointer hover:bg-white/15 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 appearance-none pr-8 disabled:opacity-50"
+              >
+                <option value="" className="bg-gray-800">👤 Todos los empleados</option>
+                {employees.map((employee) => (
+                  <option key={employee.id} value={employee.id} className="bg-gray-800">
+                    {employee.name} {employee.employee_code ? `(${employee.employee_code})` : ''}
+                  </option>
+                ))}
+              </select>
+              <ChevronDownIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+            </div>
+            {loadingEmployees && (
+              <div className="text-xs text-gray-500 mt-1">Cargando...</div>
+            )}
+          </div>
+        )}
+
+        {/* Team/Role Filter */}
+        {onRoleChange && (
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-2">Equipo</label>
+            <div className="relative">
+              <select
+                value={selectedRole}
+                onChange={(e) => handleRoleChange(e.target.value)}
+                disabled={loadingRoles || loading}
+                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm font-medium cursor-pointer hover:bg-white/15 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 appearance-none pr-8 disabled:opacity-50"
+              >
+                <option value="" className="bg-gray-800">👥 Todos los equipos</option>
+                {roles.map(role => (
+                  <option key={role} value={role} className="bg-gray-800">{role}</option>
+                ))}
+              </select>
+              <ChevronDownIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+            </div>
+            {loadingRoles && (
+              <div className="text-xs text-gray-500 mt-1">Cargando...</div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Active Filters Display */}
+      {hasActiveFilters && (
+        <div className="mt-3 pt-3 border-t border-white/10">
+          <div className="flex flex-wrap gap-2">
+            {selectedEmployeeId && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-brand-500/20 text-brand-300 text-xs rounded-full">
+                Empleado seleccionado
+                <button 
+                  onClick={() => handleEmployeeChange('')}
+                  className="hover:text-brand-100"
+                >
+                  <XMarkIcon className="h-3 w-3" />
+                </button>
+              </span>
+            )}
+            {selectedRole && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-brand-500/20 text-brand-300 text-xs rounded-full">
+                Equipo: {selectedRole}
+                <button 
+                  onClick={() => handleRoleChange('')}
+                  className="hover:text-brand-100"
+                >
+                  <XMarkIcon className="h-3 w-3" />
+                </button>
+              </span>
+            )}
           </div>
         </div>
       )}

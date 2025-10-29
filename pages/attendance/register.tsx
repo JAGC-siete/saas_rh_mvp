@@ -1,10 +1,7 @@
 import { useState, useEffect } from 'react'
 import Head from 'next/head'
-import dynamic from 'next/dynamic'
-const CloudBackground = dynamic(() => import('../../components/CloudBackground'), { ssr: false })
 import Link from 'next/link'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
-import { Clock, User, ArrowLeft } from 'lucide-react'
+import { User, ArrowLeft, Shield } from 'lucide-react'
 import AttendanceManager from '../../components/AttendanceManager'
 
 export default function AttendanceRegisterPage() {
@@ -28,56 +25,93 @@ export default function AttendanceRegisterPage() {
   return (
     <>
       <Head>
-        <title>Registro de Asistencia - Sistema HR</title>
-        <meta name="description" content="Registro de entrada y salida para empleados" />
+        <title>Registro de Asistencia | Sistema Hondureño de Recursos Humanos</title>
+        <meta name="description" content="Plataforma de entrada y salida desarrollada en Honduras para empresas hondureñas" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
 
-      <div className="min-h-screen bg-app flex items-center justify-center p-4 relative">
-        <CloudBackground />
-        <div className="relative w-full max-w-md space-y-8 z-10">
+      <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden" style={{
+        background: 'linear-gradient(180deg, #003366 0%, #01294d 100%)'
+      }}>
+        {/* Decorative elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-20 right-20 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-20 left-20 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl"></div>
+        </div>
+
+        <div className="relative w-full max-w-2xl space-y-8 z-10">
           {/* Header */}
           <div className="text-center">
-            <div className="mx-auto h-20 w-20 bg-white rounded-full flex items-center justify-center mb-6 shadow-lg">
-              <Clock className="h-10 w-10 text-brand-600" />
+            <div className="mx-auto w-24 h-24 bg-white rounded-2xl flex items-center justify-center mb-6 shadow-2xl transform transition-transform hover:scale-105" style={{
+              background: 'linear-gradient(135deg, #004C97 0%, #0072CE 100%)'
+            }}>
+              <Shield className="h-12 w-12 text-white" strokeWidth={2.5} />
             </div>
-            <h1 className="text-3xl font-bold text-white mb-2">
-              Registro de Asistencia
+            
+            <h1 className="text-4xl font-bold text-white mb-3 tracking-tight">
+              Sistema Hondureño
             </h1>
-            <p className="text-brand-200">
-              Sistema de entrada y salida
+            <h2 className="text-3xl font-bold text-white mb-3 tracking-tight">
+              de Recursos Humanos
+            </h2>
+            
+            <p className="text-brand-100 text-lg font-medium mb-4">
+              Registro Inteligente de Asistencia
             </p>
-            <div className="mt-4 text-lg font-mono text-brand-300">
+            
+            {/* Time Display */}
+            <div className="mt-6 text-3xl font-mono font-bold text-white" style={{
+              textShadow: '0 2px 10px rgba(0,0,0,0.3)'
+            }}>
               {currentTime}
+            </div>
+            
+            <p className="text-sm text-blue-200 mt-4 font-medium">
+              Cumple con IHSS, RAP, STSS — Hecho en Honduras 🇭🇳
+            </p>
+          </div>
+
+          {/* Main Card with Glassmorphism */}
+          <div style={{
+            backdropFilter: 'blur(20px)',
+            background: 'rgba(255, 255, 255, 0.08)',
+            border: '1px solid rgba(255, 255, 255, 0.15)',
+            borderRadius: '24px',
+            boxShadow: '0 8px 40px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.05)'
+          }} className="p-8">
+            <div className="text-center mb-8">
+              <h3 className="text-2xl font-bold text-white mb-2 flex items-center justify-center gap-3">
+                <User className="h-7 w-7" strokeWidth={2.5} />
+                Marcar Asistencia
+              </h3>
+              <p className="text-blue-100 text-base font-medium">
+                Ingrese su DNI completo o últimos 5 dígitos
+              </p>
+            </div>
+
+            <AttendanceManager />
+
+            {/* Footer with Admin Access */}
+            <div className="mt-8 pt-6 border-t border-white/10">
+              <p className="text-blue-100 text-sm mb-4 text-center">¿Eres administrador?</p>
+              <Link 
+                href="/app/login" 
+                className="inline-flex items-center gap-2 text-white hover:text-blue-200 transition-colors text-sm font-semibold mx-auto block w-fit px-4 py-2 rounded-lg hover:bg-white/10"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Acceso Administrativo
+              </Link>
             </div>
           </div>
 
-          {/* Attendance Form */}
-          <Card variant="glass">
-            <CardHeader className="text-center pb-6">
-              <CardTitle className="flex items-center justify-center gap-2 text-white">
-                <User className="h-5 w-5" />
-                Marcar Asistencia
-              </CardTitle>
-              <CardDescription className="text-brand-200/90">
-                Ingrese los últimos 5 dígitos de su DNI
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <AttendanceManager />
-            </CardContent>
-          </Card>
-
-          {/* Admin Access Link */}
+          {/* Footer */}
           <div className="text-center">
-            <p className="text-brand-200 text-sm mb-3">¿Eres administrador?</p>
-            <Link 
-              href="/app/login" 
-              className="inline-flex items-center gap-2 text-brand-300 hover:text-white transition-colors text-sm font-medium"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Acceso Administrativo
-            </Link>
+            <p className="text-blue-100 text-xs font-medium">
+              © 2025 Sistema Hondureño de Recursos Humanos
+            </p>
+            <p className="text-blue-200/80 text-xs mt-1">
+              Desarrollado por Humano SISU
+            </p>
           </div>
         </div>
       </div>
