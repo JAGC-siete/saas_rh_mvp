@@ -9,6 +9,7 @@ import { Input } from '../../components/ui/input'
 import { Mail, Lock, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { createClient } from '../../lib/supabase/client'
 
 export default function LoginExisting() {
   const [email, setEmail] = useState('')
@@ -39,8 +40,19 @@ export default function LoginExisting() {
       // Guardar datos del usuario en localStorage (sin JWT personalizado)
       localStorage.setItem('user', JSON.stringify(data.user))
       
-      // Esperar un momento para que las cookies se establezcan
-      await new Promise(resolve => setTimeout(resolve, 500))
+      // Sincronizar sesión del navegador con Supabase para que useAuth la detecte
+      try {
+        const supabase = await createClient()
+        if (data?.session?.access_token && data?.session?.refresh_token) {
+          await supabase.auth.setSession({
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token
+          })
+        }
+      } catch (e) {
+        // Continuar aunque falle la sincronización explícita; cookies httpOnly ya están
+        console.warn('No se pudo sincronizar la sesión del navegador', e)
+      }
       
       // Check user role and redirect accordingly using router for better state management
       if (data.user.role === 'super_admin') {

@@ -265,6 +265,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(data.user)
       setSession(data.session) // Use Supabase session directly
 
+      // Sync Supabase browser client session so useAuth sees it immediately
+      try {
+        const client = supabase || await createClient()
+        if (data?.session?.access_token && data?.session?.refresh_token) {
+          await client.auth.setSession({
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token
+          })
+        }
+      } catch (e) {
+        console.warn('Could not set Supabase session in browser client', e)
+      }
+
       console.log('✅ Login successful:', data.user.email)
       setError(null)
       return true
