@@ -16,21 +16,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'Unauthorized' })
     }
 
-    // Get user profile
-    const { data: userProfile, error: profileError } = await supabase
+    // Get user profile - use optional() to allow for missing profiles
+    const { data: profiles, error: profileError } = await supabase
       .from('user_profiles')
       .select('*')
       .eq('id', user.id)
-      .single()
 
     if (profileError) {
       console.error('Error fetching user profile:', profileError)
-      return res.status(500).json({ error: 'Failed to fetch user profile' })
+      // Return empty array instead of error to allow login to proceed
+      return res.status(200).json({
+        profiles: [],
+        error: profileError.message
+      })
     }
 
     // Return the profile in the expected format
     return res.status(200).json({
-      profiles: userProfile ? [userProfile] : []
+      profiles: profiles || []
     })
 
   } catch (error) {
