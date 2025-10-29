@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
+import { createAdminClient } from '../supabase/server'
 
 export interface AuthenticatedUser {
   supabase: any
@@ -58,17 +59,8 @@ export async function authenticateUser(
       throw new Error('UNAUTHORIZED')
     }
 
-    // Get user profile - use admin client to bypass RLS
-    const adminSupabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
-    )
+    // Get user profile - use admin client to bypass RLS (CRITICAL FIX)
+    const adminSupabase = createAdminClient()
     
     const { data: userProfile, error: profileError } = await adminSupabase
       .from('user_profiles')
