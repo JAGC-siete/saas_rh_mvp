@@ -3,7 +3,7 @@ import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { useAuth } from '../lib/auth'
 import { Button } from './ui/button'
-import SessionExpiryWarning, { useSessionExpiryMonitor } from './SessionExpiryWarning'
+import { SessionExpiryWarning, useSessionExpiryMonitor } from './SessionExpiryWarning'
 import { 
   UserIcon, 
   ClockIcon, 
@@ -42,20 +42,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const router = useRouter()
   
   // Session expiry monitoring for 90-min idle timeout
-  const { minutesUntilExpiry, isActive, setIsActive, handleExtendSession } = useSessionExpiryMonitor(() => {
-    // On expiry: logout and redirect
-    logout()
-    router.push('/app/login')
-  })
-  
-  useEffect(() => {
-    // Start monitoring when user is logged in
-    if (user) {
-      setIsActive(true)
-    } else {
-      setIsActive(false)
-    }
-  }, [user, setIsActive])
+  // Note: The SessionExpiryWarning component handles this automatically
+  // when added to the layout (pages/_app.tsx)
 
   // Obtener permisos del usuario
   useEffect(() => {
@@ -262,13 +250,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </main>
       </div>
       
-      {/* Session Expiry Warning - Shows at 80 minutes (10 min before 90-min timeout) */}
-      {user && isActive && minutesUntilExpiry !== null && (
-        <SessionExpiryWarning 
-          minutesUntilExpiry={minutesUntilExpiry} 
-          onExtendSession={handleExtendSession}
-        />
-      )}
     </div>
   )
 } 

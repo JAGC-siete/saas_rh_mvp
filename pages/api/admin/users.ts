@@ -2,8 +2,9 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../lib/supabase/server'
 import { logger } from '../../../lib/logger'
 import { createSecureErrorResponse, createAuthErrorResponse } from '../../../lib/security/error-handling'
+import { withIdleTimeout } from '../../../lib/middleware/idle-timeout'
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     const supabase = createClient(req, res)
     
@@ -271,3 +272,6 @@ async function createUser(supabase: any, req: NextApiRequest, res: NextApiRespon
     return res.status(500).json(createSecureErrorResponse(error))
   }
 }
+
+// Export handler (idle timeout is handled by middleware.ts globally)
+export default handler

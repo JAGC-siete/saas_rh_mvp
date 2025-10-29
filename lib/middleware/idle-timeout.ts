@@ -13,6 +13,7 @@
 import { createClient } from '../../lib/supabase/server'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import crypto from 'crypto'
+import { logger } from '../logger'
 
 export interface IdleTimeoutOptions {
   idleTimeoutMinutes?: number
@@ -125,6 +126,12 @@ export async function withIdleTimeout(
     const sessionToken = extractSessionToken(req.cookies as Record<string, string>)
     
     if (!sessionToken) {
+      // No session token found - might be a first request without session record
+      // Allow to pass but log warning
+      logger.debug('No session token found', {
+        userId: user.id,
+        path: req.url
+      })
       return handler(req, res)
     }
     
@@ -132,8 +139,22 @@ export async function withIdleTimeout(
     const { data: isActive, error: checkError } = await supabase
       .rpc('is_session_active', { p_session_token: sessionToken })
     
-    if (checkError || !isActive) {
+    if (checkError) {
+      logger.error('Error checking session activity', {
+        error: checkError,
+        userId: user.id,
+        sessionToken: sessionToken.substring(0, 8) + '...'
+      })
+      // If there's an error, continue anyway to avoid breaking existing sessions
+      // This is a fail-open approach for backward compatibility
+    } else if (!isActive) {
       // Session expired by idle timeout
+      logger.info('Session expired by idle timeout', {
+        userId: user.id,
+        sessionToken: sessionToken.substring(0, 8) + '...'
+      })
+      
+      // Return 440 with expiry message
       return res.status(440).json({
         error: 'Session expired',
         message: 'Tu sesión ha expirado por inactividad de 90 minutos',
@@ -150,7 +171,7 @@ export async function withIdleTimeout(
       })
     
     if (updateError) {
-      console.error('Error updating session activity:', updateError)
+      logger.error('Error updating session activity:', updateError)
       // Continue anyway - don't block request on update failure
     }
     

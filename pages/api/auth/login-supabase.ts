@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../lib/supabase/server'
 import { logger } from '../../../lib/logger'
+import { createSessionOnLogin } from '../../../lib/middleware/session-manager'
 
 interface LoginRequest {
   email: string
@@ -122,6 +123,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         .eq('id', authData.user.id)
         .single()
       userProfile = profile
+    }
+
+    // CRITICAL: Create session in user_sessions table for idle timeout tracking
+    const sessionResult = await createSessionOnLogin(
+      req,
+      res,
+      authData.user.id,
+      authData.session,
+      userProfile?.company_id || userMetadata?.company_id || null
+    )
+
+    if (!sessionResult.success) {
+      logger.warn('Failed to create session record', {
+        userId: authData.user.id,
+        email
+      })
+      // Continue anyway - don't block login, but idle timeout won't work
     }
 
     return res.status(200).json({

@@ -5,6 +5,7 @@ import { createContext, useState, useEffect } from 'react'
 import { AuthProvider } from '../lib/auth'
 import { NotificationProvider } from '../components/NotificationProvider'
 import { areEnvVarsAvailable } from '../lib/env'
+import { SessionExpiryWarning } from '../components/SessionExpiryWarning'
 import '../styles/globals.css'
 import '../styles/landing.css'
 
@@ -69,6 +70,15 @@ export default function App({ Component, pageProps }: AppProps) {
               <meta property="og:title" content="Servicio Hondureño de Recursos Humanos | Digital & Automatizado" />
             </Head>
             <Component {...pageProps} />
+            {/* Idle Timeout Warning - Shows at 80 minutes of inactivity */}
+            <SessionExpiryWarning 
+              onExpiry={() => {
+                // Redirect to login on session expiry
+                if (typeof window !== 'undefined') {
+                  window.location.href = '/app/login'
+                }
+              }} 
+            />
           </div>
         </NotificationProvider>
       </AuthProvider>

@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { logger } from './lib/logger'
+import { extractSessionToken } from './lib/middleware/session-manager'
+import crypto from 'crypto'
 
 // Inline role validation for middleware compatibility
 function validateUserPermissionsInline(profile: any, pathname: string) {
@@ -362,6 +364,63 @@ export async function middleware(request: NextRequest) {
            logger.warn('Unauthorized API access attempt', { path: pathname });
            return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
          }
+        
+        // 🔐 VERIFICAR IDLE TIMEOUT DE 90 MINUTOS
+        // Solo para rutas protegidas y si tiene session token
+        const sessionToken = extractSessionToken(request.cookies as any)
+        if (sessionToken) {
+          try {
+            const { data: isActive, error: checkError } = await supabase
+              .rpc('is_session_active', { p_session_token: sessionToken })
+            
+            if (checkError) {
+              logger.error('Error checking session activity', { 
+                error: checkError,
+                userId: user.id
+              })
+              // Continue anyway - fail open for backward compatibility
+            } else if (isActive === false) {
+              // Session expired by idle timeout
+              logger.info('Session expired by idle timeout', {
+                userId: user.id,
+                path: pathname,
+                sessionToken: sessionToken.substring(0, 8) + '...'
+              })
+              
+              // Clear cookies and return 440
+              const response = NextResponse.json(
+                { 
+                  error: 'Session expired',
+                  message: 'Tu sesión ha expirado por inactividad de 90 minutos',
+                  code: 'IDLE_TIMEOUT_90M',
+                  requiresReauth: true 
+                },
+                { status: 440 }
+              )
+              
+              // Clear auth cookies
+              response.cookies.delete('sb-auth-token')
+              response.cookies.delete('sb-access-token')
+              
+              return response
+            } else if (isActive === true) {
+              // Session is active, update last_activity (rate-limited by DB function)
+              const { error: updateError } = await supabase
+                .rpc('update_session_activity', {
+                  p_session_token: sessionToken,
+                  p_user_id: user.id
+                })
+              
+              if (updateError) {
+                logger.debug('Error updating session activity', { error: updateError })
+                // Continue anyway - don't block request
+              }
+            }
+          } catch (timeoutError) {
+            logger.error('Idle timeout check error', timeoutError)
+            // Fail open - continue with request
+          }
+        }
         
         // If admin route, check role using centralized validation
         if (isAdminRoute(pathname)) {

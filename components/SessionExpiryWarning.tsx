@@ -1,82 +1,131 @@
 /**
  * Session Expiry Warning Component
- * Shows warning at 80 minutes of inactivity (10 min before 90 min timeout)
- * 
- * Based on: https://supabase.com/docs/guides/auth/sessions
+ * Shows warning at 80 minutes (10 min before 90 min timeout)
  */
 
-import { useState, useEffect } from 'react'
-import { AlertCircle, RefreshCw, X } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { createClient } from '../lib/supabase/client'
+import { logger } from '../lib/logger'
 
 interface SessionExpiryWarningProps {
-  minutesUntilExpiry: number
-  onExtendSession: () => Promise<void>
+  onExpiry?: () => void
 }
 
-export default function SessionExpiryWarning({ minutesUntilExpiry, onExtendSession }: SessionExpiryWarningProps) {
+export function SessionExpiryWarning({ onExpiry }: SessionExpiryWarningProps) {
+  const [showWarning, setShowWarning] = useState(false)
+  const [minutesLeft, setMinutesLeft] = useState<number | null>(null)
   const [isDismissed, setIsDismissed] = useState(false)
-  const [isExtending, setIsExtending] = useState(false)
-  const [isVisible, setIsVisible] = useState(false)
 
-  // Show warning when less than 10 minutes remain
   useEffect(() => {
-    if (minutesUntilExpiry <= 10 && minutesUntilExpiry > 0) {
-      setIsVisible(true)
-      setIsDismissed(false)
-    } else {
-      setIsVisible(false)
-    }
-  }, [minutesUntilExpiry])
+    const supabase = createClient()
+    let interval: NodeJS.Timeout | null = null
+    let timeout: NodeJS.Timeout | null = null
 
-  const handleExtendSession = async () => {
-    setIsExtending(true)
+    async function checkSessionExpiry() {
+      try {
+        const response = await fetch('/api/auth/heartbeat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+
+        if (response.status === 440) {
+          // Session expired
+          setShowWarning(false)
+          if (onExpiry) onExpiry()
+          return
+        }
+
+        if (!response.ok) {
+          // Error, but continue monitoring
+          return
+        }
+
+        const data = await response.json()
+        
+        if (data.idleTimeoutMinutes !== null && data.idleTimeoutMinutes !== undefined) {
+          setMinutesLeft(data.idleTimeoutMinutes)
+          
+          // Show warning if less than 10 minutes remain (80 minutes of inactivity)
+          if (data.idleTimeoutMinutes <= data.warningAt && !isDismissed) {
+            setShowWarning(true)
+          }
+        }
+      } catch (error) {
+        logger.error('Error checking session expiry', error)
+      }
+    }
+
+    // Check immediately
+    checkSessionExpiry()
+
+    // Set up interval to check every 5 minutes
+    interval = setInterval(checkSessionExpiry, 5 * 60 * 1000)
+
+    // Cleanup
+    return () => {
+      if (interval) clearInterval(interval)
+      if (timeout) clearTimeout(timeout)
+    }
+  }, [onExpiry, isDismissed])
+
+  const handleKeepSession = async () => {
     try {
-      await onExtendSession()
-      setIsVisible(false)
+      // Make a valid authenticated request to update activity
+      const supabase = createClient()
+      await supabase.from('user_profiles').select('id').limit(1)
+      
+      setShowWarning(false)
+      setIsDismissed(true)
+      
+      // Reset dismissed state after 5 minutes
+      setTimeout(() => setIsDismissed(false), 5 * 60 * 1000)
     } catch (error) {
-      console.error('Error extending session:', error)
-    } finally {
-      setIsExtending(false)
+      logger.error('Error keeping session active', error)
     }
   }
 
   const handleDismiss = () => {
+    setShowWarning(false)
     setIsDismissed(true)
+    
+    // Reset dismissed state after 10 minutes
+    setTimeout(() => setIsDismissed(false), 10 * 60 * 1000)
   }
 
-  if (!isVisible || isDismissed) {
-    return null
-  }
+  if (!showWarning) return null
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 animate-slide-up">
-      <div className="bg-yellow-50 border-2 border-yellow-400 rounded-lg shadow-xl p-4 max-w-md">
-        <div className="flex items-start gap-3">
-          <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <h3 className="font-semibold text-yellow-900 mb-1">
-              Tu sesión está por expirar
-            </h3>
-            <p className="text-sm text-yellow-800 mb-3">
-              Has estado inactivo. Tu sesión expirará en <strong>{Math.ceil(minutesUntilExpiry)} minutos</strong>.
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={handleExtendSession}
-                disabled={isExtending}
-                className="flex items-center gap-2 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-              >
-                <RefreshCw className={`h-4 w-4 ${isExtending ? 'animate-spin' : ''}`} />
-                {isExtending ? 'Extendiendo...' : 'Mantener sesión'}
-              </button>
-              <button
-                onClick={handleDismiss}
-                className="p-2 hover:bg-yellow-100 rounded-lg transition-colors"
-                title="Cerrar"
-              >
-                <X className="h-4 w-4 text-yellow-700" />
-              </button>
-            </div>
+    <div className="fixed bottom-4 right-4 max-w-md bg-yellow-50 border-l-4 border-yellow-400 p-4 shadow-lg z-50">
+      <div className="flex items-start">
+        <div className="flex-shrink-0">
+          <svg className="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+          </svg>
+        </div>
+        <div className="ml-3">
+          <p className="text-sm text-yellow-700">
+            <strong>Tu sesión expirará pronto</strong>
+            {minutesLeft !== null && (
+              <span className="block mt-1">
+                Tu sesión se cerrará por inactividad en {minutesLeft} minutos.
+              </span>
+            )}
+          </p>
+          <div className="mt-3 flex space-x-2">
+            <button
+              onClick={handleKeepSession}
+              className="px-3 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded transition"
+            >
+              Mantener sesión
+            </button>
+            <button
+              onClick={handleDismiss}
+              className="px-3 py-1.5 text-xs font-medium text-yellow-700 bg-transparent hover:bg-yellow-100 rounded transition"
+            >
+              Descartar
+            </button>
           </div>
         </div>
       </div>
@@ -86,88 +135,49 @@ export default function SessionExpiryWarning({ minutesUntilExpiry, onExtendSessi
 
 /**
  * Hook to monitor session expiry
- * Calls heartbeat every 5 minutes and shows warning at 10 min remaining
  */
-export function useSessionExpiryMonitor(onExpiry: () => void) {
+export function useSessionExpiryMonitor(onExpiry?: () => void) {
   const [minutesUntilExpiry, setMinutesUntilExpiry] = useState<number | null>(null)
-  const [isActive, setIsActive] = useState(false)
 
   useEffect(() => {
-    if (!isActive) return
+    let interval: NodeJS.Timeout | null = null
 
-    let heartbeatInterval: NodeJS.Timeout
-    let warningCheckInterval: NodeJS.Timeout
-
-    // Heartbeat: update session activity every 5 minutes
-    const startHeartbeat = async () => {
-      const sendHeartbeat = async () => {
-        try {
-          const response = await fetch('/api/auth/heartbeat', {
-            method: 'POST',
-            credentials: 'include'
-          })
-
-          if (response.status === 440) {
-            // Session expired
-            onExpiry()
-            setIsActive(false)
-            return
+    async function checkExpiry() {
+      try {
+        const response = await fetch('/api/auth/heartbeat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
           }
+        })
 
-          if (response.ok) {
-            const data = await response.json()
+        if (response.status === 440) {
+          // Session expired
+          if (onExpiry) onExpiry()
+          return
+        }
+
+        if (response.ok) {
+          const data = await response.json()
+          if (data.idleTimeoutMinutes !== null && data.idleTimeoutMinutes !== undefined) {
             setMinutesUntilExpiry(data.idleTimeoutMinutes)
           }
-        } catch (error) {
-          console.error('Heartbeat error:', error)
         }
+      } catch (error) {
+        logger.error('Error monitoring session expiry', error)
       }
-
-      // Send immediately
-      await sendHeartbeat()
-
-      // Then every 5 minutes
-      heartbeatInterval = setInterval(sendHeartbeat, 5 * 60 * 1000)
     }
 
-    // Check for warning every minute
-    const startWarningCheck = () => {
-      warningCheckInterval = setInterval(() => {
-        // Warnings are handled by the warning component
-      }, 60 * 1000)
-    }
+    // Check immediately
+    checkExpiry()
 
-    startHeartbeat()
-    startWarningCheck()
+    // Check every 5 minutes
+    interval = setInterval(checkExpiry, 5 * 60 * 1000)
 
     return () => {
-      if (heartbeatInterval) clearInterval(heartbeatInterval)
-      if (warningCheckInterval) clearInterval(warningCheckInterval)
+      if (interval) clearInterval(interval)
     }
-  }, [isActive, onExpiry])
+  }, [onExpiry])
 
-  const handleExtendSession = async () => {
-    try {
-      const response = await fetch('/api/auth/heartbeat', {
-        method: 'POST',
-        credentials: 'include'
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setMinutesUntilExpiry(data.idleTimeoutMinutes)
-      }
-    } catch (error) {
-      console.error('Error extending session:', error)
-      throw error
-    }
-  }
-
-  return {
-    minutesUntilExpiry,
-    isActive,
-    setIsActive,
-    handleExtendSession
-  }
+  return { minutesUntilExpiry }
 }
-
