@@ -2,11 +2,12 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '../lib/supabase/client'
 import { Button } from './ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
+import { Input } from './ui/input'
 import { useAuth } from '../lib/auth'
 import { useCompanyContext } from '../lib/useCompanyContext'
 import { Employee } from '../lib/types/employee'
 import AddEmployeeForm from './AddEmployeeForm'
-import { PlusIcon, PencilIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, PencilIcon, TrashIcon, EyeIcon, MagnifyingGlassIcon, FunnelIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/outline'
 import { getHondurasTimestamp, formatTimeDisplay } from '../lib/timezone'
 
 interface Department {
@@ -66,6 +67,10 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
   const [terminationDate, setTerminationDate] = useState('')
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 25
 
   const getErrorMessage = useCallback((error: unknown) => {
     if (error instanceof Error) {
@@ -319,6 +324,58 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
 
   const shouldFetch = useMemo(() => !!user?.id && !sessionLoading, [user?.id, sessionLoading])
 
+  // Filter and sort employees
+  const filteredAndSortedEmployees = useMemo(() => {
+    let filtered = employees
+
+    // Filter by search term
+    if (searchTerm.trim()) {
+      const search = searchTerm.toLowerCase()
+      filtered = employees.filter(emp => 
+        emp.name?.toLowerCase().includes(search) ||
+        emp.employee_code?.toLowerCase().includes(search) ||
+        emp.dni?.toLowerCase().includes(search) ||
+        emp.email?.toLowerCase().includes(search) ||
+        emp.role?.toLowerCase().includes(search) ||
+        emp.team?.toLowerCase().includes(search) ||
+        emp.departments?.name?.toLowerCase().includes(search)
+      )
+    }
+
+    // Sort alphabetically
+    filtered.sort((a, b) => {
+      const nameA = a.name?.toLowerCase() || ''
+      const nameB = b.name?.toLowerCase() || ''
+      
+      if (sortOrder === 'asc') {
+        return nameA.localeCompare(nameB)
+      } else {
+        return nameB.localeCompare(nameA)
+      }
+    })
+
+    return filtered
+  }, [employees, searchTerm, sortOrder])
+
+  // Paginate results
+  const paginatedEmployees = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage
+    const endIndex = startIndex + itemsPerPage
+    return filteredAndSortedEmployees.slice(startIndex, endIndex)
+  }, [filteredAndSortedEmployees, currentPage, itemsPerPage])
+
+  // Calculate total pages
+  const totalPages = Math.ceil(filteredAndSortedEmployees.length / itemsPerPage)
+
+  // Reset to page 1 when search term changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm])
+
+  const toggleSortOrder = () => {
+    setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')
+  }
+
   useEffect(() => {
     if (shouldFetch) {
       fetchEmployees()
@@ -418,18 +475,48 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
           isEditing={!!editingEmployee}
         />
       ) : (
-        <div className="flex justify-between items-center">
-          <div>
-            <h2 className="text-xl font-semibold text-white">Empleados</h2>
-            <p className="text-gray-300">Administra la información de los empleados</p>
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-xl font-semibold text-white">Empleados</h2>
+              <p className="text-gray-300">Administra la información de los empleados</p>
+            </div>
+            <Button 
+              onClick={() => setShowForm(true)}
+              className="flex items-center space-x-2 bg-brand-600 hover:bg-brand-700"
+            >
+              <PlusIcon className="h-5 w-5" />
+              <span>Nuevo Empleado</span>
+            </Button>
           </div>
-          <Button 
-            onClick={() => setShowForm(true)}
-            className="flex items-center space-x-2 bg-brand-600 hover:bg-brand-700"
-          >
-            <PlusIcon className="h-5 w-5" />
-            <span>Nuevo Empleado</span>
-          </Button>
+
+          {/* Search and Sort Controls */}
+          <div className="flex gap-3 items-center">
+            <div className="flex-1 relative">
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Buscar por nombre, código, DNI, email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 bg-white/10 border-white/20 text-white placeholder-gray-400"
+              />
+            </div>
+            <Button
+              onClick={toggleSortOrder}
+              variant="outline"
+              className="flex items-center gap-2 bg-white/10 border-white/20 text-white hover:bg-white/20"
+            >
+              {sortOrder === 'asc' ? (
+                <ChevronUpIcon className="h-4 w-4" />
+              ) : (
+                <ChevronDownIcon className="h-4 w-4" />
+              )}
+              <span className="text-sm">
+                {sortOrder === 'asc' ? 'A-Z' : 'Z-A'}
+              </span>
+            </Button>
+          </div>
         </div>
       )}
 
@@ -459,19 +546,22 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
 
       <Card variant="glass">
         <CardHeader>
-          <CardTitle className="text-white">Lista de Empleados ({employees.length})</CardTitle>
+          <CardTitle className="text-white">
+            Lista de Empleados ({filteredAndSortedEmployees.length}{searchTerm && ` de ${employees.length}`})
+          </CardTitle>
           <CardDescription className="text-gray-300">
-            Empleados registrados en el sistema
+            Empleados registrados en el sistema {totalPages > 1 && `- Página ${currentPage} de ${totalPages}`}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {employees.length === 0 ? (
+          {filteredAndSortedEmployees.length === 0 ? (
             <div className="text-center py-8 text-gray-400">
-              No se encontraron empleados
+              {searchTerm ? 'No se encontraron empleados con ese criterio' : 'No se encontraron empleados'}
             </div>
           ) : (
+            <>
             <div className="space-y-4">
-              {employees.map((employee) => (
+              {paginatedEmployees.map((employee) => (
                 <div key={employee.id} className="border border-white/10 rounded-lg p-4 bg-white/5 hover:bg-white/10 transition-colors">
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
@@ -561,6 +651,68 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                 </div>
               ))}
             </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-6 pt-4 border-t border-white/10">
+                <div className="text-sm text-gray-400">
+                  Mostrando {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filteredAndSortedEmployees.length)} de {filteredAndSortedEmployees.length}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    variant="outline"
+                    size="sm"
+                    className="bg-white/10 border-white/20 text-white hover:bg-white/20 disabled:opacity-50"
+                  >
+                    <ChevronLeftIcon className="h-4 w-4" />
+                    Anterior
+                  </Button>
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum
+                      if (totalPages <= 5) {
+                        pageNum = i + 1
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i
+                      } else {
+                        pageNum = currentPage - 2 + i
+                      }
+                      
+                      return (
+                        <Button
+                          key={pageNum}
+                          onClick={() => setCurrentPage(pageNum)}
+                          variant={currentPage === pageNum ? 'default' : 'outline'}
+                          size="sm"
+                          className={`min-w-[40px] ${
+                            currentPage === pageNum
+                              ? 'bg-brand-600 hover:bg-brand-700 text-white'
+                              : 'bg-white/10 border-white/20 text-white hover:bg-white/20'
+                          }`}
+                        >
+                          {pageNum}
+                        </Button>
+                      )
+                    })}
+                  </div>
+                  <Button
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    variant="outline"
+                    size="sm"
+                    className="bg-white/10 border-white/20 text-white hover:bg-white/20 disabled:opacity-50"
+                  >
+                    Siguiente
+                    <ChevronRightIcon className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+            </>
           )}
         </CardContent>
       </Card>

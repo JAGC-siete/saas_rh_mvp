@@ -101,34 +101,30 @@ export async function authenticateUser(
         }
       }
 
-      // Verificar permisos específicos del rol
-      const hasRequiredPermissions = requiredPermissions.every(permission => 
+      // Verificar permisos del rol primero
+      const hasRolePermissions = requiredPermissions.every(permission => 
         allowedPermissions.includes(permission) || allowedPermissions.includes('*')
       )
+
+      // Verificar permisos específicos del usuario si están definidos
+      let hasUserPermissions = false
+      if (userProfile.permissions) {
+        const userSpecificPermissions = Object.keys(userProfile.permissions)
+          .filter(key => userProfile.permissions[key] === true)
+        
+        hasUserPermissions = requiredPermissions.every(permission =>
+          userSpecificPermissions.includes(permission)
+        )
+      }
+
+      // El usuario necesita tener los permisos YA SEA del rol O específicos
+      const hasRequiredPermissions = hasRolePermissions || hasUserPermissions
 
       if (!hasRequiredPermissions) {
         return {
           success: false,
           error: 'Permisos insuficientes',
           message: `No tiene permisos para: ${requiredPermissions.join(', ')}`
-        }
-      }
-
-      // Verificar permisos específicos del usuario si están definidos
-      if (userProfile.permissions) {
-        const userSpecificPermissions = Object.keys(userProfile.permissions)
-          .filter(key => userProfile.permissions[key] === true)
-        
-        const hasUserPermissions = requiredPermissions.every(permission =>
-          userSpecificPermissions.includes(permission)
-        )
-
-        if (!hasUserPermissions) {
-          return {
-            success: false,
-            error: 'Permisos insuficientes',
-            message: 'No tiene los permisos específicos requeridos'
-          }
         }
       }
     }
