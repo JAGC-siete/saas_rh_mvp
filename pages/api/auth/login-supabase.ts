@@ -163,13 +163,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
     // Obtener información adicional del perfil de usuario
     let userProfile = null
-    if (userType === 'admin') {
-      const { data: profile } = await supabase
+    if (userType === 'admin' || hasValidAccess) {
+      // Use admin client to bypass RLS
+      const adminSupabase = createAdminClient()
+      const { data: profile } = await adminSupabase
         .from('user_profiles')
         .select('*')
         .eq('id', authData.user.id)
         .single()
       userProfile = profile
+      
+      logger.info('User profile retrieved for response', {
+        userId: authData.user.id,
+        email,
+        companyId: profile?.company_id,
+        role: profile?.role
+      })
     }
 
     // CRITICAL: Create session in user_sessions table for idle timeout tracking
