@@ -151,8 +151,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <div className="h-screen flex overflow-hidden bg-app">
+      {/* Hot zone invisible para activar hover en desktop */}
+      <div className="sidebar-hover-zone" aria-hidden="true" />
+      
       {/* Sidebar */}
-      <div className={`${sidebarOpen ? 'w-64' : 'w-16'} glass-strong border-r border-white/10 transition-all duration-300 ease-in-out`}>
+      <div className={`dashboard-sidebar ${sidebarOpen ? 'w-64' : 'w-16'} glass-strong border-r border-white/10 transition-all duration-300 ease-in-out`}>
         <div className="flex flex-col h-full">
           {/* Header (sin logo) */}
           <div className="flex items-center justify-between h-16 px-4 border-b border-white/10">
@@ -186,19 +189,22 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   }}
                 >
                   <item.icon
-                    className={`mr-3 h-5 w-5 ${
+                    className={`mr-3 h-5 w-5 flex-shrink-0 ${
                       isActive ? 'text-brand-400' : 'text-gray-300 group-hover:text-brand-400'
                     }`}
                   />
-                  {sidebarOpen && item.name}
+                  <span className={`nav-text-hidden whitespace-nowrap ${!sidebarOpen ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'}`}>
+                    {item.name}
+                  </span>
                 </Link>
               )
             })}
           </nav>
 
           {/* User section */}
-          <div className="flex-shrink-0 border-t border-white/10 p-4">
-            {sidebarOpen ? (
+          <div className="flex-shrink-0 border-t border-white/10 p-4 relative">
+            {/* Vista completa - visible cuando sidebarOpen es true o en hover */}
+            <div className={`user-section-full transition-opacity duration-200 ${sidebarOpen ? 'opacity-100' : 'opacity-0 absolute pointer-events-none'}`}>
               <div className="space-y-3">
                 <div className="flex items-center">
                   <div className="flex-shrink-0">
@@ -208,7 +214,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                       </span>
                     </div>
                   </div>
-                  <div className="ml-3 flex-1">
+                  <div className="ml-3 flex-1 min-w-0">
                     <p className="text-sm font-medium text-white truncate">{user?.email}</p>
                     <p className="text-xs text-gray-300">Usuario</p>
                   </div>
@@ -221,7 +227,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   Cerrar Sesión
                 </Button>
               </div>
-            ) : (
+            </div>
+            
+            {/* Vista compacta - visible cuando sidebarOpen es false y sin hover */}
+            <div className={`user-section-compact transition-opacity duration-200 ${!sidebarOpen ? 'opacity-100' : 'opacity-0 absolute pointer-events-none'}`}>
               <div className="flex flex-col items-center space-y-2">
                 <div className="h-8 w-8 rounded-full bg-brand-900 flex items-center justify-center">
                   <span className="text-sm font-medium text-white">
@@ -238,7 +247,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   <ArrowLeftOnRectangleIcon className="h-5 w-5" />
                 </Button>
               </div>
-            )}
+            </div>
           </div>
         </div>
       </div>

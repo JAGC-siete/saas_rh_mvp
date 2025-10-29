@@ -396,3 +396,74 @@ html, body, #__next, #root {
     }
   }
 }
+
+/* Sidebar Hover Enhancement - Only for devices with precise hover capability */
+@layer components {
+  /* Hot zone invisible para activar hover cuando sidebar está colapsado */
+  .sidebar-hover-zone {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 12px;
+    height: 100vh;
+    z-index: 50;
+    pointer-events: auto;
+  }
+
+  /* Solo activar hover en dispositivos con pointer fino */
+  @media (hover: hover) and (pointer: fine) {
+    /* Cuando hover en zona o sidebar, expandir temporalmente (sobrescribe w-16) */
+    .sidebar-hover-zone:hover ~ .dashboard-sidebar,
+    .dashboard-sidebar:hover {
+      width: 16rem !important; /* w-64 equivalente */
+      min-width: 16rem;
+    }
+
+    /* Mostrar texto en hover aunque sidebarOpen sea false */
+    .dashboard-sidebar:hover .nav-text-hidden {
+      opacity: 1 !important;
+      width: auto !important;
+      overflow: visible !important;
+      transition: opacity 0.2s ease-in-out;
+    }
+
+    /* Asegurar que los links tengan suficiente espacio en hover */
+    .dashboard-sidebar:hover nav .group {
+      position: relative;
+    }
+
+    /* Mostrar sección de usuario completa en hover */
+    .dashboard-sidebar:hover .user-section-full {
+      opacity: 1 !important;
+      pointer-events: auto;
+      position: static !important;
+    }
+
+    .dashboard-sidebar:hover .user-section-compact {
+      opacity: 0 !important;
+      pointer-events: none;
+    }
+  }
+
+  /* Ocultar hot zone en dispositivos sin hover o pointer grueso (móviles) */
+  @media (hover: none), (pointer: coarse) {
+    .sidebar-hover-zone {
+      display: none;
+      pointer-events: none;
+    }
+  }
+
+  /* Respetar prefers-reduced-motion para animaciones de hover */
+  @media (prefers-reduced-motion: reduce) {
+    .dashboard-sidebar,
+    .dashboard-sidebar * {
+      transition: none !important;
+    }
+    
+    .nav-text-hidden,
+    .user-section-full,
+    .user-section-compact {
+      transition: none !important;
+    }
+  }
+}
