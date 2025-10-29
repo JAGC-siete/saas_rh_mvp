@@ -68,11 +68,15 @@ export function createClient(): SupabaseClient<Database> {
 
   try {
     // Create browser client with proper configuration
+    // CRITICAL: autoRefreshToken disabled for 90-min idle timeout enforcement
+    // See: https://supabase.com/docs/guides/auth/sessions
     browserClient = createBrowserClient<Database>(supabaseUrl, supabaseAnonKey, {
       auth: {
-        autoRefreshToken: true,
+        autoRefreshToken: false, // Disabled to enforce idle timeout
         persistSession: true,
-        detectSessionInUrl: false // Only enable in callback routes
+        detectSessionInUrl: false, // Only enable in callback routes
+        storageKey: 'sb-auth-token',
+        storage: typeof window !== 'undefined' ? window.localStorage : undefined
       },
       global: {
         headers: {
@@ -119,9 +123,11 @@ export function createCallbackClient(): SupabaseClient<Database> {
 
   return createBrowserClient<Database>(supabaseUrl, supabaseAnonKey, {
     auth: {
-      autoRefreshToken: true,
+      autoRefreshToken: false, // Disabled for idle timeout
       persistSession: true,
-      detectSessionInUrl: true // Enable for callback routes
+      detectSessionInUrl: true, // Enable for callback routes
+      storageKey: 'sb-auth-token',
+      storage: typeof window !== 'undefined' ? window.localStorage : undefined
     },
     global: {
       headers: {

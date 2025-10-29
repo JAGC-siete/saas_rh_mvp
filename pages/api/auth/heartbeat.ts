@@ -1,0 +1,96 @@
+/**
+ * Heartbeat Endpoint
+ * Updates last_activity for user session
+ * Called by client to signal user activity
+ * 
+ * Based on: https://supabase.com/docs/guides/auth/sessions
+ */
+
+import type { NextApiRequest, NextApiResponse } from 'next'
+import { createClient } from '../../../lib/supabase/server'
+import { logger } from '../../../lib/logger'
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
+
+  try {
+    const supabase = createClient(req, res)
+    
+    // Get current user
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
+      return res.status(401).json({ 
+        error: 'Unauthorized',
+        requiresReauth: true 
+      })
+    }
+    
+    // Extract session token from cookies
+    const cookies = req.cookies as Record<string, string>
+    const authToken = cookies['sb-auth-token'] || cookies['sb-access-token']
+    
+    if (!authToken) {
+      return res.status(400).json({ error: 'No session token found' })
+    }
+    
+    let sessionToken: string
+    try {
+      const parsed = JSON.parse(authToken)
+      sessionToken = parsed.session?.access_token?.jti || parsed.jti
+    } catch {
+      return res.status(400).json({ error: 'Invalid session token' })
+    }
+    
+    // Update session activity (rate-limited to once per 60s)
+    const { data: updated, error: updateError } = await supabase
+      .rpc('update_session_activity', {
+        p_session_token: sessionToken,
+        p_user_id: user.id
+      })
+    
+    if (updateError) {
+      logger.error('Error updating session activity', updateError)
+      return res.status(500).json({ error: 'Failed to update session' })
+    }
+    
+    if (!updated) {
+      // Session expired
+      return res.status(440).json({
+        error: 'Session expired',
+        message: 'Tu sesión ha expirado por inactividad',
+        code: 'IDLE_TIMEOUT_90M',
+        requiresReauth: true
+      })
+    }
+    
+    logger.debug('Session activity updated', {
+      userId: user.id,
+      sessionToken: sessionToken?.substring(0, 8) + '...'
+    })
+    
+    // Get time until expiration for client
+    const { data: sessionData } = await supabase
+      .from('user_sessions')
+      .select('idle_timeout_at, expires_at')
+      .eq('session_token', sessionToken)
+      .single()
+    
+    const timeUntilIdleExpiry = sessionData?.idle_timeout_at
+      ? Math.max(0, Math.floor((new Date(sessionData.idle_timeout_at).getTime() - Date.now()) / 1000 / 60))
+      : null
+    
+    res.status(200).json({
+      success: true,
+      idleTimeoutMinutes: timeUntilIdleExpiry,
+      warningAt: 10 // Warn user when 10 minutes remain
+    })
+    
+  } catch (error) {
+    logger.error('Heartbeat error', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+}
+

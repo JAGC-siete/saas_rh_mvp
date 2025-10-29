@@ -39,16 +39,19 @@ export default function LoginExisting() {
       // Guardar datos del usuario en localStorage (sin JWT personalizado)
       localStorage.setItem('user', JSON.stringify(data.user))
       
-      // Check user role and redirect accordingly
+      // Esperar un momento para que las cookies se establezcan
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      // Check user role and redirect accordingly using router for better state management
       if (data.user.role === 'super_admin') {
         // Super admin goes to the full dashboard
-        window.location.href = '/app/admin/super-admin-dashboard'
+        router.push('/app/admin/super-admin-dashboard')
       } else if (!data.user.company_id) {
         // Other users without company_id go to onboarding
-        window.location.href = '/onboarding'
+        router.push('/onboarding')
       } else {
         // Regular users go to dashboard
-        window.location.href = '/app/dashboard'
+        router.push('/app/dashboard')
       }
     } catch (err: any) {
       setError(err.message || 'Error de autenticación')
@@ -125,6 +128,13 @@ export default function LoginExisting() {
                 {error && (
                   <div className="text-red-200 text-sm glass-strong p-3 rounded-md">
                     {error}
+                  </div>
+                )}
+                
+                {loading && (
+                  <div className="text-center">
+                    <div className="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    <span className="ml-2 text-brand-200">Autenticando...</span>
                   </div>
                 )}
 
