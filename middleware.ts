@@ -92,6 +92,8 @@ const PUBLIC_ROUTES = new Set([
   '/api/health',
   '/api/env',          // Environment variables endpoint - PÚBLICO
   '/api/cron/*',       // Cron jobs para mantenimiento del sistema
+  '/api/auth/login-supabase',        // Admin login endpoint - PÚBLICO
+  '/api/auth/register',              // User registration endpoint - PÚBLICO
   '/api/employees/auth/login',      // Employee portal login - PÚBLICO
   '/api/employees/auth/send-otp',   // Send OTP code - PÚBLICO
   '/api/employees/auth/verify-otp', // Verify OTP code - PÚBLICO
