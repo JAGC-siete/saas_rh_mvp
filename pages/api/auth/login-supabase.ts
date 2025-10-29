@@ -115,6 +115,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     }
     
     if (!hasValidAccess) {
+      // Get profile for debugging
+      let profileResult = null
+      let profileErr = null
+      
+      try {
+        const adminSupabase = createAdminClient()
+        const { data: profile, error: err } = await adminSupabase
+          .from('user_profiles')
+          .select('role, permissions')
+          .eq('id', authData.user.id)
+          .single()
+        profileResult = profile
+        profileErr = err
+      } catch (e) {
+        // Ignore
+      }
+      
       // VERBOSE LOGGING: Log complete context for debugging
       logger.error('User login successful but no valid access permissions', { 
         email, 
@@ -122,8 +139,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         userMetadata,
         userType,
         hasValidAccess,
-        profileQueryResult: userProfile || null,
-        profileError: profileError || null
+        profileQueryResult: profileResult || null,
+        profileError: profileErr?.message || null
       })
       return res.status(403).json({
         success: false,
