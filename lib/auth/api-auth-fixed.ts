@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createServerClient } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 
 export interface AuthenticatedUser {
   supabase: any
@@ -57,8 +58,19 @@ export async function authenticateUser(
       throw new Error('UNAUTHORIZED')
     }
 
-    // Get user profile
-    const { data: userProfile, error: profileError } = await supabase
+    // Get user profile - use admin client to bypass RLS
+    const adminSupabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
+    )
+    
+    const { data: userProfile, error: profileError } = await adminSupabase
       .from('user_profiles')
       .select('company_id, role, employee_id, permissions, is_active')
       .eq('id', user.id)
