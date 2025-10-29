@@ -14,7 +14,7 @@ import { createClient } from '../../lib/supabase/server'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import crypto from 'crypto'
 
-interface IdleTimeoutOptions {
+export interface IdleTimeoutOptions {
   idleTimeoutMinutes?: number
   updateIntervalSeconds?: number
   excludedPaths?: string[]

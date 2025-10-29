@@ -64,30 +64,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         headers: {
           'Authorization': `Bearer ${session?.access_token}`,
         },
-        credentials: 'include'
       })
 
       if (response.ok) {
         const data = await response.json()
-        console.log('📊 Resultado perfil:', { userProfile: data.profiles?.[0], profileError: null })
-        
         // Find the current user's profile
         const profile = data.profiles?.find((p: any) => p.id === user.id)
         if (profile) {
-          console.log('✅ Perfil encontrado:', profile.email)
           setUserProfile(profile)
-        } else {
-          console.warn('⚠️ No se encontró perfil para usuario:', user.id)
-          // Don't set error - allow app to work with user data from localStorage
         }
-      } else {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
-        console.error('❌ Error obteniendo perfil de usuario:', errorData)
-        // Don't block app - use localStorage data as fallback
       }
     } catch (error) {
       console.error('Error refreshing user profile:', error)
-      // Don't block app - allow it to work with localStorage data
     }
   }
 

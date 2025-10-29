@@ -83,8 +83,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         .single()
       
       if (!profileError && userProfile) {
-        // Support all admin roles
-        if (['super_admin', 'admin', 'company_admin'].includes(userProfile.role)) {
+        if (['super_admin', 'admin'].includes(userProfile.role)) {
           userType = 'admin'
           hasValidAccess = true
         } else if (userProfile.role === 'employee') {
@@ -117,16 +116,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     // Obtener información adicional del perfil de usuario
     let userProfile = null
     if (userType === 'admin') {
-      // Fetch full profile for admins
-      const { data: profile, error: profileFetchError } = await supabase
+      const { data: profile } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('id', authData.user.id)
         .single()
-      
-      if (!profileFetchError && profile) {
-        userProfile = profile
-      }
+      userProfile = profile
     }
 
     return res.status(200).json({
