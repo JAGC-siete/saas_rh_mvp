@@ -66,11 +66,27 @@ export async function authenticateUser(
       .from('user_profiles')
       .select('company_id, role, employee_id, permissions, is_active')
       .eq('id', user.id)
-      .single()
+      .maybeSingle() // Use maybeSingle() to handle 0 rows gracefully
 
-    if (profileError || !userProfile) {
+    if (profileError) {
+      console.error('Profile query error:', profileError)
       if (requireProfile) {
         res.status(403).json({ error: 'User profile required' })
+        throw new Error('PROFILE_REQUIRED')
+      }
+      // Return basic user without profile
+      return { 
+        supabase, 
+        user, 
+        userProfile: null, 
+        companyId: null, 
+        role: 'employee' 
+      }
+    }
+
+    if (!userProfile) {
+      if (requireProfile) {
+        res.status(403).json({ error: 'User profile not found' })
         throw new Error('PROFILE_REQUIRED')
       }
       // Return basic user without profile

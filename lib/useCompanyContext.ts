@@ -23,51 +23,47 @@ export function useCompanyContext() {
       }
 
       try {
-        const supabase = await createClient()
-        
-        // Obtener el company_id del user_profile
+        // Get user profile via API (bypasses RLS on server side)
         console.log('🔍 Buscando perfil para usuario:', user.id)
-        const { data: userProfile, error: profileError } = await supabase
-          .from('user_profiles')
-          .select('company_id, role')
-          .eq('id', user.id)
-          .single()
+        const response = await fetch('/api/user-profile')
         
-        console.log('📊 Resultado perfil:', { userProfile, profileError })
+        if (!response.ok) {
+          throw new Error('Failed to fetch user profile')
+        }
+        
+        const { data: userProfile } = await response.json()
+        console.log('📊 Resultado perfil:', { userProfile })
 
-        if (profileError) {
-          console.error('❌ Error obteniendo perfil de usuario:', profileError)
-          // No usar fallback hardcodeado - esto causa problemas
-          setError('No se pudo obtener el perfil de usuario')
-          setLoading(false)
-          return
-        } else {
+        if (userProfile) {
           setCompanyId(userProfile.company_id)
-        }
+          
+          // Get company info using client
+          const supabase = await createClient()
+          const currentCompanyId = userProfile.company_id
+          console.log('🏢 Buscando empresa con ID:', currentCompanyId)
+          
+          if (!currentCompanyId) {
+            setError('No se pudo obtener el ID de la empresa')
+            setLoading(false)
+            return
+          }
+          
+          const { data: companyData, error: companyError } = await supabase
+            .from('companies')
+            .select('id, name, settings')
+            .eq('id', currentCompanyId)
+            .single()
+          
+          console.log('📊 Resultado empresa:', { companyData, companyError })
 
-        // Obtener información de la empresa
-        const currentCompanyId = userProfile.company_id
-        console.log('🏢 Buscando empresa con ID:', currentCompanyId)
-        
-        if (!currentCompanyId) {
-          setError('No se pudo obtener el ID de la empresa')
-          setLoading(false)
-          return
-        }
-        
-        const { data: companyData, error: companyError } = await supabase
-          .from('companies')
-          .select('id, name, settings')
-          .eq('id', currentCompanyId)
-          .single()
-        
-        console.log('📊 Resultado empresa:', { companyData, companyError })
-
-        if (companyError) {
-          console.error('❌ Error obteniendo empresa:', companyError)
-          setError('No se pudo cargar la información de la empresa')
+          if (companyError) {
+            console.error('❌ Error obteniendo empresa:', companyError)
+            setError('No se pudo cargar la información de la empresa')
+          } else {
+            setCompany(companyData)
+          }
         } else {
-          setCompany(companyData)
+          setError('No se pudo obtener el perfil de usuario')
         }
 
       } catch (err) {

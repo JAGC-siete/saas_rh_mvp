@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createServerClient } from '@supabase/ssr'
+import { createAdminClient } from '../../lib/supabase/server'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -29,8 +30,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'Unauthorized' })
     }
 
-    // Get user profile
-    const { data: userProfile, error: profileError } = await supabase
+    // Get user profile - use admin client to bypass RLS (CRITICAL FIX)
+    const adminSupabase = createAdminClient()
+    const { data: userProfile, error: profileError } = await adminSupabase
       .from('user_profiles')
       .select(`
         id,
@@ -40,7 +42,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         permissions
       `)
       .eq('id', user.id)
-      .single()
+      .maybeSingle() // Use maybeSingle() to handle 0 rows gracefully
 
     if (profileError) {
       console.error('Error fetching user profile:', profileError)
