@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
-import { logger } from './lib/logger'
-import { extractSessionToken } from './lib/middleware/session-manager'
-import crypto from 'crypto'
+
+// CRITICAL: Do not import anything that uses Node.js APIs (like logger, dotenv)
+// because middleware runs in Edge Runtime which doesn't support them
+// Edge Runtime restrictions: https://nextjs.org/docs/api-reference/edge-runtime
 
 // Inline role validation for middleware compatibility
 function validateUserPermissionsInline(profile: any, pathname: string) {
@@ -278,31 +279,15 @@ export async function middleware(request: NextRequest) {
 
   // Handle legacy route redirections
   if (pathname === '/register') {
-    logger.info('Redirecting legacy /register to /auth/start', { path: pathname })
     return NextResponse.redirect(new URL('/auth/start', request.url))
   }
   
   if (pathname === '/login') {
-    logger.info('Redirecting legacy /login to /app/login', { path: pathname })
     return NextResponse.redirect(new URL('/app/login', request.url))
   }
 
-  // Log all requests with structured logging
-  logger.debug('Middleware request', {
-    method: request.method,
-    path: pathname,
-    userAgent: request.headers.get('user-agent'),
-    referer: request.headers.get('referer'),
-    ip: request.headers.get('x-forwarded-for') || 'unknown'
-  })
-
   // Handle API routes
   if (pathname.startsWith('/api/')) {
-    logger.debug('API route accessed', { 
-      path: pathname,
-      isPublic: PUBLIC_ROUTES.has(pathname),
-      isProtected: isProtectedApiRoute(pathname)
-    })
     
     // Handle CORS preflight requests
     if (request.method === 'OPTIONS') {
@@ -314,18 +299,8 @@ export async function middleware(request: NextRequest) {
       return response
     }
     
-    // Special handling for invitation routes
-    if (pathname.includes('/invitations/')) {
-      logger.debug('Invitation route accessed', { 
-        path: pathname,
-        isPublic: PUBLIC_ROUTES.has(pathname),
-        isProtected: isProtectedApiRoute(pathname)
-      })
-    }
-    
     // 🔒 PROTECCIÓN ESPECÍFICA PARA ENDPOINTS CRÍTICOS
     if (isProtectedApiRoute(pathname)) {
-      logger.debug('Protected API route accessed', { path: pathname });
       
       try {
         // Create Supabase client
@@ -333,7 +308,7 @@ export async function middleware(request: NextRequest) {
         const anon = process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY'];
         
         if (!supabaseUrl || !anon) {
-          logger.error('Missing Supabase environment variables');
+          console.error('Missing Supabase environment variables');
           return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
         }
         
@@ -350,10 +325,7 @@ export async function middleware(request: NextRequest) {
          
          if (accessToken && accessToken.startsWith('emp_')) {
            // Employee API access - let the API handle validation
-           logger.debug('Employee API access detected', { path: pathname })
            const response = NextResponse.next();
-           const duration = Date.now() - startTime;
-           logger.api(request.method, pathname, 200, duration, { type: 'employee_api' });
            return response;
          }
          
@@ -361,30 +333,38 @@ export async function middleware(request: NextRequest) {
          const { data: { user }, error } = await supabase.auth.getUser();
          
          if (error || !user) {
-           logger.warn('Unauthorized API access attempt', { path: pathname });
            return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
          }
         
         // 🔐 VERIFICAR IDLE TIMEOUT DE 90 MINUTOS
         // Solo para rutas protegidas y si tiene session token
-        const sessionToken = extractSessionToken(request.cookies as any)
+        // Helper function to extract session token
+        function extractSessionTokenFromCookies(cookies: any): string | null {
+          const authToken = cookies.get('sb-auth-token')?.value || cookies.get('sb-access-token')?.value
+          if (!authToken) return null
+          
+          try {
+            const parsed = JSON.parse(authToken)
+            return parsed.session?.access_token?.jti || parsed.jti || null
+          } catch {
+            return null
+          }
+        }
+        
+        const sessionToken = extractSessionTokenFromCookies(request.cookies)
         if (sessionToken) {
           try {
             const { data: isActive, error: checkError } = await supabase
               .rpc('is_session_active', { p_session_token: sessionToken })
             
             if (checkError) {
-              logger.error('Error checking session activity', { 
-                error: checkError,
-                userId: user.id
-              })
+              console.error('Error checking session activity', checkError)
               // Continue anyway - fail open for backward compatibility
             } else if (isActive === false) {
               // Session expired by idle timeout
-              logger.info('Session expired by idle timeout', {
+              console.log('Session expired by idle timeout', {
                 userId: user.id,
-                path: pathname,
-                sessionToken: sessionToken.substring(0, 8) + '...'
+                path: pathname
               })
               
               // Clear cookies and return 440
@@ -412,12 +392,12 @@ export async function middleware(request: NextRequest) {
                 })
               
               if (updateError) {
-                logger.debug('Error updating session activity', { error: updateError })
+                console.error('Error updating session activity', updateError)
                 // Continue anyway - don't block request
               }
             }
           } catch (timeoutError) {
-            logger.error('Idle timeout check error', timeoutError)
+            console.error('Idle timeout check error', timeoutError)
             // Fail open - continue with request
           }
         }
@@ -431,7 +411,7 @@ export async function middleware(request: NextRequest) {
             .single();
           
           if (profileError || !profile) {
-            logger.warn('User profile not found for admin API access', { 
+            console.warn('User profile not found for admin API access', { 
               path: pathname, 
               userId: user.id,
               error: profileError?.message
@@ -443,7 +423,7 @@ export async function middleware(request: NextRequest) {
           const validation = validateUserPermissionsInline(profile, pathname);
           
           if (!validation.hasAccess) {
-            logger.warn('Unauthorized admin API access', { 
+            console.warn('Unauthorized admin API access', { 
               path: pathname, 
               userId: user.id,
               userRole: profile.role,
@@ -455,7 +435,7 @@ export async function middleware(request: NextRequest) {
           }
           
           // Log successful admin access
-          logger.info('Admin API access granted', {
+          console.info('Admin API access granted', {
             path: pathname,
             userId: user.id,
             userRole: profile.role,
@@ -466,11 +446,11 @@ export async function middleware(request: NextRequest) {
         // Valid, proceed
         const response = NextResponse.next();
         const duration = Date.now() - startTime;
-        logger.api(request.method, pathname, 200, duration, { type: 'protected_api' });
+        console.log(request.method, pathname, 200, duration, { type: 'protected_api' });
         return response;
         
       } catch (error) {
-        logger.error('Authentication error in protected API', error);
+        console.error('Authentication error in protected API', error);
         return NextResponse.json({ error: 'Authentication error' }, { status: 401 });
       }
     }
@@ -481,32 +461,32 @@ export async function middleware(request: NextRequest) {
 
   // Check if current path is public
   if (isPublicRoute(pathname)) {
-    logger.debug('Public route accessed', { path: pathname })
+    console.debug('Public route accessed', { path: pathname })
     const response = NextResponse.next()
     
     // Log response time
     const duration = Date.now() - startTime
-    logger.api(request.method, pathname, 200, duration, { type: 'public' })
+    console.log(request.method, pathname, 200, duration, { type: 'public' })
     
     return response
   }
 
   // Handle demo routes with PIN gate
   if (pathname.startsWith('/app/demo')) {
-    logger.debug('Demo route accessed', { path: pathname })
+    console.debug('Demo route accessed', { path: pathname })
     
     // Allow PIN page (it's already in PUBLIC_ROUTES but let's be explicit)
     if (pathname === '/app/demo/pin') {
       const response = NextResponse.next()
       const duration = Date.now() - startTime
-      logger.api(request.method, pathname, 200, duration, { type: 'demo_pin' })
+      console.log(request.method, pathname, 200, duration, { type: 'demo_pin' })
       return response
     }
     
     // Check for demo_ok cookie
     const demoCookie = request.cookies.get('demo_ok')
     if (!demoCookie || demoCookie.value !== '1') {
-      logger.debug('Demo access denied, redirecting to PIN', { path: pathname })
+      console.debug('Demo access denied, redirecting to PIN', { path: pathname })
       const pinUrl = new URL('/app/demo/pin', request.url)
       pinUrl.searchParams.set('next', pathname)
       return NextResponse.redirect(pinUrl)
@@ -517,29 +497,29 @@ export async function middleware(request: NextRequest) {
     response.headers.set('X-Robots-Tag', 'noindex, nofollow')
     
     const duration = Date.now() - startTime
-    logger.api(request.method, pathname, 200, duration, { type: 'demo_protected' })
+    console.log(request.method, pathname, 200, duration, { type: 'demo_protected' })
     return response
   }
 
   // Handle demo API routes that require demo_ok cookie
   if (pathname.startsWith('/api/demo/') && pathname !== '/api/demo/verify-pin') {
-    logger.debug('Demo API route accessed', { path: pathname })
+    console.debug('Demo API route accessed', { path: pathname })
     
     const demoCookie = request.cookies.get('demo_ok')
     if (!demoCookie || demoCookie.value !== '1') {
-      logger.debug('Demo API access denied', { path: pathname })
+      console.debug('Demo API access denied', { path: pathname })
       return NextResponse.json({ error: 'Demo access required' }, { status: 401 })
     }
     
     const response = NextResponse.next()
     const duration = Date.now() - startTime
-    logger.api(request.method, pathname, 200, duration, { type: 'demo_api' })
+    console.log(request.method, pathname, 200, duration, { type: 'demo_api' })
     return response
   }
 
   // Handle protected app routes
   if (isProtectedAppRoute(pathname)) {
-    logger.debug('Protected app route accessed', { path: pathname })
+    console.debug('Protected app route accessed', { path: pathname })
     
     try {
       // Create Supabase client for middleware using proper SSR pattern
@@ -547,7 +527,7 @@ export async function middleware(request: NextRequest) {
       const anon = process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY']
       
       if (!supabaseUrl || !anon) {
-        logger.error('Missing Supabase environment variables', undefined, {
+        console.error('Missing Supabase environment variables', undefined, {
           hasUrl: !!supabaseUrl,
           hasAnon: !!anon
         })
@@ -577,7 +557,7 @@ export async function middleware(request: NextRequest) {
       // Debug cookies
       const cookieNames = Object.keys(request.cookies.getAll())
       const authCookies = cookieNames.filter(name => name.includes('sb-') && name.includes('auth-token'))
-      logger.info('Middleware debug', { 
+      console.info('Middleware debug', { 
         path: pathname, 
         cookieNames, 
         authCookies,
@@ -592,7 +572,7 @@ export async function middleware(request: NextRequest) {
       // SECURITY FIX: Use getUser() instead of getSession() for authentication
       const { data: { user }, error } = await supabase.auth.getUser()
       
-      logger.info('User debug', {
+      console.info('User debug', {
         path: pathname,
         hasUser: !!user,
         userId: user?.id,
@@ -600,18 +580,18 @@ export async function middleware(request: NextRequest) {
       })
       
       if (error) {
-        logger.error('Error getting user', error)
+        console.error('Error getting user', error)
         return NextResponse.redirect(new URL('/app/login', request.url))
       }
       
       if (!user) {
-        logger.info('No user found for protected app route', { path: pathname })
+        console.info('No user found for protected app route', { path: pathname })
         return NextResponse.redirect(new URL('/app/login', request.url))
       }
 
       // Check admin privileges for admin routes
       if (isAdminRoute(pathname)) {
-        logger.debug('Admin route accessed, checking privileges', { 
+        console.debug('Admin route accessed, checking privileges', { 
           path: pathname, 
           userId: user?.id 
         })
@@ -630,7 +610,7 @@ export async function middleware(request: NextRequest) {
           : profile ? ['super_admin', 'company_admin', 'hr_manager'].includes(profile.role) : false
           
         if (profileError || !profile || !hasPermission) {
-          logger.warn('Unauthorized admin access attempt', { 
+          console.warn('Unauthorized admin access attempt', { 
             path: pathname, 
             userId: user?.id,
             userRole: profile?.role,
@@ -639,7 +619,7 @@ export async function middleware(request: NextRequest) {
           return NextResponse.redirect(new URL('/app/dashboard', request.url))
         }
         
-        logger.debug('Admin access granted', { 
+        console.debug('Admin access granted', { 
           path: pathname, 
           userId: user?.id,
           userRole: profile.role 
@@ -649,7 +629,7 @@ export async function middleware(request: NextRequest) {
       // Employee portal uses standard Supabase Auth now
       // No special handling needed - it will be processed like any other protected route
       
-      logger.debug('Valid user found for protected app route', { 
+      console.debug('Valid user found for protected app route', { 
         path: pathname, 
         userId: user?.id,
         email: user?.email 
@@ -657,7 +637,7 @@ export async function middleware(request: NextRequest) {
       
       // Log successful auth
       const duration = Date.now() - startTime
-      logger.api(request.method, pathname, 200, duration, { 
+      console.log(request.method, pathname, 200, duration, { 
         type: 'authenticated_app',
         userId: user?.id 
       })
@@ -665,7 +645,7 @@ export async function middleware(request: NextRequest) {
       return response
       
     } catch (error) {
-      logger.error('Authentication error in protected app route', error)
+      console.error('Authentication error in protected app route', error)
       return NextResponse.redirect(new URL('/auth/start', request.url))
     }
   }
@@ -677,7 +657,7 @@ export async function middleware(request: NextRequest) {
     const anon = process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY']
     
     if (!supabaseUrl || !anon) {
-      logger.error('Missing Supabase environment variables', undefined, {
+      console.error('Missing Supabase environment variables', undefined, {
         hasUrl: !!supabaseUrl,
         hasAnon: !!anon
       })
@@ -704,16 +684,16 @@ export async function middleware(request: NextRequest) {
     const { data: { user }, error } = await supabase.auth.getUser()
     
     if (error) {
-      logger.error('Error getting user', error)
+      console.error('Error getting user', error)
       return NextResponse.redirect(new URL('/auth/start', request.url))
     }
     
     if (!user) {
-      logger.info('No user found for private route', { path: pathname })
+      console.info('No user found for private route', { path: pathname })
       return NextResponse.redirect(new URL('/auth/start', request.url))
     }
     
-    logger.debug('Valid user found', { 
+    console.debug('Valid user found', { 
       path: pathname, 
       userId: user?.id,
       email: user?.email 
@@ -721,7 +701,7 @@ export async function middleware(request: NextRequest) {
     
     // Log successful auth
     const duration = Date.now() - startTime
-    logger.api(request.method, pathname, 200, duration, { 
+    console.log(request.method, pathname, 200, duration, { 
       type: 'authenticated',
       userId: user?.id 
     })
@@ -729,7 +709,7 @@ export async function middleware(request: NextRequest) {
     return response
     
   } catch (error) {
-    logger.error('Authentication error in middleware', error)
+    console.error('Authentication error in middleware', error)
     return NextResponse.redirect(new URL('/auth/start', request.url))
   }
 }
