@@ -12,17 +12,51 @@ import crypto from 'crypto'
  * Extract JWT jti (session token) from session
  */
 function extractJtiFromSession(session: any): string | null {
-  if (!session?.access_token) return null
-  
   try {
-    // Decode JWT (it's base64url encoded)
-    const parts = session.access_token.split('.')
-    if (parts.length < 2) return null
+    // Try multiple methods to extract jti from session
+    // Method 1: From access_token if it's a string
+    if (session?.access_token) {
+      try {
+        const parts = session.access_token.split('.')
+        if (parts.length >= 2) {
+          const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString())
+          if (payload.jti) return payload.jti
+        }
+      } catch (e) {
+        // Continue to next method
+      }
+    }
     
-    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString())
-    return payload.jti || null
+    // Method 2: Already have the token ID in session
+    if (session?.access_token?.substring) {
+      // It's a JWT token
+      try {
+        const parts = session.access_token.split('.')
+        if (parts.length >= 2) {
+          const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString())
+          return payload.jti || null
+        }
+      } catch (e) {
+        // Continue
+      }
+    }
+    
+    // Method 3: Try to extract from session metadata
+    if (session?.user?.user_metadata?.jti) {
+      return session.user.user_metadata.jti
+    }
+    
+    // Method 4: Generate a deterministic jti from user_id + expires_at
+    if (session?.user?.id && session?.expires_at) {
+      const crypto = require('crypto')
+      const hash = crypto.createHash('sha256')
+      hash.update(session.user.id + session.expires_at)
+      return hash.digest('hex').substring(0, 32)
+    }
+    
+    return null
   } catch (error) {
-    logger.error('Failed to extract jti from session', error)
+    logger.error('Failed to extract jti from session', { error, session: JSON.stringify(session).substring(0, 200) })
     return null
   }
 }
