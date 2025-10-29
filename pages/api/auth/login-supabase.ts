@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../lib/supabase/server'
+import { createClient, createAdminClient } from '../../../lib/supabase/server'
 import { logger } from '../../../lib/logger'
 import { createSessionOnLogin } from '../../../lib/middleware/session-manager'
 
@@ -76,8 +76,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       hasValidAccess = true
     } 
     // Verificar si es admin (buscar en user_profiles)
+    // CRITICAL: Use admin client to bypass RLS when reading profile during login
     else {
-      const { data: userProfile, error: profileError } = await supabase
+      const adminSupabase = createAdminClient()
+      const { data: userProfile, error: profileError } = await adminSupabase
         .from('user_profiles')
         .select('role, permissions')
         .eq('id', authData.user.id)
@@ -113,15 +115,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     }
     
     if (!hasValidAccess) {
-      logger.warn('User login successful but no valid access permissions', { 
+      // VERBOSE LOGGING: Log complete context for debugging
+      logger.error('User login successful but no valid access permissions', { 
         email, 
         userId: authData.user.id,
         userMetadata,
-        userType
+        userType,
+        hasValidAccess,
+        profileQueryResult: userProfile || null,
+        profileError: profileError || null
       })
       return res.status(403).json({
         success: false,
-        error: 'Acceso denegado. Usuario sin permisos válidos.'
+        error: 'Acceso denegado. Usuario sin permisos válidos.',
+        debug: {
+          userType,
+          hasValidAccess,
+          userMetadata
+        }
       })
     }
 
