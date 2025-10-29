@@ -84,7 +84,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         .single()
       
       if (!profileError && userProfile) {
-        if (['super_admin', 'admin'].includes(userProfile.role)) {
+        // Admin roles include: super_admin, company_admin, hr_manager
+        const adminRoles = ['super_admin', 'admin', 'company_admin', 'hr_manager']
+        if (adminRoles.includes(userProfile.role)) {
           userType = 'admin'
           hasValidAccess = true
         } else if (userProfile.role === 'employee') {
