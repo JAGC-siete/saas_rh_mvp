@@ -47,13 +47,18 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { format, dateFilter, reportType } = req.body
     
     // Validaciones
-    const allowedFormats = reportType === 'attendance' ? ['pdf', 'csv', 'excel'] : ['pdf', 'csv']
+    if (!reportType || !['attendance', 'payroll', 'employees'].includes(reportType)) {
+      return res.status(400).json({ error: 'Tipo de reporte inválido (permitidos: attendance, payroll, employees)' })
+    }
+    
+    const allowedFormats = ['pdf', 'csv', 'excel']
     if (!format || !allowedFormats.includes(format)) {
       return res.status(400).json({ error: `Formato inválido (permitidos: ${allowedFormats.join(', ')})` })
     }
     
-    if (!dateFilter || !dateFilter.startDate || !dateFilter.endDate) {
-      return res.status(400).json({ error: 'Filtro de fechas requerido' })
+    // Validar fechas solo para reportes que las requieren
+    if (reportType !== 'employees' && (!dateFilter || !dateFilter.startDate || !dateFilter.endDate)) {
+      return res.status(400).json({ error: 'Filtro de fechas requerido para este tipo de reporte' })
     }
 
     console.log('📊 Generando reporte:', {
@@ -63,17 +68,45 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       user: user.email
     })
 
-    // Obtener datos del reporte
-    const reportData = await generateReportData(supabase, dateFilter, userProfile)
+    // Obtener datos del reporte según tipo
+    let reportData: any
+    
+    if (reportType === 'attendance') {
+      reportData = await generateAttendanceReportData(supabase, dateFilter, userProfile)
+    } else if (reportType === 'payroll') {
+      reportData = await generatePayrollReportData(supabase, dateFilter, userProfile)
+    } else if (reportType === 'employees') {
+      reportData = await generateEmployeesReportData(supabase, userProfile)
+    } else {
+      // General report (backward compatibility)
+      reportData = await generateReportData(supabase, dateFilter, userProfile)
+    }
 
-    if (format === 'excel' && reportType === 'attendance') {
-      return generateAttendanceExcel(res, reportData, dateFilter)
+    // Route to appropriate exporter
+    if (format === 'excel') {
+      if (reportType === 'attendance') {
+        return generateAttendanceExcel(res, reportData, dateFilter)
+      } else if (reportType === 'payroll') {
+        return generatePayrollExcel(res, reportData, dateFilter)
+      } else if (reportType === 'employees') {
+        return generateEmployeesExcel(res, reportData)
+      } else {
+        return res.status(400).json({ error: 'Excel no disponible para este tipo de reporte' })
+      }
     }
 
     if (format === 'pdf') {
-      return generatePDFReport(res, reportData, dateFilter)
+      if (reportType === 'attendance') {
+        return generateAttendancePDF(res, reportData, dateFilter)
+      } else if (reportType === 'payroll') {
+        return generatePayrollPDF(res, reportData, dateFilter)
+      } else if (reportType === 'employees') {
+        return generateEmployeesPDF(res, reportData)
+      } else {
+        return generatePDFReport(res, reportData, dateFilter)
+      }
     } else {
-      return generateCSVReport(res, reportData, dateFilter)
+      return generateCSVReport(res, reportData, dateFilter, reportType)
     }
 
   } catch (error) {
@@ -392,7 +425,7 @@ function generatePDFReport(res: NextApiResponse, reportData: ReportData, dateFil
   }
 }
 
-function generateCSVReport(res: NextApiResponse, reportData: ReportData, dateFilter: any) {
+function generateCSVReport(res: NextApiResponse, reportData: ReportData, dateFilter: any, reportType?: string) {
   try {
     // Generar CSV con múltiples secciones
     let csvContent = ''
@@ -466,18 +499,117 @@ function generateCSVReport(res: NextApiResponse, reportData: ReportData, dateFil
   }
 } 
 
-async function generateAttendanceExcel(res: NextApiResponse, reportData: ReportData, dateFilter: any) {
+// ===== FUNCIONES PARA OBTENER DATOS ESPECÍFICOS =====
+
+async function generateAttendanceReportData(supabase: any, dateFilter: any, userProfile: any) {
+  // Obtener empleados
+  let employeesQuery = supabase
+    .from('employees')
+    .select('id, name, dni, employee_code, department_id, departments:department_id(name), status')
+    .eq('status', 'active')
+    .order('name')
+
+  if (userProfile?.company_id) {
+    employeesQuery = employeesQuery.eq('company_id', userProfile.company_id)
+  }
+
+  const { data: employees, error: empError } = await employeesQuery
+  if (empError) throw new Error('Error obteniendo empleados')
+
+  // Obtener registros de asistencia
+  let attendanceQuery = supabase
+    .from('attendance_records')
+    .select('*, employees!inner(id, name, employee_code, company_id)')
+    .gte('date', dateFilter.startDate)
+    .lte('date', dateFilter.endDate)
+
+  if (userProfile?.company_id) {
+    attendanceQuery = attendanceQuery.eq('employees.company_id', userProfile.company_id)
+  }
+
+  const { data: attendance, error: attError } = await attendanceQuery
+  if (attError) throw new Error('Error obteniendo asistencia')
+
+  return { employees: employees || [], attendance: attendance || [], dateFilter }
+}
+
+async function generatePayrollReportData(supabase: any, dateFilter: any, userProfile: any) {
+  // Obtener registros de nómina con relación a empleados
+  let payrollQuery = supabase
+    .from('payroll_records')
+    .select(`
+      *,
+      employees!inner(
+        id,
+        name,
+        employee_code,
+        dni,
+        department_id,
+        departments:department_id(name),
+        company_id
+      )
+    `)
+    .gte('period_start', dateFilter.startDate)
+    .lte('period_end', dateFilter.endDate)
+
+  if (userProfile?.company_id) {
+    payrollQuery = payrollQuery.eq('employees.company_id', userProfile.company_id)
+  }
+
+  const { data: payroll, error: payrollError } = await payrollQuery
+  if (payrollError) throw new Error('Error obteniendo nómina')
+
+  return { payroll: payroll || [], dateFilter }
+}
+
+async function generateEmployeesReportData(supabase: any, userProfile: any) {
+  let employeesQuery = supabase
+    .from('employees')
+    .select(`
+      id,
+      name,
+      dni,
+      employee_code,
+      email,
+      phone,
+      role,
+      position,
+      base_salary,
+      hire_date,
+      status,
+      department_id,
+      departments:department_id(name),
+      company_id
+    `)
+    .order('name')
+
+  if (userProfile?.company_id) {
+    employeesQuery = employeesQuery.eq('company_id', userProfile.company_id)
+  }
+
+  const { data: employees, error: empError } = await employeesQuery
+  if (empError) throw new Error('Error obteniendo empleados')
+
+  return { employees: employees || [] }
+}
+
+// ===== GENERADORES DE EXCEL =====
+
+async function generateAttendanceExcel(res: NextApiResponse, reportData: any, dateFilter: any) {
   try {
     const workbook = new ExcelJS.Workbook()
+    
+    // Hoja 1: Registros de Asistencia
     const sheet = workbook.addWorksheet('Asistencia')
-
     sheet.columns = [
+      { header: 'Código', key: 'code', width: 12 },
       { header: 'Empleado', key: 'employee', width: 25 },
       { header: 'Fecha', key: 'date', width: 14 },
       { header: 'Estado', key: 'status', width: 12 },
       { header: 'Entrada', key: 'check_in', width: 18 },
       { header: 'Salida', key: 'check_out', width: 18 },
-      { header: 'Min Tardanza', key: 'late_minutes', width: 14 }
+      { header: 'Min Tardanza', key: 'late_minutes', width: 14 },
+      { header: 'Justificación', key: 'justification', width: 30 }
     ]
 
     const employeeById = new Map<string, any>()
@@ -486,18 +618,61 @@ async function generateAttendanceExcel(res: NextApiResponse, reportData: ReportD
     }
 
     for (const r of reportData.attendance) {
-      const emp = employeeById.get(r.employee_id)
+      const emp = r.employees || employeeById.get(r.employee_id)
       sheet.addRow({
+        code: emp?.employee_code || '',
         employee: emp?.name || r.employee_id,
         date: new Date(r.date + 'T00:00:00').toLocaleDateString('es-HN'),
-        status: r.status,
+        status: r.status || '',
         check_in: r.check_in ? new Date(r.check_in).toLocaleString('es-HN', { timeZone: 'America/Tegucigalpa' }) : '',
         check_out: r.check_out ? new Date(r.check_out).toLocaleString('es-HN', { timeZone: 'America/Tegucigalpa' }) : '',
-        late_minutes: r.late_minutes || ''
+        late_minutes: r.late_minutes || 0,
+        justification: r.justification || ''
       })
     }
 
+    // Estilo del encabezado
     sheet.getRow(1).font = { bold: true }
+    sheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE0E0E0' }
+    }
+
+    // Hoja 2: Resumen
+    const summarySheet = workbook.addWorksheet('Resumen')
+    summarySheet.columns = [
+      { header: 'Empleado', key: 'employee', width: 25 },
+      { header: 'Días Presente', key: 'present', width: 15 },
+      { header: 'Días Ausente', key: 'absent', width: 15 },
+      { header: 'Días Tarde', key: 'late', width: 15 },
+      { header: 'Total Registros', key: 'total', width: 15 }
+    ]
+
+    const summary = new Map<string, any>()
+    for (const r of reportData.attendance) {
+      const emp = r.employees || employeeById.get(r.employee_id)
+      const empName = emp?.name || r.employee_id
+      
+      if (!summary.has(empName)) {
+        summary.set(empName, { employee: empName, present: 0, absent: 0, late: 0, total: 0 })
+      }
+      
+      const s = summary.get(empName)
+      s.total++
+      if (r.status === 'present') s.present++
+      if (r.status === 'absent') s.absent++
+      if (r.late_minutes && r.late_minutes > 5) s.late++
+    }
+
+    summary.forEach(s => summarySheet.addRow(s))
+    
+    summarySheet.getRow(1).font = { bold: true }
+    summarySheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE0E0E0' }
+    }
 
     const buffer = await workbook.xlsx.writeBuffer()
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
@@ -507,4 +682,182 @@ async function generateAttendanceExcel(res: NextApiResponse, reportData: ReportD
     console.error('Error generando Excel de asistencia:', error)
     throw error
   }
+}
+
+async function generatePayrollExcel(res: NextApiResponse, reportData: any, dateFilter: any) {
+  try {
+    const workbook = new ExcelJS.Workbook()
+    
+    // Hoja 1: Nómina Detallada
+    const sheet = workbook.addWorksheet('Nómina')
+    sheet.columns = [
+      { header: 'Código', key: 'code', width: 12 },
+      { header: 'Empleado', key: 'employee', width: 25 },
+      { header: 'Departamento', key: 'department', width: 20 },
+      { header: 'Período Inicio', key: 'period_start', width: 14 },
+      { header: 'Período Fin', key: 'period_end', width: 14 },
+      { header: 'Salario Base', key: 'base_salary', width: 15 },
+      { header: 'Días Trabajados', key: 'days_worked', width: 15 },
+      { header: 'Salario Bruto', key: 'gross_salary', width: 15 },
+      { header: 'ISR', key: 'income_tax', width: 12 },
+      { header: 'IHSS', key: 'social_security', width: 12 },
+      { header: 'RAP', key: 'professional_tax', width: 12 },
+      { header: 'Total Deducciones', key: 'total_deductions', width: 15 },
+      { header: 'Salario Neto', key: 'net_salary', width: 15 },
+      { header: 'Estado', key: 'status', width: 12 }
+    ]
+
+    for (const record of reportData.payroll) {
+      const emp = record.employees || {}
+      sheet.addRow({
+        code: emp.employee_code || '',
+        employee: emp.name || '',
+        department: emp.departments?.name || 'Sin Departamento',
+        period_start: new Date(record.period_start).toLocaleDateString('es-HN'),
+        period_end: new Date(record.period_end).toLocaleDateString('es-HN'),
+        base_salary: record.base_salary || 0,
+        days_worked: record.days_worked || 0,
+        gross_salary: record.gross_salary || 0,
+        income_tax: record.income_tax || 0,
+        social_security: record.social_security || 0,
+        professional_tax: record.professional_tax || 0,
+        total_deductions: record.total_deductions || 0,
+        net_salary: record.net_salary || 0,
+        status: record.status || ''
+      })
+    }
+
+    sheet.getRow(1).font = { bold: true }
+    sheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE0E0E0' }
+    }
+
+    // Hoja 2: Resumen
+    const summarySheet = workbook.addWorksheet('Resumen')
+    summarySheet.columns = [
+      { header: 'Concepto', key: 'concept', width: 25 },
+      { header: 'Valor', key: 'value', width: 15 }
+    ]
+
+    const totalBruto = reportData.payroll.reduce((sum: number, r: any) => sum + (r.gross_salary || 0), 0)
+    const totalDeducciones = reportData.payroll.reduce((sum: number, r: any) => sum + (r.total_deductions || 0), 0)
+    const totalNeto = reportData.payroll.reduce((sum: number, r: any) => sum + (r.net_salary || 0), 0)
+    const totalEmpleados = reportData.payroll.length
+
+    summarySheet.addRow({ concept: 'Total Empleados', value: totalEmpleados })
+    summarySheet.addRow({ concept: 'Total Salario Bruto', value: `L. ${totalBruto.toFixed(2)}` })
+    summarySheet.addRow({ concept: 'Total Deducciones', value: `L. ${totalDeducciones.toFixed(2)}` })
+    summarySheet.addRow({ concept: 'Total Salario Neto', value: `L. ${totalNeto.toFixed(2)}` })
+    summarySheet.addRow({ concept: 'Promedio Salario Neto', value: `L. ${(totalNeto / totalEmpleados).toFixed(2)}` })
+
+    summarySheet.getRow(1).font = { bold: true }
+    summarySheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE0E0E0' }
+    }
+
+    const buffer = await workbook.xlsx.writeBuffer()
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    res.setHeader('Content-Disposition', `attachment; filename=nomina_${dateFilter.startDate}_${dateFilter.endDate}.xlsx`)
+    res.send(Buffer.from(buffer))
+  } catch (error) {
+    console.error('Error generando Excel de nómina:', error)
+    throw error
+  }
+}
+
+async function generateEmployeesExcel(res: NextApiResponse, reportData: any) {
+  try {
+    const workbook = new ExcelJS.Workbook()
+    const sheet = workbook.addWorksheet('Empleados')
+
+    sheet.columns = [
+      { header: 'Código', key: 'code', width: 12 },
+      { header: 'DNI', key: 'dni', width: 15 },
+      { header: 'Nombre', key: 'name', width: 25 },
+      { header: 'Email', key: 'email', width: 25 },
+      { header: 'Teléfono', key: 'phone', width: 15 },
+      { header: 'Departamento', key: 'department', width: 20 },
+      { header: 'Rol', key: 'role', width: 15 },
+      { header: 'Posición', key: 'position', width: 20 },
+      { header: 'Salario Base', key: 'salary', width: 15 },
+      { header: 'Fecha Ingreso', key: 'hire_date', width: 14 },
+      { header: 'Estado', key: 'status', width: 12 }
+    ]
+
+    for (const emp of reportData.employees) {
+      sheet.addRow({
+        code: emp.employee_code || '',
+        dni: emp.dni || '',
+        name: emp.name || '',
+        email: emp.email || '',
+        phone: emp.phone || '',
+        department: emp.departments?.name || 'Sin Departamento',
+        role: emp.role || '',
+        position: emp.position || '',
+        salary: `L. ${(emp.base_salary || 0).toFixed(2)}`,
+        hire_date: emp.hire_date ? new Date(emp.hire_date).toLocaleDateString('es-HN') : '',
+        status: emp.status || ''
+      })
+    }
+
+    sheet.getRow(1).font = { bold: true }
+    sheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE0E0E0' }
+    }
+
+    const buffer = await workbook.xlsx.writeBuffer()
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    res.setHeader('Content-Disposition', `attachment; filename=empleados_${new Date().toISOString().split('T')[0]}.xlsx`)
+    res.send(Buffer.from(buffer))
+  } catch (error) {
+    console.error('Error generando Excel de empleados:', error)
+    throw error
+  }
+}
+
+// ===== GENERADORES DE PDF =====
+
+async function generateAttendancePDF(res: NextApiResponse, reportData: any, dateFilter: any) {
+  // Por ahora usar el PDF genérico, se puede mejorar después
+  return generatePDFReport(res, { 
+    employees: reportData.employees,
+    attendance: reportData.attendance,
+    payroll: [],
+    stats: {
+      totalEmployees: reportData.employees.length,
+      totalAttendance: reportData.attendance.length,
+      totalPayroll: 0,
+      averageAttendance: 0,
+      lateEmployees: 0,
+      absentEmployees: 0
+    }
+  }, dateFilter)
+}
+
+async function generatePayrollPDF(res: NextApiResponse, reportData: any, dateFilter: any) {
+  // Implementar PDF específico para nómina si se necesita
+  return res.status(400).json({ error: 'PDF de nómina use /api/payroll/report' })
+}
+
+async function generateEmployeesPDF(res: NextApiResponse, reportData: any) {
+  // Implementar PDF específico para empleados si se necesita
+  return generatePDFReport(res, { 
+    employees: reportData.employees,
+    attendance: [],
+    payroll: [],
+    stats: {
+      totalEmployees: reportData.employees.length,
+      totalAttendance: 0,
+      totalPayroll: 0,
+      averageAttendance: 0,
+      lateEmployees: 0,
+      absentEmployees: 0
+    }
+  }, { startDate: '', endDate: '' })
 }

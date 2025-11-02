@@ -7,6 +7,7 @@ import ReportKPIs from './ReportKPIs'
 import ExportBar from './ExportBar'
 import { nowInHonduras } from '../../lib/timezone'
 import { useCompanyContext } from '../../lib/useCompanyContext'
+import { useReportsExport } from '../../lib/hooks/useReportsExport'
 import { 
   Calendar, 
   Clock, 
@@ -234,52 +235,36 @@ export default function ReportBuilder() {
     }
   }, [filters, generatePreview])
 
+  // Usar hook de exportación (similar a payroll)
+  const { exportAttendance, exportPayroll, exportEmployees } = useReportsExport()
+
   const handleExport = useCallback(async (format: 'excel' | 'pdf') => {
     if (!previewData || !companyId) return
     
     try {
       setLoading(true)
       
-      const response = await fetch('/api/reports/export', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          type: filters.reportType,
-          format,
-          filters: {
-            from: filters.from,
-            to: filters.to,
-            employeeIds: filters.employeeIds,
-            departmentIds: filters.departmentIds,
-            status: filters.employeeStatus,
-            payrollType: filters.payrollType
-          }
-        })
-      })
+      // Convertir formatos de fecha
+      const startDate = filters.from || new Date().toISOString().split('T')[0]
+      const endDate = filters.to || new Date().toISOString().split('T')[0]
       
-      if (!response.ok) {
-        throw new Error(`Error al exportar: ${response.statusText}`)
+      if (filters.reportType === 'attendance') {
+        await exportAttendance(format, startDate, endDate)
+      } else if (filters.reportType === 'payroll') {
+        await exportPayroll(format, startDate, endDate)
+      } else if (filters.reportType === 'employees') {
+        await exportEmployees(format)
+      } else {
+        throw new Error('Tipo de reporte no soportado')
       }
       
-      // Download file
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `reporte_${filters.reportType}_${Date.now()}.${format === 'excel' ? 'xlsx' : 'pdf'}`
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
-      
-    } catch (err) {
+    } catch (err: any) {
       console.error('Export error:', err)
-      setError(`Error al exportar ${format}: ${err}`)
+      setError(`Error al exportar ${format}: ${err.message || err}`)
     } finally {
       setLoading(false)
     }
-  }, [filters, previewData, companyId])
+  }, [filters, previewData, companyId, exportAttendance, exportPayroll, exportEmployees])
 
   const activeTabConfig = TAB_CONFIG.find(tab => tab.id === activeTab)
 
