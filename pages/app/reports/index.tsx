@@ -3,13 +3,13 @@ import ProtectedRoute from '../../../components/ProtectedRoute'
 import DashboardLayout from '../../../components/DashboardLayout'
 
 // Code-splitting para mejor performance
-const ReportsAndAnalytics = dynamic(
-  () => import('../../../components/ReportsAndAnalytics'),
+const ReportBuilder = dynamic(
+  () => import('../../../components/reports/ReportBuilder'),
   {
     ssr: true,
     loading: () => (
-      <div className="text-gray-300" role="status" aria-live="polite">
-        Cargando gestor de reportes…
+      <div className="flex justify-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-400"></div>
       </div>
     ),
   }
@@ -19,14 +19,7 @@ export default function ReportsPage() {
   return (
     <ProtectedRoute>
       <DashboardLayout>
-        <div className="space-y-6">
-          <div>
-            <h1 className="text-2xl font-bold text-white">📊 Reportes de Asistencia</h1>
-            <p className="text-gray-300">Genera reportes detallados de asistencia en formato PDF o CSV</p>
-          </div>
-          
-          <ReportsAndAnalytics />
-        </div>
+        <ReportBuilder />
       </DashboardLayout>
     </ProtectedRoute>
   )
