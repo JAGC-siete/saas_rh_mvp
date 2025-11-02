@@ -30,10 +30,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
 
     if (error) {
-      logger.error('Error calling reports_employees RPC', { error, companyId })
+      logger.error('Error calling reports_employees RPC', { 
+        error, 
+        companyId, 
+        status, 
+        departmentIdsArray,
+        errorMessage: error.message,
+        errorCode: error.code,
+        errorDetails: error.details,
+        errorHint: error.hint
+      })
       return res.status(500).json({ 
         error: 'Error fetching employees report',
-        details: error.message
+        details: error.message || 'Unknown error',
+        code: error.code,
+        hint: error.hint
       })
     }
 

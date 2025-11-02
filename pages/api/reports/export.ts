@@ -573,7 +573,6 @@ async function generateEmployeesReportData(supabase: any, userProfile: any) {
       email,
       phone,
       role,
-      position,
       base_salary,
       hire_date,
       status,
@@ -588,7 +587,10 @@ async function generateEmployeesReportData(supabase: any, userProfile: any) {
   }
 
   const { data: employees, error: empError } = await employeesQuery
-  if (empError) throw new Error('Error obteniendo empleados')
+  if (empError) {
+    console.error('Error obteniendo empleados:', empError)
+    throw new Error(`Error obteniendo empleados: ${empError.message}`)
+  }
 
   return { employees: employees || [] }
 }
@@ -782,7 +784,6 @@ async function generateEmployeesExcel(res: NextApiResponse, reportData: any) {
       { header: 'Teléfono', key: 'phone', width: 15 },
       { header: 'Departamento', key: 'department', width: 20 },
       { header: 'Rol', key: 'role', width: 15 },
-      { header: 'Posición', key: 'position', width: 20 },
       { header: 'Salario Base', key: 'salary', width: 15 },
       { header: 'Fecha Ingreso', key: 'hire_date', width: 14 },
       { header: 'Estado', key: 'status', width: 12 }
@@ -797,7 +798,6 @@ async function generateEmployeesExcel(res: NextApiResponse, reportData: any) {
         phone: emp.phone || '',
         department: emp.departments?.name || 'Sin Departamento',
         role: emp.role || '',
-        position: emp.position || '',
         salary: `L. ${(emp.base_salary || 0).toFixed(2)}`,
         hire_date: emp.hire_date ? new Date(emp.hire_date).toLocaleDateString('es-HN') : '',
         status: emp.status || ''
