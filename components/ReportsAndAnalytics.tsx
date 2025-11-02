@@ -4,6 +4,7 @@ import { useCompanyContext } from '../lib/useCompanyContext'
 import { Button } from './ui/button'
 import { Card } from './ui/card'
 import { nowInHonduras } from '../lib/timezone'
+import { useReportsExport } from '../lib/hooks/useReportsExport'
 
 // Iconos simples como placeholders
 const UsersIcon = ({ className }: { className?: string }) => (
@@ -150,7 +151,10 @@ export default function ReportsAndAnalytics() {
   // Función para obtener tendencias de asistencia
   // Tendencias movidas al dashboard de asistencia
 
-  // Función para exportar reportes
+  // Usar hook de exportación (similar a payroll)
+  const { exportAttendance, exportPayroll, exportEmployees } = useReportsExport()
+
+  // Función para exportar reportes usando el hook
   const exportReport = useCallback(async (type: 'attendance' | 'payroll' | 'employees', format: 'csv' | 'pdf' | 'excel' = 'csv') => {
     if (!companyId) {
       setError('No hay empresa seleccionada')
@@ -161,38 +165,13 @@ export default function ReportsAndAnalytics() {
       setLoading(true)
       setError(null)
 
-      const response = await fetch(`/api/reports/export`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          format,
-          dateFilter: {
-            startDate: dateRange.startDate,
-            endDate: dateRange.endDate
-          },
-          reportType: type
-        }),
-        credentials: 'include'
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || `Error HTTP: ${response.status}`)
+      if (type === 'attendance') {
+        await exportAttendance(format as 'excel' | 'pdf' | 'csv', dateRange.startDate, dateRange.endDate)
+      } else if (type === 'payroll') {
+        await exportPayroll(format as 'excel' | 'pdf' | 'csv', dateRange.startDate, dateRange.endDate)
+      } else if (type === 'employees') {
+        await exportEmployees(format as 'excel' | 'pdf' | 'csv')
       }
-
-      // Descargar el archivo
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      
-      // Determinar extensión del archivo
-      const extension = format === 'pdf' ? 'pdf' : 'csv'
-      a.download = `${type}_report_${dateRange.startDate}_${dateRange.endDate}.${extension}`
-      a.click()
-      window.URL.revokeObjectURL(url)
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Error desconocido'
@@ -201,7 +180,7 @@ export default function ReportsAndAnalytics() {
     } finally {
       setLoading(false)
     }
-  }, [dateRange.startDate, dateRange.endDate, companyId])
+  }, [dateRange.startDate, dateRange.endDate, companyId, exportAttendance, exportPayroll, exportEmployees])
 
   // Cargar datos iniciales
   useEffect(() => {

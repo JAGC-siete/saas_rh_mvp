@@ -109,9 +109,9 @@ export default function WorkCertificateModal({
                   {employee.employee_code && `Código: ${employee.employee_code} • `}
                   DNI: {employee.dni}
                 </p>
-                {(employee.role || employee.position) && (
+                {employee.role && (
                   <p className="text-sm text-gray-400 mt-1">
-                    Cargo: {employee.position || employee.role}
+                    Cargo: {employee.role}
                   </p>
                 )}
               </div>
