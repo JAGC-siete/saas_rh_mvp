@@ -5,7 +5,7 @@
  * que todas las fechas usen la zona horaria de Tegucigalpa.
  */
 
-import { HONDURAS_TIMEZONE } from './timezone';
+import { HONDURAS_TIMEZONE, convertToHondurasTime } from './timezone';
 
 // Interceptar new Date() globalmente en desarrollo
 if (typeof window === 'undefined' && process.env.NODE_ENV === 'development') {
@@ -17,7 +17,7 @@ if (typeof window === 'undefined' && process.env.NODE_ENV === 'development') {
  */
 export function validateTimezone(date: Date, context?: string): void {
   if (process.env.NODE_ENV === 'development') {
-    const hondurasTime = new Date(date.toLocaleString("en-US", { timeZone: HONDURAS_TIMEZONE }));
+    const hondurasTime = convertToHondurasTime(date);
     const timeDiff = Math.abs(date.getTime() - hondurasTime.getTime()) / (1000 * 60 * 60);
     
     if (timeDiff > 1) {

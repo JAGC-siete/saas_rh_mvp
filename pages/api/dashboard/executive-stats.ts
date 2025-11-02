@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
-import { getHondurasTimestamp, nowInHonduras } from '../../../lib/timezone'
+import { getHondurasTimestamp, nowInHonduras, getHondurasTime } from '../../../lib/timezone'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -20,7 +20,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('📅 Timestamp:', getHondurasTimestamp())
     
     // Use Tegucigalpa timezone for today's date
-    const tegucigalpaTime = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Tegucigalpa"}))
+    const tegucigalpaTime = getHondurasTime()
     const today = tegucigalpaTime.toISOString().split('T')[0]
     const sevenDaysAgo = new Date(nowInHonduras().getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 

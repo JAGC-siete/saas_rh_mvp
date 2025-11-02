@@ -18,7 +18,9 @@ export const TEGUCIGALPA_TZ = HONDURAS_TIMEZONE;
  */
 export function getHondurasTime(): Date {
   const now = new Date();
-  return new Date(now.toLocaleString("en-US", { timeZone: HONDURAS_TIMEZONE }));
+  // Honduras is UTC-6, so subtract 6 hours in milliseconds
+  const hondurasOffsetMs = 6 * 60 * 60 * 1000;
+  return new Date(now.getTime() - hondurasOffsetMs);
 }
 
 /**
@@ -29,16 +31,12 @@ export function convertToHondurasTime(utcTimestamp: string | Date): Date {
   
   // Check if date is valid
   if (isNaN(date.getTime())) {
-    return new Date(); // Return current date if invalid
+    return getHondurasTime(); // Return current Honduras time if invalid
   }
   
-  // Convert to Honduras timezone
-  const hondurasTime = new Date(date.toLocaleString("en-US", { timeZone: HONDURAS_TIMEZONE }));
-  
-  // If conversion failed, return original date
-  if (isNaN(hondurasTime.getTime())) {
-    return date;
-  }
+  // Honduras is UTC-6, so subtract 6 hours in milliseconds
+  const hondurasOffsetMs = 6 * 60 * 60 * 1000;
+  const hondurasTime = new Date(date.getTime() - hondurasOffsetMs);
   
   return hondurasTime;
 }
@@ -143,7 +141,7 @@ export function getCurrentDayOfWeek(): string {
  * Convert UTC time to Honduras time (UTC-6, sin DST)
  */
 export function toHN(utcDate: Date): { time: string; date: string; dow: number; isWeekend: boolean } {
-  const hondurasTime = new Date(utcDate.toLocaleString("en-US", { timeZone: HONDURAS_TIMEZONE }));
+  const hondurasTime = convertToHondurasTime(utcDate);
   
   const time = hondurasTime.toTimeString().slice(0, 5); // HH:MM
   const date = `${hondurasTime.getFullYear()}-${String(hondurasTime.getMonth() + 1).padStart(2, '0')}-${String(hondurasTime.getDate()).padStart(2, '0')}`;
