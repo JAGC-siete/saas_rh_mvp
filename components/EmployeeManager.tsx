@@ -7,7 +7,8 @@ import { useAuth } from '../lib/auth'
 import { useCompanyContext } from '../lib/useCompanyContext'
 import { Employee } from '../lib/types/employee'
 import AddEmployeeForm from './AddEmployeeForm'
-import { PlusIcon, PencilIcon, TrashIcon, EyeIcon, MagnifyingGlassIcon, FunnelIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/outline'
+import WorkCertificateModal from './WorkCertificateModal'
+import { PlusIcon, PencilIcon, TrashIcon, EyeIcon, MagnifyingGlassIcon, FunnelIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, ChevronDownIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
 import { getHondurasTimestamp, formatTimeDisplay } from '../lib/timezone'
 
 interface Department {
@@ -67,6 +68,8 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
   const [terminationDate, setTerminationDate] = useState('')
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
+  const [showCertificateModal, setShowCertificateModal] = useState(false)
+  const [employeeForCertificate, setEmployeeForCertificate] = useState<Employee | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [currentPage, setCurrentPage] = useState(1)
@@ -281,6 +284,11 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
   const handleViewDetails = useCallback((employee: Employee) => {
     setSelectedEmployee(employee)
     setShowDetailsModal(true)
+  }, [])
+
+  const handleOpenCertificateModal = useCallback((employee: Employee) => {
+    setEmployeeForCertificate(employee)
+    setShowCertificateModal(true)
   }, [])
 
   const confirmDeactivate = useCallback(async () => {
@@ -628,6 +636,16 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                         <Button
                           size="sm"
                           variant="outline"
+                          onClick={() => handleOpenCertificateModal(employee)}
+                          className="flex items-center gap-1 bg-emerald-500/20 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30"
+                        >
+                          <DocumentTextIcon className="h-4 w-4" />
+                          <span className="hidden sm:inline">Constancia</span>
+                        </Button>
+                        
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => handleEdit(employee)}
                           className="flex items-center gap-1 bg-white/5 border-white/20 text-white hover:bg-white/10"
                         >
@@ -889,6 +907,16 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
               <Button
                 onClick={() => {
                   setShowDetailsModal(false)
+                  handleOpenCertificateModal(selectedEmployee)
+                }}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 flex items-center gap-2"
+              >
+                <DocumentTextIcon className="h-4 w-4" />
+                Generar Constancia
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowDetailsModal(false)
                   handleEdit(selectedEmployee)
                 }}
                 className="flex-1 bg-brand-600 hover:bg-brand-700"
@@ -954,6 +982,16 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
           </div>
         </div>
       )}
+
+      {/* Modal de Constancia Laboral */}
+      <WorkCertificateModal
+        isOpen={showCertificateModal}
+        onClose={() => {
+          setShowCertificateModal(false)
+          setEmployeeForCertificate(null)
+        }}
+        employee={employeeForCertificate}
+      />
     </div>
   )
 }
