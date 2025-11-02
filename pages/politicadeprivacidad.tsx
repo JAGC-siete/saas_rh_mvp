@@ -34,7 +34,7 @@ export default function PoliticaPrivacidad() {
               <p className="text-slate-300">
                 <strong>Humano SISU</strong> (&quot;nosotros&quot;), <strong>Honduras</strong>.
                 <br />
-                Contacto: <strong>user@example.comt</strong> | <strong>+504 9470-7007</strong>
+                Contacto: <strong>jorgearturo@humanosisu.net</strong> | <strong>+504 9470-7007</strong>
               </p>
             </section>
 
@@ -99,7 +99,7 @@ export default function PoliticaPrivacidad() {
             <section className="mb-8">
               <h2 className="text-2xl font-semibold text-white mb-4">8) Tus derechos</h2>
               <p className="text-slate-300 mb-4">
-                Podés ejercer <strong>acceso, rectificación, supresión, oposición, limitación y portabilidad</strong>, además de <strong>retirar tu consentimiento</strong> en cualquier momento, escribiendo a <strong>jorge@humanosisu.net</strong> con el asunto &quot;Derechos de datos – [tu nombre]&quot;.
+                Podés ejercer <strong>acceso, rectificación, supresión, oposición, limitación y portabilidad</strong>, además de <strong>retirar tu consentimiento</strong> en cualquier momento, escribiendo a <strong>jorgearturo@humanosisu.net</strong> con el asunto &quot;Derechos de datos – [tu nombre]&quot;.
               </p>
               <p className="text-slate-300">
                 También podés reclamar ante la autoridad de control competente conforme a las <strong>leyes aplicables de protección de datos de Honduras y/o Guatemala</strong>.
@@ -126,7 +126,7 @@ export default function PoliticaPrivacidad() {
               <h2 className="text-2xl font-semibold text-white mb-4">Aviso corto (para el formulario)</h2>
               <blockquote className="border-l-4 border-brand-500 pl-4 py-2 bg-slate-800/50 rounded-r">
                 <p className="text-slate-300">
-                  Al enviar aceptás nuestra <strong>Política de Privacidad</strong>. Usaremos tus datos <strong>solo para contactarte</strong> y dar seguimiento a tu solicitud. Podés retirar tu consentimiento y ejercer tus derechos en <strong>jorge@humanosisu.net</strong>.
+                  Al enviar aceptás nuestra <strong>Política de Privacidad</strong>. Usaremos tus datos <strong>solo para contactarte</strong> y dar seguimiento a tu solicitud. Podés retirar tu consentimiento y ejercer tus derechos en <strong>jorgearturo@humanosisu.net</strong>.
                 </p>
               </blockquote>
               

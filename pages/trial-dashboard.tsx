@@ -450,10 +450,10 @@ export default function TrialDashboard() {
                 <div>
                   <h4 className="font-semibold text-white mb-2">📧 Email</h4>
                   <a 
-                    href="mailto:jorge7gomez@gmail.com?subject=Automatización%20RH%20-%20Trial%20SISU&body=Hola%20Jorge,%0A%0AYa%20vi%20el%20demo%20de%20SISU.%0A%0AQuiero%20dejar%20de%20hacer%20planillas%20manuales%20y%20tener%20todo%20automatizado%20antes%20de%20mañana.%0A%0ADecime%20qué%20necesitás%20para%20arrancar.%0A%0ASaludos"
+                    href="mailto:jorgearturo@humanosisu.net?subject=Automatización%20RH%20-%20Trial%20SISU&body=Hola%20Jorge,%0A%0AYa%20vi%20el%20demo%20de%20SISU.%0A%0AQuiero%20dejar%20de%20hacer%20planillas%20manuales%20y%20tener%20todo%20automatizado%20antes%20de%20mañana.%0A%0ADecime%20qué%20necesitás%20para%20arrancar.%0A%0ASaludos"
                     className="text-blue-400 hover:text-blue-300 transition-colors"
                   >
-                    jorge7gomez@gmail.com
+                    jorgearturo@humanosisu.net
                   </a>
                 </div>
                 <div>
