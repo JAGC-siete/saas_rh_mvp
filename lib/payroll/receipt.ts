@@ -30,6 +30,7 @@ export async function generateEmployeeReceiptPDF(
   return new Promise<Buffer>((resolve, reject) => {
     try {
       const PDFDocument = require('pdfkit')
+      const formatHNL = (n: number) => `L. ${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
       const doc = new PDFDocument({
         size: 'A4',
         layout: 'portrait',
@@ -87,7 +88,7 @@ export async function generateEmployeeReceiptPDF(
       doc.fontSize(10).text('Concepto:', 40, 225)
       doc.fontSize(10).text('Monto:', 400, 225)
       doc.fontSize(10).text('Salario Base (Quincenal):', 40, 240)
-      doc.fontSize(10).text(`L. ${(record.base_salary).toFixed(2)}`, 400, 240)
+      doc.fontSize(10).text(formatHNL(record.base_salary), 400, 240)
 
       // Deductions
       doc.fontSize(12).text('DETALLE DE DEDUCCIONES:', 30, 280)
@@ -95,19 +96,19 @@ export async function generateEmployeeReceiptPDF(
       doc.fontSize(10).text('Concepto:', 40, 305)
       doc.fontSize(10).text('Monto:', 400, 305)
       doc.fontSize(10).text('IHSS:', 40, 320)
-      doc.fontSize(10).text(`L. ${record.social_security.toFixed(2)}`, 400, 320)
+      doc.fontSize(10).text(formatHNL(record.social_security), 400, 320)
       doc.fontSize(10).text('RAP:', 40, 335)
-      doc.fontSize(10).text(`L. ${record.professional_tax.toFixed(2)}`, 400, 335)
+      doc.fontSize(10).text(formatHNL(record.professional_tax), 400, 335)
       doc.fontSize(10).text('ISR:', 40, 350)
-      doc.fontSize(10).text(`L. ${record.income_tax.toFixed(2)}`, 400, 350)
+      doc.fontSize(10).text(formatHNL(record.income_tax), 400, 350)
       doc.fontSize(10).text('Total Deducciones:', 40, 365)
-      doc.fontSize(10).text(`L. ${record.total_deductions.toFixed(2)}`, 400, 365)
+      doc.fontSize(10).text(formatHNL(record.total_deductions), 400, 365)
 
       // Summary
       doc.fontSize(12).text('RESUMEN FINAL:', 30, 400)
       doc.rect(30, 415, 535, 40).fillAndStroke('#f3f4f6', '#000')
       doc.fontSize(12).text('TOTAL A RECIBIR:', 40, 425)
-      doc.fontSize(14).text(`L. ${record.net_salary.toFixed(2)}`, 400, 425, { align: 'right' })
+      doc.fontSize(14).text(formatHNL(record.net_salary), 400, 425, { align: 'right' })
 
       // Bank
       doc.fontSize(12).text('INFORMACIÓN BANCARIA:', 30, 480)
@@ -117,11 +118,11 @@ export async function generateEmployeeReceiptPDF(
       doc.fontSize(10).text('Número de Cuenta:', 40, 520)
       doc.fontSize(10).text(record.bank_account || 'No especificado', 120, 520)
       doc.fontSize(10).text('Monto a Transferir:', 300, 505)
-      doc.fontSize(10).text(`L. ${record.net_salary.toFixed(2)}`, 400, 505)
+      doc.fontSize(10).text(formatHNL(record.net_salary), 400, 505)
 
       // Notes & signatures
       doc.fontSize(10).text('NOTAS:', 30, 560)
-      doc.fontSize(9).text('• Este recibo es un documento oficial de Paragon Honduras.', 30, 575)
+      doc.fontSize(9).text('• Este recibo es un documento oficial emitido por la empresa.', 30, 575)
       doc.fontSize(9).text('• Los montos están calculados según la legislación laboral de Honduras.', 30, 590)
       doc.fontSize(9).text('• Para consultas, contactar al departamento de recursos humanos.', 30, 605)
       doc.fontSize(10).text('Firma del Empleado:', 30, 650)

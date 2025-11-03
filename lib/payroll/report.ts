@@ -37,6 +37,7 @@ export async function generateConsolidatedPayrollPDF(
   return new Promise<Buffer>((resolve, reject) => {
     try {
       const PDFDocument = require('pdfkit')
+      const formatHNL = (n: number) => `L. ${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
       const doc = new PDFDocument({
         size: 'A4',
         layout: 'landscape',
@@ -89,11 +90,11 @@ export async function generateConsolidatedPayrollPDF(
       doc.fontSize(10).text('Total Empleados:', 45, 232)
       doc.fontSize(10).text(totalEmployees.toString(), 200, 232)
       doc.fontSize(10).text('Total Salario Bruto:', 45, 248)
-      doc.fontSize(10).text(`L. ${totalGross.toFixed(2)}`, 200, 248)
+      doc.fontSize(10).text(formatHNL(totalGross), 200, 248)
       doc.fontSize(10).text('Total Deducciones:', 45, 264)
-      doc.fontSize(10).text(`L. ${totalDeductions.toFixed(2)}`, 200, 264)
+      doc.fontSize(10).text(formatHNL(totalDeductions), 200, 264)
       doc.fontSize(10).text('Total Salario Neto:', 45, 280)
-      doc.fontSize(10).text(`L. ${totalNet.toFixed(2)}`, 200, 280)
+      doc.fontSize(10).text(formatHNL(totalNet), 200, 280)
 
       const deptTotals: { [key: string]: { count: number, gross: number, net: number } } = {}
       planilla.forEach((row) => {
@@ -147,13 +148,13 @@ export async function generateConsolidatedPayrollPDF(
           row.name,
           row.department,
           row.days_worked.toString(),
-          `L. ${row.monthly_salary.toFixed(2)}`,
-          `L. ${row.total_earnings.toFixed(2)}`,
-          `L. ${row.IHSS.toFixed(2)}`,
-          `L. ${row.RAP.toFixed(2)}`,
-          `L. ${row.ISR.toFixed(2)}`,
-          `L. ${row.total_deductions.toFixed(2)}`,
-          `L. ${row.total.toFixed(2)}`
+          formatHNL(row.monthly_salary),
+          formatHNL(row.total_earnings),
+          formatHNL(row.IHSS),
+          formatHNL(row.RAP),
+          formatHNL(row.ISR),
+          formatHNL(row.total_deductions),
+          formatHNL(row.total)
         ]
         values.forEach((val, i) => {
           const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0)
@@ -167,9 +168,9 @@ export async function generateConsolidatedPayrollPDF(
       const totalsWidth = colWidths.reduce((a, b) => a + b, 0)
       doc.rect(startX, y, totalsWidth, rowHeight).fillAndStroke('#f3f4f6', '#0f172a')
       doc.fontSize(10).fillColor('#0f172a').text('TOTALES:', startX + 6, y + 5)
-      doc.fontSize(10).text(`L. ${totalGross.toFixed(2)}`, startX + totalsWidth * 0.45, y + 5)
-      doc.fontSize(10).text(`L. ${totalDeductions.toFixed(2)}`, startX + totalsWidth * 0.65, y + 5)
-      doc.fontSize(10).text(`L. ${totalNet.toFixed(2)}`, startX + totalsWidth * 0.82, y + 5)
+      doc.fontSize(10).text(formatHNL(totalGross), startX + totalsWidth * 0.45, y + 5)
+      doc.fontSize(10).text(formatHNL(totalDeductions), startX + totalsWidth * 0.65, y + 5)
+      doc.fontSize(10).text(formatHNL(totalNet), startX + totalsWidth * 0.82, y + 5)
 
       // ===== PAGE 3: BANK DETAILS & NOTES =====
       doc.addPage()
@@ -202,7 +203,7 @@ export async function generateConsolidatedPayrollPDF(
           row.name,
           row.bank || 'No especificado',
           row.bank_account || 'No especificado',
-          `L. ${row.total.toFixed(2)}`
+          formatHNL(row.total)
         ]
         bankValues.forEach((val, i) => {
           const x = bankStartX + bankColWidths.slice(0, i).reduce((a, b) => a + b, 0)
