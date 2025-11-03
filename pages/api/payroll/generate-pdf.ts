@@ -79,7 +79,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log(`Generando PDF desde draft: ${planilla.length} empleados para ${periodo} Q${quincena}`)
 
     // Generar PDF consolidado
-    const pdf = await generateConsolidatedPayrollPDF(planilla, periodo, Number(quincena), user?.email)
+    const { data: company } = await supabase
+      .from('companies')
+      .select('name')
+      .eq('id', companyId)
+      .single()
+
+    const pdf = await generateConsolidatedPayrollPDF(planilla, periodo, Number(quincena), user?.email, company?.name)
     
     // Increment usage meter for PDF generation
     try {
@@ -90,7 +96,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     
     res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', `attachment; filename=planilla_draft_${periodo}_q${quincena}.pdf`)
+    res.setHeader('Content-Disposition', `attachment; filename=planilla_${periodo}_q${quincena}.pdf`)
     return res.send(pdf)
 
   } catch (error: any) {

@@ -89,7 +89,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       notes_on_deductions: r.notes_on_deductions || ''
     }))
 
-    const pdf = await generateConsolidatedPayrollPDF(planilla, periodo, Number(quincena), user.email)
+    const { data: company } = await supabase
+      .from('companies')
+      .select('name')
+      .eq('id', companyId)
+      .single()
+
+    const pdf = await generateConsolidatedPayrollPDF(planilla, periodo, Number(quincena), user.email, company?.name)
     res.setHeader('Content-Type', 'application/pdf')
     res.setHeader('Content-Disposition', `attachment; filename=planilla_${periodo}_q${quincena}.pdf`)
     return res.send(pdf)

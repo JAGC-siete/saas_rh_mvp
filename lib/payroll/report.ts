@@ -31,7 +31,8 @@ export async function generateConsolidatedPayrollPDF(
   planilla: PlanillaItem[],
   periodo: string,
   quincena: number,
-  generatedByEmail?: string
+  generatedByEmail?: string,
+  companyName?: string
 ): Promise<Buffer> {
   return new Promise<Buffer>((resolve, reject) => {
     try {
@@ -64,7 +65,7 @@ export async function generateConsolidatedPayrollPDF(
       const pageWidth = doc.page.width
       doc.rect(0, 0, pageWidth, 90).fill('#0b4fa1')
       doc.fillColor('white')
-      doc.fontSize(22).text('SISTEMA HONDUREÑO DE RECURSOS HUMANOS', 30, 20, { align: 'center', width: pageWidth - 60 })
+      doc.fontSize(22).text(companyName || 'SISTEMA HONDUREÑO DE RECURSOS HUMANOS', 30, 20, { align: 'center', width: pageWidth - 60 })
       doc.fontSize(13).text('Planilla Quincenal', 30, 46, { align: 'center', width: pageWidth - 60 })
       doc.fontSize(12).text(`${periodo} • Quincena ${quincena}`, 30, 66, { align: 'center', width: pageWidth - 60 })
 
@@ -119,7 +120,7 @@ export async function generateConsolidatedPayrollPDF(
       doc.fontSize(14).fillColor('#0f172a').text('DETALLE DE NÓMINA POR EMPLEADO', 30, 24, { align: 'center', width: tablePageWidth - 60 })
 
       const headers = ['Código', 'Nombre', 'Departamento', 'Días Trab.', 'Salario Base', 'Devengado', 'IHSS', 'RAP', 'ISR', 'Deducciones', 'Neto']
-      const colWidths = [58, 116, 88, 51, 73, 73, 51, 51, 51, 73, 73]
+      const colWidths = [78, 110, 82, 49, 73, 73, 51, 49, 51, 73, 73]
       const startX = 40
       let y = 60
       const rowHeight = 17
@@ -218,7 +219,7 @@ export async function generateConsolidatedPayrollPDF(
       doc.fontSize(9).text('• Verificar que la información bancaria sea correcta antes de procesar pagos.', 40, bankY + 83)
       doc.fontSize(9).text('• Para consultas, contactar al departamento de recursos humanos.', 40, bankY + 98)
 
-      doc.fontSize(8).fillColor('#64748b').text('Documento generado automáticamente — Sistema Hondureño de Recursos Humanos', 40, doc.page.height - 35, { align: 'center', width: bankPageWidth - 80 })
+      doc.fontSize(8).fillColor('#64748b').text('SISU: Sistema Hondureño de Recursos Humanos', 40, doc.page.height - 35, { align: 'center', width: bankPageWidth - 80 })
       doc.fontSize(8).text(`Fecha de generación: ${formatDateTimeForHonduras(nowInHonduras())}`, 40, doc.page.height - 20, { align: 'center', width: bankPageWidth - 80 })
 
       doc.end()

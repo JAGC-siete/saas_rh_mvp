@@ -24,7 +24,8 @@ export interface EmployeeReceiptInput {
 export async function generateEmployeeReceiptPDF(
   record: EmployeeReceiptInput,
   periodo: string,
-  quincena: number
+  quincena: number,
+  companyName?: string
 ): Promise<Buffer> {
   return new Promise<Buffer>((resolve, reject) => {
     try {
@@ -56,10 +57,13 @@ export async function generateEmployeeReceiptPDF(
       // Header
       doc.rect(0, 0, 595, 80).fill('#0b4fa1')
       doc.fillColor('white')
-      doc.fontSize(18).text('SISTEMA HONDUREÑO DE RECURSOS HUMANOS', 30, 16, { align: 'center', width: 535 })
+      doc.fontSize(18).text(companyName || 'SISTEMA HONDUREÑO DE RECURSOS HUMANOS', 30, 16, { align: 'center', width: 535 })
       doc.fontSize(12).text('Recibo de Nómina Quincenal', 30, 38, { align: 'center', width: 535 })
       doc.fontSize(11).text(`${periodo} • Quincena ${quincena}`, 30, 56, { align: 'center', width: 535 })
       doc.fillColor('#0f172a')
+
+      // Footer SISU
+      doc.fontSize(8).fillColor('#64748b').text('SISU: Sistema Hondureño de Recursos Humanos', 30, 820, { align: 'center', width: 535 })
 
       // Employee info
       doc.fontSize(12).text('INFORMACIÓN DEL EMPLEADO:', 30, 100)
