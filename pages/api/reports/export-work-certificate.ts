@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../lib/supabase/server'
-import { authenticateUser } from '../../../lib/auth-helpers'
+import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
 import { getHondurasTimestamp, formatDateForHonduras, nowInHonduras } from '../../../lib/timezone'
 
 interface WorkCertificateData {
@@ -32,14 +31,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Autenticación y autorización
-    const authResult = await authenticateUser(req, res, ['can_view_reports', 'can_manage_employees'])
-    if (!authResult.success) {
-      return res.status(401).json({ error: 'No autorizado' })
+    // Autenticación y autorización usando el mismo método que payroll
+    const { supabase, companyId, role, user, userProfile } = await requireCompanyAccess(req, res)
+    
+    // Verificar permisos (solo admins y HR managers pueden generar constancias)
+    if (!['super_admin', 'company_admin', 'hr_manager'].includes(role)) {
+      return res.status(403).json({ 
+        error: 'Permisos insuficientes',
+        message: 'No tiene permisos para generar constancias laborales'
+      })
     }
-
-    const { userProfile } = authResult
-    const supabase = createClient(req, res)
 
     const { 
       employeeId, 
@@ -62,7 +63,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const certificateData = await generateWorkCertificateData(
       supabase, 
       employeeId, 
-      userProfile, 
+      companyId,
+      role,
       certificateType,
       purpose,
       additionalInfo
@@ -74,21 +76,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Generar reporte según formato
     if (format === 'pdf') {
-      generateWorkCertificatePDF(res, certificateData, includeDeductions)
+      await generateWorkCertificatePDF(res, certificateData, includeDeductions)
     } else {
       generateWorkCertificateCSV(res, certificateData, includeDeductions)
     }
 
   } catch (error) {
     console.error('Error generando constancia de trabajo:', error)
-    res.status(500).json({ error: 'Error interno del servidor' })
+    // Solo enviar error JSON si no se han enviado headers aún
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Error interno del servidor' })
+    }
   }
 }
 
 async function generateWorkCertificateData(
   supabase: any, 
   employeeId: string, 
-  userProfile: any,
+  companyId: string | null,
+  role: string,
   certificateType: string,
   purpose: string,
   additionalInfo: string
@@ -108,14 +114,15 @@ async function generateWorkCertificateData(
         termination_date,
         base_salary,
         status,
+        company_id,
         departments(name),
         companies(name)
       `)
       .eq('id', employeeId)
 
     // Aplicar filtro por empresa si no es superadmin
-    if (userProfile.role !== 'super_admin' && userProfile.company_id) {
-      employeeQuery = employeeQuery.eq('company_id', userProfile.company_id)
+    if (role !== 'super_admin' && companyId) {
+      employeeQuery = employeeQuery.eq('company_id', companyId)
     }
 
     const { data: employee, error: empError } = await employeeQuery.single()
@@ -125,8 +132,8 @@ async function generateWorkCertificateData(
       return null
     }
 
-    // Verificar que el empleado pertenece a la empresa del usuario
-    if (userProfile.role !== 'super_admin' && employee.companies?.name !== userProfile.company_name) {
+    // Verificar que el empleado pertenece a la empresa del usuario (si no es superadmin)
+    if (role !== 'super_admin' && companyId && employee.company_id !== companyId) {
       console.error('Empleado no pertenece a la empresa del usuario')
       return null
     }
@@ -191,30 +198,59 @@ function formatDateInWords(date: Date): string {
 }
 
 function generateWorkCertificatePDF(res: NextApiResponse, certificateData: WorkCertificateData, includeDeductions: boolean = true) {
-  try {
-    const PDFDocument = require('pdfkit')
-    const doc = new PDFDocument({
-      size: 'A4',
-      margins: {
-        top: 50,
-        bottom: 50,
-        left: 50,
-        right: 50
-      }
-    })
+  return new Promise<void>((resolve, reject) => {
+    try {
+      const PDFDocument = require('pdfkit')
+      const doc = new PDFDocument({
+        size: 'A4',
+        margins: {
+          top: 50,
+          bottom: 50,
+          left: 50,
+          right: 50
+        }
+      })
 
-    // Configurar headers de respuesta
-    res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', `attachment; filename=constancia_laboral_${certificateData.employee.employee_code}_${getHondurasTimestamp().split('T')[0]}.pdf`)
+      const buffers: Buffer[] = []
+      doc.on('data', (chunk: Buffer) => buffers.push(chunk))
+      doc.on('end', () => {
+        try {
+          const pdf = Buffer.concat(buffers)
+          res.setHeader('Content-Type', 'application/pdf')
+          res.setHeader('Content-Disposition', `attachment; filename=constancia_laboral_${certificateData.employee.employee_code}_${getHondurasTimestamp().split('T')[0]}.pdf`)
+          res.send(pdf)
+          resolve()
+        } catch (e) {
+          reject(e)
+        }
+      })
+      doc.on('error', (error: Error) => {
+        reject(error)
+      })
 
-    // Pipe el documento a la respuesta
-    doc.pipe(res)
+    // ==== Branding consistente (header y colores) ====
+    const pageWidth = doc.page.width
+    const pageHeight = doc.page.height
+    const primary = '#0b4fa1'
+    const textColor = '#0f172a'
+
+    // Header bar
+    doc.rect(0, 0, pageWidth, 80).fill(primary)
+    doc.fillColor('white')
+      .font('Helvetica-Bold').fontSize(16)
+      .text((certificateData.employee.company_name || 'SISTEMA HONDUREÑO DE RECURSOS HUMANOS').toUpperCase(), 30, 20, { align: 'center', width: pageWidth - 60 })
+    doc.font('Helvetica').fontSize(12)
+      .text('Constancia Laboral', 30, 46, { align: 'center', width: pageWidth - 60 })
+
+    // Reset base text color
+    doc.fillColor(textColor)
 
     // Título principal
-    doc.fontSize(18)
+    doc.moveDown(3)
+    doc.fontSize(16)
        .font('Helvetica-Bold')
        .text('CONSTANCIA LABORAL', { align: 'center' })
-       .moveDown(2)
+       .moveDown(1.5)
 
     // Cuerpo principal - Formato exacto según especificación
     doc.fontSize(12)
@@ -237,12 +273,14 @@ function generateWorkCertificatePDF(res: NextApiResponse, certificateData: WorkC
       periodText = `desde el ${hireDateFormatted} de ${hireDate.getFullYear()} hasta la fecha`
     }
 
+    // Formateador de moneda consistente
+    const formatHNL = (n: number) => `L. ${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
     // Convertir salario a palabras
     const salaryInWords = numberToWords(certificateData.employee.base_salary)
-    const salaryFormatted = certificateData.employee.base_salary.toFixed(2).replace('.', ',')
+    const salaryFormatted = formatHNL(certificateData.employee.base_salary)
     
     // Construir texto principal
-    let mainText = `Por medio de la presente, ${certificateData.employee.company_name.toUpperCase()} S. de R.L. certifica que ${certificateData.employee.name}, con Documento Nacional de Identificación No. ${certificateData.employee.dni}, se desempeña en esta empresa con modalidad de contrato permanente, ocupando el cargo de "${certificateData.employee.position}" ${periodText}, con modalidad de contrato permanente y con un salario mensual de L. ${salaryFormatted} (${salaryInWords} lempiras exactos)`
+    let mainText = `Por medio de la presente, ${certificateData.employee.company_name.toUpperCase()} S. de R.L. certifica que ${certificateData.employee.name}, con Documento Nacional de Identificación No. ${certificateData.employee.dni}, se desempeña en esta empresa bajo contrato permanente, ocupando el cargo de "${certificateData.employee.position}" ${periodText}, con un salario mensual de ${salaryFormatted} (${salaryInWords} lempiras exactos)`
     
     if (includeDeductions) {
       mainText += ', con las siguientes deducciones:'
@@ -263,30 +301,30 @@ function generateWorkCertificatePDF(res: NextApiResponse, certificateData: WorkC
 
       const tableTop = doc.y
       const rowHeight = 25
-      const labelWidth = 200
-      const valueWidth = 150
-      const startX = 50
+      const labelWidth = 220
+      const valueWidth = 180
+      const startX = 60
 
       // Fila 1: Salario base
       doc.fontSize(11)
          .font('Helvetica')
          .text('Salario base', startX, tableTop, { width: labelWidth })
       doc.font('Helvetica-Bold')
-         .text(`L ${certificateData.employee.base_salary.toFixed(2).replace('.', ',')}`, startX + labelWidth, tableTop, { width: valueWidth })
+         .text(`${salaryFormatted}`, startX + labelWidth, tableTop, { width: valueWidth })
       
       // Fila 2: Deducciones
       const deductionsY = tableTop + rowHeight
       doc.font('Helvetica')
          .text('Deducciones (RAP / IHSS)', startX, deductionsY, { width: labelWidth })
       doc.font('Helvetica-Bold')
-         .text(`L ${totalDeductions.toFixed(2).replace('.', ',')}`, startX + labelWidth, deductionsY, { width: valueWidth })
+         .text(`${formatHNL(totalDeductions)}`, startX + labelWidth, deductionsY, { width: valueWidth })
       
       // Fila 3: Total
       const totalY = deductionsY + rowHeight
       doc.font('Helvetica')
          .text('Total', startX, totalY, { width: labelWidth })
       doc.font('Helvetica-Bold')
-         .text(`L ${netSalary.toFixed(2).replace('.', ',')}`, startX + labelWidth, totalY, { width: valueWidth })
+         .text(`${formatHNL(netSalary)}`, startX + labelWidth, totalY, { width: valueWidth })
 
       doc.moveDown(2)
     }
@@ -306,13 +344,17 @@ function generateWorkCertificatePDF(res: NextApiResponse, certificateData: WorkC
        .font('Helvetica')
        .text(`Esta constancia se emite a solicitud del interesado para los fines que estime convenientes. Extendida en Tegucigalpa, M.D.C., ${dayPrefix} ${dayInWords} ${daySuffix} del mes de ${monthInWords} del año ${yearInWords}.`, { align: 'justify' })
 
-    // Finalizar documento
-    doc.end()
+    // Footer SISU
+    doc.fontSize(8).fillColor('#64748b')
+      .text('SISU: Sistema Hondureño de Recursos Humanos', 30, pageHeight - 30, { align: 'center', width: pageWidth - 60 })
 
-  } catch (error) {
-    console.error('Error generando PDF de constancia:', error)
-    res.status(500).json({ error: 'Error generando PDF' })
-  }
+    // Finalizar documento
+      doc.end()
+
+    } catch (error) {
+      reject(error)
+    }
+  })
 }
 
 // Función auxiliar para convertir números a palabras (mejorada para números grandes)
