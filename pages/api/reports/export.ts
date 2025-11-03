@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../lib/supabase/server'
-import { authenticateUser } from '../../../lib/auth-helpers'
+import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
 import { formatDateForHonduras, nowInHonduras, formatDateTimeForHonduras } from '../../../lib/timezone'
 import { withExportRateLimit } from '../../../lib/security/rate-limiting'
 import ExcelJS from 'exceljs'
@@ -25,23 +24,21 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   try {
-    // 🔒 AUTENTICACIÓN REQUERIDA CON MISMOS PERMISOS QUE PAYROLL
-    const authResult = await authenticateUser(req, res, ['can_view_reports', 'can_export_payroll'])
+    // Autenticación usando el mismo método que payroll
+    const { supabase, companyId, role, user, userProfile } = await requireCompanyAccess(req, res)
     
-    if (!authResult.success) {
-      return res.status(401).json({ 
-        error: authResult.error,
-        message: authResult.message
+    // Verificar permisos (solo admins y HR managers pueden generar reportes)
+    if (!['super_admin', 'company_admin', 'hr_manager'].includes(role)) {
+      return res.status(403).json({ 
+        error: 'Permisos insuficientes',
+        message: 'No tiene permisos para generar reportes'
       })
     }
 
-    const { user, userProfile } = authResult
-    const supabase = createClient(req, res)
-
     console.log('🔐 Usuario autenticado para reportes:', { 
       userId: user.id, 
-      role: userProfile?.role,
-      companyId: userProfile?.company_id 
+      role: role,
+      companyId: companyId 
     })
 
     const { format, dateFilter, reportType } = req.body
@@ -71,15 +68,27 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // Obtener datos del reporte según tipo
     let reportData: any
     
+    // Obtener nombre de la empresa para branding del PDF
+    const { data: company } = await supabase
+      .from('companies')
+      .select('name')
+      .eq('id', companyId)
+      .single()
+    
     if (reportType === 'attendance') {
-      reportData = await generateAttendanceReportData(supabase, dateFilter, userProfile)
+      reportData = await generateAttendanceReportData(supabase, dateFilter, companyId)
     } else if (reportType === 'payroll') {
-      reportData = await generatePayrollReportData(supabase, dateFilter, userProfile)
+      reportData = await generatePayrollReportData(supabase, dateFilter, companyId)
     } else if (reportType === 'employees') {
-      reportData = await generateEmployeesReportData(supabase, userProfile)
+      reportData = await generateEmployeesReportData(supabase, companyId)
     } else {
       // General report (backward compatibility)
-      reportData = await generateReportData(supabase, dateFilter, userProfile)
+      reportData = await generateReportData(supabase, dateFilter, companyId)
+    }
+    
+    // Agregar nombre de empresa a reportData para usar en PDFs
+    if (company) {
+      reportData.companyName = company.name
     }
 
     // Route to appropriate exporter
@@ -97,13 +106,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     if (format === 'pdf') {
       if (reportType === 'attendance') {
-        return generateAttendancePDF(res, reportData, dateFilter)
+        return generateAttendancePDF(res, reportData, dateFilter, company?.name)
       } else if (reportType === 'payroll') {
-        return generatePayrollPDF(res, reportData, dateFilter)
+        return generatePayrollPDF(res, reportData, dateFilter, company?.name)
       } else if (reportType === 'employees') {
-        return generateEmployeesPDF(res, reportData)
+        return generateEmployeesPDF(res, reportData, company?.name)
       } else {
-        return generatePDFReport(res, reportData, dateFilter)
+        return generatePDFReport(res, reportData, dateFilter, company?.name)
       }
     } else {
       return generateCSVReport(res, reportData, dateFilter, reportType)
@@ -111,16 +120,19 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   } catch (error) {
     console.error('Error generando reporte:', error)
-    return res.status(500).json({ 
-      error: 'Error interno del servidor', 
-      message: error instanceof Error ? error.message : 'Error desconocido'
-    })
+    // Solo enviar error JSON si no se han enviado headers aún
+    if (!res.headersSent) {
+      return res.status(500).json({ 
+        error: 'Error interno del servidor', 
+        message: error instanceof Error ? error.message : 'Error desconocido'
+      })
+    }
   }
 }
 
 export default withExportRateLimit()(handler)
 
-async function generateReportData(supabase: any, dateFilter: any, userProfile: any): Promise<ReportData> {
+async function generateReportData(supabase: any, dateFilter: any, companyId: string | null): Promise<ReportData> {
   // Obtener empleados activos
   let employeesQuery = supabase
     .from('employees')
@@ -128,9 +140,9 @@ async function generateReportData(supabase: any, dateFilter: any, userProfile: a
     .eq('status', 'active')
     .order('name')
 
-  // Si el usuario tiene company_id, filtrar por empresa (mismo patrón que payroll)
-  if (userProfile?.company_id) {
-    employeesQuery = employeesQuery.eq('company_id', userProfile.company_id)
+  // Filtrar por empresa (mismo patrón que payroll)
+  if (companyId) {
+    employeesQuery = employeesQuery.eq('company_id', companyId)
   }
 
   const { data: employees, error: empError } = await employeesQuery
@@ -148,7 +160,7 @@ async function generateReportData(supabase: any, dateFilter: any, userProfile: a
     .lte('date', dateFilter.endDate)
 
   // attendance_records puede no tener company_id; filtrar por empleados de la compañía
-  if (userProfile?.company_id) {
+  if (companyId) {
     const employeeIds = (employees || []).map((e: any) => e.id)
     if (employeeIds.length > 0) {
       attendanceQuery = attendanceQuery.in('employee_id', employeeIds)
@@ -171,8 +183,8 @@ async function generateReportData(supabase: any, dateFilter: any, userProfile: a
     .gte('period_start', dateFilter.startDate)
     .lte('period_end', dateFilter.endDate)
 
-  if (userProfile?.company_id) {
-    payrollQuery = payrollQuery.eq('company_id', userProfile.company_id)
+  if (companyId) {
+    payrollQuery = payrollQuery.eq('company_id', companyId)
   }
 
   const { data: payrollRecords, error: payrollError } = await payrollQuery
@@ -231,7 +243,7 @@ async function generateReportData(supabase: any, dateFilter: any, userProfile: a
   }
 }
 
-function generatePDFReport(res: NextApiResponse, reportData: ReportData, dateFilter: any) {
+function generatePDFReport(res: NextApiResponse, reportData: ReportData, dateFilter: any, companyName?: string) {
   try {
     const PDFDocument = require('pdfkit')
     const doc = new PDFDocument({ 
@@ -240,12 +252,14 @@ function generatePDFReport(res: NextApiResponse, reportData: ReportData, dateFil
       margin: 30,
       info: {
         Title: `Reporte General - ${dateFilter.startDate} a ${dateFilter.endDate}`,
-        Author: 'Sistema de Recursos Humanos',
+        Author: 'Sistema Hondureño de Recursos Humanos',
         Subject: 'Reporte de Estadísticas',
         Keywords: 'reporte, estadísticas, recursos humanos',
         Creator: 'HR SaaS System'
       }
     })
+    
+    const formatHNL = (n: number) => `L. ${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
     
     let buffers: Buffer[] = []
 
@@ -258,16 +272,17 @@ function generatePDFReport(res: NextApiResponse, reportData: ReportData, dateFil
     })
 
     // ===== PÁGINA 1: HEADER Y RESUMEN EJECUTIVO =====
+    const pageWidth = doc.page.width
     
-    // Header con branding
-    doc.rect(0, 0, 595, 80).fill('#1e40af')
+    // Header con branding consistente
+    doc.rect(0, 0, pageWidth, 80).fill('#0b4fa1')
     doc.fillColor('white')
-    doc.fontSize(20).text('SISTEMA DE RECURSOS HUMANOS', 30, 20, { align: 'center', width: 535 })
-    doc.fontSize(16).text('Reporte de Estadísticas', 30, 45, { align: 'center', width: 535 })
-    doc.fontSize(12).text(`${dateFilter.startDate} - ${dateFilter.endDate}`, 30, 65, { align: 'center', width: 535 })
+    doc.fontSize(18).text((companyName || 'SISTEMA HONDUREÑO DE RECURSOS HUMANOS').toUpperCase(), 30, 20, { align: 'center', width: pageWidth - 60 })
+    doc.fontSize(14).text('Reporte de Estadísticas', 30, 44, { align: 'center', width: pageWidth - 60 })
+    doc.fontSize(12).text(`${dateFilter.startDate} - ${dateFilter.endDate}`, 30, 64, { align: 'center', width: pageWidth - 60 })
     
     // Reset colors
-    doc.fillColor('black')
+    doc.fillColor('#0f172a')
     
     // Información del reporte
     doc.fontSize(10).text('INFORMACIÓN DEL REPORTE:', 30, 100)
@@ -286,7 +301,7 @@ function generatePDFReport(res: NextApiResponse, reportData: ReportData, dateFil
     doc.fontSize(10).text(reportData.stats.totalAttendance.toString(), 200, 215)
     
     doc.fontSize(10).text('Nómina Total:', 40, 230)
-    doc.fontSize(10).text(`L. ${reportData.stats.totalPayroll.toFixed(2)}`, 200, 230)
+    doc.fontSize(10).text(formatHNL(reportData.stats.totalPayroll), 200, 230)
     
     doc.fontSize(10).text('Promedio Asistencia:', 40, 245)
     doc.fontSize(10).text(reportData.stats.averageAttendance.toFixed(1), 200, 245)
@@ -330,7 +345,7 @@ function generatePDFReport(res: NextApiResponse, reportData: ReportData, dateFil
         emp.dni || emp.id,
         emp.name,
         emp.department_id || 'Sin Departamento',
-        `L. ${(emp.base_salary || 0).toFixed(2)}`,
+        formatHNL(emp.base_salary || 0),
         emp.status
       ]
       
@@ -414,9 +429,9 @@ function generatePDFReport(res: NextApiResponse, reportData: ReportData, dateFil
       attY += rowHeight
     })
     
-    // Pie de página
-    doc.fontSize(8).text('Documento generado automáticamente - Sistema de Recursos Humanos', 30, 800, { align: 'center', width: 535 })
-    doc.fontSize(8).text(`Fecha de generación: ${formatDateTimeForHonduras(nowInHonduras())}`, 30, 815, { align: 'center', width: 535 })
+    // Footer SISU
+    doc.fontSize(8).fillColor('#64748b').text('SISU: Sistema Hondureño de Recursos Humanos', 30, doc.page.height - 30, { align: 'center', width: pageWidth - 60 })
+    doc.fontSize(8).text(`Fecha de generación: ${formatDateTimeForHonduras(nowInHonduras())}`, 30, doc.page.height - 15, { align: 'center', width: pageWidth - 60 })
 
     doc.end()
   } catch (error) {
@@ -438,9 +453,10 @@ function generateCSVReport(res: NextApiResponse, reportData: ReportData, dateFil
     // Resumen ejecutivo
     csvContent += 'RESUMEN EJECUTIVO\n'
     csvContent += 'Métrica,Valor\n'
+    const formatHNL = (n: number) => `L. ${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
     csvContent += `Total Empleados,${reportData.stats.totalEmployees}\n`
     csvContent += `Registros de Asistencia,${reportData.stats.totalAttendance}\n`
-    csvContent += `Nómina Total,L. ${reportData.stats.totalPayroll.toFixed(2)}\n`
+    csvContent += `Nómina Total,${formatHNL(reportData.stats.totalPayroll)}\n`
     csvContent += `Promedio Asistencia,${reportData.stats.averageAttendance.toFixed(1)}\n`
     csvContent += `Empleados Tardíos,${reportData.stats.lateEmployees}\n`
     csvContent += `Empleados Ausentes,${reportData.stats.absentEmployees}\n\n`
@@ -448,8 +464,9 @@ function generateCSVReport(res: NextApiResponse, reportData: ReportData, dateFil
     // Lista de empleados
     csvContent += 'LISTA DE EMPLEADOS\n'
     csvContent += 'Código,Nombre,Departamento,Salario Base,Estado\n'
+    const formatHNL = (n: number) => `L. ${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
     reportData.employees.forEach((emp: any) => {
-      csvContent += `${emp.dni || emp.id},"${emp.name}",${emp.department_id || 'Sin Departamento'},L. ${(emp.base_salary || 0).toFixed(2)},${emp.status}\n`
+      csvContent += `${emp.dni || emp.id},"${emp.name}",${emp.department_id || 'Sin Departamento'},${formatHNL(emp.base_salary || 0)},${emp.status}\n`
     })
     csvContent += '\n'
     
@@ -501,7 +518,7 @@ function generateCSVReport(res: NextApiResponse, reportData: ReportData, dateFil
 
 // ===== FUNCIONES PARA OBTENER DATOS ESPECÍFICOS =====
 
-async function generateAttendanceReportData(supabase: any, dateFilter: any, userProfile: any) {
+async function generateAttendanceReportData(supabase: any, dateFilter: any, companyId: string | null) {
   // Obtener empleados
   let employeesQuery = supabase
     .from('employees')
@@ -509,8 +526,8 @@ async function generateAttendanceReportData(supabase: any, dateFilter: any, user
     .eq('status', 'active')
     .order('name')
 
-  if (userProfile?.company_id) {
-    employeesQuery = employeesQuery.eq('company_id', userProfile.company_id)
+  if (companyId) {
+    employeesQuery = employeesQuery.eq('company_id', companyId)
   }
 
   const { data: employees, error: empError } = await employeesQuery
@@ -523,8 +540,8 @@ async function generateAttendanceReportData(supabase: any, dateFilter: any, user
     .gte('date', dateFilter.startDate)
     .lte('date', dateFilter.endDate)
 
-  if (userProfile?.company_id) {
-    attendanceQuery = attendanceQuery.eq('employees.company_id', userProfile.company_id)
+  if (companyId) {
+    attendanceQuery = attendanceQuery.eq('employees.company_id', companyId)
   }
 
   const { data: attendance, error: attError } = await attendanceQuery
@@ -533,7 +550,7 @@ async function generateAttendanceReportData(supabase: any, dateFilter: any, user
   return { employees: employees || [], attendance: attendance || [], dateFilter }
 }
 
-async function generatePayrollReportData(supabase: any, dateFilter: any, userProfile: any) {
+async function generatePayrollReportData(supabase: any, dateFilter: any, companyId: string | null) {
   // Obtener registros de nómina con relación a empleados
   let payrollQuery = supabase
     .from('payroll_records')
@@ -552,8 +569,8 @@ async function generatePayrollReportData(supabase: any, dateFilter: any, userPro
     .gte('period_start', dateFilter.startDate)
     .lte('period_end', dateFilter.endDate)
 
-  if (userProfile?.company_id) {
-    payrollQuery = payrollQuery.eq('employees.company_id', userProfile.company_id)
+  if (companyId) {
+    payrollQuery = payrollQuery.eq('employees.company_id', companyId)
   }
 
   const { data: payroll, error: payrollError } = await payrollQuery
@@ -562,7 +579,7 @@ async function generatePayrollReportData(supabase: any, dateFilter: any, userPro
   return { payroll: payroll || [], dateFilter }
 }
 
-async function generateEmployeesReportData(supabase: any, userProfile: any) {
+async function generateEmployeesReportData(supabase: any, companyId: string | null) {
   let employeesQuery = supabase
     .from('employees')
     .select(`
@@ -582,8 +599,8 @@ async function generateEmployeesReportData(supabase: any, userProfile: any) {
     `)
     .order('name')
 
-  if (userProfile?.company_id) {
-    employeesQuery = employeesQuery.eq('company_id', userProfile.company_id)
+  if (companyId) {
+    employeesQuery = employeesQuery.eq('company_id', companyId)
   }
 
   const { data: employees, error: empError } = await employeesQuery
@@ -743,16 +760,17 @@ async function generatePayrollExcel(res: NextApiResponse, reportData: any, dateF
       { header: 'Valor', key: 'value', width: 15 }
     ]
 
+    const formatHNL = (n: number) => `L. ${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
     const totalBruto = reportData.payroll.reduce((sum: number, r: any) => sum + (r.gross_salary || 0), 0)
     const totalDeducciones = reportData.payroll.reduce((sum: number, r: any) => sum + (r.total_deductions || 0), 0)
     const totalNeto = reportData.payroll.reduce((sum: number, r: any) => sum + (r.net_salary || 0), 0)
     const totalEmpleados = reportData.payroll.length
 
     summarySheet.addRow({ concept: 'Total Empleados', value: totalEmpleados })
-    summarySheet.addRow({ concept: 'Total Salario Bruto', value: `L. ${totalBruto.toFixed(2)}` })
-    summarySheet.addRow({ concept: 'Total Deducciones', value: `L. ${totalDeducciones.toFixed(2)}` })
-    summarySheet.addRow({ concept: 'Total Salario Neto', value: `L. ${totalNeto.toFixed(2)}` })
-    summarySheet.addRow({ concept: 'Promedio Salario Neto', value: `L. ${(totalNeto / totalEmpleados).toFixed(2)}` })
+    summarySheet.addRow({ concept: 'Total Salario Bruto', value: formatHNL(totalBruto) })
+    summarySheet.addRow({ concept: 'Total Deducciones', value: formatHNL(totalDeducciones) })
+    summarySheet.addRow({ concept: 'Total Salario Neto', value: formatHNL(totalNeto) })
+    summarySheet.addRow({ concept: 'Promedio Salario Neto', value: formatHNL(totalNeto / totalEmpleados) })
 
     summarySheet.getRow(1).font = { bold: true }
     summarySheet.getRow(1).fill = {
@@ -789,6 +807,7 @@ async function generateEmployeesExcel(res: NextApiResponse, reportData: any) {
       { header: 'Estado', key: 'status', width: 12 }
     ]
 
+    const formatHNL = (n: number) => `L. ${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
     for (const emp of reportData.employees) {
       sheet.addRow({
         code: emp.employee_code || '',
@@ -798,7 +817,7 @@ async function generateEmployeesExcel(res: NextApiResponse, reportData: any) {
         phone: emp.phone || '',
         department: emp.departments?.name || 'Sin Departamento',
         role: emp.role || '',
-        salary: `L. ${(emp.base_salary || 0).toFixed(2)}`,
+        salary: formatHNL(emp.base_salary || 0),
         hire_date: emp.hire_date ? new Date(emp.hire_date).toLocaleDateString('es-HN') : '',
         status: emp.status || ''
       })
@@ -823,7 +842,7 @@ async function generateEmployeesExcel(res: NextApiResponse, reportData: any) {
 
 // ===== GENERADORES DE PDF =====
 
-async function generateAttendancePDF(res: NextApiResponse, reportData: any, dateFilter: any) {
+async function generateAttendancePDF(res: NextApiResponse, reportData: any, dateFilter: any, companyName?: string) {
   // Por ahora usar el PDF genérico, se puede mejorar después
   return generatePDFReport(res, { 
     employees: reportData.employees,
@@ -837,15 +856,15 @@ async function generateAttendancePDF(res: NextApiResponse, reportData: any, date
       lateEmployees: 0,
       absentEmployees: 0
     }
-  }, dateFilter)
+  }, dateFilter, companyName)
 }
 
-async function generatePayrollPDF(res: NextApiResponse, reportData: any, dateFilter: any) {
+async function generatePayrollPDF(res: NextApiResponse, reportData: any, dateFilter: any, companyName?: string) {
   // Implementar PDF específico para nómina si se necesita
   return res.status(400).json({ error: 'PDF de nómina use /api/payroll/report' })
 }
 
-async function generateEmployeesPDF(res: NextApiResponse, reportData: any) {
+async function generateEmployeesPDF(res: NextApiResponse, reportData: any, companyName?: string) {
   // Implementar PDF específico para empleados si se necesita
   return generatePDFReport(res, { 
     employees: reportData.employees,
@@ -859,5 +878,5 @@ async function generateEmployeesPDF(res: NextApiResponse, reportData: any) {
       lateEmployees: 0,
       absentEmployees: 0
     }
-  }, { startDate: '', endDate: '' })
+  }, { startDate: '', endDate: '' }, companyName)
 }
