@@ -56,19 +56,22 @@ export async function generateEmployeeReceiptPDF(
       })
 
       // Header
-      doc.rect(0, 0, 595, 80).fill('#0b4fa1')
+      const pageWidth = doc.page.width
+      const pageHeight = doc.page.height
+      doc.rect(0, 0, pageWidth, 80).fill('#0b4fa1')
       doc.fillColor('white')
       doc.fontSize(18).text(companyName || 'SISTEMA HONDUREÑO DE RECURSOS HUMANOS', 30, 16, { align: 'center', width: 535 })
       doc.fontSize(12).text('Recibo de Nómina Quincenal', 30, 38, { align: 'center', width: 535 })
       doc.fontSize(11).text(`${periodo} • Quincena ${quincena}`, 30, 56, { align: 'center', width: 535 })
       doc.fillColor('#0f172a')
 
-      // Footer SISU
-      doc.fontSize(8).fillColor('#64748b').text('SISU: Sistema Hondureño de Recursos Humanos', 30, 820, { align: 'center', width: 535 })
+      // Footer SISU (usar límites reales de la página)
+      const footerY = pageHeight - 24
+      doc.fontSize(8).fillColor('#64748b').text('SISU: Sistema Hondureño de Recursos Humanos', 30, footerY, { align: 'center', width: pageWidth - 60 })
 
       // Employee info
       doc.fontSize(12).text('INFORMACIÓN DEL EMPLEADO:', 30, 100)
-      doc.rect(30, 115, 535, 60).stroke()
+      doc.rect(30, 115, pageWidth - 60, 60).stroke()
       doc.fontSize(10).text('Código:', 40, 125)
       doc.fontSize(10).text(record.employee_code || 'N/A', 120, 125)
       doc.fontSize(10).text('Nombre:', 40, 140)
@@ -106,13 +109,13 @@ export async function generateEmployeeReceiptPDF(
 
       // Summary
       doc.fontSize(12).text('RESUMEN FINAL:', 30, 400)
-      doc.rect(30, 415, 535, 40).fillAndStroke('#f3f4f6', '#000')
+      doc.rect(30, 415, pageWidth - 60, 40).fillAndStroke('#f3f4f6', '#0f172a')
       doc.fontSize(12).text('TOTAL A RECIBIR:', 40, 425)
       doc.fontSize(14).text(formatHNL(record.net_salary), 400, 425, { align: 'right' })
 
       // Bank
       doc.fontSize(12).text('INFORMACIÓN BANCARIA:', 30, 480)
-      doc.rect(30, 495, 535, 40).stroke()
+      doc.rect(30, 495, pageWidth - 60, 40).stroke()
       doc.fontSize(10).text('Banco:', 40, 505)
       doc.fontSize(10).text(record.bank_name || 'No especificado', 120, 505)
       doc.fontSize(10).text('Número de Cuenta:', 40, 520)
@@ -129,8 +132,8 @@ export async function generateEmployeeReceiptPDF(
       doc.rect(30, 665, 200, 30).stroke()
       doc.fontSize(10).text('Firma del Autorizado:', 300, 650)
       doc.rect(300, 665, 200, 30).stroke()
-      doc.fontSize(8).text('Documento generado automáticamente - Paragon Honduras - Sistema de Recursos Humanos', 30, 750, { align: 'center', width: 535 })
-      doc.fontSize(8).text(`Fecha de generación: ${formatDateTimeForHonduras(nowInHonduras())}`, 30, 765, { align: 'center', width: 535 })
+      // Fecha de generación cerca del footer
+      doc.fontSize(8).fillColor('#64748b').text(`Fecha de generación: ${formatDateTimeForHonduras(nowInHonduras())}`, 30, footerY - 14, { align: 'center', width: pageWidth - 60 })
 
       doc.end()
     } catch (error) {
