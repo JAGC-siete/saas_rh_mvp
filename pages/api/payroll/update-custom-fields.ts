@@ -46,10 +46,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Build metadata
     const metadata = buildPayrollMetadata(companyId, custom_fields)
 
-    // Get existing payroll line
+    // Get existing payroll line (include effective statutory deductions to recompute net)
     const { data: existingLine, error: lineError } = await supabase
       .from('payroll_run_lines')
-      .select('metadata, eff_bruto, eff_neto')
+      .select('metadata, eff_bruto, eff_neto, eff_ihss, eff_rap, eff_isr')
       .eq('id', run_line_id)
       .eq('company_id', companyId)
       .single()
@@ -83,12 +83,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       (metadata.otras_deducciones_medicamentos || 0) +
       (metadata.otras_deducciones_efectivo || 0)
 
-    // Update payroll line with new metadata
+    // Compute new effective amounts using additional ingresos/deducciones
+    const baseEffBruto = Number(existingLine.eff_bruto) || 0
+    const effIHSS = Number((existingLine as any).eff_ihss) || 0
+    const effRAP = Number((existingLine as any).eff_rap) || 0
+    const effISR = Number((existingLine as any).eff_isr) || 0
+    const statutoryDeductions = effIHSS + effRAP + effISR
+
+    const newEffBruto = Math.round((baseEffBruto + ingresosAdicionales) * 100) / 100
+    const newEffNeto = Math.round((newEffBruto - statutoryDeductions - deduccionesAdicionales) * 100) / 100
+
+    // Update payroll line with new metadata and recalculated effective totals
     const { error: updateError } = await supabase
       .from('payroll_run_lines')
       .update({
         metadata: mergedMetadata,
         edited: true,
+        eff_bruto: newEffBruto,
+        eff_neto: newEffNeto,
         updated_at: new Date().toISOString()
       })
       .eq('id', run_line_id)
@@ -108,7 +120,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       success: true,
       message: 'Campos personalizados actualizados exitosamente',
       ingresos_adicionales: ingresosAdicionales,
-      deducciones_adicionales: deduccionesAdicionales
+      deducciones_adicionales: deduccionesAdicionales,
+      eff_bruto: newEffBruto,
+      eff_neto: newEffNeto
     })
 
   } catch (error: any) {

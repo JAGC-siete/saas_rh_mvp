@@ -85,14 +85,44 @@ export async function fetchUnifiedPayroll(
     
     console.log('🔍 DEBUG - Planilla data sample:', planilla.slice(0, 3));
 
-    // Convert planilla data to unified format
-    const rows: UnifiedRow[] = planilla.map(p => ({
+    // Convert planilla data to unified format (base rows without metadata)
+    let rows: UnifiedRow[] = planilla.map(p => ({
       ...p,
       horas_trabajadas: 0,
       extras: { horas: 0, monto: 0 },
       observaciones: '',
       status: 'completo' as const
     }));
+
+    // If we have a run_id, fetch run lines to enrich rows with metadata
+    if (planillaData.run_id) {
+      try {
+        const linesRes = await fetch(`/api/payroll/run-lines?run_id=${encodeURIComponent(planillaData.run_id)}&_t=${timestamp}`)
+        if (linesRes.ok) {
+          const { lines } = await linesRes.json()
+          // Build quick lookup by line_id and by employee_id
+          const byLineId: Record<string, any> = {}
+          const byEmployee: Record<string, any> = {}
+          ;(lines || []).forEach((l: any) => {
+            if (l?.id) byLineId[l.id] = l
+            if (l?.employee_id) byEmployee[l.employee_id] = l
+          })
+
+          // Merge metadata into rows
+          rows = rows.map((r) => {
+            const line = (r as any).line_id ? byLineId[(r as any).line_id as string] : byEmployee[r.employee_id]
+            if (line && line.metadata) {
+              return { ...r, ...(line.metadata ? { metadata: line.metadata } : {}) } as any
+            }
+            return r
+          })
+        } else {
+          console.warn('No se pudo cargar run-lines para metadata:', linesRes.status)
+        }
+      } catch (e) {
+        console.warn('Error cargando run-lines:', e)
+      }
+    }
 
     // Calculate summary
     const resumen = rows.reduce((acc, r) => {
