@@ -125,10 +125,37 @@ async function generateWorkCertificateData(
       employeeQuery = employeeQuery.eq('company_id', companyId)
     }
 
-    const { data: employee, error: empError } = await employeeQuery.single()
+    let { data: employee, error: empError } = await employeeQuery.single()
 
-    if (empError || !employee) {
-      console.error('Error obteniendo empleado:', empError)
+    // Fallback: si no se encuentra y el rol es admin, intentar sin filtro de empresa
+    if ((empError || !employee) && role !== 'super_admin' && companyId) {
+      const { data: fallbackEmp, error: fallbackErr } = await supabase
+        .from('employees')
+        .select(`
+          id,
+          name,
+          email,
+          employee_code,
+          dni,
+          position,
+          hire_date,
+          termination_date,
+          base_salary,
+          status,
+          company_id,
+          departments(name),
+          companies(name)
+        `)
+        .eq('id', employeeId)
+        .single()
+
+      if (!fallbackErr && fallbackEmp) {
+        employee = fallbackEmp
+      }
+    }
+
+    if (!employee) {
+      console.error('Empleado no encontrado para constancia (id=', employeeId, ')')
       return null
     }
 
