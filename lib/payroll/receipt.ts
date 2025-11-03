@@ -35,7 +35,7 @@ export async function generateEmployeeReceiptPDF(
         margin: 30,
         info: {
           Title: `Recibo de Nómina - ${record.employee_name || 'Empleado'} - ${periodo} Q${quincena}`,
-          Author: 'Sistema de Recursos Humanos',
+          Author: 'Sistema Hondureño de Recursos Humanos',
           Subject: 'Recibo de Nómina Individual',
           Keywords: 'recibo, nómina, empleado, Paragon, Honduras',
           Creator: 'HR SaaS System'
@@ -54,12 +54,12 @@ export async function generateEmployeeReceiptPDF(
       })
 
       // Header
-      doc.rect(0, 0, 595, 80).fill('#1e40af')
+      doc.rect(0, 0, 595, 80).fill('#0b4fa1')
       doc.fillColor('white')
-      doc.fontSize(20).text('PARAGON HONDURAS', 30, 15, { align: 'center', width: 535 })
-      doc.fontSize(14).text('RECIBO DE NÓMINA QUINCENAL', 30, 40, { align: 'center', width: 535 })
-      doc.fontSize(12).text(`${periodo} - Quincena ${quincena}`, 30, 60, { align: 'center', width: 535 })
-      doc.fillColor('black')
+      doc.fontSize(18).text('SISTEMA HONDUREÑO DE RECURSOS HUMANOS', 30, 16, { align: 'center', width: 535 })
+      doc.fontSize(12).text('Recibo de Nómina Quincenal', 30, 38, { align: 'center', width: 535 })
+      doc.fontSize(11).text(`${periodo} • Quincena ${quincena}`, 30, 56, { align: 'center', width: 535 })
+      doc.fillColor('#0f172a')
 
       // Employee info
       doc.fontSize(12).text('INFORMACIÓN DEL EMPLEADO:', 30, 100)

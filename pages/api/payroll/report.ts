@@ -91,7 +91,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const pdf = await generateConsolidatedPayrollPDF(planilla, periodo, Number(quincena), user.email)
     res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', `attachment; filename=planilla_paragon_${periodo}_q${quincena}.pdf`)
+    res.setHeader('Content-Disposition', `attachment; filename=planilla_${periodo}_q${quincena}.pdf`)
     return res.send(pdf)
   } catch (error) {
     console.error('Error generando reporte PDF:', error)

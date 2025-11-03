@@ -38,11 +38,11 @@ export async function generateConsolidatedPayrollPDF(
       const PDFDocument = require('pdfkit')
       const doc = new PDFDocument({
         size: 'A4',
-        layout: 'portrait',
+        layout: 'landscape',
         margin: 30,
         info: {
           Title: `Planilla Quincenal - ${periodo} Q${quincena}`,
-          Author: 'Sistema de Recursos Humanos',
+          Author: 'Sistema Hondureño de Recursos Humanos',
           Subject: 'Nómina Quincenal',
           Keywords: 'nómina, planilla, Paragon, Honduras',
           Creator: 'HR SaaS System'
@@ -61,25 +61,21 @@ export async function generateConsolidatedPayrollPDF(
       })
 
       // ===== PAGE 1: HEADER & EXEC SUMMARY =====
-      doc.rect(0, 0, 595, 100).fill('#1e40af')
+      const pageWidth = doc.page.width
+      doc.rect(0, 0, pageWidth, 90).fill('#0b4fa1')
       doc.fillColor('white')
-      doc.fontSize(24).text('PARAGON HONDURAS', 30, 20, { align: 'center', width: 535 })
-      doc.fontSize(16).text('Sistema de Recursos Humanos', 30, 50, { align: 'center', width: 535 })
-      doc.fontSize(14).text(`PLANILLA QUINCENAL - ${periodo} Q${quincena}`, 30, 75, { align: 'center', width: 535 })
+      doc.fontSize(22).text('SISTEMA HONDUREÑO DE RECURSOS HUMANOS', 30, 20, { align: 'center', width: pageWidth - 60 })
+      doc.fontSize(13).text('Planilla Quincenal', 30, 46, { align: 'center', width: pageWidth - 60 })
+      doc.fontSize(12).text(`${periodo} • Quincena ${quincena}`, 30, 66, { align: 'center', width: pageWidth - 60 })
 
-      doc.fillColor('black')
-      doc.fontSize(10).text('INFORMACIÓN DE LA EMPRESA:', 30, 120)
-      doc.fontSize(9).text('Paragon Honduras', 30, 135)
-      doc.fontSize(9).text('Dirección: Tegucigalpa, Honduras', 30, 150)
-      doc.fontSize(9).text('Teléfono: +504 XXXX-XXXX', 30, 165)
-      doc.fontSize(9).text('Email: info@paragonhonduras.com', 30, 180)
-
-      doc.fontSize(10).text('INFORMACIÓN DEL PERÍODO:', 300, 120)
-      doc.fontSize(9).text(`Período: ${periodo}`, 300, 135)
-      doc.fontSize(9).text(`Quincena: ${quincena === 1 ? 'Primera (1-15)' : 'Segunda (16-fin de mes)'}`, 300, 150)
-      doc.fontSize(9).text(`Fecha de generación: ${formatDateForHonduras(nowInHonduras())}`, 300, 165)
+      // Body base styles
+      doc.fillColor('#0f172a')
+      doc.fontSize(11).text('INFORMACIÓN DEL PERÍODO:', 30, 110)
+      doc.fontSize(10).text(`Período: ${periodo}`, 30, 126)
+      doc.fontSize(10).text(`Quincena: ${quincena === 1 ? 'Primera (1-15)' : 'Segunda (16-fin de mes)'}`, 30, 142)
+      doc.fontSize(10).text(`Fecha de generación: ${formatDateForHonduras(nowInHonduras())}`, 30, 158)
       if (generatedByEmail) {
-        doc.fontSize(9).text(`Generado por: ${generatedByEmail}`, 300, 180)
+        doc.fontSize(10).text(`Generado por: ${generatedByEmail}`, 30, 174)
       }
 
       const totalGross = planilla.reduce((sum, row) => sum + row.total_earnings, 0)
@@ -87,16 +83,16 @@ export async function generateConsolidatedPayrollPDF(
       const totalNet = planilla.reduce((sum, row) => sum + row.total, 0)
       const totalEmployees = planilla.length
 
-      doc.rect(30, 200, 535, 80).stroke()
-      doc.fontSize(12).text('RESUMEN EJECUTIVO', 35, 210)
-      doc.fontSize(10).text('Total Empleados:', 40, 230)
-      doc.fontSize(10).text(totalEmployees.toString(), 200, 230)
-      doc.fontSize(10).text('Total Salario Bruto:', 40, 245)
-      doc.fontSize(10).text(`L. ${totalGross.toFixed(2)}`, 200, 245)
-      doc.fontSize(10).text('Total Deducciones:', 40, 260)
-      doc.fontSize(10).text(`L. ${totalDeductions.toFixed(2)}`, 200, 260)
-      doc.fontSize(10).text('Total Salario Neto:', 40, 275)
-      doc.fontSize(10).text(`L. ${totalNet.toFixed(2)}`, 200, 275)
+      doc.rect(30, 200, pageWidth - 60, 90).stroke()
+      doc.fontSize(12).text('RESUMEN EJECUTIVO', 40, 210)
+      doc.fontSize(10).text('Total Empleados:', 45, 232)
+      doc.fontSize(10).text(totalEmployees.toString(), 200, 232)
+      doc.fontSize(10).text('Total Salario Bruto:', 45, 248)
+      doc.fontSize(10).text(`L. ${totalGross.toFixed(2)}`, 200, 248)
+      doc.fontSize(10).text('Total Deducciones:', 45, 264)
+      doc.fontSize(10).text(`L. ${totalDeductions.toFixed(2)}`, 200, 264)
+      doc.fontSize(10).text('Total Salario Neto:', 45, 280)
+      doc.fontSize(10).text(`L. ${totalNet.toFixed(2)}`, 200, 280)
 
       const deptTotals: { [key: string]: { count: number, gross: number, net: number } } = {}
       planilla.forEach((row) => {
@@ -108,41 +104,42 @@ export async function generateConsolidatedPayrollPDF(
         deptTotals[dept].gross += row.total_earnings
         deptTotals[dept].net += row.total
       })
-      doc.fontSize(10).text('TOTALES POR DEPARTAMENTO:', 300, 230)
+      doc.fontSize(10).text('TOTALES POR DEPARTAMENTO:', 360, 232)
       let deptY = 245
       Object.entries(deptTotals).forEach(([dept, totals]) => {
         if (deptY < 275) {
-          doc.fontSize(9).text(`${dept}: ${totals.count} emp. - L. ${totals.net.toFixed(2)}`, 300, deptY)
+          doc.fontSize(9).text(`${dept}: ${totals.count} emp. - L. ${totals.net.toFixed(2)}`, 360, deptY)
           deptY += 12
         }
       })
 
       // ===== PAGE 2: PAYROLL TABLE =====
       doc.addPage()
-      doc.fontSize(14).text('DETALLE DE NÓMINA POR EMPLEADO', 30, 30, { align: 'center', width: 535 })
+      const tablePageWidth = doc.page.width
+      doc.fontSize(14).fillColor('#0f172a').text('DETALLE DE NÓMINA POR EMPLEADO', 30, 24, { align: 'center', width: tablePageWidth - 60 })
 
       const headers = ['Código', 'Nombre', 'Departamento', 'Días Trab.', 'Salario Base', 'Devengado', 'IHSS', 'RAP', 'ISR', 'Deducciones', 'Neto']
-      const colWidths = [40, 80, 60, 35, 50, 50, 35, 35, 35, 50, 50]
-      const startX = 30
-      let y = 70
-      const rowHeight = 15
+      const colWidths = [58, 116, 88, 51, 73, 73, 51, 51, 51, 73, 73]
+      const startX = 40
+      let y = 60
+      const rowHeight = 17
 
       headers.forEach((h, i) => {
         const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0)
-        doc.rect(x, y, colWidths[i], rowHeight).fillAndStroke('#1e40af', '#000')
+        doc.rect(x, y, colWidths[i], rowHeight).fillAndStroke('#0b4fa1', '#0f172a')
         doc.fillColor('white')
-        doc.fontSize(8).text(h, x + 2, y + 4, { width: colWidths[i] - 4, align: 'center' })
-        doc.fillColor('black')
+        doc.fontSize(9).text(h, x + 2, y + 4, { width: colWidths[i] - 4, align: 'center' })
+        doc.fillColor('#0f172a')
       })
       y += rowHeight
 
       let pageCount = 1
       planilla.forEach((row) => {
-        if (y > 750) {
+        if (y > doc.page.height - 60) {
           doc.addPage()
-          y = 30
+          y = 40
           pageCount++
-          doc.fontSize(10).text(`Página ${pageCount} - Continuación`, 30, 15)
+          doc.fontSize(10).fillColor('#475569').text(`Página ${pageCount} - Continuación`, 40, 20)
         }
         const values = [
           row.id || '',
@@ -160,42 +157,44 @@ export async function generateConsolidatedPayrollPDF(
         values.forEach((val, i) => {
           const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0)
           doc.rect(x, y, colWidths[i], rowHeight).stroke()
-          doc.fontSize(7).text(val.toString(), x + 2, y + 4, { width: colWidths[i] - 4, align: 'center' })
+          doc.fontSize(9).fillColor('#0f172a').text(val.toString(), x + 2, y + 4, { width: colWidths[i] - 4, align: 'center' })
         })
         y += rowHeight
       })
 
-      y += 5
-      doc.rect(startX, y, 535, rowHeight).fillAndStroke('#f3f4f6', '#000')
-      doc.fontSize(9).text('TOTALES:', startX + 5, y + 4)
-      doc.fontSize(9).text(`L. ${totalGross.toFixed(2)}`, startX + 200, y + 4)
-      doc.fontSize(9).text(`L. ${totalDeductions.toFixed(2)}`, startX + 350, y + 4)
-      doc.fontSize(9).text(`L. ${totalNet.toFixed(2)}`, startX + 450, y + 4)
+      y += 6
+      const totalsWidth = colWidths.reduce((a, b) => a + b, 0)
+      doc.rect(startX, y, totalsWidth, rowHeight).fillAndStroke('#f3f4f6', '#0f172a')
+      doc.fontSize(10).fillColor('#0f172a').text('TOTALES:', startX + 6, y + 5)
+      doc.fontSize(10).text(`L. ${totalGross.toFixed(2)}`, startX + totalsWidth * 0.45, y + 5)
+      doc.fontSize(10).text(`L. ${totalDeductions.toFixed(2)}`, startX + totalsWidth * 0.65, y + 5)
+      doc.fontSize(10).text(`L. ${totalNet.toFixed(2)}`, startX + totalsWidth * 0.82, y + 5)
 
       // ===== PAGE 3: BANK DETAILS & NOTES =====
       doc.addPage()
-      doc.fontSize(14).text('INFORMACIÓN BANCARIA Y NOTAS', 30, 30, { align: 'center', width: 535 })
+      const bankPageWidth = doc.page.width
+      doc.fontSize(14).fillColor('#0f172a').text('INFORMACIÓN BANCARIA Y NOTAS', 30, 24, { align: 'center', width: bankPageWidth - 60 })
 
       doc.fontSize(10).text('DETALLE BANCARIO PARA TRANSFERENCIAS:', 30, 60)
       const bankHeaders = ['Código', 'Nombre', 'Banco', 'Cuenta', 'Monto Neto']
-      const bankColWidths = [40, 120, 80, 100, 80]
-      const bankStartX = 30
-      let bankY = 80
-      const bankRowHeight = 15
+      const bankColWidths = [70, 210, 120, 180, 120]
+      const bankStartX = 40
+      let bankY = 60
+      const bankRowHeight = 17
 
       bankHeaders.forEach((h, i) => {
         const x = bankStartX + bankColWidths.slice(0, i).reduce((a, b) => a + b, 0)
-        doc.rect(x, bankY, bankColWidths[i], bankRowHeight).fillAndStroke('#1e40af', '#000')
+        doc.rect(x, bankY, bankColWidths[i], bankRowHeight).fillAndStroke('#0b4fa1', '#0f172a')
         doc.fillColor('white')
-        doc.fontSize(8).text(h, x + 2, bankY + 4, { width: bankColWidths[i] - 4, align: 'center' })
-        doc.fillColor('black')
+        doc.fontSize(9).text(h, x + 2, bankY + 4, { width: bankColWidths[i] - 4, align: 'center' })
+        doc.fillColor('#0f172a')
       })
       bankY += bankRowHeight
 
       planilla.forEach((row) => {
-        if (bankY > 750) {
+        if (bankY > doc.page.height - 60) {
           doc.addPage()
-          bankY = 30
+          bankY = 40
         }
         const bankValues = [
           row.id || '',
@@ -207,20 +206,20 @@ export async function generateConsolidatedPayrollPDF(
         bankValues.forEach((val, i) => {
           const x = bankStartX + bankColWidths.slice(0, i).reduce((a, b) => a + b, 0)
           doc.rect(x, bankY, bankColWidths[i], bankRowHeight).stroke()
-          doc.fontSize(8).text(val.toString(), x + 2, bankY + 4, { width: bankColWidths[i] - 4, align: 'center' })
+          doc.fontSize(9).fillColor('#0f172a').text(val.toString(), x + 2, bankY + 4, { width: bankColWidths[i] - 4, align: 'center' })
         })
         bankY += bankRowHeight
       })
 
-      doc.fontSize(10).text('NOTAS IMPORTANTES:', 30, bankY + 20)
-      doc.fontSize(9).text('• Esta planilla ha sido generada automáticamente por el sistema de recursos humanos.', 30, bankY + 35)
-      doc.fontSize(9).text('• Los montos están calculados según la legislación laboral de Honduras.', 30, bankY + 50)
-      doc.fontSize(9).text('• Las deducciones incluyen: IHSS, RAP, ISR (según tabla progresiva).', 30, bankY + 65)
-      doc.fontSize(9).text('• Verificar que la información bancaria sea correcta antes de procesar pagos.', 30, bankY + 80)
-      doc.fontSize(9).text('• Para consultas, contactar al departamento de recursos humanos.', 30, bankY + 95)
+      doc.fontSize(10).fillColor('#0f172a').text('NOTAS IMPORTANTES:', 40, bankY + 22)
+      doc.fontSize(9).fillColor('#334155').text('• Esta planilla ha sido generada automáticamente por el Sistema Hondureño de Recursos Humanos.', 40, bankY + 38)
+      doc.fontSize(9).text('• Los montos están calculados según la legislación laboral de Honduras.', 40, bankY + 53)
+      doc.fontSize(9).text('• Las deducciones incluyen: IHSS, RAP, ISR (según tabla progresiva).', 40, bankY + 68)
+      doc.fontSize(9).text('• Verificar que la información bancaria sea correcta antes de procesar pagos.', 40, bankY + 83)
+      doc.fontSize(9).text('• Para consultas, contactar al departamento de recursos humanos.', 40, bankY + 98)
 
-      doc.fontSize(8).text('Documento generado automáticamente - Paragon Honduras - Sistema de Recursos Humanos', 30, 800, { align: 'center', width: 535 })
-      doc.fontSize(8).text(`Fecha de generación: ${formatDateTimeForHonduras(nowInHonduras())}`, 30, 815, { align: 'center', width: 535 })
+      doc.fontSize(8).fillColor('#64748b').text('Documento generado automáticamente — Sistema Hondureño de Recursos Humanos', 40, doc.page.height - 35, { align: 'center', width: bankPageWidth - 80 })
+      doc.fontSize(8).text(`Fecha de generación: ${formatDateTimeForHonduras(nowInHonduras())}`, 40, doc.page.height - 20, { align: 'center', width: bankPageWidth - 80 })
 
       doc.end()
     } catch (error) {
