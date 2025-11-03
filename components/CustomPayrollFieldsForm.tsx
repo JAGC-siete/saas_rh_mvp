@@ -8,6 +8,7 @@ interface CustomPayrollFieldsFormProps {
   companyId: string
   runLineId: string
   currentMetadata?: any
+  baseSalary: number
   onSave: (metadata: any) => Promise<void>
   onCancel: () => void
 }
@@ -16,6 +17,7 @@ export default function CustomPayrollFieldsForm({
   companyId,
   runLineId,
   currentMetadata = {},
+  baseSalary,
   onSave,
   onCancel
 }: CustomPayrollFieldsFormProps) {
@@ -44,7 +46,19 @@ export default function CustomPayrollFieldsForm({
     setSaving(true)
 
     try {
-      const metadata = buildPayrollMetadata(companyId, formData)
+      // Convert units to Lempiras where applicable
+      const hourlyRate = (Number(baseSalary) || 0) / 30 / 8
+      const converted: any = { ...formData }
+      if (converted.horas_extras !== undefined && converted.horas_extras !== null) {
+        const hours = Number(converted.horas_extras) || 0
+        converted.horas_extras = Math.round(hours * hourlyRate * 100) / 100
+      }
+      if (converted.feriado_trabajado !== undefined && converted.feriado_trabajado !== null) {
+        const days = Number(converted.feriado_trabajado) || 0
+        converted.feriado_trabajado = Math.round(days * 8 * hourlyRate * 100) / 100
+      }
+
+      const metadata = buildPayrollMetadata(companyId, converted)
       await onSave(metadata)
     } catch (error) {
       console.error('Error saving custom fields:', error)
@@ -78,8 +92,14 @@ export default function CustomPayrollFieldsForm({
     !key.includes('pausa')
   )
 
-  // Calculate totals
-  const totalIngresos = earningsFields.reduce((sum, key) => sum + (formData[key] || 0), 0)
+  // Calculate totals (convert hours/days to Lempiras for display)
+  const hourlyRate = (Number(baseSalary) || 0) / 30 / 8
+  const totalIngresos = earningsFields.reduce((sum, key) => {
+    const val = Number(formData[key] || 0)
+    if (key.includes('horas_extras')) return sum + val * hourlyRate
+    if (key.includes('feriado')) return sum + val * 8 * hourlyRate
+    return sum + val
+  }, 0)
   const totalDeducciones = deductionsFields.reduce((sum, key) => sum + (formData[key] || 0), 0)
 
   return (

@@ -16,7 +16,7 @@ interface UnifiedPayrollTableProps {
   onAuthorize: () => void
   onGeneratePDF: () => void
   onSendEmail: () => void
-  onEditCustomFields?: (lineId: string, metadata: any) => void
+  onEditCustomFields?: (lineId: string, metadata: any, baseSalary: number) => void
   loading?: boolean
   canAuthorize?: boolean
   canSend?: boolean
@@ -269,7 +269,7 @@ export default function UnifiedPayrollTable({
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => onEditCustomFields?.(row.line_id || row.employee_id, (row as any).metadata)}
+                              onClick={() => onEditCustomFields?.(row.line_id || row.employee_id, (row as any).metadata, row.base_salary || 0)}
                               disabled={loading}
                               className="bg-white/10 border-white/30 text-white hover:bg-white/20"
                               title="Editar campos personalizados"

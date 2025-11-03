@@ -15,6 +15,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
   const [showCustomFieldsModal, setShowCustomFieldsModal] = useState(false)
   const [selectedLineId, setSelectedLineId] = useState<string>('')
   const [selectedMetadata, setSelectedMetadata] = useState<any>(null)
+  const [selectedBaseSalary, setSelectedBaseSalary] = useState<number>(0)
   
   // Debug logging para verificar el companyId
   useEffect(() => {
@@ -94,9 +95,10 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
   }
 
   // Handle edit custom fields
-  const handleEditCustomFields = (lineId: string, metadata: any) => {
+  const handleEditCustomFields = (lineId: string, metadata: any, baseSalary: number) => {
     setSelectedLineId(lineId)
     setSelectedMetadata(metadata)
+    setSelectedBaseSalary(baseSalary || 0)
     setShowCustomFieldsModal(true)
   }
 
@@ -329,6 +331,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
                 companyId={payroll.companyId || ''}
                 runLineId={selectedLineId}
                 currentMetadata={selectedMetadata}
+                baseSalary={selectedBaseSalary}
                 onSave={handleSaveCustomFields}
                 onCancel={() => setShowCustomFieldsModal(false)}
               />
