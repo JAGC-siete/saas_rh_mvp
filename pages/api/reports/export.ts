@@ -25,7 +25,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   try {
     // Autenticación usando el mismo método que payroll
-    const { supabase, companyId, role, user, userProfile } = await requireCompanyAccess(req, res)
+    const { supabase, companyId, role, user } = await requireCompanyAccess(req, res)
     
     // Verificar permisos (solo admins y HR managers pueden generar reportes)
     if (!['super_admin', 'company_admin', 'hr_manager'].includes(role)) {
@@ -440,7 +440,7 @@ function generatePDFReport(res: NextApiResponse, reportData: ReportData, dateFil
   }
 }
 
-function generateCSVReport(res: NextApiResponse, reportData: ReportData, dateFilter: any, reportType?: string) {
+function generateCSVReport(res: NextApiResponse, reportData: ReportData, dateFilter: any, _reportType?: string) {
   try {
     // Generar CSV con múltiples secciones
     let csvContent = ''
@@ -464,7 +464,6 @@ function generateCSVReport(res: NextApiResponse, reportData: ReportData, dateFil
     // Lista de empleados
     csvContent += 'LISTA DE EMPLEADOS\n'
     csvContent += 'Código,Nombre,Departamento,Salario Base,Estado\n'
-    const formatHNL = (n: number) => `L. ${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
     reportData.employees.forEach((emp: any) => {
       csvContent += `${emp.dni || emp.id},"${emp.name}",${emp.department_id || 'Sin Departamento'},${formatHNL(emp.base_salary || 0)},${emp.status}\n`
     })
@@ -859,7 +858,7 @@ async function generateAttendancePDF(res: NextApiResponse, reportData: any, date
   }, dateFilter, companyName)
 }
 
-async function generatePayrollPDF(res: NextApiResponse, reportData: any, dateFilter: any, companyName?: string) {
+async function generatePayrollPDF(res: NextApiResponse, _reportData: any, _dateFilter: any, _companyName?: string) {
   // Implementar PDF específico para nómina si se necesita
   return res.status(400).json({ error: 'PDF de nómina use /api/payroll/report' })
 }
