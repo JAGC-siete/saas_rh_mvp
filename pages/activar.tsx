@@ -132,21 +132,35 @@ export default function ActivarPage() {
                 <CheckCircleIcon className="h-12 w-12 text-green-400" />
               </div>
               <h1 className="text-4xl font-bold text-white mb-4">
-                ¡Solicitud recibida, {formData.nombre || 'Equipo'}!
+                ¡Tu entorno está siendo creado, {formData.nombre || 'Equipo'}!
               </h1>
               <p className="text-xl text-brand-300 mb-8">
-                Estamos creando tu entorno de RH con datos de prueba. Te enviaremos acceso por email{formData.contactoWhatsApp && formData.contactoWhatsApp.trim() ? ' y WhatsApp' : ''}. Empezamos con asistencia y planilla. Sin tarjeta. Sin compromiso.
+                Estamos configurando automáticamente tu empresa <strong>{formData.empresa}</strong> con {formData.departamentos} departamento{formData.departamentos > 1 ? 's' : ''} y {formData.empleados} empleado{formData.empleados > 1 ? 's' : ''} de prueba. En unos segundos recibirás un email con tus credenciales de acceso para iniciar sesión inmediatamente.
               </p>
             </div>
 
             <Card variant="glass" className="mb-8">
               <CardContent className="p-8">
                 <h2 className="text-2xl font-bold text-white mb-4">
-                  Garantía: 24 horas o trabajo gratis hasta dejarlo andando
+                  ¿Qué recibirás en tu email?
                 </h2>
-                <p className="text-lg text-brand-300 mb-6">
-                  Si en tu caso necesitamos más ajustes, seguimos trabajando sin costo adicional hasta que tu proceso quede funcionando.
-                </p>
+                <div className="space-y-3 mb-6">
+                  <p className="text-lg text-brand-300">
+                    📧 <strong>Tu email de acceso:</strong> {formData.contactoEmail}
+                  </p>
+                  <p className="text-lg text-brand-300">
+                    🔑 <strong>Tu contraseña temporal:</strong> Se generará automáticamente y la recibirás en el correo
+                  </p>
+                  <p className="text-lg text-brand-300">
+                    🚀 <strong>Enlace directo:</strong> Para iniciar sesión inmediatamente
+                  </p>
+                </div>
+                <div className="bg-brand-500/10 border border-brand-500/30 rounded-lg p-4 mt-6">
+                  <p className="text-white font-semibold mb-2">Garantía: 24 horas o trabajo gratis</p>
+                  <p className="text-sm text-brand-300">
+                    Si necesitamos más ajustes, seguimos trabajando sin costo adicional hasta que tu proceso quede funcionando.
+                  </p>
+                </div>
                 <div className="grid md:grid-cols-2 gap-4 max-w-md mx-auto">
                   <div className="text-center">
                     <p className="text-sm text-brand-300">WhatsApp</p>
@@ -158,7 +172,7 @@ export default function ActivarPage() {
                   </div>
                 </div>
                 <p className="text-sm text-brand-400 text-center mt-6">
-                  Solo email requerido. 
+                  Revisa tu correo en los próximos minutos. Si no lo recibes, revisa spam o contáctanos.
                 </p>
               </CardContent>
             </Card>
@@ -182,7 +196,7 @@ export default function ActivarPage() {
         <meta name="twitter:title" content="Servicio Hondureño de Recursos Humanos | Digital & Automatizado" />
         <meta
           name="description"
-          content="Automatizo tu asistencia y planilla en 24 horas o trabajo gratis hasta dejarlo funcionando. Solo email para empezar. Sin tarjeta."
+          content="Crea tu entorno de RH completo en minutos. Empresa, departamentos, horarios y empleados de prueba configurados automáticamente. Acceso inmediato con credenciales por email. Sin tarjeta."
         />
       </Head>
 
@@ -196,11 +210,11 @@ export default function ActivarPage() {
           </Link>
           
           <h1 className="text-5xl font-bold text-white mb-6">
-            Automatizo tu planilla en 24 horas<br className="hidden md:block" />
-            <span className="text-brand-300">o trabajo gratis hasta lograrlo</span>
+            Tu entorno de RH listo en minutos<br className="hidden md:block" />
+            <span className="text-brand-300">con empleados y departamentos configurados</span>
           </h1>
           <p className="text-2xl text-brand-300 mb-8">
-            Empieza con tu email. Recibes un entorno de prueba gratuito. Sin tarjeta. Sin compromiso.
+            Completa el formulario y recibe acceso inmediato. Tu empresa, departamentos, horarios y empleados ya estarán creados. Sin tarjeta. Sin compromiso.
           </p>
         </div>
 
@@ -209,8 +223,11 @@ export default function ActivarPage() {
           <Card variant="glass">
             <CardContent className="p-8">
               <h2 className="text-2xl font-bold text-white mb-6 text-center">
-                Activa tu sistema 
+                Configura tu entorno de prueba
               </h2>
+              <p className="text-brand-300 text-center mb-6">
+                Con esta información crearemos automáticamente tu empresa, departamentos, horarios de trabajo y empleados de prueba.
+              </p>
 
               <div className="space-y-6">
                 {/* Company Name */}
@@ -277,7 +294,7 @@ export default function ActivarPage() {
                       {errors.contactoEmail}
                     </p>
                   )}
-                  <p className="text-brand-400 text-sm mt-2">Te enviaremos las credenciales aquí</p>
+                  <p className="text-brand-400 text-sm mt-2">Te enviaremos tu email y contraseña de acceso aquí</p>
                 </div>
 
                 {/* Employee Count */}
@@ -301,7 +318,8 @@ export default function ActivarPage() {
                         min="1"
                         required
                       />
-                      <p className="text-brand-400 text-sm mt-2">empleados</p>
+                      <p className="text-brand-400 text-sm mt-2">empleados de prueba</p>
+                      <p className="text-brand-400 text-xs mt-1">Se crearán automáticamente con datos de ejemplo</p>
                     </div>
                     
                     <button
@@ -337,6 +355,7 @@ export default function ActivarPage() {
                         required
                       />
                       <p className="text-brand-400 text-sm mt-2">departamentos</p>
+                      <p className="text-brand-400 text-xs mt-1">Se crearán automáticamente con nombres por defecto</p>
                       {errors.departamentos && (
                         <p className="text-red-400 text-xs mt-1">{errors.departamentos}</p>
                       )}
@@ -361,9 +380,9 @@ export default function ActivarPage() {
                     className="mt-1 w-5 h-5 text-brand-600 bg-brand-600/20 border-brand-500 rounded focus:ring-brand-500 focus:ring-2"
                   />
                   <label htmlFor="acepta-trial" className="text-white text-sm leading-relaxed">
-                    Deseo automatizar mi RRHH en 24 horas. Sin costo.
+                    Deseo crear mi entorno de prueba ahora. Recibiré acceso inmediato con empleados y departamentos configurados.
                   </label>
-                  <p className="text-brand-400 text-xs mt-2 ml-8">Usalo por 30 días sin compromiso</p>
+                  <p className="text-brand-400 text-xs mt-2 ml-8">Trial de 7 días. Sin costo. Sin compromiso.</p>
                 </div>
 
                 {/* Submit Button */}
@@ -375,11 +394,11 @@ export default function ActivarPage() {
                   {isLoading ? (
                     <>
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                      Automatizando tu operación de RRHH...
+                      Creando tu entorno completo...
                     </>
                   ) : (
                     <>
-                      <RocketLaunchIcon className="h-5 w-5 mr-2" /> Automatíza mi operación en 24 horas
+                      <RocketLaunchIcon className="h-5 w-5 mr-2" /> Crear mi entorno de prueba ahora
                     </>
                   )}
                 </button>
@@ -391,7 +410,7 @@ export default function ActivarPage() {
                 )}
                 
                 <p className="text-brand-400 text-xs text-center">
-                  Sin tarjeta. Puedes cancelar cuando quieras. Empezamos con asistencia y planilla; vouchers se habilitan al pasar a plan.
+                  Recibirás acceso inmediato por email con credenciales. Tu entorno vendrá con empleados de prueba, departamentos y horarios ya configurados. Sin tarjeta. Puedes cancelar cuando quieras.
                 </p>
               </div>
             </CardContent>
@@ -496,8 +515,8 @@ export default function ActivarPage() {
                 <div className="w-12 h-12 bg-purple-500/20 rounded-full flex items-center justify-center mb-3 mx-auto">
                   <UserGroupIcon className="h-6 w-6 text-purple-400" />
                 </div>
-                <p className="font-medium text-white">Onboarding simple</p>
-                <p className="text-sm text-brand-300">Solo email para empezar</p>
+                <p className="font-medium text-white">Entorno completo</p>
+                <p className="text-sm text-brand-300">Empleados, departamentos y horarios listos</p>
               </CardContent>
             </Card>
           </div>
