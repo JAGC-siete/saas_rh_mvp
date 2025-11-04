@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { ArrowLeftIcon, CheckCircleIcon, ClockIcon, CurrencyDollarIcon, ShieldCheckIcon, UserGroupIcon, DocumentTextIcon, RocketLaunchIcon } from '@heroicons/react/24/outline'
 import dynamic from 'next/dynamic'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
+import { TRIAL_CONFIG } from '../lib/config/trial'
 
 interface FormData {
   empleados: number
@@ -19,6 +20,9 @@ interface ValidationErrors {
   contactoEmail?: string
   empresa?: string
   departamentos?: string
+  contactoWhatsApp?: string
+  empleados?: string
+  submit?: string
 }
 
 export default function ActivarPage() {
@@ -36,11 +40,15 @@ export default function ActivarPage() {
   })
 
   const handleEmpleadosChange = (value: number) => {
-    setFormData(prev => ({ ...prev, empleados: Math.max(1, value) }))
+    const newValue = Math.max(TRIAL_CONFIG.MIN_EMPLOYEES, Math.min(TRIAL_CONFIG.MAX_EMPLOYEES, value))
+    setFormData(prev => ({ ...prev, empleados: newValue }))
+    validateField('empleados', newValue)
   }
 
   const handleDepartamentosChange = (value: number) => {
-    setFormData(prev => ({ ...prev, departamentos: Math.max(1, value) }))
+    const newValue = Math.max(TRIAL_CONFIG.MIN_DEPARTMENTS, Math.min(TRIAL_CONFIG.MAX_DEPARTMENTS, value))
+    setFormData(prev => ({ ...prev, departamentos: newValue }))
+    validateField('departamentos', newValue)
   }
 
   const validateField = (field: keyof FormData, value: string | boolean | number) => {
@@ -48,21 +56,63 @@ export default function ActivarPage() {
     switch (field) {
       case 'contactoEmail': {
         const v = (typeof value === 'string' ? value : '').trim()
-        if (!v) newErrors.contactoEmail = '¿Cuál es tu correo electrónico?'
-        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) newErrors.contactoEmail = 'Por favor ingresa un email válido'
-        else delete newErrors.contactoEmail
+        if (!v) {
+          newErrors.contactoEmail = '✉️ Este campo es obligatorio. Necesitamos tu email para enviarte las credenciales de acceso.'
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) {
+          newErrors.contactoEmail = '✉️ El formato del email no es válido. Ejemplo: nombre@empresa.com'
+        } else {
+          delete newErrors.contactoEmail
+        }
         break
       }
       case 'empresa': {
         const v = (typeof value === 'string' ? value : '').trim()
-        if (!v) newErrors.empresa = 'El nombre de la empresa es requerido'
-        else delete newErrors.empresa
+        if (!v) {
+          newErrors.empresa = '🏢 Este campo es obligatorio. Ingresa el nombre de tu empresa.'
+        } else if (v.length < 2) {
+          newErrors.empresa = '🏢 El nombre de la empresa debe tener al menos 2 caracteres.'
+        } else if (v.length > 100) {
+          newErrors.empresa = '🏢 El nombre de la empresa no puede tener más de 100 caracteres.'
+        } else {
+          delete newErrors.empresa
+        }
         break
       }
       case 'departamentos': {
         const v = typeof value === 'number' ? value : 1
-        if (v < 1) newErrors.departamentos = 'Debe haber al menos 1 departamento'
-        else delete newErrors.departamentos
+        if (v < 1) {
+          newErrors.departamentos = '🏢 Debe haber al menos 1 departamento.'
+        } else if (v > TRIAL_CONFIG.MAX_DEPARTMENTS) {
+          newErrors.departamentos = `🏢 El número máximo de departamentos es ${TRIAL_CONFIG.MAX_DEPARTMENTS}.`
+        } else {
+          delete newErrors.departamentos
+        }
+        break
+      }
+      case 'empleados': {
+        const v = typeof value === 'number' ? value : 1
+        if (v < TRIAL_CONFIG.MIN_EMPLOYEES) {
+          newErrors.empleados = `👥 Debe haber al menos ${TRIAL_CONFIG.MIN_EMPLOYEES} empleado.`
+        } else if (v > TRIAL_CONFIG.MAX_EMPLOYEES) {
+          newErrors.empleados = `👥 El número máximo de empleados es ${TRIAL_CONFIG.MAX_EMPLOYEES}.`
+        } else {
+          delete newErrors.empleados
+        }
+        break
+      }
+      case 'contactoWhatsApp': {
+        const v = (typeof value === 'string' ? value : '').trim()
+        if (v && v.length > 0) {
+          const whatsappRegex = /^(\+504|504)?[0-9]{8}$/
+          const cleaned = v.replace(/[-\s]/g, '')
+          if (!whatsappRegex.test(cleaned)) {
+            newErrors.contactoWhatsApp = '📱 Formato inválido. Usa: 9999-9999 o +50499999999'
+          } else {
+            delete newErrors.contactoWhatsApp
+          }
+        } else {
+          delete newErrors.contactoWhatsApp
+        }
         break
       }
     }
@@ -72,30 +122,51 @@ export default function ActivarPage() {
 
   const handleInputChange = (field: keyof FormData, value: string | boolean | number) => {
     setFormData(prev => ({ ...prev, [field]: value }))
-    if (field === 'contactoEmail' || field === 'empresa' || field === 'departamentos') {
+    // Validar en tiempo real para campos requeridos
+    if (field === 'contactoEmail' || field === 'empresa' || field === 'departamentos' || field === 'empleados' || field === 'contactoWhatsApp') {
       validateField(field, value)
+    }
+    // Limpiar error de submit cuando el usuario empieza a escribir
+    if (errors.submit) {
+      setErrors(prev => ({ ...prev, submit: undefined }))
     }
   }
 
   const handleSubmit = async () => {
+    // Limpiar errores previos
+    setErrors({})
+    
+    // Validar todos los campos requeridos
     const emailErrors = validateField('contactoEmail', formData.contactoEmail)
     const empresaErrors = validateField('empresa', formData.empresa)
     const deptErrors = validateField('departamentos', formData.departamentos)
-    const allErrors = { ...emailErrors, ...empresaErrors, ...deptErrors }
+    const empleadosErrors = validateField('empleados', formData.empleados)
+    const whatsappErrors = formData.contactoWhatsApp ? validateField('contactoWhatsApp', formData.contactoWhatsApp) : {}
+    const allErrors = { ...emailErrors, ...empresaErrors, ...deptErrors, ...empleadosErrors, ...whatsappErrors }
     
     if (Object.keys(allErrors).length > 0) {
       setErrors(allErrors)
+      // Scroll al primer error
+      const firstErrorField = Object.keys(allErrors)[0]
+      const errorElement = document.querySelector(`[name="${firstErrorField}"]`) || 
+                          document.querySelector(`input[value="${formData[firstErrorField as keyof FormData]}"]`)
+      if (errorElement) {
+        errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        ;(errorElement as HTMLElement).focus()
+      }
       return
     }
 
     setIsLoading(true)
+    setErrors({}) // Limpiar errores antes de enviar
+    
     try {
       const submitData = {
         empleados: formData.empleados,
-        empresa: formData.empresa,
-        nombre: formData.nombre || '',
-        contactoWhatsApp: formData.contactoWhatsApp || '',
-        contactoEmail: formData.contactoEmail,
+        empresa: formData.empresa.trim(),
+        nombre: formData.nombre?.trim() || '',
+        contactoWhatsApp: formData.contactoWhatsApp?.trim() || '',
+        contactoEmail: formData.contactoEmail.trim(),
         departamentos: formData.departamentos,
         aceptaTrial: formData.aceptaTrial || false
       }
@@ -106,14 +177,33 @@ export default function ActivarPage() {
         body: JSON.stringify(submitData),
       })
 
+      let data
+      try {
+        data = await response.json()
+      } catch (e) {
+        // Si no hay JSON, usar mensaje genérico
+        data = { error: 'Error al procesar tu solicitud. Por favor, intenta de nuevo.' }
+      }
+
       if (response.ok) {
         setIsSuccess(true)
       } else {
-        throw new Error('Error al enviar')
+        // Manejar errores del servidor
+        const errorMessage = data.error || 'Error al procesar tu solicitud. Por favor, intenta de nuevo.'
+        setErrors({ submit: errorMessage })
+        // Scroll al mensaje de error
+        setTimeout(() => {
+          const errorElement = document.querySelector('.error-message')
+          if (errorElement) {
+            errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          }
+        }, 100)
       }
     } catch (error) {
       console.error('Error:', error)
-      alert('Hubo un error. Por favor, intenta de nuevo.')
+      setErrors({ 
+        submit: '❌ Error de conexión. Por favor, verifica tu internet e intenta de nuevo.' 
+      })
     } finally {
       setIsLoading(false)
     }
@@ -210,11 +300,11 @@ export default function ActivarPage() {
           </Link>
           
           <h1 className="text-5xl font-bold text-white mb-6">
-            Tu entorno de RH listo en minutos<br className="hidden md:block" />
-            <span className="text-brand-300">con empleados y departamentos configurados</span>
+            Activa un demo de RRHH gratuito<br className="hidden md:block" />
+            <span className="text-brand-300">Listo en segundos. Sin tarjeta. Sin compromiso.</span>
           </h1>
           <p className="text-2xl text-brand-300 mb-8">
-            Completa el formulario y recibe acceso inmediato. Tu empresa, departamentos, horarios y empleados ya estarán creados. Sin tarjeta. Sin compromiso.
+            Gratis por {TRIAL_CONFIG.DURATION_DAYS} días.
           </p>
         </div>
 
@@ -244,7 +334,7 @@ export default function ActivarPage() {
                     required
                   />
                   {errors.empresa && (
-                    <p className="text-red-400 text-sm mt-2 flex items-center">
+                    <p className="text-red-400 text-sm mt-2 font-medium flex items-center">
                       {errors.empresa}
                     </p>
                   )}
@@ -270,10 +360,18 @@ export default function ActivarPage() {
                     type="tel"
                     value={formData.contactoWhatsApp}
                     onChange={(e) => handleInputChange('contactoWhatsApp', e.target.value)}
-                    className="w-full p-3 rounded-lg glass border text-white placeholder-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all border-brand-600/30"
+                    className={`w-full p-3 rounded-lg glass border text-white placeholder-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all ${
+                      errors.contactoWhatsApp ? 'border-red-500/50' : 'border-brand-600/30'
+                    }`}
                     placeholder="+504 9999-9999"
                   />
-                  <p className="text-brand-400 text-sm mt-2">Formato: +504 9999-9999 (opcional)</p>
+                  {errors.contactoWhatsApp ? (
+                    <p className="text-red-400 text-sm mt-2 font-medium flex items-center">
+                      {errors.contactoWhatsApp}
+                    </p>
+                  ) : (
+                    <p className="text-brand-400 text-sm mt-2">Formato: +504 9999-9999 (opcional)</p>
+                  )}
                 </div>
 
                 {/* Email */}
@@ -290,11 +388,13 @@ export default function ActivarPage() {
                     required
                   />
                   {errors.contactoEmail && (
-                    <p className="text-red-400 text-sm mt-2 flex items-center">
+                    <p className="text-red-400 text-sm mt-2 font-medium flex items-center">
                       {errors.contactoEmail}
                     </p>
                   )}
-                  <p className="text-brand-400 text-sm mt-2">Te enviaremos tu email y contraseña de acceso aquí</p>
+                  {!errors.contactoEmail && (
+                    <p className="text-brand-400 text-sm mt-2">Te enviaremos tu email y contraseña de acceso aquí</p>
+                  )}
                 </div>
 
                 {/* Employee Count */}
@@ -314,12 +414,18 @@ export default function ActivarPage() {
                         type="number"
                         value={formData.empleados}
                         onChange={(e) => handleEmpleadosChange(parseInt(e.target.value) || 1)}
-                        className="w-24 h-16 text-3xl font-bold text-center glass border-2 border-brand-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 transition-all"
+                        className={`w-24 h-16 text-3xl font-bold text-center glass border-2 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 transition-all ${
+                          errors.empleados ? 'border-red-500/50' : 'border-brand-500'
+                        }`}
                         min="1"
                         required
                       />
                       <p className="text-brand-400 text-sm mt-2">empleados de prueba</p>
-                      <p className="text-brand-400 text-xs mt-1">Se crearán automáticamente con datos de ejemplo</p>
+                      {errors.empleados ? (
+                        <p className="text-red-400 text-xs mt-1 font-medium">{errors.empleados}</p>
+                      ) : (
+                        <p className="text-brand-400 text-xs mt-1">Se crearán automáticamente con datos de ejemplo</p>
+                      )}
                     </div>
                     
                     <button
@@ -355,9 +461,10 @@ export default function ActivarPage() {
                         required
                       />
                       <p className="text-brand-400 text-sm mt-2">departamentos</p>
-                      <p className="text-brand-400 text-xs mt-1">Se crearán automáticamente con nombres por defecto</p>
-                      {errors.departamentos && (
-                        <p className="text-red-400 text-xs mt-1">{errors.departamentos}</p>
+                      {errors.departamentos ? (
+                        <p className="text-red-400 text-xs mt-1 font-medium">{errors.departamentos}</p>
+                      ) : (
+                        <p className="text-brand-400 text-xs mt-1">Se crearán automáticamente con nombres por defecto</p>
                       )}
                     </div>
                     
@@ -403,35 +510,24 @@ export default function ActivarPage() {
                   )}
                 </button>
 
-                {errors.contactoEmail && (
-                  <p className="text-red-400 text-sm text-center mt-4 flex items-center justify-center">
-                    Por favor, ingresa un email válido para continuar
-                  </p>
+                {/* Error general del submit */}
+                {errors.submit && (
+                  <div className="error-message bg-red-500/10 border border-red-500/50 rounded-lg p-4 mt-4">
+                    <p className="text-red-400 text-sm font-medium text-center">
+                      {errors.submit}
+                    </p>
+                  </div>
                 )}
                 
-                <p className="text-brand-400 text-xs text-center">
-                  Recibirás acceso inmediato por email con credenciales. Tu entorno vendrá con empleados de prueba, departamentos y horarios ya configurados. Sin tarjeta. Puedes cancelar cuando quieras.
-                </p>
+                {!errors.submit && (
+                  <p className="text-brand-400 text-xs text-center">
+                    Recibirás acceso inmediato por email con credenciales. Tu entorno vendrá con empleados de prueba, departamentos y horarios ya configurados. Sin tarjeta. Puedes cancelar cuando quieras.
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
         </div>
-
-        {/* Sub-hero / Social proof */}
-        <div className="max-w-4xl mx-auto mb-16 text-center">
-          <Card variant="glass" className="border-green-500/30 bg-green-500/5">
-            <CardContent className="p-8">
-              <p className="text-xl text-white mb-4">
-                <span className="text-green-400 font-bold">“Reducimos 80% el tiempo de planilla con SISU.”</span> — Paragon Financial Corp
-              </p>
-              <p className="text-brand-300">
-                Infraestructura estilo AWS, datos cifrados en tránsito y en reposo, control de roles. Soporte por email o WhatsApp.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-
 
 
         {/* Trial modules */}
