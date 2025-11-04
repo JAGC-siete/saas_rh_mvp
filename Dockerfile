@@ -13,13 +13,19 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 # Install dependencies based on the preferred package manager
+# Copy only package files first for better caching
 COPY package.json package-lock.json* ./
+# Install all dependencies (including devDependencies needed for build)
 RUN npm ci && npm cache clean --force
 
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
+
+# Copy node_modules from deps stage
 COPY --from=deps /app/node_modules ./node_modules
+
+# Copy source code (excluding files in .dockerignore)
 COPY . .
 
 # Set build-time environment variables
@@ -27,6 +33,7 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # Build the application with standalone output
+# Use --no-lint to speed up build during deployment
 RUN npm run build
 
 # Production image, copy all the files and run next

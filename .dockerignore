@@ -74,3 +74,27 @@ venv/
 docs/_build/
 README.md
 *.md
+!README.md
+
+# Large documentation files that slow down builds
+TRIAL_LIMITS_ANALYSIS.md
+REALTIME_ATTENDANCE_IMPLEMENTATION_CHECKLIST.md
+REALTIME_ATTENDANCE_INDEX.md
+RESUMEN_EJECUTIVO_REALTIME_ASISTENCIA.md
+RISK_ASSESSMENT_REALTIME_ATTENDANCE.md
+SAFE_IMPLEMENTATION_GUIDE.md
+SUPABASE_REALTIME_ATTENDANCE_EVALUATION.md
+
+# Test files
+tests/
+*.test.ts
+*.test.tsx
+*.test.js
+*.spec.ts
+*.spec.tsx
+
+# Migration files (not needed at runtime)
+supabase/migrations/
+
+# Scripts not needed in production
+scripts/
