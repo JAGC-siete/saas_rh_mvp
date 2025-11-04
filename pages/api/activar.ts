@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient } from '../../lib/supabase/server'
 import { getHondurasTimestamp, nowInHonduras } from '../../lib/timezone'
+import { randomUUID } from 'crypto'
 
 export const config = {
   api: {
@@ -14,6 +15,7 @@ interface ActivationData {
   nombre: string
   contactoWhatsApp: string
   contactoEmail: string
+  departamentos: number
   aceptaTrial: boolean
 }
 
@@ -37,15 +39,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       nombre,
       contactoWhatsApp,
       contactoEmail,
+      departamentos,
       aceptaTrial
     }: ActivationData = req.body
 
-    console.log('📝 Datos recibidos:', { empleados, empresa, nombre, contactoWhatsApp, contactoEmail, aceptaTrial })
+    console.log('📝 Datos recibidos:', { empleados, empresa, nombre, contactoWhatsApp, contactoEmail, departamentos, aceptaTrial })
 
-    // Validar solo el campo requerido (email)
+    // Validar campos requeridos
     if (!contactoEmail) {
       return res.status(400).json({ 
         error: 'El email es requerido para continuar' 
+      })
+    }
+
+    if (!empresa || empresa.trim() === '') {
+      return res.status(400).json({ 
+        error: 'El nombre de la empresa es requerido' 
+      })
+    }
+
+    if (!departamentos || departamentos < 1) {
+      return res.status(400).json({ 
+        error: 'El número de departamentos debe ser mayor a 0' 
       })
     }
 
@@ -74,6 +89,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
+    // Validar número de departamentos
+    if (departamentos < 1 || departamentos > 100) {
+      return res.status(400).json({ 
+        error: '🏢 El número de departamentos debe estar entre 1 y 100' 
+      })
+    }
+
     console.log('✅ Validaciones pasadas exitosamente')
 
     // Generar tenant_id único
@@ -95,7 +117,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .from('activaciones')
       .insert([{
         empleados,
-        empresa: empresa || 'Empresa no especificada',
+        empresa: empresa.trim(),
         contacto_nombre: nombre || 'Contacto no especificado',
         contacto_whatsapp: contactoWhatsApp || null,
         contacto_email: contactoEmail,
@@ -104,10 +126,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         magic_link,
         trial_expires_at: trial_expires_at.toISOString(),
         status: 'trial_pending_data',
-        departamentos: null, // Ya no se usa en el nuevo flujo
+        departamentos: { total: departamentos },
         monto: null, // Ya no se calcula en el trial
         comprobante: null, // Ya no se sube en el trial
-        notas: `Trial activado automáticamente. Empleados: ${empleados}`
+        notas: `Trial activado automáticamente. Empleados: ${empleados}, Departamentos: ${departamentos}`
       }])
       .select()
 
@@ -122,10 +144,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('🏗️ Creando entorno de trial...')
     const trialEnvironment = await crearEntornoTrial(supabase, {
       tenant_id,
-      empresa: empresa || 'Empresa no especificada',
+      empresa: empresa.trim(),
       nombre: nombre || 'Contacto no especificado',
       contactoEmail,
-      empleados
+      empleados,
+      departamentos
     })
 
     if (trialEnvironment.success) {
@@ -184,124 +207,404 @@ async function crearEntornoTrial(supabase: any, data: {
   nombre: string
   contactoEmail: string
   empleados: number
+  departamentos: number
 }) {
   try {
-    console.log('🔍 Buscando entorno demo existente para reutilizar...')
+    console.log('🏗️ Creando entorno completo de trial para:', data.empresa)
     
-    // 1. Buscar empresa demo existente (NO crear nueva)
-    const { data: demoCompany, error: companyError } = await supabase
+    // 1. Crear company única
+    console.log('📦 Paso 1: Creando company...')
+    const companyId = randomUUID()
+    const subdomain = `trial-${Date.now().toString(36)}`
+    
+    const { data: newCompany, error: companyError } = await supabase
       .from('companies')
-      .select('*')
-      .eq('name', 'DEMO EMPRESARIAL  - Datos de  Prueba')
-      .eq('is_active', true)
+      .insert([{
+        id: companyId,
+        name: data.empresa,
+        subdomain,
+        plan_type: 'trial',
+        settings: {
+          trial_activated_at: getHondurasTimestamp(),
+          trial_employee_limit: data.empleados,
+          timezone: 'America/Tegucigalpa'
+        },
+        is_active: true
+      }])
+      .select()
       .single()
 
-    if (companyError || !demoCompany) {
-      console.log('⚠️ No existe empresa demo, creando una sola vez...')
-      
-      // Crear SOLO UNA VEZ la empresa demo
-      const { data: newDemoCompany, error: createError } = await supabase
-        .from('companies')
-        .insert([{
-          name: 'DEMO EMPRESARIAL  - Datos de  Prueba',
-          subdomain: 'demo-trial',
-          plan_type: 'trial',
-          settings: {
-            trial_activated_at: getHondurasTimestamp(),
-            trial_employee_limit: 25,
-            timezone: 'America/Tegucigalpa'
-          },
-          is_active: true
-        }])
-        .select()
+    if (companyError || !newCompany) {
+      throw new Error(`Error creando company: ${companyError?.message || 'Unknown error'}`)
+    }
+    console.log('✅ Company creada:', newCompany.id)
 
-      if (createError) {
-        throw new Error(`Error creando empresa demo: ${createError.message}`)
-      }
-      
-      // Crear empleados demo SOLO UNA VEZ
-      const demoEmployees = [
-        { name: 'Juan Pérez Demo', dni: '0001', position: 'Desarrollador', base_salary: 15000 },
-        { name: 'María González Demo', dni: '0002', position: 'Diseñadora', base_salary: 12000 },
-        { name: 'Carlos López Demo', dni: '0003', position: 'Vendedor', base_salary: 10000 },
-        { name: 'Ana Martínez Demo', dni: '0004', position: 'Contadora', base_salary: 14000 },
-        { name: 'Luis Rodríguez Demo', dni: '0005', position: 'Marketing', base_salary: 11000 }
-      ]
+    // 2. Crear horarios de trabajo (3 horarios por defecto)
+    console.log('⏰ Paso 2: Creando horarios de trabajo...')
+    const horarios = [
+      { name: 'Horario 8-5', start: '08:00', end: '17:00' },
+      { name: 'Horario 9-6', start: '09:00', end: '18:00' },
+      { name: 'Horario 10-7', start: '10:00', end: '19:00' }
+    ]
 
-      const { data: newEmployees, error: employeesError } = await supabase
-        .from('employees')
-        .insert(demoEmployees.map(emp => ({
-          ...emp,
-          company_id: newDemoCompany[0].id,
-          status: 'active',
-          employee_code: emp.dni,
-          hire_date: '2025-01-01'
-        })))
-        .select()
+    const schedulesToInsert = horarios.map(h => ({
+      company_id: companyId,
+      name: h.name,
+      monday_start: h.start,
+      monday_end: h.end,
+      tuesday_start: h.start,
+      tuesday_end: h.end,
+      wednesday_start: h.start,
+      wednesday_end: h.end,
+      thursday_start: h.start,
+      thursday_end: h.end,
+      friday_start: h.start,
+      friday_end: h.end,
+      saturday_start: null,
+      saturday_end: null,
+      sunday_start: null,
+      sunday_end: null,
+      checkin_open: subtractMinutes(h.start, 30),
+      checkin_close: addMinutes(h.start, 90),
+      checkout_open: subtractMinutes(h.end, 90),
+      checkout_close: addMinutes(h.end, 60),
+      timezone: 'America/Tegucigalpa'
+    }))
 
-      if (employeesError) {
-        throw new Error(`Error creando empleados demo: ${employeesError.message}`)
-      }
+    const { data: schedules, error: schedulesError } = await supabase
+      .from('work_schedules')
+      .insert(schedulesToInsert)
+      .select()
 
-      console.log('✅ Entorno demo creado exitosamente')
-      
-      // Crear registro en trial_access_users para este tenant
-      const { error: trialAccessError } = await supabase
-        .from('trial_access_users')
-        .insert([{
-          tenant_id: data.tenant_id,
-          company_id: newDemoCompany[0].id,
-          is_active: true
-        }])
+    if (schedulesError) {
+      console.error('⚠️ Error creando horarios:', schedulesError)
+      // Continuar sin horarios
+    } else {
+      console.log(`✅ ${schedules?.length || 0} horarios creados`)
+    }
 
-      if (trialAccessError) {
-        console.error('⚠️ Error creando trial_access_users:', trialAccessError)
-        // No fallar todo el proceso
-      } else {
-        console.log('✅ trial_access_users creado exitosamente')
-      }
-      
-      return {
-        success: true,
-        data: {
-          company: newDemoCompany[0],
-          employees: newEmployees
-        }
+    // 3. Crear departamentos (número dinámico del formulario)
+    console.log('🏢 Paso 3: Creando departamentos...')
+    const defaultDeptNames = ['Administración', 'Ventas', 'Operaciones', 'Finanzas', 'Recursos Humanos']
+    const deptNamesToCreate = defaultDeptNames.slice(0, Math.min(data.departamentos, defaultDeptNames.length))
+    
+    // Si necesitamos más departamentos, agregar genéricos
+    if (data.departamentos > deptNamesToCreate.length) {
+      for (let i = deptNamesToCreate.length; i < data.departamentos; i++) {
+        deptNamesToCreate.push(`Departamento ${i + 1}`)
       }
     }
 
-    console.log('✅ Reutilizando entorno demo existente')
+    const departmentsToInsert = deptNamesToCreate.map(name => ({
+      company_id: companyId,
+      name
+    }))
+
+    const { data: departments, error: departmentsError } = await supabase
+      .from('departments')
+      .insert(departmentsToInsert)
+      .select()
+
+    if (departmentsError) {
+      throw new Error(`Error creando departamentos: ${departmentsError.message}`)
+    }
+    console.log(`✅ ${departments?.length || 0} departamentos creados`)
+
+    // 4. Crear empleados con nombres bíblicos
+    console.log('👥 Paso 4: Creando empleados...')
+    const employees = await crearEmpleadosBiblicos(supabase, companyId, data.empleados, departments, schedules)
+    console.log(`✅ ${employees.length} empleados creados`)
+
+    // 5. Crear usuario Auth y perfil
+    console.log('👤 Paso 5: Creando usuario Auth...')
+    const genericPassword = `SISU${Date.now().toString().slice(-6)}`
     
-    // Crear registro en trial_access_users para este tenant (puede reutilizar la misma empresa demo)
+    const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+      email: data.contactoEmail,
+      password: genericPassword,
+      email_confirm: true,
+      user_metadata: {
+        company_id: companyId,
+        role: 'company_admin',
+        full_name: data.nombre
+      }
+    })
+
+    if (authError || !authUser.user) {
+      console.error('⚠️ Error creando usuario Auth:', authError)
+      // Continuar sin usuario Auth
+    } else {
+      console.log('✅ Usuario Auth creado:', authUser.user.id)
+
+      // Crear perfil de usuario
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .insert([{
+          id: authUser.user.id,
+          company_id: companyId,
+          role: 'company_admin',
+          permissions: {
+            dashboard: true,
+            employees: true,
+            departments: true,
+            attendance: true,
+            leave: true,
+            payroll: true,
+            reports: true,
+            gamification: true,
+            settings: true
+          }
+        }])
+
+      if (profileError) {
+        console.error('⚠️ Error creando perfil de usuario:', profileError)
+      } else {
+        console.log('✅ Perfil de usuario creado')
+      }
+
+      // Enviar correo de bienvenida
+      await enviarCorreoBienvenida({
+        email: data.contactoEmail,
+        nombre: data.nombre,
+        empresa: data.empresa,
+        password: genericPassword,
+        loginUrl: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net'}/app/login`
+      })
+    }
+
+    // 6. Crear registro en trial_access_users
     const { error: trialAccessError } = await supabase
       .from('trial_access_users')
       .insert([{
         tenant_id: data.tenant_id,
-        company_id: demoCompany.id,
+        company_id: companyId,
+        email: data.contactoEmail,
+        nombre: data.nombre,
+        empresa_solicitante: data.empresa,
+        empleados_solicitados: data.empleados,
         is_active: true
       }])
 
     if (trialAccessError) {
       console.error('⚠️ Error creando trial_access_users:', trialAccessError)
-      // No fallar todo el proceso
     } else {
-      console.log('✅ trial_access_users creado exitosamente para tenant reutilizado')
+      console.log('✅ trial_access_users creado exitosamente')
     }
-    
+
     return {
       success: true,
       data: {
-        company: demoCompany,
-        employees: [] // Los empleados ya existen
+        company: newCompany,
+        employees,
+        departments,
+        schedules,
+        authUser: authUser?.user,
+        password: genericPassword
       }
     }
 
   } catch (error) {
+    console.error('❌ Error en crearEntornoTrial:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Error desconocido'
     }
   }
+}
+
+// Función auxiliar para crear empleados con nombres bíblicos
+async function crearEmpleadosBiblicos(
+  supabase: any,
+  companyId: string,
+  cantidad: number,
+  departments: any[],
+  schedules: any[]
+): Promise<any[]> {
+  const nombresBiblicos = [
+    'Abraham', 'Isaac', 'Jacob', 'Moisés', 'Josué', 'David', 'Salomón', 'Elías', 'Eliseo', 'Daniel',
+    'José', 'Jonás', 'Noé', 'Job', 'Samuel', 'Isaías', 'Jeremías', 'Ezequiel', 'Oseas', 'Joel',
+    'Amós', 'Abdías', 'Miqueas', 'Nahúm', 'Habacuc', 'Sofonías', 'Ageo', 'Zacarías', 'Malaquías', 'Pedro',
+    'Juan', 'Santiago', 'Andrés', 'Felipe', 'Tomás', 'Bartolomé', 'Mateo', 'Simón', 'Judas', 'Pablo',
+    'Timoteo', 'Tito', 'Bernabé', 'Lucas', 'Marcos'
+  ]
+
+  const apellidos = [
+    'Hernández', 'García', 'Martínez', 'López', 'González',
+    'Pérez', 'Rodríguez', 'Sánchez', 'Ramírez', 'Flores'
+  ]
+
+  const employees = []
+  const now = nowInHonduras()
+
+  for (let i = 0; i < cantidad; i++) {
+    const nombreIndex = i % nombresBiblicos.length
+    const apellidoIndex = i % apellidos.length
+    const nombre = nombresBiblicos[nombreIndex]
+    const apellido = apellidos[apellidoIndex]
+    const fullName = `${nombre} ${apellido}`
+    
+    const dni = `${String(1000 + i).padStart(4, '0')}-${String(2000 + i).padStart(4, '0')}-${String(30000 + i).padStart(5, '0')}`
+    const departmentIndex = i % (departments?.length || 1)
+    const scheduleIndex = i % (schedules?.length || 1)
+    
+    const hireDate = new Date(now)
+    hireDate.setDate(hireDate.getDate() - (i % 12) * 15)
+
+    const email = `${nombre.toLowerCase().replace(/[áéíóú]/g, (m) => {
+      const map: any = { á: 'a', é: 'e', í: 'i', ó: 'o', ú: 'u' }
+      return map[m]
+    })}.${apellido.toLowerCase().replace(/[áéíóú]/g, (m) => {
+      const map: any = { á: 'a', é: 'e', í: 'i', ó: 'o', ú: 'u' }
+      return map[m]
+    })}@demo.local`
+
+    employees.push({
+      company_id: companyId,
+      department_id: departments?.[departmentIndex]?.id || null,
+      work_schedule_id: schedules?.[scheduleIndex]?.id || null,
+      employee_code: `EMP-${String(i + 1).padStart(3, '0')}`,
+      dni,
+      name: fullName,
+      email,
+      phone: '9999-0000',
+      role: 'employee',
+      base_salary: 8000 + ((i % 5) * 500),
+      hire_date: hireDate.toISOString().split('T')[0],
+      status: 'active'
+    })
+  }
+
+  const { data: createdEmployees, error: employeesError } = await supabase
+    .from('employees')
+    .insert(employees)
+    .select()
+
+  if (employeesError) {
+    throw new Error(`Error creando empleados: ${employeesError.message}`)
+  }
+
+  return createdEmployees || []
+}
+
+// Función auxiliar para enviar correo de bienvenida
+async function enviarCorreoBienvenida(data: {
+  email: string
+  nombre: string
+  empresa: string
+  password: string
+  loginUrl: string
+}) {
+  try {
+    const apiKey = process.env.RESEND_API_KEY
+    if (!apiKey) {
+      console.log('⚠️ RESEND_API_KEY no configurado, saltando envío de correo de bienvenida')
+      return
+    }
+
+    const { Resend } = await import('resend')
+    const resend = new Resend(apiKey)
+
+    const emailHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Bienvenido a SISU</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+          .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+          .credentials { background: white; padding: 20px; border-radius: 5px; margin: 20px 0; border: 2px solid #667eea; }
+          .credential-row { margin: 15px 0; }
+          .label { font-weight: bold; color: #667eea; }
+          .value { font-family: monospace; font-size: 16px; color: #333; background: #f0f0f0; padding: 8px; border-radius: 4px; }
+          .button { display: inline-block; background: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+          .warning { background: #fff3cd; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #f59e0b; }
+          .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>🎉 ¡Bienvenido a SISU!</h1>
+            <p>Empresa: <strong>${data.empresa}</strong></p>
+          </div>
+          
+          <div class="content">
+            <h2>¡Hola ${data.nombre}!</h2>
+            <p>Tu entorno de prueba SISU está listo y funcionando. Ya puedes empezar a explorar todas las funcionalidades.</p>
+            
+            <div class="credentials">
+              <h3 style="color: #667eea; margin-top: 0;">📧 Tus credenciales de acceso:</h3>
+              <div class="credential-row">
+                <div class="label">Email:</div>
+                <div class="value">${data.email}</div>
+              </div>
+              <div class="credential-row">
+                <div class="label">Contraseña:</div>
+                <div class="value">${data.password}</div>
+              </div>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${data.loginUrl}" class="button">🚀 Iniciar Sesión</a>
+            </div>
+            
+            <div class="warning">
+              <strong>⚠️ Importante:</strong> Por favor, cambia tu contraseña después de iniciar sesión por primera vez.
+            </div>
+            
+            <div style="background: #e8f4fd; padding: 20px; border-radius: 5px; margin: 20px 0;">
+              <h4>📱 ¿Necesitas ayuda?</h4>
+              <p>Responde a este email o escríbenos por WhatsApp al <strong>+504 9470-7007</strong></p>
+            </div>
+            
+            <div style="background: #fff3cd; padding: 20px; border-radius: 5px; margin: 20px 0;">
+              <h4>⏰ Tu trial expira en 7 días</h4>
+              <p>Disfruta explorando SISU y conoce todas las funcionalidades que te ofrecemos.</p>
+            </div>
+          </div>
+          
+          <div class="footer">
+            <p>Este email fue enviado desde SISU - Sistema de Gestión de Recursos Humanos</p>
+            <p>Si no solicitaste este trial, puedes ignorar este mensaje.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+
+    const result = await resend.emails.send({
+      from: process.env.RESEND_FROM || 'SISU <noreply@humanosisu.net>',
+      to: data.email,
+      subject: `🎉 ¡Bienvenido a SISU! - ${data.empresa}`,
+      html: emailHtml
+    })
+
+    console.log('✅ Correo de bienvenida enviado exitosamente:', result)
+  } catch (error) {
+    console.error('❌ Error enviando correo de bienvenida:', error)
+    // No fallar todo el proceso si el correo falla
+  }
+}
+
+// Funciones auxiliares para manipular horas
+function subtractMinutes(timeStr: string, minutes: number): string {
+  const [hours, mins] = timeStr.split(':').map(Number)
+  const totalMinutes = hours * 60 + mins - minutes
+  const h = Math.floor(totalMinutes / 60)
+  const m = totalMinutes % 60
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+}
+
+function addMinutes(timeStr: string, minutes: number): string {
+  const [hours, mins] = timeStr.split(':').map(Number)
+  const totalMinutes = hours * 60 + mins + minutes
+  const h = Math.floor(totalMinutes / 60)
+  const m = totalMinutes % 60
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
 
 async function enviarNotificacionesTrial(data: {

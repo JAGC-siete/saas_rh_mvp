@@ -11,11 +11,14 @@ interface FormData {
   nombre: string
   contactoWhatsApp: string
   contactoEmail: string
+  departamentos: number
   aceptaTrial: boolean
 }
 
 interface ValidationErrors {
   contactoEmail?: string
+  empresa?: string
+  departamentos?: string
 }
 
 export default function ActivarPage() {
@@ -28,6 +31,7 @@ export default function ActivarPage() {
     nombre: '',
     contactoWhatsApp: '',
     contactoEmail: '',
+    departamentos: 1,
     aceptaTrial: true
   })
 
@@ -35,7 +39,11 @@ export default function ActivarPage() {
     setFormData(prev => ({ ...prev, empleados: Math.max(1, value) }))
   }
 
-  const validateField = (field: keyof FormData, value: string | boolean) => {
+  const handleDepartamentosChange = (value: number) => {
+    setFormData(prev => ({ ...prev, departamentos: Math.max(1, value) }))
+  }
+
+  const validateField = (field: keyof FormData, value: string | boolean | number) => {
     const newErrors = { ...errors }
     switch (field) {
       case 'contactoEmail': {
@@ -45,28 +53,50 @@ export default function ActivarPage() {
         else delete newErrors.contactoEmail
         break
       }
+      case 'empresa': {
+        const v = (typeof value === 'string' ? value : '').trim()
+        if (!v) newErrors.empresa = 'El nombre de la empresa es requerido'
+        else delete newErrors.empresa
+        break
+      }
+      case 'departamentos': {
+        const v = typeof value === 'number' ? value : 1
+        if (v < 1) newErrors.departamentos = 'Debe haber al menos 1 departamento'
+        else delete newErrors.departamentos
+        break
+      }
     }
     setErrors(newErrors)
     return newErrors
   }
 
-  const handleInputChange = (field: keyof FormData, value: string | boolean) => {
+  const handleInputChange = (field: keyof FormData, value: string | boolean | number) => {
     setFormData(prev => ({ ...prev, [field]: value }))
-    if (field === 'contactoEmail') validateField(field, value)
+    if (field === 'contactoEmail' || field === 'empresa' || field === 'departamentos') {
+      validateField(field, value)
+    }
   }
 
   const handleSubmit = async () => {
-    const currentErrors = validateField('contactoEmail', formData.contactoEmail)
-    if (Object.keys(currentErrors).length > 0) return
+    const emailErrors = validateField('contactoEmail', formData.contactoEmail)
+    const empresaErrors = validateField('empresa', formData.empresa)
+    const deptErrors = validateField('departamentos', formData.departamentos)
+    const allErrors = { ...emailErrors, ...empresaErrors, ...deptErrors }
+    
+    if (Object.keys(allErrors).length > 0) {
+      setErrors(allErrors)
+      return
+    }
 
     setIsLoading(true)
     try {
       const submitData = {
         empleados: formData.empleados,
-        empresa: formData.empresa || '',
+        empresa: formData.empresa,
         nombre: formData.nombre || '',
         contactoWhatsApp: formData.contactoWhatsApp || '',
         contactoEmail: formData.contactoEmail,
+        departamentos: formData.departamentos,
         aceptaTrial: formData.aceptaTrial || false
       }
 
@@ -124,7 +154,7 @@ export default function ActivarPage() {
                   </div>
                   <div className="text-center">
                     <p className="text-sm text-brand-300">Email</p>
-                    <p className="text-xs text-brand-400">user@example.com</p>
+                    <p className="text-xs text-brand-400">jorgearturo@humanosisu.net</p>
                   </div>
                 </div>
                 <p className="text-sm text-brand-400 text-center mt-6">
@@ -183,21 +213,28 @@ export default function ActivarPage() {
               </h2>
 
               <div className="space-y-6">
-                {/* Company Name - Comentado para simplificar */}
-                {/* <div>
-                  <label className="block text-white font-medium mb-2">Empresa </label>
+                {/* Company Name */}
+                <div>
+                  <label className="block text-white font-medium mb-2">Nombre de la empresa *</label>
                   <input
                     type="text"
                     value={formData.empresa}
                     onChange={(e) => handleInputChange('empresa', e.target.value)}
-                    className="w-full p-3 rounded-lg glass border text-white placeholder-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all border-brand-600/30"
+                    className={`w-full p-3 rounded-lg glass border text-white placeholder-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all ${
+                      errors.empresa ? 'border-red-500/50' : 'border-brand-600/30'
+                    }`}
                     placeholder="Mi Empresa S.A."
+                    required
                   />
-                  <p className="text-brand-400 text-sm mt-2">(opcional)</p>
-                </div> */}
+                  {errors.empresa && (
+                    <p className="text-red-400 text-sm mt-2 flex items-center">
+                      {errors.empresa}
+                    </p>
+                  )}
+                </div>
 
-                {/* Contact Name - Comentado para simplificar */}
-                {/* <div>
+                {/* Contact Name */}
+                <div>
                   <label className="block text-white font-medium mb-2">Tu nombre</label>
                   <input
                     type="text"
@@ -207,10 +244,10 @@ export default function ActivarPage() {
                     placeholder="María González"
                   />
                   <p className="text-brand-400 text-sm mt-2">(opcional)</p>
-                </div> */}
+                </div>
 
-                {/* WhatsApp - Comentado para simplificar */}
-                {/* <div>
+                {/* WhatsApp */}
+                <div>
                   <label className="block text-white font-medium mb-2">WhatsApp</label>
                   <input
                     type="tel"
@@ -220,7 +257,7 @@ export default function ActivarPage() {
                     placeholder="+504 9999-9999"
                   />
                   <p className="text-brand-400 text-sm mt-2">Formato: +504 9999-9999 (opcional)</p>
-                </div> */}
+                </div>
 
                 {/* Email */}
                 <div>
@@ -245,7 +282,7 @@ export default function ActivarPage() {
 
                 {/* Employee Count */}
                 <div>
-                  <label className="block text-white font-medium mb-2 text-center"># empleados en planilla </label>
+                  <label className="block text-white font-medium mb-2 text-center"># empleados en planilla *</label>
                   <div className="flex items-center justify-center space-x-4">
                     <button
                       onClick={() => handleEmpleadosChange(formData.empleados - 1)}
@@ -262,13 +299,51 @@ export default function ActivarPage() {
                         onChange={(e) => handleEmpleadosChange(parseInt(e.target.value) || 1)}
                         className="w-24 h-16 text-3xl font-bold text-center glass border-2 border-brand-500 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 transition-all"
                         min="1"
+                        required
                       />
                       <p className="text-brand-400 text-sm mt-2">empleados</p>
-                      <p className="text-brand-400 text-xs mt-1">(opcional)</p>
                     </div>
                     
                     <button
                       onClick={() => handleEmpleadosChange(formData.empleados + 1)}
+                      className="w-12 h-12 rounded-full glass border border-brand-600/30 hover:border-brand-500 flex items-center justify-center text-2xl font-bold transition-all text-white hover:text-brand-200"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                {/* Departments Count */}
+                <div>
+                  <label className="block text-white font-medium mb-2 text-center"># departamentos *</label>
+                  <div className="flex items-center justify-center space-x-4">
+                    <button
+                      onClick={() => handleDepartamentosChange(formData.departamentos - 1)}
+                      className="w-12 h-12 rounded-full glass border border-brand-600/30 hover:border-brand-500 flex items-center justify-center text-2xl font-bold transition-all text-white hover:text-brand-200"
+                      disabled={formData.departamentos <= 1}
+                    >
+                      -
+                    </button>
+                    
+                    <div className="text-center">
+                      <input
+                        type="number"
+                        value={formData.departamentos}
+                        onChange={(e) => handleDepartamentosChange(parseInt(e.target.value) || 1)}
+                        className={`w-24 h-16 text-3xl font-bold text-center glass border-2 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 transition-all ${
+                          errors.departamentos ? 'border-red-500/50' : 'border-brand-500'
+                        }`}
+                        min="1"
+                        required
+                      />
+                      <p className="text-brand-400 text-sm mt-2">departamentos</p>
+                      {errors.departamentos && (
+                        <p className="text-red-400 text-xs mt-1">{errors.departamentos}</p>
+                      )}
+                    </div>
+                    
+                    <button
+                      onClick={() => handleDepartamentosChange(formData.departamentos + 1)}
                       className="w-12 h-12 rounded-full glass border border-brand-600/30 hover:border-brand-500 flex items-center justify-center text-2xl font-bold transition-all text-white hover:text-brand-200"
                     >
                       +
@@ -294,7 +369,7 @@ export default function ActivarPage() {
                 {/* Submit Button */}
                 <button
                   onClick={handleSubmit}
-                  disabled={!formData.contactoEmail || isLoading || Object.keys(errors).length > 0}
+                  disabled={!formData.contactoEmail || !formData.empresa || formData.departamentos < 1 || isLoading || Object.keys(errors).length > 0}
                   className="w-full bg-brand-600 hover:bg-brand-700 text-white px-8 py-4 rounded-lg font-semibold inline-flex items-center justify-center transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-lg"
                 >
                   {isLoading ? (
