@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient } from '../../../lib/supabase/server'
 import { getHondurasTimestamp, nowInHonduras } from '../../../lib/timezone'
+import { TRIAL_CONFIG } from '../../../lib/config/trial'
 
 /**
  * Trial Validate API - Valida y retorna información del trial
@@ -52,9 +53,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: 'Error interno del sistema' })
     }
 
-    // Verificar que el trial no haya expirado (30 días desde creación)
+    // Verificar que el trial no haya expirado (duración configurable)
     const trialExpiresAt = new Date(trialUser.created_at || new Date())
-    trialExpiresAt.setDate(trialExpiresAt.getDate() + 30)
+    trialExpiresAt.setDate(trialExpiresAt.getDate() + TRIAL_CONFIG.DURATION_DAYS)
     const now = nowInHonduras()
 
     if (trialExpiresAt < now) {

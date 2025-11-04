@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient } from '../../lib/supabase/server'
 import { getHondurasTimestamp, nowInHonduras } from '../../lib/timezone'
 import { randomUUID } from 'crypto'
+import { TRIAL_CONFIG } from '../../lib/config/trial'
 
 export const config = {
   api: {
@@ -83,16 +84,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Validar número de empleados
-    if (empleados < 1 || empleados > 1000) {
+    if (empleados < TRIAL_CONFIG.MIN_EMPLOYEES || empleados > TRIAL_CONFIG.MAX_EMPLOYEES) {
       return res.status(400).json({ 
-        error: '👥 El número de empleados debe estar entre 1 y 1000' 
+        error: `👥 El número de empleados debe estar entre ${TRIAL_CONFIG.MIN_EMPLOYEES} y ${TRIAL_CONFIG.MAX_EMPLOYEES}` 
       })
     }
 
     // Validar número de departamentos
-    if (departamentos < 1 || departamentos > 100) {
+    if (departamentos < TRIAL_CONFIG.MIN_DEPARTMENTS || departamentos > TRIAL_CONFIG.MAX_DEPARTMENTS) {
       return res.status(400).json({ 
-        error: '🏢 El número de departamentos debe estar entre 1 y 100' 
+        error: `🏢 El número de departamentos debe estar entre ${TRIAL_CONFIG.MIN_DEPARTMENTS} y ${TRIAL_CONFIG.MAX_DEPARTMENTS}` 
+      })
+    }
+
+    // Validar email duplicado
+    console.log('🔍 Verificando si el email ya tiene un trial activo...')
+    const validacionEmail = await verificarEmailDuplicado(supabase, contactoEmail)
+    
+    if (!validacionEmail.puedeContinuar) {
+      console.log('⚠️ Email duplicado detectado:', validacionEmail.razon)
+      return res.status(409).json({ 
+        error: validacionEmail.razon || 'Este email ya tiene un trial activo. Por favor, utiliza otro email o espera a que expire tu trial actual.'
       })
     }
 
@@ -101,9 +113,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Generar tenant_id único
     const tenant_id = `tnt_${nowInHonduras().getTime()}_${Math.random().toString(36).substr(2, 9)}`
     
-    // Calcular fecha de expiración del trial (7 días)
+    // Calcular fecha de expiración del trial (configurable)
     const trial_expires_at = nowInHonduras()
-    trial_expires_at.setDate(trial_expires_at.getDate() + 7)
+    trial_expires_at.setDate(trial_expires_at.getDate() + TRIAL_CONFIG.DURATION_DAYS)
 
     // Generar magic link para acceso inmediato
     const magic_link = `${process.env.NEXT_PUBLIC_SITE_URL || process.env.RAILWAY_PUBLIC_DOMAIN || 'https://humanosisu.net'}/trial-dashboard?tenant=${tenant_id}&trial=true`
@@ -197,6 +209,124 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } catch (error) {
     console.error('💥 Error general en handler:', error)
     return res.status(500).json({ error: 'Error procesando la solicitud de trial' })
+  }
+}
+
+/**
+ * Verifica si un email ya tiene un trial activo o reciente
+ * @returns {puedeContinuar: boolean, razon?: string, trialExistente?: any}
+ */
+async function verificarEmailDuplicado(supabase: any, email: string): Promise<{
+  puedeContinuar: boolean
+  razon?: string
+  trialExistente?: any
+}> {
+  const emailNormalizado = email.toLowerCase().trim()
+  const ahora = nowInHonduras()
+
+  try {
+    // 1. Verificar trial_access_users activo
+    const { data: trialActivo, error: trialError } = await supabase
+      .from('trial_access_users')
+      .select('*, companies!inner(plan_type, is_active, created_at)')
+      .eq('email', emailNormalizado)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+
+    if (!trialError && trialActivo && trialActivo.length > 0) {
+      const trial = trialActivo[0]
+      // Calcular fecha de expiración basada en cuando se creó el trial
+      const fechaCreacion = new Date(trial.created_at || trial.companies?.created_at || new Date())
+      const expiresAt = new Date(fechaCreacion)
+      expiresAt.setDate(expiresAt.getDate() + TRIAL_CONFIG.DURATION_DAYS)
+
+      if (expiresAt > ahora) {
+        const diasRestantes = Math.ceil((expiresAt.getTime() - ahora.getTime()) / (1000 * 60 * 60 * 24))
+        return {
+          puedeContinuar: false,
+          razon: `Ya tienes un trial activo que expira en ${diasRestantes} día${diasRestantes > 1 ? 's' : ''}. Por favor, utiliza otro email o espera a que expire.`,
+          trialExistente: trial
+        }
+      }
+    }
+
+    // 2. Verificar activaciones recientes (cooldown period)
+    const fechaLimite = new Date(ahora)
+    fechaLimite.setDate(fechaLimite.getDate() - TRIAL_CONFIG.COOLDOWN_DAYS)
+
+    const { data: activacionReciente, error: activacionError } = await supabase
+      .from('activaciones')
+      .select('*')
+      .eq('contacto_email', emailNormalizado)
+      .gte('created_at', fechaLimite.toISOString())
+      .order('created_at', { ascending: false })
+      .limit(1)
+
+    if (!activacionError && activacionReciente && activacionReciente.length > 0) {
+      const activacion = activacionReciente[0]
+      const fechaActivacion = new Date(activacion.created_at)
+      const diasDesdeUltima = Math.floor(
+        (ahora.getTime() - fechaActivacion.getTime()) / (1000 * 60 * 60 * 24)
+      )
+      const diasRestantes = TRIAL_CONFIG.COOLDOWN_DAYS - diasDesdeUltima
+
+      if (diasRestantes > 0) {
+        return {
+          puedeContinuar: false,
+          razon: `Ya solicitaste un trial hace ${diasDesdeUltima} día${diasDesdeUltima > 1 ? 's' : ''}. Puedes solicitar otro en ${diasRestantes} día${diasRestantes > 1 ? 's' : ''}.`
+        }
+      }
+    }
+
+    // 3. Verificar auth.users con trial activo
+    try {
+      const { data: authUser } = await supabase.auth.admin.getUserByEmail(emailNormalizado)
+
+      if (authUser?.user) {
+        // Verificar si tiene company con plan_type='trial' y activa
+        const { data: userProfile, error: profileError } = await supabase
+          .from('user_profiles')
+          .select(`
+            company_id,
+            companies!inner(
+              id,
+              plan_type,
+              is_active,
+              created_at
+            )
+          `)
+          .eq('id', authUser.user.id)
+          .single()
+
+        if (!profileError && userProfile?.companies) {
+          const company = userProfile.companies
+          if (company.plan_type === 'trial' && company.is_active) {
+            // Calcular si el trial aún no expira
+            const fechaCreacionCompany = new Date(company.created_at)
+            const expiresAt = new Date(fechaCreacionCompany)
+            expiresAt.setDate(expiresAt.getDate() + TRIAL_CONFIG.DURATION_DAYS)
+
+            if (expiresAt > ahora) {
+              const diasRestantes = Math.ceil((expiresAt.getTime() - ahora.getTime()) / (1000 * 60 * 60 * 24))
+              return {
+                puedeContinuar: false,
+                razon: `Ya tienes una cuenta con trial activo que expira en ${diasRestantes} día${diasRestantes > 1 ? 's' : ''}. Por favor, inicia sesión con tus credenciales o utiliza otro email.`
+              }
+            }
+          }
+        }
+      }
+    } catch (authError) {
+      // Si hay error al verificar auth, continuar (no bloquear)
+      console.warn('⚠️ Error verificando auth.users, continuando:', authError)
+    }
+
+    return { puedeContinuar: true }
+  } catch (error) {
+    console.error('❌ Error en verificarEmailDuplicado:', error)
+    // En caso de error, permitir continuar (no bloquear el proceso)
+    return { puedeContinuar: true }
   }
 }
 
@@ -562,7 +692,7 @@ async function enviarCorreoBienvenida(data: {
             </div>
             
             <div style="background: #fff3cd; padding: 20px; border-radius: 5px; margin: 20px 0;">
-              <h4>⏰ Tu trial expira en 7 días</h4>
+              <h4>⏰ Tu trial expira en ${TRIAL_CONFIG.DURATION_DAYS} día${TRIAL_CONFIG.DURATION_DAYS > 1 ? 's' : ''}</h4>
               <p>Disfruta explorando SISU y conoce todas las funcionalidades que te ofrecemos.</p>
             </div>
           </div>
@@ -690,7 +820,7 @@ async function enviarNotificacionesTrial(data: {
                   </div>
                   
                   <div style="background: #fff3cd; padding: 20px; border-radius: 5px; margin: 20px 0;">
-                    <h4>⏰ Tu trial expira en 7 días</h4>
+                    <h4>⏰ Tu trial expira en ${TRIAL_CONFIG.DURATION_DAYS} día${TRIAL_CONFIG.DURATION_DAYS > 1 ? 's' : ''}</h4>
                     <p>Disfruta explorando SISU y conoce todas las funcionalidades que te ofrecemos.</p>
                   </div>
                 </div>
