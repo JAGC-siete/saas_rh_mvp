@@ -170,18 +170,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // No fallar todo el proceso, pero logear el error
     }
 
-    // Enviar notificaciones inmediatas
-    console.log('📱 Enviando notificaciones...')
-    await enviarNotificacionesTrial({
-      empresa: empresa || 'Empresa no especificada',
-      nombre: nombre || 'Contacto no especificado',
-      contactoWhatsApp: contactoWhatsApp || 'No especificado',
-      contactoEmail,
-      empleados,
-      magic_link,
-      tenant_id
-    })
-
     // Disparar webhook a canal #activaciones
     console.log('🔗 Disparando webhook...')
     await dispararWebhookActivaciones({
@@ -348,20 +336,20 @@ async function crearEntornoTrial(supabase: any, data: {
     const subdomain = `trial-${Date.now().toString(36)}`
     
     const { data: newCompany, error: companyError } = await supabase
-      .from('companies')
-      .insert([{
+        .from('companies')
+        .insert([{
         id: companyId,
         name: data.empresa,
         subdomain,
-        plan_type: 'trial',
-        settings: {
-          trial_activated_at: getHondurasTimestamp(),
+          plan_type: 'trial',
+          settings: {
+            trial_activated_at: getHondurasTimestamp(),
           trial_employee_limit: data.empleados,
-          timezone: 'America/Tegucigalpa'
-        },
-        is_active: true
-      }])
-      .select()
+            timezone: 'America/Tegucigalpa'
+          },
+          is_active: true
+        }])
+        .select()
       .single()
 
     if (companyError || !newCompany) {
@@ -433,7 +421,7 @@ async function crearEntornoTrial(supabase: any, data: {
     const { data: departments, error: departmentsError } = await supabase
       .from('departments')
       .insert(departmentsToInsert)
-      .select()
+        .select()
 
     if (departmentsError) {
       throw new Error(`Error creando departamentos: ${departmentsError.message}`)
@@ -466,30 +454,39 @@ async function crearEntornoTrial(supabase: any, data: {
     } else {
       console.log('✅ Usuario Auth creado:', authUser.user.id)
 
-      // Crear perfil de usuario
+      // Permisos correctos para company_admin según el formato requerido
+      const companyAdminPermissions = {
+        can_view_all: true,
+        can_manage_all: true,
+        manage_payroll: true,
+        manage_reports: true,
+        manage_settings: true,
+        manage_employees: true,
+        can_manage_employees: true
+      }
+
+      // Usar UPSERT para asegurar que el perfil se cree/actualice correctamente
+      // Esto es importante porque puede haber un trigger que cree un perfil por defecto
       const { error: profileError } = await supabase
         .from('user_profiles')
-        .insert([{
+        .upsert({
           id: authUser.user.id,
-          company_id: companyId,
-          role: 'company_admin',
-          permissions: {
-            dashboard: true,
-            employees: true,
-            departments: true,
-            attendance: true,
-            leave: true,
-            payroll: true,
-            reports: true,
-            gamification: true,
-            settings: true
-          }
-        }])
+          company_id: companyId, // ✅ Asegurar que el company_id se asigne correctamente
+          role: 'company_admin', // ✅ Asegurar que el rol sea company_admin
+          permissions: companyAdminPermissions, // ✅ Permisos correctos
+          is_active: true
+        }, {
+          onConflict: 'id'
+        })
 
       if (profileError) {
-        console.error('⚠️ Error creando perfil de usuario:', profileError)
+        console.error('⚠️ Error creando/actualizando perfil de usuario:', profileError)
+        console.error('⚠️ Detalles del error:', JSON.stringify(profileError, null, 2))
       } else {
-        console.log('✅ Perfil de usuario creado')
+        console.log('✅ Perfil de usuario creado/actualizado correctamente')
+        console.log('✅ Company ID asignado:', companyId)
+        console.log('✅ Rol asignado: company_admin')
+        console.log('✅ Permisos asignados:', JSON.stringify(companyAdminPermissions, null, 2))
       }
 
       // Enviar correo de bienvenida
@@ -520,7 +517,7 @@ async function crearEntornoTrial(supabase: any, data: {
     } else {
       console.log('✅ trial_access_users creado exitosamente')
     }
-
+    
     return {
       success: true,
       data: {
@@ -631,52 +628,52 @@ async function enviarCorreoBienvenida(data: {
       return
     }
 
-    const { Resend } = await import('resend')
-    const resend = new Resend(apiKey)
-
+        const { Resend } = await import('resend')
+        const resend = new Resend(apiKey)
+        
     const emailHtml = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Bienvenido a SISU</title>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-          .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+              <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+                .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
           .credentials { background: white; padding: 20px; border-radius: 5px; margin: 20px 0; border: 2px solid #667eea; }
           .credential-row { margin: 15px 0; }
           .label { font-weight: bold; color: #667eea; }
           .value { font-family: monospace; font-size: 16px; color: #333; background: #f0f0f0; padding: 8px; border-radius: 4px; }
-          .button { display: inline-block; background: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+                .button { display: inline-block; background: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
           .warning { background: #fff3cd; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #f59e0b; }
-          .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
+                .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
+              </style>
+            </head>
+            <body>
+              <div class="container">
+                <div class="header">
             <h1>🎉 ¡Bienvenido a SISU!</h1>
-            <p>Empresa: <strong>${data.empresa}</strong></p>
-          </div>
-          
-          <div class="content">
-            <h2>¡Hola ${data.nombre}!</h2>
-            <p>Tu entorno de prueba SISU está listo y funcionando. Ya puedes empezar a explorar todas las funcionalidades.</p>
-            
+                  <p>Empresa: <strong>${data.empresa}</strong></p>
+                </div>
+                
+                <div class="content">
+                  <h2>¡Hola ${data.nombre}!</h2>
+                  <p>Tu entorno de prueba SISU está listo y funcionando. Ya puedes empezar a explorar todas las funcionalidades.</p>
+                  
             <div class="credentials">
               <h3 style="color: #667eea; margin-top: 0;">📧 Tus credenciales de acceso:</h3>
               <div class="credential-row">
                 <div class="label">Email:</div>
                 <div class="value">${data.email}</div>
-              </div>
+                  </div>
               <div class="credential-row">
                 <div class="label">Contraseña:</div>
                 <div class="value">${data.password}</div>
-              </div>
-            </div>
+                    </div>
+                  </div>
             
             <div style="text-align: center; margin: 30px 0;">
               <a href="${data.loginUrl}" class="button">🚀 Iniciar Sesión</a>
@@ -685,26 +682,26 @@ async function enviarCorreoBienvenida(data: {
             <div class="warning">
               <strong>⚠️ Importante:</strong> Por favor, cambia tu contraseña después de iniciar sesión por primera vez.
             </div>
-            
-            <div style="background: #e8f4fd; padding: 20px; border-radius: 5px; margin: 20px 0;">
-              <h4>📱 ¿Necesitas ayuda?</h4>
+                  
+                  <div style="background: #e8f4fd; padding: 20px; border-radius: 5px; margin: 20px 0;">
+                    <h4>📱 ¿Necesitas ayuda?</h4>
               <p>Responde a este email o escríbenos por WhatsApp al <strong>+504 9470-7007</strong></p>
-            </div>
-            
-            <div style="background: #fff3cd; padding: 20px; border-radius: 5px; margin: 20px 0;">
+                  </div>
+                  
+                  <div style="background: #fff3cd; padding: 20px; border-radius: 5px; margin: 20px 0;">
               <h4>⏰ Tu trial expira en ${TRIAL_CONFIG.DURATION_DAYS} día${TRIAL_CONFIG.DURATION_DAYS > 1 ? 's' : ''}</h4>
-              <p>Disfruta explorando SISU y conoce todas las funcionalidades que te ofrecemos.</p>
-            </div>
-          </div>
-          
-          <div class="footer">
-            <p>Este email fue enviado desde SISU - Sistema de Gestión de Recursos Humanos</p>
-            <p>Si no solicitaste este trial, puedes ignorar este mensaje.</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `
+                    <p>Disfruta explorando SISU y conoce todas las funcionalidades que te ofrecemos.</p>
+                  </div>
+                </div>
+                
+                <div class="footer">
+                  <p>Este email fue enviado desde SISU - Sistema de Gestión de Recursos Humanos</p>
+                  <p>Si no solicitaste este trial, puedes ignorar este mensaje.</p>
+                </div>
+              </div>
+            </body>
+            </html>
+          `
 
     const result = await resend.emails.send({
       from: process.env.RESEND_FROM || 'SISU <noreply@humanosisu.net>',
@@ -737,128 +734,10 @@ function addMinutes(timeStr: string, minutes: number): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
 
-async function enviarNotificacionesTrial(data: {
-  empresa: string
-  nombre: string
-  contactoWhatsApp: string
-  contactoEmail: string
-  empleados: number
-  magic_link: string
-  tenant_id: string
-}) {
-  try {
-    console.log('🚀 Enviando notificaciones de trial para:', {
-      empresa: data.empresa,
-      nombre: data.nombre,
-      email: data.contactoEmail,
-      whatsapp: data.contactoWhatsApp,
-      empleados: data.empleados,
-      magic_link: data.magic_link,
-      tenant_id: data.tenant_id
-    })
-
-    // Envío de email con Resend
-    const apiKey = process.env.RESEND_API_KEY
-    if (apiKey) {
-      try {
-        const { Resend } = await import('resend')
-        const resend = new Resend(apiKey)
-        
-        const emailResult = await resend.emails.send({
-          from: process.env.RESEND_FROM || 'SISU <noreply@humanosisu.net>',
-      to: data.contactoEmail,
-          subject: `🎉 ¡Tu trial de SISU está activo! - ${data.empresa}`,
-      html: `
-            <!DOCTYPE html>
-            <html>
-            <head>
-              <meta charset="utf-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <title>Tu trial de SISU está activo</title>
-              <style>
-                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-                .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-                .button { display: inline-block; background: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-                .steps { background: white; padding: 20px; border-radius: 5px; margin: 20px 0; }
-                .step { margin: 10px 0; padding: 10px; border-left: 3px solid #667eea; }
-                .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
-              </style>
-            </head>
-            <body>
-              <div class="container">
-                <div class="header">
-                  <h1>🎉 ¡Tu trial de SISU está activo!</h1>
-                  <p>Empresa: <strong>${data.empresa}</strong></p>
-                </div>
-                
-                <div class="content">
-                  <h2>¡Hola ${data.nombre}!</h2>
-                  <p>Tu entorno de prueba SISU está listo y funcionando. Ya puedes empezar a explorar todas las funcionalidades.</p>
-                  
-                  <div style="text-align: center; margin: 30px 0;">
-                    <a href="${data.magic_link}" class="button">🚀 Acceder a mi Dashboard</a>
-                  </div>
-                  
-                  <div class="steps">
-                    <h3>📋 Próximos pasos:</h3>
-                    <div class="step">
-                      <strong>1.</strong> Entra al dashboard y explora las funciones
-                    </div>
-                    <div class="step">
-                      <strong>2.</strong> Sube tu plantilla de empleados o pide que te carguemos ${data.empleados} empleados demo
-                    </div>
-                    <div class="step">
-                      <strong>3.</strong> Agenda una demo de 15 min si quieres
-                    </div>
-                  </div>
-                  
-                  <div style="background: #e8f4fd; padding: 20px; border-radius: 5px; margin: 20px 0;">
-                    <h4>📱 ¿Necesitas ayuda?</h4>
-                    <p>Responde a este email o ${data.contactoWhatsApp !== 'No especificado' ? `escríbenos por WhatsApp al <strong>+504 ${data.contactoWhatsApp}</strong>` : 'escríbenos por email'}</p>
-                  </div>
-                  
-                  <div style="background: #fff3cd; padding: 20px; border-radius: 5px; margin: 20px 0;">
-                    <h4>⏰ Tu trial expira en ${TRIAL_CONFIG.DURATION_DAYS} día${TRIAL_CONFIG.DURATION_DAYS > 1 ? 's' : ''}</h4>
-                    <p>Disfruta explorando SISU y conoce todas las funcionalidades que te ofrecemos.</p>
-                  </div>
-                </div>
-                
-                <div class="footer">
-                  <p>Este email fue enviado desde SISU - Sistema de Gestión de Recursos Humanos</p>
-                  <p>Si no solicitaste este trial, puedes ignorar este mensaje.</p>
-                </div>
-              </div>
-            </body>
-            </html>
-          `
-        })
-        
-        console.log('✅ Email enviado exitosamente:', emailResult)
-      } catch (emailError) {
-        console.error('❌ Error enviando email:', emailError)
-      }
-    } else {
-      console.log('⚠️ RESEND_API_KEY no configurado, saltando envío de email')
-    }
-
-    // TODO: Implementar envío real de WhatsApp con Twilio
-    // Por ahora solo log
-    if (data.contactoWhatsApp && data.contactoWhatsApp !== 'No especificado') {
-      console.log('📱 WhatsApp notification (to be implemented):', {
-        to: `+504${data.contactoWhatsApp.replace(/[-\s]/g, '')}`,
-        message: `Hola ${data.nombre}, ya activamos SISU – ${data.empresa}. Entra aquí: ${data.magic_link}. Paso siguiente: sube tu plantilla (CSV/Excel) o respóndenos con ${data.empleados} empleados y te lo dejamos corriendo hoy. ¿Querés una demo de 15 min?`
-      })
-    } else {
-      console.log('📱 WhatsApp no proporcionado, saltando notificación por WhatsApp')
-    }
-
-  } catch (error) {
-    console.error('❌ Error sending trial notifications:', error)
-    // No fallar todo el proceso si las notificaciones fallan
-  }
-}
+// Función eliminada: enviarNotificacionesTrial
+// Razón: El usuario recibía dos correos (trial + bienvenida con credenciales)
+// Solución: Solo se envía un correo de bienvenida con credenciales después de crear el entorno
+// Esto mejora la experiencia del usuario al evitar correos duplicados y confusión
 
 async function dispararWebhookActivaciones(data: {
   empresa: string
