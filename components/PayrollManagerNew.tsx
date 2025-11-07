@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback, useMemo } from 'react'
 import { Card, CardContent } from './ui/card'
 import { Button } from './ui/button'
 import { Icon } from './Icon'
@@ -6,128 +6,115 @@ import { usePayrollManager } from '../lib/hooks/usePayrollManager'
 import UnifiedPayrollTable from './UnifiedPayrollTable'
 import ConfigNomina from './ConfigNomina'
 import CustomPayrollFieldsForm from './CustomPayrollFieldsForm'
+import { 
+  getPayrollConfig, 
+  calculateProhalcaPayroll, 
+  calculateAlmacenesExtraPayroll 
+} from '../lib/payroll-client-specific'
+
+// Type definitions for better type safety
+interface CustomFieldData {
+  metadata: Record<string, unknown>
+  eff_bruto: number
+  eff_neto: number
+}
+
+interface ModalState {
+  lineId: string
+  metadata: Record<string, unknown> | null
+  baseSalary: number
+}
 
 export default function PayrollManagerNew({ companyId: propCompanyId }: { companyId?: string }) {
   // Use the new unified payroll manager
   const payroll = usePayrollManager()
   
-  // Modal state for editing custom fields
+  // Modal state for editing custom fields - combined into single state object
   const [showCustomFieldsModal, setShowCustomFieldsModal] = useState(false)
-  const [selectedLineId, setSelectedLineId] = useState<string>('')
-  const [selectedMetadata, setSelectedMetadata] = useState<any>(null)
-  const [selectedBaseSalary, setSelectedBaseSalary] = useState<number>(0)
+  const [modalState, setModalState] = useState<ModalState | null>(null)
   
   // Local state for preview-only custom fields changes (not persisted until authorization)
-  const [previewCustomFields, setPreviewCustomFields] = useState<Record<string, any>>({})
+  const [previewCustomFields, setPreviewCustomFields] = useState<Record<string, CustomFieldData>>({})
   
-  // Debug logging para verificar el companyId
+  // Debug logging para verificar el companyId (only in development)
   useEffect(() => {
-    console.log('🔍 PayrollManagerNew - companyId from context:', payroll.companyId, 'loading:', payroll.companyLoading)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 PayrollManagerNew - companyId from context:', payroll.companyId, 'loading:', payroll.companyLoading)
+    }
   }, [payroll.companyId, payroll.companyLoading])
 
-  // Loading state while company is being loaded
-  if (payroll.companyLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Card className="backdrop-blur-md bg-blue-500/20 border border-blue-500/30">
-          <CardContent className="p-6 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mx-auto mb-4"></div>
-            <h2 className="text-xl font-semibold text-blue-300 mb-2">Cargando...</h2>
-            <p className="text-blue-200">Obteniendo información de la empresa...</p>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
+  // Memoize total deducciones calculation to avoid recalculating on every render
+  const totalDeducciones = useMemo(() => {
+    if (!payroll.unifiedData?.resumen.total_deducciones) return 0
+    return Object.values(payroll.unifiedData.resumen.total_deducciones).reduce((a, b) => a + b, 0)
+  }, [payroll.unifiedData?.resumen.total_deducciones])
 
-  // Early return if no company_id
-  if (!payroll.companyId) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Card className="backdrop-blur-md bg-red-500/20 border border-red-500/30">
-          <CardContent className="p-6 text-center">
-            <Icon name="alert" className="h-12 w-12 text-red-400 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-red-300 mb-2">Sin Empresa Asignada</h2>
-            <p className="text-red-200">No se encontró una empresa asociada a tu cuenta. Contacta al administrador.</p>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
+  // Handle filter changes - now unified (memoized to prevent re-renders)
+  const handleFilterChange = useCallback(async (key: string, value: unknown) => {
+    await payroll.updateFilter(key as keyof typeof payroll.filters, value)
+  }, [payroll])
 
-  // Handle filter changes - now unified
-  const handleFilterChange = async (key: string, value: any) => {
-    await payroll.updateFilter(key as any, value)
-  }
-
-  // Handle unified preview - now single handler
-  const handlePreview = async () => {
+  // Handle unified preview - now single handler (memoized)
+  const handlePreview = useCallback(async () => {
     try {
       await payroll.generatePreview()
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Error handling is done in the hook
+      console.error('Error in handlePreview:', error)
     }
-  }
+  }, [payroll])
 
-  const getStatusBadge = (status: string) => {
-    const variants = {
-      idle: 'bg-white/20 text-gray-300',
-      previewing: 'bg-blue-500/20 text-blue-300',
-      draft: 'bg-blue-500/20 text-blue-300',
-      edited: 'bg-yellow-500/20 text-yellow-300',
-      authorizing: 'bg-orange-500/20 text-orange-300',
-      authorized: 'bg-green-500/20 text-green-300',
-      distributed: 'bg-purple-500/20 text-purple-300',
-      error: 'bg-red-500/20 text-red-300'
-    }
-    
-    return (
-      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-        variants[status as keyof typeof variants] || variants.idle
-      }`}>
-        {status === 'idle' ? 'Inactivo' :
-         status === 'previewing' ? 'Generando Preview' :
-         status === 'draft' ? 'Borrador' :
-         status === 'edited' ? 'Editado' :
-         status === 'authorizing' ? 'Autorizando' :
-         status === 'authorized' ? 'Autorizado' :
-         status === 'distributed' ? 'Distribuido' :
-         status === 'error' ? 'Error' : status}
-      </span>
-    )
-  }
-
-  // Handle pre-authorize - NOW PERSISTS custom fields to database
-  const handlePreAuthorize = async () => {
+  // Handle pre-authorize - NOW PERSISTS custom fields to database using batch API (memoized)
+  const handlePreAuthorize = useCallback(async () => {
     if (!payroll.runId) {
       alert('No hay corrida de nómina activa')
       return
     }
 
     try {
-      // First, persist all preview custom fields to database
+      // First, persist all preview custom fields to database using batch endpoint
       if (Object.keys(previewCustomFields).length > 0) {
         const { companyId } = payroll
         if (!companyId) {
           throw new Error('Company ID no encontrado')
         }
 
-        // Save each custom field change to database
-        for (const [lineId, fieldData] of Object.entries(previewCustomFields)) {
-          const response = await fetch('/api/payroll/update-custom-fields', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              run_line_id: lineId,
-              custom_fields: fieldData.metadata
-            })
-          })
+        // Prepare batch updates
+        const batchUpdates = Object.entries(previewCustomFields).map(([lineId, fieldData]) => ({
+          run_line_id: lineId,
+          custom_fields: fieldData.metadata
+        }))
 
-          if (!response.ok) {
-            const error = await response.json()
-            throw new Error(`Error guardando campos para línea ${lineId}: ${error.error}`)
+        // Save all custom field changes in a single batch API call
+        const batchResponse = await fetch('/api/payroll/update-custom-fields-batch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ updates: batchUpdates })
+        })
+
+        if (!batchResponse.ok) {
+          const error = await batchResponse.json()
+          throw new Error(`Error guardando campos en batch: ${error.error || error.message || 'Error desconocido'}`)
+        }
+
+        const batchData = await batchResponse.json()
+        
+        // Check if all updates were successful
+        if (!batchData.success) {
+          // Partial failure - show which ones failed
+          interface BatchResult {
+            run_line_id: string
+            success: boolean
+            error?: string
+          }
+          const failedUpdates = (batchData.results as BatchResult[] | undefined)?.filter((r) => !r.success) || []
+          if (failedUpdates.length > 0) {
+            const failedLines = failedUpdates.map((r) => r.run_line_id).join(', ')
+            throw new Error(`Error guardando algunos campos. Líneas con error: ${failedLines}`)
           }
         }
+
+        console.log(`✅ Batch update successful: ${batchData.summary?.successful || 0} líneas actualizadas`)
 
         // Clear preview fields after persisting
         setPreviewCustomFields({})
@@ -156,30 +143,30 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
             `Con campos personalizados: ${data.summary.lines_with_metadata}\n` +
             `Total Neto: L. ${data.summary.total_neto.toFixed(2)}\n\n` +
             `Ya puede autorizar la nómina`)
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error consolidando:', error)
-      alert('Error al consolidar: ' + error.message)
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
+      alert('Error al consolidar: ' + errorMessage)
     }
-  }
+  }, [payroll, previewCustomFields])
 
-  // Handle edit custom fields
-  const handleEditCustomFields = (lineId: string, metadata: any, baseSalary: number) => {
-    setSelectedLineId(lineId)
-    setSelectedMetadata(metadata)
-    setSelectedBaseSalary(baseSalary || 0)
+  // Handle edit custom fields (memoized)
+  const handleEditCustomFields = useCallback((lineId: string, metadata: Record<string, unknown> | null, baseSalary: number) => {
+    setModalState({
+      lineId,
+      metadata,
+      baseSalary: baseSalary || 0
+    })
     setShowCustomFieldsModal(true)
-  }
+  }, [])
 
-  // Handle save custom fields - ONLY UPDATE PREVIEW (not persisted until authorization)
-  const handleSaveCustomFields = async (metadata: any) => {
+  // Handle save custom fields - ONLY UPDATE PREVIEW (not persisted until authorization) (memoized)
+  const handleSaveCustomFields = useCallback(async (metadata: Record<string, unknown>) => {
+    if (!modalState) {
+      throw new Error('No hay estado de modal activo')
+    }
+
     try {
-      // Calculate new totals locally using the client-specific functions
-      const { 
-        getPayrollConfig, 
-        calculateProhalcaPayroll, 
-        calculateAlmacenesExtraPayroll 
-      } = require('../lib/payroll-client-specific')
-      
       const companyId = payroll.companyId
       if (!companyId) {
         throw new Error('Company ID no encontrado')
@@ -196,7 +183,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
       }
 
       const row = payroll.unifiedData.rows.find(
-        r => (r.line_id === selectedLineId || r.employee_id === selectedLineId)
+        r => (r.line_id === modalState.lineId || r.employee_id === modalState.lineId)
       )
 
       if (!row) {
@@ -226,7 +213,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
       // Update local preview state (NOT persisted to DB)
       setPreviewCustomFields(prev => ({
         ...prev,
-        [selectedLineId]: {
+        [modalState.lineId]: {
           metadata,
           eff_bruto: newBruto,
           eff_neto: newNeto
@@ -235,7 +222,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
 
       // Update local unified data for immediate preview
       const updatedRows = payroll.unifiedData.rows.map(r => {
-        if (r.line_id === selectedLineId || r.employee_id === selectedLineId) {
+        if (r.line_id === modalState.lineId || r.employee_id === modalState.lineId) {
           return {
             ...r,
             total_earnings: newBruto,
@@ -267,10 +254,70 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
       payroll.setUnifiedData({ rows: updatedRows, resumen: newResumen })
 
       setShowCustomFieldsModal(false)
-    } catch (error: any) {
+      setModalState(null)
+    } catch (error: unknown) {
       console.error('Error calculating custom fields:', error)
-      alert('Error al calcular campos personalizados: ' + error.message)
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
+      alert('Error al calcular campos personalizados: ' + errorMessage)
     }
+  }, [modalState, payroll])
+
+  // Loading state while company is being loaded
+  if (payroll.companyLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Card className="backdrop-blur-md bg-blue-500/20 border border-blue-500/30">
+          <CardContent className="p-6 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mx-auto mb-4"></div>
+            <h2 className="text-xl font-semibold text-blue-300 mb-2">Cargando...</h2>
+            <p className="text-blue-200">Obteniendo información de la empresa...</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // Early return if no company_id
+  if (!payroll.companyId) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Card className="backdrop-blur-md bg-red-500/20 border border-red-500/30">
+          <CardContent className="p-6 text-center">
+            <Icon name="alert" className="h-12 w-12 text-red-400 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-red-300 mb-2">Sin Empresa Asignada</h2>
+            <p className="text-red-200">No se encontró una empresa asociada a tu cuenta. Contacta al administrador.</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  const getStatusBadge = (status: string) => {
+    const variants = {
+      idle: 'bg-white/20 text-gray-300',
+      previewing: 'bg-blue-500/20 text-blue-300',
+      draft: 'bg-blue-500/20 text-blue-300',
+      edited: 'bg-yellow-500/20 text-yellow-300',
+      authorizing: 'bg-orange-500/20 text-orange-300',
+      authorized: 'bg-green-500/20 text-green-300',
+      distributed: 'bg-purple-500/20 text-purple-300',
+      error: 'bg-red-500/20 text-red-300'
+    }
+    
+    return (
+      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+        variants[status as keyof typeof variants] || variants.idle
+      }`}>
+        {status === 'idle' ? 'Inactivo' :
+         status === 'previewing' ? 'Generando Preview' :
+         status === 'draft' ? 'Borrador' :
+         status === 'edited' ? 'Editado' :
+         status === 'authorizing' ? 'Autorizando' :
+         status === 'authorized' ? 'Autorizado' :
+         status === 'distributed' ? 'Distribuido' :
+         status === 'error' ? 'Error' : status}
+      </span>
+    )
   }
 
   return (
@@ -367,9 +414,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
                   {payroll.loading ? (
                     <div className="animate-pulse bg-white/20 h-8 w-16 rounded"></div>
                   ) : (
-                    payroll.unifiedData?.resumen.total_deducciones ? 
-                      `L. ${Object.values(payroll.unifiedData.resumen.total_deducciones).reduce((a, b) => a + b, 0).toLocaleString('es-HN')}` : 
-                      'L. 0'
+                    `L. ${totalDeducciones.toLocaleString('es-HN')}`
                   )}
                 </p>
               </div>
@@ -475,11 +520,14 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
             <div className="p-6">
               <CustomPayrollFieldsForm
                 companyId={payroll.companyId || ''}
-                runLineId={selectedLineId}
-                currentMetadata={selectedMetadata}
-                baseSalary={selectedBaseSalary}
+                runLineId={modalState?.lineId || ''}
+                currentMetadata={modalState?.metadata || null}
+                baseSalary={modalState?.baseSalary || 0}
                 onSave={handleSaveCustomFields}
-                onCancel={() => setShowCustomFieldsModal(false)}
+                onCancel={() => {
+                  setShowCustomFieldsModal(false)
+                  setModalState(null)
+                }}
               />
             </div>
           </div>
