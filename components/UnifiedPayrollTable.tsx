@@ -7,7 +7,7 @@ import { Button } from './ui/button'
 import { Icon, IconName } from './Icon'
 import { formatCurrency } from '../lib/utils/currency'
 import { UnifiedRow, UnifiedResumen } from '../lib/payroll-unified'
-import { extractCustomFields, calculateProhalcaPayroll, hasCustomFields, getCustomFields, getPayrollConfig } from '../lib/payroll-client-specific'
+import { extractCustomFields, calculateProhalcaPayroll, calculateAlmacenesExtraPayroll, hasCustomFields, getCustomFields, getPayrollConfig } from '../lib/payroll-client-specific'
 import { Pagination } from './ui/pagination'
 
 interface UnifiedPayrollTableProps {
@@ -457,16 +457,25 @@ export default function UnifiedPayrollTable({
                             </div>
                           </div>
                           
-                          {/* Custom Fields (PROHALCA-specific) */}
+                          {/* Custom Fields (Client-specific) */}
                           {hasCustom && payrollConfig && (
                             <div className="mt-4 pt-4 border-t border-white/10">
-                              <h4 className="text-sm font-semibold text-white mb-2">Campos Específicos de PROHALCA</h4>
+                              <h4 className="text-sm font-semibold text-white mb-2">Campos Específicos de {payrollConfig.companyName}</h4>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {/* Get custom fields from metadata if available */}
                                 {(() => {
                                   const metadata = (row as any).metadata
                                   const customFields = metadata ? extractCustomFields(companyId || '', metadata) : {}
-                                  const calculatedFields = metadata && row.total_earnings ? calculateProhalcaPayroll(row.total_earnings, metadata) : null
+                                  
+                                  // Calculate fields based on client type
+                                  let calculatedFields: any = null
+                                  if (metadata && row.total_earnings) {
+                                    if (payrollConfig.calculationType === 'prohalca') {
+                                      calculatedFields = calculateProhalcaPayroll(row.total_earnings, metadata)
+                                    } else if (payrollConfig.calculationType === 'almacenes_extra') {
+                                      calculatedFields = calculateAlmacenesExtraPayroll(row.total_earnings, metadata)
+                                    }
+                                  }
                                   
                                   if (!customFields || Object.keys(customFields).length === 0) {
                                     return (
@@ -474,39 +483,63 @@ export default function UnifiedPayrollTable({
                                     )
                                   }
                                   
+                                  // Categorize fields by type
+                                  const earningsFields = ['horas_extras', 'feriado_trabajado', 'estipendio_transporte', 'incapacidad']
+                                  const helperFields = ['valor_hora_extra', 'descanso_por_turno_noche', 'doble_turno', 'pausa_almuerzo', 'dias_faltados']
+                                  
+                                  const earnings: Array<{key: string, label: string, value: number}> = []
+                                  const deductions: Array<{key: string, label: string, value: number}> = []
+                                  
+                                  if (payrollConfig.customFields) {
+                                    Object.keys(payrollConfig.customFields).forEach(fieldName => {
+                                      const value = customFields[fieldName] || (calculatedFields as any)?.[fieldName] || 0
+                                      const label = payrollConfig.customFields![fieldName]
+                                      
+                                      // Skip helper fields
+                                      if (helperFields.includes(fieldName)) {
+                                        return
+                                      }
+                                      
+                                      // Categorize
+                                      if (earningsFields.includes(fieldName)) {
+                                        if (value > 0 || customFields[fieldName] !== undefined) {
+                                          earnings.push({ key: fieldName, label, value })
+                                        }
+                                      } else {
+                                        if (value > 0 || customFields[fieldName] !== undefined) {
+                                          deductions.push({ key: fieldName, label, value })
+                                        }
+                                      }
+                                    })
+                                  }
+                                  
                                   return (
                                     <>
                                       {/* Earnings */}
-                                      {payrollConfig.customFields && Object.keys(payrollConfig.customFields).map((fieldName) => {
-                                        if (fieldName.includes('horas_extras') || fieldName.includes('feriado') || fieldName.includes('transporte')) {
-                                          const value = customFields[fieldName] || (calculatedFields as any)?.[fieldName] || 0
-                                          const label = payrollConfig.customFields![fieldName]
-                                          return (
-                                            <div key={fieldName} className="flex justify-between text-sm text-gray-200">
-                                              <span>{label}:</span>
-                                              <span className="text-green-300">{formatCurrency(value)}</span>
-                                            </div>
-                                          )
-                                        }
-                                        return null
-                                      })}
+                                      {earnings.length > 0 && (
+                                        <div className="col-span-full">
+                                          <h5 className="text-xs font-semibold text-green-300 mb-2">Ingresos Adicionales</h5>
+                                        </div>
+                                      )}
+                                      {earnings.map(({ key, label, value }) => (
+                                        <div key={key} className="flex justify-between text-sm text-gray-200">
+                                          <span>{label}:</span>
+                                          <span className="text-green-300">{formatCurrency(value)}</span>
+                                        </div>
+                                      ))}
                                       
                                       {/* Deductions */}
-                                      {payrollConfig.customFields && Object.keys(payrollConfig.customFields).map((fieldName) => {
-                                        if (!fieldName.includes('horas_extras') && !fieldName.includes('feriado') && !fieldName.includes('transporte') && !fieldName.includes('valor') && !fieldName.includes('descanso') && !fieldName.includes('doble') && !fieldName.includes('pausa')) {
-                                          const value = customFields[fieldName] || (calculatedFields as any)?.[fieldName] || 0
-                                          const label = payrollConfig.customFields![fieldName]
-                                          if (value > 0) {
-                                            return (
-                                              <div key={fieldName} className="flex justify-between text-sm text-gray-200">
-                                                <span>{label}:</span>
-                                                <span className="text-red-300">{formatCurrency(value)}</span>
-                                              </div>
-                                            )
-                                          }
-                                        }
-                                        return null
-                                      })}
+                                      {deductions.length > 0 && (
+                                        <div className="col-span-full mt-2">
+                                          <h5 className="text-xs font-semibold text-red-300 mb-2">Deducciones Adicionales</h5>
+                                        </div>
+                                      )}
+                                      {deductions.map(({ key, label, value }) => (
+                                        <div key={key} className="flex justify-between text-sm text-gray-200">
+                                          <span>{label}:</span>
+                                          <span className="text-red-300">{formatCurrency(value)}</span>
+                                        </div>
+                                      ))}
                                     </>
                                   )
                                 })()}
