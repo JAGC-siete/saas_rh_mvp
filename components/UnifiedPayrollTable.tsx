@@ -590,7 +590,7 @@ export default function UnifiedPayrollTable({
           {/* Authorize Button */}
           <Button
             onClick={onAuthorize}
-            disabled={buttonState.disabled || (status !== 'pre-authorized' && status !== 'draft')}
+            disabled={buttonState.disabled || (status !== 'edited' && status !== 'draft')}
             className={`flex items-center gap-2 ${buttonState.className} relative overflow-hidden`}
           >
             {buttonState.showAnimation ? (
@@ -606,10 +606,10 @@ export default function UnifiedPayrollTable({
 
           <Button
             onClick={onGeneratePDF}
-            disabled={!runId || loading || (status !== 'pre-authorized' && status !== 'authorized')}
+            disabled={!runId || loading || (status !== 'edited' && status !== 'authorized')}
             variant="outline"
             className="flex items-center gap-2 bg-white/10 border-white/30 text-white hover:bg-white/20 disabled:opacity-50"
-            title={status === 'draft' ? 'Pre-autorice la nómina primero para generar PDF' : 'Generar PDF consolidado'}
+            title={status === 'draft' ? 'Consolide la nómina primero para generar PDF' : 'Generar PDF consolidado'}
           >
             <Icon name="document" className="h-4 w-4" />
             Generar PDF

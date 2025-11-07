@@ -71,11 +71,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    // Update run status to pre-authorized
+    // Update run status to edited (consolidate changes)
     const { error: updateError } = await supabase
       .from('payroll_runs')
       .update({ 
-        status: 'pre-authorized',
+        status: 'edited',
         updated_at: new Date().toISOString()
       })
       .eq('id', run_id)
@@ -102,10 +102,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     return res.status(200).json({
-      message: 'Nómina pre-autorizada exitosamente',
+      message: 'Nómina consolidada y lista para PDF',
       ok: true,
       run_id,
-      status: 'pre-authorized',
+      status: 'edited',
       summary
     })
 

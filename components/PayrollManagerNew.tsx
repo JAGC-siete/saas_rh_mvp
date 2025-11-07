@@ -71,11 +71,10 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
       idle: 'bg-white/20 text-gray-300',
       previewing: 'bg-blue-500/20 text-blue-300',
       draft: 'bg-blue-500/20 text-blue-300',
-      editing: 'bg-yellow-500/20 text-yellow-300',
-      'pre-authorized': 'bg-orange-500/20 text-orange-300',
+      edited: 'bg-yellow-500/20 text-yellow-300',
       authorizing: 'bg-orange-500/20 text-orange-300',
       authorized: 'bg-green-500/20 text-green-300',
-      distributing: 'bg-purple-500/20 text-purple-300',
+      distributed: 'bg-purple-500/20 text-purple-300',
       error: 'bg-red-500/20 text-red-300'
     }
     
@@ -86,11 +85,10 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
         {status === 'idle' ? 'Inactivo' :
          status === 'previewing' ? 'Generando Preview' :
          status === 'draft' ? 'Borrador' :
-         status === 'editing' ? 'Editando' :
-         status === 'pre-authorized' ? 'Pre-Autorizado' :
+         status === 'edited' ? 'Editado' :
          status === 'authorizing' ? 'Autorizando' :
          status === 'authorized' ? 'Autorizado' :
-         status === 'distributing' ? 'Distribuyendo' :
+         status === 'distributed' ? 'Distribuido' :
          status === 'error' ? 'Error' : status}
       </span>
     )
@@ -120,10 +118,12 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
       // Reload data to reflect new status
       await payroll.loadUnifiedData()
       
-      alert(`Nómina pre-autorizada exitosamente\n\n` +
+      alert(`Nómina consolidada exitosamente\n\n` +
+            `✓ Cambios guardados\n` +
             `Líneas editadas: ${data.summary.edited_lines}\n` +
             `Con campos personalizados: ${data.summary.lines_with_metadata}\n` +
-            `Total Neto: L. ${data.summary.total_neto.toFixed(2)}`)
+            `Total Neto: L. ${data.summary.total_neto.toFixed(2)}\n\n` +
+            `Ya puede generar el PDF consolidado`)
     } catch (error: any) {
       console.error('Error pre-autorizando:', error)
       alert('Error al pre-autorizar: ' + error.message)
