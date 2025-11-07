@@ -106,7 +106,7 @@ export default function CustomPayrollFieldsForm({
     <Card className="backdrop-blur-md bg-white/10 border border-white/20">
       <CardHeader className="border-b border-white/10">
         <CardTitle className="text-white text-xl font-bold">
-          Campos Personalizados - PROHALCA
+          Campos Personalizados - {config.companyName || 'Sin Configurar'}
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-6">

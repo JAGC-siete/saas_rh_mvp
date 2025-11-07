@@ -20,7 +20,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { data: lines, error } = await supabase
       .from('payroll_run_lines')
-      .select('id, employee_id, metadata')
+      .select('id, employee_id, metadata, eff_neto, eff_bruto, eff_ihss, eff_rap, eff_isr, eff_hours, edited')
       .eq('run_id', run_id)
       .eq('company_id', companyId)
 

@@ -1,6 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
-import { buildPayrollMetadata, validateCustomPayrollData } from '../../../lib/payroll-client-specific'
+import { 
+  buildPayrollMetadata, 
+  validateCustomPayrollData, 
+  getPayrollConfig,
+  calculateProhalcaPayroll,
+  calculateAlmacenesExtraPayroll
+} from '../../../lib/payroll-client-specific'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -65,23 +71,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const existingMetadata = existingLine.metadata || {}
     const mergedMetadata = { ...existingMetadata, ...metadata }
 
-    // Calculate new totals
-    // Get total ingresos adicionales from metadata
-    const ingresosAdicionales = 
-      (metadata.horas_extras || 0) + 
-      (metadata.feriado_trabajado || 0) + 
-      (metadata.estipendio_transporte || 0)
-    
-    // Get total deducciones adicionales from metadata
-    const deduccionesAdicionales = 
-      (metadata.comedor || 0) +
-      (metadata.cooperativa_aportaciones || 0) +
-      (metadata.cooperativa_retirable || 0) +
-      (metadata.cooperativa_prestamo || 0) +
-      (metadata.embargo_alimentos || 0) +
-      (metadata.otras_deducciones_materiales || 0) +
-      (metadata.otras_deducciones_medicamentos || 0) +
-      (metadata.otras_deducciones_efectivo || 0)
+    // Calculate new totals based on client type
+    const config = getPayrollConfig(companyId)
+    let ingresosAdicionales = 0
+    let deduccionesAdicionales = 0
+
+    if (config) {
+      if (config.calculationType === 'prohalca') {
+        const calc = calculateProhalcaPayroll(Number(existingLine.eff_bruto) || 0, mergedMetadata)
+        ingresosAdicionales = calc.totalIngresosAdicionales
+        deduccionesAdicionales = calc.totalDeduccionesAdicionales
+      } else if (config.calculationType === 'almacenes_extra') {
+        const calc = calculateAlmacenesExtraPayroll(Number(existingLine.eff_bruto) || 0, mergedMetadata)
+        ingresosAdicionales = calc.totalIngresosAdicionales
+        deduccionesAdicionales = calc.totalDeduccionesAdicionales
+      }
+    }
 
     // Compute new effective amounts using additional ingresos/deducciones
     const baseEffBruto = Number(existingLine.eff_bruto) || 0

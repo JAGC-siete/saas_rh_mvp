@@ -65,7 +65,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       return res.status(404).json({ error: 'No hay líneas de nómina para esta corrida' })
     }
 
-    // Mapear a estructura de PlanillaItem
+    // Mapear a estructura de PlanillaItem - usar valores EFECTIVOS (eff_*)
     const planilla: PlanillaItem[] = payrollLines.map((line: any) => ({
       id: line.employees?.dni || '',
       name: line.employees?.name || '',
@@ -73,15 +73,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       bank_account: line.employees?.bank_account || 'No especificado',
       department: line.employees?.departments?.name || 'Sin Departamento',
       monthly_salary: Number(line.employees?.base_salary) || 0,
-      days_worked: Number(line.calc_hours) / 8 || 0, // Convertir horas a días
+      days_worked: Number(line.eff_hours) / 8 || 0, // Convertir horas a días - usar EFECTIVO
       days_absent: 0, // Calcular si es necesario
       late_days: 0, // Calcular si es necesario
-      total_earnings: Number(line.calc_bruto) || 0,
-      IHSS: Number(line.calc_ihss) || 0,
-      RAP: Number(line.calc_rap) || 0,
-      ISR: Number(line.calc_isr) || 0,
-      total_deductions: (Number(line.calc_ihss) || 0) + (Number(line.calc_rap) || 0) + (Number(line.calc_isr) || 0),
-      total: Number(line.calc_neto) || 0,
+      total_earnings: Number(line.eff_bruto) || 0, // EFECTIVO incluye campos personalizados
+      IHSS: Number(line.eff_ihss) || 0,
+      RAP: Number(line.eff_rap) || 0,
+      ISR: Number(line.eff_isr) || 0,
+      total_deductions: (Number(line.eff_ihss) || 0) + (Number(line.eff_rap) || 0) + (Number(line.eff_isr) || 0),
+      total: Number(line.eff_neto) || 0, // NETO EFECTIVO con deducciones personalizadas
       notes_on_ingress: line.edited ? 'Editado' : '',
       notes_on_deductions: ''
     }))

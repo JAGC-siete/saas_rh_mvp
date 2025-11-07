@@ -108,11 +108,26 @@ export async function fetchUnifiedPayroll(
             if (l?.employee_id) byEmployee[l.employee_id] = l
           })
 
-          // Merge metadata into rows
+          // Merge metadata and effective values into rows
           rows = rows.map((r) => {
             const line = (r as any).line_id ? byLineId[(r as any).line_id as string] : byEmployee[r.employee_id]
-            if (line && line.metadata) {
-              return { ...r, ...(line.metadata ? { metadata: line.metadata } : {}) } as any
+            if (line) {
+              // Use effective values from database if available (they override preview values)
+              return { 
+                ...r, 
+                ...(line.metadata ? { metadata: line.metadata } : {}),
+                ...(line.eff_neto !== undefined ? { total: Number(line.eff_neto) } : {}),
+                ...(line.eff_bruto !== undefined ? { total_earnings: Number(line.eff_bruto) } : {}),
+                ...(line.eff_ihss !== undefined ? { IHSS: Number(line.eff_ihss) } : {}),
+                ...(line.eff_rap !== undefined ? { RAP: Number(line.eff_rap) } : {}),
+                ...(line.eff_isr !== undefined ? { ISR: Number(line.eff_isr) } : {}),
+                ...(line.eff_hours !== undefined ? { days_worked: Number(line.eff_hours) } : {}),
+                ...(line.edited !== undefined ? { edited: line.edited } : {}),
+                // Recalculate total_deducciones with effective values
+                total_deducciones: (Number(line.eff_ihss) || r.IHSS || 0) + 
+                                  (Number(line.eff_rap) || r.RAP || 0) + 
+                                  (Number(line.eff_isr) || r.ISR || 0)
+              } as any
             }
             return r
           })
