@@ -132,7 +132,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Process all updates
     const config = getPayrollConfig(companyId)
     const results: BatchUpdateResult[] = []
-    const updatePromises: Promise<void>[] = []
+    const updatePromises: Promise<BatchUpdateResult>[] = []
 
     for (const update of updates) {
       const existingLine = existingLines.find((l: any) => l.id === update.run_line_id)
@@ -179,50 +179,54 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const newEffBruto = Math.round((baseEffBruto + ingresosAdicionales) * 100) / 100
       const newEffNeto = Math.round((newEffBruto - statutoryDeductions - deduccionesAdicionales) * 100) / 100
 
-      // Create update promise
-      const updatePromise = supabase
-        .from('payroll_run_lines')
-        .update({
-          metadata: mergedMetadata,
-          edited: true,
-          eff_bruto: newEffBruto,
-          eff_neto: newEffNeto,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', update.run_line_id)
-        .eq('company_id', companyId)
-        .then(({ error: updateError }) => {
+      // Create update promise with explicit typing
+      const updatePromise = (async (): Promise<BatchUpdateResult> => {
+        try {
+          const { error: updateError } = await supabase
+            .from('payroll_run_lines')
+            .update({
+              metadata: mergedMetadata,
+              edited: true,
+              eff_bruto: newEffBruto,
+              eff_neto: newEffNeto,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', update.run_line_id)
+            .eq('company_id', companyId)
+
           if (updateError) {
-            results.push({
+            return {
               run_line_id: update.run_line_id,
               success: false,
               error: updateError.message
-            })
+            }
           } else {
-            results.push({
+            return {
               run_line_id: update.run_line_id,
               success: true,
               ingresos_adicionales: ingresosAdicionales,
               deducciones_adicionales: deduccionesAdicionales,
               eff_bruto: newEffBruto,
               eff_neto: newEffNeto
-            })
+            }
           }
-        })
-        .catch((error: any) => {
+        } catch (error: unknown) {
           console.error(`Error updating line ${update.run_line_id}:`, error)
-          results.push({
+          const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
+          return {
             run_line_id: update.run_line_id,
             success: false,
-            error: error.message || 'Error desconocido'
-          })
-        })
+            error: errorMessage
+          }
+        }
+      })()
 
       updatePromises.push(updatePromise)
     }
 
-    // Wait for all updates to complete
-    await Promise.all(updatePromises)
+    // Wait for all updates to complete and collect results
+    const updateResults = await Promise.all(updatePromises)
+    results.push(...updateResults)
 
     // Check if all updates were successful
     const successfulUpdates = results.filter(r => r.success)
