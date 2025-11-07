@@ -72,6 +72,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
       previewing: 'bg-blue-500/20 text-blue-300',
       draft: 'bg-blue-500/20 text-blue-300',
       editing: 'bg-yellow-500/20 text-yellow-300',
+      'pre-authorized': 'bg-orange-500/20 text-orange-300',
       authorizing: 'bg-orange-500/20 text-orange-300',
       authorized: 'bg-green-500/20 text-green-300',
       distributing: 'bg-purple-500/20 text-purple-300',
@@ -86,12 +87,47 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
          status === 'previewing' ? 'Generando Preview' :
          status === 'draft' ? 'Borrador' :
          status === 'editing' ? 'Editando' :
+         status === 'pre-authorized' ? 'Pre-Autorizado' :
          status === 'authorizing' ? 'Autorizando' :
          status === 'authorized' ? 'Autorizado' :
          status === 'distributing' ? 'Distribuyendo' :
          status === 'error' ? 'Error' : status}
       </span>
     )
+  }
+
+  // Handle pre-authorize
+  const handlePreAuthorize = async () => {
+    if (!payroll.runId) {
+      alert('No hay corrida de nómina activa')
+      return
+    }
+
+    try {
+      const response = await fetch('/api/payroll/pre-authorize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ run_id: payroll.runId })
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Error al pre-autorizar nómina')
+      }
+
+      const data = await response.json()
+      
+      // Reload data to reflect new status
+      await payroll.loadUnifiedData()
+      
+      alert(`Nómina pre-autorizada exitosamente\n\n` +
+            `Líneas editadas: ${data.summary.edited_lines}\n` +
+            `Con campos personalizados: ${data.summary.lines_with_metadata}\n` +
+            `Total Neto: L. ${data.summary.total_neto.toFixed(2)}`)
+    } catch (error: any) {
+      console.error('Error pre-autorizando:', error)
+      alert('Error al pre-autorizar: ' + error.message)
+    }
   }
 
   // Handle edit custom fields
@@ -119,8 +155,11 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
         throw new Error(error.error || 'Error al guardar campos personalizados')
       }
 
-      // Refresh payroll data
+      await response.json()
+      
+      // Refresh payroll data silently to get updated totals
       await payroll.loadUnifiedData()
+      
       setShowCustomFieldsModal(false)
     } catch (error) {
       console.error('Error saving custom fields:', error)
@@ -279,6 +318,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
           rows={payroll.unifiedData.rows}
           resumen={payroll.unifiedData.resumen}
           onGenerateVoucher={payroll.generateVoucher}
+          onPreAuthorize={handlePreAuthorize}
           onAuthorize={payroll.authorizeRun}
           onGeneratePDF={payroll.generatePDF}
           onSendEmail={() => payroll.sendEmail()}

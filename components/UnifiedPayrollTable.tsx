@@ -14,6 +14,7 @@ interface UnifiedPayrollTableProps {
   rows: UnifiedRow[]
   resumen: UnifiedResumen
   onGenerateVoucher: (lineId: string) => void
+  onPreAuthorize?: () => void
   onAuthorize: () => void
   onGeneratePDF: () => void
   onSendEmail: () => void
@@ -35,6 +36,7 @@ export default function UnifiedPayrollTable({
   rows,
   resumen,
   onGenerateVoucher,
+  onPreAuthorize,
   onAuthorize,
   onGeneratePDF,
   onSendEmail,
@@ -540,9 +542,22 @@ export default function UnifiedPayrollTable({
 
         {/* Action Buttons */}
         <div className="flex items-center gap-4 mt-6 pt-6 border-t border-white/20">
+          {/* Pre-Authorize Button */}
+          {onPreAuthorize && status === 'draft' && (
+            <Button
+              onClick={onPreAuthorize}
+              disabled={!runId || loading}
+              className="flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white transform hover:scale-105 transition-all duration-200 hover:shadow-lg hover:shadow-orange-500/25"
+            >
+              <Icon name="check" className="h-4 w-4" />
+              Pre-Autorizar Nómina
+            </Button>
+          )}
+
+          {/* Authorize Button */}
           <Button
             onClick={onAuthorize}
-            disabled={buttonState.disabled}
+            disabled={buttonState.disabled || (status !== 'pre-authorized' && status !== 'draft')}
             className={`flex items-center gap-2 ${buttonState.className} relative overflow-hidden`}
           >
             {buttonState.showAnimation ? (
@@ -558,9 +573,10 @@ export default function UnifiedPayrollTable({
 
           <Button
             onClick={onGeneratePDF}
-            disabled={!runId || loading}
+            disabled={!runId || loading || (status !== 'pre-authorized' && status !== 'authorized')}
             variant="outline"
-            className="flex items-center gap-2 bg-white/10 border-white/30 text-white hover:bg-white/20"
+            className="flex items-center gap-2 bg-white/10 border-white/30 text-white hover:bg-white/20 disabled:opacity-50"
+            title={status === 'draft' ? 'Pre-autorice la nómina primero para generar PDF' : 'Generar PDF consolidado'}
           >
             <Icon name="document" className="h-4 w-4" />
             Generar PDF
