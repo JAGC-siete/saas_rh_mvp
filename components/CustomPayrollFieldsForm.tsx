@@ -29,15 +29,26 @@ export default function CustomPayrollFieldsForm({
 
   useEffect(() => {
     // Initialize form with current metadata
-    if (currentMetadata) {
+    if (currentMetadata && Object.keys(currentMetadata).length > 0) {
       setFormData(currentMetadata)
+    } else {
+      // Initialize with empty values for all custom fields
+      const initialData: any = {}
+      if (customFields) {
+        Object.keys(customFields).forEach(key => {
+          initialData[key] = currentMetadata?.[key] ?? ''
+        })
+      }
+      setFormData(initialData)
     }
-  }, [currentMetadata])
+  }, [currentMetadata, customFields])
 
   const handleInputChange = (fieldName: string, value: string | number) => {
+    // Allow string values while user is typing (for decimal inputs like "0.")
+    // Convert to number only when it's a valid complete number
     setFormData((prev: any) => ({
       ...prev,
-      [fieldName]: typeof value === 'string' && value !== '' ? parseFloat(value) || 0 : value
+      [fieldName]: value
     }))
   }
 
@@ -46,9 +57,19 @@ export default function CustomPayrollFieldsForm({
     setSaving(true)
 
     try {
+      // Convert string values to numbers for all fields
+      const converted: any = {}
+      for (const key in formData) {
+        const value = formData[key]
+        if (value === '' || value === null || value === undefined) {
+          converted[key] = 0
+        } else {
+          converted[key] = typeof value === 'string' ? parseFloat(value) || 0 : value
+        }
+      }
+
       // Convert units to Lempiras where applicable
       const hourlyRate = (Number(baseSalary) || 0) / 30 / 8
-      const converted: any = { ...formData }
       if (converted.horas_extras !== undefined && converted.horas_extras !== null) {
         const hours = Number(converted.horas_extras) || 0
         converted.horas_extras = Math.round(hours * hourlyRate * 100) / 100
@@ -95,12 +116,15 @@ export default function CustomPayrollFieldsForm({
   // Calculate totals (convert hours/days to Lempiras for display)
   const hourlyRate = (Number(baseSalary) || 0) / 30 / 8
   const totalIngresos = earningsFields.reduce((sum, key) => {
-    const val = Number(formData[key] || 0)
+    const val = typeof formData[key] === 'string' ? parseFloat(formData[key]) || 0 : (formData[key] || 0)
     if (key.includes('horas_extras')) return sum + val * hourlyRate
     if (key.includes('feriado')) return sum + val * 8 * hourlyRate
     return sum + val
   }, 0)
-  const totalDeducciones = deductionsFields.reduce((sum, key) => sum + (formData[key] || 0), 0)
+  const totalDeducciones = deductionsFields.reduce((sum, key) => {
+    const val = typeof formData[key] === 'string' ? parseFloat(formData[key]) || 0 : (formData[key] || 0)
+    return sum + val
+  }, 0)
 
   return (
     <Card className="backdrop-blur-md bg-white/10 border border-white/20">
@@ -126,7 +150,7 @@ export default function CustomPayrollFieldsForm({
                   <input
                     type="number"
                     step="0.01"
-                    value={formData[fieldName] || ''}
+                    value={formData[fieldName] !== undefined && formData[fieldName] !== null ? formData[fieldName] : ''}
                     onChange={(e) => handleInputChange(fieldName, e.target.value)}
                     className="w-full px-4 py-2 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-white/10 backdrop-blur-sm text-white placeholder-gray-300"
                     placeholder="0.00"
@@ -157,7 +181,7 @@ export default function CustomPayrollFieldsForm({
                   <input
                     type="number"
                     step="0.01"
-                    value={formData[fieldName] || ''}
+                    value={formData[fieldName] !== undefined && formData[fieldName] !== null ? formData[fieldName] : ''}
                     onChange={(e) => handleInputChange(fieldName, e.target.value)}
                     className="w-full px-4 py-2 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-red-400 bg-white/10 backdrop-blur-sm text-white placeholder-gray-300"
                     placeholder="0.00"
