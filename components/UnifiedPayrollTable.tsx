@@ -1,13 +1,14 @@
 // Unified Payroll Table Component
 // Combines planilla and detalle data in a single expandable table
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Icon, IconName } from './Icon'
 import { formatCurrency } from '../lib/utils/currency'
 import { UnifiedRow, UnifiedResumen } from '../lib/payroll-unified'
 import { extractCustomFields, calculateProhalcaPayroll, hasCustomFields, getCustomFields, getPayrollConfig } from '../lib/payroll-client-specific'
+import { Pagination } from './ui/pagination'
 
 interface UnifiedPayrollTableProps {
   rows: UnifiedRow[]
@@ -47,10 +48,76 @@ export default function UnifiedPayrollTable({
   companyId
 }: UnifiedPayrollTableProps) {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage] = useState(10)
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+  const [sortBy, setSortBy] = useState<'name' | 'department'>('name')
+  const [departmentFilter, setDepartmentFilter] = useState<string>('all')
   
   // Get payroll configuration for this company
   const payrollConfig = companyId ? getPayrollConfig(companyId) : null
   const hasCustom = hasCustomFields(companyId || '')
+
+  // Get unique departments for filter
+  const departments = useMemo(() => {
+    const depts = new Set<string>()
+    rows.forEach(row => {
+      if (row.department) {
+        depts.add(row.department)
+      }
+    })
+    return Array.from(depts).sort()
+  }, [rows])
+
+  // Filter and sort employees
+  const filteredAndSortedRows = useMemo(() => {
+    let filtered = [...rows]
+
+    // Filter by department
+    if (departmentFilter !== 'all') {
+      filtered = filtered.filter(row => row.department === departmentFilter)
+    }
+
+    // Sort
+    const sorted = [...filtered].sort((a, b) => {
+      let compareA: string
+      let compareB: string
+
+      if (sortBy === 'department') {
+        compareA = a.department?.toLowerCase() || ''
+        compareB = b.department?.toLowerCase() || ''
+      } else {
+        compareA = a.name?.toLowerCase() || ''
+        compareB = b.name?.toLowerCase() || ''
+      }
+
+      if (sortOrder === 'asc') {
+        return compareA.localeCompare(compareB)
+      } else {
+        return compareB.localeCompare(compareA)
+      }
+    })
+
+    return sorted
+  }, [rows, departmentFilter, sortBy, sortOrder])
+
+  // Paginate results
+  const paginatedRows = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage
+    const endIndex = startIndex + itemsPerPage
+    return filteredAndSortedRows.slice(startIndex, endIndex)
+  }, [filteredAndSortedRows, currentPage, itemsPerPage])
+
+  // Calculate total pages
+  const totalPages = Math.ceil(filteredAndSortedRows.length / itemsPerPage)
+
+  const toggleSortOrder = () => {
+    setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')
+  }
+
+  const toggleSortBy = () => {
+    setSortBy(prev => prev === 'name' ? 'department' : 'name')
+  }
 
   const toggleRow = (employeeId: string) => {
     const newExpanded = new Set(expandedRows)
@@ -171,6 +238,63 @@ export default function UnifiedPayrollTable({
           </div>
         </div>
 
+        {/* Filters and Sort Controls */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-4">
+          {/* Department Filter */}
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-white">Departamento:</label>
+            <select
+              value={departmentFilter}
+              onChange={(e) => {
+                setDepartmentFilter(e.target.value)
+                setCurrentPage(1)
+              }}
+              className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+            >
+              <option value="all" className="bg-gray-800">Todos</option>
+              {departments.map(dept => (
+                <option key={dept} value={dept} className="bg-gray-800">{dept}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Sort Controls */}
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-white">Ordenar por:</label>
+            <button
+              onClick={toggleSortBy}
+              className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm hover:bg-white/20 transition-colors"
+            >
+              {sortBy === 'name' ? 'Nombre' : 'Departamento'}
+            </button>
+            <button
+              onClick={toggleSortOrder}
+              className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm hover:bg-white/20 transition-colors flex items-center gap-1"
+            >
+              {sortOrder === 'asc' ? (
+                <>
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                  </svg>
+                  A-Z
+                </>
+              ) : (
+                <>
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                  Z-A
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Results count */}
+          <div className="flex items-center text-sm text-gray-300 sm:ml-auto">
+            Mostrando {filteredAndSortedRows.length} de {rows.length} empleados
+          </div>
+        </div>
+
         {/* Unified Table */}
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-white/30">
@@ -206,8 +330,8 @@ export default function UnifiedPayrollTable({
               </tr>
             </thead>
             <tbody className="bg-transparent divide-y divide-white/20">
-              {Array.isArray(rows) && rows.length > 0 ? (
-                rows.map((row, index) => (
+              {Array.isArray(paginatedRows) && paginatedRows.length > 0 ? (
+                paginatedRows.map((row, index) => (
                   <React.Fragment key={row.employee_id}>
                     <tr className="hover:bg-white/10 transition-colors duration-200">
                       <td className="px-4 py-3 whitespace-nowrap">
@@ -402,6 +526,17 @@ export default function UnifiedPayrollTable({
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredAndSortedRows.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+          />
+        )}
 
         {/* Action Buttons */}
         <div className="flex items-center gap-4 mt-6 pt-6 border-t border-white/20">
