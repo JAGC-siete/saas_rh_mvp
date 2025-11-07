@@ -164,6 +164,7 @@ export default function UnifiedPayrollTable({
   } => {
     const isAuthorized = status === 'authorized'
     const isAuthorizing = loading && status === 'authorizing'
+    const canAuth = (status === 'draft' || status === 'edited') && !!runId && !loading
     
     if (isAuthorized) {
       return {
@@ -191,7 +192,7 @@ export default function UnifiedPayrollTable({
       text: 'Autorizar Nómina',
       icon: 'check',
       className: 'bg-green-600 hover:bg-green-700 text-white transform hover:scale-105 transition-all duration-200 hover:shadow-lg hover:shadow-green-500/25',
-      disabled: !canAuthorize || loading,
+      disabled: !canAuth,
       showAnimation: false,
       showSuccessEffect: false
     }
@@ -575,7 +576,7 @@ export default function UnifiedPayrollTable({
 
         {/* Action Buttons */}
         <div className="flex items-center gap-4 mt-6 pt-6 border-t border-white/20">
-          {/* Pre-Authorize Button */}
+          {/* Pre-Authorize Button - Only show in draft status */}
           {onPreAuthorize && status === 'draft' && (
             <Button
               onClick={onPreAuthorize}
@@ -583,14 +584,14 @@ export default function UnifiedPayrollTable({
               className="flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white transform hover:scale-105 transition-all duration-200 hover:shadow-lg hover:shadow-orange-500/25"
             >
               <Icon name="check" className="h-4 w-4" />
-              Pre-Autorizar Nómina
+              Consolidar Cambios
             </Button>
           )}
 
-          {/* Authorize Button */}
+          {/* Authorize Button - Enabled when status is 'edited' or 'draft' */}
           <Button
             onClick={onAuthorize}
-            disabled={buttonState.disabled || (status !== 'edited' && status !== 'draft')}
+            disabled={buttonState.disabled}
             className={`flex items-center gap-2 ${buttonState.className} relative overflow-hidden`}
           >
             {buttonState.showAnimation ? (
@@ -604,22 +605,25 @@ export default function UnifiedPayrollTable({
             )}
           </Button>
 
+          {/* Generate PDF - Only enabled after authorization */}
           <Button
             onClick={onGeneratePDF}
-            disabled={!runId || loading || (status !== 'edited' && status !== 'authorized')}
+            disabled={!runId || loading || status !== 'authorized'}
             variant="outline"
             className="flex items-center gap-2 bg-white/10 border-white/30 text-white hover:bg-white/20 disabled:opacity-50"
-            title={status === 'draft' ? 'Consolide la nómina primero para generar PDF' : 'Generar PDF consolidado'}
+            title={status !== 'authorized' ? 'Autorice la nómina primero para generar PDF' : 'Generar PDF consolidado'}
           >
             <Icon name="document" className="h-4 w-4" />
             Generar PDF
           </Button>
 
+          {/* Send Email - Only enabled after PDF generation (tracked separately) */}
           <Button
             onClick={onSendEmail}
-            disabled={!canSend || loading}
+            disabled={!runId || loading || status !== 'authorized'}
             variant="outline"
-            className="flex items-center gap-2 bg-white/10 border-white/30 text-white hover:bg-white/20"
+            className="flex items-center gap-2 bg-white/10 border-white/30 text-white hover:bg-white/20 disabled:opacity-50"
+            title={status !== 'authorized' ? 'Autorice y genere PDF primero' : 'Enviar recibos por email'}
           >
             <Icon name="envelope" className="h-4 w-4" />
             Enviar por Email

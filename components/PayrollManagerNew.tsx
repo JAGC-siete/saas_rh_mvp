@@ -17,6 +17,9 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
   const [selectedMetadata, setSelectedMetadata] = useState<any>(null)
   const [selectedBaseSalary, setSelectedBaseSalary] = useState<number>(0)
   
+  // Local state for preview-only custom fields changes (not persisted until authorization)
+  const [previewCustomFields, setPreviewCustomFields] = useState<Record<string, any>>({})
+  
   // Debug logging para verificar el companyId
   useEffect(() => {
     console.log('🔍 PayrollManagerNew - companyId from context:', payroll.companyId, 'loading:', payroll.companyLoading)
@@ -94,7 +97,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
     )
   }
 
-  // Handle pre-authorize
+  // Handle pre-authorize - NOW PERSISTS custom fields to database
   const handlePreAuthorize = async () => {
     if (!payroll.runId) {
       alert('No hay corrida de nómina activa')
@@ -102,6 +105,35 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
     }
 
     try {
+      // First, persist all preview custom fields to database
+      if (Object.keys(previewCustomFields).length > 0) {
+        const { companyId } = payroll
+        if (!companyId) {
+          throw new Error('Company ID no encontrado')
+        }
+
+        // Save each custom field change to database
+        for (const [lineId, fieldData] of Object.entries(previewCustomFields)) {
+          const response = await fetch('/api/payroll/update-custom-fields', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              run_line_id: lineId,
+              custom_fields: fieldData.metadata
+            })
+          })
+
+          if (!response.ok) {
+            const error = await response.json()
+            throw new Error(`Error guardando campos para línea ${lineId}: ${error.error}`)
+          }
+        }
+
+        // Clear preview fields after persisting
+        setPreviewCustomFields({})
+      }
+
+      // Then update status to 'edited'
       const response = await fetch('/api/payroll/pre-authorize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -110,23 +142,23 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || 'Error al pre-autorizar nómina')
+        throw new Error(error.error || 'Error al consolidar nómina')
       }
 
       const data = await response.json()
       
-      // Reload data to reflect new status
+      // Reload data to reflect persisted changes and new status
       await payroll.loadUnifiedData()
       
       alert(`Nómina consolidada exitosamente\n\n` +
-            `✓ Cambios guardados\n` +
+            `✓ Cambios guardados en base de datos\n` +
             `Líneas editadas: ${data.summary.edited_lines}\n` +
             `Con campos personalizados: ${data.summary.lines_with_metadata}\n` +
             `Total Neto: L. ${data.summary.total_neto.toFixed(2)}\n\n` +
-            `Ya puede generar el PDF consolidado`)
+            `Ya puede autorizar la nómina`)
     } catch (error: any) {
-      console.error('Error pre-autorizando:', error)
-      alert('Error al pre-autorizar: ' + error.message)
+      console.error('Error consolidando:', error)
+      alert('Error al consolidar: ' + error.message)
     }
   }
 
@@ -138,32 +170,106 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
     setShowCustomFieldsModal(true)
   }
 
-  // Handle save custom fields
+  // Handle save custom fields - ONLY UPDATE PREVIEW (not persisted until authorization)
   const handleSaveCustomFields = async (metadata: any) => {
     try {
-      const response = await fetch('/api/payroll/update-custom-fields', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          run_line_id: selectedLineId,
-          custom_fields: metadata
-        })
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Error al guardar campos personalizados')
+      // Calculate new totals locally using the client-specific functions
+      const { 
+        getPayrollConfig, 
+        calculateProhalcaPayroll, 
+        calculateAlmacenesExtraPayroll 
+      } = require('../lib/payroll-client-specific')
+      
+      const companyId = payroll.companyId
+      if (!companyId) {
+        throw new Error('Company ID no encontrado')
       }
 
-      await response.json()
-      
-      // Refresh payroll data silently to get updated totals
-      await payroll.loadUnifiedData()
-      
+      const config = getPayrollConfig(companyId)
+      if (!config) {
+        throw new Error('Configuración de cliente no encontrada')
+      }
+
+      // Find the row in current data
+      if (!payroll.unifiedData) {
+        throw new Error('No hay datos de planilla cargados')
+      }
+
+      const row = payroll.unifiedData.rows.find(
+        r => (r.line_id === selectedLineId || r.employee_id === selectedLineId)
+      )
+
+      if (!row) {
+        throw new Error('Línea de planilla no encontrada')
+      }
+
+      // Calculate new totals
+      let ingresosAdicionales = 0
+      let deduccionesAdicionales = 0
+
+      if (config.calculationType === 'prohalca') {
+        const calc = calculateProhalcaPayroll(row.total_earnings || 0, metadata)
+        ingresosAdicionales = calc.totalIngresosAdicionales
+        deduccionesAdicionales = calc.totalDeduccionesAdicionales
+      } else if (config.calculationType === 'almacenes_extra') {
+        const calc = calculateAlmacenesExtraPayroll(row.total_earnings || 0, metadata)
+        ingresosAdicionales = calc.totalIngresosAdicionales
+        deduccionesAdicionales = calc.totalDeduccionesAdicionales
+      }
+
+      // Calculate new net
+      const baseBruto = row.total_earnings || 0
+      const statutoryDeductions = (row.IHSS || 0) + (row.RAP || 0) + (row.ISR || 0)
+      const newBruto = baseBruto + ingresosAdicionales
+      const newNeto = newBruto - statutoryDeductions - deduccionesAdicionales
+
+      // Update local preview state (NOT persisted to DB)
+      setPreviewCustomFields(prev => ({
+        ...prev,
+        [selectedLineId]: {
+          metadata,
+          eff_bruto: newBruto,
+          eff_neto: newNeto
+        }
+      }))
+
+      // Update local unified data for immediate preview
+      const updatedRows = payroll.unifiedData.rows.map(r => {
+        if (r.line_id === selectedLineId || r.employee_id === selectedLineId) {
+          return {
+            ...r,
+            total_earnings: newBruto,
+            total: newNeto,
+            metadata: metadata
+          }
+        }
+        return r
+      })
+
+      // Recalculate resumen
+      const newResumen = updatedRows.reduce((acc, r) => {
+        acc.total_bruto += r.total_earnings || 0
+        acc.total_neto += r.total || 0
+        acc.total_deducciones.IHSS += r.IHSS || 0
+        acc.total_deducciones.RAP += r.RAP || 0
+        acc.total_deducciones.ISR += r.ISR || 0
+        return acc
+      }, {
+        empleados: updatedRows.length,
+        total_bruto: 0,
+        total_deducciones: { IHSS: 0, RAP: 0, ISR: 0, otros: 0 },
+        total_neto: 0,
+        total_dias_trabajados: payroll.unifiedData.resumen.total_dias_trabajados,
+        total_horas_extras: payroll.unifiedData.resumen.total_horas_extras
+      })
+
+      // Update state directly without API call
+      payroll.setUnifiedData({ rows: updatedRows, resumen: newResumen })
+
       setShowCustomFieldsModal(false)
-    } catch (error) {
-      console.error('Error saving custom fields:', error)
-      alert('Error al guardar campos personalizados')
+    } catch (error: any) {
+      console.error('Error calculating custom fields:', error)
+      alert('Error al calcular campos personalizados: ' + error.message)
     }
   }
 

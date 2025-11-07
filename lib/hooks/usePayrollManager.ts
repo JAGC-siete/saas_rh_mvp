@@ -566,10 +566,15 @@ export const usePayrollManager = () => {
     loadData()
   }, [state.hasLoadedInitialData, companyId, state.currentPeriod.year, state.currentPeriod.month, state.currentPeriod.quincena])
 
+  // Set unified data directly (for preview updates)
+  const setUnifiedData = useCallback((data: { rows: UnifiedRow[]; resumen: UnifiedResumen }) => {
+    dispatch({ type: 'SET_DATA', payload: data })
+  }, [])
+
   // Computed Properties
   const canPreview = state.status === 'idle' || state.status === 'draft' || state.status === 'error'
   const canEdit = state.status === 'draft' && !!state.runId
-  const canAuthorize = state.status === 'draft' && !!state.runId
+  const canAuthorize = (state.status === 'draft' || state.status === 'edited') && !!state.runId
   const canSend = state.status === 'authorized' && !!state.runId
   const canReset = state.status !== 'idle'
   
@@ -616,6 +621,7 @@ export const usePayrollManager = () => {
     setError,
     clearError,
     setLoading,
+    setUnifiedData,
     
     // Computed Properties
     canPreview,
