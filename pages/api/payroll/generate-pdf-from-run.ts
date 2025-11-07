@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { generateConsolidatedPayrollPDF, type PlanillaItem } from '../../../lib/payroll/report'
 import { withExportRateLimit } from '../../../lib/security/rate-limiting'
+import { getPayrollConfig, calculateProhalcaPayroll, calculateAlmacenesExtraPayroll } from '../../../lib/payroll-client-specific'
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -56,6 +57,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .eq('run_id', run_id)
       .eq('company_id', companyId)
 
+    // Get payroll config for this company
+    const config = getPayrollConfig(companyId)
+
     if (linesError) {
       console.error('Error obteniendo líneas de nómina:', linesError)
       return res.status(500).json({ error: 'Error obteniendo líneas de nómina' })
@@ -66,25 +70,62 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     // Mapear a estructura de PlanillaItem - usar valores EFECTIVOS (eff_*)
-    const planilla: PlanillaItem[] = payrollLines.map((line: any) => ({
-      id: line.employees?.dni || '',
-      name: line.employees?.name || '',
-      bank: line.employees?.bank_name || 'No especificado',
-      bank_account: line.employees?.bank_account || 'No especificado',
-      department: line.employees?.departments?.name || 'Sin Departamento',
-      monthly_salary: Number(line.employees?.base_salary) || 0,
-      days_worked: Number(line.eff_hours) / 8 || 0, // Convertir horas a días - usar EFECTIVO
-      days_absent: 0, // Calcular si es necesario
-      late_days: 0, // Calcular si es necesario
-      total_earnings: Number(line.eff_bruto) || 0, // EFECTIVO incluye campos personalizados
-      IHSS: Number(line.eff_ihss) || 0,
-      RAP: Number(line.eff_rap) || 0,
-      ISR: Number(line.eff_isr) || 0,
-      total_deductions: (Number(line.eff_ihss) || 0) + (Number(line.eff_rap) || 0) + (Number(line.eff_isr) || 0),
-      total: Number(line.eff_neto) || 0, // NETO EFECTIVO con deducciones personalizadas
-      notes_on_ingress: line.edited ? 'Editado' : '',
-      notes_on_deductions: ''
-    }))
+    const planilla: PlanillaItem[] = payrollLines.map((line: any) => {
+      // Calculate custom deductions from metadata
+      let customDeductions = 0
+      let deductionsNotes = ''
+      
+      if (config && line.metadata) {
+        if (config.calculationType === 'prohalca') {
+          const calc = calculateProhalcaPayroll(Number(line.eff_bruto) || 0, line.metadata)
+          customDeductions = calc.totalDeduccionesAdicionales
+          // Build notes for custom deductions
+          const deductionItems: string[] = []
+          if (calc.comedor > 0) deductionItems.push(`Comedor: L. ${calc.comedor.toFixed(2)}`)
+          if (calc.cooperativaAportaciones > 0) deductionItems.push(`Coop. Aportaciones: L. ${calc.cooperativaAportaciones.toFixed(2)}`)
+          if (calc.cooperativaRetirable > 0) deductionItems.push(`Coop. Retirable: L. ${calc.cooperativaRetirable.toFixed(2)}`)
+          if (calc.cooperativaPrestamo > 0) deductionItems.push(`Coop. Préstamo: L. ${calc.cooperativaPrestamo.toFixed(2)}`)
+          if (calc.embargoAlimentos > 0) deductionItems.push(`Embargo: L. ${calc.embargoAlimentos.toFixed(2)}`)
+          if (calc.otrasDeduccionesMateriales > 0) deductionItems.push(`Materiales: L. ${calc.otrasDeduccionesMateriales.toFixed(2)}`)
+          if (calc.otrasDeduccionesMedicamentos > 0) deductionItems.push(`Medicamentos: L. ${calc.otrasDeduccionesMedicamentos.toFixed(2)}`)
+          if (calc.otrasDeduccionesEfectivo > 0) deductionItems.push(`Efectivo: L. ${calc.otrasDeduccionesEfectivo.toFixed(2)}`)
+          if (deductionItems.length > 0) deductionsNotes = deductionItems.join('; ')
+        } else if (config.calculationType === 'almacenes_extra') {
+          const calc = calculateAlmacenesExtraPayroll(Number(line.eff_bruto) || 0, line.metadata)
+          customDeductions = calc.totalDeduccionesAdicionales
+          // Build notes for custom deductions
+          const deductionItems: string[] = []
+          if (calc.prestamoBanrural > 0) deductionItems.push(`Préstamo BANRURAL: L. ${calc.prestamoBanrural.toFixed(2)}`)
+          if (calc.prestamoCelular > 0) deductionItems.push(`Préstamo Celular: L. ${calc.prestamoCelular.toFixed(2)}`)
+          if (calc.anticipoPrestamo > 0) deductionItems.push(`Anticipo/Préstamo: L. ${calc.anticipoPrestamo.toFixed(2)}`)
+          if (calc.impuestoVecinal > 0) deductionItems.push(`Impuesto Vecinal: L. ${calc.impuestoVecinal.toFixed(2)}`)
+          if (deductionItems.length > 0) deductionsNotes = deductionItems.join('; ')
+        }
+      }
+
+      const statutoryDeductions = (Number(line.eff_ihss) || 0) + (Number(line.eff_rap) || 0) + (Number(line.eff_isr) || 0)
+      const totalDeductions = statutoryDeductions + customDeductions
+
+      return {
+        id: line.employees?.dni || '',
+        name: line.employees?.name || '',
+        bank: line.employees?.bank_name || 'No especificado',
+        bank_account: line.employees?.bank_account || 'No especificado',
+        department: line.employees?.departments?.name || 'Sin Departamento',
+        monthly_salary: Number(line.employees?.base_salary) || 0,
+        days_worked: Number(line.eff_hours) / 8 || 0, // Convertir horas a días - usar EFECTIVO
+        days_absent: 0, // Calcular si es necesario
+        late_days: 0, // Calcular si es necesario
+        total_earnings: Number(line.eff_bruto) || 0, // EFECTIVO incluye campos personalizados
+        IHSS: Number(line.eff_ihss) || 0,
+        RAP: Number(line.eff_rap) || 0,
+        ISR: Number(line.eff_isr) || 0,
+        total_deductions: totalDeductions,
+        total: Number(line.eff_neto) || 0, // NETO EFECTIVO con deducciones personalizadas
+        notes_on_ingress: line.edited ? 'Editado' : '',
+        notes_on_deductions: deductionsNotes
+      }
+    })
 
     const periodo = `${payrollRun.year}-${String(payrollRun.month).padStart(2, '0')}`
     // Fetch company name for document title

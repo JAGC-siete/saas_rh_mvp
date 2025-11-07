@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { generateEmployeeReceiptPDF } from '../../../lib/payroll/receipt'
 import { getHondurasTimestamp } from '../../../lib/timezone'
+import { getPayrollConfig, calculateProhalcaPayroll, calculateAlmacenesExtraPayroll } from '../../../lib/payroll-client-specific'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Accept both GET and POST for flexibility
@@ -45,6 +46,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         eff_isr,
         eff_neto,
         eff_hours,
+        metadata,
         employees:employee_id (
           name,
           employee_code,
@@ -61,6 +63,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       `)
       .eq('id', run_line_id)
       .single()
+
+    // Get payroll config for this company
+    const config = getPayrollConfig(companyId)
 
     if (lineError || !lineData) {
       console.error('❌ Error fetching payroll line:', lineError)
@@ -91,17 +96,55 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (dept) departmentName = dept.name
     }
 
+    // Get company name
+    const { data: company } = await supabase
+      .from('companies')
+      .select('name')
+      .eq('id', companyId)
+      .single()
+
     // Build period strings
     const periodo = `${run.year}-${String(run.month).padStart(2, '0')}`
     const ultimoDia = new Date(run.year, run.month, 0).getDate()
     const fechaInicio = run.quincena === 1 ? `${periodo}-01` : `${periodo}-16`
     const fechaFin = run.quincena === 1 ? `${periodo}-15` : `${periodo}-${ultimoDia}`
 
+    // Calculate custom deductions from metadata
+    let customDeductions = 0
+    let customDeductionsList: Array<{ name: string; amount: number }> = []
+    
+    if (config && lineData.metadata) {
+      if (config.calculationType === 'prohalca') {
+        const calc = calculateProhalcaPayroll(Number(lineData.eff_bruto) || 0, lineData.metadata)
+        customDeductions = calc.totalDeduccionesAdicionales
+        if (calc.comedor > 0) customDeductionsList.push({ name: 'Comedor', amount: calc.comedor })
+        if (calc.cooperativaAportaciones > 0) customDeductionsList.push({ name: 'Coop. Aportaciones', amount: calc.cooperativaAportaciones })
+        if (calc.cooperativaRetirable > 0) customDeductionsList.push({ name: 'Coop. Retirable', amount: calc.cooperativaRetirable })
+        if (calc.cooperativaPrestamo > 0) customDeductionsList.push({ name: 'Coop. Préstamo', amount: calc.cooperativaPrestamo })
+        if (calc.embargoAlimentos > 0) customDeductionsList.push({ name: 'Embargo de Alimentos', amount: calc.embargoAlimentos })
+        if (calc.otrasDeduccionesMateriales > 0) customDeductionsList.push({ name: 'Materiales', amount: calc.otrasDeduccionesMateriales })
+        if (calc.otrasDeduccionesMedicamentos > 0) customDeductionsList.push({ name: 'Medicamentos', amount: calc.otrasDeduccionesMedicamentos })
+        if (calc.otrasDeduccionesEfectivo > 0) customDeductionsList.push({ name: 'Efectivo', amount: calc.otrasDeduccionesEfectivo })
+      } else if (config.calculationType === 'almacenes_extra') {
+        const calc = calculateAlmacenesExtraPayroll(Number(lineData.eff_bruto) || 0, lineData.metadata)
+        customDeductions = calc.totalDeduccionesAdicionales
+        if (calc.prestamoBanrural > 0) customDeductionsList.push({ name: 'Préstamo BANRURAL', amount: calc.prestamoBanrural })
+        if (calc.prestamoCelular > 0) customDeductionsList.push({ name: 'Préstamo Celular', amount: calc.prestamoCelular })
+        if (calc.anticipoPrestamo > 0) customDeductionsList.push({ name: 'Anticipo/Préstamo', amount: calc.anticipoPrestamo })
+        if (calc.impuestoVecinal > 0) customDeductionsList.push({ name: 'Impuesto Vecinal', amount: calc.impuestoVecinal })
+      }
+    }
+
+    const statutoryDeductions = (lineData.eff_ihss || 0) + (lineData.eff_rap || 0) + (lineData.eff_isr || 0)
+    const totalDeductions = statutoryDeductions + customDeductions
+
     console.log('✅ Voucher data prepared:', {
       employee: employee.name,
       periodo,
       quincena: run.quincena,
-      neto: lineData.eff_neto
+      neto: lineData.eff_neto,
+      customDeductions,
+      totalDeductions
     })
 
     // Generate PDF
@@ -117,11 +160,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       income_tax: lineData.eff_isr || 0,
       professional_tax: lineData.eff_rap || 0,
       social_security: lineData.eff_ihss || 0,
-      total_deductions: (lineData.eff_ihss || 0) + (lineData.eff_rap || 0) + (lineData.eff_isr || 0),
+      total_deductions: totalDeductions,
       net_salary: lineData.eff_neto || 0,
       bank_name: employee.bank_name || '',
-      bank_account: employee.bank_account || ''
-    }, periodo, run.quincena)
+      bank_account: employee.bank_account || '',
+      custom_deductions: customDeductionsList
+    }, periodo, run.quincena, companyId, company?.name)
 
     console.log('✅ Voucher PDF generated for:', employee.name)
 
