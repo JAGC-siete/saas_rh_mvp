@@ -19,6 +19,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // AUTENTICACIÓN ESTANDARIZADA - Usar requireCompanyAccess
     const { supabase, companyId, role, user } = await requireCompanyAccess(req, res)
     
+    // Verificar que companyId esté presente
+    if (!companyId) {
+      return res.status(400).json({ error: 'Company ID es requerido' })
+    }
+    
     // Verificar roles específicos para generar PDF
     if (!['super_admin', 'company_admin', 'hr_manager'].includes(role)) {
       return res.status(403).json({ 
