@@ -9,7 +9,7 @@
 export interface ClientPayrollConfig {
   companyId: string
   companyName: string
-  calculationType: 'standard' | 'prohalca'
+  calculationType: 'standard' | 'prohalca' | 'almacenes_extra'
   customFields?: {
     [key: string]: string // field_name: description
   }
@@ -46,6 +46,24 @@ export const CLIENT_PAYROLL_CONFIGS: ClientPayrollConfig[] = [
       'descanso_por_turno_noche': 'Compensación por turno nocturno (boolean)',
       'doble_turno': 'Compensación por doble turno (boolean)',
       'pausa_almuerzo': 'Pausa de almuerzo en minutos'
+    }
+  },
+  {
+    companyId: '2e4781b1-f1f5-449f-b0b1-b9cf1630f5a6',
+    companyName: 'Almacenes EXTRA',
+    calculationType: 'almacenes_extra',
+    customFields: {
+      // Earnings / Adjustments (Ingresos/Ajustes)
+      'incapacidad': 'Pago por incapacidad (lempiras por día)',
+      'dias_faltados': 'Días faltados (afecta cálculo de horas)',
+      
+      // Deductions (Deducciones)
+      'prestamo_banrural': 'Préstamo BANRURAL',
+      'prestamo_celular': 'Préstamo celular',
+      'anticipo_prestamo': 'Anticipo/Préstamo',
+      'impuesto_vecinal': 'Impuesto vecinal (anual - una vez al año)'
+      
+      // NOTA: RAP ya existe en el schema estándar (calc_rap/eff_rap)
     }
   }
 ]
@@ -147,6 +165,56 @@ export function calculateProhalcaPayroll(baseSalary: number, metadata: any): {
     valorHoraExtra,
     descansoTurnoNoche,
     dobleTurno,
+    
+    // Totals
+    totalIngresosAdicionales,
+    totalDeduccionesAdicionales
+  }
+}
+
+/**
+ * Calculate Almacenes EXTRA-specific payroll values
+ */
+export function calculateAlmacenesExtraPayroll(baseSalary: number, metadata: any): {
+  // Earnings / Adjustments
+  incapacidad: number
+  diasFaltados: number
+  
+  // Deductions
+  prestamoBanrural: number
+  prestamoCelular: number
+  anticipoPrestamo: number
+  impuestoVecinal: number
+  
+  // Totals
+  totalIngresosAdicionales: number
+  totalDeduccionesAdicionales: number
+} {
+  // Extract earnings/adjustments from metadata
+  const incapacidad = parseFloat(metadata?.incapacidad || '0')
+  const diasFaltados = parseFloat(metadata?.dias_faltados || '0')
+  
+  // Extract deductions from metadata
+  const prestamoBanrural = parseFloat(metadata?.prestamo_banrural || '0')
+  const prestamoCelular = parseFloat(metadata?.prestamo_celular || '0')
+  const anticipoPrestamo = parseFloat(metadata?.anticipo_prestamo || '0')
+  const impuestoVecinal = parseFloat(metadata?.impuesto_vecinal || '0')
+  
+  // Calculate totals
+  const totalIngresosAdicionales = incapacidad
+  const totalDeduccionesAdicionales = prestamoBanrural + prestamoCelular + 
+    anticipoPrestamo + impuestoVecinal
+
+  return {
+    // Earnings / Adjustments
+    incapacidad,
+    diasFaltados,
+    
+    // Deductions
+    prestamoBanrural,
+    prestamoCelular,
+    anticipoPrestamo,
+    impuestoVecinal,
     
     // Totals
     totalIngresosAdicionales,
