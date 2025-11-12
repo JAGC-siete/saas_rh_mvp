@@ -83,8 +83,23 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             admin: false
           })
         } else {
-          // Verificar que data.permissions existe antes de usarlo
-          const permissions = data.permissions || {
+          // Parsear permissions si viene como string JSON
+          let permissions: any = {}
+          if (data.permissions) {
+            if (typeof data.permissions === 'string') {
+              try {
+                permissions = JSON.parse(data.permissions)
+              } catch (e) {
+                console.error('Error parsing permissions JSON:', e)
+                permissions = {}
+              }
+            } else {
+              permissions = data.permissions
+            }
+          }
+          
+          // Establecer permisos por defecto si no existen
+          const defaultPermissions = {
             dashboard: true,
             employees: true,
             departments: true,
@@ -97,13 +112,23 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             admin: false
           }
           
-          // Determinar permiso de admin basado en el rol
+          // Merge con permisos por defecto
+          permissions = { ...defaultPermissions, ...permissions }
+          
+          // CRÍTICO: Determinar permiso de admin basado en el rol (sobrescribe cualquier valor previo)
           const isAdmin = ['super_admin', 'company_admin', 'hr_manager'].includes(data.role || '')
           permissions.admin = isAdmin
           
-          // Determinar permiso de settings basado en el rol (company_admin y super_admin)
+          // CRÍTICO: Determinar permiso de settings basado en el rol (sobrescribe cualquier valor previo)
           const canAccessSettings = ['super_admin', 'company_admin'].includes(data.role || '')
           permissions.settings = canAccessSettings
+          
+          console.log('✅ Final permissions for user:', {
+            role: data.role,
+            permissions,
+            isAdmin,
+            canAccessSettings
+          })
           
           setUserPermissions(permissions)
         }
@@ -151,8 +176,25 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   // Filtrar navegación basada en permisos
   const filteredNavigation = navigationItems.filter(item => {
     if (loadingPermissions) return true // Mostrar todo mientras carga
-    return userPermissions[item.permission as keyof UserPermissions] !== false
+    
+    const hasPermission = userPermissions[item.permission as keyof UserPermissions]
+    const shouldShow = hasPermission !== false && hasPermission !== undefined
+    
+    // Debug logging para ver qué se está filtrando
+    if (!shouldShow) {
+      console.log(`🚫 Filtering out navigation item: ${item.name} (permission: ${item.permission}, value: ${hasPermission})`)
+    }
+    
+    return shouldShow
   })
+  
+  // Debug: mostrar navegación filtrada
+  useEffect(() => {
+    if (!loadingPermissions) {
+      console.log('📋 Filtered navigation items:', filteredNavigation.map(item => item.name))
+      console.log('🔑 Current user permissions:', userPermissions)
+    }
+  }, [filteredNavigation, userPermissions, loadingPermissions])
 
   return (
     <div className="h-screen flex overflow-hidden bg-app">
