@@ -69,6 +69,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             console.warn('No user profile data found, using default permissions')
           }
           // Usar permisos por defecto si hay error o no hay data
+          // Nota: settings y admin se establecerán basados en el rol del usuario
           setUserPermissions({
             dashboard: true,
             employees: true,
@@ -99,6 +100,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           // Determinar permiso de admin basado en el rol
           const isAdmin = ['super_admin', 'company_admin', 'hr_manager'].includes(data.role || '')
           permissions.admin = isAdmin
+          
+          // Determinar permiso de settings basado en el rol (company_admin y super_admin)
+          const canAccessSettings = ['super_admin', 'company_admin'].includes(data.role || '')
+          permissions.settings = canAccessSettings
           
           setUserPermissions(permissions)
         }
@@ -139,8 +144,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Nómina', href: '/app/payroll', icon: CurrencyDollarIcon, permission: 'payroll' },
     { name: 'Reportes', href: '/app/reports', icon: ChartBarIcon, permission: 'reports' },
     { name: 'Gamificación', href: '/app/gamification', icon: TrophyIcon, permission: 'gamification' },
-    { name: 'Administración', href: '/app/admin', icon: ShieldCheckIcon, permission: 'admin' },
     { name: 'Configuración', href: '/app/settings', icon: Cog6ToothIcon, permission: 'settings' },
+    { name: 'Administración', href: '/app/admin', icon: ShieldCheckIcon, permission: 'admin' },
   ]
 
   // Filtrar navegación basada en permisos
