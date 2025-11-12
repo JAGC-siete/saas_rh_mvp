@@ -3,9 +3,7 @@ import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { 
   buildPayrollMetadata, 
   validateCustomPayrollData, 
-  getPayrollConfig,
-  calculateProhalcaPayroll,
-  calculateAlmacenesExtraPayroll
+  calculatePayroll
 } from '../../../lib/payroll-client-specific'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -40,7 +38,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Validate custom payroll data
-    const validation = validateCustomPayrollData(companyId, custom_fields)
+    const validation = await validateCustomPayrollData(companyId, custom_fields, supabase)
     
     if (!validation.valid) {
       return res.status(400).json({
@@ -50,7 +48,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Build metadata
-    const metadata = buildPayrollMetadata(companyId, custom_fields)
+    const metadata = await buildPayrollMetadata(companyId, custom_fields, supabase)
 
     // Get existing payroll line (include effective statutory deductions to recompute net)
     const { data: existingLine, error: lineError } = await supabase
@@ -71,22 +69,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const existingMetadata = existingLine.metadata || {}
     const mergedMetadata = { ...existingMetadata, ...metadata }
 
-    // Calculate new totals based on client type
-    const config = getPayrollConfig(companyId)
-    let ingresosAdicionales = 0
-    let deduccionesAdicionales = 0
-
-    if (config) {
-      if (config.calculationType === 'prohalca') {
-        const calc = calculateProhalcaPayroll(Number(existingLine.eff_bruto) || 0, mergedMetadata)
-        ingresosAdicionales = calc.totalIngresosAdicionales
-        deduccionesAdicionales = calc.totalDeduccionesAdicionales
-      } else if (config.calculationType === 'almacenes_extra') {
-        const calc = calculateAlmacenesExtraPayroll(Number(existingLine.eff_bruto) || 0, mergedMetadata)
-        ingresosAdicionales = calc.totalIngresosAdicionales
-        deduccionesAdicionales = calc.totalDeduccionesAdicionales
-      }
-    }
+    // Calculate new totals using new calculation engine (supports DB configs)
+    const calcResult = await calculatePayroll(
+      companyId,
+      Number(existingLine.eff_bruto) || 0,
+      mergedMetadata,
+      supabase
+    )
+    
+    const ingresosAdicionales = calcResult.totalIngresosAdicionales
+    const deduccionesAdicionales = calcResult.totalDeduccionesAdicionales
 
     // Compute new effective amounts using additional ingresos/deducciones
     const baseEffBruto = Number(existingLine.eff_bruto) || 0

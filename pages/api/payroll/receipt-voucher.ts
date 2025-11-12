@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { generateEmployeeReceiptPDF } from '../../../lib/payroll/receipt'
 import { getHondurasTimestamp } from '../../../lib/timezone'
-import { getPayrollConfig, calculateProhalcaPayroll, calculateAlmacenesExtraPayroll } from '../../../lib/payroll-client-specific'
+import { calculatePayroll } from '../../../lib/payroll-client-specific'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Accept both GET and POST for flexibility
@@ -69,9 +69,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq('id', run_line_id)
       .single()
 
-    // Get payroll config for this company
-    const config = getPayrollConfig(companyId)
-
     if (lineError || !lineData) {
       console.error('❌ Error fetching payroll line:', lineError)
       return res.status(404).json({ 
@@ -114,29 +111,43 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const fechaInicio = run.quincena === 1 ? `${periodo}-01` : `${periodo}-16`
     const fechaFin = run.quincena === 1 ? `${periodo}-15` : `${periodo}-${ultimoDia}`
 
-    // Calculate custom deductions from metadata
+    // Calculate custom deductions from metadata using new calculation engine
     let customDeductions = 0
     let customDeductionsList: Array<{ name: string; amount: number }> = []
     
-    if (config && lineData.metadata) {
-      if (config.calculationType === 'prohalca') {
-        const calc = calculateProhalcaPayroll(Number(lineData.eff_bruto) || 0, lineData.metadata)
-        customDeductions = calc.totalDeduccionesAdicionales
-        if (calc.comedor > 0) customDeductionsList.push({ name: 'Comedor', amount: calc.comedor })
-        if (calc.cooperativaAportaciones > 0) customDeductionsList.push({ name: 'Coop. Aportaciones', amount: calc.cooperativaAportaciones })
-        if (calc.cooperativaRetirable > 0) customDeductionsList.push({ name: 'Coop. Retirable', amount: calc.cooperativaRetirable })
-        if (calc.cooperativaPrestamo > 0) customDeductionsList.push({ name: 'Coop. Préstamo', amount: calc.cooperativaPrestamo })
-        if (calc.embargoAlimentos > 0) customDeductionsList.push({ name: 'Embargo de Alimentos', amount: calc.embargoAlimentos })
-        if (calc.otrasDeduccionesMateriales > 0) customDeductionsList.push({ name: 'Materiales', amount: calc.otrasDeduccionesMateriales })
-        if (calc.otrasDeduccionesMedicamentos > 0) customDeductionsList.push({ name: 'Medicamentos', amount: calc.otrasDeduccionesMedicamentos })
-        if (calc.otrasDeduccionesEfectivo > 0) customDeductionsList.push({ name: 'Efectivo', amount: calc.otrasDeduccionesEfectivo })
-      } else if (config.calculationType === 'almacenes_extra') {
-        const calc = calculateAlmacenesExtraPayroll(Number(lineData.eff_bruto) || 0, lineData.metadata)
-        customDeductions = calc.totalDeduccionesAdicionales
-        if (calc.prestamoBanrural > 0) customDeductionsList.push({ name: 'Préstamo BANRURAL', amount: calc.prestamoBanrural })
-        if (calc.prestamoCelular > 0) customDeductionsList.push({ name: 'Préstamo Celular', amount: calc.prestamoCelular })
-        if (calc.anticipoPrestamo > 0) customDeductionsList.push({ name: 'Anticipo/Préstamo', amount: calc.anticipoPrestamo })
-        if (calc.impuestoVecinal > 0) customDeductionsList.push({ name: 'Impuesto Vecinal', amount: calc.impuestoVecinal })
+    if (lineData.metadata) {
+      const calcResult = await calculatePayroll(
+        companyId,
+        Number(lineData.eff_bruto) || 0,
+        lineData.metadata,
+        supabase
+      )
+      
+      customDeductions = calcResult.totalDeduccionesAdicionales
+      
+      // Build deductions list from metadata (generic approach)
+      if (lineData.metadata) {
+        const deductionFields = [
+          { key: 'comedor', label: 'Comedor' },
+          { key: 'cooperativa_aportaciones', label: 'Coop. Aportaciones' },
+          { key: 'cooperativa_retirable', label: 'Coop. Retirable' },
+          { key: 'cooperativa_prestamo', label: 'Coop. Préstamo' },
+          { key: 'embargo_alimentos', label: 'Embargo de Alimentos' },
+          { key: 'otras_deducciones_materiales', label: 'Materiales' },
+          { key: 'otras_deducciones_medicamentos', label: 'Medicamentos' },
+          { key: 'otras_deducciones_efectivo', label: 'Efectivo' },
+          { key: 'prestamo_banrural', label: 'Préstamo BANRURAL' },
+          { key: 'prestamo_celular', label: 'Préstamo Celular' },
+          { key: 'anticipo_prestamo', label: 'Anticipo/Préstamo' },
+          { key: 'impuesto_vecinal', label: 'Impuesto Vecinal' }
+        ]
+        
+        for (const field of deductionFields) {
+          const value = parseFloat(lineData.metadata[field.key] || '0')
+          if (value > 0) {
+            customDeductionsList.push({ name: field.label, amount: value })
+          }
+        }
       }
     }
 

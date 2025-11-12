@@ -21,6 +21,8 @@ export interface Employee {
   department_id: string | null
   work_schedule_id: string | null
   employee_pin_hash: string | null
+  profile_image_path: string | null
+  profile_image_meta: Record<string, any> | null
   created_at: string
   updated_at: string
   

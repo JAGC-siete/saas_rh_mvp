@@ -6,11 +6,8 @@ import { usePayrollManager } from '../lib/hooks/usePayrollManager'
 import UnifiedPayrollTable from './UnifiedPayrollTable'
 import ConfigNomina from './ConfigNomina'
 import CustomPayrollFieldsForm from './CustomPayrollFieldsForm'
-import { 
-  getPayrollConfig, 
-  calculateProhalcaPayroll, 
-  calculateAlmacenesExtraPayroll 
-} from '../lib/payroll-client-specific'
+import { calculatePayroll } from '../lib/payroll-client-specific'
+import { createClient } from '../lib/supabase/client'
 
 // Type definitions for better type safety
 interface CustomFieldData {
@@ -172,11 +169,6 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
         throw new Error('Company ID no encontrado')
       }
 
-      const config = getPayrollConfig(companyId)
-      if (!config) {
-        throw new Error('Configuración de cliente no encontrada')
-      }
-
       // Find the row in current data
       if (!payroll.unifiedData) {
         throw new Error('No hay datos de planilla cargados')
@@ -190,19 +182,17 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
         throw new Error('Línea de planilla no encontrada')
       }
 
-      // Calculate new totals
-      let ingresosAdicionales = 0
-      let deduccionesAdicionales = 0
-
-      if (config.calculationType === 'prohalca') {
-        const calc = calculateProhalcaPayroll(row.total_earnings || 0, metadata)
-        ingresosAdicionales = calc.totalIngresosAdicionales
-        deduccionesAdicionales = calc.totalDeduccionesAdicionales
-      } else if (config.calculationType === 'almacenes_extra') {
-        const calc = calculateAlmacenesExtraPayroll(row.total_earnings || 0, metadata)
-        ingresosAdicionales = calc.totalIngresosAdicionales
-        deduccionesAdicionales = calc.totalDeduccionesAdicionales
-      }
+      // Calculate new totals using new calculation engine
+      const supabase = createClient()
+      const calcResult = await calculatePayroll(
+        companyId,
+        row.total_earnings || 0,
+        metadata,
+        supabase
+      )
+      
+      const ingresosAdicionales = calcResult.totalIngresosAdicionales
+      const deduccionesAdicionales = calcResult.totalDeduccionesAdicionales
 
       // Calculate new net
       const baseBruto = row.total_earnings || 0

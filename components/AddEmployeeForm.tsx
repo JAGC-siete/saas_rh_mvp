@@ -23,6 +23,15 @@ interface AddEmployeeFormProps {
   workSchedules: WorkSchedule[]
   loading: boolean
   isEditing?: boolean
+  profileImagePreview?: string | null
+  profileImageUploading?: boolean
+  profileImageError?: string | null
+  onProfileImageChange?: (file: File | null) => void
+  onProfileImageRemove?: () => void
+  onToggleProfileImage?: () => void
+  canRemoveProfileImage?: boolean
+  existingProfileImageUrl?: string | null
+  isProfileImageMarkedForRemoval?: boolean
 }
 
 function AddEmployeeForm({
@@ -34,6 +43,15 @@ function AddEmployeeForm({
   workSchedules,
   loading,
   isEditing = false,
+  profileImagePreview,
+  profileImageUploading,
+  profileImageError,
+  onProfileImageChange,
+  onProfileImageRemove,
+  onToggleProfileImage,
+  canRemoveProfileImage,
+  existingProfileImageUrl,
+  isProfileImageMarkedForRemoval,
 }: AddEmployeeFormProps) {
   // Helper to keep inputs controlled and avoid React warnings
   const v = (value: any) => (value ?? '')

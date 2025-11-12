@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Button } from './ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
-import { getCustomFields, getPayrollConfig, buildPayrollMetadata } from '../lib/payroll-client-specific'
+import { buildPayrollMetadata } from '../lib/payroll-client-specific'
 import { formatCurrency } from '../lib/utils/currency'
 
 interface CustomPayrollFieldsFormProps {
@@ -23,9 +23,37 @@ export default function CustomPayrollFieldsForm({
 }: CustomPayrollFieldsFormProps) {
   const [formData, setFormData] = useState<any>({})
   const [saving, setSaving] = useState(false)
+  const [config, setConfig] = useState<any>(null)
+  const [customFields, setCustomFields] = useState<Record<string, string> | undefined>(undefined)
+  const [loading, setLoading] = useState(true)
 
-  const config = getPayrollConfig(companyId)
-  const customFields = getCustomFields(companyId)
+  useEffect(() => {
+    async function loadConfig() {
+      try {
+        const response = await fetch('/api/payroll/config')
+        if (response.ok) {
+          const data = await response.json()
+          if (data.config) {
+            setConfig(data.config)
+            // Convert custom_fields from DB format to simple format
+            const fields: Record<string, string> = {}
+            if (data.config.custom_fields) {
+              for (const [fieldName, fieldDef] of Object.entries(data.config.custom_fields)) {
+                const def = fieldDef as any
+                fields[fieldName] = typeof def === 'string' ? def : (def.label || fieldName)
+              }
+            }
+            setCustomFields(fields)
+          }
+        }
+      } catch (error) {
+        console.error('Error loading payroll config:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadConfig()
+  }, [companyId])
 
   useEffect(() => {
     // Initialize form with current metadata
@@ -79,13 +107,24 @@ export default function CustomPayrollFieldsForm({
         converted.feriado_trabajado = Math.round(days * 8 * hourlyRate * 100) / 100
       }
 
-      const metadata = buildPayrollMetadata(companyId, converted)
-      await onSave(metadata)
+      // buildPayrollMetadata will be called on the server side
+      // For now, just pass the converted data as metadata
+      await onSave(converted)
     } catch (error) {
       console.error('Error saving custom fields:', error)
     } finally {
       setSaving(false)
     }
+  }
+
+  if (loading) {
+    return (
+      <Card className="backdrop-blur-md bg-white/10 border border-white/20">
+        <CardContent className="p-6 text-center">
+          <p className="text-gray-400">Cargando configuración...</p>
+        </CardContent>
+      </Card>
+    )
   }
 
   if (!config || !customFields) {
@@ -130,7 +169,7 @@ export default function CustomPayrollFieldsForm({
     <Card className="backdrop-blur-md bg-white/10 border border-white/20">
       <CardHeader className="border-b border-white/10">
         <CardTitle className="text-white text-xl font-bold">
-          Campos Personalizados - {config.companyName || 'Sin Configurar'}
+          Campos Personalizados - {config?.companyName || 'Sin Configurar'}
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-6">

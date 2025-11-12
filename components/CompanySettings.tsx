@@ -12,8 +12,10 @@ import {
   ShieldCheckIcon,
   BellIcon,
   CogIcon,
-  LinkIcon
+  LinkIcon,
+  CalculatorIcon
 } from '@heroicons/react/24/outline'
+import PayrollConfigEditor from './PayrollConfigEditor'
 
 interface Company {
   id: string
@@ -268,6 +270,7 @@ export default function CompanySettings() {
     { id: 'general', name: 'General', icon: CogIcon },
     { id: 'departments', name: 'Departamentos', icon: BuildingOfficeIcon },
     { id: 'schedules', name: 'Horarios', icon: ClockIcon },
+    { id: 'payroll', name: 'Configuración Payroll', icon: CalculatorIcon },
     { id: 'integrations', name: 'Integraciones', icon: LinkIcon },
   ]
 
@@ -513,6 +516,16 @@ export default function CompanySettings() {
           <h3 className="text-lg font-medium text-gray-900 mb-4">Gestión de Departamentos</h3>
           <p className="text-gray-600">Próximamente: Gestión de departamentos y empleados</p>
         </Card>
+      )}
+
+      {activeTab === 'payroll' && company && (
+        <PayrollConfigEditor 
+          companyId={company.id}
+          onSave={() => {
+            // Optionally refresh data or show success message
+            console.log('Payroll configuration saved')
+          }}
+        />
       )}
 
       {activeTab === 'integrations' && (

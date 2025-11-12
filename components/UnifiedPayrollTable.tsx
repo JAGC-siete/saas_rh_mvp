@@ -1,13 +1,14 @@
 // Unified Payroll Table Component
 // Combines planilla and detalle data in a single expandable table
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Icon, IconName } from './Icon'
 import { formatCurrency } from '../lib/utils/currency'
 import { UnifiedRow, UnifiedResumen } from '../lib/payroll-unified'
-import { extractCustomFields, calculateProhalcaPayroll, calculateAlmacenesExtraPayroll, hasCustomFields, getCustomFields, getPayrollConfig } from '../lib/payroll-client-specific'
+import { extractCustomFields, calculatePayroll } from '../lib/payroll-client-specific'
+import { createClient } from '../lib/supabase/client'
 import { Pagination } from './ui/pagination'
 
 interface UnifiedPayrollTableProps {
@@ -55,10 +56,35 @@ export default function UnifiedPayrollTable({
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [sortBy, setSortBy] = useState<'name' | 'department'>('name')
   const [departmentFilter, setDepartmentFilter] = useState<string>('all')
+  const [hasCustom, setHasCustom] = useState(false)
+  const [payrollConfig, setPayrollConfig] = useState<any>(null)
   
-  // Get payroll configuration for this company
-  const payrollConfig = companyId ? getPayrollConfig(companyId) : null
-  const hasCustom = hasCustomFields(companyId || '')
+  // Load payroll configuration async
+  useEffect(() => {
+    async function loadConfig() {
+      if (!companyId) {
+        setHasCustom(false)
+        setPayrollConfig(null)
+        return
+      }
+      
+      try {
+        const supabase = createClient()
+        const { hasCustomFields: hasCustomFieldsFn, getPayrollConfig: getPayrollConfigFn } = await import('../lib/payroll-client-specific')
+        const [hasCustomResult, configResult] = await Promise.all([
+          hasCustomFieldsFn(companyId, supabase),
+          getPayrollConfigFn(companyId, supabase)
+        ])
+        setHasCustom(hasCustomResult)
+        setPayrollConfig(configResult || null)
+      } catch (error) {
+        console.error('Error loading payroll config:', error)
+        setHasCustom(false)
+        setPayrollConfig(null)
+      }
+    }
+    loadConfig()
+  }, [companyId])
 
   // Get unique departments for filter
   const departments = useMemo(() => {
@@ -459,94 +485,80 @@ export default function UnifiedPayrollTable({
                           </div>
                           
                           {/* Custom Fields (Client-specific) */}
-                          {hasCustom && payrollConfig && (
-                            <div className="mt-4 pt-4 border-t border-white/10">
-                              <h4 className="text-sm font-semibold text-white mb-2">Campos Específicos de {payrollConfig.companyName}</h4>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {/* Get custom fields from metadata if available */}
-                                {(() => {
-                                  const metadata = (row as any).metadata
-                                  const customFields = metadata ? extractCustomFields(companyId || '', metadata) : {}
-                                  
-                                  // Calculate fields based on client type
-                                  let calculatedFields: any = null
-                                  if (metadata && row.total_earnings) {
-                                    if (payrollConfig.calculationType === 'prohalca') {
-                                      calculatedFields = calculateProhalcaPayroll(row.total_earnings, metadata)
-                                    } else if (payrollConfig.calculationType === 'almacenes_extra') {
-                                      calculatedFields = calculateAlmacenesExtraPayroll(row.total_earnings, metadata)
-                                    }
+                          {hasCustom && payrollConfig && (() => {
+                            const metadata = (row as any).metadata
+                            if (!metadata || Object.keys(metadata).length === 0) {
+                              return (
+                                <div className="mt-4 pt-4 border-t border-white/10">
+                                  <p className="text-sm text-gray-400">No hay campos adicionales</p>
+                                </div>
+                              )
+                            }
+                            
+                            // Display metadata fields directly
+                            const earningsFields = ['horas_extras', 'feriado_trabajado', 'estipendio_transporte', 'incapacidad']
+                            const helperFields = ['valor_hora_extra', 'descanso_por_turno_noche', 'doble_turno', 'pausa_almuerzo', 'dias_faltados']
+                            
+                            const earnings: Array<{key: string, label: string, value: number}> = []
+                            const deductions: Array<{key: string, label: string, value: number}> = []
+                            
+                            if (payrollConfig.customFields) {
+                              Object.keys(payrollConfig.customFields).forEach(fieldName => {
+                                const value = parseFloat(metadata[fieldName] || '0')
+                                const fieldDef = payrollConfig.customFields![fieldName]
+                                const label = typeof fieldDef === 'string' ? fieldDef : (fieldDef as any)?.label || fieldName
+                                
+                                // Skip helper fields
+                                if (helperFields.includes(fieldName)) {
+                                  return
+                                }
+                                
+                                // Categorize
+                                if (earningsFields.includes(fieldName)) {
+                                  if (value > 0 || metadata[fieldName] !== undefined) {
+                                    earnings.push({ key: fieldName, label, value })
                                   }
-                                  
-                                  if (!customFields || Object.keys(customFields).length === 0) {
-                                    return (
-                                      <p className="text-sm text-gray-400">No hay campos adicionales</p>
-                                    )
+                                } else {
+                                  if (value > 0 || metadata[fieldName] !== undefined) {
+                                    deductions.push({ key: fieldName, label, value })
                                   }
+                                }
+                              })
+                            }
+                            
+                            return (
+                              <div className="mt-4 pt-4 border-t border-white/10">
+                                <h4 className="text-sm font-semibold text-white mb-2">Campos Específicos de {payrollConfig.companyName || 'Cliente'}</h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  {/* Earnings */}
+                                  {earnings.length > 0 && (
+                                    <div className="col-span-full">
+                                      <h5 className="text-xs font-semibold text-green-300 mb-2">Ingresos Adicionales</h5>
+                                    </div>
+                                  )}
+                                  {earnings.map(({ key, label, value }) => (
+                                    <div key={key} className="flex justify-between text-sm text-gray-200">
+                                      <span>{label}:</span>
+                                      <span className="text-green-300">{formatCurrency(value)}</span>
+                                    </div>
+                                  ))}
                                   
-                                  // Categorize fields by type
-                                  const earningsFields = ['horas_extras', 'feriado_trabajado', 'estipendio_transporte', 'incapacidad']
-                                  const helperFields = ['valor_hora_extra', 'descanso_por_turno_noche', 'doble_turno', 'pausa_almuerzo', 'dias_faltados']
-                                  
-                                  const earnings: Array<{key: string, label: string, value: number}> = []
-                                  const deductions: Array<{key: string, label: string, value: number}> = []
-                                  
-                                  if (payrollConfig.customFields) {
-                                    Object.keys(payrollConfig.customFields).forEach(fieldName => {
-                                      const value = customFields[fieldName] || (calculatedFields as any)?.[fieldName] || 0
-                                      const label = payrollConfig.customFields![fieldName]
-                                      
-                                      // Skip helper fields
-                                      if (helperFields.includes(fieldName)) {
-                                        return
-                                      }
-                                      
-                                      // Categorize
-                                      if (earningsFields.includes(fieldName)) {
-                                        if (value > 0 || customFields[fieldName] !== undefined) {
-                                          earnings.push({ key: fieldName, label, value })
-                                        }
-                                      } else {
-                                        if (value > 0 || customFields[fieldName] !== undefined) {
-                                          deductions.push({ key: fieldName, label, value })
-                                        }
-                                      }
-                                    })
-                                  }
-                                  
-                                  return (
-                                    <>
-                                      {/* Earnings */}
-                                      {earnings.length > 0 && (
-                                        <div className="col-span-full">
-                                          <h5 className="text-xs font-semibold text-green-300 mb-2">Ingresos Adicionales</h5>
-                                        </div>
-                                      )}
-                                      {earnings.map(({ key, label, value }) => (
-                                        <div key={key} className="flex justify-between text-sm text-gray-200">
-                                          <span>{label}:</span>
-                                          <span className="text-green-300">{formatCurrency(value)}</span>
-                                        </div>
-                                      ))}
-                                      
-                                      {/* Deductions */}
-                                      {deductions.length > 0 && (
-                                        <div className="col-span-full mt-2">
-                                          <h5 className="text-xs font-semibold text-red-300 mb-2">Deducciones Adicionales</h5>
-                                        </div>
-                                      )}
-                                      {deductions.map(({ key, label, value }) => (
-                                        <div key={key} className="flex justify-between text-sm text-gray-200">
-                                          <span>{label}:</span>
-                                          <span className="text-red-300">{formatCurrency(value)}</span>
-                                        </div>
-                                      ))}
-                                    </>
-                                  )
-                                })()}
+                                  {/* Deductions */}
+                                  {deductions.length > 0 && (
+                                    <div className="col-span-full mt-2">
+                                      <h5 className="text-xs font-semibold text-red-300 mb-2">Deducciones Adicionales</h5>
+                                    </div>
+                                  )}
+                                  {deductions.map(({ key, label, value }) => (
+                                    <div key={key} className="flex justify-between text-sm text-gray-200">
+                                      <span>{label}:</span>
+                                      <span className="text-red-300">{formatCurrency(value)}</span>
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
-                            </div>
-                          )}
+                            )
+                          })()}
                         </td>
                       </tr>
                     )}

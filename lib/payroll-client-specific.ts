@@ -4,14 +4,25 @@
  * This module handles client-specific payroll fields without affecting other clients.
  * Each client can have their own calculation logic and additional fields stored in
  * the metadata JSONB column of payroll_run_lines.
+ * 
+ * REFACTORED: Now supports database-backed configuration for scalability.
+ * Falls back to hardcoded configs for backward compatibility.
  */
+
+import { calculatePayrollFromConfig, getCustomFieldsFromDB, validateCustomFields } from './payroll-calculation-engine'
 
 export interface ClientPayrollConfig {
   companyId: string
-  companyName: string
-  calculationType: 'standard' | 'prohalca' | 'almacenes_extra'
+  companyName?: string
+  calculationType: 'standard' | 'prohalca' | 'almacenes_extra' | 'formula_based' | 'custom'
   customFields?: {
-    [key: string]: string // field_name: description
+    [key: string]: string | {
+      label: string
+      type: 'number' | 'string' | 'boolean'
+      category: 'earnings' | 'deductions' | 'calculation_helper'
+      required: boolean
+      default: any
+    }
   }
 }
 
@@ -70,25 +81,123 @@ export const CLIENT_PAYROLL_CONFIGS: ClientPayrollConfig[] = [
 
 /**
  * Get payroll configuration for a specific company
+ * 
+ * NEW: Tries to get from database first, falls back to hardcoded configs
  */
-export function getPayrollConfig(companyId: string): ClientPayrollConfig | undefined {
+export async function getPayrollConfig(
+  companyId: string,
+  supabase?: any
+): Promise<ClientPayrollConfig | undefined> {
+  // Try database first if supabase client is provided
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('company_payroll_configs')
+        .select('company_id, calculation_type, custom_fields')
+        .eq('company_id', companyId)
+        .eq('is_active', true)
+        .single()
+
+      if (!error && data) {
+        // Convert DB format to ClientPayrollConfig format
+        const customFields: Record<string, string> = {}
+        if (data.custom_fields) {
+          for (const [fieldName, fieldDef] of Object.entries(data.custom_fields)) {
+            const def = fieldDef as any
+            customFields[fieldName] = typeof def === 'string' 
+              ? def 
+              : def.label || fieldName
+          }
+        }
+
+        return {
+          companyId: data.company_id,
+          calculationType: data.calculation_type as any,
+          customFields
+        }
+      }
+    } catch (error) {
+      console.warn('Error fetching payroll config from DB, using fallback:', error)
+    }
+  }
+
+  // Fallback to hardcoded configs
+  return CLIENT_PAYROLL_CONFIGS.find(config => config.companyId === companyId)
+}
+
+/**
+ * Get payroll configuration (synchronous version for backward compatibility)
+ * @deprecated Use async version with supabase client
+ */
+export function getPayrollConfigSync(companyId: string): ClientPayrollConfig | undefined {
   return CLIENT_PAYROLL_CONFIGS.find(config => config.companyId === companyId)
 }
 
 /**
  * Check if a company has custom payroll fields
+ * 
+ * NEW: Supports database-backed configs
  */
-export function hasCustomFields(companyId: string): boolean {
-  const config = getPayrollConfig(companyId)
+export async function hasCustomFields(
+  companyId: string,
+  supabase?: any
+): Promise<boolean> {
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('company_payroll_configs')
+        .select('custom_fields')
+        .eq('company_id', companyId)
+        .eq('is_active', true)
+        .single()
+
+      if (!error && data?.custom_fields) {
+        return Object.keys(data.custom_fields).length > 0
+      }
+    } catch (error) {
+      console.warn('Error checking custom fields from DB:', error)
+    }
+  }
+
+  // Fallback
+  const config = getPayrollConfigSync(companyId)
   return config?.customFields ? Object.keys(config.customFields).length > 0 : false
 }
 
 /**
  * Get custom fields definition for a company
+ * 
+ * NEW: Supports database-backed configs
  */
-export function getCustomFields(companyId: string): { [key: string]: string } | undefined {
-  const config = getPayrollConfig(companyId)
-  return config?.customFields
+export async function getCustomFields(
+  companyId: string,
+  supabase?: any
+): Promise<{ [key: string]: string } | undefined> {
+  if (supabase) {
+    const fields = await getCustomFieldsFromDB(companyId, supabase)
+    if (fields) {
+      // Convert to simple format for backward compatibility
+      const result: Record<string, string> = {}
+      for (const [fieldName, fieldDef] of Object.entries(fields)) {
+        result[fieldName] = typeof fieldDef === 'string' 
+          ? fieldDef 
+          : fieldDef.label || fieldName
+      }
+      return result
+    }
+  }
+
+  // Fallback
+  const config = getPayrollConfigSync(companyId)
+  if (config?.customFields) {
+    // Convert to simple format
+    const result: Record<string, string> = {}
+    for (const [fieldName, fieldDef] of Object.entries(config.customFields)) {
+      result[fieldName] = typeof fieldDef === 'string' ? fieldDef : (fieldDef as any).label || fieldName
+    }
+    return result
+  }
+  return undefined
 }
 
 /**
@@ -224,11 +333,37 @@ export function calculateAlmacenesExtraPayroll(baseSalary: number, metadata: any
 
 /**
  * Save custom payroll metadata for a payroll line
+ * 
+ * NEW: Supports database-backed configs
  */
-export function buildPayrollMetadata(companyId: string, customData: any): any {
-  const config = getPayrollConfig(companyId)
-  
-  if (!config || !config.customFields) {
+export async function buildPayrollMetadata(
+  companyId: string,
+  customData: any,
+  supabase?: any
+): Promise<any> {
+  let customFields: Record<string, any> = {}
+
+  if (supabase) {
+    try {
+      const fields = await getCustomFieldsFromDB(companyId, supabase)
+      if (fields) {
+        customFields = fields
+      }
+    } catch (error) {
+      console.warn('Error getting custom fields from DB:', error)
+    }
+  }
+
+  // Fallback to hardcoded config
+  if (Object.keys(customFields).length === 0) {
+    const config = getPayrollConfigSync(companyId)
+    if (config?.customFields) {
+      // Convert to simple object for iteration
+      customFields = config.customFields as any
+    }
+  }
+
+  if (Object.keys(customFields).length === 0) {
     return {}
   }
 
@@ -236,7 +371,7 @@ export function buildPayrollMetadata(companyId: string, customData: any): any {
   const metadata: any = {}
   
   for (const fieldName in customData) {
-    if (config.customFields![fieldName]) {
+    if (customFields[fieldName]) {
       metadata[fieldName] = customData[fieldName]
     }
   }
@@ -246,17 +381,46 @@ export function buildPayrollMetadata(companyId: string, customData: any): any {
 
 /**
  * Extract custom fields from metadata for display
+ * 
+ * NEW: Supports database-backed configs
  */
-export function extractCustomFields(companyId: string, metadata: any): any {
-  const config = getPayrollConfig(companyId)
-  
-  if (!config || !config.customFields || !metadata) {
+export async function extractCustomFields(
+  companyId: string,
+  metadata: any,
+  supabase?: any
+): Promise<any> {
+  if (!metadata) {
+    return {}
+  }
+
+  let customFields: Record<string, any> = {}
+
+  if (supabase) {
+    try {
+      const fields = await getCustomFieldsFromDB(companyId, supabase)
+      if (fields) {
+        customFields = fields
+      }
+    } catch (error) {
+      console.warn('Error getting custom fields from DB:', error)
+    }
+  }
+
+  // Fallback to hardcoded config
+  if (Object.keys(customFields).length === 0) {
+    const config = getPayrollConfigSync(companyId)
+    if (config?.customFields) {
+      customFields = config.customFields as any
+    }
+  }
+
+  if (Object.keys(customFields).length === 0) {
     return {}
   }
 
   const extracted: any = {}
   
-  for (const fieldName in config.customFields) {
+  for (const fieldName in customFields) {
     if (metadata[fieldName] !== undefined) {
       extracted[fieldName] = metadata[fieldName]
     }
@@ -267,9 +431,31 @@ export function extractCustomFields(companyId: string, metadata: any): any {
 
 /**
  * Validate custom payroll data for a company
+ * 
+ * NEW: Supports database-backed configs with proper validation
  */
-export function validateCustomPayrollData(companyId: string, data: any): { valid: boolean; errors: string[] } {
-  const config = getPayrollConfig(companyId)
+export async function validateCustomPayrollData(
+  companyId: string,
+  data: any,
+  supabase?: any
+): Promise<{ valid: boolean; errors: string[] }> {
+  let fieldDefinitions: Record<string, any> = {}
+
+  if (supabase) {
+    try {
+      const fields = await getCustomFieldsFromDB(companyId, supabase)
+      if (fields) {
+        fieldDefinitions = fields
+        // Use proper validation from engine
+        return validateCustomFields(data, fields)
+      }
+    } catch (error) {
+      console.warn('Error validating from DB:', error)
+    }
+  }
+
+  // Fallback to basic validation
+  const config = getPayrollConfigSync(companyId)
   const errors: string[] = []
 
   if (!config || !config.customFields) {
@@ -298,6 +484,80 @@ export function validateCustomPayrollData(companyId: string, data: any): { valid
   return {
     valid: errors.length === 0,
     errors
+  }
+}
+
+/**
+ * Calculate payroll using database configuration
+ * 
+ * NEW: Main function to use for payroll calculations
+ * Automatically uses DB config if available, falls back to hardcoded functions
+ */
+export async function calculatePayroll(
+  companyId: string,
+  baseSalary: number,
+  metadata: any,
+  supabase: any
+): Promise<{
+  totalIngresosAdicionales: number
+  totalDeduccionesAdicionales: number
+  calculatedFields: Record<string, any>
+}> {
+  // Try database-backed calculation first
+  if (supabase) {
+    try {
+      const result = await calculatePayrollFromConfig(
+        companyId,
+        baseSalary,
+        metadata,
+        supabase
+      )
+      
+      // If we got a result (even if zeros), use it
+      if (result !== null && result !== undefined) {
+        return result
+      }
+    } catch (error) {
+      console.warn('Error calculating from DB config, using fallback:', error)
+    }
+  }
+
+  // Fallback to hardcoded calculation functions
+  const config = getPayrollConfigSync(companyId)
+  
+  if (config?.calculationType === 'prohalca') {
+    const result = calculateProhalcaPayroll(baseSalary, metadata)
+    return {
+      totalIngresosAdicionales: result.totalIngresosAdicionales,
+      totalDeduccionesAdicionales: result.totalDeduccionesAdicionales,
+      calculatedFields: {
+        horasExtras: result.horasExtras,
+        feriadoTrabajado: result.feriadoTrabajado,
+        estipendioTransporte: result.estipendioTransporte,
+        valorHoraExtra: result.valorHoraExtra,
+        descansoTurnoNoche: result.descansoTurnoNoche,
+        dobleTurno: result.dobleTurno
+      }
+    }
+  }
+
+  if (config?.calculationType === 'almacenes_extra') {
+    const result = calculateAlmacenesExtraPayroll(baseSalary, metadata)
+    return {
+      totalIngresosAdicionales: result.totalIngresosAdicionales,
+      totalDeduccionesAdicionales: result.totalDeduccionesAdicionales,
+      calculatedFields: {
+        incapacidad: result.incapacidad,
+        diasFaltados: result.diasFaltados
+      }
+    }
+  }
+
+  // Default: no custom calculations
+  return {
+    totalIngresosAdicionales: 0,
+    totalDeduccionesAdicionales: 0,
+    calculatedFields: {}
   }
 }
 

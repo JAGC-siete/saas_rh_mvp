@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import Image from 'next/image'
 import { createClient } from '../lib/supabase/client'
 import { Button } from './ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
@@ -8,7 +9,7 @@ import { useCompanyContext } from '../lib/useCompanyContext'
 import { Employee } from '../lib/types/employee'
 import AddEmployeeForm from './AddEmployeeForm'
 import WorkCertificateModal from './WorkCertificateModal'
-import { PlusIcon, PencilIcon, TrashIcon, EyeIcon, MagnifyingGlassIcon, FunnelIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, ChevronDownIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, PencilIcon, TrashIcon, EyeIcon, MagnifyingGlassIcon, FunnelIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, ChevronDownIcon, DocumentTextIcon, UserCircleIcon, ChatBubbleBottomCenterTextIcon } from '@heroicons/react/24/outline'
 import { getHondurasTimestamp, formatTimeDisplay } from '../lib/timezone'
 
 interface Department {
@@ -40,11 +41,96 @@ const INITIAL_FORM_DATA = {
   emergency_contact_name: '',
   emergency_contact_phone: '',
   address: '',
-  metadata: ''
+  metadata: '',
+  profile_image_path: ''
+}
+
+const PROFILE_PHOTO_BUCKET = 'HR_BUCKET'
+const PROFILE_PHOTO_SIGNED_URL_EXPIRATION = 60 * 60 // 1 hour
+const HNL_CURRENCY_FORMATTER = new Intl.NumberFormat('es-HN', {
+  style: 'currency',
+  currency: 'HNL'
+})
+const EMPLOYEE_DETAIL_TABS = [
+  { id: 'personal', label: 'Información Personal' },
+  { id: 'contract', label: 'Información Contractual' },
+  { id: 'attendance', label: 'Asistencia' },
+  { id: 'discipline', label: 'Medidas Disciplinarias' },
+  { id: 'emergency', label: 'Contacto de Emergencia' }
+] as const
+const ATTENDANCE_STATUS_LABEL: Record<'present' | 'absent' | 'late' | 'not_registered' | 'unknown', string> = {
+  present: 'Presente',
+  absent: 'Ausente',
+  late: 'Tardanza',
+  not_registered: 'No registrado',
+  unknown: 'No disponible'
+}
+
+const formatCurrency = (value?: number | null) => {
+  if (value === null || value === undefined) return 'No especificado'
+  return HNL_CURRENCY_FORMATTER.format(value)
+}
+
+const formatDateDisplay = (value?: string | null) => {
+  if (!value) return 'No especificada'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
+  return date.toLocaleDateString('es-HN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
+}
+
+const formatDateTimeDisplay = (value?: string | null) => {
+  if (!value) return 'No especificado'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
+  return date.toLocaleString('es-HN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+const parseMaybeJsonObject = (value: unknown): Record<string, any> | null => {
+  if (!value) return null
+  if (typeof value === 'object') {
+    return value as Record<string, any>
+  }
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value)
+      return typeof parsed === 'object' && parsed !== null ? parsed as Record<string, any> : null
+    } catch {
+      return null
+    }
+  }
+  return null
+}
+
+const formatAddress = (address: Employee['address']) => {
+  if (!address) return 'No especificada'
+
+  if (typeof address === 'string') {
+    const parsed = parseMaybeJsonObject(address)
+    if (!parsed) return address
+    const values = Object.values(parsed).filter(Boolean)
+    return values.length ? values.join(', ') : 'No especificada'
+  }
+
+  const values = Object.values(address).filter(Boolean)
+  return values.length ? values.join(', ') : 'No especificada'
 }
 
 export default function EmployeeManager({ companyId: propCompanyId }: { companyId?: string }) {
-  const { user, loading: sessionLoading } = useAuth()
+  const { user, loading: sessionLoading, userProfile } = useAuth()
   const { companyId: contextCompanyId, loading: companyLoading } = useCompanyContext()
   
   // Usar companyId de props si está disponible, sino del contexto
@@ -73,6 +159,39 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
   const [searchTerm, setSearchTerm] = useState('')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [currentPage, setCurrentPage] = useState(1)
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null)
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null)
+  const [profileImageUploading, setProfileImageUploading] = useState(false)
+  const [profileImageError, setProfileImageError] = useState<string | null>(null)
+  const [existingProfileImagePath, setExistingProfileImagePath] = useState<string | null>(null)
+  const [removeExistingProfileImage, setRemoveExistingProfileImage] = useState(false)
+  const [selectedEmployeeImageUrl, setSelectedEmployeeImageUrl] = useState<string | null>(null)
+  const [selectedEmployeeImageLoading, setSelectedEmployeeImageLoading] = useState(false)
+  const [selectedEmployeeImageError, setSelectedEmployeeImageError] = useState<string | null>(null)
+  const [detailsActiveTab, setDetailsActiveTab] = useState<(typeof EMPLOYEE_DETAIL_TABS)[number]['id']>('personal')
+
+  const canSendInstantMessage = userProfile?.role === 'company_admin'
+
+  const getWhatsAppLink = useCallback((phone: string | null, employeeName: string | null) => {
+    if (!phone) return null
+    const digits = phone.replace(/\D+/g, '')
+    if (!digits) return null
+
+    const firstName = employeeName ? employeeName.split(' ')[0] : ''
+    const friendlyGreeting = firstName ? `Hola ${firstName}, ` : 'Hola, '
+    const senderText = userProfile?.name ? `soy ${userProfile.name} desde tu empresa.` : 'te escribe tu administrador.'
+    const message = encodeURIComponent(`${friendlyGreeting}${senderText}`)
+
+    return `https://wa.me/${digits}?text=${message}`
+  }, [userProfile?.name])
+
+  useEffect(() => {
+    return () => {
+      if (profileImagePreview && profileImagePreview.startsWith('blob:')) {
+        URL.revokeObjectURL(profileImagePreview)
+      }
+    }
+  }, [profileImagePreview])
   const itemsPerPage = 25
 
   const getErrorMessage = useCallback((error: unknown) => {
@@ -89,6 +208,144 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
     }
     return 'Error inesperado. Por favor, verifica tu conexión e intenta nuevamente.'
   }, [])
+
+  const getSignedProfileImageUrl = useCallback(async (path: string | null) => {
+    if (!path) return null
+    try {
+      const supabaseClient = createClient()
+      const { data, error } = await supabaseClient.storage
+        .from(PROFILE_PHOTO_BUCKET)
+        .createSignedUrl(path, PROFILE_PHOTO_SIGNED_URL_EXPIRATION)
+      if (error) {
+        console.error('Error creating signed URL for profile image:', error)
+        return null
+      }
+      return data?.signedUrl ?? null
+    } catch (err) {
+      console.error('Unexpected error generating signed URL for profile image:', err)
+      return null
+    }
+  }, [])
+
+  const handleProfileImageSelected = useCallback((file: File | null) => {
+    if (profileImagePreview && profileImagePreview.startsWith('blob:')) {
+      URL.revokeObjectURL(profileImagePreview)
+    }
+
+    if (!file) {
+      setProfileImageFile(null)
+      setProfileImagePreview(null)
+      setProfileImageError(null)
+      return
+    }
+
+    if (!file.type.startsWith('image/')) {
+      setProfileImageError('Por favor selecciona un archivo de imagen válido.')
+      setProfileImageFile(null)
+      setProfileImagePreview(null)
+      return
+    }
+
+    const maxSizeBytes = 5 * 1024 * 1024 // 5 MB
+    if (file.size > maxSizeBytes) {
+      setProfileImageError('La imagen debe pesar menos de 5 MB.')
+      setProfileImageFile(null)
+      setProfileImagePreview(null)
+      return
+    }
+
+    setProfileImageError(null)
+    setProfileImageFile(file)
+    setRemoveExistingProfileImage(false)
+    setProfileImagePreview(URL.createObjectURL(file))
+  }, [profileImagePreview])
+
+  const handleProfileImageToggle = useCallback(() => {
+    if (removeExistingProfileImage) {
+      setRemoveExistingProfileImage(false)
+      if (!profileImagePreview && existingProfileImagePath) {
+        getSignedProfileImageUrl(existingProfileImagePath)
+          .then((url) => setProfileImagePreview(url))
+          .catch((err) => {
+            console.error('Error restoring profile image preview:', err)
+            setProfileImagePreview(null)
+          })
+      }
+      return
+    }
+
+    if (profileImagePreview && profileImagePreview.startsWith('blob:')) {
+      URL.revokeObjectURL(profileImagePreview)
+    }
+
+    setProfileImageFile(null)
+    setProfileImagePreview(null)
+    setProfileImageError(null)
+
+    if (editingEmployee?.profile_image_path) {
+      setRemoveExistingProfileImage(true)
+    } else {
+      setExistingProfileImagePath(null)
+    }
+  }, [
+    removeExistingProfileImage,
+    profileImagePreview,
+    existingProfileImagePath,
+    editingEmployee,
+    getSignedProfileImageUrl
+  ])
+
+  const uploadProfileImageIfNeeded = useCallback(async () => {
+    if (!profileImageFile) return null
+
+    setProfileImageUploading(true)
+    setProfileImageError(null)
+
+    try {
+      const supabaseClient = createClient()
+      const safeFileName = profileImageFile.name.trim().replace(/\s+/g, '-').toLowerCase()
+      const uniqueId =
+        typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+      const baseSegments = [
+        companyId || 'company',
+        editingEmployee?.id || 'new-employee',
+        uniqueId
+      ]
+      const objectPath = `${baseSegments.join('/')}-${safeFileName}`
+
+      const { error: uploadError } = await supabaseClient.storage
+        .from(PROFILE_PHOTO_BUCKET)
+        .upload(objectPath, profileImageFile, {
+          cacheControl: '3600',
+          upsert: true,
+          contentType: profileImageFile.type || undefined
+        })
+
+      if (uploadError) {
+        console.error('Supabase storage upload error:', uploadError)
+        throw uploadError
+      }
+
+      const meta = {
+        bucket: PROFILE_PHOTO_BUCKET,
+        path: objectPath,
+        size: profileImageFile.size,
+        mime_type: profileImageFile.type,
+        original_name: profileImageFile.name,
+        uploaded_at: new Date().toISOString()
+      }
+
+      return { path: objectPath, meta }
+    } catch (err) {
+      console.error('Error uploading profile image:', err)
+      setProfileImageError('No se pudo subir la foto de perfil. Intenta nuevamente.')
+      return null
+    } finally {
+      setProfileImageUploading(false)
+    }
+  }, [profileImageFile, companyId, editingEmployee])
 
   const fetchEmployees = useCallback(async () => {
     if (!user?.id) return
@@ -200,7 +457,15 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
     setEmployeesError(null)
     setDepartmentsError(null)
     setSchedulesError(null)
-  }, [])
+    if (profileImagePreview && profileImagePreview.startsWith('blob:')) {
+      URL.revokeObjectURL(profileImagePreview)
+    }
+    setProfileImageFile(null)
+    setProfileImagePreview(null)
+    setProfileImageError(null)
+    setExistingProfileImagePath(null)
+    setRemoveExistingProfileImage(false)
+  }, [profileImagePreview])
 
   const handleFormChange = useCallback((field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -211,16 +476,46 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
     
     try {
       setIsSubmitting(true)
-      
+
+      const uploadedImage = await uploadProfileImageIfNeeded()
+      if (profileImageFile && !uploadedImage) {
+        // Error uploading image; abort submit
+        return
+      }
+
+      const shouldRemoveExisting =
+        !profileImageFile &&
+        removeExistingProfileImage &&
+        !!editingEmployee?.profile_image_path
+
+      const sanitizedFormData: any = { ...formData }
+      delete sanitizedFormData.profile_image_path
+
       const url = editingEmployee 
         ? '/api/employees/update'
         : '/api/employees/create'
       
       const method = editingEmployee ? 'PUT' : 'POST'
       
-      const requestBody = editingEmployee 
-        ? { id: editingEmployee.id, ...formData }
-        : formData
+      const payload = editingEmployee 
+        ? { id: editingEmployee.id, ...sanitizedFormData }
+        : sanitizedFormData
+
+      const requestBody = {
+        ...payload,
+        ...(uploadedImage
+          ? {
+              profile_image_path: uploadedImage.path,
+              profile_image_meta: uploadedImage.meta
+            }
+          : {}),
+        ...(shouldRemoveExisting
+          ? {
+              profile_image_path: null,
+              profile_image_meta: null
+            }
+          : {})
+      }
       
       const response = await fetch(url, {
         method,
@@ -235,6 +530,23 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
         throw new Error(`Error ${editingEmployee ? 'updating' : 'creating'} employee: ${response.status} - ${errorText}`)
       }
 
+      const previousPath = editingEmployee?.profile_image_path
+      const newPath = uploadedImage?.path ?? null
+
+      if (
+        previousPath &&
+        (shouldRemoveExisting || (newPath && previousPath !== newPath))
+      ) {
+        try {
+          const supabaseClient = createClient()
+          await supabaseClient.storage
+            .from(PROFILE_PHOTO_BUCKET)
+            .remove([previousPath])
+        } catch (storageError) {
+          console.warn('No se pudo eliminar la foto anterior:', storageError)
+        }
+      }
+
       // Reset form and refresh employees
       resetForm()
       fetchEmployees()
@@ -244,7 +556,15 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
     } finally {
       setIsSubmitting(false)
     }
-  }, [formData, editingEmployee, resetForm, fetchEmployees])
+  }, [
+    formData,
+    editingEmployee,
+    resetForm,
+    fetchEmployees,
+    uploadProfileImageIfNeeded,
+    profileImageFile,
+    removeExistingProfileImage
+  ])
 
   const handleCancel = useCallback(() => {
     resetForm()
@@ -271,10 +591,28 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       emergency_contact_name: employee.emergency_contact_name || '',
       emergency_contact_phone: employee.emergency_contact_phone || '',
       address: typeof employee.address === 'string' ? employee.address : JSON.stringify(employee.address || {}),
-      metadata: typeof employee.metadata === 'object' ? JSON.stringify(employee.metadata || {}) : (employee.metadata || '')
+      metadata: typeof employee.metadata === 'object' ? JSON.stringify(employee.metadata || {}) : (employee.metadata || ''),
+      profile_image_path: employee.profile_image_path || ''
     })
     setShowForm(true)
-  }, [])
+    setProfileImageFile(null)
+    if (profileImagePreview && profileImagePreview.startsWith('blob:')) {
+      URL.revokeObjectURL(profileImagePreview)
+    }
+    setProfileImageError(null)
+    setRemoveExistingProfileImage(false)
+    setExistingProfileImagePath(employee.profile_image_path || null)
+    if (employee.profile_image_path) {
+      getSignedProfileImageUrl(employee.profile_image_path)
+        .then((url) => setProfileImagePreview(url))
+        .catch((err) => {
+          console.error('Error loading profile image preview for edit:', err)
+          setProfileImagePreview(null)
+        })
+    } else {
+      setProfileImagePreview(null)
+    }
+  }, [profileImagePreview, getSignedProfileImageUrl])
 
   const handleDeactivate = useCallback((employee: Employee) => {
     setEmployeeToDeactivate(employee)
@@ -284,11 +622,36 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
   const handleViewDetails = useCallback((employee: Employee) => {
     setSelectedEmployee(employee)
     setShowDetailsModal(true)
-  }, [])
+    setDetailsActiveTab('personal')
+    setSelectedEmployeeImageUrl(null)
+    setSelectedEmployeeImageError(null)
+    if (employee.profile_image_path) {
+      setSelectedEmployeeImageLoading(true)
+      getSignedProfileImageUrl(employee.profile_image_path)
+        .then((url) => {
+          setSelectedEmployeeImageUrl(url)
+        })
+        .catch((err) => {
+          console.error('Error loading employee profile image:', err)
+          setSelectedEmployeeImageError('No se pudo cargar la foto de perfil.')
+        })
+        .finally(() => setSelectedEmployeeImageLoading(false))
+    } else {
+      setSelectedEmployeeImageLoading(false)
+    }
+  }, [getSignedProfileImageUrl])
 
   const handleOpenCertificateModal = useCallback((employee: Employee) => {
     setEmployeeForCertificate(employee)
     setShowCertificateModal(true)
+  }, [])
+
+  const closeDetailsModal = useCallback(() => {
+    setShowDetailsModal(false)
+    setSelectedEmployeeImageUrl(null)
+    setSelectedEmployeeImageError(null)
+    setSelectedEmployeeImageLoading(false)
+    setDetailsActiveTab('personal')
   }, [])
 
   const confirmDeactivate = useCallback(async () => {
@@ -331,6 +694,68 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
   }, [employeeToDeactivate, fetchEmployees, terminationDate])
 
   const shouldFetch = useMemo(() => !!user?.id && !sessionLoading, [user?.id, sessionLoading])
+  const selectedEmployeeMetadata = useMemo(() => {
+    if (!selectedEmployee) return null
+    return parseMaybeJsonObject(selectedEmployee.metadata)
+  }, [selectedEmployee])
+  const attendanceRecords = selectedEmployee?.attendance_records ?? []
+  const disciplinaryActions = useMemo(() => {
+    if (!selectedEmployeeMetadata) return []
+    const rawActions =
+      selectedEmployeeMetadata['disciplinary_actions'] ??
+      selectedEmployeeMetadata['disciplinaryActions']
+    return Array.isArray(rawActions) ? rawActions : []
+  }, [selectedEmployeeMetadata])
+  const personalNotes = useMemo(() => {
+    if (!selectedEmployeeMetadata) return null
+    const raw =
+      selectedEmployeeMetadata['personal_notes'] ??
+      selectedEmployeeMetadata['personalNotes'] ??
+      selectedEmployeeMetadata['notes']
+    return typeof raw === 'string' && raw.trim() ? raw.trim() : null
+  }, [selectedEmployeeMetadata])
+  const contractNotes = useMemo(() => {
+    if (!selectedEmployeeMetadata) return null
+    const raw =
+      selectedEmployeeMetadata['contract_notes'] ??
+      selectedEmployeeMetadata['contractNotes']
+    return typeof raw === 'string' && raw.trim() ? raw.trim() : null
+  }, [selectedEmployeeMetadata])
+  const attendanceInsights = useMemo(() => {
+    if (!selectedEmployeeMetadata) return null
+    const raw =
+      selectedEmployeeMetadata['attendance_summary'] ??
+      selectedEmployeeMetadata['attendanceSummary']
+    if (typeof raw === 'string' && raw.trim()) {
+      return raw.trim()
+    }
+    if (raw && typeof raw === 'object') {
+      return raw
+    }
+    return null
+  }, [selectedEmployeeMetadata])
+  const emergencyContactMetadata = useMemo(() => {
+    if (!selectedEmployeeMetadata) return null
+    const raw =
+      selectedEmployeeMetadata['emergency_contact'] ??
+      selectedEmployeeMetadata['emergencyContact']
+    if (!raw) return null
+    if (typeof raw === 'string') {
+      const parsed = parseMaybeJsonObject(raw)
+      return parsed ?? raw
+    }
+    if (typeof raw === 'object') {
+      return raw
+    }
+    return null
+  }, [selectedEmployeeMetadata])
+  const disciplinaryNotes = useMemo(() => {
+    if (!selectedEmployeeMetadata) return null
+    const raw =
+      selectedEmployeeMetadata['disciplinary_notes'] ??
+      selectedEmployeeMetadata['disciplinaryNotes']
+    return typeof raw === 'string' && raw.trim() ? raw.trim() : null
+  }, [selectedEmployeeMetadata])
 
   // Filter and sort employees
   const filteredAndSortedEmployees = useMemo(() => {
@@ -482,6 +907,13 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
           workSchedules={workSchedules}
           loading={isSubmitting}
           isEditing={!!editingEmployee}
+          profileImagePreview={profileImagePreview}
+          profileImageUploading={profileImageUploading}
+          profileImageError={profileImageError}
+          onProfileImageChange={handleProfileImageSelected}
+          onToggleProfileImage={handleProfileImageToggle}
+          canRemoveProfileImage={Boolean(profileImagePreview || editingEmployee?.profile_image_path)}
+          isProfileImageMarkedForRemoval={removeExistingProfileImage}
         />
       ) : (
         <div className="space-y-4">
@@ -570,11 +1002,14 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
           ) : (
             <>
             <div className="space-y-4">
-              {paginatedEmployees.map((employee) => (
-                <div key={employee.id} className="border border-white/10 rounded-lg p-4 bg-white/5 hover:bg-white/10 transition-colors">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
+              {paginatedEmployees.map((employee) => {
+                const whatsappLink = getWhatsAppLink(employee.phone, employee.name)
+
+                return (
+                  <div key={employee.id} className="border border-white/10 rounded-lg p-4 bg-white/5 hover:bg-white/10 transition-colors">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
                         <h3 className="font-semibold text-lg text-white">{employee.name}</h3>
                         <span className={`px-2 py-1 rounded text-xs font-medium ${
                           employee.status === 'active' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
@@ -600,7 +1035,32 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                           <p><span className="font-medium text-gray-200">DNI:</span> {employee.dni}</p>
                           <p><span className="font-medium text-gray-200">Código:</span> {employee.employee_code || 'Sin asignar'}</p>
                           <p><span className="font-medium text-gray-200">Email:</span> {employee.email || 'No especificado'}</p>
-                          <p><span className="font-medium text-gray-200">Teléfono:</span> {employee.phone || 'No especificado'}</p>
+                          <div className="flex items-center gap-2">
+                            <p>
+                              <span className="font-medium text-gray-200">Teléfono:</span>{' '}
+                              {employee.phone || 'No especificado'}
+                            </p>
+                            {canSendInstantMessage && whatsappLink && (
+                              <Button
+                                asChild
+                                size="sm"
+                                variant="outline"
+                                className="bg-emerald-500/20 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/30"
+                              >
+                                <a
+                                  href={whatsappLink}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  aria-label={`Enviar mensaje de WhatsApp a ${employee.name}`}
+                                >
+                                  <span className="flex items-center gap-1">
+                                    <ChatBubbleBottomCenterTextIcon className="h-4 w-4" />
+                                    <span className="hidden sm:inline">Mensaje instantáneo</span>
+                                  </span>
+                                </a>
+                              </Button>
+                            )}
+                          </div>
                         </div>
                         <div>
                           <p><span className="font-medium text-gray-200">Posición:</span> {employee.role || 'No especificada'}</p>
@@ -668,7 +1128,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                     </div>
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
 
             {/* Pagination Controls */}
@@ -745,7 +1205,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                 Detalles del Empleado
               </h3>
               <Button
-                onClick={() => setShowDetailsModal(false)}
+                onClick={closeDetailsModal}
                 variant="outline"
                 size="sm"
                 className="bg-white/5 border-white/20 text-white hover:bg-white/10"
@@ -754,151 +1214,367 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
               </Button>
             </div>
             
-            <div className="space-y-4">
-              <div className="text-center mb-6">
-                <h4 className="text-lg font-medium text-white">{selectedEmployee.name}</h4>
-                <p className="text-sm text-gray-400">{selectedEmployee.employee_code}</p>
-                <div className="flex justify-center gap-2 mt-2">
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${
-                    selectedEmployee.status === 'active' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'
-                  }`}>
+            <div className="space-y-6">
+              <div className="flex flex-col items-center text-center gap-3">
+                <div className="relative h-28 w-28 rounded-full border border-white/20 overflow-hidden bg-white/5 flex items-center justify-center">
+                  {selectedEmployeeImageLoading ? (
+                    <div className="h-8 w-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                  ) : selectedEmployeeImageUrl ? (
+                    <Image
+                      src={selectedEmployeeImageUrl}
+                      alt={`Foto de ${selectedEmployee.name}`}
+                      width={112}
+                      height={112}
+                      className="h-28 w-28 object-cover"
+                    />
+                  ) : (
+                    <UserCircleIcon className="h-16 w-16 text-gray-600" />
+                  )}
+                </div>
+                {selectedEmployeeImageError && (
+                  <p className="text-xs text-red-400 -mt-1">
+                    {selectedEmployeeImageError}
+                  </p>
+                )}
+                <div>
+                  <h4 className="text-lg font-medium text-white">{selectedEmployee.name}</h4>
+                  <p className="text-sm text-gray-400">{selectedEmployee.employee_code || 'Sin código'}</p>
+                </div>
+                <div className="flex flex-wrap justify-center gap-2">
+                  <span
+                    className={`px-2 py-1 rounded text-xs font-medium ${
+                      selectedEmployee.status === 'active'
+                        ? 'bg-emerald-500/20 text-emerald-400'
+                        : 'bg-red-500/20 text-red-400'
+                    }`}
+                  >
                     {selectedEmployee.status === 'active' ? 'Activo' : 'Inactivo'}
                   </span>
                   {selectedEmployee.attendance_status && (
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${
-                      selectedEmployee.attendance_status === 'present' ? 'bg-brand-500/20 text-brand-400' :
-                      selectedEmployee.attendance_status === 'late' ? 'bg-yellow-500/20 text-yellow-400' :
-                      selectedEmployee.attendance_status === 'absent' ? 'bg-red-500/20 text-red-400' :
-                      'bg-gray-500/20 text-gray-400'
-                    }`}>
-                      {selectedEmployee.attendance_status === 'present' ? 'Presente' :
-                       selectedEmployee.attendance_status === 'late' ? 'Tardanza' :
-                       selectedEmployee.attendance_status === 'absent' ? 'Ausente' : 'No registrado'}
+                    <span
+                      className={`px-2 py-1 rounded text-xs font-medium ${
+                        selectedEmployee.attendance_status === 'present'
+                          ? 'bg-brand-500/20 text-brand-400'
+                          : selectedEmployee.attendance_status === 'late'
+                          ? 'bg-yellow-500/20 text-yellow-400'
+                          : selectedEmployee.attendance_status === 'absent'
+                          ? 'bg-red-500/20 text-red-400'
+                          : 'bg-gray-500/20 text-gray-400'
+                      }`}
+                    >
+                      {ATTENDANCE_STATUS_LABEL[selectedEmployee.attendance_status] ?? ATTENDANCE_STATUS_LABEL.unknown}
+                    </span>
+                  )}
+                  {selectedEmployee.employee_scores && (
+                    <span className="px-2 py-1 rounded text-xs font-medium bg-blue-500/20 text-blue-300">
+                      Puntos {selectedEmployee.employee_scores.total_points ?? 0}
                     </span>
                   )}
                 </div>
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-400">Nombre Completo</label>
-                    <div className="text-white font-medium">{selectedEmployee.name}</div>
-                  </div>
-                  
-                  <div>
-                    <label className="text-sm font-medium text-gray-400">Código de Empleado</label>
-                    <div className="text-white font-medium">{selectedEmployee.employee_code}</div>
-                  </div>
-                  
-                  <div>
-                    <label className="text-sm font-medium text-gray-400">DNI</label>
-                    <div className="text-white font-medium">{selectedEmployee.dni}</div>
-                  </div>
-                  
-                  <div>
-                    <label className="text-sm font-medium text-gray-400">Departamento</label>
-                    <div className="text-white font-medium">{selectedEmployee.departments?.name || 'Sin asignar'}</div>
-                  </div>
-                  
-                  <div>
-                    <label className="text-sm font-medium text-gray-400">Cargo/Posición</label>
-                    <div className="text-white font-medium">{selectedEmployee.role || 'No especificado'}</div>
-                  </div>
-                  
-                  <div>
-                    <label className="text-sm font-medium text-gray-400">Salario Base</label>
-                    <div className="text-green-400 font-medium">
-                      {selectedEmployee.base_salary ? 
-                        new Intl.NumberFormat('es-HN', {
-                          style: 'currency',
-                          currency: 'HNL'
-                        }).format(selectedEmployee.base_salary) : 
-                        'No especificado'
-                      }
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-400">Email</label>
-                    <div className="text-white font-medium">{selectedEmployee.email || 'No especificado'}</div>
-                  </div>
-                  
-                  <div>
-                    <label className="text-sm font-medium text-gray-400">Teléfono</label>
-                    <div className="text-white font-medium">{selectedEmployee.phone || 'No especificado'}</div>
-                  </div>
-                  
-                  <div>
-                    <label className="text-sm font-medium text-gray-400">Fecha de Contratación</label>
-                    <div className="text-white font-medium">
-                      {selectedEmployee.hire_date ? 
-                        new Date(selectedEmployee.hire_date).toLocaleDateString('es-HN') : 
-                        'No especificada'
-                      }
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label className="text-sm font-medium text-gray-400">Horario de Trabajo</label>
-                    <div className="text-white font-medium">{selectedEmployee.work_schedules?.name || 'Sin asignar'}</div>
-                  </div>
-                  
-                  {selectedEmployee.check_in_time && (
-                    <div>
-                      <label className="text-sm font-medium text-gray-400">Entrada de Hoy</label>
-                      <div className="text-white font-medium">{formatTimeDisplay(selectedEmployee.check_in_time)}</div>
-                    </div>
-                  )}
-                  
-                  {selectedEmployee.employee_scores && (
-                    <div>
-                      <label className="text-sm font-medium text-gray-400">Puntos de Gamificación</label>
-                      <div className="text-yellow-400 font-medium">
-                        Total: {selectedEmployee.employee_scores.total_points || 0} | 
-                        Semana: {selectedEmployee.employee_scores.weekly_points || 0}
-                      </div>
-                    </div>
-                  )}
-                </div>
+
+              <div className="flex flex-wrap gap-2 border-b border-white/10 pb-2">
+                {EMPLOYEE_DETAIL_TABS.map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setDetailsActiveTab(tab.id)}
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition ${
+                      detailsActiveTab === tab.id
+                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                        : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
               </div>
-              
-              {(selectedEmployee.address || selectedEmployee.emergency_contact_name) && (
-                <div className="border-t border-white/10 pt-4">
-                  <h5 className="text-sm font-medium text-gray-400 mb-3">Información Adicional</h5>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {selectedEmployee.address && (
+
+              <div className="space-y-6">
+                {detailsActiveTab === 'personal' && (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <label className="text-sm font-medium text-gray-400">Dirección</label>
-                        <div className="text-white font-medium">
-                          {typeof selectedEmployee.address === 'string' 
-                            ? selectedEmployee.address 
-                            : JSON.stringify(selectedEmployee.address, null, 2)
-                          }
-                        </div>
+                        <label className="text-sm font-medium text-gray-400">Nombre Completo</label>
+                        <div className="text-white font-medium">{selectedEmployee.name}</div>
                       </div>
-                    )}
-                    {selectedEmployee.emergency_contact_name && (
                       <div>
-                        <label className="text-sm font-medium text-gray-400">Contacto de Emergencia</label>
-                        <div className="text-white font-medium">
-                          {selectedEmployee.emergency_contact_name}
-                          {selectedEmployee.emergency_contact_phone && (
-                            <span className="text-gray-400"> - {selectedEmployee.emergency_contact_phone}</span>
-                          )}
-                        </div>
+                        <label className="text-sm font-medium text-gray-400">DNI</label>
+                        <div className="text-white font-medium">{selectedEmployee.dni}</div>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-400">Email</label>
+                        <div className="text-white font-medium">{selectedEmployee.email || 'No especificado'}</div>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-400">Teléfono</label>
+                        <div className="text-white font-medium">{selectedEmployee.phone || 'No especificado'}</div>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-400">Equipo</label>
+                        <div className="text-white font-medium">{selectedEmployee.team || 'Sin asignar'}</div>
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="text-sm font-medium text-gray-400">Dirección</label>
+                        <div className="text-white font-medium">{formatAddress(selectedEmployee.address)}</div>
+                      </div>
+                    </div>
+                    {personalNotes && (
+                      <div className="border border-white/10 rounded-lg p-4 bg-white/5">
+                        <h6 className="text-sm font-medium text-gray-300 mb-2">Notas personales</h6>
+                        <p className="text-sm text-gray-200 leading-relaxed">{personalNotes}</p>
                       </div>
                     )}
                   </div>
-                </div>
-              )}
+                )}
+
+                {detailsActiveTab === 'contract' && (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="text-sm font-medium text-gray-400">Código de Empleado</label>
+                        <div className="text-white font-medium">{selectedEmployee.employee_code || 'Sin asignar'}</div>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-400">Estado</label>
+                        <div className="text-white font-medium">{selectedEmployee.status === 'active' ? 'Activo' : 'Inactivo'}</div>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-400">Departamento</label>
+                        <div className="text-white font-medium">{selectedEmployee.departments?.name || 'Sin asignar'}</div>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-400">Cargo/Posición</label>
+                        <div className="text-white font-medium">{selectedEmployee.role || 'No especificado'}</div>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-400">Horario de Trabajo</label>
+                        <div className="text-white font-medium">{selectedEmployee.work_schedules?.name || 'Sin asignar'}</div>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-400">Fecha de Contratación</label>
+                        <div className="text-white font-medium">{formatDateDisplay(selectedEmployee.hire_date)}</div>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-400">Fecha de Terminación</label>
+                        <div className="text-white font-medium">
+                          {selectedEmployee.status === 'inactive'
+                            ? formatDateDisplay(selectedEmployee.termination_date)
+                            : 'Contrato vigente'}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-400">Salario Base</label>
+                        <div className="text-green-400 font-medium">{formatCurrency(selectedEmployee.base_salary)}</div>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-400">Banco</label>
+                        <div className="text-white font-medium">{selectedEmployee.bank_name || 'No especificado'}</div>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-400">Cuenta Bancaria</label>
+                        <div className="text-white font-medium">{selectedEmployee.bank_account || 'No especificada'}</div>
+                      </div>
+                    </div>
+                    {contractNotes && (
+                      <div className="border border-white/10 rounded-lg p-4 bg-white/5">
+                        <h6 className="text-sm font-medium text-gray-300 mb-2">Notas contractuales</h6>
+                        <p className="text-sm text-gray-200 leading-relaxed">{contractNotes}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {detailsActiveTab === 'attendance' && (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div>
+                        <label className="text-sm font-medium text-gray-400">Estado de Asistencia</label>
+                        <div className="text-white font-medium">
+                          {selectedEmployee.attendance_status
+                            ? ATTENDANCE_STATUS_LABEL[selectedEmployee.attendance_status]
+                            : ATTENDANCE_STATUS_LABEL.unknown}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-400">Entrada más reciente</label>
+                        <div className="text-white font-medium">
+                          {selectedEmployee.check_in_time
+                            ? formatTimeDisplay(selectedEmployee.check_in_time)
+                            : 'Sin registro'}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-400">Salida más reciente</label>
+                        <div className="text-white font-medium">
+                          {selectedEmployee.check_out_time
+                            ? formatTimeDisplay(selectedEmployee.check_out_time)
+                            : 'Sin registro'}
+                        </div>
+                      </div>
+                    </div>
+                    {Array.isArray(attendanceRecords) && attendanceRecords.length > 0 ? (
+                      <div className="space-y-3">
+                        {attendanceRecords.map((record, index) => (
+                          <div
+                            key={`attendance-${selectedEmployee.id}-${index}`}
+                            className="border border-white/10 rounded-lg p-4 bg-white/5"
+                          >
+                            <div className="flex justify-between items-center mb-2">
+                              <h6 className="text-sm font-semibold text-white">Registro {index + 1}</h6>
+                              <span className="text-xs text-gray-400">
+                                {record.status ? record.status : 'Sin estado'}
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-300">
+                              <div>
+                                <span className="text-gray-400 block text-xs uppercase tracking-wider">Entrada</span>
+                                <span className="text-white">
+                                  {record.check_in ? formatDateTimeDisplay(record.check_in) : 'Sin registro'}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-gray-400 block text-xs uppercase tracking-wider">Salida</span>
+                                <span className="text-white">
+                                  {record.check_out ? formatDateTimeDisplay(record.check_out) : 'Sin registro'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-300">
+                        No se han registrado asistencias recientes para este empleado.
+                      </p>
+                    )}
+                    {attendanceInsights && (
+                      <div className="border border-brand-500/30 rounded-lg p-4 bg-brand-500/10">
+                        <h6 className="text-sm font-medium text-brand-200 mb-2">Resumen de asistencia</h6>
+                        {typeof attendanceInsights === 'string' ? (
+                          <p className="text-sm text-brand-50">{attendanceInsights}</p>
+                        ) : (
+                          <ul className="text-sm text-brand-50 space-y-1">
+                            {Object.entries(attendanceInsights).map(([key, value]) => (
+                              <li key={key} className="flex justify-between">
+                                <span className="capitalize">{key.replace(/[_-]/g, ' ')}:</span>
+                                <span className="font-medium">{String(value)}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {detailsActiveTab === 'discipline' && (
+                  <div className="space-y-4">
+                    {disciplinaryActions.length > 0 ? (
+                      disciplinaryActions.map((action, index) => {
+                        const actionObject =
+                          action && typeof action === 'object' ? (action as Record<string, any>) : null
+                        const title =
+                          actionObject?.type ||
+                          actionObject?.motivo ||
+                          actionObject?.reason ||
+                          `Medida ${index + 1}`
+                        const actionDate =
+                          actionObject?.date ||
+                          actionObject?.fecha ||
+                          actionObject?.applied_at ||
+                          null
+                        const actionNotes =
+                          actionObject?.notes ||
+                          actionObject?.descripcion ||
+                          actionObject?.description ||
+                          (typeof action === 'string' ? action : null)
+
+                        return (
+                          <div
+                            key={`discipline-${selectedEmployee.id}-${index}`}
+                            className="border border-white/10 rounded-lg p-4 bg-white/5 space-y-2"
+                          >
+                            <div className="flex justify-between items-center">
+                              <h6 className="text-sm font-semibold text-white">{title}</h6>
+                              {actionDate && (
+                                <span className="text-xs text-gray-400">{formatDateDisplay(actionDate)}</span>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-200 leading-relaxed">
+                              {actionNotes || 'Sin detalles adicionales.'}
+                            </p>
+                            {actionObject?.status && (
+                              <p className="text-xs text-gray-400">
+                                Estado: <span className="text-white">{String(actionObject.status)}</span>
+                              </p>
+                            )}
+                          </div>
+                        )
+                      })
+                    ) : (
+                      <p className="text-sm text-gray-300">
+                        No se registran medidas disciplinarias para este empleado.
+                      </p>
+                    )}
+                    {disciplinaryNotes && (
+                      <div className="border border-red-500/30 rounded-lg p-4 bg-red-500/10">
+                        <h6 className="text-sm font-medium text-red-200 mb-2">Notas del historial disciplinario</h6>
+                        <p className="text-sm text-red-100 leading-relaxed">{disciplinaryNotes}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {detailsActiveTab === 'emergency' && (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="text-sm font-medium text-gray-400">Nombre del contacto</label>
+                        <div className="text-white font-medium">
+                          {selectedEmployee.emergency_contact_name || 'No especificado'}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-400">Teléfono</label>
+                        <div className="text-white font-medium">
+                          {selectedEmployee.emergency_contact_phone || 'No especificado'}
+                        </div>
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="text-sm font-medium text-gray-400">Dirección del contacto</label>
+                        <div className="text-white font-medium">
+                          {emergencyContactMetadata && typeof emergencyContactMetadata === 'object'
+                            ? Object.values(emergencyContactMetadata)
+                                .filter(Boolean)
+                                .join(', ') || 'No especificada'
+                            : typeof emergencyContactMetadata === 'string'
+                            ? emergencyContactMetadata
+                            : 'No especificada'}
+                        </div>
+                      </div>
+                    </div>
+                    {emergencyContactMetadata && typeof emergencyContactMetadata === 'object' && (
+                      <div className="border border-white/10 rounded-lg p-4 bg-white/5">
+                        <h6 className="text-sm font-medium text-gray-300 mb-2">Información adicional</h6>
+                        <ul className="text-sm text-gray-200 space-y-1">
+                          {Object.entries(emergencyContactMetadata).map(([key, value]) => (
+                            <li key={key} className="flex justify-between">
+                              <span className="capitalize">{key.replace(/[_-]/g, ' ')}:</span>
+                              <span className="font-medium">{String(value)}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
             
             <div className="flex gap-3 mt-6 pt-4 border-t border-white/10">
               <Button
-                onClick={() => setShowDetailsModal(false)}
+                onClick={closeDetailsModal}
                 className="flex-1 bg-white/5 border-white/20 text-white hover:bg-white/10"
                 variant="outline"
               >
@@ -906,8 +1582,10 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
               </Button>
               <Button
                 onClick={() => {
-                  setShowDetailsModal(false)
-                  handleOpenCertificateModal(selectedEmployee)
+                  if (selectedEmployee) {
+                    handleOpenCertificateModal(selectedEmployee)
+                  }
+                  closeDetailsModal()
                 }}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 flex items-center gap-2"
               >
@@ -916,8 +1594,9 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
               </Button>
               <Button
                 onClick={() => {
-                  setShowDetailsModal(false)
+                  if (!selectedEmployee) return
                   handleEdit(selectedEmployee)
+                  closeDetailsModal()
                 }}
                 className="flex-1 bg-brand-600 hover:bg-brand-700"
               >
