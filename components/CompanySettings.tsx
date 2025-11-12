@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '../lib/supabase/client'
-import { useSession } from '@supabase/auth-helpers-react'
+import { useCompanyContext } from '../lib/useCompanyContext'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Card, CardContent } from './ui/card'
@@ -41,12 +41,22 @@ interface WorkSchedule {
 }
 
 export default function CompanySettings() {
-  const session = useSession()
-  const [company, setCompany] = useState<Company | null>(null)
+  // Use the same pattern as EmployeeManager and PayrollManagerNew
+  const { companyId, company: contextCompany, loading: companyLoading, error: companyError } = useCompanyContext()
   const [workSchedules, setWorkSchedules] = useState<WorkSchedule[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState('schedules')
+  
+  // Convert contextCompany to Company type if available
+  const company = contextCompany ? {
+    id: contextCompany.id,
+    name: contextCompany.name,
+    subdomain: undefined,
+    plan_type: 'basic',
+    settings: contextCompany.settings,
+    created_at: new Date().toISOString()
+  } as Company : null
 
   const [scheduleForm, setScheduleForm] = useState({
     name: '',
@@ -71,76 +81,12 @@ export default function CompanySettings() {
   const [showScheduleForm, setShowScheduleForm] = useState(false)
   const [editingSchedule, setEditingSchedule] = useState<WorkSchedule | null>(null)
 
-  const fetchCompany = useCallback(async () => {
-    if (!session?.user?.id) {
-      setError('No hay sesión activa')
-      setLoading(false)
-      return
+  // Sync error from company context
+  useEffect(() => {
+    if (companyError) {
+      setError(companyError)
     }
-
-    try {
-      setLoading(true)
-      setError(null)
-      
-      // Step 1: Get user profile with company_id via API (bypasses RLS)
-      console.log('🔍 CompanySettings: Fetching user profile...')
-      const profileResponse = await fetch('/api/user-profile')
-      if (!profileResponse.ok) {
-        const errorData = await profileResponse.json().catch(() => ({}))
-        console.error('❌ CompanySettings: Profile API error:', profileResponse.status, errorData)
-        throw new Error(`Error al obtener perfil de usuario: ${errorData.error || profileResponse.statusText}`)
-      }
-      const profileData = await profileResponse.json()
-      console.log('✅ CompanySettings: Profile response:', profileData)
-      const { data: userProfile } = profileData
-      
-      if (!userProfile) {
-        console.error('❌ CompanySettings: No user profile in response')
-        setError('No se encontró perfil de usuario')
-        setLoading(false)
-        return
-      }
-      
-      if (!userProfile?.company_id) {
-        console.warn('⚠️ CompanySettings: User has no company_id', { userProfile })
-        setError('Usuario no tiene empresa asignada. Si eres super_admin, necesitas seleccionar una empresa.')
-        setLoading(false)
-        return
-      }
-
-      // Step 2: Get company data using client (with proper RLS)
-      console.log('🔍 CompanySettings: Fetching company data for ID:', userProfile.company_id)
-      const supabaseClient = createClient()
-      const { data: companyData, error: companyError } = await supabaseClient
-        .from('companies')
-        .select('*')
-        .eq('id', userProfile.company_id)
-        .single()
-
-      if (companyError) {
-        console.error('❌ CompanySettings: Company query error:', companyError)
-        setError(`Error al cargar la empresa: ${companyError.message}`)
-        return
-      }
-      
-      if (!companyData) {
-        console.error('❌ CompanySettings: Company not found for ID:', userProfile.company_id)
-        setError('Empresa no encontrada')
-        return
-      }
-      
-      console.log('✅ CompanySettings: Company loaded successfully:', companyData.id, companyData.name)
-      
-      const company = companyData as Company
-      setCompany(company)
-      setError(null)
-    } catch (error: any) {
-      console.error('Error fetching company:', error)
-      setError(error?.message || 'Error desconocido al cargar la empresa')
-    } finally {
-      setLoading(false)
-    }
-  }, [session?.user?.id])
+  }, [companyError])
 
   const fetchWorkSchedules = useCallback(async () => {
     try {
@@ -158,11 +104,11 @@ export default function CompanySettings() {
   }, [])
 
   useEffect(() => {
-    if (session?.user) {
-      fetchCompany()
+    // Only fetch work schedules when companyId is available
+    if (companyId) {
       fetchWorkSchedules()
     }
-  }, [session, fetchCompany, fetchWorkSchedules])
+  }, [companyId, fetchWorkSchedules])
 
   const handleScheduleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -276,7 +222,8 @@ export default function CompanySettings() {
     { key: 'sunday', label: 'Domingo' }
   ]
 
-  if (loading && !company) {
+  // Show loading state while company context is loading
+  if (companyLoading || (!company && !error)) {
     return (
       <div className="flex flex-col items-center justify-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -285,14 +232,15 @@ export default function CompanySettings() {
     )
   }
 
-  if (error && !company) {
+  // Show error state if company context failed
+  if ((error || companyError) && !company) {
     return (
       <Card className="p-6">
         <CardContent className="text-center">
-          <p className="text-red-600 mb-2">{error}</p>
-          <Button onClick={() => fetchCompany()} variant="outline" size="sm">
-            Reintentar
-          </Button>
+          <p className="text-red-600 mb-2">{error || companyError}</p>
+          <p className="text-sm text-gray-500 mt-2">
+            {!companyId && 'No se pudo obtener el ID de la empresa. Verifica tu perfil de usuario.'}
+          </p>
         </CardContent>
       </Card>
     )
@@ -465,9 +413,9 @@ export default function CompanySettings() {
       )}
 
       {activeTab === 'payroll' && (
-        company ? (
+        companyId && company ? (
           <PayrollConfigEditor 
-            companyId={company.id}
+            companyId={companyId}
             onSave={() => {
               // Optionally refresh data or show success message
               console.log('Payroll configuration saved')
@@ -476,15 +424,9 @@ export default function CompanySettings() {
         ) : (
           <Card className="p-6">
             <CardContent className="text-center">
-              {error ? (
-                <>
-                  <p className="text-red-600 mb-4">{error}</p>
-                  <Button onClick={() => fetchCompany()} variant="outline">
-                    Reintentar
-                  </Button>
-                </>
-              ) : (
-                <p className="text-gray-600">Cargando información de la empresa...</p>
+              <p className="text-red-600 mb-4">{error || companyError || 'No se pudo cargar la información de la empresa'}</p>
+              {!companyId && (
+                <p className="text-sm text-gray-500">Verifica que tu perfil de usuario tenga una empresa asignada.</p>
               )}
             </CardContent>
           </Card>
