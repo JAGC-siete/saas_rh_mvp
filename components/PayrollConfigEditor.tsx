@@ -15,7 +15,14 @@ import {
   Calculator,
   FileText,
   Code,
-  X
+  X,
+  Search,
+  TrendingUp,
+  TrendingDown,
+  Hash,
+  Type,
+  ToggleLeft,
+  Info
 } from 'lucide-react'
 
 interface CustomField {
@@ -67,6 +74,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
   })
 
   const [showAddField, setShowAddField] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
 
   // Load current configuration
   useEffect(() => {
@@ -378,15 +386,64 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
       {/* Custom Fields */}
       <Card variant="glass" className="p-6">
         <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Campos Personalizados
-          </CardTitle>
-          <CardDescription className="text-gray-300">
-            Defina campos adicionales para almacenar en metadata de payroll
-          </CardDescription>
+          <div className="flex items-start justify-between flex-wrap gap-4">
+            <div className="flex-1">
+              <CardTitle className="text-white flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Campos Personalizados
+              </CardTitle>
+              <CardDescription className="text-gray-300 mt-1">
+                Defina campos adicionales que se sumarán o restarán automáticamente según su categoría
+              </CardDescription>
+            </div>
+            {/* Statistics */}
+            {Object.keys(config.custom_fields).length > 0 && (
+              <div className="flex gap-3">
+                <div className="text-center px-3 py-2 glass rounded-lg border border-green-400/20">
+                  <div className="text-2xl font-bold text-green-300">
+                    {Object.entries(config.custom_fields).filter(([_, f]) => f.category === 'earnings').length}
+                  </div>
+                  <div className="text-xs text-gray-400 mt-1">Ingresos</div>
+                </div>
+                <div className="text-center px-3 py-2 glass rounded-lg border border-red-400/20">
+                  <div className="text-2xl font-bold text-red-300">
+                    {Object.entries(config.custom_fields).filter(([_, f]) => f.category === 'deductions').length}
+                  </div>
+                  <div className="text-xs text-gray-400 mt-1">Deducciones</div>
+                </div>
+                <div className="text-center px-3 py-2 glass rounded-lg border border-white/20">
+                  <div className="text-2xl font-bold text-white">
+                    {Object.keys(config.custom_fields).length}
+                  </div>
+                  <div className="text-xs text-gray-400 mt-1">Total</div>
+                </div>
+              </div>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Search Bar */}
+          {Object.keys(config.custom_fields).length > 0 && (
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Buscar campos por nombre o etiqueta..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 input-glass text-white placeholder:text-white/50"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          )}
+          
           {/* Existing Fields - Grouped by Category */}
           {Object.keys(config.custom_fields).length > 0 ? (
             <div className="space-y-6">
@@ -399,23 +456,44 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                   </h4>
                   <div className="space-y-3">
                     {Object.entries(config.custom_fields)
-                      .filter(([_, field]) => field.category === 'earnings')
+                      .filter(([fieldName, field]) => {
+                        const matchesCategory = field.category === 'earnings'
+                        const matchesSearch = !searchQuery || 
+                          fieldName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          field.label.toLowerCase().includes(searchQuery.toLowerCase())
+                        return matchesCategory && matchesSearch
+                      })
                       .map(([fieldName, field]) => (
                 <div key={fieldName} className="p-5 glass border border-white/20 rounded-lg glass-list-item">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2 flex-wrap">
-                        <span className="font-semibold text-white text-base">{fieldName}</span>
-                        <Badge variant="outline" className={`text-xs px-2 py-0.5 ${
+                        <div className="flex items-center gap-2">
+                          {field.type === 'number' && <Hash className="h-4 w-4 text-blue-300" />}
+                          {field.type === 'string' && <Type className="h-4 w-4 text-purple-300" />}
+                          {field.type === 'boolean' && <ToggleLeft className="h-4 w-4 text-yellow-300" />}
+                          <span className="font-semibold text-white text-base">{fieldName}</span>
+                        </div>
+                        <Badge variant="outline" className={`text-xs px-2 py-0.5 flex items-center gap-1 ${
                           field.category === 'earnings' 
                             ? 'bg-green-500/20 text-green-300 border-green-400/30' 
                             : 'bg-red-500/20 text-red-300 border-red-400/30'
                         }`}>
+                          {field.category === 'earnings' ? (
+                            <TrendingUp className="h-3 w-3" />
+                          ) : (
+                            <TrendingDown className="h-3 w-3" />
+                          )}
                           {field.category === 'earnings' ? 'Ingreso' : 'Deducción'}
                         </Badge>
                         <Badge variant="outline" className="text-xs bg-white/10 text-white border-white/20 px-2 py-0.5">
-                          {field.type}
+                          {field.type === 'number' ? 'Número' : field.type === 'string' ? 'Texto' : 'Booleano'}
                         </Badge>
+                        {field.required && (
+                          <Badge variant="outline" className="text-xs bg-orange-500/20 text-orange-300 border-orange-400/30 px-2 py-0.5">
+                            Requerido
+                          </Badge>
+                        )}
                       </div>
                       <p className="text-sm text-gray-300">{field.label || 'Sin descripción'}</p>
                     </div>
@@ -494,23 +572,44 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                   </h4>
                   <div className="space-y-3">
                     {Object.entries(config.custom_fields)
-                      .filter(([_, field]) => field.category === 'deductions')
+                      .filter(([fieldName, field]) => {
+                        const matchesCategory = field.category === 'deductions'
+                        const matchesSearch = !searchQuery || 
+                          fieldName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          field.label.toLowerCase().includes(searchQuery.toLowerCase())
+                        return matchesCategory && matchesSearch
+                      })
                       .map(([fieldName, field]) => (
                         <div key={fieldName} className="p-5 glass border border-white/20 rounded-lg glass-list-item">
                           <div className="flex items-start justify-between mb-4">
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-2 flex-wrap">
-                                <span className="font-semibold text-white text-base">{fieldName}</span>
-                                <Badge variant="outline" className={`text-xs px-2 py-0.5 ${
+                                <div className="flex items-center gap-2">
+                                  {field.type === 'number' && <Hash className="h-4 w-4 text-blue-300" />}
+                                  {field.type === 'string' && <Type className="h-4 w-4 text-purple-300" />}
+                                  {field.type === 'boolean' && <ToggleLeft className="h-4 w-4 text-yellow-300" />}
+                                  <span className="font-semibold text-white text-base">{fieldName}</span>
+                                </div>
+                                <Badge variant="outline" className={`text-xs px-2 py-0.5 flex items-center gap-1 ${
                                   field.category === 'earnings' 
                                     ? 'bg-green-500/20 text-green-300 border-green-400/30' 
                                     : 'bg-red-500/20 text-red-300 border-red-400/30'
                                 }`}>
+                                  {field.category === 'earnings' ? (
+                                    <TrendingUp className="h-3 w-3" />
+                                  ) : (
+                                    <TrendingDown className="h-3 w-3" />
+                                  )}
                                   {field.category === 'earnings' ? 'Ingreso' : 'Deducción'}
                                 </Badge>
                                 <Badge variant="outline" className="text-xs bg-white/10 text-white border-white/20 px-2 py-0.5">
-                                  {field.type}
+                                  {field.type === 'number' ? 'Número' : field.type === 'string' ? 'Texto' : 'Booleano'}
                                 </Badge>
+                                {field.required && (
+                                  <Badge variant="outline" className="text-xs bg-orange-500/20 text-orange-300 border-orange-400/30 px-2 py-0.5">
+                                    Requerido
+                                  </Badge>
+                                )}
                               </div>
                               <p className="text-sm text-gray-300">{field.label || 'Sin descripción'}</p>
                             </div>
@@ -581,12 +680,37 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
               )}
             </div>
           ) : (
-            <div className="text-center py-8 glass border border-white/10 rounded-lg">
-              <FileText className="h-10 w-10 mx-auto text-gray-400 mb-3" />
-              <p className="text-sm text-gray-300 font-medium">No hay campos personalizados configurados</p>
-              <p className="text-xs text-gray-400 mt-1">Agrega campos personalizados para tu configuración de payroll</p>
+            <div className="text-center py-12 glass border border-white/10 rounded-lg">
+              <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4 opacity-50" />
+              <p className="text-sm text-gray-300 font-medium mb-1">No hay campos personalizados configurados</p>
+              <p className="text-xs text-gray-400 mb-4">Agrega campos personalizados que se sumarán o restarán automáticamente al salario</p>
+              <div className="flex items-center justify-center gap-4 text-xs text-gray-400">
+                <div className="flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3 text-green-400" />
+                  <span>Ingresos suman</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <TrendingDown className="h-3 w-3 text-red-400" />
+                  <span>Deducciones restan</span>
+                </div>
+              </div>
             </div>
           )}
+          
+          {/* Empty State for Search */}
+          {Object.keys(config.custom_fields).length > 0 && searchQuery && 
+            Object.entries(config.custom_fields).filter(([fieldName, field]) => {
+              const matchesSearch = fieldName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                field.label.toLowerCase().includes(searchQuery.toLowerCase())
+              return matchesSearch
+            }).length === 0 && (
+              <div className="text-center py-8 glass border border-white/10 rounded-lg">
+                <Search className="h-8 w-8 mx-auto text-gray-400 mb-3 opacity-50" />
+                <p className="text-sm text-gray-300 font-medium">No se encontraron campos</p>
+                <p className="text-xs text-gray-400 mt-1">Intenta con otro término de búsqueda</p>
+              </div>
+            )
+          }
 
           {/* Add New Field */}
           {showAddField ? (
