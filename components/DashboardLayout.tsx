@@ -37,7 +37,19 @@ interface UserPermissions {
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user, logout } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [userPermissions, setUserPermissions] = useState<UserPermissions>({})
+  // Estado inicial con permisos por defecto para company_admin
+  const [userPermissions, setUserPermissions] = useState<UserPermissions>({
+    dashboard: true,
+    employees: true,
+    departments: true,
+    attendance: true,
+    leave: true,
+    payroll: true,
+    reports: true,
+    gamification: true,
+    settings: true, // Por defecto true, se ajustará según rol
+    admin: true    // Por defecto true, se ajustará según rol
+  })
   const [loadingPermissions, setLoadingPermissions] = useState(true)
   const router = useRouter()
   
@@ -68,20 +80,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           } else {
             console.warn('No user profile data found, using default permissions')
           }
-          // Usar permisos por defecto si hay error o no hay data
-          // Nota: settings y admin se establecerán basados en el rol del usuario
-          setUserPermissions({
-            dashboard: true,
-            employees: true,
-            departments: true,
-            attendance: true,
-            leave: true,
-            payroll: true,
-            reports: true,
-            gamification: true,
-            settings: false,
-            admin: false
-          })
+          // Si no hay data, intentar obtener rol de otra forma o usar defaults
+          console.warn('⚠️ No user profile data, checking if we can get role from user object')
+          // Mantener permisos por defecto (ya están en estado inicial)
+          // No resetear a false porque puede causar que desaparezcan las opciones
         } else {
           // Parsear permissions si viene como string JSON
           let rawPermissions: any = {}
@@ -99,11 +101,17 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           }
           
           console.log('📦 Raw permissions from DB:', rawPermissions)
-          console.log('👤 User role:', data.role)
+          console.log('👤 User role:', data.role, 'Type:', typeof data.role)
+          
+          // CRÍTICO: Normalizar el rol (trim, lowercase) para comparación robusta
+          const normalizedRole = (data.role || '').toString().trim().toLowerCase()
+          console.log('🔍 Normalized role:', normalizedRole)
           
           // CRÍTICO: Determinar permisos basados en el rol PRIMERO (antes del merge)
-          const isAdmin = ['super_admin', 'company_admin', 'hr_manager'].includes(data.role || '')
-          const canAccessSettings = ['super_admin', 'company_admin'].includes(data.role || '')
+          const isAdmin = ['super_admin', 'company_admin', 'hr_manager'].includes(normalizedRole)
+          const canAccessSettings = ['super_admin', 'company_admin'].includes(normalizedRole)
+          
+          console.log('🔐 Permission checks:', { isAdmin, canAccessSettings, normalizedRole })
           
           // Construir objeto de permisos final - FORZAR settings y admin basado en rol
           const permissions: UserPermissions = {
@@ -121,10 +129,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           }
           
           console.log('✅ Final permissions FORCED by role:', {
-            role: data.role,
+            originalRole: data.role,
+            normalizedRole,
             permissions,
             isAdmin,
             canAccessSettings,
+            settingsValue: permissions.settings,
+            adminValue: permissions.admin,
             note: 'settings and admin are FORCED by role, ignoring DB values'
           })
           
@@ -132,18 +143,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         }
       } catch (error) {
         console.error('Error in fetchUserPermissions:', error)
-        // Usar permisos por defecto si hay error
-        setUserPermissions({
-          dashboard: true,
-          employees: true,
-          departments: true,
-          attendance: true,
-          leave: true,
-          payroll: true,
-          reports: true,
-          gamification: true,
-          settings: false
-        })
+        // En caso de error, mantener permisos por defecto (ya están en el estado inicial)
+        // No resetear a false porque puede causar que desaparezcan las opciones
+        console.warn('⚠️ Error loading permissions, keeping default permissions')
       } finally {
         setLoadingPermissions(false)
       }
@@ -176,11 +178,19 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     if (loadingPermissions) return true // Mostrar todo mientras carga
     
     const hasPermission = userPermissions[item.permission as keyof UserPermissions]
-    const shouldShow = hasPermission !== false && hasPermission !== undefined
     
-    // Debug logging para ver qué se está filtrando
+    // CRÍTICO: Mostrar si es true, o si no está definido (asumir true por defecto)
+    // SOLO ocultar si es explícitamente false
+    const shouldShow = hasPermission !== false
+    
+    // Debug logging SOLO para items que se están filtrando
     if (!shouldShow) {
-      console.log(`🚫 Filtering out navigation item: ${item.name} (permission: ${item.permission}, value: ${hasPermission})`)
+      console.log(`🚫 Filtering out: ${item.name}`, {
+        permission: item.permission,
+        value: hasPermission,
+        type: typeof hasPermission,
+        allPermissions: userPermissions
+      })
     }
     
     return shouldShow
