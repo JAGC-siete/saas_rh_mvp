@@ -54,34 +54,27 @@ export default function GamificationDashboard() {
     }
   }
 
-  if (companyLoading || loading) {
-    return (
-      <ProtectedRoute>
-        <DashboardLayout>
-          <div className="flex items-center justify-center h-64">
-            <div className="text-lg text-white font-medium">Cargando gamificación...</div>
-          </div>
-        </DashboardLayout>
-      </ProtectedRoute>
-    )
-  }
-
-  if (!companyId) {
-    return (
-      <ProtectedRoute>
-        <DashboardLayout>
-          <div className="flex items-center justify-center h-64">
-            <div className="text-lg text-white font-medium">Error: No se pudo cargar la información de la empresa</div>
-          </div>
-        </DashboardLayout>
-      </ProtectedRoute>
-    )
-  }
-
   return (
     <ProtectedRoute>
       <DashboardLayout>
         <div className="space-y-6">
+          {/* Loading State */}
+          {(companyLoading || loading) && (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-lg text-white font-medium">Cargando gamificación...</div>
+            </div>
+          )}
+
+          {/* Error State */}
+          {!companyLoading && !loading && !companyId && (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-lg text-white font-medium">Error: No se pudo cargar la información de la empresa</div>
+            </div>
+          )}
+
+          {/* Main Content */}
+          {!companyLoading && !loading && companyId && (
+            <>
           {/* Header */}
           <div className="flex justify-between items-center">
             <div>
@@ -252,6 +245,8 @@ export default function GamificationDashboard() {
               </div>
             </CardContent>
           </Card>
+            </>
+          )}
         </div>
       </DashboardLayout>
     </ProtectedRoute>
