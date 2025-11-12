@@ -12,7 +12,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           .from('user_profiles')
           .select(`
             *,
-            employees(name, email, position)
+            employees(name, email)
           `)
           .eq('company_id', companyId)
           .order('created_at', { ascending: false })
@@ -56,7 +56,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }])
           .select(`
             *,
-            employees(name, email, position)
+            employees(name, email)
           `)
           .single()
 
