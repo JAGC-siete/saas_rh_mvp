@@ -518,14 +518,22 @@ export default function CompanySettings() {
         </Card>
       )}
 
-      {activeTab === 'payroll' && company && (
-        <PayrollConfigEditor 
-          companyId={company.id}
-          onSave={() => {
-            // Optionally refresh data or show success message
-            console.log('Payroll configuration saved')
-          }}
-        />
+      {activeTab === 'payroll' && (
+        company ? (
+          <PayrollConfigEditor 
+            companyId={company.id}
+            onSave={() => {
+              // Optionally refresh data or show success message
+              console.log('Payroll configuration saved')
+            }}
+          />
+        ) : (
+          <Card className="p-6">
+            <CardContent className="text-center">
+              <p className="text-gray-600">Cargando información de la empresa...</p>
+            </CardContent>
+          </Card>
+        )
       )}
 
       {activeTab === 'integrations' && (

@@ -43,6 +43,8 @@ interface PayrollConfigEditorProps {
 }
 
 export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfigEditorProps) {
+  console.log('🚀 PayrollConfigEditor: Component mounted/rendered', { companyId })
+  
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -75,10 +77,16 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     setLoading(true)
     setError(null)
     
+    console.log('🔄 PayrollConfigEditor: Loading config for companyId:', companyId)
+    
     try {
       const response = await fetch('/api/payroll/config')
+      console.log('📡 PayrollConfigEditor: API response status:', response.status)
+      
       if (response.ok) {
         const data = await response.json()
+        console.log('✅ PayrollConfigEditor: API response data:', data)
+        
         if (data.config) {
           setConfig({
             calculation_type: data.config.calculation_type || 'standard',
@@ -86,9 +94,21 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
             calculation_config: data.config.calculation_config || {},
             calculation_script: data.config.calculation_script || null
           })
+          console.log('✅ PayrollConfigEditor: Config loaded successfully')
+        } else {
+          // No config exists yet, use defaults
+          console.log('ℹ️ PayrollConfigEditor: No config found, using defaults')
+          setConfig({
+            calculation_type: 'standard',
+            custom_fields: {},
+            calculation_config: {},
+            calculation_script: null
+          })
         }
       } else {
         // No config exists yet, use defaults
+        const errorData = await response.json().catch(() => ({}))
+        console.log('⚠️ PayrollConfigEditor: API returned non-OK status, using defaults:', errorData)
         setConfig({
           calculation_type: 'standard',
           custom_fields: {},
@@ -97,10 +117,11 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
         })
       }
     } catch (err: any) {
-      console.error('Error loading config:', err)
-      setError('Error cargando configuración')
+      console.error('❌ PayrollConfigEditor: Error loading config:', err)
+      setError('Error cargando configuración: ' + (err.message || 'Error desconocido'))
     } finally {
       setLoading(false)
+      console.log('🏁 PayrollConfigEditor: Loading complete')
     }
   }
 
@@ -251,15 +272,19 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
   }
 
   if (loading) {
+    console.log('⏳ PayrollConfigEditor: Rendering loading state')
     return (
       <Card className="p-6">
         <CardContent className="text-center">
           <Loader2 className="h-6 w-6 animate-spin mx-auto text-blue-600 mb-2" />
           <p className="text-gray-600">Cargando configuración...</p>
+          <p className="text-xs text-gray-400 mt-2">Company ID: {companyId}</p>
         </CardContent>
       </Card>
     )
   }
+  
+  console.log('🎨 PayrollConfigEditor: Rendering main content', { config, error, companyId })
 
   return (
     <div className="space-y-6">
