@@ -28,11 +28,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // 1. Obtener total de empleados activos - DE LA EMPRESA DEL USUARIO
     console.log('👥 PASO 1: Obteniendo empleados activos de la empresa:', companyId)
-    const { data: employees, error: empError } = await supabase
+    let employeesQuery = supabase
       .from('employees')
       .select('id, name, employee_code, base_salary, department_id, status')
       .eq('status', 'active')
-      .eq('company_id', companyId)
+    
+    // Solo filtrar por company_id si no es super_admin o si companyId existe
+    if (companyId && role !== 'super_admin') {
+      employeesQuery = employeesQuery.eq('company_id', companyId)
+    } else if (role === 'super_admin' && !companyId) {
+      // Para super_admin sin companyId, no filtrar por company (ver todos)
+      // O retornar datos vacíos si se prefiere
+      employeesQuery = employeesQuery.limit(0) // No mostrar empleados para super_admin sin company
+    }
+    
+    const { data: employees, error: empError } = await employeesQuery
 
     if (empError) {
       console.error('❌ Error fetching employees:', empError)
@@ -53,8 +63,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (employeeIds.length > 0) {
       attendanceQuery = attendanceQuery.in('employee_id', employeeIds)
     } else {
-      // Si no hay empleados, no hay asistencia
-      attendanceQuery = attendanceQuery.eq('employee_id', '__none__')
+      // Si no hay empleados, no hay asistencia - usar un ID que no existe
+      attendanceQuery = attendanceQuery.eq('employee_id', '00000000-0000-0000-0000-000000000000')
     }
     
     const { data: todayAttendance, error: attError } = await attendanceQuery
@@ -66,8 +76,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log('✅ Asistencia de hoy:', todayAttendance?.length || 0)
 
-    // 3. Obtener nóminas recientes - SOLO DE EMPLEADOS DE PARAGON
-    console.log('💰 PASO 3: Obteniendo nóminas recientes de empleados de Paragon...')
+    // 3. Obtener nóminas recientes - SOLO DE EMPLEADOS DE LA EMPRESA
+    console.log('💰 PASO 3: Obteniendo nóminas recientes de empleados...')
     let payrollQuery = supabase
       .from('payroll_records')
       .select(`
@@ -81,12 +91,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .order('created_at', { ascending: false })
       .limit(5)
     
-    // Filtrar por empleados de Paragon si hay empleados
+    // Filtrar por empleados si hay empleados
     if (employeeIds.length > 0) {
       payrollQuery = payrollQuery.in('employee_id', employeeIds)
     } else {
-      // Si no hay empleados, no hay nóminas
-      payrollQuery = payrollQuery.eq('employee_id', '__none__')
+      // Si no hay empleados, no hay nóminas - usar un ID que no existe
+      payrollQuery = payrollQuery.eq('employee_id', '00000000-0000-0000-0000-000000000000')
     }
     
     const { data: recentPayrolls, error: payrollError } = await payrollQuery
@@ -193,6 +203,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   } catch (error) {
     console.error('❌ Error general en executive dashboard stats:', error)
+    
+    // Check if response has already been sent
+    if (res.headersSent) {
+      return
+    }
+    
+    // Handle specific authentication errors
+    if (error instanceof Error) {
+      if (error.message === 'UNAUTHORIZED') {
+        return res.status(401).json({ 
+          error: 'Unauthorized',
+          details: 'Authentication required'
+        })
+      }
+      if (error.message === 'ADMIN_REQUIRED') {
+        return res.status(403).json({ 
+          error: 'Forbidden',
+          details: 'Admin privileges required'
+        })
+      }
+      if (error.message === 'COMPANY_ACCESS_REQUIRED') {
+        return res.status(400).json({ 
+          error: 'Company access required',
+          details: error.message
+        })
+      }
+    }
+    
     res.status(500).json({ 
       error: 'Internal server error', 
       details: error instanceof Error ? error.message : 'Error desconocido'

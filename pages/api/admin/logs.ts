@@ -108,6 +108,11 @@ export default async function handler(
   } catch (error: any) {
     logger.error('Error in logs API', { error })
     
+    // Check if response has already been sent
+    if (res.headersSent) {
+      return
+    }
+    
     // Handle specific authentication errors
     if (error.message === 'UNAUTHORIZED') {
       return res.status(401).json({ 

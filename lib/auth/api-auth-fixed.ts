@@ -42,7 +42,10 @@ export async function authenticateUser(
     
     if (authError || !user) {
       console.error('Auth error:', authError)
-      res.status(401).json({ error: 'Unauthorized' })
+      // Check if response has already been sent
+      if (!res.headersSent) {
+        res.status(401).json({ error: 'Unauthorized' })
+      }
       throw new Error('UNAUTHORIZED')
     }
 
@@ -58,7 +61,9 @@ export async function authenticateUser(
     if (profileError) {
       console.error('Profile query error:', profileError)
       if (requireProfile) {
-        res.status(403).json({ error: 'User profile required' })
+        if (!res.headersSent) {
+          res.status(403).json({ error: 'User profile required' })
+        }
         throw new Error('PROFILE_REQUIRED')
       }
       // Return basic user without profile
@@ -73,7 +78,9 @@ export async function authenticateUser(
 
     if (!userProfile) {
       if (requireProfile) {
-        res.status(403).json({ error: 'User profile not found' })
+        if (!res.headersSent) {
+          res.status(403).json({ error: 'User profile not found' })
+        }
         throw new Error('PROFILE_REQUIRED')
       }
       // Return basic user without profile
@@ -88,7 +95,9 @@ export async function authenticateUser(
 
     // Check if user is active
     if (!userProfile.is_active) {
-      res.status(403).json({ error: 'Account deactivated' })
+      if (!res.headersSent) {
+        res.status(403).json({ error: 'Account deactivated' })
+      }
       throw new Error('ACCOUNT_DEACTIVATED')
     }
 
@@ -96,13 +105,17 @@ export async function authenticateUser(
 
     // Check admin requirements
     if (requireAdmin && !['super_admin', 'company_admin', 'hr_manager'].includes(normalizedRole)) {
-      res.status(403).json({ error: 'Admin privileges required' })
+      if (!res.headersSent) {
+        res.status(403).json({ error: 'Admin privileges required' })
+      }
       throw new Error('ADMIN_REQUIRED')
     }
 
     // Check allowed roles
     if (allowedRoles.length > 0 && !allowedRoles.map(r => r.trim().toLowerCase()).includes(normalizedRole)) {
-      res.status(403).json({ error: 'Insufficient permissions' })
+      if (!res.headersSent) {
+        res.status(403).json({ error: 'Insufficient permissions' })
+      }
       throw new Error('INSUFFICIENT_PERMISSIONS')
     }
 
@@ -142,7 +155,9 @@ export async function requireCompanyAccess(req: NextApiRequest, res: NextApiResp
   
   // FIXED: Permitir super_admin sin company_id
   if (!auth.companyId && auth.role !== 'super_admin') {
-    res.status(400).json({ error: 'Company access required' })
+    if (!res.headersSent) {
+      res.status(400).json({ error: 'Company access required' })
+    }
     throw new Error('COMPANY_ACCESS_REQUIRED')
   }
   
