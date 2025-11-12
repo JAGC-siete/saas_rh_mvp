@@ -85,7 +85,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }])
       .select(`
         *,
-        employees(name, email),
+        employees(name, email, role),
         companies(name, is_active)
       `)
       .single()
