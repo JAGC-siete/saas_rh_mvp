@@ -11,8 +11,7 @@ import {
   ChartBarIcon,
   Cog6ToothIcon,
   ArrowLeftOnRectangleIcon,
-  UsersIcon,
-  ShieldCheckIcon
+  UsersIcon
 } from '@heroicons/react/24/outline'
 import { TrophyIcon } from '@heroicons/react/24/solid'
 
@@ -209,8 +208,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Nómina', href: '/app/payroll', icon: CurrencyDollarIcon, permission: 'payroll' },
     { name: 'Reportes', href: '/app/reports', icon: ChartBarIcon, permission: 'reports' },
     { name: 'Gamificación', href: '/app/gamification', icon: TrophyIcon, permission: 'gamification' },
-    { name: 'Configuración', href: '/app/settings', icon: Cog6ToothIcon, permission: 'settings' },
-    { name: 'Administración', href: '/app/admin', icon: ShieldCheckIcon, permission: 'admin' },
+    { name: 'Parametros', href: '/app/settings', icon: Cog6ToothIcon, permission: 'settings' },
   ]
 
   // Filtrar navegación basada en permisos

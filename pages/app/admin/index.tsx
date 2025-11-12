@@ -25,15 +25,24 @@ export default function AdminDashboard() {
   const [loadingStats, setLoadingStats] = useState(true)
 
   useEffect(() => {
-    if (!loading && (!user || !userProfile)) {
-      router.push('/auth/start')
+    // Esperar a que termine de cargar antes de verificar
+    if (loading) return
+
+    // Si no hay usuario, redirigir a login (no a /auth/start que es para registro)
+    if (!user) {
+      router.push('/app/login')
       return
     }
 
-    if (!loading && userProfile && !['super_admin', 'company_admin', 'hr_manager'].includes(userProfile.role)) {
-      router.push('/app/dashboard')
-      return
+    // Si hay usuario pero no tiene perfil aún, esperar un momento más
+    // o verificar permisos si ya tiene perfil
+    if (userProfile) {
+      if (!['super_admin', 'company_admin', 'hr_manager'].includes(userProfile.role)) {
+        router.push('/app/dashboard')
+        return
+      }
     }
+    // Si hay usuario pero no hay perfil aún, no hacer nada (esperar a que se cargue)
   }, [user, userProfile, loading, router])
 
   useEffect(() => {

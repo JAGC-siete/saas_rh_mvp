@@ -3,16 +3,9 @@ import { createClient } from '../lib/supabase/client'
 import { useSession } from '@supabase/auth-helpers-react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from './ui/card'
+import { Card, CardContent } from './ui/card'
 import { 
-  BuildingOfficeIcon, 
-  UserGroupIcon, 
   ClockIcon,
-  CreditCardIcon,
-  ShieldCheckIcon,
-  BellIcon,
-  CogIcon,
-  LinkIcon,
   CalculatorIcon
 } from '@heroicons/react/24/outline'
 import PayrollConfigEditor from './PayrollConfigEditor'
@@ -52,14 +45,7 @@ export default function CompanySettings() {
   const [company, setCompany] = useState<Company | null>(null)
   const [workSchedules, setWorkSchedules] = useState<WorkSchedule[]>([])
   const [loading, setLoading] = useState(false)
-  const [activeTab, setActiveTab] = useState('general')
-  
-  const [companyForm, setCompanyForm] = useState({
-    name: '',
-    subdomain: '',
-    plan_type: 'basic',
-    settings: {}
-  })
+  const [activeTab, setActiveTab] = useState('schedules')
 
   const [scheduleForm, setScheduleForm] = useState({
     name: '',
@@ -107,12 +93,6 @@ export default function CompanySettings() {
       
       const company = companyData as Company
       setCompany(company)
-      setCompanyForm({
-        name: company.name,
-        subdomain: company.subdomain || '',
-        plan_type: company.plan_type,
-        settings: company.settings || {}
-      })
     } catch (error) {
       console.error('Error fetching company:', error)
     } finally {
@@ -141,33 +121,6 @@ export default function CompanySettings() {
       fetchWorkSchedules()
     }
   }, [session, fetchCompany, fetchWorkSchedules])
-
-  const handleCompanySubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!company) return
-
-    try {
-      setLoading(true)
-      const supabaseClient = createClient()
-      const { error } = await supabaseClient
-        .from('companies')
-        .update({
-          name: companyForm.name,
-          subdomain: companyForm.subdomain || null,
-          plan_type: companyForm.plan_type,
-          settings: companyForm.settings
-        })
-        .eq('id', company.id)
-
-      if (error) throw error
-      
-      fetchCompany()
-    } catch (error) {
-      console.error('Error updating company:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handleScheduleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -267,11 +220,8 @@ export default function CompanySettings() {
   }
 
   const tabs = [
-    { id: 'general', name: 'General', icon: CogIcon },
-    { id: 'departments', name: 'Departamentos', icon: BuildingOfficeIcon },
     { id: 'schedules', name: 'Horarios', icon: ClockIcon },
     { id: 'payroll', name: 'Configuración Payroll', icon: CalculatorIcon },
-    { id: 'integrations', name: 'Integraciones', icon: LinkIcon },
   ]
 
   const days = [
@@ -323,59 +273,6 @@ export default function CompanySettings() {
       </div>
 
       {/* Tab Content */}
-      {activeTab === 'general' && (
-        <Card className="p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Información General</h3>
-          
-          <form onSubmit={handleCompanySubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nombre de la Empresa *
-                </label>
-                <Input
-                  type="text"
-                  value={companyForm.name}
-                  onChange={(e) => setCompanyForm({ ...companyForm, name: e.target.value })}
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Subdominio
-                </label>
-                <Input
-                  type="text"
-                  value={companyForm.subdomain}
-                  onChange={(e) => setCompanyForm({ ...companyForm, subdomain: e.target.value })}
-                  placeholder="mi-empresa"
-                />
-              </div>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Plan
-              </label>
-              <select
-                value={companyForm.plan_type}
-                onChange={(e) => setCompanyForm({ ...companyForm, plan_type: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="basic">Básico</option>
-                <option value="professional">Profesional</option>
-                <option value="enterprise">Empresarial</option>
-              </select>
-            </div>
-            
-            <Button type="submit" disabled={loading}>
-              {loading ? 'Guardando...' : 'Guardar Cambios'}
-            </Button>
-          </form>
-        </Card>
-      )}
-
       {activeTab === 'schedules' && (
         <div className="space-y-6">
           <div className="flex justify-between items-center">
@@ -511,13 +408,6 @@ export default function CompanySettings() {
         </div>
       )}
 
-      {activeTab === 'departments' && (
-        <Card className="p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Gestión de Departamentos</h3>
-          <p className="text-gray-600">Próximamente: Gestión de departamentos y empleados</p>
-        </Card>
-      )}
-
       {activeTab === 'payroll' && (
         company ? (
           <PayrollConfigEditor 
@@ -536,12 +426,6 @@ export default function CompanySettings() {
         )
       )}
 
-      {activeTab === 'integrations' && (
-        <Card className="p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Integraciones</h3>
-          <p className="text-gray-600">Próximamente: Configuración de integraciones con otras aplicaciones</p>
-        </Card>
-      )}
     </div>
   )
 }
