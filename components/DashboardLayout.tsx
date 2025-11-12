@@ -15,7 +15,6 @@ import {
   ShieldCheckIcon
 } from '@heroicons/react/24/outline'
 import { TrophyIcon } from '@heroicons/react/24/solid'
-import { supabase } from '../lib/supabase'
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -35,7 +34,7 @@ interface UserPermissions {
 }
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  const { user, logout } = useAuth()
+  const { user, userProfile, logout } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(true)
   // Estado inicial con permisos por defecto para company_admin
   const [userPermissions, setUserPermissions] = useState<UserPermissions>({
@@ -66,54 +65,27 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         setLoadingPermissions(true)
         console.log('🔍 Fetching permissions for user:', user.id, user.email)
         
-        const { data, error } = await supabase
-          .from('user_profiles')
-          .select('permissions, role')
-          .eq('id', user.id)
-          .single()
-        
-        console.log('📋 Permissions query result:', { data, error })
-
-        if (error || !data) {
-          if (error) {
-            console.error('Error fetching user permissions:', error)
-          } else {
-            console.warn('No user profile data found, using default permissions')
-          }
-          // Si no hay data, intentar obtener rol de otra forma o usar defaults
-          console.warn('⚠️ No user profile data, checking if we can get role from user object')
-          // Mantener permisos por defecto (ya están en estado inicial)
-          // No resetear a false porque puede causar que desaparezcan las opciones
-        } else {
-          // Parsear permissions si viene como string JSON
+        // Primero intentar usar userProfile del contexto de auth
+        if (userProfile) {
+          console.log('✅ Using userProfile from auth context:', userProfile)
           let rawPermissions: any = {}
-          if (data.permissions) {
-            if (typeof data.permissions === 'string') {
+          if (userProfile.permissions) {
+            if (typeof userProfile.permissions === 'string') {
               try {
-                rawPermissions = JSON.parse(data.permissions)
+                rawPermissions = JSON.parse(userProfile.permissions)
               } catch (e) {
                 console.error('Error parsing permissions JSON:', e)
                 rawPermissions = {}
               }
             } else {
-              rawPermissions = data.permissions
+              rawPermissions = userProfile.permissions
             }
           }
           
-          console.log('📦 Raw permissions from DB:', rawPermissions)
-          console.log('👤 User role:', data.role, 'Type:', typeof data.role)
-          
-          // CRÍTICO: Normalizar el rol (trim, lowercase) para comparación robusta
-          const normalizedRole = (data.role || '').toString().trim().toLowerCase()
-          console.log('🔍 Normalized role:', normalizedRole)
-          
-          // CRÍTICO: Determinar permisos basados en el rol PRIMERO (antes del merge)
+          const normalizedRole = (userProfile.role || '').toString().trim().toLowerCase()
           const isAdmin = ['super_admin', 'company_admin', 'hr_manager'].includes(normalizedRole)
           const canAccessSettings = ['super_admin', 'company_admin'].includes(normalizedRole)
           
-          console.log('🔐 Permission checks:', { isAdmin, canAccessSettings, normalizedRole })
-          
-          // Construir objeto de permisos final - FORZAR settings y admin basado en rol
           const permissions: UserPermissions = {
             dashboard: true,
             employees: true,
@@ -123,24 +95,92 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             payroll: true,
             reports: true,
             gamification: true,
-            // CRÍTICO: Forzar estos valores basado en rol, ignorar lo que venga de la DB
             settings: canAccessSettings,
             admin: isAdmin
           }
           
-          console.log('✅ Final permissions FORCED by role:', {
-            originalRole: data.role,
-            normalizedRole,
-            permissions,
-            isAdmin,
-            canAccessSettings,
-            settingsValue: permissions.settings,
-            adminValue: permissions.admin,
-            note: 'settings and admin are FORCED by role, ignoring DB values'
-          })
-          
           setUserPermissions(permissions)
+          setLoadingPermissions(false)
+          return
         }
+        
+        // Si no hay userProfile en el contexto, usar la API
+        console.log('⚠️ No userProfile in context, fetching from API...')
+        const response = await fetch('/api/user-profiles')
+        
+        if (!response.ok) {
+          console.error('Error fetching user profile from API:', response.status)
+          console.warn('No user profile data found, using default permissions')
+          setLoadingPermissions(false)
+          return
+        }
+        
+        const { profiles } = await response.json()
+        const profile = profiles?.[0]
+        
+        if (!profile) {
+          console.warn('No user profile data found, using default permissions')
+          setLoadingPermissions(false)
+          return
+        }
+        
+        console.log('📋 Profile from API:', profile)
+        
+        // Parsear permissions si viene como string JSON
+        let rawPermissions: any = {}
+        if (profile.permissions) {
+          if (typeof profile.permissions === 'string') {
+            try {
+              rawPermissions = JSON.parse(profile.permissions)
+            } catch (e) {
+              console.error('Error parsing permissions JSON:', e)
+              rawPermissions = {}
+            }
+          } else {
+            rawPermissions = profile.permissions
+          }
+        }
+        
+        console.log('📦 Raw permissions from DB:', rawPermissions)
+        console.log('👤 User role:', profile.role, 'Type:', typeof profile.role)
+        
+        // CRÍTICO: Normalizar el rol (trim, lowercase) para comparación robusta
+        const normalizedRole = (profile.role || '').toString().trim().toLowerCase()
+        console.log('🔍 Normalized role:', normalizedRole)
+        
+        // CRÍTICO: Determinar permisos basados en el rol PRIMERO (antes del merge)
+        const isAdmin = ['super_admin', 'company_admin', 'hr_manager'].includes(normalizedRole)
+        const canAccessSettings = ['super_admin', 'company_admin'].includes(normalizedRole)
+        
+        console.log('🔐 Permission checks:', { isAdmin, canAccessSettings, normalizedRole })
+        
+        // Construir objeto de permisos final - FORZAR settings y admin basado en rol
+        const permissions: UserPermissions = {
+          dashboard: true,
+          employees: true,
+          departments: true,
+          attendance: true,
+          leave: true,
+          payroll: true,
+          reports: true,
+          gamification: true,
+          // CRÍTICO: Forzar estos valores basado en rol, ignorar lo que venga de la DB
+          settings: canAccessSettings,
+          admin: isAdmin
+        }
+        
+        console.log('✅ Final permissions FORCED by role:', {
+          originalRole: profile.role,
+          normalizedRole,
+          permissions,
+          isAdmin,
+          canAccessSettings,
+          settingsValue: permissions.settings,
+          adminValue: permissions.admin,
+          note: 'settings and admin are FORCED by role, ignoring DB values'
+        })
+        
+        setUserPermissions(permissions)
       } catch (error) {
         console.error('Error in fetchUserPermissions:', error)
         // En caso de error, mantener permisos por defecto (ya están en el estado inicial)
@@ -152,7 +192,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     }
 
     fetchUserPermissions()
-  }, [user?.id])
+  }, [user?.id, userProfile])
 
   const handleSignOut = async () => {
     await logout()
