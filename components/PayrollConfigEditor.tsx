@@ -252,10 +252,10 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
 
   if (loading) {
     return (
-      <Card className="backdrop-blur-md bg-white/10 border border-white/20">
-        <CardContent className="p-6 text-center">
-          <Loader2 className="h-6 w-6 animate-spin mx-auto text-blue-400 mb-2" />
-          <p className="text-gray-400">Cargando configuración...</p>
+      <Card className="p-6">
+        <CardContent className="text-center">
+          <Loader2 className="h-6 w-6 animate-spin mx-auto text-blue-600 mb-2" />
+          <p className="text-gray-600">Cargando configuración...</p>
         </CardContent>
       </Card>
     )
@@ -264,26 +264,26 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card className="backdrop-blur-md bg-white/10 border border-white/20">
+      <Card className="p-6">
         <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
+          <CardTitle className="text-gray-900 flex items-center gap-2">
             <Settings className="h-5 w-5" />
             Configuración de Payroll por Empresa
           </CardTitle>
-          <CardDescription className="text-gray-300">
+          <CardDescription className="text-gray-600">
             Configure campos personalizados y fórmulas de cálculo específicas para su empresa
           </CardDescription>
         </CardHeader>
         <CardContent>
           {error && (
-            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg flex items-center gap-2 text-red-400">
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
               <AlertCircle className="h-4 w-4" />
               <span>{error}</span>
             </div>
           )}
 
           {success && (
-            <div className="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-lg flex items-center gap-2 text-green-400">
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2 text-green-700">
               <CheckCircle className="h-4 w-4" />
               <span>Configuración guardada exitosamente</span>
             </div>
@@ -291,7 +291,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
 
           {/* Calculation Type */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-white mb-2">
+            <label className="block text-sm font-medium text-gray-900 mb-2">
               Tipo de Cálculo
             </label>
             <div className="flex gap-4">
@@ -304,7 +304,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                   onChange={(e) => setConfig(prev => ({ ...prev, calculation_type: e.target.value as any }))}
                   className="w-4 h-4 text-blue-600"
                 />
-                <span className="text-gray-300">Estándar</span>
+                <span className="text-gray-700">Estándar</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -315,7 +315,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                   onChange={(e) => setConfig(prev => ({ ...prev, calculation_type: e.target.value as any }))}
                   className="w-4 h-4 text-blue-600"
                 />
-                <span className="text-gray-300">Basado en Fórmulas</span>
+                <span className="text-gray-700">Basado en Fórmulas</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -326,7 +326,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                   onChange={(e) => setConfig(prev => ({ ...prev, calculation_type: e.target.value as any }))}
                   className="w-4 h-4 text-blue-600"
                 />
-                <span className="text-gray-300">Script Personalizado</span>
+                <span className="text-gray-700">Script Personalizado</span>
               </label>
             </div>
             <p className="text-xs text-gray-400 mt-1">
@@ -339,13 +339,13 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
       </Card>
 
       {/* Custom Fields */}
-      <Card className="backdrop-blur-md bg-white/10 border border-white/20">
+      <Card className="p-6">
         <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
+          <CardTitle className="text-gray-900 flex items-center gap-2">
             <FileText className="h-5 w-5" />
             Campos Personalizados
           </CardTitle>
-          <CardDescription className="text-gray-300">
+          <CardDescription className="text-gray-600">
             Defina campos adicionales para almacenar en metadata de payroll
           </CardDescription>
         </CardHeader>
@@ -354,11 +354,11 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
           {Object.keys(config.custom_fields).length > 0 ? (
             <div className="space-y-3">
               {Object.entries(config.custom_fields).map(([fieldName, field]) => (
-                <div key={fieldName} className="p-4 bg-white/5 border border-white/10 rounded-lg">
+                <div key={fieldName} className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="font-medium text-white">{fieldName}</span>
+                        <span className="font-medium text-gray-900">{fieldName}</span>
                         <Badge variant="outline" className="text-xs">
                           {field.category}
                         </Badge>
@@ -366,7 +366,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                           {field.type}
                         </Badge>
                       </div>
-                      <p className="text-sm text-gray-300">{field.label}</p>
+                      <p className="text-sm text-gray-600">{field.label}</p>
                     </div>
                     <Button
                       variant="ghost"
@@ -380,20 +380,20 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                   
                   <div className="grid grid-cols-2 gap-3 mt-3">
                     <div>
-                      <label className="block text-xs text-gray-400 mb-1">Etiqueta</label>
+                      <label className="block text-xs text-gray-600 mb-1">Etiqueta</label>
                       <Input
                         value={field.label}
                         onChange={(e) => handleUpdateField(fieldName, { label: e.target.value })}
-                        className="bg-white/10 border-white/20 text-white text-sm"
+                        className="text-sm"
                         placeholder="Descripción del campo"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-400 mb-1">Tipo</label>
+                      <label className="block text-xs text-gray-600 mb-1">Tipo</label>
                       <select
                         value={field.type}
                         onChange={(e) => handleUpdateField(fieldName, { type: e.target.value as any })}
-                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                       >
                         <option value="number">Número</option>
                         <option value="string">Texto</option>
@@ -401,11 +401,11 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-400 mb-1">Categoría</label>
+                      <label className="block text-xs text-gray-600 mb-1">Categoría</label>
                       <select
                         value={field.category}
                         onChange={(e) => handleUpdateField(fieldName, { category: e.target.value as any })}
-                        className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                       >
                         <option value="earnings">Ingresos</option>
                         <option value="deductions">Deducciones</option>
@@ -413,7 +413,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-400 mb-1">Valor por Defecto</label>
+                      <label className="block text-xs text-gray-600 mb-1">Valor por Defecto</label>
                       <Input
                         type={field.type === 'number' ? 'number' : 'text'}
                         value={field.default}
@@ -425,7 +425,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                             : e.target.value
                           handleUpdateField(fieldName, { default: value })
                         }}
-                        className="bg-white/10 border-white/20 text-white text-sm"
+                        className="text-sm"
                       />
                     </div>
                   </div>
@@ -433,42 +433,41 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
               ))}
             </div>
           ) : (
-            <p className="text-sm text-gray-400 text-center py-4">
+            <p className="text-sm text-gray-500 text-center py-4">
               No hay campos personalizados configurados
             </p>
           )}
 
           {/* Add New Field */}
           {showAddField ? (
-            <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-white mb-1">
+                  <label className="block text-sm font-medium text-gray-900 mb-1">
                     Nombre del Campo (snake_case)
                   </label>
                   <Input
                     value={newFieldName}
                     onChange={(e) => setNewFieldName(e.target.value.toLowerCase().replace(/\s+/g, '_'))}
                     placeholder="ej: horas_extras"
-                    className="bg-white/10 border-white/20 text-white"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs text-gray-400 mb-1">Etiqueta</label>
+                    <label className="block text-xs text-gray-600 mb-1">Etiqueta</label>
                     <Input
                       value={newField.label}
                       onChange={(e) => setNewField(prev => ({ ...prev, label: e.target.value }))}
-                      className="bg-white/10 border-white/20 text-white text-sm"
+                      className="text-sm"
                       placeholder="Descripción"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-400 mb-1">Tipo</label>
+                    <label className="block text-xs text-gray-600 mb-1">Tipo</label>
                     <select
                       value={newField.type}
                       onChange={(e) => setNewField(prev => ({ ...prev, type: e.target.value as any }))}
-                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                     >
                       <option value="number">Número</option>
                       <option value="string">Texto</option>
@@ -476,11 +475,11 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-400 mb-1">Categoría</label>
+                    <label className="block text-xs text-gray-600 mb-1">Categoría</label>
                     <select
                       value={newField.category}
                       onChange={(e) => setNewField(prev => ({ ...prev, category: e.target.value as any }))}
-                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                     >
                       <option value="earnings">Ingresos</option>
                       <option value="deductions">Deducciones</option>
@@ -488,7 +487,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-400 mb-1">Valor por Defecto</label>
+                    <label className="block text-xs text-gray-600 mb-1">Valor por Defecto</label>
                     <Input
                       type={newField.type === 'number' ? 'number' : 'text'}
                       value={newField.default}
@@ -500,7 +499,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                           : e.target.value
                         setNewField(prev => ({ ...prev, default: value }))
                       }}
-                      className="bg-white/10 border-white/20 text-white text-sm"
+                      className="text-sm"
                     />
                   </div>
                 </div>
@@ -537,7 +536,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
             <Button
               onClick={() => setShowAddField(true)}
               variant="outline"
-              className="w-full border-dashed border-white/30 text-white hover:bg-white/10"
+              className="w-full border-dashed"
             >
               <Plus className="h-4 w-4 mr-2" />
               Agregar Campo Personalizado
@@ -548,47 +547,47 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
 
       {/* Calculation Formulas (only for formula_based) */}
       {config.calculation_type === 'formula_based' && (
-        <Card className="backdrop-blur-md bg-white/10 border border-white/20">
+        <Card className="p-6">
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-gray-900 flex items-center gap-2">
               <Calculator className="h-5 w-5" />
               Fórmulas de Cálculo
             </CardTitle>
-            <CardDescription className="text-gray-300">
+            <CardDescription className="text-gray-600">
               Configure fórmulas para calcular ingresos y deducciones adicionales
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Earnings Formula */}
             <div>
-              <label className="block text-sm font-medium text-white mb-2">
+              <label className="block text-sm font-medium text-gray-900 mb-2">
                 Fórmula de Ingresos Adicionales
               </label>
               <Textarea
                 value={config.calculation_config.earnings_formula || ''}
                 onChange={(e) => handleUpdateFormula('earnings_formula', e.target.value)}
                 placeholder="ej: horas_extras + feriado_trabajado + estipendio_transporte"
-                className="bg-white/10 border-white/20 text-white font-mono text-sm"
+                className="font-mono text-sm"
                 rows={2}
               />
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-gray-500 mt-1">
                 Use nombres de campos separados por operadores: +, -, *, /, ()
               </p>
             </div>
 
             {/* Deductions Formula */}
             <div>
-              <label className="block text-sm font-medium text-white mb-2">
+              <label className="block text-sm font-medium text-gray-900 mb-2">
                 Fórmula de Deducciones Adicionales
               </label>
               <Textarea
                 value={config.calculation_config.deductions_formula || ''}
                 onChange={(e) => handleUpdateFormula('deductions_formula', e.target.value)}
                 placeholder="ej: comedor + cooperativa_aportaciones + embargo_alimentos"
-                className="bg-white/10 border-white/20 text-white font-mono text-sm"
+                className="font-mono text-sm"
                 rows={2}
               />
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-gray-500 mt-1">
                 Use nombres de campos separados por operadores: +, -, *, /, ()
               </p>
             </div>
@@ -596,7 +595,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
             {/* Custom Calculations */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-white">
+                <label className="block text-sm font-medium text-gray-900">
                   Cálculos Personalizados
                 </label>
                 <Button
@@ -620,7 +619,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                           value={formula}
                           onChange={(e) => handleUpdateCustomCalculation(fieldName, e.target.value)}
                           placeholder="ej: coalesce(metadata.valor_hora_extra, baseSalary / 220 * 1.5)"
-                          className="bg-white/10 border-white/20 text-white font-mono text-sm"
+                          className="font-mono text-sm"
                         />
                       </div>
                       <Button
@@ -635,11 +634,11 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-gray-400 text-center py-2">
+                <p className="text-xs text-gray-500 text-center py-2">
                   No hay cálculos personalizados
                 </p>
               )}
-              <p className="text-xs text-gray-400 mt-2">
+              <p className="text-xs text-gray-500 mt-2">
                 Soporta: coalesce(), metadata.campo, baseSalary, operadores matemáticos
               </p>
             </div>
@@ -649,19 +648,19 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
 
       {/* Custom Script (only for custom type) */}
       {config.calculation_type === 'custom' && (
-        <Card className="backdrop-blur-md bg-white/10 border border-white/20">
+        <Card className="p-6">
           <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
+            <CardTitle className="text-gray-900 flex items-center gap-2">
               <Code className="h-5 w-5" />
               Script de Cálculo Personalizado
             </CardTitle>
-            <CardDescription className="text-gray-300">
+            <CardDescription className="text-gray-600">
               Escriba código JavaScript/TypeScript para cálculos complejos
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="mb-2 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-              <p className="text-xs text-yellow-400">
+            <div className="mb-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-xs text-yellow-700">
                 ⚠️ Solo para super_admins. El script debe retornar un objeto con:
                 totalIngresosAdicionales, totalDeduccionesAdicionales, calculatedFields
               </p>
@@ -677,7 +676,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     calculatedFields: {}
   }
 }`}
-              className="bg-white/10 border-white/20 text-white font-mono text-sm"
+              className="font-mono text-sm"
               rows={15}
             />
           </CardContent>
@@ -690,7 +689,6 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
           onClick={loadConfig}
           variant="outline"
           disabled={saving}
-          className="border-white/30 text-white hover:bg-white/10"
         >
           Cancelar
         </Button>
