@@ -81,28 +81,55 @@ export default function CompanySettings() {
     try {
       setLoading(true)
       setError(null)
-      const supabaseClient = createClient()
-      const { data, error } = await supabaseClient
-        .from('user_profiles')
-        .select(`
-          company_id,
-          companies (*)
-        `)
-        .eq('id', session.user.id)
-        .single()
-
-      if (error) {
-        console.error('Error fetching company:', error)
-        setError(`Error al cargar la empresa: ${error.message}`)
+      
+      // Step 1: Get user profile with company_id via API (bypasses RLS)
+      console.log('🔍 CompanySettings: Fetching user profile...')
+      const profileResponse = await fetch('/api/user-profile')
+      if (!profileResponse.ok) {
+        const errorData = await profileResponse.json().catch(() => ({}))
+        console.error('❌ CompanySettings: Profile API error:', profileResponse.status, errorData)
+        throw new Error(`Error al obtener perfil de usuario: ${errorData.error || profileResponse.statusText}`)
+      }
+      const profileData = await profileResponse.json()
+      console.log('✅ CompanySettings: Profile response:', profileData)
+      const { data: userProfile } = profileData
+      
+      if (!userProfile) {
+        console.error('❌ CompanySettings: No user profile in response')
+        setError('No se encontró perfil de usuario')
+        setLoading(false)
         return
       }
       
-      // Safely extract company data with proper typing
-      const companyData = data?.companies
-      if (!companyData || Array.isArray(companyData)) {
-        setError('Estructura de datos de empresa inválida')
+      if (!userProfile?.company_id) {
+        console.warn('⚠️ CompanySettings: User has no company_id', { userProfile })
+        setError('Usuario no tiene empresa asignada. Si eres super_admin, necesitas seleccionar una empresa.')
+        setLoading(false)
         return
       }
+
+      // Step 2: Get company data using client (with proper RLS)
+      console.log('🔍 CompanySettings: Fetching company data for ID:', userProfile.company_id)
+      const supabaseClient = createClient()
+      const { data: companyData, error: companyError } = await supabaseClient
+        .from('companies')
+        .select('*')
+        .eq('id', userProfile.company_id)
+        .single()
+
+      if (companyError) {
+        console.error('❌ CompanySettings: Company query error:', companyError)
+        setError(`Error al cargar la empresa: ${companyError.message}`)
+        return
+      }
+      
+      if (!companyData) {
+        console.error('❌ CompanySettings: Company not found for ID:', userProfile.company_id)
+        setError('Empresa no encontrada')
+        return
+      }
+      
+      console.log('✅ CompanySettings: Company loaded successfully:', companyData.id, companyData.name)
       
       const company = companyData as Company
       setCompany(company)
