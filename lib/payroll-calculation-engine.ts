@@ -14,7 +14,7 @@ interface CalculationConfig {
 interface CustomField {
   label: string
   type: 'number' | 'string' | 'boolean'
-  category: 'earnings' | 'deductions' | 'calculation_helper'
+  category: 'earnings' | 'deductions'
   required: boolean
   default: any
 }
@@ -58,30 +58,50 @@ export async function calculatePayrollFromConfig(
     }
   }
 
-  // 2. Ejecutar cálculo según tipo
+  // 2. Calcular según tipo (pero SIEMPRE aplicar campos personalizados)
+  const customFields = config.custom_fields as Record<string, CustomField> | undefined
+  
+  let result: PayrollCalculationResult
+  
   switch (config.calculation_type) {
     case 'formula_based':
-      return calculateWithFormulas(
+      result = calculateWithFormulas(
         config.calculation_config as CalculationConfig,
         baseSalary,
         metadata
       )
+      break
     
     case 'custom':
       // Para casos complejos, ejecutar script almacenado
-      return executeCalculationScript(
+      result = executeCalculationScript(
         config.calculation_script,
         baseSalary,
         metadata
       )
+      break
     
     case 'standard':
     default:
-      return {
+      // En modo estándar, solo aplicar campos personalizados
+      result = {
         totalIngresosAdicionales: 0,
         totalDeduccionesAdicionales: 0,
         calculatedFields: {}
       }
+      break
+  }
+  
+  // 3. SIEMPRE aplicar campos personalizados automáticamente (sumar/restar según categoría)
+  const customFieldsResult = applyCustomFields(customFields, metadata)
+  
+  return {
+    totalIngresosAdicionales: result.totalIngresosAdicionales + customFieldsResult.totalIngresosAdicionales,
+    totalDeduccionesAdicionales: result.totalDeduccionesAdicionales + customFieldsResult.totalDeduccionesAdicionales,
+    calculatedFields: {
+      ...result.calculatedFields,
+      ...customFieldsResult.calculatedFields
+    }
   }
 }
 
@@ -400,6 +420,68 @@ function executeCalculationScript(
       totalDeduccionesAdicionales: 0,
       calculatedFields: {}
     }
+  }
+}
+
+/**
+ * Aplicar campos personalizados automáticamente: sumar earnings, restar deductions
+ * Esta función se aplica SIEMPRE, independientemente del tipo de cálculo
+ */
+function applyCustomFields(
+  customFieldsDefinitions: Record<string, CustomField> | undefined,
+  metadata: Record<string, any>
+): PayrollCalculationResult {
+  let totalIngresosAdicionales = 0
+  let totalDeduccionesAdicionales = 0
+  const calculatedFields: Record<string, any> = {}
+
+  if (!customFieldsDefinitions) {
+    return {
+      totalIngresosAdicionales: 0,
+      totalDeduccionesAdicionales: 0,
+      calculatedFields: {}
+    }
+  }
+
+  // Iterar sobre todos los campos personalizados definidos
+  for (const [fieldName, fieldDef] of Object.entries(customFieldsDefinitions)) {
+    // Solo procesar campos con categoría earnings o deductions
+    if (fieldDef.category !== 'earnings' && fieldDef.category !== 'deductions') {
+      continue
+    }
+
+    // Obtener el valor del campo desde metadata
+    const value = metadata[fieldName]
+    
+    // Si el valor existe y no es null/undefined
+    if (value !== undefined && value !== null) {
+      // Convertir a número (si es string, parsear; si es boolean, convertir a 0/1)
+      let numericValue = 0
+      
+      if (typeof value === 'number') {
+        numericValue = value
+      } else if (typeof value === 'boolean') {
+        numericValue = value ? 1 : 0
+      } else if (typeof value === 'string') {
+        numericValue = parseFloat(value) || 0
+      }
+      
+      // Guardar el valor procesado
+      calculatedFields[fieldName] = numericValue
+      
+      // Sumar o restar según la categoría
+      if (fieldDef.category === 'earnings') {
+        totalIngresosAdicionales += numericValue
+      } else if (fieldDef.category === 'deductions') {
+        totalDeduccionesAdicionales += numericValue
+      }
+    }
+  }
+
+  return {
+    totalIngresosAdicionales,
+    totalDeduccionesAdicionales,
+    calculatedFields
   }
 }
 

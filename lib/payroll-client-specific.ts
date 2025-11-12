@@ -19,7 +19,7 @@ export interface ClientPayrollConfig {
     [key: string]: string | {
       label: string
       type: 'number' | 'string' | 'boolean'
-      category: 'earnings' | 'deductions' | 'calculation_helper'
+      category: 'earnings' | 'deductions'
       required: boolean
       default: any
     }
