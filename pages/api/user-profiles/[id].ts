@@ -11,7 +11,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     switch (req.method) {
-      case 'GET':
+      case 'GET': {
         // Get specific user profile
         const { data: profile, error: fetchError } = await supabase
           .from('user_profiles')
@@ -30,9 +30,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           throw fetchError
         }
 
-        return res.json({ profile })
+        // Normalize null role to empty string
+        const normalizedProfile = profile ? {
+          ...profile,
+          employees: profile.employees ? {
+            ...profile.employees,
+            role: profile.employees.role ?? ''
+          } : null
+        } : profile
 
-      case 'PUT':
+        return res.json({ profile: normalizedProfile })
+      }
+
+      case 'PUT': {
         // Update user profile
         const { 
           role: newRole, 
@@ -76,9 +86,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           throw updateError
         }
 
-        return res.json({ profile: updatedProfile })
+        // Normalize null role to empty string
+        const normalizedProfile = updatedProfile ? {
+          ...updatedProfile,
+          employees: updatedProfile.employees ? {
+            ...updatedProfile.employees,
+            role: updatedProfile.employees.role ?? ''
+          } : null
+        } : updatedProfile
 
-      case 'DELETE':
+        return res.json({ profile: normalizedProfile })
+      }
+
+      case 'DELETE': {
         // Only super admins can delete profiles
         if (role !== 'super_admin') {
           return res.status(403).json({ error: 'Super admin privileges required' })
@@ -92,6 +112,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         if (deleteError) throw deleteError
         return res.status(204).end()
+      }
 
       default:
         return res.status(405).json({ error: 'Method not allowed' })

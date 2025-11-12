@@ -80,7 +80,9 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     console.log('🔄 PayrollConfigEditor: Loading config for companyId:', companyId)
     
     try {
-      const response = await fetch('/api/payroll/config')
+      // Send companyId in query for super_admin support
+      const url = companyId ? `/api/payroll/config?company_id=${companyId}` : '/api/payroll/config'
+      const response = await fetch(url)
       console.log('📡 PayrollConfigEditor: API response status:', response.status)
       
       if (response.ok) {
@@ -142,6 +144,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          company_id: companyId, // Include companyId for super_admin support
           calculation_type: config.calculation_type,
           custom_fields: config.custom_fields,
           calculation_config: config.calculation_config,
