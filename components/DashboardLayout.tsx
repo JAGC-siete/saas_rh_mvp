@@ -84,22 +84,29 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           })
         } else {
           // Parsear permissions si viene como string JSON
-          let permissions: any = {}
+          let rawPermissions: any = {}
           if (data.permissions) {
             if (typeof data.permissions === 'string') {
               try {
-                permissions = JSON.parse(data.permissions)
+                rawPermissions = JSON.parse(data.permissions)
               } catch (e) {
                 console.error('Error parsing permissions JSON:', e)
-                permissions = {}
+                rawPermissions = {}
               }
             } else {
-              permissions = data.permissions
+              rawPermissions = data.permissions
             }
           }
           
-          // Establecer permisos por defecto si no existen
-          const defaultPermissions = {
+          console.log('📦 Raw permissions from DB:', rawPermissions)
+          console.log('👤 User role:', data.role)
+          
+          // CRÍTICO: Determinar permisos basados en el rol PRIMERO (antes del merge)
+          const isAdmin = ['super_admin', 'company_admin', 'hr_manager'].includes(data.role || '')
+          const canAccessSettings = ['super_admin', 'company_admin'].includes(data.role || '')
+          
+          // Construir objeto de permisos final - FORZAR settings y admin basado en rol
+          const permissions: UserPermissions = {
             dashboard: true,
             employees: true,
             departments: true,
@@ -108,26 +115,17 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             payroll: true,
             reports: true,
             gamification: true,
-            settings: false,
-            admin: false
+            // CRÍTICO: Forzar estos valores basado en rol, ignorar lo que venga de la DB
+            settings: canAccessSettings,
+            admin: isAdmin
           }
           
-          // Merge con permisos por defecto
-          permissions = { ...defaultPermissions, ...permissions }
-          
-          // CRÍTICO: Determinar permiso de admin basado en el rol (sobrescribe cualquier valor previo)
-          const isAdmin = ['super_admin', 'company_admin', 'hr_manager'].includes(data.role || '')
-          permissions.admin = isAdmin
-          
-          // CRÍTICO: Determinar permiso de settings basado en el rol (sobrescribe cualquier valor previo)
-          const canAccessSettings = ['super_admin', 'company_admin'].includes(data.role || '')
-          permissions.settings = canAccessSettings
-          
-          console.log('✅ Final permissions for user:', {
+          console.log('✅ Final permissions FORCED by role:', {
             role: data.role,
             permissions,
             isAdmin,
-            canAccessSettings
+            canAccessSettings,
+            note: 'settings and admin are FORCED by role, ignoring DB values'
           })
           
           setUserPermissions(permissions)
