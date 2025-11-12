@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createServerClient } from '@supabase/ssr'
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '../supabase/server'
 import { createAdminClient } from '../supabase/server'
 
 export interface AuthenticatedUser {
@@ -35,20 +34,8 @@ export async function authenticateUser(
   } = options
 
   try {
-    // Create Supabase client with cookies from request
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return req.cookies[name]
-          },
-          set() {},
-          remove() {},
-        },
-      }
-    )
+    // Create Supabase client with cookies from request - USAR createClient de server.ts
+    const supabase = createClient(req, res)
 
     // Get user from auth
     const { data: { user }, error: authError } = await supabase.auth.getUser()
