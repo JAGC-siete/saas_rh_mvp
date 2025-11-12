@@ -256,9 +256,31 @@ html, body, #__next, #root {
     color: rgba(255,255,255,.75) 
   }
   
+  .input-glass option {
+    background: rgba(15, 23, 42, 0.95);
+    color: #fff;
+  }
+  
+  .input-glass:focus {
+    outline: none;
+    border-color: rgba(255,255,255,.4);
+    box-shadow: 0 0 0 3px rgba(59,130,246,.25);
+  }
+  
   .focus-ring { 
     box-shadow: 0 0 0 3px rgba(59,130,246,.35) 
   } /* #3b82f6 */
+  
+  /* List hover effects */
+  .glass-list-item {
+    transition: all 0.2s ease;
+  }
+  
+  .glass-list-item:hover {
+    border-color: rgba(255,255,255,.3);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,.15);
+  }
 }
 
 /* Fallback sin backdrop-filter */

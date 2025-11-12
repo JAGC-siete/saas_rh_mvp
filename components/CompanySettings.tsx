@@ -226,8 +226,8 @@ export default function CompanySettings() {
   if (companyLoading || (!company && !error)) {
     return (
       <div className="flex flex-col items-center justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <p className="mt-4 text-gray-600">Cargando información de la empresa...</p>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+        <p className="mt-4 text-white">Cargando información de la empresa...</p>
       </div>
     )
   }
@@ -235,10 +235,10 @@ export default function CompanySettings() {
   // Show error state if company context failed
   if ((error || companyError) && !company) {
     return (
-      <Card className="p-6">
+      <Card variant="glass" className="p-6">
         <CardContent className="text-center">
-          <p className="text-red-600 mb-2">{error || companyError}</p>
-          <p className="text-sm text-gray-500 mt-2">
+          <p className="text-red-400 mb-2">{error || companyError}</p>
+          <p className="text-sm text-gray-300 mt-2">
             {!companyId && 'No se pudo obtener el ID de la empresa. Verifica tu perfil de usuario.'}
           </p>
         </CardContent>
@@ -249,12 +249,12 @@ export default function CompanySettings() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-gray-900">Configuración de la Empresa</h2>
-        <p className="text-gray-600">Administra la configuración y ajustes de tu empresa</p>
+        <h2 className="text-xl font-semibold text-white">Configuración de la Empresa</h2>
+        <p className="text-gray-300">Administra la configuración y ajustes de tu empresa</p>
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200">
+      <div className="border-b border-white/20">
         <nav className="-mb-px flex space-x-8">
           {tabs.map((tab) => {
             const Icon = tab.icon
@@ -262,10 +262,10 @@ export default function CompanySettings() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
+                className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 transition-colors ${
                   activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-brand-400 text-white'
+                    : 'border-transparent text-gray-300 hover:text-white hover:border-white/30'
                 }`}
               >
                 <Icon className="h-5 w-5" />
@@ -280,22 +280,29 @@ export default function CompanySettings() {
       {activeTab === 'schedules' && (
         <div className="space-y-6">
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-medium text-gray-900">Horarios de Trabajo</h3>
-            <Button onClick={() => setShowScheduleForm(true)}>
+            <div>
+              <h3 className="text-lg font-semibold text-white">Horarios de Trabajo</h3>
+              <p className="text-sm text-gray-400 mt-1">Gestiona los horarios de trabajo de tu empresa</p>
+            </div>
+            <Button 
+              onClick={() => setShowScheduleForm(true)}
+              className="bg-brand-600 hover:bg-brand-700 text-white font-medium"
+            >
+              <ClockIcon className="h-4 w-4 mr-2" />
               Nuevo Horario
             </Button>
           </div>
 
           {showScheduleForm && (
-            <Card className="p-6">
-              <h4 className="text-md font-medium text-gray-900 mb-4">
+            <Card variant="glass" className="p-6">
+              <h4 className="text-md font-medium text-white mb-4">
                 {editingSchedule ? 'Editar Horario' : 'Nuevo Horario'}
               </h4>
               
               <form onSubmit={handleScheduleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-white mb-1">
                       Nombre del Horario *
                     </label>
                     <Input
@@ -304,11 +311,12 @@ export default function CompanySettings() {
                       onChange={(e) => setScheduleForm({ ...scheduleForm, name: e.target.value })}
                       required
                       placeholder="Ej: Horario Estándar"
+                      className="input-glass text-white placeholder:text-white/70"
                     />
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-white mb-1">
                       Duración del Almuerzo (minutos)
                     </label>
                     <Input
@@ -316,39 +324,51 @@ export default function CompanySettings() {
                       value={scheduleForm.break_duration}
                       onChange={(e) => setScheduleForm({ ...scheduleForm, break_duration: parseInt(e.target.value) })}
                       min="0"
+                      className="input-glass text-white placeholder:text-white/70"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-3">
-                  <h5 className="font-medium text-gray-900">Horarios por Día</h5>
-                  {days.map((day) => (
-                    <div key={day.key} className="grid grid-cols-3 gap-4 items-center">
-                      <span className="text-sm font-medium text-gray-700">{day.label}</span>
-                      <Input
-                        type="time"
-                        value={scheduleForm[`${day.key}_start` as keyof typeof scheduleForm] as string}
-                        onChange={(e) => setScheduleForm({ 
-                          ...scheduleForm, 
-                          [`${day.key}_start`]: e.target.value 
-                        })}
-                        placeholder="Entrada"
-                      />
-                      <Input
-                        type="time"
-                        value={scheduleForm[`${day.key}_end` as keyof typeof scheduleForm] as string}
-                        onChange={(e) => setScheduleForm({ 
-                          ...scheduleForm, 
-                          [`${day.key}_end`]: e.target.value 
-                        })}
-                        placeholder="Salida"
-                      />
-                    </div>
-                  ))}
+                  <h5 className="font-medium text-white mb-3">Horarios por Día</h5>
+                  <div className="glass p-4 rounded-lg border border-white/10 space-y-3">
+                    {days.map((day) => (
+                      <div key={day.key} className="grid grid-cols-3 gap-4 items-center py-2 border-b border-white/5 last:border-0">
+                        <span className="text-sm font-medium text-white flex items-center">
+                          <span className="w-2 h-2 rounded-full bg-brand-400 mr-2"></span>
+                          {day.label}
+                        </span>
+                        <Input
+                          type="time"
+                          value={scheduleForm[`${day.key}_start` as keyof typeof scheduleForm] as string}
+                          onChange={(e) => setScheduleForm({ 
+                            ...scheduleForm, 
+                            [`${day.key}_start`]: e.target.value 
+                          })}
+                          placeholder="Entrada"
+                          className="input-glass text-white placeholder:text-white/70"
+                        />
+                        <Input
+                          type="time"
+                          value={scheduleForm[`${day.key}_end` as keyof typeof scheduleForm] as string}
+                          onChange={(e) => setScheduleForm({ 
+                            ...scheduleForm, 
+                            [`${day.key}_end`]: e.target.value 
+                          })}
+                          placeholder="Salida"
+                          className="input-glass text-white placeholder:text-white/70"
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
                 
-                <div className="flex space-x-3">
-                  <Button type="submit" disabled={loading}>
+                <div className="flex space-x-3 pt-4 border-t border-white/10">
+                  <Button 
+                    type="submit" 
+                    disabled={loading}
+                    className="bg-brand-600 hover:bg-brand-700 text-white font-medium"
+                  >
                     {loading ? 'Guardando...' : editingSchedule ? 'Actualizar' : 'Crear'}
                   </Button>
                   <Button
@@ -358,6 +378,7 @@ export default function CompanySettings() {
                       setShowScheduleForm(false)
                       setEditingSchedule(null)
                     }}
+                    className="border-white/20 hover:bg-white/10 hover:border-white/30"
                   >
                     Cancelar
                   </Button>
@@ -367,47 +388,71 @@ export default function CompanySettings() {
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {workSchedules.map((schedule) => (
-              <Card key={schedule.id} className="p-4">
-                <div className="flex justify-between items-start mb-3">
-                  <h4 className="font-medium text-gray-900">{schedule.name}</h4>
-                  <div className="flex space-x-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleEditSchedule(schedule)}
-                    >
-                      Editar
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleDeleteSchedule(schedule.id)}
-                      className="text-red-600 border-red-300 hover:bg-red-50"
-                    >
-                      Eliminar
-                    </Button>
-                  </div>
-                </div>
-                
-                <div className="space-y-1 text-sm">
-                  <div className="flex justify-between">
-                    <span>Lun - Vie:</span>
-                    <span>{schedule.monday_start} - {schedule.monday_end}</span>
-                  </div>
-                  {schedule.saturday_start && (
-                    <div className="flex justify-between">
-                      <span>Sábado:</span>
-                      <span>{schedule.saturday_start} - {schedule.saturday_end}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-gray-600">
-                    <span>Almuerzo:</span>
-                    <span>{schedule.break_duration} min</span>
-                  </div>
+            {workSchedules.length === 0 ? (
+              <Card variant="glass" className="p-8 col-span-2">
+                <div className="text-center">
+                  <ClockIcon className="h-12 w-12 mx-auto text-gray-400 mb-3" />
+                  <p className="text-gray-300 text-sm">No hay horarios configurados</p>
+                  <p className="text-gray-400 text-xs mt-1">Crea un nuevo horario para comenzar</p>
                 </div>
               </Card>
-            ))}
+            ) : (
+              workSchedules.map((schedule) => (
+                <Card key={schedule.id} variant="glass" className="p-5 glass-list-item border border-white/20">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-white text-lg mb-1">{schedule.name}</h4>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-400 bg-white/10 px-2 py-1 rounded-full border border-white/10">
+                          Horario de trabajo
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex space-x-2 ml-3">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleEditSchedule(schedule)}
+                        className="text-white border-white/20 hover:bg-white/10 hover:border-white/30"
+                      >
+                        Editar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDeleteSchedule(schedule.id)}
+                        className="text-red-400 border-red-400/50 hover:bg-red-500/20 hover:border-red-400 hover:text-red-300"
+                      >
+                        Eliminar
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2.5 pt-3 border-t border-white/10">
+                    <div className="flex justify-between items-center py-1">
+                      <span className="text-sm text-gray-300 font-medium">Lun - Vie</span>
+                      <span className="text-sm text-white font-semibold">{schedule.monday_start || '--:--'} - {schedule.monday_end || '--:--'}</span>
+                    </div>
+                    {schedule.saturday_start && (
+                      <div className="flex justify-between items-center py-1">
+                        <span className="text-sm text-gray-300 font-medium">Sábado</span>
+                        <span className="text-sm text-white font-semibold">{schedule.saturday_start} - {schedule.saturday_end}</span>
+                      </div>
+                    )}
+                    {schedule.sunday_start && (
+                      <div className="flex justify-between items-center py-1">
+                        <span className="text-sm text-gray-300 font-medium">Domingo</span>
+                        <span className="text-sm text-white font-semibold">{schedule.sunday_start} - {schedule.sunday_end}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between items-center py-1 pt-2 border-t border-white/5">
+                      <span className="text-xs text-gray-400">Duración del almuerzo</span>
+                      <span className="text-xs text-gray-300 font-medium">{schedule.break_duration} min</span>
+                    </div>
+                  </div>
+                </Card>
+              ))
+            )}
           </div>
         </div>
       )}
@@ -422,11 +467,11 @@ export default function CompanySettings() {
             }}
           />
         ) : (
-          <Card className="p-6">
+          <Card variant="glass" className="p-6">
             <CardContent className="text-center">
-              <p className="text-red-600 mb-4">{error || companyError || 'No se pudo cargar la información de la empresa'}</p>
+              <p className="text-red-400 mb-4">{error || companyError || 'No se pudo cargar la información de la empresa'}</p>
               {!companyId && (
-                <p className="text-sm text-gray-500">Verifica que tu perfil de usuario tenga una empresa asignada.</p>
+                <p className="text-sm text-gray-300">Verifica que tu perfil de usuario tenga una empresa asignada.</p>
               )}
             </CardContent>
           </Card>
