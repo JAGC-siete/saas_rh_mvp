@@ -22,7 +22,9 @@ import {
   Hash,
   Type,
   ToggleLeft,
-  Info
+  Info,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react'
 
 interface CustomField {
@@ -64,6 +66,8 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     calculation_script: null
   })
 
+  const [initialConfig, setInitialConfig] = useState<PayrollConfig | null>(null)
+
   const [newFieldName, setNewFieldName] = useState('')
   const [newField, setNewField] = useState<CustomField>({
     label: '',
@@ -75,6 +79,10 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
 
   const [showAddField, setShowAddField] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [expandedSections, setExpandedSections] = useState({
+    earnings: true,
+    deductions: true
+  })
 
   // Load current configuration
   useEffect(() => {
@@ -98,12 +106,14 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
         console.log('✅ PayrollConfigEditor: API response data:', data)
         
         if (data.config) {
-          setConfig({
+          const loadedConfig = {
             calculation_type: data.config.calculation_type || 'standard',
             custom_fields: data.config.custom_fields || {},
             calculation_config: data.config.calculation_config || {},
             calculation_script: data.config.calculation_script || null
-          })
+          }
+          setConfig(loadedConfig)
+          setInitialConfig(loadedConfig) // Guardar como referencia inicial
           console.log('✅ PayrollConfigEditor: Config loaded successfully')
         } else {
           // No config exists yet, use defaults
@@ -238,6 +248,38 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
         }
       }
     }))
+  }
+
+  // Función para detectar si hay cambios
+  const hasChanges = (): boolean => {
+    if (!initialConfig) return false
+    
+    // Comparar calculation_type
+    if (config.calculation_type !== initialConfig.calculation_type) return true
+    
+    // Comparar calculation_script
+    if (config.calculation_script !== initialConfig.calculation_script) return true
+    
+    // Comparar calculation_config (deep comparison)
+    const configStr = JSON.stringify(config.calculation_config)
+    const initialStr = JSON.stringify(initialConfig.calculation_config)
+    if (configStr !== initialStr) return true
+    
+    // Comparar custom_fields (deep comparison)
+    const fieldsStr = JSON.stringify(config.custom_fields)
+    const initialFieldsStr = JSON.stringify(initialConfig.custom_fields)
+    if (fieldsStr !== initialFieldsStr) return true
+    
+    return false
+  }
+
+  // Función para cancelar cambios y restaurar configuración inicial
+  const handleCancel = () => {
+    if (initialConfig) {
+      setConfig(initialConfig)
+      setError(null)
+      setSuccess(false)
+    }
   }
 
   const handleUpdateFormula = (formulaType: 'earnings_formula' | 'deductions_formula', value: string) => {
@@ -449,12 +491,32 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
             <div className="space-y-6">
               {/* Earnings Section */}
               {Object.entries(config.custom_fields).filter(([_, field]) => field.category === 'earnings').length > 0 && (
-                <div>
-                  <h4 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-green-400"></span>
-                    Ingresos (Suman al salario)
-                  </h4>
-                  <div className="space-y-3">
+                <div className="glass border border-green-400/20 rounded-lg p-4">
+                  <button
+                    onClick={() => setExpandedSections(prev => ({ ...prev, earnings: !prev.earnings }))}
+                    className="w-full flex items-center justify-between p-3 hover:bg-white/5 rounded-lg transition-all duration-200 cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="w-2 h-2 rounded-full bg-green-400"></span>
+                      <h4 className="text-sm font-semibold text-white flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4 text-green-300" />
+                        Ingresos (Suman al salario)
+                      </h4>
+                      <Badge variant="outline" className="text-xs bg-green-500/20 text-green-300 border-green-400/30 px-2 py-0.5">
+                        {Object.entries(config.custom_fields).filter(([_, f]) => f.category === 'earnings').length} campos
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {expandedSections.earnings ? (
+                        <ChevronUp className="h-5 w-5 text-green-300 transition-transform duration-200" />
+                      ) : (
+                        <ChevronDown className="h-5 w-5 text-green-300 transition-transform duration-200" />
+                      )}
+                    </div>
+                  </button>
+                  <div className={`space-y-3 overflow-hidden transition-all duration-300 ease-in-out ${
+                    expandedSections.earnings ? 'max-h-[5000px] opacity-100' : 'max-h-0 opacity-0'
+                  }`}>
                     {Object.entries(config.custom_fields)
                       .filter(([fieldName, field]) => {
                         const matchesCategory = field.category === 'earnings'
@@ -464,7 +526,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                         return matchesCategory && matchesSearch
                       })
                       .map(([fieldName, field]) => (
-                <div key={fieldName} className="p-5 glass border border-white/20 rounded-lg glass-list-item">
+                        <div key={fieldName} className="p-5 glass border border-white/20 rounded-lg glass-list-item">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -565,12 +627,32 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
 
               {/* Deductions Section */}
               {Object.entries(config.custom_fields).filter(([_, field]) => field.category === 'deductions').length > 0 && (
-                <div>
-                  <h4 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-red-400"></span>
-                    Deducciones (Restan al salario)
-                  </h4>
-                  <div className="space-y-3">
+                <div className="glass border border-red-400/20 rounded-lg p-4">
+                  <button
+                    onClick={() => setExpandedSections(prev => ({ ...prev, deductions: !prev.deductions }))}
+                    className="w-full flex items-center justify-between p-3 hover:bg-white/5 rounded-lg transition-all duration-200 cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="w-2 h-2 rounded-full bg-red-400"></span>
+                      <h4 className="text-sm font-semibold text-white flex items-center gap-2">
+                        <TrendingDown className="h-4 w-4 text-red-300" />
+                        Deducciones (Restan al salario)
+                      </h4>
+                      <Badge variant="outline" className="text-xs bg-red-500/20 text-red-300 border-red-400/30 px-2 py-0.5">
+                        {Object.entries(config.custom_fields).filter(([_, f]) => f.category === 'deductions').length} campos
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {expandedSections.deductions ? (
+                        <ChevronUp className="h-5 w-5 text-red-300 transition-transform duration-200" />
+                      ) : (
+                        <ChevronDown className="h-5 w-5 text-red-300 transition-transform duration-200" />
+                      )}
+                    </div>
+                  </button>
+                  <div className={`space-y-3 overflow-hidden transition-all duration-300 ease-in-out ${
+                    expandedSections.deductions ? 'max-h-[5000px] opacity-100' : 'max-h-0 opacity-0'
+                  }`}>
                     {Object.entries(config.custom_fields)
                       .filter(([fieldName, field]) => {
                         const matchesCategory = field.category === 'deductions'
@@ -967,36 +1049,44 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
         </Card>
       )}
 
-      {/* Save Button */}
-      <Card variant="glass" className="p-4">
-        <div className="flex justify-end gap-3">
-          <Button
-            onClick={loadConfig}
-            variant="outline"
-            disabled={saving}
-            className="border-white/20 hover:bg-white/10 hover:border-white/30"
-          >
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={saving}
-            className="bg-brand-600 hover:bg-brand-700 text-white font-medium"
-          >
-            {saving ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Guardando...
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4 mr-2" />
-                Guardar Configuración
-              </>
-            )}
-          </Button>
-        </div>
-      </Card>
+      {/* Save Button - Solo mostrar si hay cambios */}
+      {hasChanges() && (
+        <Card variant="glass" className="p-4 border-yellow-400/30">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-yellow-300 text-sm">
+              <AlertCircle className="h-4 w-4" />
+              <span>Tienes cambios sin guardar</span>
+            </div>
+            <div className="flex justify-end gap-3">
+              <Button
+                onClick={handleCancel}
+                variant="outline"
+                disabled={saving}
+                className="border-white/20 hover:bg-white/10 hover:border-white/30"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={saving}
+                className="bg-brand-600 hover:bg-brand-700 text-white font-medium"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Guardar Configuración
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
     </div>
   )
 }
