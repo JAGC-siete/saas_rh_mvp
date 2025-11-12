@@ -45,6 +45,7 @@ export default function CompanySettings() {
   const [company, setCompany] = useState<Company | null>(null)
   const [workSchedules, setWorkSchedules] = useState<WorkSchedule[]>([])
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState('schedules')
 
   const [scheduleForm, setScheduleForm] = useState({
@@ -71,8 +72,15 @@ export default function CompanySettings() {
   const [editingSchedule, setEditingSchedule] = useState<WorkSchedule | null>(null)
 
   const fetchCompany = useCallback(async () => {
+    if (!session?.user?.id) {
+      setError('No hay sesión activa')
+      setLoading(false)
+      return
+    }
+
     try {
       setLoading(true)
+      setError(null)
       const supabaseClient = createClient()
       const { data, error } = await supabaseClient
         .from('user_profiles')
@@ -80,21 +88,28 @@ export default function CompanySettings() {
           company_id,
           companies (*)
         `)
-        .eq('id', session?.user?.id)
+        .eq('id', session.user.id)
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('Error fetching company:', error)
+        setError(`Error al cargar la empresa: ${error.message}`)
+        return
+      }
       
       // Safely extract company data with proper typing
       const companyData = data?.companies
       if (!companyData || Array.isArray(companyData)) {
-        throw new Error('Invalid company data structure')
+        setError('Estructura de datos de empresa inválida')
+        return
       }
       
       const company = companyData as Company
       setCompany(company)
-    } catch (error) {
+      setError(null)
+    } catch (error: any) {
       console.error('Error fetching company:', error)
+      setError(error?.message || 'Error desconocido al cargar la empresa')
     } finally {
       setLoading(false)
     }
@@ -236,9 +251,23 @@ export default function CompanySettings() {
 
   if (loading && !company) {
     return (
-      <div className="flex justify-center py-8">
+      <div className="flex flex-col items-center justify-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <p className="mt-4 text-gray-600">Cargando información de la empresa...</p>
       </div>
+    )
+  }
+
+  if (error && !company) {
+    return (
+      <Card className="p-6">
+        <CardContent className="text-center">
+          <p className="text-red-600 mb-2">{error}</p>
+          <Button onClick={() => fetchCompany()} variant="outline" size="sm">
+            Reintentar
+          </Button>
+        </CardContent>
+      </Card>
     )
   }
 
@@ -420,7 +449,16 @@ export default function CompanySettings() {
         ) : (
           <Card className="p-6">
             <CardContent className="text-center">
-              <p className="text-gray-600">Cargando información de la empresa...</p>
+              {error ? (
+                <>
+                  <p className="text-red-600 mb-4">{error}</p>
+                  <Button onClick={() => fetchCompany()} variant="outline">
+                    Reintentar
+                  </Button>
+                </>
+              ) : (
+                <p className="text-gray-600">Cargando información de la empresa...</p>
+              )}
             </CardContent>
           </Card>
         )
