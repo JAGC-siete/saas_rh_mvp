@@ -122,3 +122,5 @@ COMMENT ON POLICY payroll_config_admin_update ON public.company_payroll_configs 
 COMMENT ON POLICY payroll_config_admin_delete ON public.company_payroll_configs IS 
   'Solo super_admin puede eliminar configuraciones.';
 
+
+

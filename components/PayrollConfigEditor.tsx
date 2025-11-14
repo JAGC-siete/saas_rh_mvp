@@ -24,7 +24,12 @@ import {
   ToggleLeft,
   Info,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Calendar,
+  DollarSign,
+  Coins,
+  CheckSquare,
+  Square
 } from 'lucide-react'
 
 interface CustomField {
@@ -36,7 +41,28 @@ interface CustomField {
 }
 
 interface PayrollConfig {
-  calculation_type: 'standard' | 'formula_based' | 'custom'
+  // Configuración básica de payroll
+  payment_frequency: 'monthly' | 'biweekly' // mensual o quincenal
+  currency: 'HNL' | 'USD' // Lempiras o Dólares
+  legal_deductions: {
+    ihss: boolean
+    rap: boolean
+    isr: boolean
+    infop: boolean
+  }
+  payment_cut_dates: {
+    // Para quincenal
+    biweekly_type?: 'standard' | 'custom' // standard: 1-15, 16-30 | custom: personalizado
+    biweekly_first_start?: number // día inicio primera quincena (default: 1)
+    biweekly_first_end?: number // día fin primera quincena (default: 15)
+    biweekly_second_start?: number // día inicio segunda quincena (default: 16)
+    biweekly_second_end?: number // día fin segunda quincena (default: 30)
+    // Para mensual
+    monthly_type?: 'standard' | 'custom' // standard: 1-30 | custom: personalizado
+    monthly_start?: number // día inicio mes (default: 1)
+    monthly_end?: number // día fin mes (default: 30)
+  }
+  // Campos personalizados (mantener compatibilidad)
   custom_fields: Record<string, CustomField>
   calculation_config: {
     earnings_formula?: string
@@ -60,7 +86,22 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
   const [success, setSuccess] = useState(false)
   
   const [config, setConfig] = useState<PayrollConfig>({
-    calculation_type: 'standard',
+    payment_frequency: 'biweekly',
+    currency: 'HNL',
+    legal_deductions: {
+      ihss: true,
+      rap: true,
+      isr: true,
+      infop: false
+    },
+    payment_cut_dates: {
+      biweekly_first_start: 1,
+      biweekly_first_end: 15,
+      biweekly_second_start: 16,
+      biweekly_second_end: 30,
+      monthly_start: 1,
+      monthly_end: 30
+    },
     custom_fields: {},
     calculation_config: {},
     calculation_script: null
@@ -106,8 +147,25 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
         console.log('✅ PayrollConfigEditor: API response data:', data)
         
         if (data.config) {
-          const loadedConfig = {
-            calculation_type: data.config.calculation_type || 'standard',
+          const loadedConfig: PayrollConfig = {
+            payment_frequency: data.config.payment_frequency || 'biweekly',
+            currency: data.config.currency || 'HNL',
+            legal_deductions: {
+              ihss: data.config.legal_deductions?.ihss ?? true,
+              rap: data.config.legal_deductions?.rap ?? true,
+              isr: data.config.legal_deductions?.isr ?? true,
+              infop: data.config.legal_deductions?.infop ?? false
+            },
+            payment_cut_dates: {
+              biweekly_type: data.config.payment_cut_dates?.biweekly_type || 'standard',
+              biweekly_first_start: data.config.payment_cut_dates?.biweekly_first_start ?? 1,
+              biweekly_first_end: data.config.payment_cut_dates?.biweekly_first_end ?? 15,
+              biweekly_second_start: data.config.payment_cut_dates?.biweekly_second_start ?? 16,
+              biweekly_second_end: data.config.payment_cut_dates?.biweekly_second_end ?? 30,
+              monthly_type: data.config.payment_cut_dates?.monthly_type || 'standard',
+              monthly_start: data.config.payment_cut_dates?.monthly_start ?? 1,
+              monthly_end: data.config.payment_cut_dates?.monthly_end ?? 30
+            },
             custom_fields: data.config.custom_fields || {},
             calculation_config: data.config.calculation_config || {},
             calculation_script: data.config.calculation_script || null
@@ -118,23 +176,61 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
         } else {
           // No config exists yet, use defaults
           console.log('ℹ️ PayrollConfigEditor: No config found, using defaults')
-          setConfig({
-            calculation_type: 'standard',
+          const defaultConfig: PayrollConfig = {
+            payment_frequency: 'biweekly',
+            currency: 'HNL',
+            legal_deductions: {
+              ihss: true,
+              rap: true,
+              isr: true,
+              infop: false
+            },
+            payment_cut_dates: {
+              biweekly_type: 'standard',
+              biweekly_first_start: 1,
+              biweekly_first_end: 15,
+              biweekly_second_start: 16,
+              biweekly_second_end: 30,
+              monthly_type: 'standard',
+              monthly_start: 1,
+              monthly_end: 30
+            },
             custom_fields: {},
             calculation_config: {},
             calculation_script: null
-          })
+          }
+          setConfig(defaultConfig)
+          setInitialConfig(defaultConfig)
         }
       } else {
         // No config exists yet, use defaults
         const errorData = await response.json().catch(() => ({}))
         console.log('⚠️ PayrollConfigEditor: API returned non-OK status, using defaults:', errorData)
-        setConfig({
-          calculation_type: 'standard',
+        const defaultConfig: PayrollConfig = {
+          payment_frequency: 'biweekly',
+          currency: 'HNL',
+          legal_deductions: {
+            ihss: true,
+            rap: true,
+            isr: true,
+            infop: false
+          },
+          payment_cut_dates: {
+            biweekly_type: 'standard',
+            biweekly_first_start: 1,
+            biweekly_first_end: 15,
+            biweekly_second_start: 16,
+            biweekly_second_end: 30,
+            monthly_type: 'standard',
+            monthly_start: 1,
+            monthly_end: 30
+          },
           custom_fields: {},
           calculation_config: {},
           calculation_script: null
-        })
+        }
+        setConfig(defaultConfig)
+        setInitialConfig(defaultConfig)
       }
     } catch (err: any) {
       console.error('❌ PayrollConfigEditor: Error loading config:', err)
@@ -151,11 +247,20 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     setSuccess(false)
 
     try {
-      // Validate configuration
-      if (config.calculation_type === 'custom' && !config.calculation_script) {
-        setError('El script de cálculo es requerido cuando el tipo es "custom"')
-        setSaving(false)
-        return
+      // Validar fechas de corte según el tipo de pago
+      if (config.payment_frequency === 'biweekly') {
+        if (!config.payment_cut_dates.biweekly_first_start || !config.payment_cut_dates.biweekly_first_end ||
+            !config.payment_cut_dates.biweekly_second_start || !config.payment_cut_dates.biweekly_second_end) {
+          setError('Las fechas de corte para pago quincenal son requeridas')
+          setSaving(false)
+          return
+        }
+      } else if (config.payment_frequency === 'monthly') {
+        if (!config.payment_cut_dates.monthly_start || !config.payment_cut_dates.monthly_end) {
+          setError('Las fechas de corte para pago mensual son requeridas')
+          setSaving(false)
+          return
+        }
       }
 
       const response = await fetch('/api/payroll/config', {
@@ -163,7 +268,10 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           company_id: companyId, // Include companyId for super_admin support
-          calculation_type: config.calculation_type,
+          payment_frequency: config.payment_frequency,
+          currency: config.currency,
+          legal_deductions: config.legal_deductions,
+          payment_cut_dates: config.payment_cut_dates,
           custom_fields: config.custom_fields,
           calculation_config: config.calculation_config,
           calculation_script: config.calculation_script || null
@@ -254,8 +362,21 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
   const hasChanges = (): boolean => {
     if (!initialConfig) return false
     
-    // Comparar calculation_type
-    if (config.calculation_type !== initialConfig.calculation_type) return true
+    // Comparar payment_frequency
+    if (config.payment_frequency !== initialConfig.payment_frequency) return true
+    
+    // Comparar currency
+    if (config.currency !== initialConfig.currency) return true
+    
+    // Comparar legal_deductions (deep comparison)
+    const deductionsStr = JSON.stringify(config.legal_deductions)
+    const initialDeductionsStr = JSON.stringify(initialConfig.legal_deductions)
+    if (deductionsStr !== initialDeductionsStr) return true
+    
+    // Comparar payment_cut_dates (deep comparison)
+    const cutDatesStr = JSON.stringify(config.payment_cut_dates)
+    const initialCutDatesStr = JSON.stringify(initialConfig.payment_cut_dates)
+    if (cutDatesStr !== initialCutDatesStr) return true
     
     // Comparar calculation_script
     if (config.calculation_script !== initialConfig.calculation_script) return true
@@ -358,7 +479,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
             Configuración de Payroll por Empresa
           </CardTitle>
           <CardDescription className="text-gray-300">
-            Configure campos personalizados y fórmulas de cálculo específicas para su empresa
+            Configure la frecuencia de pago, moneda, deducciones de ley y fechas de corte para su empresa
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -376,51 +497,346 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
             </div>
           )}
 
-          {/* Calculation Type */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-white mb-2">
-              Tipo de Cálculo
-            </label>
-            <div className="flex gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="calculation_type"
-                  value="standard"
-                  checked={config.calculation_type === 'standard'}
-                  onChange={(e) => setConfig(prev => ({ ...prev, calculation_type: e.target.value as any }))}
-                  className="w-4 h-4 text-brand-400"
-                />
-                <span className="text-white">Estándar</span>
+          {/* Configuración Básica de Payroll */}
+          <div className="space-y-6">
+            {/* Tipo de Pago */}
+            <div>
+              <label className="block text-sm font-medium text-white mb-3 flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-blue-300" />
+                Frecuencia de Pago
               </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="calculation_type"
-                  value="formula_based"
-                  checked={config.calculation_type === 'formula_based'}
-                  onChange={(e) => setConfig(prev => ({ ...prev, calculation_type: e.target.value as any }))}
-                  className="w-4 h-4 text-brand-400"
-                />
-                <span className="text-white">Basado en Fórmulas</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="calculation_type"
-                  value="custom"
-                  checked={config.calculation_type === 'custom'}
-                  onChange={(e) => setConfig(prev => ({ ...prev, calculation_type: e.target.value as any }))}
-                  className="w-4 h-4 text-brand-400"
-                />
-                <span className="text-white">Script Personalizado</span>
-              </label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 cursor-pointer p-3 glass border border-white/20 rounded-lg hover:border-blue-400/50 transition-colors">
+                  <input
+                    type="radio"
+                    name="payment_frequency"
+                    value="biweekly"
+                    checked={config.payment_frequency === 'biweekly'}
+                    onChange={(e) => setConfig(prev => ({ ...prev, payment_frequency: e.target.value as 'biweekly' | 'monthly' }))}
+                    className="w-4 h-4 text-blue-600"
+                  />
+                  <span className="text-white">Quincenal</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer p-3 glass border border-white/20 rounded-lg hover:border-blue-400/50 transition-colors">
+                  <input
+                    type="radio"
+                    name="payment_frequency"
+                    value="monthly"
+                    checked={config.payment_frequency === 'monthly'}
+                    onChange={(e) => setConfig(prev => ({ ...prev, payment_frequency: e.target.value as 'biweekly' | 'monthly' }))}
+                    className="w-4 h-4 text-blue-600"
+                  />
+                  <span className="text-white">Mensual</span>
+                </label>
+              </div>
             </div>
-            <p className="text-xs text-gray-300 mt-1">
-              {config.calculation_type === 'standard' && 'Sin cálculos personalizados'}
-              {config.calculation_type === 'formula_based' && 'Use fórmulas matemáticas para calcular ingresos y deducciones'}
-              {config.calculation_type === 'custom' && 'Use JavaScript/TypeScript para cálculos complejos'}
-            </p>
+
+            {/* Moneda */}
+            <div>
+              <label className="block text-sm font-medium text-white mb-3 flex items-center gap-2">
+                <Coins className="h-4 w-4 text-yellow-300" />
+                Moneda
+              </label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 cursor-pointer p-3 glass border border-white/20 rounded-lg hover:border-blue-400/50 transition-colors">
+                  <input
+                    type="radio"
+                    name="currency"
+                    value="HNL"
+                    checked={config.currency === 'HNL'}
+                    onChange={(e) => setConfig(prev => ({ ...prev, currency: e.target.value as 'HNL' | 'USD' }))}
+                    className="w-4 h-4 text-blue-600"
+                  />
+                  <DollarSign className="h-4 w-4 text-green-300" />
+                  <span className="text-white">Lempiras (HNL)</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer p-3 glass border border-white/20 rounded-lg hover:border-blue-400/50 transition-colors">
+                  <input
+                    type="radio"
+                    name="currency"
+                    value="USD"
+                    checked={config.currency === 'USD'}
+                    onChange={(e) => setConfig(prev => ({ ...prev, currency: e.target.value as 'HNL' | 'USD' }))}
+                    className="w-4 h-4 text-blue-600"
+                  />
+                  <DollarSign className="h-4 w-4 text-blue-300" />
+                  <span className="text-white">Dólares (USD)</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Deducciones de Ley */}
+            <div>
+              <label className="block text-sm font-medium text-white mb-3 flex items-center gap-2">
+                <CheckSquare className="h-4 w-4 text-purple-300" />
+                Deducciones de Ley
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="flex items-center gap-2 cursor-pointer p-3 glass border border-white/20 rounded-lg hover:border-purple-400/50 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={config.legal_deductions.ihss}
+                    onChange={(e) => setConfig(prev => ({
+                      ...prev,
+                      legal_deductions: { ...prev.legal_deductions, ihss: e.target.checked }
+                    }))}
+                    className="w-4 h-4 text-purple-600 rounded"
+                  />
+                  <span className="text-white">IHSS</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer p-3 glass border border-white/20 rounded-lg hover:border-purple-400/50 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={config.legal_deductions.rap}
+                    onChange={(e) => setConfig(prev => ({
+                      ...prev,
+                      legal_deductions: { ...prev.legal_deductions, rap: e.target.checked }
+                    }))}
+                    className="w-4 h-4 text-purple-600 rounded"
+                  />
+                  <span className="text-white">RAP</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer p-3 glass border border-white/20 rounded-lg hover:border-purple-400/50 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={config.legal_deductions.isr}
+                    onChange={(e) => setConfig(prev => ({
+                      ...prev,
+                      legal_deductions: { ...prev.legal_deductions, isr: e.target.checked }
+                    }))}
+                    className="w-4 h-4 text-purple-600 rounded"
+                  />
+                  <span className="text-white">ISR</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer p-3 glass border border-white/20 rounded-lg hover:border-purple-400/50 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={config.legal_deductions.infop}
+                    onChange={(e) => setConfig(prev => ({
+                      ...prev,
+                      legal_deductions: { ...prev.legal_deductions, infop: e.target.checked }
+                    }))}
+                    className="w-4 h-4 text-purple-600 rounded"
+                  />
+                  <span className="text-white">INFOP</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Fechas de Corte */}
+            <div>
+              <label className="block text-sm font-medium text-white mb-3 flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-green-300" />
+                Fechas de Corte de Pago
+              </label>
+              {config.payment_frequency === 'biweekly' ? (
+                <div className="space-y-4">
+                  {/* Tipo de fechas quincenales */}
+                  <div className="flex gap-4 mb-4">
+                    <label className="flex items-center gap-2 cursor-pointer p-2 glass border border-white/20 rounded-lg hover:border-green-400/50 transition-colors">
+                      <input
+                        type="radio"
+                        name="biweekly_type"
+                        value="standard"
+                        checked={(config.payment_cut_dates.biweekly_type || 'standard') === 'standard'}
+                        onChange={(e) => {
+                          setConfig(prev => ({
+                            ...prev,
+                            payment_cut_dates: {
+                              ...prev.payment_cut_dates,
+                              biweekly_type: 'standard',
+                              biweekly_first_start: 1,
+                              biweekly_first_end: 15,
+                              biweekly_second_start: 16,
+                              biweekly_second_end: 30
+                            }
+                          }))
+                        }}
+                        className="w-4 h-4 text-green-600"
+                      />
+                      <span className="text-white text-sm">Estándar (1-15, 16-30)</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer p-2 glass border border-white/20 rounded-lg hover:border-green-400/50 transition-colors">
+                      <input
+                        type="radio"
+                        name="biweekly_type"
+                        value="custom"
+                        checked={(config.payment_cut_dates.biweekly_type || 'standard') === 'custom'}
+                        onChange={(e) => {
+                          setConfig(prev => ({
+                            ...prev,
+                            payment_cut_dates: {
+                              ...prev.payment_cut_dates,
+                              biweekly_type: 'custom'
+                            }
+                          }))
+                        }}
+                        className="w-4 h-4 text-green-600"
+                      />
+                      <span className="text-white text-sm">Personalizado</span>
+                    </label>
+                  </div>
+                  
+                  {/* Campos de fechas quincenales */}
+                  {(config.payment_cut_dates.biweekly_type || 'standard') === 'custom' && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs text-gray-300 mb-2">Primera Quincena</label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            min="1"
+                            max="31"
+                            value={config.payment_cut_dates.biweekly_first_start || 1}
+                            onChange={(e) => setConfig(prev => ({
+                              ...prev,
+                              payment_cut_dates: {
+                                ...prev.payment_cut_dates,
+                                biweekly_first_start: parseInt(e.target.value) || 1
+                              }
+                            }))}
+                            className="w-20 input-glass text-white text-center"
+                          />
+                          <span className="text-white">al</span>
+                          <Input
+                            type="number"
+                            min="1"
+                            max="31"
+                            value={config.payment_cut_dates.biweekly_first_end || 15}
+                            onChange={(e) => setConfig(prev => ({
+                              ...prev,
+                              payment_cut_dates: {
+                                ...prev.payment_cut_dates,
+                                biweekly_first_end: parseInt(e.target.value) || 15
+                              }
+                            }))}
+                            className="w-20 input-glass text-white text-center"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-300 mb-2">Segunda Quincena</label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            min="1"
+                            max="31"
+                            value={config.payment_cut_dates.biweekly_second_start || 16}
+                            onChange={(e) => setConfig(prev => ({
+                              ...prev,
+                              payment_cut_dates: {
+                                ...prev.payment_cut_dates,
+                                biweekly_second_start: parseInt(e.target.value) || 16
+                              }
+                            }))}
+                            className="w-20 input-glass text-white text-center"
+                          />
+                          <span className="text-white">al</span>
+                          <Input
+                            type="number"
+                            min="1"
+                            max="31"
+                            value={config.payment_cut_dates.biweekly_second_end || 30}
+                            onChange={(e) => setConfig(prev => ({
+                              ...prev,
+                              payment_cut_dates: {
+                                ...prev.payment_cut_dates,
+                                biweekly_second_end: parseInt(e.target.value) || 30
+                              }
+                            }))}
+                            className="w-20 input-glass text-white text-center"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Tipo de fechas mensuales */}
+                  <div className="flex gap-4 mb-4">
+                    <label className="flex items-center gap-2 cursor-pointer p-2 glass border border-white/20 rounded-lg hover:border-green-400/50 transition-colors">
+                      <input
+                        type="radio"
+                        name="monthly_type"
+                        value="standard"
+                        checked={(config.payment_cut_dates.monthly_type || 'standard') === 'standard'}
+                        onChange={(e) => {
+                          setConfig(prev => ({
+                            ...prev,
+                            payment_cut_dates: {
+                              ...prev.payment_cut_dates,
+                              monthly_type: 'standard',
+                              monthly_start: 1,
+                              monthly_end: 30
+                            }
+                          }))
+                        }}
+                        className="w-4 h-4 text-green-600"
+                      />
+                      <span className="text-white text-sm">Estándar (1-30)</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer p-2 glass border border-white/20 rounded-lg hover:border-green-400/50 transition-colors">
+                      <input
+                        type="radio"
+                        name="monthly_type"
+                        value="custom"
+                        checked={(config.payment_cut_dates.monthly_type || 'standard') === 'custom'}
+                        onChange={(e) => {
+                          setConfig(prev => ({
+                            ...prev,
+                            payment_cut_dates: {
+                              ...prev.payment_cut_dates,
+                              monthly_type: 'custom'
+                            }
+                          }))
+                        }}
+                        className="w-4 h-4 text-green-600"
+                      />
+                      <span className="text-white text-sm">Personalizado</span>
+                    </label>
+                  </div>
+                  
+                  {/* Campos de fechas mensuales */}
+                  {(config.payment_cut_dates.monthly_type || 'standard') === 'custom' && (
+                    <div>
+                      <label className="block text-xs text-gray-300 mb-2">Período Mensual</label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min="1"
+                          max="31"
+                          value={config.payment_cut_dates.monthly_start || 1}
+                          onChange={(e) => setConfig(prev => ({
+                            ...prev,
+                            payment_cut_dates: {
+                              ...prev.payment_cut_dates,
+                              monthly_start: parseInt(e.target.value) || 1
+                            }
+                          }))}
+                          className="w-20 input-glass text-white text-center"
+                        />
+                        <span className="text-white">al</span>
+                        <Input
+                          type="number"
+                          min="1"
+                          max="31"
+                          value={config.payment_cut_dates.monthly_end || 30}
+                          onChange={(e) => setConfig(prev => ({
+                            ...prev,
+                            payment_cut_dates: {
+                              ...prev.payment_cut_dates,
+                              monthly_end: parseInt(e.target.value) || 30
+                            }
+                          }))}
+                          className="w-20 input-glass text-white text-center"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -904,150 +1320,6 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
         </CardContent>
       </Card>
 
-      {/* Calculation Formulas (only for formula_based) */}
-      {config.calculation_type === 'formula_based' && (
-        <Card variant="glass" className="p-6">
-          <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
-              <Calculator className="h-5 w-5" />
-              Fórmulas de Cálculo
-            </CardTitle>
-            <CardDescription className="text-gray-300">
-              Configure fórmulas para calcular ingresos y deducciones adicionales
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Earnings Formula */}
-            <div>
-              <label className="block text-sm font-medium text-white mb-2">
-                Fórmula de Ingresos Adicionales
-              </label>
-              <Textarea
-                value={config.calculation_config.earnings_formula || ''}
-                onChange={(e) => handleUpdateFormula('earnings_formula', e.target.value)}
-                placeholder="ej: horas_extras + feriado_trabajado + estipendio_transporte"
-                className="font-mono text-sm input-glass text-white placeholder:text-white/70"
-                rows={2}
-              />
-              <p className="text-xs text-gray-300 mt-1">
-                Use nombres de campos separados por operadores: +, -, *, /, ()
-              </p>
-            </div>
-
-            {/* Deductions Formula */}
-            <div>
-              <label className="block text-sm font-medium text-white mb-2">
-                Fórmula de Deducciones Adicionales
-              </label>
-              <Textarea
-                value={config.calculation_config.deductions_formula || ''}
-                onChange={(e) => handleUpdateFormula('deductions_formula', e.target.value)}
-                placeholder="ej: comedor + cooperativa_aportaciones + embargo_alimentos"
-                className="font-mono text-sm input-glass text-white placeholder:text-white/70"
-                rows={2}
-              />
-              <p className="text-xs text-gray-300 mt-1">
-                Use nombres de campos separados por operadores: +, -, *, /, ()
-              </p>
-            </div>
-
-            {/* Custom Calculations */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-white">
-                  Cálculos Personalizados
-                </label>
-                <Button
-                  onClick={handleAddCustomCalculation}
-                  size="sm"
-                  variant="outline"
-                  className="text-xs"
-                >
-                  <Plus className="h-3 w-3 mr-1" />
-                  Agregar
-                </Button>
-              </div>
-              {config.calculation_config.custom_calculations && 
-               Object.keys(config.calculation_config.custom_calculations).length > 0 ? (
-                <div className="space-y-3">
-                  {Object.entries(config.calculation_config.custom_calculations).map(([fieldName, formula]) => (
-                    <div key={fieldName} className="p-3 glass border border-white/10 rounded-lg glass-list-item">
-                      <div className="flex gap-3 items-start">
-                        <div className="flex-1">
-                          <div className="text-sm font-medium text-white mb-2 flex items-center gap-2">
-                            <Code className="h-4 w-4 text-brand-400" />
-                            {fieldName}
-                          </div>
-                          <Input
-                            value={formula}
-                            onChange={(e) => handleUpdateCustomCalculation(fieldName, e.target.value)}
-                            placeholder="ej: coalesce(metadata.valor_hora_extra, baseSalary / 220 * 1.5)"
-                            className="font-mono text-sm input-glass text-white placeholder:text-white/70"
-                          />
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveCustomCalculation(fieldName)}
-                          className="text-red-400 hover:text-red-300 hover:bg-red-500/10 p-2 mt-1"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-6 glass border border-white/10 rounded-lg">
-                  <Code className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-                  <p className="text-sm text-gray-300">No hay cálculos personalizados</p>
-                  <p className="text-xs text-gray-400 mt-1">Agrega cálculos personalizados para fórmulas avanzadas</p>
-                </div>
-              )}
-              <p className="text-xs text-gray-300 mt-2">
-                Soporta: coalesce(), metadata.campo, baseSalary, operadores matemáticos
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Custom Script (only for custom type) */}
-      {config.calculation_type === 'custom' && (
-        <Card variant="glass" className="p-6">
-          <CardHeader>
-            <CardTitle className="text-white flex items-center gap-2">
-              <Code className="h-5 w-5" />
-              Script de Cálculo Personalizado
-            </CardTitle>
-            <CardDescription className="text-gray-300">
-              Escriba código JavaScript/TypeScript para cálculos complejos
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="mb-2 p-3 bg-yellow-500/20 border border-yellow-400/50 rounded-lg">
-              <p className="text-xs text-yellow-300">
-                ⚠️ Solo para super_admins. El script debe retornar un objeto con:
-                totalIngresosAdicionales, totalDeduccionesAdicionales, calculatedFields
-              </p>
-            </div>
-            <Textarea
-              value={config.calculation_script || ''}
-              onChange={(e) => setConfig(prev => ({ ...prev, calculation_script: e.target.value }))}
-              placeholder={`function calculatePayroll(baseSalary, metadata) {
-  // Su lógica aquí
-  return {
-    totalIngresosAdicionales: 0,
-    totalDeduccionesAdicionales: 0,
-    calculatedFields: {}
-  }
-}`}
-              className="font-mono text-sm input-glass text-white placeholder:text-white/70"
-              rows={15}
-            />
-          </CardContent>
-        </Card>
-      )}
 
       {/* Save Button - Solo mostrar si hay cambios */}
       {hasChanges() && (
