@@ -121,8 +121,12 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
   const [showAddField, setShowAddField] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [expandedSections, setExpandedSections] = useState({
-    earnings: true,
-    deductions: true
+    earnings: false, // Retraída por defecto
+    deductions: false, // Retraída por defecto
+    paymentFrequency: false, // Retraída por defecto
+    currency: false, // Retraída por defecto
+    legalDeductions: false, // Retraída por defecto
+    paymentCutDates: false // Retraída por defecto
   })
 
   // Load current configuration
@@ -500,12 +504,29 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
           {/* Configuración Básica de Payroll */}
           <div className="space-y-6">
             {/* Tipo de Pago */}
-            <div>
-              <label className="block text-sm font-medium text-white mb-3 flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-blue-300" />
-                Frecuencia de Pago
-              </label>
-              <div className="flex gap-4">
+            <div className="glass border border-white/20 rounded-lg p-4">
+              <button
+                onClick={() => setExpandedSections(prev => ({ ...prev, paymentFrequency: !prev.paymentFrequency }))}
+                className="w-full flex items-center justify-between p-3 hover:bg-white/5 rounded-lg transition-all duration-200 cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <Calendar className="h-4 w-4 text-blue-300" />
+                  <label className="text-sm font-medium text-white">
+                    Frecuencia de Pago
+                  </label>
+                </div>
+                <div className="flex items-center gap-2">
+                  {expandedSections.paymentFrequency ? (
+                    <ChevronUp className="h-5 w-5 text-blue-300 transition-transform duration-200" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-blue-300 transition-transform duration-200" />
+                  )}
+                </div>
+              </button>
+              <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                expandedSections.paymentFrequency ? 'max-h-[200px] opacity-100 mt-4' : 'max-h-0 opacity-0'
+              }`}>
+                <div className="flex gap-4">
                 <label className="flex items-center gap-2 cursor-pointer p-3 glass border border-white/20 rounded-lg hover:border-blue-400/50 transition-colors">
                   <input
                     type="radio"
@@ -528,16 +549,34 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                   />
                   <span className="text-white">Mensual</span>
                 </label>
+                </div>
               </div>
             </div>
 
             {/* Moneda */}
-            <div>
-              <label className="block text-sm font-medium text-white mb-3 flex items-center gap-2">
-                <Coins className="h-4 w-4 text-yellow-300" />
-                Moneda
-              </label>
-              <div className="flex gap-4">
+            <div className="glass border border-white/20 rounded-lg p-4">
+              <button
+                onClick={() => setExpandedSections(prev => ({ ...prev, currency: !prev.currency }))}
+                className="w-full flex items-center justify-between p-3 hover:bg-white/5 rounded-lg transition-all duration-200 cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <Coins className="h-4 w-4 text-yellow-300" />
+                  <label className="text-sm font-medium text-white">
+                    Moneda
+                  </label>
+                </div>
+                <div className="flex items-center gap-2">
+                  {expandedSections.currency ? (
+                    <ChevronUp className="h-5 w-5 text-yellow-300 transition-transform duration-200" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-yellow-300 transition-transform duration-200" />
+                  )}
+                </div>
+              </button>
+              <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                expandedSections.currency ? 'max-h-[200px] opacity-100 mt-4' : 'max-h-0 opacity-0'
+              }`}>
+                <div className="flex gap-4">
                 <label className="flex items-center gap-2 cursor-pointer p-3 glass border border-white/20 rounded-lg hover:border-blue-400/50 transition-colors">
                   <input
                     type="radio"
@@ -562,16 +601,34 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                   <DollarSign className="h-4 w-4 text-blue-300" />
                   <span className="text-white">Dólares (USD)</span>
                 </label>
+                </div>
               </div>
             </div>
 
             {/* Deducciones de Ley */}
-            <div>
-              <label className="block text-sm font-medium text-white mb-3 flex items-center gap-2">
-                <CheckSquare className="h-4 w-4 text-purple-300" />
-                Deducciones de Ley
-              </label>
-              <div className="grid grid-cols-2 gap-3">
+            <div className="glass border border-white/20 rounded-lg p-4">
+              <button
+                onClick={() => setExpandedSections(prev => ({ ...prev, legalDeductions: !prev.legalDeductions }))}
+                className="w-full flex items-center justify-between p-3 hover:bg-white/5 rounded-lg transition-all duration-200 cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <CheckSquare className="h-4 w-4 text-purple-300" />
+                  <label className="text-sm font-medium text-white">
+                    Deducciones de Ley
+                  </label>
+                </div>
+                <div className="flex items-center gap-2">
+                  {expandedSections.legalDeductions ? (
+                    <ChevronUp className="h-5 w-5 text-purple-300 transition-transform duration-200" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-purple-300 transition-transform duration-200" />
+                  )}
+                </div>
+              </button>
+              <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                expandedSections.legalDeductions ? 'max-h-[300px] opacity-100 mt-4' : 'max-h-0 opacity-0'
+              }`}>
+                <div className="grid grid-cols-2 gap-3">
                 <label className="flex items-center gap-2 cursor-pointer p-3 glass border border-white/20 rounded-lg hover:border-purple-400/50 transition-colors">
                   <input
                     type="checkbox"
@@ -620,16 +677,34 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                   />
                   <span className="text-white">INFOP</span>
                 </label>
+                </div>
               </div>
             </div>
 
             {/* Fechas de Corte */}
-            <div>
-              <label className="block text-sm font-medium text-white mb-3 flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-green-300" />
-                Fechas de Corte de Pago
-              </label>
-              {config.payment_frequency === 'biweekly' ? (
+            <div className="glass border border-white/20 rounded-lg p-4">
+              <button
+                onClick={() => setExpandedSections(prev => ({ ...prev, paymentCutDates: !prev.paymentCutDates }))}
+                className="w-full flex items-center justify-between p-3 hover:bg-white/5 rounded-lg transition-all duration-200 cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <Calendar className="h-4 w-4 text-green-300" />
+                  <label className="text-sm font-medium text-white">
+                    Fechas de Corte de Pago
+                  </label>
+                </div>
+                <div className="flex items-center gap-2">
+                  {expandedSections.paymentCutDates ? (
+                    <ChevronUp className="h-5 w-5 text-green-300 transition-transform duration-200" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-green-300 transition-transform duration-200" />
+                  )}
+                </div>
+              </button>
+              <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                expandedSections.paymentCutDates ? 'max-h-[2000px] opacity-100 mt-4' : 'max-h-0 opacity-0'
+              }`}>
+                {config.payment_frequency === 'biweekly' ? (
                 <div className="space-y-4">
                   {/* Tipo de fechas quincenales */}
                   <div className="flex gap-4 mb-4">
@@ -836,6 +911,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                   )}
                 </div>
               )}
+              </div>
             </div>
           </div>
         </CardContent>

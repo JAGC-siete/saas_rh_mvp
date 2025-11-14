@@ -57,10 +57,75 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       })
     }
 
-    // Calcular fechas del período
+    // Obtener configuración de payroll de la empresa
+    const { data: payrollConfig, error: configError } = await supabase
+      .from('company_payroll_configs')
+      .select('payment_frequency, payment_cut_dates, legal_deductions, currency')
+      .eq('company_id', companyId)
+      .eq('is_active', true)
+      .single()
+    
+    // Usar valores por defecto si no hay configuración
+    const paymentFrequency = payrollConfig?.payment_frequency || 'biweekly'
+    const paymentCutDates = payrollConfig?.payment_cut_dates || {
+      biweekly_first_start: 1,
+      biweekly_first_end: 15,
+      biweekly_second_start: 16,
+      biweekly_second_end: 30
+    }
+    const legalDeductions = payrollConfig?.legal_deductions || {
+      ihss: true,
+      rap: true,
+      isr: true,
+      infop: false
+    }
+    
+    // Calcular fechas del período según configuración
     const ultimoDia = new Date(yearNum, monthNum, 0).getDate()
-    const fechaInicio = quincenaNum === 1 ? `${yearNum}-${monthNum.toString().padStart(2, '0')}-01` : `${yearNum}-${monthNum.toString().padStart(2, '0')}-16`
-    const fechaFin = quincenaNum === 1 ? `${yearNum}-${monthNum.toString().padStart(2, '0')}-15` : `${yearNum}-${monthNum.toString().padStart(2, '0')}-${ultimoDia}`
+    let fechaInicio: string
+    let fechaFin: string
+    let diasPeriodo: number
+    
+    if (paymentFrequency === 'monthly') {
+      // Nómina mensual
+      const monthlyType = paymentCutDates?.monthly_type || 'standard'
+      if (monthlyType === 'custom' && paymentCutDates?.monthly_start && paymentCutDates?.monthly_end) {
+        fechaInicio = `${yearNum}-${monthNum.toString().padStart(2, '0')}-${paymentCutDates.monthly_start.toString().padStart(2, '0')}`
+        fechaFin = `${yearNum}-${monthNum.toString().padStart(2, '0')}-${Math.min(paymentCutDates.monthly_end, ultimoDia).toString().padStart(2, '0')}`
+        diasPeriodo = paymentCutDates.monthly_end - paymentCutDates.monthly_start + 1
+      } else {
+        // Standard: del 1 al último día del mes
+        fechaInicio = `${yearNum}-${monthNum.toString().padStart(2, '0')}-01`
+        fechaFin = `${yearNum}-${monthNum.toString().padStart(2, '0')}-${ultimoDia}`
+        diasPeriodo = ultimoDia
+      }
+    } else {
+      // Nómina quincenal (biweekly)
+      const biweeklyType = paymentCutDates?.biweekly_type || 'standard'
+      if (biweeklyType === 'custom' && paymentCutDates?.biweekly_first_start && paymentCutDates?.biweekly_first_end && 
+          paymentCutDates?.biweekly_second_start && paymentCutDates?.biweekly_second_end) {
+        if (quincenaNum === 1) {
+          fechaInicio = `${yearNum}-${monthNum.toString().padStart(2, '0')}-${paymentCutDates.biweekly_first_start.toString().padStart(2, '0')}`
+          fechaFin = `${yearNum}-${monthNum.toString().padStart(2, '0')}-${Math.min(paymentCutDates.biweekly_first_end, ultimoDia).toString().padStart(2, '0')}`
+          diasPeriodo = paymentCutDates.biweekly_first_end - paymentCutDates.biweekly_first_start + 1
+        } else {
+          fechaInicio = `${yearNum}-${monthNum.toString().padStart(2, '0')}-${paymentCutDates.biweekly_second_start.toString().padStart(2, '0')}`
+          fechaFin = `${yearNum}-${monthNum.toString().padStart(2, '0')}-${Math.min(paymentCutDates.biweekly_second_end, ultimoDia).toString().padStart(2, '0')}`
+          diasPeriodo = paymentCutDates.biweekly_second_end - paymentCutDates.biweekly_second_start + 1
+        }
+      } else {
+        // Standard: 1-15 y 16-último día
+        if (quincenaNum === 1) {
+          fechaInicio = `${yearNum}-${monthNum.toString().padStart(2, '0')}-01`
+          fechaFin = `${yearNum}-${monthNum.toString().padStart(2, '0')}-15`
+          diasPeriodo = 15
+        } else {
+          fechaInicio = `${yearNum}-${monthNum.toString().padStart(2, '0')}-16`
+          fechaFin = `${yearNum}-${monthNum.toString().padStart(2, '0')}-${ultimoDia}`
+          diasPeriodo = ultimoDia - 15
+        }
+      }
+    }
 
     // Verificar si ya existe una corrida para este período
     const { data: existingRun, error: checkError } = await supabase
@@ -235,38 +300,55 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         record.check_in && 
         record.check_out)
       
-      // CALCULAR DÍAS TRABAJADOS EN LA QUINCENA ACTUAL
-      const diasQuincena = quincenaNum === 1 ? 15 : ultimoDia - 15
-      
       // Si hay registros de asistencia, usar la cantidad real
-      // Si no hay registros, asumir que trabajó todos los días de la quincena
-      const days_worked = registros.length > 0 ? registros.length : diasQuincena
-      const days_absent = diasQuincena - days_worked
+      // Si no hay registros, asumir que trabajó todos los días del período
+      const days_worked = registros.length > 0 ? registros.length : diasPeriodo
+      const days_absent = diasPeriodo - days_worked
       
       const base_salary = Number(emp.base_salary) || 0
       
-      // CALCULAR SALARIO QUINCENAL (SALARIO MENSUAL / 2)
-      const salarioQuincenal = base_salary / 2
-      const total_earnings = salarioQuincenal
+      // CALCULAR SALARIO SEGÚN payment_frequency
+      let total_earnings = 0
+      if (paymentFrequency === 'monthly') {
+        // Nómina mensual: usar salario completo proporcional a días trabajados
+        total_earnings = (base_salary / ultimoDia) * days_worked
+      } else {
+        // Nómina quincenal (biweekly): dividir salario mensual / 2 y ajustar por días trabajados
+        const salarioQuincenal = base_salary / 2
+        total_earnings = salarioQuincenal * (days_worked / diasPeriodo)
+      }
       
       let IHSS = 0, RAP = 0, ISR = 0, total_deductions = 0, total = 0
 
-      // APLICAR DEDUCCIONES SEGÚN EL TIPO (independientemente de la quincena)
+      // APLICAR DEDUCCIONES SEGÚN legal_deductions (solo si tipoParam === 'CON')
       if (tipoParam === 'CON') {
         // CÁLCULOS CORRECTOS 2025 - DEDUCCIONES MENSUALES COMPLETAS
-        IHSS = Math.min(base_salary, 11903.13) * 0.05  // Deducción mensual completa
-        RAP = Math.max(0, base_salary - 11903.13) * 0.015    // Deducción mensual completa
+        // Aplicar solo si están habilitadas en legal_deductions
+        if (legalDeductions.ihss) {
+          IHSS = Math.min(base_salary, 11903.13) * 0.05  // Deducción mensual completa
+        }
         
-        // ISR según tabla MENSUAL de Honduras 2025
-        if (base_salary > 21457.76) {
-          if (base_salary <= 30969.88) {
-            ISR = (base_salary - 21457.76) * 0.15
-          } else if (base_salary <= 67604.36) {
-            ISR = 1428.32 + (base_salary - 30969.88) * 0.20
-          } else {
-            ISR = 8734.32 + (base_salary - 67604.36) * 0.25
+        if (legalDeductions.rap) {
+          RAP = Math.max(0, base_salary - 11903.13) * 0.015    // Deducción mensual completa
+        }
+        
+        if (legalDeductions.isr) {
+          // ISR según tabla MENSUAL de Honduras 2025
+          if (base_salary > 21457.76) {
+            if (base_salary <= 30969.88) {
+              ISR = (base_salary - 21457.76) * 0.15
+            } else if (base_salary <= 67604.36) {
+              ISR = 1428.32 + (base_salary - 30969.88) * 0.20
+            } else {
+              ISR = 8734.32 + (base_salary - 67604.36) * 0.25
+            }
           }
         }
+        
+        // INFOP (si está configurado, aunque no es común en Honduras)
+        // if (legalDeductions.infop) {
+        //   INFOP = calcularINFOP(base_salary)
+        // }
         
         total_deductions = IHSS + RAP + ISR
         total = total_earnings - total_deductions

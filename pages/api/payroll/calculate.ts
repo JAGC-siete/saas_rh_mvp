@@ -163,15 +163,80 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    // Calcular fechas del período
-    const ultimoDia = new Date(year, month, 0).getDate()
-    const fechaInicio = quincena === 1 ? `${periodo}-01` : `${periodo}-16`
-    const fechaFin = quincena === 1 ? `${periodo}-15` : `${periodo}-${ultimoDia}`
+    // Obtener configuración de payroll de la empresa
+    const { data: payrollConfig, error: configError } = await supabase
+      .from('company_payroll_configs')
+      .select('payment_frequency, payment_cut_dates, legal_deductions, currency')
+      .eq('company_id', companyId)
+      .eq('is_active', true)
+      .single()
     
-    // IMPORTANTE: Las deducciones se aplican SOLO UNA VEZ al mes (en Q2)
-    // Q1: solo salario bruto proporcional por días trabajados
-    // Q2: salario bruto proporcional + deducciones mensuales completas
-    const aplicarDeducciones = quincena === 2
+    // Usar valores por defecto si no hay configuración
+    const paymentFrequency = payrollConfig?.payment_frequency || 'biweekly'
+    const paymentCutDates = payrollConfig?.payment_cut_dates || {
+      biweekly_first_start: 1,
+      biweekly_first_end: 15,
+      biweekly_second_start: 16,
+      biweekly_second_end: 30
+    }
+    const legalDeductions = payrollConfig?.legal_deductions || {
+      ihss: true,
+      rap: true,
+      isr: true,
+      infop: false
+    }
+    
+    // Calcular fechas del período según configuración
+    const ultimoDia = new Date(year, month, 0).getDate()
+    let fechaInicio: string
+    let fechaFin: string
+    let diasPeriodo: number
+    
+    if (paymentFrequency === 'monthly') {
+      // Nómina mensual
+      const monthlyType = paymentCutDates?.monthly_type || 'standard'
+      if (monthlyType === 'custom' && paymentCutDates?.monthly_start && paymentCutDates?.monthly_end) {
+        fechaInicio = `${periodo}-${paymentCutDates.monthly_start.toString().padStart(2, '0')}`
+        fechaFin = `${periodo}-${Math.min(paymentCutDates.monthly_end, ultimoDia).toString().padStart(2, '0')}`
+        diasPeriodo = paymentCutDates.monthly_end - paymentCutDates.monthly_start + 1
+      } else {
+        // Standard: del 1 al último día del mes
+        fechaInicio = `${periodo}-01`
+        fechaFin = `${periodo}-${ultimoDia}`
+        diasPeriodo = ultimoDia
+      }
+    } else {
+      // Nómina quincenal (biweekly)
+      const biweeklyType = paymentCutDates?.biweekly_type || 'standard'
+      if (biweeklyType === 'custom' && paymentCutDates?.biweekly_first_start && paymentCutDates?.biweekly_first_end && 
+          paymentCutDates?.biweekly_second_start && paymentCutDates?.biweekly_second_end) {
+        if (quincena === 1) {
+          fechaInicio = `${periodo}-${paymentCutDates.biweekly_first_start.toString().padStart(2, '0')}`
+          fechaFin = `${periodo}-${Math.min(paymentCutDates.biweekly_first_end, ultimoDia).toString().padStart(2, '0')}`
+          diasPeriodo = paymentCutDates.biweekly_first_end - paymentCutDates.biweekly_first_start + 1
+        } else {
+          fechaInicio = `${periodo}-${paymentCutDates.biweekly_second_start.toString().padStart(2, '0')}`
+          fechaFin = `${periodo}-${Math.min(paymentCutDates.biweekly_second_end, ultimoDia).toString().padStart(2, '0')}`
+          diasPeriodo = paymentCutDates.biweekly_second_end - paymentCutDates.biweekly_second_start + 1
+        }
+      } else {
+        // Standard: 1-15 y 16-último día
+        if (quincena === 1) {
+          fechaInicio = `${periodo}-01`
+          fechaFin = `${periodo}-15`
+          diasPeriodo = 15
+        } else {
+          fechaInicio = `${periodo}-16`
+          fechaFin = `${periodo}-${ultimoDia}`
+          diasPeriodo = ultimoDia - 15
+        }
+      }
+    }
+    
+    // IMPORTANTE: Las deducciones se aplican SOLO UNA VEZ al mes (en Q2) o siempre en mensual
+    // Q1 (biweekly): solo salario bruto proporcional por días trabajados
+    // Q2 (biweekly) o mensual: salario bruto proporcional + deducciones mensuales completas
+    const aplicarDeducciones = paymentFrequency === 'monthly' || quincena === 2
 
     console.log('Generando nómina:', {
       periodo,
@@ -255,40 +320,60 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         record.check_in && 
         record.check_out)
       
-      // CALCULAR DÍAS TRABAJADOS EN LA QUINCENA ACTUAL
-      const diasQuincena = quincena === 1 ? 15 : ultimoDia - 15
       const days_worked = registros.length
-      const days_absent = diasQuincena - days_worked
+      const days_absent = diasPeriodo - days_worked
       const late_days = calcularTardanzas(registros)
       
       const base_salary = Number(emp.base_salary) || 0
       
-      // CALCULAR SALARIO PROPORCIONAL POR DÍAS TRABAJADOS EN LA QUINCENA
-      const salarioProporcional = (base_salary / 30) * days_worked
-      const total_earnings = salarioProporcional
+      // CALCULAR SALARIO SEGÚN payment_frequency
+      let total_earnings = 0
+      if (paymentFrequency === 'monthly') {
+        // Nómina mensual: usar salario completo proporcional a días trabajados
+        total_earnings = (base_salary / ultimoDia) * days_worked
+      } else {
+        // Nómina quincenal (biweekly): dividir salario mensual / 2 y ajustar por días trabajados
+        const salarioQuincenal = base_salary / 2
+        total_earnings = salarioQuincenal * (days_worked / diasPeriodo)
+      }
       
       let IHSS = 0, RAP = 0, ISR = 0, total_deductions = 0, total = 0
       let notes_on_ingress = ''
       let notes_on_deductions = ''
 
-      // APLICAR DEDUCCIONES SOLO UNA VEZ AL MES (en Q2)
+      // APLICAR DEDUCCIONES según configuración y legal_deductions
       if (aplicarDeducciones) {
         // CÁLCULOS CORRECTOS 2025 - DEDUCCIONES MENSUALES COMPLETAS
-        IHSS = calcularIHSS(base_salary)  // Deducción mensual completa
-        RAP = calcularRAP(base_salary)    // Deducción mensual completa
-        ISR = calcularISR(base_salary)    // Deducción mensual completa
+        // Aplicar solo si están habilitadas en legal_deductions
+        if (legalDeductions.ihss) {
+          IHSS = calcularIHSS(base_salary)  // Deducción mensual completa
+        }
+        
+        if (legalDeductions.rap) {
+          RAP = calcularRAP(base_salary)    // Deducción mensual completa
+        }
+        
+        if (legalDeductions.isr) {
+          ISR = calcularISR(base_salary)    // Deducción mensual completa
+        }
+        
         total_deductions = IHSS + RAP + ISR
         total = total_earnings - total_deductions
         
-        notes_on_deductions = `Deducciones mensuales completas aplicadas en Q2: IHSS L.${IHSS.toFixed(2)}, RAP L.${RAP.toFixed(2)}, ISR L.${ISR.toFixed(2)}`
+        const deduccionesAplicadas = []
+        if (legalDeductions.ihss) deduccionesAplicadas.push(`IHSS L.${IHSS.toFixed(2)}`)
+        if (legalDeductions.rap) deduccionesAplicadas.push(`RAP L.${RAP.toFixed(2)}`)
+        if (legalDeductions.isr) deduccionesAplicadas.push(`ISR L.${ISR.toFixed(2)}`)
+        
+        notes_on_deductions = `Deducciones mensuales completas: ${deduccionesAplicadas.join(', ')}`
       } else {
-        // Q1: solo salario proporcional, sin deducciones
+        // Q1 (biweekly): solo salario proporcional, sin deducciones
         total = total_earnings
         notes_on_deductions = 'Primera quincena: solo salario proporcional (deducciones se aplican en Q2)'
       }
 
       // Notas automáticas
-      if (days_worked < (quincena === 1 ? 15 : ultimoDia - 15)) {
+      if (days_worked < diasPeriodo) {
         notes_on_ingress = `Faltaron ${days_absent} días de asistencia completa.`
       }
       
