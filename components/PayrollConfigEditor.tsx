@@ -4,6 +4,7 @@ import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Textarea } from './ui/textarea'
 import { Badge } from './ui/badge'
+import { ConfirmationDialog } from './ui/confirmation-dialog'
 import { 
   Settings, 
   Plus, 
@@ -128,6 +129,8 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     legalDeductions: false, // Retraída por defecto
     paymentCutDates: false // Retraída por defecto
   })
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  const [confirmAction, setConfirmAction] = useState('')
 
   // Load current configuration
   useEffect(() => {
@@ -245,28 +248,34 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     }
   }
 
-  const handleSave = async () => {
+  const handleSaveClick = () => {
+    // Validar fechas de corte según el tipo de pago
+    if (config.payment_frequency === 'biweekly') {
+      if (!config.payment_cut_dates.biweekly_first_start || !config.payment_cut_dates.biweekly_first_end ||
+          !config.payment_cut_dates.biweekly_second_start || !config.payment_cut_dates.biweekly_second_end) {
+        setError('Las fechas de corte para pago quincenal son requeridas')
+        return
+      }
+    } else if (config.payment_frequency === 'monthly') {
+      if (!config.payment_cut_dates.monthly_start || !config.payment_cut_dates.monthly_end) {
+        setError('Las fechas de corte para pago mensual son requeridas')
+        return
+      }
+    }
+
+    // Obtener descripción de cambios y mostrar dialog de confirmación
+    const { action, description } = getChangesDescription()
+    setConfirmAction(action)
+    setShowConfirmDialog(true)
+  }
+
+  const handleConfirmSave = async () => {
+    setShowConfirmDialog(false)
     setSaving(true)
     setError(null)
     setSuccess(false)
 
     try {
-      // Validar fechas de corte según el tipo de pago
-      if (config.payment_frequency === 'biweekly') {
-        if (!config.payment_cut_dates.biweekly_first_start || !config.payment_cut_dates.biweekly_first_end ||
-            !config.payment_cut_dates.biweekly_second_start || !config.payment_cut_dates.biweekly_second_end) {
-          setError('Las fechas de corte para pago quincenal son requeridas')
-          setSaving(false)
-          return
-        }
-      } else if (config.payment_frequency === 'monthly') {
-        if (!config.payment_cut_dates.monthly_start || !config.payment_cut_dates.monthly_end) {
-          setError('Las fechas de corte para pago mensual son requeridas')
-          setSaving(false)
-          return
-        }
-      }
-
       const response = await fetch('/api/payroll/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -396,6 +405,78 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     if (fieldsStr !== initialFieldsStr) return true
     
     return false
+  }
+
+  // Función para detectar qué cambios se están haciendo y generar mensaje de confirmación
+  const getChangesDescription = (): { action: string, description: string } => {
+    if (!initialConfig) {
+      return { action: 'guardar configuración', description: 'Está guardando la configuración inicial de payroll' }
+    }
+
+    const changes: string[] = []
+    
+    // Detectar cambios específicos
+    if (config.payment_frequency !== initialConfig.payment_frequency) {
+      const oldFreq = initialConfig.payment_frequency === 'biweekly' ? 'quincenal' : 'mensual'
+      const newFreq = config.payment_frequency === 'biweekly' ? 'quincenal' : 'mensual'
+      changes.push(`frecuencia de pago de ${oldFreq} a ${newFreq}`)
+    }
+    
+    if (config.currency !== initialConfig.currency) {
+      const oldCurr = initialConfig.currency === 'HNL' ? 'Lempiras' : 'Dólares'
+      const newCurr = config.currency === 'HNL' ? 'Lempiras' : 'Dólares'
+      changes.push(`moneda de ${oldCurr} a ${newCurr}`)
+    }
+    
+    const deductionsStr = JSON.stringify(config.legal_deductions)
+    const initialDeductionsStr = JSON.stringify(initialConfig.legal_deductions)
+    if (deductionsStr !== initialDeductionsStr) {
+      changes.push('deducciones legales')
+    }
+    
+    const cutDatesStr = JSON.stringify(config.payment_cut_dates)
+    const initialCutDatesStr = JSON.stringify(initialConfig.payment_cut_dates)
+    if (cutDatesStr !== initialCutDatesStr) {
+      changes.push('fechas de corte de pago')
+    }
+    
+    if (config.calculation_script !== initialConfig.calculation_script) {
+      changes.push('script de cálculo')
+    }
+    
+    const configStr = JSON.stringify(config.calculation_config)
+    const initialStr = JSON.stringify(initialConfig.calculation_config)
+    if (configStr !== initialStr) {
+      changes.push('configuración de cálculo')
+    }
+    
+    const fieldsStr = JSON.stringify(config.custom_fields)
+    const initialFieldsStr = JSON.stringify(initialConfig.custom_fields)
+    if (fieldsStr !== initialFieldsStr) {
+      const oldFieldsCount = Object.keys(initialConfig.custom_fields).length
+      const newFieldsCount = Object.keys(config.custom_fields).length
+      if (newFieldsCount > oldFieldsCount) {
+        changes.push(`campos personalizados (agregado${newFieldsCount - oldFieldsCount > 1 ? 's' : ''} ${newFieldsCount - oldFieldsCount} campo${newFieldsCount - oldFieldsCount > 1 ? 's' : ''})`)
+      } else if (newFieldsCount < oldFieldsCount) {
+        changes.push(`campos personalizados (eliminado${oldFieldsCount - newFieldsCount > 1 ? 's' : ''} ${oldFieldsCount - newFieldsCount} campo${oldFieldsCount - newFieldsCount > 1 ? 's' : ''})`)
+      } else {
+        changes.push('campos personalizados')
+      }
+    }
+
+    if (changes.length === 0) {
+      return { action: 'guardar configuración', description: 'No se detectaron cambios' }
+    }
+
+    const actionText = changes.length === 1 
+      ? `modificar ${changes[0]}`
+      : `modificar ${changes.length} configuraciones`
+
+    const descriptionText = changes.length === 1
+      ? `Está modificando ${changes[0]}. Esta acción afectará los cálculos de nómina futuros.`
+      : `Está modificando las siguientes configuraciones: ${changes.join(', ')}. Esta acción afectará los cálculos de nómina futuros.`
+
+    return { action: actionText, description: descriptionText }
   }
 
   // Función para cancelar cambios y restaurar configuración inicial
@@ -1415,7 +1496,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                 Cancelar
               </Button>
               <Button
-                onClick={handleSave}
+                onClick={handleSaveClick}
                 disabled={saving}
                 className="bg-brand-600 hover:bg-brand-700 text-white font-medium"
               >
@@ -1435,6 +1516,19 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
           </div>
         </Card>
       )}
+
+      {/* Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={showConfirmDialog}
+        onClose={() => setShowConfirmDialog(false)}
+        onConfirm={handleConfirmSave}
+        title="Confirmar Cambios en Configuración de Payroll"
+        description={getChangesDescription().description}
+        confirmText={confirmAction}
+        confirmLabel="Confirmar Cambios"
+        type="warning"
+        loading={saving}
+      />
     </div>
   )
 }
