@@ -81,7 +81,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         let customDeductions = 0
         let deductionsNotes = ''
         
-        if (line.metadata) {
+        if (line.metadata && companyId) {
           const calcResult = await calculatePayroll(
             companyId,
             Number(line.eff_bruto) || 0,
@@ -149,21 +149,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq('id', companyId)
       .single()
 
-    // Get custom fields configuration for PDF columns
-    const customFieldsConfig = await getCustomFields(companyId, supabase)
-    
-    // Get full config from DB to get category information
+    // Get custom fields configuration for PDF columns (validar companyId no sea null)
     let pdfCustomFieldsConfig: Record<string, any> | undefined = undefined
-    if (customFieldsConfig) {
-      const { data: payrollConfig } = await supabase
-        .from('company_payroll_configs')
-        .select('custom_fields')
-        .eq('company_id', companyId)
-        .eq('is_active', true)
-        .single()
+    if (companyId) {
+      const customFieldsConfig = await getCustomFields(companyId, supabase)
       
-      if (payrollConfig?.custom_fields) {
-        pdfCustomFieldsConfig = payrollConfig.custom_fields as Record<string, any>
+      // Get full config from DB to get category information
+      if (customFieldsConfig) {
+        const { data: payrollConfig } = await supabase
+          .from('company_payroll_configs')
+          .select('custom_fields')
+          .eq('company_id', companyId)
+          .eq('is_active', true)
+          .single()
+        
+        if (payrollConfig?.custom_fields) {
+          pdfCustomFieldsConfig = payrollConfig.custom_fields as Record<string, any>
+        }
       }
     }
 

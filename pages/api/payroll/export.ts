@@ -88,21 +88,23 @@ async function payrollExportHandler(req: NextApiRequest, res: NextApiResponse) {
     console.log(`Exportando ${payrollLines.length} líneas de nómina para ${periodo}`)
 
     if (formato === 'excel') {
-      // Get custom fields configuration
-      const customFieldsConfig = await getCustomFields(companyId, supabase)
-      
-      // Get full config from DB to get category information
+      // Get custom fields configuration (validar companyId no sea null)
       let pdfCustomFieldsConfig: Record<string, any> | undefined = undefined
-      if (customFieldsConfig) {
-        const { data: payrollConfig } = await supabase
-          .from('company_payroll_configs')
-          .select('custom_fields')
-          .eq('company_id', companyId)
-          .eq('is_active', true)
-          .single()
+      if (companyId) {
+        const customFieldsConfig = await getCustomFields(companyId, supabase)
         
-        if (payrollConfig?.custom_fields) {
-          pdfCustomFieldsConfig = payrollConfig.custom_fields as Record<string, any>
+        // Get full config from DB to get category information
+        if (customFieldsConfig) {
+          const { data: payrollConfig } = await supabase
+            .from('company_payroll_configs')
+            .select('custom_fields')
+            .eq('company_id', companyId)
+            .eq('is_active', true)
+            .single()
+          
+          if (payrollConfig?.custom_fields) {
+            pdfCustomFieldsConfig = payrollConfig.custom_fields as Record<string, any>
+          }
         }
       }
       
