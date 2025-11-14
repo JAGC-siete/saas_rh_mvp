@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { generateConsolidatedPayrollPDF, type PlanillaItem } from '../../../lib/payroll/report'
+import { getCustomFields } from '../../../lib/payroll-client-specific'
+import { calculatePayroll } from '../../../lib/payroll-client-specific'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (!['POST', 'GET'].includes(req.method || '')) {
@@ -28,66 +30,118 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const [year, month] = periodo.split('-').map(Number)
-    const ultimoDia = new Date(year, month, 0).getDate()
-    const fechaInicio = Number(quincena) === 1 ? `${periodo}-01` : `${periodo}-16`
-    const fechaFin = Number(quincena) === 1 ? `${periodo}-15` : `${periodo}-${ultimoDia}`
 
-    // Obtener registros de nómina persistidos para el período y quincena
-    const { data: payrollRecords, error: payrollError } = await supabase
-      .from('payroll_records')
+    // MIGRADO: Usar payroll_run_lines en lugar de payroll_records
+    // Get payroll run for this period and quincena
+    const { data: payrollRun, error: runError } = await supabase
+      .from('payroll_runs')
+      .select('id')
+      .eq('company_id', companyId)
+      .eq('year', year)
+      .eq('month', month)
+      .eq('quincena', Number(quincena))
+      .single()
+
+    if (runError || !payrollRun) {
+      return res.status(404).json({ error: 'No hay corrida de nómina para el período indicado' })
+    }
+
+    // Get payroll lines with employee data
+    const { data: payrollLines, error: linesError } = await supabase
+      .from('payroll_run_lines')
       .select(`
         *,
-        employees:employee_id (
+        employees!payroll_run_lines_employee_id_fkey(
           name,
+          dni,
           employee_code,
-          department,
-          position,
+          base_salary,
           bank_name,
           bank_account,
-          company_id
+          departments!employees_department_id_fkey(name)
         )
       `)
-      .eq('period_start', fechaInicio)
-      .eq('period_end', fechaFin)
+      .eq('run_id', payrollRun.id)
+      .eq('company_id', companyId)
       .order('created_at', { ascending: false })
 
-    if (payrollError) {
-      console.error('Error obteniendo registros de nómina:', payrollError)
-      return res.status(500).json({ error: 'Error obteniendo registros de nómina' })
+    if (linesError) {
+      console.error('Error obteniendo líneas de nómina:', linesError)
+      return res.status(500).json({ error: 'Error obteniendo líneas de nómina' })
     }
 
-    if (!payrollRecords || payrollRecords.length === 0) {
-      return res.status(404).json({ error: 'No hay registros de nómina para el período indicado' })
+    if (!payrollLines || payrollLines.length === 0) {
+      return res.status(404).json({ error: 'No hay líneas de nómina para el período indicado' })
     }
 
-    // Si el usuario pertenece a una empresa, validar que los registros correspondan
-    if (companyId) {
-      const anyOtherCompany = payrollRecords.some((r: any) => (r.employees?.company_id || null) !== companyId)
-      if (anyOtherCompany) {
-        return res.status(403).json({ error: 'No autorizado para acceder a registros de otra empresa' })
-      }
-    }
+    // Mapear a estructura de PlanillaItem con campos personalizados
+    const planilla: PlanillaItem[] = await Promise.all(
+      payrollLines.map(async (line: any) => {
+        // Calculate custom deductions from metadata
+        let customDeductions = 0
+        let deductionsNotes = ''
+        
+        if (line.metadata) {
+          const calcResult = await calculatePayroll(
+            companyId,
+            Number(line.eff_bruto) || 0,
+            line.metadata,
+            supabase
+          )
+          
+          customDeductions = calcResult.totalDeduccionesAdicionales
+          
+          // Build notes for custom deductions
+          const deductionFields = [
+            { key: 'comedor', label: 'Comedor' },
+            { key: 'cooperativa_aportaciones', label: 'Coop. Aportaciones' },
+            { key: 'cooperativa_retirable', label: 'Coop. Retirable' },
+            { key: 'cooperativa_prestamo', label: 'Coop. Préstamo' },
+            { key: 'embargo_alimentos', label: 'Embargo' },
+            { key: 'prestamo_banrural', label: 'Préstamo BANRURAL' },
+            { key: 'prestamo_celular', label: 'Préstamo Celular' },
+            { key: 'anticipo_prestamo', label: 'Anticipo/Préstamo' },
+            { key: 'impuesto_vecinal', label: 'Impuesto Vecinal' }
+          ]
+          
+          const deductionItems: string[] = []
+          for (const field of deductionFields) {
+            const value = parseFloat(line.metadata[field.key] || '0')
+            if (value > 0) {
+              deductionItems.push(`${field.label}: L. ${value.toFixed(2)}`)
+            }
+          }
+          
+          if (deductionItems.length > 0) {
+            deductionsNotes = deductionItems.join('; ')
+          }
+        }
 
-    // Mapear a estructura de PlanillaItem
-    const planilla: PlanillaItem[] = payrollRecords.map((r: any) => ({
-      id: r.employees?.employee_code || '',
-      name: r.employees?.name || '',
-      bank: r.employees?.bank_name || '',
-      bank_account: r.employees?.bank_account || '',
-      department: r.employees?.department || 'Sin Departamento',
-      monthly_salary: Number(r.base_salary) || 0,
-      days_worked: Number(r.days_worked) || 0,
-      days_absent: Number(r.days_absent) || 0,
-      late_days: Number(r.late_days) || 0,
-      total_earnings: Number(r.gross_salary) || 0,
-      IHSS: Number(r.social_security) || 0,
-      RAP: Number(r.professional_tax) || 0,
-      ISR: Number(r.income_tax) || 0,
-      total_deductions: Number(r.total_deductions) || 0,
-      total: Number(r.net_salary) || 0,
-      notes_on_ingress: r.notes_on_ingress || '',
-      notes_on_deductions: r.notes_on_deductions || ''
-    }))
+        const statutoryDeductions = (Number(line.eff_ihss) || 0) + (Number(line.eff_rap) || 0) + (Number(line.eff_isr) || 0)
+        const totalDeductions = statutoryDeductions + customDeductions
+
+        return {
+          id: line.employees?.dni || line.employees?.employee_code || '',
+          name: line.employees?.name || '',
+          bank: line.employees?.bank_name || 'No especificado',
+          bank_account: line.employees?.bank_account || 'No especificado',
+          department: line.employees?.departments?.name || 'Sin Departamento',
+          monthly_salary: Number(line.employees?.base_salary) || 0,
+          days_worked: (Number(line.eff_hours) || 0) / 8,
+          days_absent: 0,
+          late_days: 0,
+          total_earnings: Number(line.eff_bruto) || 0,
+          IHSS: Number(line.eff_ihss) || 0,
+          RAP: Number(line.eff_rap) || 0,
+          ISR: Number(line.eff_isr) || 0,
+          total_deductions: totalDeductions,
+          total: Number(line.eff_neto) || 0,
+          notes_on_ingress: line.edited ? 'Editado' : '',
+          notes_on_deductions: deductionsNotes,
+          metadata: line.metadata || {} // Include metadata for custom fields display
+        }
+      })
+    )
 
     const { data: company } = await supabase
       .from('companies')
@@ -95,7 +149,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq('id', companyId)
       .single()
 
-    const pdf = await generateConsolidatedPayrollPDF(planilla, periodo, Number(quincena), user.email, company?.name)
+    // Get custom fields configuration for PDF columns
+    const customFieldsConfig = await getCustomFields(companyId, supabase)
+    
+    // Get full config from DB to get category information
+    let pdfCustomFieldsConfig: Record<string, any> | undefined = undefined
+    if (customFieldsConfig) {
+      const { data: payrollConfig } = await supabase
+        .from('company_payroll_configs')
+        .select('custom_fields')
+        .eq('company_id', companyId)
+        .eq('is_active', true)
+        .single()
+      
+      if (payrollConfig?.custom_fields) {
+        pdfCustomFieldsConfig = payrollConfig.custom_fields as Record<string, any>
+      }
+    }
+
+    const pdf = await generateConsolidatedPayrollPDF(
+      planilla, 
+      periodo, 
+      Number(quincena), 
+      user.email, 
+      company?.name,
+      pdfCustomFieldsConfig
+    )
     res.setHeader('Content-Type', 'application/pdf')
     res.setHeader('Content-Disposition', `attachment; filename=planilla_${periodo}_q${quincena}.pdf`)
     return res.send(pdf)

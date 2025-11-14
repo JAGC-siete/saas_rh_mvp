@@ -1,8 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { validatePayrollExport, sanitizeFilename } from '../../../lib/security/payroll-validation'
-import { createSecurePayrollQueryBuilder } from '../../../lib/security/payroll-queries'
 import { withExportRateLimit } from '../../../lib/security/rate-limiting'
+import { getCustomFields } from '../../../lib/payroll-client-specific'
 
 // Usar exceljs para generar Excel (más seguro que xlsx)
 import ExcelJS from 'exceljs'
@@ -38,25 +38,75 @@ async function payrollExportHandler(req: NextApiRequest, res: NextApiResponse) {
 
     const { periodo, formato } = validation.data!
 
-    // USAR QUERY BUILDER SEGURO
-    const queryBuilder = createSecurePayrollQueryBuilder(supabase, { 
-      id: user.id, 
-      company_id: companyId, 
-      role: role 
-    } as any)
-    const payrollRecords = await queryBuilder.getPayrollRecords(validation.data!)
-
-    if (!payrollRecords || payrollRecords.length === 0) {
+    // MIGRADO: Usar payroll_run_lines en lugar de payroll_records
+    // Parse periodo to get year and month
+    const [year, month] = periodo.split('-').map(Number)
+    
+    // Get payroll runs for this period
+    const { data: payrollRuns, error: runsError } = await supabase
+      .from('payroll_runs')
+      .select('id')
+      .eq('company_id', companyId)
+      .eq('year', year)
+      .eq('month', month)
+    
+    if (runsError || !payrollRuns || payrollRuns.length === 0) {
       return res.status(404).json({ 
         error: 'No hay registros',
-        message: 'No se encontraron registros de nómina para el período especificado'
+        message: 'No se encontraron corridas de nómina para el período especificado'
+      })
+    }
+    
+    const runIds = payrollRuns.map((run: any) => run.id)
+    
+    // Get payroll lines with employee data
+    const { data: payrollLines, error: linesError } = await supabase
+      .from('payroll_run_lines')
+      .select(`
+        *,
+        employees!payroll_run_lines_employee_id_fkey(
+          name,
+          dni,
+          employee_code,
+          base_salary,
+          bank_name,
+          bank_account,
+          departments!employees_department_id_fkey(name)
+        )
+      `)
+      .in('run_id', runIds)
+      .eq('company_id', companyId)
+      .order('created_at', { ascending: false })
+
+    if (linesError || !payrollLines || payrollLines.length === 0) {
+      return res.status(404).json({ 
+        error: 'No hay registros',
+        message: 'No se encontraron líneas de nómina para el período especificado'
       })
     }
 
-    console.log(`Exportando ${payrollRecords.length} registros de nómina para ${periodo}`)
+    console.log(`Exportando ${payrollLines.length} líneas de nómina para ${periodo}`)
 
     if (formato === 'excel') {
-      return exportToExcel(payrollRecords, periodo, res)
+      // Get custom fields configuration
+      const customFieldsConfig = await getCustomFields(companyId, supabase)
+      
+      // Get full config from DB to get category information
+      let pdfCustomFieldsConfig: Record<string, any> | undefined = undefined
+      if (customFieldsConfig) {
+        const { data: payrollConfig } = await supabase
+          .from('company_payroll_configs')
+          .select('custom_fields')
+          .eq('company_id', companyId)
+          .eq('is_active', true)
+          .single()
+        
+        if (payrollConfig?.custom_fields) {
+          pdfCustomFieldsConfig = payrollConfig.custom_fields as Record<string, any>
+        }
+      }
+      
+      return exportToExcel(payrollLines, periodo, res, pdfCustomFieldsConfig)
     } else if (formato === 'pdf') {
       return res.status(400).json({ error: 'El PDF consolidado ahora está en /api/payroll/report' })
     } else if (formato === 'recibo-individual') {
@@ -74,52 +124,104 @@ async function payrollExportHandler(req: NextApiRequest, res: NextApiResponse) {
   }
 }
 
-async function exportToExcel(payrollRecords: any[], periodo: string, res: NextApiResponse) {
+async function exportToExcel(
+  payrollLines: any[], 
+  periodo: string, 
+  res: NextApiResponse,
+  customFieldsConfig?: Record<string, any>
+) {
   try {
+    // Extract custom fields by category
+    const earningsFields: Array<{ name: string; label: string }> = []
+    const deductionsFields: Array<{ name: string; label: string }> = []
+    
+    if (customFieldsConfig) {
+      for (const [fieldName, fieldDef] of Object.entries(customFieldsConfig)) {
+        const def = typeof fieldDef === 'string' 
+          ? { label: fieldDef, category: 'earnings' as const, type: 'number' as const, required: false, default: 0 }
+          : fieldDef
+        
+        if (def.category === 'earnings') {
+          earningsFields.push({ name: fieldName, label: def.label || fieldName })
+        } else if (def.category === 'deductions') {
+          deductionsFields.push({ name: fieldName, label: def.label || fieldName })
+        }
+      }
+    }
+    
+    // Helper to get custom field value from metadata
+    const getCustomFieldValue = (line: any, fieldName: string): number => {
+      if (!line.metadata || !line.metadata[fieldName]) {
+        return 0
+      }
+      const value = line.metadata[fieldName]
+      if (typeof value === 'number') {
+        return value
+      } else if (typeof value === 'boolean') {
+        return value ? 1 : 0
+      }
+      return parseFloat(String(value)) || 0
+    }
+    
     // Preparar datos para Excel
-    const excelData = payrollRecords.map(record => ({
-      'Código': record.employees?.employee_code || '',
-      'Nombre': record.employees?.name || '',
-      'Departamento': record.employees?.department || '',
-      'Posición': record.employees?.position || '',
-      'Banco': record.employees?.bank_name || '',
-      'Cuenta': record.employees?.bank_account || '',
-      'Período Inicio': new Date(record.period_start).toLocaleDateString('es-HN'),
-      'Período Fin': new Date(record.period_end).toLocaleDateString('es-HN'),
-      'Salario Base': record.base_salary,
-      'Días Trabajados': record.days_worked,
-      'Días Ausente': record.days_absent || 0,
-      'Días Tardanza': record.late_days || 0,
-      'Salario Bruto': record.gross_salary,
-      'ISR': record.income_tax,
-      'IHSS': record.social_security,
-      'RAP': record.professional_tax,
-      'Total Deducciones': record.total_deductions,
-      'Salario Neto': record.net_salary,
-      'Estado': record.status,
-      'Notas Ingresos': record.notes_on_ingress || '',
-      'Notas Deducciones': record.notes_on_deductions || '',
-      'Generado': new Date(record.created_at).toLocaleDateString('es-HN')
-    }))
+    const excelData = payrollLines.map(line => {
+      const baseData: Record<string, any> = {
+        'Código': line.employees?.employee_code || line.employees?.dni || '',
+        'Nombre': line.employees?.name || '',
+        'Departamento': line.employees?.departments?.name || 'Sin Departamento',
+        'Banco': line.employees?.bank_name || '',
+        'Cuenta': line.employees?.bank_account || '',
+        'Salario Base': Number(line.employees?.base_salary) || 0,
+        'Horas Trabajadas': Number(line.eff_hours) || 0,
+        'Días Trabajados': (Number(line.eff_hours) || 0) / 8,
+        'Salario Bruto': Number(line.eff_bruto) || 0,
+        'ISR': Number(line.eff_isr) || 0,
+        'IHSS': Number(line.eff_ihss) || 0,
+        'RAP': Number(line.eff_rap) || 0,
+        'Salario Neto': Number(line.eff_neto) || 0,
+        'Editado': line.edited ? 'Sí' : 'No',
+        'Generado': new Date(line.created_at).toLocaleDateString('es-HN')
+      }
+      
+      // Add custom earnings fields
+      for (const field of earningsFields) {
+        baseData[field.label] = getCustomFieldValue(line, field.name)
+      }
+      
+      // Add custom deductions fields
+      for (const field of deductionsFields) {
+        baseData[field.label] = getCustomFieldValue(line, field.name)
+      }
+      
+      // Calculate total deductions (statutory + custom)
+      const statutoryDeductions = (Number(line.eff_ihss) || 0) + 
+                                  (Number(line.eff_rap) || 0) + 
+                                  (Number(line.eff_isr) || 0)
+      const customDeductions = deductionsFields.reduce((sum, field) => 
+        sum + getCustomFieldValue(line, field.name), 0)
+      baseData['Total Deducciones'] = statutoryDeductions + customDeductions
+      
+      return baseData
+    })
 
     // Preparar datos de resumen
-    const totalBruto = payrollRecords.reduce((sum, r) => sum + r.gross_salary, 0)
-    const totalDeducciones = payrollRecords.reduce((sum, r) => sum + r.total_deductions, 0)
-    const totalNeto = payrollRecords.reduce((sum, r) => sum + r.net_salary, 0)
-    const totalEmpleados = payrollRecords.length
+    const totalBruto = excelData.reduce((sum, r) => sum + (r['Salario Bruto'] || 0), 0)
+    const totalDeducciones = excelData.reduce((sum, r) => sum + (r['Total Deducciones'] || 0), 0)
+    const totalNeto = excelData.reduce((sum, r) => sum + (r['Salario Neto'] || 0), 0)
+    const totalEmpleados = excelData.length
 
     const resumenData = [
       { 'Concepto': 'Total Empleados', 'Valor': totalEmpleados },
       { 'Concepto': 'Total Salario Bruto', 'Valor': totalBruto },
       { 'Concepto': 'Total Deducciones', 'Valor': totalDeducciones },
       { 'Concepto': 'Total Salario Neto', 'Valor': totalNeto },
-      { 'Concepto': 'Promedio Salario Neto', 'Valor': totalNeto / totalEmpleados }
+      { 'Concepto': 'Promedio Salario Neto', 'Valor': totalEmpleados > 0 ? totalNeto / totalEmpleados : 0 }
     ]
 
     // Preparar datos por departamento
     const deptData: { [key: string]: any } = {}
-    payrollRecords.forEach(record => {
-      const dept = record.employees?.department || 'Sin Departamento'
+    excelData.forEach(row => {
+      const dept = row['Departamento'] || 'Sin Departamento'
       if (!deptData[dept]) {
         deptData[dept] = {
           empleados: 0,
@@ -129,9 +231,9 @@ async function exportToExcel(payrollRecords: any[], periodo: string, res: NextAp
         }
       }
       deptData[dept].empleados++
-      deptData[dept].totalBruto += record.gross_salary
-      deptData[dept].totalDeducciones += record.total_deductions
-      deptData[dept].totalNeto += record.net_salary
+      deptData[dept].totalBruto += row['Salario Bruto'] || 0
+      deptData[dept].totalDeducciones += row['Total Deducciones'] || 0
+      deptData[dept].totalNeto += row['Salario Neto'] || 0
     })
 
     const deptSheetData = Object.entries(deptData).map(([dept, data]: [string, any]) => ({
@@ -147,31 +249,45 @@ async function exportToExcel(payrollRecords: any[], periodo: string, res: NextAp
     const workbook = new ExcelJS.Workbook()
     const worksheet = workbook.addWorksheet('Nómina')
     
-    // Agregar datos a la hoja principal
-    worksheet.columns = [
+    // Build column definitions dynamically
+    const columnDefs: Array<{ header: string; key: string; width: number }> = [
       { header: 'Código', key: 'Código', width: 12 },
       { header: 'Nombre', key: 'Nombre', width: 25 },
-      { header: 'Departamento', key: 'Departamento', width: 15 },
-      { header: 'Posición', key: 'Posición', width: 20 },
+      { header: 'Departamento', key: 'Departamento', width: 20 },
       { header: 'Banco', key: 'Banco', width: 15 },
       { header: 'Cuenta', key: 'Cuenta', width: 20 },
-      { header: 'Período Inicio', key: 'Período Inicio', width: 12 },
-      { header: 'Período Fin', key: 'Período Fin', width: 12 },
       { header: 'Salario Base', key: 'Salario Base', width: 12 },
-      { header: 'Días Trabajados', key: 'Días Trabajados', width: 12 },
-      { header: 'Días Ausente', key: 'Días Ausente', width: 12 },
-      { header: 'Días Tardanza', key: 'Días Tardanza', width: 12 },
+      { header: 'Horas Trabajadas', key: 'Horas Trabajadas', width: 12 },
+      { header: 'Días Trabajados', key: 'Días Trabajados', width: 12 }
+    ]
+    
+    // Add custom earnings columns
+    for (const field of earningsFields) {
+      columnDefs.push({ header: field.label, key: field.label, width: 15 })
+    }
+    
+    // Add standard columns
+    columnDefs.push(
       { header: 'Salario Bruto', key: 'Salario Bruto', width: 12 },
       { header: 'ISR', key: 'ISR', width: 10 },
       { header: 'IHSS', key: 'IHSS', width: 10 },
-      { header: 'RAP', key: 'RAP', width: 10 },
+      { header: 'RAP', key: 'RAP', width: 10 }
+    )
+    
+    // Add custom deductions columns
+    for (const field of deductionsFields) {
+      columnDefs.push({ header: field.label, key: field.label, width: 15 })
+    }
+    
+    // Add final columns
+    columnDefs.push(
       { header: 'Total Deducciones', key: 'Total Deducciones', width: 15 },
       { header: 'Salario Neto', key: 'Salario Neto', width: 12 },
-      { header: 'Estado', key: 'Estado', width: 10 },
-      { header: 'Notas Ingresos', key: 'Notas Ingresos', width: 30 },
-      { header: 'Notas Deducciones', key: 'Notas Deducciones', width: 30 },
+      { header: 'Editado', key: 'Editado', width: 10 },
       { header: 'Generado', key: 'Generado', width: 12 }
-    ]
+    )
+    
+    worksheet.columns = columnDefs
 
     // Agregar datos
     excelData.forEach(row => {

@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { generateConsolidatedPayrollPDF, type PlanillaItem } from '../../../lib/payroll/report'
 import { withExportRateLimit } from '../../../lib/security/rate-limiting'
-import { calculatePayroll } from '../../../lib/payroll-client-specific'
+import { calculatePayroll, getCustomFields } from '../../../lib/payroll-client-specific'
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -137,7 +137,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         total_deductions: totalDeductions,
         total: Number(line.eff_neto) || 0, // NETO EFECTIVO con deducciones personalizadas
         notes_on_ingress: line.edited ? 'Editado' : '',
-        notes_on_deductions: deductionsNotes
+        notes_on_deductions: deductionsNotes,
+        metadata: line.metadata || {} // Include metadata for custom fields display
       }
       })
     )
@@ -150,7 +151,47 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .eq('id', companyId)
       .single()
 
-    const pdf = await generateConsolidatedPayrollPDF(planilla, periodo, payrollRun.quincena, user.email, company?.name)
+    // Get custom fields configuration for PDF columns
+    const customFieldsConfig = await getCustomFields(companyId, supabase)
+    
+    // Convert simple custom fields format to config format needed by PDF generator
+    // If custom fields come from DB, they might be in the full format already
+    let pdfCustomFieldsConfig: Record<string, any> | undefined = undefined
+    if (customFieldsConfig) {
+      // Try to get full config from DB to get category information
+      const { data: payrollConfig } = await supabase
+        .from('company_payroll_configs')
+        .select('custom_fields')
+        .eq('company_id', companyId)
+        .eq('is_active', true)
+        .single()
+      
+      if (payrollConfig?.custom_fields) {
+        pdfCustomFieldsConfig = payrollConfig.custom_fields as Record<string, any>
+      } else {
+        // Fallback: use simple format and assume all are earnings (conservative)
+        // Better to have them show than not at all
+        pdfCustomFieldsConfig = {}
+        for (const [fieldName, label] of Object.entries(customFieldsConfig)) {
+          pdfCustomFieldsConfig[fieldName] = {
+            label: typeof label === 'string' ? label : fieldName,
+            type: 'number',
+            category: 'earnings', // Default to earnings if unknown
+            required: false,
+            default: 0
+          }
+        }
+      }
+    }
+
+    const pdf = await generateConsolidatedPayrollPDF(
+      planilla, 
+      periodo, 
+      payrollRun.quincena, 
+      user.email, 
+      company?.name,
+      pdfCustomFieldsConfig
+    )
     
     res.setHeader('Content-Type', 'application/pdf')
     res.setHeader('Content-Disposition', `attachment; filename=planilla_${periodo}_q${payrollRun.quincena}.pdf`)

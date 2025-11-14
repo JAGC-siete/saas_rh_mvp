@@ -21,18 +21,33 @@ export interface PlanillaItem {
   total: number
   notes_on_ingress?: string
   notes_on_deductions?: string
+  metadata?: Record<string, any> // Custom fields metadata
+}
+
+/**
+ * Custom field definition from payroll config
+ */
+interface CustomFieldDef {
+  label: string
+  type: 'number' | 'string' | 'boolean'
+  category: 'earnings' | 'deductions'
+  required: boolean
+  default: any
 }
 
 /**
  * Generates a consolidated payroll PDF (3 pages: executive summary, payroll table, bank details)
  * Returns a Buffer that can be sent as application/pdf
+ * 
+ * NEW: Supports dynamic columns for custom fields based on payroll configuration
  */
 export async function generateConsolidatedPayrollPDF(
   planilla: PlanillaItem[],
   periodo: string,
   quincena: number,
   generatedByEmail?: string,
-  companyName?: string
+  companyName?: string,
+  customFieldsConfig?: Record<string, CustomFieldDef | string>
 ): Promise<Buffer> {
   return new Promise<Buffer>((resolve, reject) => {
     try {
@@ -120,21 +135,96 @@ export async function generateConsolidatedPayrollPDF(
       const tablePageWidth = doc.page.width
       doc.fontSize(14).fillColor('#0f172a').text('DETALLE DE NÓMINA POR EMPLEADO', 30, 24, { align: 'center', width: tablePageWidth - 60 })
 
-      const headers = ['Código', 'Nombre', 'Departamento', 'Días Trab.', 'Salario Base', 'Devengado', 'IHSS', 'RAP', 'ISR', 'Deducciones', 'Neto']
-      const colWidths = [78, 110, 82, 49, 73, 73, 51, 49, 51, 73, 73]
+      // Build dynamic headers based on custom fields config
+      const baseHeaders = ['Código', 'Nombre', 'Departamento', 'Días Trab.', 'Salario Base']
+      const earningsHeaders: string[] = []
+      const deductionsHeaders: string[] = []
+      const standardDeductionsHeaders = ['IHSS', 'RAP', 'ISR']
+      const finalHeaders = ['Devengado', 'Deducciones', 'Neto']
+      
+      // Extract custom fields by category
+      if (customFieldsConfig) {
+        for (const [fieldName, fieldDef] of Object.entries(customFieldsConfig)) {
+          const def = typeof fieldDef === 'string' 
+            ? { label: fieldDef, category: 'earnings' as const, type: 'number' as const, required: false, default: 0 }
+            : fieldDef
+          
+          if (def.category === 'earnings') {
+            earningsHeaders.push(def.label || fieldName)
+          } else if (def.category === 'deductions') {
+            deductionsHeaders.push(def.label || fieldName)
+          }
+        }
+      }
+      
+      // Combine all headers
+      const allHeaders = [
+        ...baseHeaders,
+        ...earningsHeaders,
+        ...finalHeaders.slice(0, 1), // Devengado
+        ...standardDeductionsHeaders,
+        ...deductionsHeaders,
+        ...finalHeaders.slice(1) // Deducciones, Neto
+      ]
+      
+      // Calculate column widths dynamically
+      // Base widths: [78, 110, 82, 49, 73] for base headers
+      // Custom field columns: 60 each (can be adjusted)
+      const baseColWidths = [78, 110, 82, 49, 73]
+      const customFieldWidth = 60
+      const earningsColWidths = earningsHeaders.map(() => customFieldWidth)
+      const devengadoWidth = 73
+      const standardDeductionsWidths = [51, 49, 51]
+      const deductionsColWidths = deductionsHeaders.map(() => customFieldWidth)
+      const finalColWidths = [73, 73] // Deducciones, Neto
+      
+      const colWidths = [
+        ...baseColWidths,
+        ...earningsColWidths,
+        devengadoWidth,
+        ...standardDeductionsWidths,
+        ...deductionsColWidths,
+        ...finalColWidths
+      ]
+      
+      // Adjust widths if table is too wide (fit to page width - margins)
+      const totalWidth = colWidths.reduce((a, b) => a + b, 0)
+      const availableWidth = tablePageWidth - 80 // margins
+      if (totalWidth > availableWidth) {
+        const scaleFactor = availableWidth / totalWidth
+        for (let i = 0; i < colWidths.length; i++) {
+          colWidths[i] = Math.floor(colWidths[i] * scaleFactor)
+        }
+      }
+
       const startX = 40
       let y = 60
       const rowHeight = 17
 
-      headers.forEach((h, i) => {
+      // Draw headers
+      allHeaders.forEach((h, i) => {
         const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0)
         doc.rect(x, y, colWidths[i], rowHeight).fillAndStroke('#0b4fa1', '#0f172a')
         doc.fillColor('white')
-        doc.fontSize(9).text(h, x + 2, y + 4, { width: colWidths[i] - 4, align: 'center' })
+        doc.fontSize(8).text(h, x + 2, y + 4, { width: colWidths[i] - 4, align: 'center' })
         doc.fillColor('#0f172a')
       })
       y += rowHeight
 
+      // Helper to get custom field value from metadata
+      const getCustomFieldValue = (row: PlanillaItem, fieldName: string): string => {
+        if (!row.metadata || !row.metadata[fieldName]) {
+          return formatHNL(0)
+        }
+        const value = row.metadata[fieldName]
+        if (typeof value === 'number') {
+          return formatHNL(value)
+        } else if (typeof value === 'boolean') {
+          return value ? 'Sí' : 'No'
+        }
+        return String(value || '')
+      }
+      
       let pageCount = 1
       planilla.forEach((row) => {
         if (y > doc.page.height - 60) {
@@ -142,24 +232,67 @@ export async function generateConsolidatedPayrollPDF(
           y = 40
           pageCount++
           doc.fontSize(10).fillColor('#475569').text(`Página ${pageCount} - Continuación`, 40, 20)
+          
+          // Redraw headers on new page
+          allHeaders.forEach((h, i) => {
+            const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0)
+            doc.rect(x, y, colWidths[i], rowHeight).fillAndStroke('#0b4fa1', '#0f172a')
+            doc.fillColor('white')
+            doc.fontSize(8).text(h, x + 2, y + 4, { width: colWidths[i] - 4, align: 'center' })
+            doc.fillColor('#0f172a')
+          })
+          y += rowHeight
         }
-        const values = [
+        
+        // Build values array with custom fields
+        const values: string[] = [
           row.id || '',
           row.name,
           row.department,
           row.days_worked.toString(),
-          formatHNL(row.monthly_salary),
-          formatHNL(row.total_earnings),
-          formatHNL(row.IHSS),
-          formatHNL(row.RAP),
-          formatHNL(row.ISR),
-          formatHNL(row.total_deductions),
-          formatHNL(row.total)
+          formatHNL(row.monthly_salary)
         ]
+        
+        // Add custom earnings fields
+        if (customFieldsConfig) {
+          for (const [fieldName, fieldDef] of Object.entries(customFieldsConfig)) {
+            const def = typeof fieldDef === 'string' 
+              ? { label: fieldDef, category: 'earnings' as const, type: 'number' as const, required: false, default: 0 }
+              : fieldDef
+            if (def.category === 'earnings') {
+              values.push(getCustomFieldValue(row, fieldName))
+            }
+          }
+        }
+        
+        // Add Devengado (total earnings)
+        values.push(formatHNL(row.total_earnings))
+        
+        // Add standard deductions
+        values.push(formatHNL(row.IHSS))
+        values.push(formatHNL(row.RAP))
+        values.push(formatHNL(row.ISR))
+        
+        // Add custom deductions fields
+        if (customFieldsConfig) {
+          for (const [fieldName, fieldDef] of Object.entries(customFieldsConfig)) {
+            const def = typeof fieldDef === 'string' 
+              ? { label: fieldDef, category: 'deductions' as const, type: 'number' as const, required: false, default: 0 }
+              : fieldDef
+            if (def.category === 'deductions') {
+              values.push(getCustomFieldValue(row, fieldName))
+            }
+          }
+        }
+        
+        // Add final columns
+        values.push(formatHNL(row.total_deductions))
+        values.push(formatHNL(row.total))
+        
         values.forEach((val, i) => {
           const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0)
           doc.rect(x, y, colWidths[i], rowHeight).stroke()
-          doc.fontSize(9).fillColor('#0f172a').text(val.toString(), x + 2, y + 4, { width: colWidths[i] - 4, align: 'center' })
+          doc.fontSize(8).fillColor('#0f172a').text(val.toString(), x + 2, y + 4, { width: colWidths[i] - 4, align: 'center' })
         })
         y += rowHeight
       })
