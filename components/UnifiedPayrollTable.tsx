@@ -171,14 +171,34 @@ export default function UnifiedPayrollTable({
     setExpandedRows(newExpanded)
   }
 
-  const getStatusBadge = (status: string) => {
-    const variants = {
+  // Función para mostrar el estado de la corrida (no el estado individual de la fila)
+  const getRunStatusBadge = (runStatus?: string) => {
+    // Si no hay estado de corrida, mostrar "Sin Estado"
+    if (!runStatus) {
+      return (
+        <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-500/30 text-gray-200 border border-gray-500/20">
+          Sin Estado
+        </span>
+      )
+    }
+
+    const variants: Record<string, string> = {
+      draft: 'bg-blue-500/30 text-blue-200 border border-blue-500/20',
+      edited: 'bg-yellow-500/30 text-yellow-200 border border-yellow-500/20',
+      authorized: 'bg-green-500/30 text-green-200 border border-green-500/20',
+      distributed: 'bg-purple-500/30 text-purple-200 border border-purple-500/20',
+      // Mantener compatibilidad con estados antiguos
       completo: 'bg-green-500/30 text-green-200 border border-green-500/20',
       sin_planilla: 'bg-yellow-500/30 text-yellow-200 border border-yellow-500/20',
       sin_asistencia: 'bg-orange-500/30 text-orange-200 border border-orange-500/20'
     }
     
-    const labels = {
+    const labels: Record<string, string> = {
+      draft: 'Borrador',
+      edited: 'Editado',
+      authorized: 'Autorizado',
+      distributed: 'Distribuido',
+      // Mantener compatibilidad con estados antiguos
       completo: 'Completo',
       sin_planilla: 'Sin Planilla',
       sin_asistencia: 'Sin Asistencia'
@@ -186,9 +206,9 @@ export default function UnifiedPayrollTable({
 
     return (
       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-        variants[status as keyof typeof variants] || variants.completo
+        variants[runStatus] || 'bg-gray-500/30 text-gray-200 border border-gray-500/20'
       }`}>
-        {labels[status as keyof typeof labels] || status}
+        {labels[runStatus] || runStatus}
       </span>
     )
   }
@@ -400,7 +420,7 @@ export default function UnifiedPayrollTable({
                         </div>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
-                        {getStatusBadge(row.status || 'completo')}
+                        {getRunStatusBadge(status)}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">
                         {formatCurrency(row.base_salary || 0)}
