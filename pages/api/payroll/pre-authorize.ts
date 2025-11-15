@@ -60,6 +60,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq('company_id', companyId)
 
     if (linesError) {
+      console.error('Error obteniendo líneas de nómina:', linesError)
       return res.status(500).json({ error: 'Error obteniendo líneas de nómina' })
     }
 
@@ -81,11 +82,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq('company_id', companyId)
 
     if (updateError) {
+      console.error('Error pre-autorizando corrida:', updateError)
       return res.status(500).json({ 
         error: 'Error pre-autorizando nómina',
         details: updateError.message
       })
     }
+
+    console.log('✅ Nómina pre-autorizada:', run_id)
 
     // Calculate summary
     const summary = {
@@ -106,6 +110,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
 
   } catch (error: any) {
+    console.error('Error en pre-autorización:', error)
     return res.status(500).json({ 
       error: 'Error interno del servidor',
       message: error?.message || 'Error desconocido'

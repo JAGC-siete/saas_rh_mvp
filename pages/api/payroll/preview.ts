@@ -16,7 +16,17 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       return res.status(400).json({ error: 'Company ID is required' })
     }
 
+    console.log('Usuario autenticado para preview de nómina:', { 
+      companyId: companyId 
+    })
+    
+    // DEBUG: Verificar qué company_id está usando
+    console.log('🔍 DEBUG - Company ID del usuario:', companyId)
+
     const { year, month, quincena, tipo } = req.query
+    
+    // DEBUG: Verificar parámetros recibidos
+    console.log('🔍 DEBUG - Parámetros recibidos:', { year, month, quincena, tipo })
     
     // Validaciones
     if (!year || !month || !quincena) {
@@ -135,13 +145,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .eq('tipo', tipoParam)
       .single()
 
-    // Existing run check (logs removed to prevent rate limiting)
+    console.log('🔍 DEBUG - Existing run check:', { existingRun, checkError })
 
     let runId: string
 
     if (existingRun) {
       // Si ya existe una corrida, verificar su estado y manejar según el caso
+      console.log('🔍 DEBUG - Existing run found:', { id: existingRun.id, status: existingRun.status })
+      
       if (existingRun.status === 'authorized') {
+        console.log('⚠️ WARNING - Regenerating preview for authorized run')
         // UPSERT LOGIC: En lugar de error, permitir regenerar con advertencia
         // Cambiar estado a 'draft' para permitir ediciones
         const { error: resetError } = await supabase
@@ -154,6 +167,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           .eq('company_id', companyId)
 
         if (resetError) {
+          console.error('Error resetting run status:', resetError)
           return res.status(500).json({ error: 'Error actualizando estado de corrida' })
         }
 
@@ -165,8 +179,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           .eq('company_id', companyId)
 
         if (deleteError) {
+          console.error('Error deleting existing lines:', deleteError)
           return res.status(500).json({ error: 'Error eliminando líneas existentes' })
         }
+
+        console.log('✅ Run reset to draft and lines cleared for regeneration')
       }
       
       runId = existingRun.id
@@ -186,12 +203,17 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         .select('id')
         .single()
 
+      console.log('🔍 DEBUG - New run creation:', { newRun, createError })
+
       if (createError) {
+        console.error('Error creando nueva corrida:', createError)
         return res.status(500).json({ error: 'Error creando nueva corrida de planilla' })
       }
 
       runId = newRun.id
     }
+
+    console.log('🔍 DEBUG - Final RunId:', runId, 'Type:', typeof runId)
 
     // Obtener empleados activos con información de departamento
     const { data: employees, error: empError } = await supabase
@@ -205,6 +227,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .order('name')
 
     if (empError) {
+      console.error('Error obteniendo empleados:', empError)
       return res.status(500).json({ error: 'Error obteniendo empleados' })
     }
 
@@ -214,6 +237,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         message: 'No se encontraron empleados activos para generar la nómina'
       })
     }
+    
+    // DEBUG: Verificar cuántos empleados se encontraron
+    console.log('🔍 DEBUG - Empleados encontrados:', employees.length)
+    console.log('🔍 DEBUG - Company ID usado:', companyId)
+    console.log('🔍 DEBUG - Primeros 3 empleados:', employees.slice(0, 3))
+    console.log('🔍 DEBUG - Primeros 3 empleados:', employees.slice(0, 3).map((emp: any) => ({
+      name: emp.name,
+      status: emp.status
+    })))
 
     // Obtener registros de asistencia del período
     const { data: attendanceRecords, error: attError } = await supabase
@@ -223,6 +255,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .lte('date', fechaFin)
 
     if (attError) {
+      console.error('Error obteniendo registros de asistencia:', attError)
       return res.status(500).json({ error: 'Error obteniendo registros de asistencia' })
     }
 
@@ -257,6 +290,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       })
     }
 
+    console.log(`Procesando preview de nómina para ${empleadosParaNomina.length} empleados`)
+    
+          // DEBUG: Verificar el filtro de asistencia
+      console.log('🔍 DEBUG - Tipo de nómina:', tipoParam)
+      console.log('🔍 DEBUG - Total registros de asistencia:', attendanceRecords.length)
+      console.log('🔍 DEBUG - Empleados después del filtro de asistencia:', empleadosParaNomina.length)
+      console.log('🔍 DEBUG - Lógica de deducciones: tipo=' + tipoParam + ' → deducciones=' + (tipoParam === 'CON' ? 'SÍ' : 'NO'))
 
     // Calcular planilla con CÁLCULOS CORRECTOS 2025
     const planilla: any[] = []
@@ -350,7 +390,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         })
         .select('id')
         .single()
-
+        
       if (lineError) {
         return res.status(500).json({ 
           error: 'Error insertando línea de nómina',
@@ -380,6 +420,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       })
     }
 
+    console.log(`Preview de nómina generado exitosamente para ${planilla.length} empleados`)
+    console.log('🔍 DEBUG - RunId generado:', runId)
+    console.log('🔍 DEBUG - Tipo procesado:', tipoParam)
+
     // Obtener el estado actual de la corrida
     const { data: currentRun, error: statusError } = await supabase
       .from('payroll_runs')
@@ -387,7 +431,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .eq('id', runId)
       .single()
 
+    if (statusError) {
+      console.error('Error obteniendo estado de corrida:', statusError)
+    }
+
     const currentStatus = currentRun?.status || 'draft'
+    console.log('🔍 DEBUG - Estado actual de la corrida:', { runId, status: currentStatus })
 
     // Determinar si es una regeneración
     const isRegeneration = existingRun && existingRun.status === 'authorized'

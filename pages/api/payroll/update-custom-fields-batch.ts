@@ -102,6 +102,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq('company_id', companyId)
 
     if (linesError) {
+      console.error('Error obteniendo líneas de nómina:', linesError)
       return res.status(500).json({
         error: 'Error obteniendo líneas de nómina',
         details: linesError.message
@@ -202,6 +203,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             }
           }
         } catch (error: unknown) {
+          console.error(`Error updating line ${update.run_line_id}:`, error)
           const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
           return {
             run_line_id: update.run_line_id,
@@ -249,6 +251,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
 
   } catch (error: any) {
+    console.error('❌ Error en update-custom-fields-batch:', error)
     return res.status(500).json({ 
       error: error?.message || 'Internal error',
       message: 'Error interno del servidor'
