@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { nowInHonduras } from '../../../lib/timezone'
-import { withReportsRateLimit } from '../../../lib/security/rate-limiting'
+import { withGeneralRateLimit } from '../../../lib/security/rate-limiting'
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -468,4 +468,4 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 }
 
-export default withReportsRateLimit(['GET'])(handler)
+export default withGeneralRateLimit(['GET'])(handler)

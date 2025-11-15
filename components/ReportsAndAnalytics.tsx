@@ -188,7 +188,8 @@ export default function ReportsAndAnalytics() {
       console.log('Refreshing dashboard for company:', companyId)
       fetchDashboardStats()
     }
-  }, [session, companyId, companyLoading, monthStart, monthEnd, fetchDashboardStats])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user, companyId, companyLoading])
 
   // Actualizar datos cuando cambie el rango de fechas
   // Tendencias removidas de este módulo

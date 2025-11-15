@@ -293,7 +293,8 @@ export const usePayrollManager = () => {
         toast.error('Error', 'No se pudieron cargar los datos del período actual', 5000)
       }
     }
-  }, [companyId, state.currentPeriod, state.filters, checkDraft, toast])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyId, state.currentPeriod.year, state.currentPeriod.month, state.currentPeriod.quincena, state.filters.tipo])
 
   // Legacy API Actions (for compatibility during migration)
   const generatePreview = useCallback(async () => {
@@ -627,7 +628,8 @@ export const usePayrollManager = () => {
     }
 
     loadData()
-  }, [state.hasLoadedInitialData, companyId, state.currentPeriod.year, state.currentPeriod.month, state.currentPeriod.quincena, state.filters.tipo, checkDraft, toast])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.hasLoadedInitialData, companyId, state.currentPeriod.year, state.currentPeriod.month, state.currentPeriod.quincena, state.filters.tipo])
 
   // Set unified data directly (for preview updates)
   const setUnifiedData = useCallback((data: { rows: UnifiedRow[]; resumen: UnifiedResumen }) => {
