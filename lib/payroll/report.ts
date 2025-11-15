@@ -47,20 +47,84 @@ export async function generateConsolidatedPayrollPDF(
   quincena: number,
   generatedByEmail?: string,
   companyName?: string,
-  customFieldsConfig?: Record<string, CustomFieldDef | string>
+  customFieldsConfig?: Record<string, CustomFieldDef | string>,
+  payrollConfig?: {
+    currency?: string
+    payment_frequency?: string
+    payment_cut_dates?: {
+      biweekly_type?: string
+      biweekly_first_start?: number
+      biweekly_first_end?: number
+      biweekly_second_start?: number
+      biweekly_second_end?: number
+      monthly_type?: string
+      monthly_start?: number
+      monthly_end?: number
+    }
+  }
 ): Promise<Buffer> {
   return new Promise<Buffer>((resolve, reject) => {
     try {
       const PDFDocument = require('pdfkit')
-      const formatHNL = (n: number) => `L. ${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+      
+      // Configuración de payroll con valores por defecto
+      const currency = payrollConfig?.currency || 'HNL'
+      const paymentFrequency = payrollConfig?.payment_frequency || 'biweekly'
+      const paymentCutDates = payrollConfig?.payment_cut_dates || {
+        biweekly_type: 'standard',
+        biweekly_first_start: 1,
+        biweekly_first_end: 15,
+        biweekly_second_start: 16,
+        biweekly_second_end: 30,
+        monthly_type: 'standard',
+        monthly_start: 1,
+        monthly_end: 30
+      }
+      
+      // Formateo dinámico de currency
+      const formatCurrency = (n: number) => {
+        const formatted = Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        if (currency === 'USD') {
+          return `$${formatted}`
+        }
+        return `L. ${formatted}`
+      }
+      
+      // Título dinámico según payment_frequency
+      const payrollTitle = paymentFrequency === 'monthly' ? 'Planilla Mensual' : 'Planilla Quincenal'
+      const payrollSubject = paymentFrequency === 'monthly' ? 'Nómina Mensual' : 'Nómina Quincenal'
+      
+      // Calcular texto de quincena/período según configuración
+      let quincenaText = ''
+      if (paymentFrequency === 'monthly') {
+        const monthlyType = paymentCutDates?.monthly_type || 'standard'
+        if (monthlyType === 'custom' && paymentCutDates?.monthly_start && paymentCutDates?.monthly_end) {
+          quincenaText = `Mensual (${paymentCutDates.monthly_start}-${paymentCutDates.monthly_end})`
+        } else {
+          quincenaText = 'Mensual (1-fin de mes)'
+        }
+      } else {
+        const biweeklyType = paymentCutDates?.biweekly_type || 'standard'
+        if (biweeklyType === 'custom' && paymentCutDates?.biweekly_first_start && paymentCutDates?.biweekly_first_end && 
+            paymentCutDates?.biweekly_second_start && paymentCutDates?.biweekly_second_end) {
+          if (quincena === 1) {
+            quincenaText = `Primera (${paymentCutDates.biweekly_first_start}-${paymentCutDates.biweekly_first_end})`
+          } else {
+            quincenaText = `Segunda (${paymentCutDates.biweekly_second_start}-${paymentCutDates.biweekly_second_end})`
+          }
+        } else {
+          quincenaText = quincena === 1 ? 'Primera (1-15)' : 'Segunda (16-fin de mes)'
+        }
+      }
+      
       const doc = new PDFDocument({
         size: 'A4',
         layout: 'landscape',
         margin: 30,
         info: {
-          Title: `Planilla Quincenal - ${periodo} Q${quincena}`,
+          Title: `${payrollTitle} - ${periodo}${paymentFrequency === 'monthly' ? '' : ` Q${quincena}`}`,
           Author: 'Sistema Hondureño de Recursos Humanos',
-          Subject: 'Nómina Quincenal',
+          Subject: payrollSubject,
           Keywords: 'nómina, planilla, Paragon, Honduras',
           Creator: 'HR SaaS System'
         }
@@ -82,14 +146,14 @@ export async function generateConsolidatedPayrollPDF(
       doc.rect(0, 0, pageWidth, 90).fill('#0b4fa1')
       doc.fillColor('white')
       doc.fontSize(22).text(companyName || 'SISTEMA HONDUREÑO DE RECURSOS HUMANOS', 30, 20, { align: 'center', width: pageWidth - 60 })
-      doc.fontSize(13).text('Planilla Quincenal', 30, 46, { align: 'center', width: pageWidth - 60 })
-      doc.fontSize(12).text(`${periodo} • Quincena ${quincena}`, 30, 66, { align: 'center', width: pageWidth - 60 })
+      doc.fontSize(13).text(payrollTitle, 30, 46, { align: 'center', width: pageWidth - 60 })
+      doc.fontSize(12).text(`${periodo}${paymentFrequency === 'monthly' ? '' : ` • Quincena ${quincena}`}`, 30, 66, { align: 'center', width: pageWidth - 60 })
 
       // Body base styles
       doc.fillColor('#0f172a')
       doc.fontSize(11).text('INFORMACIÓN DEL PERÍODO:', 30, 110)
       doc.fontSize(10).text(`Período: ${periodo}`, 30, 126)
-      doc.fontSize(10).text(`Quincena: ${quincena === 1 ? 'Primera (1-15)' : 'Segunda (16-fin de mes)'}`, 30, 142)
+      doc.fontSize(10).text(`${paymentFrequency === 'monthly' ? 'Período' : 'Quincena'}: ${quincenaText}`, 30, 142)
       doc.fontSize(10).text(`Fecha de generación: ${formatDateForHonduras(nowInHonduras())}`, 30, 158)
       if (generatedByEmail) {
         doc.fontSize(10).text(`Generado por: ${generatedByEmail}`, 30, 174)
@@ -105,11 +169,11 @@ export async function generateConsolidatedPayrollPDF(
       doc.fontSize(10).text('Total Empleados:', 45, 232)
       doc.fontSize(10).text(totalEmployees.toString(), 200, 232)
       doc.fontSize(10).text('Total Salario Bruto:', 45, 248)
-      doc.fontSize(10).text(formatHNL(totalGross), 200, 248)
+      doc.fontSize(10).text(formatCurrency(totalGross), 200, 248)
       doc.fontSize(10).text('Total Deducciones:', 45, 264)
-      doc.fontSize(10).text(formatHNL(totalDeductions), 200, 264)
+      doc.fontSize(10).text(formatCurrency(totalDeductions), 200, 264)
       doc.fontSize(10).text('Total Salario Neto:', 45, 280)
-      doc.fontSize(10).text(formatHNL(totalNet), 200, 280)
+      doc.fontSize(10).text(formatCurrency(totalNet), 200, 280)
 
       const deptTotals: { [key: string]: { count: number, gross: number, net: number } } = {}
       planilla.forEach((row) => {
@@ -214,11 +278,11 @@ export async function generateConsolidatedPayrollPDF(
       // Helper to get custom field value from metadata
       const getCustomFieldValue = (row: PlanillaItem, fieldName: string): string => {
         if (!row.metadata || !row.metadata[fieldName]) {
-          return formatHNL(0)
+          return formatCurrency(0)
         }
         const value = row.metadata[fieldName]
         if (typeof value === 'number') {
-          return formatHNL(value)
+          return formatCurrency(value)
         } else if (typeof value === 'boolean') {
           return value ? 'Sí' : 'No'
         }
@@ -250,7 +314,7 @@ export async function generateConsolidatedPayrollPDF(
           row.name,
           row.department,
           row.days_worked.toString(),
-          formatHNL(row.monthly_salary)
+          formatCurrency(row.monthly_salary)
         ]
         
         // Add custom earnings fields
@@ -266,12 +330,12 @@ export async function generateConsolidatedPayrollPDF(
         }
         
         // Add Devengado (total earnings)
-        values.push(formatHNL(row.total_earnings))
+        values.push(formatCurrency(row.total_earnings))
         
         // Add standard deductions
-        values.push(formatHNL(row.IHSS))
-        values.push(formatHNL(row.RAP))
-        values.push(formatHNL(row.ISR))
+        values.push(formatCurrency(row.IHSS))
+        values.push(formatCurrency(row.RAP))
+        values.push(formatCurrency(row.ISR))
         
         // Add custom deductions fields
         if (customFieldsConfig) {
@@ -286,8 +350,8 @@ export async function generateConsolidatedPayrollPDF(
         }
         
         // Add final columns
-        values.push(formatHNL(row.total_deductions))
-        values.push(formatHNL(row.total))
+        values.push(formatCurrency(row.total_deductions))
+        values.push(formatCurrency(row.total))
         
         values.forEach((val, i) => {
           const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0)
@@ -301,9 +365,9 @@ export async function generateConsolidatedPayrollPDF(
       const totalsWidth = colWidths.reduce((a, b) => a + b, 0)
       doc.rect(startX, y, totalsWidth, rowHeight).fillAndStroke('#f3f4f6', '#0f172a')
       doc.fontSize(10).fillColor('#0f172a').text('TOTALES:', startX + 6, y + 5)
-      doc.fontSize(10).text(formatHNL(totalGross), startX + totalsWidth * 0.45, y + 5)
-      doc.fontSize(10).text(formatHNL(totalDeductions), startX + totalsWidth * 0.65, y + 5)
-      doc.fontSize(10).text(formatHNL(totalNet), startX + totalsWidth * 0.82, y + 5)
+      doc.fontSize(10).text(formatCurrency(totalGross), startX + totalsWidth * 0.45, y + 5)
+      doc.fontSize(10).text(formatCurrency(totalDeductions), startX + totalsWidth * 0.65, y + 5)
+      doc.fontSize(10).text(formatCurrency(totalNet), startX + totalsWidth * 0.82, y + 5)
 
       // ===== PAGE 3: BANK DETAILS & NOTES =====
       doc.addPage()
@@ -336,7 +400,7 @@ export async function generateConsolidatedPayrollPDF(
           row.name,
           row.bank || 'No especificado',
           row.bank_account || 'No especificado',
-          formatHNL(row.total)
+          formatCurrency(row.total)
         ]
         bankValues.forEach((val, i) => {
           const x = bankStartX + bankColWidths.slice(0, i).reduce((a, b) => a + b, 0)

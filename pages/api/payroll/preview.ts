@@ -58,7 +58,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     // Obtener configuración de payroll de la empresa (leer desde metadata)
-    const { data: payrollConfig, error: configError } = await supabase
+    const { data: payrollConfig } = await supabase
       .from('company_payroll_configs')
       .select('metadata')
       .eq('company_id', companyId)
@@ -86,7 +86,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       isr: true,
       infop: false
     }
-    const currency = payrollMetadata.currency || 'HNL'
     
     // Calcular fechas del período según configuración
     const ultimoDia = new Date(yearNum, monthNum, 0).getDate()

@@ -13,10 +13,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { supabase, companyId, role, user } = await requireCompanyAccess(req, res)
     
     // Verificar roles específicos para autorizar nómina
-    if (!['super_admin', 'company_admin', 'hr_manager'].includes(role)) {
+    // Solo super_admin y company_admin pueden autorizar (no hr_manager)
+    // hr_manager puede preparar borradores pero no autorizarlos
+    if (!['super_admin', 'company_admin'].includes(role)) {
       return res.status(403).json({ 
         error: 'Permisos insuficientes',
-        message: 'No tiene permisos para autorizar nómina'
+        message: 'Solo administradores pueden autorizar nómina. Los preparadores pueden crear y editar borradores, pero no autorizarlos.'
       })
     }
 

@@ -145,11 +145,34 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     const periodo = `${payrollRun.year}-${String(payrollRun.month).padStart(2, '0')}`
     // Fetch company name for document title
-    const { data: company, error: companyError } = await supabase
+    const { data: company } = await supabase
       .from('companies')
       .select('name')
       .eq('id', companyId)
       .single()
+
+    // Obtener configuración de payroll (metadata con parámetros)
+    const { data: payrollConfig } = await supabase
+      .from('company_payroll_configs')
+      .select('metadata, custom_fields')
+      .eq('company_id', companyId)
+      .eq('is_active', true)
+      .single()
+    
+    // Extraer parámetros desde metadata
+    const payrollMetadata = payrollConfig?.metadata || {}
+    const currency = payrollMetadata.currency || 'HNL'
+    const paymentFrequency = payrollMetadata.payment_frequency || 'biweekly'
+    const paymentCutDates = payrollMetadata.payment_cut_dates || {
+      biweekly_type: 'standard',
+      biweekly_first_start: 1,
+      biweekly_first_end: 15,
+      biweekly_second_start: 16,
+      biweekly_second_end: 30,
+      monthly_type: 'standard',
+      monthly_start: 1,
+      monthly_end: 30
+    }
 
     // Get custom fields configuration for PDF columns
     const customFieldsConfig = await getCustomFields(companyId, supabase)
@@ -158,14 +181,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // If custom fields come from DB, they might be in the full format already
     let pdfCustomFieldsConfig: Record<string, any> | undefined = undefined
     if (customFieldsConfig) {
-      // Try to get full config from DB to get category information
-      const { data: payrollConfig } = await supabase
-        .from('company_payroll_configs')
-        .select('custom_fields')
-        .eq('company_id', companyId)
-        .eq('is_active', true)
-        .single()
-      
       if (payrollConfig?.custom_fields) {
         pdfCustomFieldsConfig = payrollConfig.custom_fields as Record<string, any>
       } else {
@@ -184,13 +199,21 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       }
     }
 
+    // Preparar configuración de payroll para el PDF
+    const pdfPayrollConfig = {
+      currency,
+      payment_frequency: paymentFrequency,
+      payment_cut_dates: paymentCutDates
+    }
+
     const pdf = await generateConsolidatedPayrollPDF(
       planilla, 
       periodo, 
       payrollRun.quincena, 
       user.email, 
       company?.name,
-      pdfCustomFieldsConfig
+      pdfCustomFieldsConfig,
+      pdfPayrollConfig
     )
     
     res.setHeader('Content-Type', 'application/pdf')

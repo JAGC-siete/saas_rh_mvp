@@ -320,6 +320,14 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
         </div>
         
         <div className="flex items-center gap-2">
+          {/* Indicador de borrador guardado */}
+          {(payroll.status === 'draft' || payroll.status === 'edited') && payroll.runId && (
+            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-500/30">
+              <Icon name="check" className="h-4 w-4 text-blue-300" />
+              <span className="text-sm font-medium text-blue-300">Borrador Guardado</span>
+            </div>
+          )}
+          
           {getStatusBadge(payroll.status)}
           
           {payroll.loading && (

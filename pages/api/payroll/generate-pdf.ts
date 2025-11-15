@@ -78,6 +78,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log(`Generando PDF desde draft: ${planilla.length} empleados para ${periodo} Q${quincena}`)
 
+    // Obtener configuración de payroll (metadata con parámetros)
+    const { data: payrollConfig } = await supabase
+      .from('company_payroll_configs')
+      .select('metadata')
+      .eq('company_id', companyId)
+      .eq('is_active', true)
+      .single()
+    
+    // Extraer parámetros desde metadata
+    const payrollMetadata = payrollConfig?.metadata || {}
+    const currency = payrollMetadata.currency || 'HNL'
+    const paymentFrequency = payrollMetadata.payment_frequency || 'biweekly'
+    const paymentCutDates = payrollMetadata.payment_cut_dates || {
+      biweekly_type: 'standard',
+      biweekly_first_start: 1,
+      biweekly_first_end: 15,
+      biweekly_second_start: 16,
+      biweekly_second_end: 30,
+      monthly_type: 'standard',
+      monthly_start: 1,
+      monthly_end: 30
+    }
+
+    // Preparar configuración de payroll para el PDF
+    const pdfPayrollConfig = {
+      currency,
+      payment_frequency: paymentFrequency,
+      payment_cut_dates: paymentCutDates
+    }
+
     // Generar PDF consolidado
     const { data: company } = await supabase
       .from('companies')
@@ -85,7 +115,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq('id', companyId)
       .single()
 
-    const pdf = await generateConsolidatedPayrollPDF(planilla, periodo, Number(quincena), user?.email, company?.name)
+    const pdf = await generateConsolidatedPayrollPDF(
+      planilla, 
+      periodo, 
+      Number(quincena), 
+      user?.email, 
+      company?.name,
+      undefined, // customFieldsConfig (no disponible en este endpoint legacy)
+      pdfPayrollConfig
+    )
     
     // Increment usage meter for PDF generation
     try {

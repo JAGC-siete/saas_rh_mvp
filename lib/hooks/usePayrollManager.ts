@@ -208,6 +208,27 @@ export const usePayrollManager = () => {
     })
   }, [])
 
+  // Check for existing draft
+  const checkDraft = useCallback(async () => {
+    if (!companyId) return null
+
+    try {
+      const response = await fetch(
+        `/api/payroll/draft?year=${state.filters.year}&month=${state.filters.month}&quincena=${state.filters.quincena}&tipo=${state.filters.tipo}`
+      )
+
+      if (!response.ok) {
+        return null
+      }
+
+      const data = await response.json()
+      return data.exists ? data.draft : null
+    } catch (error) {
+      console.error('Error checking draft:', error)
+      return null
+    }
+  }, [companyId, state.filters])
+
   // Data Loading
   const loadUnifiedData = useCallback(async () => {
     if (!companyId) return
@@ -216,8 +237,23 @@ export const usePayrollManager = () => {
     dispatch({ type: 'CLEAR_ERROR' })
 
     try {
-      // Loading unified payroll data
+      // Check for existing draft first
+      const draft = await checkDraft()
+      
+      if (draft) {
+        console.log('📋 Borrador encontrado:', draft)
+        dispatch({ type: 'SET_RUN_ID', payload: draft.run_id })
+        dispatch({ type: 'SET_STATUS', payload: draft.status as UIRunStatus })
+        
+        // Show toast notification
+        toast.success(
+          'Borrador Cargado',
+          `Se encontró un borrador guardado con ${draft.edited_lines} líneas editadas`,
+          5000
+        )
+      }
 
+      // Loading unified payroll data
       const data = await fetchUnifiedPayroll(
         companyId,
         state.currentPeriod.year,
@@ -228,7 +264,7 @@ export const usePayrollManager = () => {
 
       dispatch({ type: 'SET_DATA', payload: data })
       
-      // Si hay un runId en la respuesta, actualizarlo
+      // Si hay un runId en la respuesta, actualizarlo (sobrescribe el del draft si es diferente)
       if (data.runId) {
         dispatch({ type: 'SET_RUN_ID', payload: data.runId })
         console.log('🔍 DEBUG - Run ID set from data:', data.runId)
@@ -257,7 +293,7 @@ export const usePayrollManager = () => {
         toast.error('Error', 'No se pudieron cargar los datos del período actual', 5000)
       }
     }
-  }, [companyId, state.currentPeriod, toast])
+  }, [companyId, state.currentPeriod, state.filters, checkDraft, toast])
 
   // Legacy API Actions (for compatibility during migration)
   const generatePreview = useCallback(async () => {
@@ -547,6 +583,22 @@ export const usePayrollManager = () => {
       dispatch({ type: 'CLEAR_ERROR' })
 
       try {
+        // Check for existing draft first
+        const draft = await checkDraft()
+        
+        if (draft) {
+          console.log('📋 Borrador encontrado en auto-load:', draft)
+          dispatch({ type: 'SET_RUN_ID', payload: draft.run_id })
+          dispatch({ type: 'SET_STATUS', payload: draft.status as UIRunStatus })
+          
+          // Show toast notification
+          toast.success(
+            'Borrador Cargado',
+            `Se encontró un borrador guardado con ${draft.edited_lines} líneas editadas`,
+            5000
+          )
+        }
+
         const data = await fetchUnifiedPayroll(
           companyId,
           state.currentPeriod.year,
@@ -556,6 +608,17 @@ export const usePayrollManager = () => {
         )
 
         dispatch({ type: 'SET_DATA', payload: data })
+        
+        // Si hay un runId en la respuesta, actualizarlo
+        if (data.runId) {
+          dispatch({ type: 'SET_RUN_ID', payload: data.runId })
+        }
+        
+        // Si hay un status en la respuesta, actualizar el estado
+        if (data.status) {
+          dispatch({ type: 'SET_STATUS', payload: data.status as UIRunStatus })
+        }
+        
         dispatch({ type: 'SET_LOADED_INITIAL', payload: true })
       } catch (error: any) {
         const errorMessage = error?.message || 'Error desconocido'
@@ -564,7 +627,7 @@ export const usePayrollManager = () => {
     }
 
     loadData()
-  }, [state.hasLoadedInitialData, companyId, state.currentPeriod.year, state.currentPeriod.month, state.currentPeriod.quincena])
+  }, [state.hasLoadedInitialData, companyId, state.currentPeriod.year, state.currentPeriod.month, state.currentPeriod.quincena, state.filters.tipo, checkDraft, toast])
 
   // Set unified data directly (for preview updates)
   const setUnifiedData = useCallback((data: { rows: UnifiedRow[]; resumen: UnifiedResumen }) => {

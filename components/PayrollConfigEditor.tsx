@@ -138,7 +138,18 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     loadConfig()
   }, [companyId])
 
-  // Función para detectar si hay cambios (debe estar antes de useMemo)
+  // Helper function para normalizar objetos antes de comparar con JSON.stringify
+  // Ordena las claves para evitar falsos positivos por orden de propiedades
+  const normalizeObjectForComparison = (obj: any): string => {
+    if (!obj || typeof obj !== 'object') return JSON.stringify(obj)
+    const sorted = Object.keys(obj).sort().reduce((acc, key) => {
+      acc[key] = obj[key]
+      return acc
+    }, {} as any)
+    return JSON.stringify(sorted)
+  }
+
+  // Función para detectar si hay cambios (comparación robusta campo por campo)
   const hasChanges = (): boolean => {
     if (!initialConfig) return false
     
@@ -148,28 +159,58 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     // Comparar currency
     if (config.currency !== initialConfig.currency) return true
     
-    // Comparar legal_deductions (deep comparison)
-    const deductionsStr = JSON.stringify(config.legal_deductions)
-    const initialDeductionsStr = JSON.stringify(initialConfig.legal_deductions)
-    if (deductionsStr !== initialDeductionsStr) return true
+    // Comparar legal_deductions (comparación específica campo por campo)
+    // Evita problemas con JSON.stringify y orden de propiedades
+    const deductions = config.legal_deductions
+    const initialDeductions = initialConfig.legal_deductions
+    if (deductions.ihss !== initialDeductions.ihss ||
+        deductions.rap !== initialDeductions.rap ||
+        deductions.isr !== initialDeductions.isr ||
+        deductions.infop !== initialDeductions.infop) {
+      return true
+    }
     
-    // Comparar payment_cut_dates (deep comparison)
-    const cutDatesStr = JSON.stringify(config.payment_cut_dates)
-    const initialCutDatesStr = JSON.stringify(initialConfig.payment_cut_dates)
-    if (cutDatesStr !== initialCutDatesStr) return true
+    // Comparar payment_cut_dates (comparación específica campo por campo)
+    // Evita problemas con JSON.stringify y orden de propiedades
+    const cutDates = config.payment_cut_dates
+    const initialCutDates = initialConfig.payment_cut_dates
+    if (cutDates.biweekly_type !== initialCutDates.biweekly_type ||
+        cutDates.biweekly_first_start !== initialCutDates.biweekly_first_start ||
+        cutDates.biweekly_first_end !== initialCutDates.biweekly_first_end ||
+        cutDates.biweekly_second_start !== initialCutDates.biweekly_second_start ||
+        cutDates.biweekly_second_end !== initialCutDates.biweekly_second_end ||
+        cutDates.monthly_type !== initialCutDates.monthly_type ||
+        cutDates.monthly_start !== initialCutDates.monthly_start ||
+        cutDates.monthly_end !== initialCutDates.monthly_end) {
+      return true
+    }
     
-    // Comparar calculation_script
-    if (config.calculation_script !== initialConfig.calculation_script) return true
+    // Comparar calculation_script (comparación directa, null-safe)
+    const script1 = config.calculation_script || null
+    const script2 = initialConfig.calculation_script || null
+    if (script1 !== script2) return true
     
-    // Comparar calculation_config (deep comparison)
-    const configStr = JSON.stringify(config.calculation_config)
-    const initialStr = JSON.stringify(initialConfig.calculation_config)
-    if (configStr !== initialStr) return true
+    // Comparar calculation_config (usar JSON.stringify solo para objetos complejos)
+    // Normalizar antes de comparar para evitar problemas de orden
+    try {
+      const configStr = normalizeObjectForComparison(config.calculation_config)
+      const initialStr = normalizeObjectForComparison(initialConfig.calculation_config)
+      if (configStr !== initialStr) return true
+    } catch (e) {
+      // Si hay error en stringify, comparar directamente
+      if (config.calculation_config !== initialConfig.calculation_config) return true
+    }
     
-    // Comparar custom_fields (deep comparison)
-    const fieldsStr = JSON.stringify(config.custom_fields)
-    const initialFieldsStr = JSON.stringify(initialConfig.custom_fields)
-    if (fieldsStr !== initialFieldsStr) return true
+    // Comparar custom_fields (usar JSON.stringify solo para objetos complejos)
+    // Normalizar antes de comparar para evitar problemas de orden
+    try {
+      const fieldsStr = normalizeObjectForComparison(config.custom_fields)
+      const initialFieldsStr = normalizeObjectForComparison(initialConfig.custom_fields)
+      if (fieldsStr !== initialFieldsStr) return true
+    } catch (e) {
+      // Si hay error en stringify, comparar directamente
+      if (config.custom_fields !== initialConfig.custom_fields) return true
+    }
     
     return false
   }
