@@ -74,9 +74,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         continue
       }
 
+      // Log para debugging
+      console.log(`🔍 Validando línea ${update.run_line_id}:`, {
+        custom_fields: update.custom_fields,
+        field_types: Object.entries(update.custom_fields).map(([k, v]) => ({ [k]: typeof v }))
+      })
+
       // Validate custom payroll data
       const validation = await validateCustomPayrollData(companyId, update.custom_fields, supabase)
       if (!validation.valid) {
+        console.error(`❌ Errores de validación para línea ${update.run_line_id}:`, validation.errors)
         validationErrors.push({
           run_line_id: update.run_line_id,
           error: `Datos inválidos: ${validation.errors.join(', ')}`

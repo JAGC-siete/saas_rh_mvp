@@ -515,20 +515,48 @@ export function validateCustomFields(
 ): { valid: boolean; errors: string[] } {
   const errors: string[] = []
 
+  // Si no hay definiciones de campos, permitir cualquier campo (modo permisivo)
+  if (!fieldDefinitions || Object.keys(fieldDefinitions).length === 0) {
+    // Solo validar tipos básicos si no hay configuración
+    for (const [fieldName, value] of Object.entries(customFields)) {
+      if (value !== null && value !== undefined && value !== '') {
+        // Validación básica: si parece número, debe ser parseable
+        if (typeof value === 'string' && !isNaN(parseFloat(value)) && value.trim() !== '') {
+          // Es un string numérico válido, está bien
+          continue
+        }
+        // Otros tipos están bien
+      }
+    }
+    return { valid: true, errors: [] }
+  }
+
   for (const [fieldName, value] of Object.entries(customFields)) {
     const definition = fieldDefinitions[fieldName]
     
     if (!definition) {
-      // Campo no definido en configuración, ignorar
+      // Campo no definido en configuración - solo warning, no error
+      // Permitir campos adicionales que no estén en la configuración
       continue
     }
 
-    // Validar tipo
-    if (definition.type === 'number' && typeof value !== 'number' && isNaN(parseFloat(value))) {
-      errors.push(`${fieldName} debe ser un número`)
+    // Validar tipo (permitir conversión de strings a números)
+    if (definition.type === 'number') {
+      if (typeof value === 'string' && value.trim() === '') {
+        // String vacío - solo error si es requerido
+        if (definition.required) {
+          errors.push(`${fieldName} es requerido`)
+        }
+      } else if (typeof value !== 'number') {
+        const numValue = parseFloat(value)
+        if (isNaN(numValue)) {
+          errors.push(`${fieldName} debe ser un número válido`)
+        }
+        // Si es un string numérico válido, está bien (se convertirá después)
+      }
     }
 
-    if (definition.type === 'boolean' && typeof value !== 'boolean') {
+    if (definition.type === 'boolean' && typeof value !== 'boolean' && value !== 'true' && value !== 'false' && value !== 1 && value !== 0) {
       errors.push(`${fieldName} debe ser un booleano`)
     }
 

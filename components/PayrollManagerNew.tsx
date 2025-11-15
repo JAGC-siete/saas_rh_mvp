@@ -76,11 +76,31 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
           throw new Error('Company ID no encontrado')
         }
 
-        // Prepare batch updates
-        const batchUpdates = Object.entries(previewCustomFields).map(([lineId, fieldData]) => ({
-          run_line_id: lineId,
-          custom_fields: fieldData.metadata
-        }))
+        // Prepare batch updates - normalizar valores antes de enviar
+        const batchUpdates = Object.entries(previewCustomFields).map(([lineId, fieldData]) => {
+          // Normalizar metadata: asegurar que números sean números, no strings
+          const normalizedFields: Record<string, unknown> = {}
+          for (const [key, value] of Object.entries(fieldData.metadata || {})) {
+            if (value === '' || value === null || value === undefined) {
+              continue // Omitir valores vacíos
+            }
+            // Convertir strings numéricos a números
+            if (typeof value === 'string' && !isNaN(parseFloat(value)) && value.trim() !== '') {
+              normalizedFields[key] = parseFloat(value)
+            } else if (typeof value === 'string' && (value === 'true' || value === 'false')) {
+              normalizedFields[key] = value === 'true'
+            } else {
+              normalizedFields[key] = value
+            }
+          }
+          
+          return {
+            run_line_id: lineId,
+            custom_fields: normalizedFields
+          }
+        })
+        
+        console.log('🔍 DEBUG - Batch updates preparados:', JSON.stringify(batchUpdates, null, 2))
 
         // Save all custom field changes in a single batch API call
         const batchResponse = await fetch('/api/payroll/update-custom-fields-batch', {
@@ -91,6 +111,15 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
 
         if (!batchResponse.ok) {
           const error = await batchResponse.json()
+          
+          // Si hay detalles de validación, mostrarlos
+          if (error.details && Array.isArray(error.details)) {
+            const validationErrors = error.details.map((d: any) => 
+              `Línea ${d.run_line_id}: ${d.error}`
+            ).join('\n')
+            throw new Error(`Error guardando campos en batch:\n\n${validationErrors}`)
+          }
+          
           throw new Error(`Error guardando campos en batch: ${error.error || error.message || 'Error desconocido'}`)
         }
 
@@ -106,8 +135,10 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
           }
           const failedUpdates = (batchData.results as BatchResult[] | undefined)?.filter((r) => !r.success) || []
           if (failedUpdates.length > 0) {
-            const failedLines = failedUpdates.map((r) => r.run_line_id).join(', ')
-            throw new Error(`Error guardando algunos campos. Líneas con error: ${failedLines}`)
+            const failedDetails = failedUpdates.map((r) => 
+              `Línea ${r.run_line_id}: ${r.error || 'Error desconocido'}`
+            ).join('\n')
+            throw new Error(`Error guardando algunos campos:\n\n${failedDetails}`)
           }
         }
 
@@ -182,12 +213,29 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
         throw new Error('Línea de planilla no encontrada')
       }
 
+      // Normalizar metadata: convertir strings a números donde sea necesario
+      const normalizedMetadata: Record<string, unknown> = {}
+      for (const [key, value] of Object.entries(metadata)) {
+        if (value === '' || value === null || value === undefined) {
+          // Omitir valores vacíos
+          continue
+        }
+        // Si es un string que parece número, convertirlo
+        if (typeof value === 'string' && !isNaN(parseFloat(value)) && value.trim() !== '') {
+          normalizedMetadata[key] = parseFloat(value)
+        } else if (typeof value === 'string' && (value === 'true' || value === 'false')) {
+          normalizedMetadata[key] = value === 'true'
+        } else {
+          normalizedMetadata[key] = value
+        }
+      }
+
       // Calculate new totals using new calculation engine
       const supabase = createClient()
       const calcResult = await calculatePayroll(
         companyId,
         row.total_earnings || 0,
-        metadata,
+        normalizedMetadata,
         supabase
       )
       
@@ -200,11 +248,11 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
       const newBruto = baseBruto + ingresosAdicionales
       const newNeto = newBruto - statutoryDeductions - deduccionesAdicionales
 
-      // Update local preview state (NOT persisted to DB)
+      // Update local preview state (NOT persisted to DB) - usar metadata normalizado
       setPreviewCustomFields(prev => ({
         ...prev,
         [modalState.lineId]: {
-          metadata,
+          metadata: normalizedMetadata,
           eff_bruto: newBruto,
           eff_neto: newNeto
         }
