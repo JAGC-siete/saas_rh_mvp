@@ -95,9 +95,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: 'Failed to create user profile' })
     }
 
+    // Normalize null role to empty string
+    const normalizedProfile = newProfile ? {
+      ...newProfile,
+      employees: newProfile.employees ? {
+        ...newProfile.employees,
+        role: newProfile.employees.role ?? ''
+      } : null
+    } : newProfile
+
     return res.status(201).json({
       message: 'User profile created successfully',
-      profile: newProfile
+      profile: normalizedProfile
     })
 
   } catch (error: any) {
