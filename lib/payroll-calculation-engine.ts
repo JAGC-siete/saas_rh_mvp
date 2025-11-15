@@ -126,7 +126,6 @@ function calculateWithFormulas(
           { baseSalary, metadata, calculatedFields }
         )
       } catch (error) {
-        console.error(`Error calculating ${fieldName}:`, error)
         calculatedFields[fieldName] = 0
       }
     }
@@ -141,7 +140,7 @@ function calculateWithFormulas(
         { baseSalary, metadata, calculatedFields }
       )
     } catch (error) {
-      console.error('Error calculating earnings:', error)
+      // Error calculating earnings, use 0
     }
   }
   
@@ -154,7 +153,7 @@ function calculateWithFormulas(
         { baseSalary, metadata, calculatedFields }
       )
     } catch (error) {
-      console.error('Error calculating deductions:', error)
+      // Error calculating deductions, use 0
     }
   }
   
@@ -313,7 +312,6 @@ function evaluateMathExpression(expression: string): number {
     
     // Validar que solo contenga números, operadores y paréntesis
     if (!/^[0-9+\-*/().\s]+$/.test(clean)) {
-      console.warn('Invalid characters in formula:', expression)
       return 0
     }
     
@@ -327,7 +325,6 @@ function evaluateMathExpression(expression: string): number {
     
     return 0
   } catch (error) {
-    console.error('Formula evaluation error:', error, 'Expression:', expression)
     return 0
   }
 }
@@ -368,7 +365,6 @@ function executeCalculationScript(
   
   for (const pattern of dangerousPatterns) {
     if (script.includes(pattern)) {
-      console.error('Dangerous pattern detected in calculation script:', pattern)
       return {
         totalIngresosAdicionales: 0,
         totalDeduccionesAdicionales: 0,
@@ -414,7 +410,6 @@ function executeCalculationScript(
       calculatedFields: {}
     }
   } catch (error) {
-    console.error('Error executing calculation script:', error)
     return {
       totalIngresosAdicionales: 0,
       totalDeduccionesAdicionales: 0,

@@ -66,7 +66,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .order('created_at', { ascending: false })
 
     if (linesError) {
-      console.error('Error obteniendo líneas de nómina:', linesError)
       return res.status(500).json({ error: 'Error obteniendo líneas de nómina' })
     }
 
@@ -181,7 +180,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.setHeader('Content-Disposition', `attachment; filename=planilla_${periodo}_q${quincena}.pdf`)
     return res.send(pdf)
   } catch (error) {
-    console.error('Error generando reporte PDF:', error)
     return res.status(500).json({ error: 'Error interno del servidor' })
   }
 }

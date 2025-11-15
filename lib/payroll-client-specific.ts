@@ -117,7 +117,7 @@ export async function getPayrollConfig(
         }
       }
     } catch (error) {
-      console.warn('Error fetching payroll config from DB, using fallback:', error)
+      // Fallback to hardcoded configs
     }
   }
 
@@ -155,7 +155,7 @@ export async function hasCustomFields(
         return Object.keys(data.custom_fields).length > 0
       }
     } catch (error) {
-      console.warn('Error checking custom fields from DB:', error)
+      // Fallback to hardcoded check
     }
   }
 
@@ -350,7 +350,7 @@ export async function buildPayrollMetadata(
         customFields = fields
       }
     } catch (error) {
-      console.warn('Error getting custom fields from DB:', error)
+      // Fallback to hardcoded fields
     }
   }
 
@@ -402,7 +402,7 @@ export async function extractCustomFields(
         customFields = fields
       }
     } catch (error) {
-      console.warn('Error getting custom fields from DB:', error)
+      // Fallback to hardcoded fields
     }
   }
 
@@ -450,7 +450,7 @@ export async function validateCustomPayrollData(
         return validateCustomFields(data, fields)
       }
     } catch (error) {
-      console.warn('Error validating from DB:', error)
+      // Fallback validation
     }
   }
 
@@ -518,7 +518,7 @@ export async function calculatePayroll(
         return result
       }
     } catch (error) {
-      console.warn('Error calculating from DB config, using fallback:', error)
+      // Fallback to hardcoded calculation
     }
   }
 
