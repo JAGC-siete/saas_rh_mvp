@@ -137,20 +137,18 @@ export default function CustomPayrollFieldsForm({
     )
   }
 
-  // Separate earnings and deductions
-  const earningsFields = Object.keys(customFields).filter(key => 
-    key.includes('horas_extras') || key.includes('feriado') || key.includes('transporte')
-  )
+  // Separate earnings and deductions based on category from config
+  const earningsFields = Object.keys(customFields).filter(key => {
+    if (!config?.custom_fields?.[key]) return false
+    const fieldDef = config.custom_fields[key]
+    return typeof fieldDef === 'object' && fieldDef.category === 'earnings'
+  })
   
-  const deductionsFields = Object.keys(customFields).filter(key => 
-    !key.includes('horas_extras') && 
-    !key.includes('feriado') && 
-    !key.includes('transporte') &&
-    !key.includes('valor') &&
-    !key.includes('descanso') &&
-    !key.includes('doble') &&
-    !key.includes('pausa')
-  )
+  const deductionsFields = Object.keys(customFields).filter(key => {
+    if (!config?.custom_fields?.[key]) return false
+    const fieldDef = config.custom_fields[key]
+    return typeof fieldDef === 'object' && fieldDef.category === 'deductions'
+  })
 
   // Calculate totals (convert hours/days to Lempiras for display)
   const hourlyRate = (Number(baseSalary) || 0) / 30 / 8
