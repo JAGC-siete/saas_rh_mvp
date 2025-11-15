@@ -84,6 +84,20 @@ export default function UnifiedPayrollTable({
       }
     }
     loadConfig()
+    
+    // Listen for config updates from PayrollConfigEditor
+    const handleConfigUpdate = (event: CustomEvent) => {
+      if (event.detail?.companyId === companyId) {
+        console.log('🔄 Payroll config updated, reloading...')
+        loadConfig()
+      }
+    }
+    
+    window.addEventListener('payrollConfigUpdated', handleConfigUpdate as EventListener)
+    
+    return () => {
+      window.removeEventListener('payrollConfigUpdated', handleConfigUpdate as EventListener)
+    }
   }, [companyId])
 
   // Get unique departments for filter

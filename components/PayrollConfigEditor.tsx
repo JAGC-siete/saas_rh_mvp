@@ -184,6 +184,33 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     setHasChangesState(hasChangesResult)
   }, [hasChangesResult])
 
+  // Helper function para construir PayrollConfig desde la respuesta de la API
+  const buildPayrollConfigFromApiResponse = (apiConfig: any): PayrollConfig => {
+    return {
+      payment_frequency: apiConfig.payment_frequency || 'biweekly',
+      currency: apiConfig.currency || 'HNL',
+      legal_deductions: {
+        ihss: apiConfig.legal_deductions?.ihss ?? true,
+        rap: apiConfig.legal_deductions?.rap ?? true,
+        isr: apiConfig.legal_deductions?.isr ?? true,
+        infop: apiConfig.legal_deductions?.infop ?? false
+      },
+      payment_cut_dates: {
+        biweekly_type: apiConfig.payment_cut_dates?.biweekly_type || 'standard',
+        biweekly_first_start: apiConfig.payment_cut_dates?.biweekly_first_start ?? 1,
+        biweekly_first_end: apiConfig.payment_cut_dates?.biweekly_first_end ?? 15,
+        biweekly_second_start: apiConfig.payment_cut_dates?.biweekly_second_start ?? 16,
+        biweekly_second_end: apiConfig.payment_cut_dates?.biweekly_second_end ?? 30,
+        monthly_type: apiConfig.payment_cut_dates?.monthly_type || 'standard',
+        monthly_start: apiConfig.payment_cut_dates?.monthly_start ?? 1,
+        monthly_end: apiConfig.payment_cut_dates?.monthly_end ?? 30
+      },
+      custom_fields: apiConfig.custom_fields || {},
+      calculation_config: apiConfig.calculation_config || {},
+      calculation_script: apiConfig.calculation_script || null
+    }
+  }
+
   const loadConfig = async () => {
     setLoading(true)
     setError(null)
@@ -201,29 +228,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
         console.log('✅ PayrollConfigEditor: API response data:', data)
         
         if (data.config) {
-          const loadedConfig: PayrollConfig = {
-            payment_frequency: data.config.payment_frequency || 'biweekly',
-            currency: data.config.currency || 'HNL',
-            legal_deductions: {
-              ihss: data.config.legal_deductions?.ihss ?? true,
-              rap: data.config.legal_deductions?.rap ?? true,
-              isr: data.config.legal_deductions?.isr ?? true,
-              infop: data.config.legal_deductions?.infop ?? false
-            },
-            payment_cut_dates: {
-              biweekly_type: data.config.payment_cut_dates?.biweekly_type || 'standard',
-              biweekly_first_start: data.config.payment_cut_dates?.biweekly_first_start ?? 1,
-              biweekly_first_end: data.config.payment_cut_dates?.biweekly_first_end ?? 15,
-              biweekly_second_start: data.config.payment_cut_dates?.biweekly_second_start ?? 16,
-              biweekly_second_end: data.config.payment_cut_dates?.biweekly_second_end ?? 30,
-              monthly_type: data.config.payment_cut_dates?.monthly_type || 'standard',
-              monthly_start: data.config.payment_cut_dates?.monthly_start ?? 1,
-              monthly_end: data.config.payment_cut_dates?.monthly_end ?? 30
-            },
-            custom_fields: data.config.custom_fields || {},
-            calculation_config: data.config.calculation_config || {},
-            calculation_script: data.config.calculation_script || null
-          }
+          const loadedConfig = buildPayrollConfigFromApiResponse(data.config)
           setConfig(loadedConfig)
           setInitialConfig(loadedConfig) // Guardar como referencia inicial
           console.log('✅ PayrollConfigEditor: Config loaded successfully')
@@ -344,11 +349,21 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
         throw new Error(data.error || 'Error guardando configuración')
       }
 
+      // Usar la respuesta del POST directamente para actualizar config e initialConfig
+      // Esto evita el desfase de hacer un GET adicional y garantiza consistencia inmediata
+      if (data.config) {
+        const savedConfig = buildPayrollConfigFromApiResponse(data.config)
+        setConfig(savedConfig)
+        setInitialConfig(savedConfig) // Actualizar inmediatamente sin necesidad de loadConfig()
+        console.log('✅ PayrollConfigEditor: Config saved and updated from POST response')
+      } else {
+        // Fallback: si por alguna razón no viene config, hacer loadConfig
+        console.warn('⚠️ PayrollConfigEditor: POST response missing config, falling back to loadConfig')
+        await loadConfig()
+      }
+
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
-      
-      // Reload config to ensure it's fresh
-      await loadConfig()
       
       onSave?.()
       

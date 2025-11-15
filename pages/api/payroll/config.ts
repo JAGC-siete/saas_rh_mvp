@@ -266,8 +266,34 @@ async function upsertPayrollConfig(
       throw error
     }
 
+    // Extraer parámetros de configuración desde metadata y exponerlos en el nivel superior
+    // (igual que en getPayrollConfig para mantener consistencia)
+    const metadata = data.metadata || {}
+    const configResponse = {
+      ...data,
+      // Exponer parámetros de configuración desde metadata
+      payment_frequency: metadata.payment_frequency || 'biweekly',
+      currency: metadata.currency || 'HNL',
+      legal_deductions: metadata.legal_deductions || {
+        ihss: true,
+        rap: true,
+        isr: true,
+        infop: false
+      },
+      payment_cut_dates: metadata.payment_cut_dates || {
+        biweekly_type: 'standard',
+        biweekly_first_start: 1,
+        biweekly_first_end: 15,
+        biweekly_second_start: 16,
+        biweekly_second_end: 30,
+        monthly_type: 'standard',
+        monthly_start: 1,
+        monthly_end: 30
+      }
+    }
+
     return res.status(200).json({
-      config: data,
+      config: configResponse,
       message: 'Configuración guardada exitosamente'
     })
   } catch (error: any) {
