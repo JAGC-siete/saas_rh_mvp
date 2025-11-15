@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -109,6 +109,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
   })
 
   const [initialConfig, setInitialConfig] = useState<PayrollConfig | null>(null)
+  const [hasChangesState, setHasChangesState] = useState(false)
 
   const [newFieldName, setNewFieldName] = useState('')
   const [newField, setNewField] = useState<CustomField>({
@@ -136,6 +137,16 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
   useEffect(() => {
     loadConfig()
   }, [companyId])
+
+  // Calcular si hay cambios usando useMemo para mejor rendimiento
+  const hasChangesResult = useMemo(() => {
+    return hasChanges()
+  }, [config, initialConfig])
+
+  // Actualizar estado cuando cambie el resultado
+  useEffect(() => {
+    setHasChangesState(hasChangesResult)
+  }, [hasChangesResult])
 
   const loadConfig = async () => {
     setLoading(true)
@@ -1478,15 +1489,22 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
       </Card>
 
 
-      {/* Save Button - Solo mostrar si hay cambios */}
-      {hasChanges() && (
-        <Card variant="glass" className="p-4 border-yellow-400/30">
-          <div className="flex items-center justify-between">
+      {/* Save Button - Siempre visible, deshabilitado si no hay cambios */}
+      <Card variant="glass" className={`p-4 ${hasChangesState ? 'border-yellow-400/30' : 'border-white/10'}`}>
+        <div className="flex items-center justify-between">
+          {hasChangesState ? (
             <div className="flex items-center gap-2 text-yellow-300 text-sm">
               <AlertCircle className="h-4 w-4" />
               <span>Tienes cambios sin guardar</span>
             </div>
-            <div className="flex justify-end gap-3">
+          ) : (
+            <div className="flex items-center gap-2 text-gray-400 text-sm">
+              <CheckCircle className="h-4 w-4" />
+              <span>No hay cambios pendientes</span>
+            </div>
+          )}
+          <div className="flex justify-end gap-3">
+            {hasChangesState && (
               <Button
                 onClick={handleCancel}
                 variant="outline"
@@ -1495,27 +1513,27 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
               >
                 Cancelar
               </Button>
-              <Button
-                onClick={handleSaveClick}
-                disabled={saving}
-                className="bg-brand-600 hover:bg-brand-700 text-white font-medium"
-              >
-                {saving ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Guardando...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    Guardar Configuración
-                  </>
-                )}
-              </Button>
-            </div>
+            )}
+            <Button
+              onClick={handleSaveClick}
+              disabled={saving || !hasChangesState}
+              className="bg-brand-600 hover:bg-brand-700 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Guardar Configuración
+                </>
+              )}
+            </Button>
           </div>
-        </Card>
-      )}
+        </div>
+      </Card>
 
       {/* Confirmation Dialog */}
       <ConfirmationDialog
