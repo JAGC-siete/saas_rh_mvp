@@ -625,7 +625,21 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                     name="payment_frequency"
                     value="biweekly"
                     checked={config.payment_frequency === 'biweekly'}
-                    onChange={(e) => setConfig(prev => ({ ...prev, payment_frequency: e.target.value as 'biweekly' | 'monthly' }))}
+                    onChange={(e) => {
+                      // Al cambiar a quincenal, resetear fechas a estándar quincenal
+                      setConfig(prev => ({
+                        ...prev,
+                        payment_frequency: 'biweekly' as 'biweekly' | 'monthly',
+                        payment_cut_dates: {
+                          ...prev.payment_cut_dates,
+                          biweekly_type: 'standard',
+                          biweekly_first_start: 1,
+                          biweekly_first_end: 15,
+                          biweekly_second_start: 16,
+                          biweekly_second_end: 30
+                        }
+                      }))
+                    }}
                     className="w-4 h-4 text-blue-600"
                   />
                   <span className="text-white">Quincenal</span>
@@ -636,7 +650,19 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                     name="payment_frequency"
                     value="monthly"
                     checked={config.payment_frequency === 'monthly'}
-                    onChange={(e) => setConfig(prev => ({ ...prev, payment_frequency: e.target.value as 'biweekly' | 'monthly' }))}
+                    onChange={(e) => {
+                      // Al cambiar a mensual, resetear fechas a estándar mensual
+                      setConfig(prev => ({
+                        ...prev,
+                        payment_frequency: 'monthly' as 'biweekly' | 'monthly',
+                        payment_cut_dates: {
+                          ...prev.payment_cut_dates,
+                          monthly_type: 'standard',
+                          monthly_start: 1,
+                          monthly_end: 30
+                        }
+                      }))
+                    }}
                     className="w-4 h-4 text-blue-600"
                   />
                   <span className="text-white">Mensual</span>
@@ -830,13 +856,21 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                         value="custom"
                         checked={(config.payment_cut_dates.biweekly_type || 'standard') === 'custom'}
                         onChange={(e) => {
-                          setConfig(prev => ({
-                            ...prev,
-                            payment_cut_dates: {
-                              ...prev.payment_cut_dates,
-                              biweekly_type: 'custom'
+                          setConfig(prev => {
+                            // Al cambiar a personalizado, mantener valores actuales o usar estándar si no existen
+                            const current = prev.payment_cut_dates
+                            return {
+                              ...prev,
+                              payment_cut_dates: {
+                                ...prev.payment_cut_dates,
+                                biweekly_type: 'custom',
+                                biweekly_first_start: current.biweekly_first_start || 1,
+                                biweekly_first_end: current.biweekly_first_end || 15,
+                                biweekly_second_start: current.biweekly_second_start || 16,
+                                biweekly_second_end: current.biweekly_second_end || 30
+                              }
                             }
-                          }))
+                          })
                         }}
                         className="w-4 h-4 text-green-600"
                       />
@@ -844,7 +878,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                     </label>
                   </div>
                   
-                  {/* Campos de fechas quincenales */}
+                  {/* Campos de fechas quincenales - Siempre mostrar cuando es personalizado */}
                   {(config.payment_cut_dates.biweekly_type || 'standard') === 'custom' && (
                     <div className="grid grid-cols-2 gap-4">
                       <div>
@@ -854,32 +888,35 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                             type="number"
                             min="1"
                             max="31"
-                            value={config.payment_cut_dates.biweekly_first_start || 1}
+                            placeholder="Día inicio"
+                            value={config.payment_cut_dates.biweekly_first_start || ''}
                             onChange={(e) => setConfig(prev => ({
                               ...prev,
                               payment_cut_dates: {
                                 ...prev.payment_cut_dates,
-                                biweekly_first_start: parseInt(e.target.value) || 1
+                                biweekly_first_start: e.target.value ? parseInt(e.target.value) : undefined
                               }
                             }))}
-                            className="w-20 input-glass text-white text-center"
+                            className="w-24 input-glass text-white text-center"
                           />
                           <span className="text-white">al</span>
                           <Input
                             type="number"
                             min="1"
                             max="31"
-                            value={config.payment_cut_dates.biweekly_first_end || 15}
+                            placeholder="Día fin"
+                            value={config.payment_cut_dates.biweekly_first_end || ''}
                             onChange={(e) => setConfig(prev => ({
                               ...prev,
                               payment_cut_dates: {
                                 ...prev.payment_cut_dates,
-                                biweekly_first_end: parseInt(e.target.value) || 15
+                                biweekly_first_end: e.target.value ? parseInt(e.target.value) : undefined
                               }
                             }))}
-                            className="w-20 input-glass text-white text-center"
+                            className="w-24 input-glass text-white text-center"
                           />
                         </div>
+                        <p className="text-xs text-gray-400 mt-1">Ej: 26 al 11 (cruza fin de mes)</p>
                       </div>
                       <div>
                         <label className="block text-xs text-gray-300 mb-2">Segunda Quincena</label>
@@ -888,33 +925,48 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                             type="number"
                             min="1"
                             max="31"
-                            value={config.payment_cut_dates.biweekly_second_start || 16}
+                            placeholder="Día inicio"
+                            value={config.payment_cut_dates.biweekly_second_start || ''}
                             onChange={(e) => setConfig(prev => ({
                               ...prev,
                               payment_cut_dates: {
                                 ...prev.payment_cut_dates,
-                                biweekly_second_start: parseInt(e.target.value) || 16
+                                biweekly_second_start: e.target.value ? parseInt(e.target.value) : undefined
                               }
                             }))}
-                            className="w-20 input-glass text-white text-center"
+                            className="w-24 input-glass text-white text-center"
                           />
                           <span className="text-white">al</span>
                           <Input
                             type="number"
                             min="1"
                             max="31"
-                            value={config.payment_cut_dates.biweekly_second_end || 30}
+                            placeholder="Día fin"
+                            value={config.payment_cut_dates.biweekly_second_end || ''}
                             onChange={(e) => setConfig(prev => ({
                               ...prev,
                               payment_cut_dates: {
                                 ...prev.payment_cut_dates,
-                                biweekly_second_end: parseInt(e.target.value) || 30
+                                biweekly_second_end: e.target.value ? parseInt(e.target.value) : undefined
                               }
                             }))}
-                            className="w-20 input-glass text-white text-center"
+                            className="w-24 input-glass text-white text-center"
                           />
                         </div>
+                        <p className="text-xs text-gray-400 mt-1">Ej: 27 al 10 (cruza fin de mes)</p>
                       </div>
+                    </div>
+                  )}
+                  
+                  {/* Mostrar valores estándar cuando está seleccionado estándar */}
+                  {(config.payment_cut_dates.biweekly_type || 'standard') === 'standard' && (
+                    <div className="p-3 glass border border-green-400/20 rounded-lg">
+                      <p className="text-sm text-gray-300">
+                        <span className="font-semibold text-green-300">Primera Quincena:</span> Día 1 al 15
+                      </p>
+                      <p className="text-sm text-gray-300 mt-1">
+                        <span className="font-semibold text-green-300">Segunda Quincena:</span> Día 16 al 30
+                      </p>
                     </div>
                   )}
                 </div>
@@ -950,13 +1002,19 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                         value="custom"
                         checked={(config.payment_cut_dates.monthly_type || 'standard') === 'custom'}
                         onChange={(e) => {
-                          setConfig(prev => ({
-                            ...prev,
-                            payment_cut_dates: {
-                              ...prev.payment_cut_dates,
-                              monthly_type: 'custom'
+                          setConfig(prev => {
+                            // Al cambiar a personalizado, mantener valores actuales o usar estándar si no existen
+                            const current = prev.payment_cut_dates
+                            return {
+                              ...prev,
+                              payment_cut_dates: {
+                                ...prev.payment_cut_dates,
+                                monthly_type: 'custom',
+                                monthly_start: current.monthly_start || 1,
+                                monthly_end: current.monthly_end || 30
+                              }
                             }
-                          }))
+                          })
                         }}
                         className="w-4 h-4 text-green-600"
                       />
@@ -964,7 +1022,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                     </label>
                   </div>
                   
-                  {/* Campos de fechas mensuales */}
+                  {/* Campos de fechas mensuales - Siempre mostrar cuando es personalizado */}
                   {(config.payment_cut_dates.monthly_type || 'standard') === 'custom' && (
                     <div>
                       <label className="block text-xs text-gray-300 mb-2">Período Mensual</label>
@@ -973,32 +1031,44 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                           type="number"
                           min="1"
                           max="31"
-                          value={config.payment_cut_dates.monthly_start || 1}
+                          placeholder="Día inicio"
+                          value={config.payment_cut_dates.monthly_start || ''}
                           onChange={(e) => setConfig(prev => ({
                             ...prev,
                             payment_cut_dates: {
                               ...prev.payment_cut_dates,
-                              monthly_start: parseInt(e.target.value) || 1
+                              monthly_start: e.target.value ? parseInt(e.target.value) : undefined
                             }
                           }))}
-                          className="w-20 input-glass text-white text-center"
+                          className="w-24 input-glass text-white text-center"
                         />
                         <span className="text-white">al</span>
                         <Input
                           type="number"
                           min="1"
                           max="31"
-                          value={config.payment_cut_dates.monthly_end || 30}
+                          placeholder="Día fin"
+                          value={config.payment_cut_dates.monthly_end || ''}
                           onChange={(e) => setConfig(prev => ({
                             ...prev,
                             payment_cut_dates: {
                               ...prev.payment_cut_dates,
-                              monthly_end: parseInt(e.target.value) || 30
+                              monthly_end: e.target.value ? parseInt(e.target.value) : undefined
                             }
                           }))}
-                          className="w-20 input-glass text-white text-center"
+                          className="w-24 input-glass text-white text-center"
                         />
                       </div>
+                      <p className="text-xs text-gray-400 mt-1">Ej: 28 al 27 (cruza fin de mes)</p>
+                    </div>
+                  )}
+                  
+                  {/* Mostrar valores estándar cuando está seleccionado estándar */}
+                  {(config.payment_cut_dates.monthly_type || 'standard') === 'standard' && (
+                    <div className="p-3 glass border border-green-400/20 rounded-lg">
+                      <p className="text-sm text-gray-300">
+                        <span className="font-semibold text-green-300">Período Mensual:</span> Día 1 al 30
+                      </p>
                     </div>
                   )}
                 </div>

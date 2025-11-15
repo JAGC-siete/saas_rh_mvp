@@ -163,28 +163,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    // Obtener configuración de payroll de la empresa
+    // Obtener configuración de payroll de la empresa (leer desde metadata)
     const { data: payrollConfig, error: configError } = await supabase
       .from('company_payroll_configs')
-      .select('payment_frequency, payment_cut_dates, legal_deductions, currency')
+      .select('metadata')
       .eq('company_id', companyId)
       .eq('is_active', true)
       .single()
     
+    // Extraer parámetros desde metadata
+    const payrollMetadata = payrollConfig?.metadata || {}
+    
     // Usar valores por defecto si no hay configuración
-    const paymentFrequency = payrollConfig?.payment_frequency || 'biweekly'
-    const paymentCutDates = payrollConfig?.payment_cut_dates || {
+    const paymentFrequency = payrollMetadata.payment_frequency || 'biweekly'
+    const paymentCutDates = payrollMetadata.payment_cut_dates || {
+      biweekly_type: 'standard',
       biweekly_first_start: 1,
       biweekly_first_end: 15,
       biweekly_second_start: 16,
-      biweekly_second_end: 30
+      biweekly_second_end: 30,
+      monthly_type: 'standard',
+      monthly_start: 1,
+      monthly_end: 30
     }
-    const legalDeductions = payrollConfig?.legal_deductions || {
+    const legalDeductions = payrollMetadata.legal_deductions || {
       ihss: true,
       rap: true,
       isr: true,
       infop: false
     }
+    const currency = payrollMetadata.currency || 'HNL'
     
     // Calcular fechas del período según configuración
     const ultimoDia = new Date(year, month, 0).getDate()

@@ -109,8 +109,33 @@ async function getPayrollConfig(
       throw error
     }
 
+    // Extraer parámetros de configuración desde metadata y exponerlos en el nivel superior
+    const metadata = data.metadata || {}
+    const configResponse = {
+      ...data,
+      // Exponer parámetros de configuración desde metadata
+      payment_frequency: metadata.payment_frequency || 'biweekly',
+      currency: metadata.currency || 'HNL',
+      legal_deductions: metadata.legal_deductions || {
+        ihss: true,
+        rap: true,
+        isr: true,
+        infop: false
+      },
+      payment_cut_dates: metadata.payment_cut_dates || {
+        biweekly_type: 'standard',
+        biweekly_first_start: 1,
+        biweekly_first_end: 15,
+        biweekly_second_start: 16,
+        biweekly_second_end: 30,
+        monthly_type: 'standard',
+        monthly_start: 1,
+        monthly_end: 30
+      }
+    }
+
     return res.status(200).json({
-      config: data,
+      config: configResponse,
       message: 'Configuración obtenida exitosamente'
     })
   } catch (error: any) {
@@ -137,7 +162,12 @@ async function upsertPayrollConfig(
       custom_fields = {},
       calculation_config = {},
       calculation_script = null,
-      metadata = {}
+      metadata = {},
+      // Extraer parámetros de configuración de payroll
+      payment_frequency,
+      currency,
+      legal_deductions,
+      payment_cut_dates
     } = body
 
     // Validar calculation_type
@@ -189,6 +219,30 @@ async function upsertPayrollConfig(
       }
     }
 
+    // Construir metadata con los parámetros de configuración de payroll
+    // Mantener metadata existente y agregar/actualizar parámetros de configuración
+    const payrollMetadata = {
+      ...metadata,
+      payment_frequency: payment_frequency || 'biweekly',
+      currency: currency || 'HNL',
+      legal_deductions: legal_deductions || {
+        ihss: true,
+        rap: true,
+        isr: true,
+        infop: false
+      },
+      payment_cut_dates: payment_cut_dates || {
+        biweekly_type: 'standard',
+        biweekly_first_start: 1,
+        biweekly_first_end: 15,
+        biweekly_second_start: 16,
+        biweekly_second_end: 30,
+        monthly_type: 'standard',
+        monthly_start: 1,
+        monthly_end: 30
+      }
+    }
+
     // Upsert configuración
     const { data, error } = await supabase
       .from('company_payroll_configs')
@@ -198,7 +252,7 @@ async function upsertPayrollConfig(
         custom_fields: custom_fields || {},
         calculation_config: calculation_config || {},
         calculation_script: calculation_script || null,
-        metadata: metadata || {},
+        metadata: payrollMetadata,
         is_active: true,
         updated_at: new Date().toISOString()
       }, {
