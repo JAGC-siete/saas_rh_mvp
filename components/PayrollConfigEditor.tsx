@@ -36,7 +36,7 @@ import {
 interface CustomField {
   label: string
   type: 'number' | 'string' | 'boolean'
-  category: 'earnings' | 'deductions' // Solo earnings o deductions
+  category: 'earnings' | 'deductions' | 'calculation_helper'
   required: boolean
   default: any
 }
@@ -1249,11 +1249,14 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                       <label className="block text-xs text-white mb-1">Categoría</label>
                       <select
                         value={field.category}
-                        onChange={(e) => handleUpdateField(fieldName, { category: e.target.value as 'earnings' | 'deductions' })}
+                        onChange={(e) => handleUpdateField(fieldName, { category: e.target.value as 'earnings' | 'deductions' | 'calculation_helper' })}
                         className="w-full px-3 py-2 input-glass text-white text-sm"
                       >
                         <option value="earnings">Ingresos (Suman al salario)</option>
                         <option value="deductions">Deducciones (Restan al salario)</option>
+                        {field.category === 'calculation_helper' && (
+                          <option value="calculation_helper">Ayuda de Cálculo (Solo lectura)</option>
+                        )}
                       </select>
                     </div>
                     <div>
@@ -1385,11 +1388,14 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                               <label className="block text-xs text-white mb-1">Categoría</label>
                               <select
                                 value={field.category}
-                                onChange={(e) => handleUpdateField(fieldName, { category: e.target.value as 'earnings' | 'deductions' })}
+                                onChange={(e) => handleUpdateField(fieldName, { category: e.target.value as 'earnings' | 'deductions' | 'calculation_helper' })}
                                 className="w-full px-3 py-2 input-glass text-white text-sm"
                               >
                                 <option value="earnings">Ingresos (Suman al salario)</option>
                                 <option value="deductions">Deducciones (Restan al salario)</option>
+                                {field.category === 'calculation_helper' && (
+                                  <option value="calculation_helper">Ayuda de Cálculo (Solo lectura)</option>
+                                )}
                               </select>
                             </div>
                             <div>

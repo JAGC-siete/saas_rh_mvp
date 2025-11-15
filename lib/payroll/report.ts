@@ -30,7 +30,7 @@ export interface PlanillaItem {
 interface CustomFieldDef {
   label: string
   type: 'number' | 'string' | 'boolean'
-  category: 'earnings' | 'deductions'
+  category: 'earnings' | 'deductions' | 'calculation_helper'
   required: boolean
   default: any
 }

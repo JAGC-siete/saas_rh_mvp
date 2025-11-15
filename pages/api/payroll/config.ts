@@ -208,7 +208,7 @@ async function upsertPayrollConfig(
             })
           }
 
-          const validCategories = ['earnings', 'deductions']
+          const validCategories = ['earnings', 'deductions', 'calculation_helper']
           if (!validCategories.includes(def.category)) {
             return res.status(400).json({
               error: 'Categoría de campo inválida',
