@@ -120,11 +120,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    console.log('Usuario autenticado para nómina:', { 
-      userId: user.id, 
-      role: role,
-      companyId: companyId 
-    })
 
     try {
       await requirePlanAndQuota(supabase, companyId, 'generate_payroll')
@@ -246,14 +241,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Q2 (biweekly) o mensual: salario bruto proporcional + deducciones mensuales completas
     const aplicarDeducciones = paymentFrequency === 'monthly' || quincena === 2
 
-    console.log('Generando nómina:', {
-      periodo,
-      quincena,
-      fechaInicio,
-      fechaFin,
-      aplicarDeducciones,
-      tipoCalculo
-    })
 
     // Obtener empleados activos
     let employeesQuery = supabase
@@ -269,7 +256,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { data: employees, error: empError } = await employeesQuery
 
     if (empError) {
-      console.error('Error obteniendo empleados:', empError)
       return res.status(500).json({ error: 'Error obteniendo empleados' })
     }
 
@@ -288,7 +274,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .lte('date', fechaFin)
 
     if (attError) {
-      console.error('Error obteniendo registros de asistencia:', attError)
       return res.status(500).json({ error: 'Error obteniendo registros de asistencia' })
     }
 
@@ -319,7 +304,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    console.log(`Procesando nómina para ${empleadosParaNomina.length} empleados`)
 
     // Calcular planilla con CÁLCULOS CORRECTOS 2025
     const planilla: PlanillaItem[] = empleadosParaNomina.map((emp: any) => {
@@ -441,17 +425,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     
     if (saveError) {
-      console.error('Error guardando nómina:', saveError)
       return res.status(500).json({ error: 'Error guardando nómina en la base de datos' })
     }
-
-    console.log(`Nómina generada exitosamente para ${planilla.length} empleados`)
 
     // Increment usage meter
     try {
       await incrementUsage(supabase, companyId, 'generate_payroll')
     } catch (error) {
-      console.warn('Failed to increment usage meter:', error)
       // Don't fail the request if usage tracking fails
     }
 
@@ -459,7 +439,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       await auditPayrollGenerated(supabase, user.id, companyId, periodo)
     } catch (error) {
-      console.warn('Failed to log audit event:', error)
       // Don't fail the request if audit fails
     }
 
@@ -474,7 +453,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       planilla
     })
   } catch (error) {
-    console.error('Error en cálculo de nómina:', error)
     return res.status(500).json({ 
       error: 'Error interno del servidor', 
       message: error instanceof Error ? error.message : 'Error desconocido'

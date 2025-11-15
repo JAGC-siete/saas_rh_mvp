@@ -74,16 +74,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         continue
       }
 
-      // Log para debugging
-      console.log(`🔍 Validando línea ${update.run_line_id}:`, {
-        custom_fields: update.custom_fields,
-        field_types: Object.entries(update.custom_fields).map(([k, v]) => ({ [k]: typeof v }))
-      })
-
       // Validate custom payroll data
       const validation = await validateCustomPayrollData(companyId, update.custom_fields, supabase)
       if (!validation.valid) {
-        console.error(`❌ Errores de validación para línea ${update.run_line_id}:`, validation.errors)
         validationErrors.push({
           run_line_id: update.run_line_id,
           error: `Datos inválidos: ${validation.errors.join(', ')}`
@@ -109,7 +102,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq('company_id', companyId)
 
     if (linesError) {
-      console.error('Error obteniendo líneas de nómina:', linesError)
       return res.status(500).json({
         error: 'Error obteniendo líneas de nómina',
         details: linesError.message
@@ -210,7 +202,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             }
           }
         } catch (error: unknown) {
-          console.error(`Error updating line ${update.run_line_id}:`, error)
           const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
           return {
             run_line_id: update.run_line_id,
@@ -246,8 +237,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // All updates successful
-    console.log(`✅ Batch update successful: ${successfulUpdates.length} lines updated`)
-
     return res.status(200).json({
       success: true,
       message: 'Todos los campos personalizados fueron actualizados exitosamente',
@@ -260,7 +249,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
 
   } catch (error: any) {
-    console.error('❌ Error en update-custom-fields-batch:', error)
     return res.status(500).json({ 
       error: error?.message || 'Internal error',
       message: 'Error interno del servidor'
