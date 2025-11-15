@@ -138,6 +138,42 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     loadConfig()
   }, [companyId])
 
+  // Función para detectar si hay cambios (debe estar antes de useMemo)
+  const hasChanges = (): boolean => {
+    if (!initialConfig) return false
+    
+    // Comparar payment_frequency
+    if (config.payment_frequency !== initialConfig.payment_frequency) return true
+    
+    // Comparar currency
+    if (config.currency !== initialConfig.currency) return true
+    
+    // Comparar legal_deductions (deep comparison)
+    const deductionsStr = JSON.stringify(config.legal_deductions)
+    const initialDeductionsStr = JSON.stringify(initialConfig.legal_deductions)
+    if (deductionsStr !== initialDeductionsStr) return true
+    
+    // Comparar payment_cut_dates (deep comparison)
+    const cutDatesStr = JSON.stringify(config.payment_cut_dates)
+    const initialCutDatesStr = JSON.stringify(initialConfig.payment_cut_dates)
+    if (cutDatesStr !== initialCutDatesStr) return true
+    
+    // Comparar calculation_script
+    if (config.calculation_script !== initialConfig.calculation_script) return true
+    
+    // Comparar calculation_config (deep comparison)
+    const configStr = JSON.stringify(config.calculation_config)
+    const initialStr = JSON.stringify(initialConfig.calculation_config)
+    if (configStr !== initialStr) return true
+    
+    // Comparar custom_fields (deep comparison)
+    const fieldsStr = JSON.stringify(config.custom_fields)
+    const initialFieldsStr = JSON.stringify(initialConfig.custom_fields)
+    if (fieldsStr !== initialFieldsStr) return true
+    
+    return false
+  }
+
   // Calcular si hay cambios usando useMemo para mejor rendimiento
   const hasChangesResult = useMemo(() => {
     return hasChanges()
@@ -380,42 +416,6 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
         }
       }
     }))
-  }
-
-  // Función para detectar si hay cambios
-  const hasChanges = (): boolean => {
-    if (!initialConfig) return false
-    
-    // Comparar payment_frequency
-    if (config.payment_frequency !== initialConfig.payment_frequency) return true
-    
-    // Comparar currency
-    if (config.currency !== initialConfig.currency) return true
-    
-    // Comparar legal_deductions (deep comparison)
-    const deductionsStr = JSON.stringify(config.legal_deductions)
-    const initialDeductionsStr = JSON.stringify(initialConfig.legal_deductions)
-    if (deductionsStr !== initialDeductionsStr) return true
-    
-    // Comparar payment_cut_dates (deep comparison)
-    const cutDatesStr = JSON.stringify(config.payment_cut_dates)
-    const initialCutDatesStr = JSON.stringify(initialConfig.payment_cut_dates)
-    if (cutDatesStr !== initialCutDatesStr) return true
-    
-    // Comparar calculation_script
-    if (config.calculation_script !== initialConfig.calculation_script) return true
-    
-    // Comparar calculation_config (deep comparison)
-    const configStr = JSON.stringify(config.calculation_config)
-    const initialStr = JSON.stringify(initialConfig.calculation_config)
-    if (configStr !== initialStr) return true
-    
-    // Comparar custom_fields (deep comparison)
-    const fieldsStr = JSON.stringify(config.custom_fields)
-    const initialFieldsStr = JSON.stringify(initialConfig.custom_fields)
-    if (fieldsStr !== initialFieldsStr) return true
-    
-    return false
   }
 
   // Función para detectar qué cambios se están haciendo y generar mensaje de confirmación
