@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Head from 'next/head'
-import { useRouter } from 'next/router'
-import { useAuth } from '../../../lib/auth'
 import SuperAdminLayout from '../../../components/SuperAdminLayout'
+import SuperAdminGuard from '../../../components/SuperAdminGuard'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card'
 import { Button } from '../../../components/ui/button'
 import { useNotificationContext } from '../../../components/NotificationProvider'
@@ -19,14 +18,11 @@ interface UserRow {
 }
 
 export default function UsersAdminPage() {
-  const { userProfile, loading } = useAuth()
-  const router = useRouter()
   const { addNotification } = useNotificationContext()
 
   const [users, setUsers] = useState<UserRow[]>([])
   const [loadingUsers, setLoadingUsers] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [authorized, setAuthorized] = useState(false)
 
   const [search, setSearch] = useState('')
   const [role, setRole] = useState('')
@@ -38,22 +34,6 @@ export default function UsersAdminPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [companies, setCompanies] = useState<Array<{ id: string; name: string }>>([])
   const [form, setForm] = useState({ email: '', password: '', role: 'company_admin', company_id: '' })
-
-  useEffect(() => {
-    if (loading) return
-
-    if (!userProfile) {
-      router.replace('/app/login?redirect=/app/admin/users')
-      return
-    }
-
-    if (userProfile.role !== 'super_admin') {
-      router.replace('/app/dashboard')
-      return
-    }
-
-    setAuthorized(true)
-  }, [userProfile, loading, router])
 
   useEffect(() => {
     const loadUsers = async () => {
@@ -173,24 +153,17 @@ export default function UsersAdminPage() {
     }
   }
 
-  if (loading || !authorized) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    )
-  }
-
   return (
     <>
       <Head>
         <title>Usuarios - Admin</title>
       </Head>
-      <SuperAdminLayout>
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold">Usuarios</h1>
-            <div className="flex items-center gap-2">
+      <SuperAdminGuard>
+        <SuperAdminLayout>
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h1 className="text-2xl font-bold">Usuarios</h1>
+              <div className="flex items-center gap-2">
               <input
                 type="text"
                 value={search}
@@ -212,14 +185,14 @@ export default function UsersAdminPage() {
                 <option value="inactive">Inactivos</option>
               </select>
               <Button onClick={invite}>Invitar</Button>
+              </div>
             </div>
-          </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Listado ({filtered.length})</CardTitle>
-            </CardHeader>
-            <CardContent>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Listado ({filtered.length})</CardTitle>
+              </CardHeader>
+              <CardContent>
               {error && (
                 <div className="mb-4 border border-red-200 bg-red-50 text-sm text-red-700 px-3 py-2 rounded-md">
                   {error}
@@ -307,10 +280,11 @@ export default function UsersAdminPage() {
                   </div>
                 </>
               )}
-            </CardContent>
-          </Card>
-        </div>
-      </SuperAdminLayout>
+              </CardContent>
+            </Card>
+          </div>
+        </SuperAdminLayout>
+      </SuperAdminGuard>
     </>
   )
 }

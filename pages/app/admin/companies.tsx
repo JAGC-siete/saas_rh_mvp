@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
-import { useAuth } from '../../../lib/auth'
 import SuperAdminLayout from '../../../components/SuperAdminLayout'
+import SuperAdminGuard from '../../../components/SuperAdminGuard'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card'
 import { Button } from '../../../components/ui/button'
 import { useNotificationContext } from '../../../components/NotificationProvider'
@@ -18,7 +18,6 @@ interface Company {
 }
 
 export default function CompaniesAdminPage() {
-  const { userProfile, loading } = useAuth()
   const router = useRouter()
 
   const [companies, setCompanies] = useState<Company[]>([])
@@ -27,7 +26,6 @@ export default function CompaniesAdminPage() {
   const [total, setTotal] = useState(0)
   const [selected, setSelected] = useState<Record<string, boolean>>({})
   const { addNotification } = useNotificationContext()
-  const [authorized, setAuthorized] = useState(false)
 
   // UI state
   const [search, setSearch] = useState('')
@@ -42,23 +40,6 @@ export default function CompaniesAdminPage() {
     admin_email: '',
     admin_password: ''
   })
-
-  // Guard: only admins
-  useEffect(() => {
-    if (loading) return
-
-    if (!userProfile) {
-      router.replace('/app/login?redirect=/app/admin/companies')
-      return
-    }
-
-    if (userProfile.role !== 'super_admin') {
-      router.replace('/app/dashboard')
-      return
-    }
-
-    setAuthorized(true)
-  }, [userProfile, loading, router])
 
   // Load companies with server pagination and filters
   useEffect(() => {
@@ -186,24 +167,17 @@ export default function CompaniesAdminPage() {
     if (page > totalPages) setPage(totalPages)
   }, [totalPages, page])
 
-  if (loading || !authorized) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    )
-  }
-
   return (
     <>
       <Head>
         <title>Empresas - Admin</title>
       </Head>
-      <SuperAdminLayout>
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold">Empresas</h1>
-            <div className="flex items-center gap-2">
+      <SuperAdminGuard>
+        <SuperAdminLayout>
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h1 className="text-2xl font-bold">Empresas</h1>
+              <div className="flex items-center gap-2">
               <input
                 type="text"
                 value={search}
@@ -216,20 +190,20 @@ export default function CompaniesAdminPage() {
                 Sólo activas
               </label>
               <Button onClick={() => setShowCreate(true)}>Nueva empresa</Button>
+              </div>
             </div>
-          </div>
 
-          {error && (
-            <Card className="border-red-200 bg-red-50">
-              <CardContent className="pt-4 text-red-800 text-sm">{error}</CardContent>
-            </Card>
-          )}
+            {error && (
+              <Card className="border-red-200 bg-red-50">
+                <CardContent className="pt-4 text-red-800 text-sm">{error}</CardContent>
+              </Card>
+            )}
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Listado ({showOnlyActive || search ? filtered.length : total})</CardTitle>
-            </CardHeader>
-            <CardContent>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Listado ({showOnlyActive || search ? filtered.length : total})</CardTitle>
+              </CardHeader>
+              <CardContent>
               <div className="flex items-center gap-2 mb-3">
                 <Button variant="outline" size="sm" onClick={toggleSelectAll}>Seleccionar todos</Button>
                 <Button variant="outline" size="sm" disabled={!selectedIds.length} onClick={() => bulk('activate')}>Activar</Button>
@@ -288,10 +262,11 @@ export default function CompaniesAdminPage() {
                   </div>
                 </>
               )}
-            </CardContent>
-          </Card>
-        </div>
-      </SuperAdminLayout>
+              </CardContent>
+            </Card>
+          </div>
+        </SuperAdminLayout>
+      </SuperAdminGuard>
 
       {showCreate && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center">

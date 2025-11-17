@@ -1,17 +1,15 @@
 import { useState, useEffect } from 'react'
-import { useAuth } from '../../../lib/auth'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
 import SuperAdminLayout from '../../../components/SuperAdminLayout'
+import SuperAdminGuard from '../../../components/SuperAdminGuard'
 import SuperAdminStats from '../../../components/SuperAdminStats'
 import EnvironmentError from '../../../components/EnvironmentError'
 import ClientEnvDebug from '../../../components/ClientEnvDebug'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card'
-import { Button } from '../../../components/ui/button'
 import { 
   Building2, 
   Users, 
-  TrendingUp,
   AlertTriangle,
   CheckCircle,
   XCircle,
@@ -44,7 +42,6 @@ interface RecentActivity {
 }
 
 export default function SuperAdminDashboard() {
-  const { user, userProfile, loading } = useAuth()
   const router = useRouter()
   
   // State
@@ -66,10 +63,8 @@ export default function SuperAdminDashboard() {
 
   // Load dashboard data
   useEffect(() => {
-    if (!loading && user) {
-      loadDashboardData()
-    }
-  }, [loading, user])
+    loadDashboardData()
+  }, [])
 
   const loadDashboardData = async () => {
     try {
@@ -108,45 +103,6 @@ export default function SuperAdminDashboard() {
     }
   }
 
-  // Redirect if not super admin (solo cuando el perfil ya está disponible)
-  useEffect(() => {
-    if (!loading && userProfile && userProfile.role && userProfile.role !== 'super_admin') {
-      router.push('/app/dashboard')
-    }
-  }, [loading, userProfile, router])
-
-  if (loading || loadingData || !userProfile) {
-    return (
-      <SuperAdminLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        </div>
-      </SuperAdminLayout>
-    )
-  }
-
-  if (!user || userProfile.role !== 'super_admin') {
-    return (
-      <SuperAdminLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-sm text-gray-600">Acceso restringido</div>
-        </div>
-      </SuperAdminLayout>
-    )
-  }
-
-  // Show environment error if detected
-  if (envError) {
-    return (
-      <SuperAdminLayout>
-        <div className="space-y-6">
-          <EnvironmentError />
-          <ClientEnvDebug />
-        </div>
-      </SuperAdminLayout>
-    )
-  }
-
   const getHealthIcon = (health: string) => {
     switch (health) {
       case 'healthy': return <CheckCircle className="h-5 w-5 text-green-500" />
@@ -182,8 +138,24 @@ export default function SuperAdminDashboard() {
         <meta name="description" content="Panel de super administrador del sistema" />
       </Head>
 
-      <SuperAdminLayout>
-        <div className="space-y-8">
+      <SuperAdminGuard>
+        <SuperAdminLayout>
+          <div className="space-y-8">
+            {loadingData && (
+              <div className="flex items-center justify-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+              </div>
+            )}
+
+            {!loadingData && envError && (
+              <div className="space-y-6">
+                <EnvironmentError />
+                <ClientEnvDebug />
+              </div>
+            )}
+
+            {!loadingData && !envError && (
+              <>
           {/* Welcome Header */}
           <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white">
             <div className="flex items-center justify-between">
@@ -204,17 +176,17 @@ export default function SuperAdminDashboard() {
             </div>
           </div>
 
-          {/* System Statistics */}
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
-              Estadísticas del Sistema
-            </h2>
-            <SuperAdminStats />
-          </div>
+                {/* System Statistics */}
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                    Estadísticas del Sistema
+                  </h2>
+                  <SuperAdminStats />
+                </div>
 
-          {/* Quick Actions */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/app/admin/companies')}>
+                {/* Quick Actions */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/app/admin/companies')}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Gestión de Empresas</CardTitle>
                 <Building2 className="h-4 w-4 text-muted-foreground" />
@@ -269,10 +241,10 @@ export default function SuperAdminDashboard() {
             </Card>
           </div>
 
-          {/* Recent Activity & System Status */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Recent Activity */}
-            <Card>
+                {/* Recent Activity & System Status */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Recent Activity */}
+                  <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Activity className="h-5 w-5" />
@@ -308,8 +280,8 @@ export default function SuperAdminDashboard() {
               </CardContent>
             </Card>
 
-            {/* System Status */}
-            <Card>
+                  {/* System Status */}
+                  <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Shield className="h-5 w-5" />
@@ -359,19 +331,22 @@ export default function SuperAdminDashboard() {
             </Card>
           </div>
 
-          {/* Error Display */}
-          {error && (
-            <Card className="border-red-200 bg-red-50">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-2 text-red-800">
-                  <XCircle className="h-5 w-5" />
-                  <span>{error}</span>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      </SuperAdminLayout>
+                {/* Error Display */}
+                {error && (
+                  <Card className="border-red-200 bg-red-50">
+                    <CardContent className="pt-6">
+                      <div className="flex items-center gap-2 text-red-800">
+                        <XCircle className="h-5 w-5" />
+                        <span>{error}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </>
+            )}
+          </div>
+        </SuperAdminLayout>
+      </SuperAdminGuard>
     </>
   )
 }

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
 import SuperAdminLayout from '../../../../components/SuperAdminLayout'
+import SuperAdminGuard from '../../../../components/SuperAdminGuard'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card'
 import { Button } from '../../../../components/ui/button'
 
@@ -96,20 +97,21 @@ export default function CompanyDetailPage() {
       <Head>
         <title>Empresa - Admin</title>
       </Head>
-      <SuperAdminLayout>
-        <div className="space-y-6">
-          <Button variant="outline" onClick={() => router.back()}>← Volver</Button>
-          {error && (
-            <Card className="border-red-200 bg-red-50">
-              <CardContent className="pt-4 text-red-800 text-sm">{error}</CardContent>
-            </Card>
-          )}
-          {company && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Empresa</CardTitle>
-              </CardHeader>
-              <CardContent>
+      <SuperAdminGuard>
+        <SuperAdminLayout>
+          <div className="space-y-6">
+            <Button variant="outline" onClick={() => router.back()}>← Volver</Button>
+            {error && (
+              <Card className="border-red-200 bg-red-50">
+                <CardContent className="pt-4 text-red-800 text-sm">{error}</CardContent>
+              </Card>
+            )}
+            {company && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Empresa</CardTitle>
+                </CardHeader>
+                <CardContent>
                 {isEdit ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -152,11 +154,12 @@ export default function CompanyDetailPage() {
                     </div>
                   </div>
                 )}
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      </SuperAdminLayout>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </SuperAdminLayout>
+      </SuperAdminGuard>
     </>
   )
 }

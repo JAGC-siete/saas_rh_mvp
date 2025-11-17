@@ -1,15 +1,13 @@
-import { useEffect, useState } from 'react'
-import { useAuth } from '../../../lib/auth'
-import { useRouter } from 'next/router'
+import { useCallback, useEffect, useState } from 'react'
 import Head from 'next/head'
 import SuperAdminLayout from '../../../components/SuperAdminLayout'
+import SuperAdminGuard from '../../../components/SuperAdminGuard'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card'
 import { Button } from '../../../components/ui/button'
 import { Badge } from '../../../components/ui/badge'
 import { 
   FileText, 
   Filter, 
-  Download,
   AlertCircle,
   Info,
   AlertTriangle,
@@ -35,56 +33,29 @@ interface LogsData {
   }
 }
 
+const DEFAULT_FILTERS = {
+  level: '',
+  limit: 100,
+  startDate: '',
+  endDate: ''
+}
+
 export default function AdminLogs() {
-  const { user, userProfile, loading } = useAuth()
-  const router = useRouter()
   const [logs, setLogs] = useState<LogsData | null>(null)
   const [loadingLogs, setLoadingLogs] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [filters, setFilters] = useState({
-    level: '',
-    limit: 100,
-    startDate: '',
-    endDate: ''
-  })
+  const [filters, setFilters] = useState(DEFAULT_FILTERS)
 
-  useEffect(() => {
-    // Esperar a que termine de cargar antes de verificar
-    if (loading) return
-
-    // Si no hay usuario, redirigir a login (no a /auth/start que es para registro)
-    if (!user) {
-      router.push('/app/login')
-      return
-    }
-
-    // Si hay usuario pero no tiene perfil aún, esperar un momento más
-    // o verificar permisos si ya tiene perfil
-    if (userProfile) {
-      if (!['super_admin', 'company_admin', 'hr_manager'].includes(userProfile.role)) {
-        router.push('/app/dashboard')
-        return
-      }
-    }
-    // Si hay usuario pero no hay perfil aún, no hacer nada (esperar a que se cargue)
-  }, [user, userProfile, loading, router])
-
-  useEffect(() => {
-    if (userProfile && ['super_admin', 'company_admin', 'hr_manager'].includes(userProfile.role)) {
-      fetchLogs()
-    }
-  }, [userProfile])
-
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async (activeFilters: typeof DEFAULT_FILTERS) => {
     try {
       setLoadingLogs(true)
       setError(null)
       
       const params = new URLSearchParams()
-      if (filters.level) params.append('level', filters.level)
-      if (filters.limit) params.append('limit', filters.limit.toString())
-      if (filters.startDate) params.append('startDate', filters.startDate)
-      if (filters.endDate) params.append('endDate', filters.endDate)
+      if (activeFilters.level) params.append('level', activeFilters.level)
+      if (activeFilters.limit) params.append('limit', activeFilters.limit.toString())
+      if (activeFilters.startDate) params.append('startDate', activeFilters.startDate)
+      if (activeFilters.endDate) params.append('endDate', activeFilters.endDate)
       
       const response = await fetch(`/api/admin/logs?${params.toString()}`)
       
@@ -101,7 +72,11 @@ export default function AdminLogs() {
     } finally {
       setLoadingLogs(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchLogs(DEFAULT_FILTERS)
+  }, [fetchLogs])
 
   const getLevelIcon = (level: string) => {
     switch (level?.toLowerCase()) {
@@ -129,18 +104,6 @@ export default function AdminLogs() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    )
-  }
-
-  if (!user || !userProfile || !['super_admin', 'company_admin', 'hr_manager'].includes(userProfile.role)) {
-    return null
-  }
-
   return (
     <>
       <Head>
@@ -148,8 +111,9 @@ export default function AdminLogs() {
         <meta name="description" content="Visualiza y analiza los logs del sistema" />
       </Head>
 
-      <SuperAdminLayout>
-        <div className="space-y-6">
+      <SuperAdminGuard>
+        <SuperAdminLayout>
+          <div className="space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
@@ -158,7 +122,7 @@ export default function AdminLogs() {
             </div>
             <div className="flex items-center gap-2">
               <Button 
-                onClick={fetchLogs}
+                onClick={() => fetchLogs(filters)}
                 disabled={loadingLogs}
                 variant="outline"
                 size="sm"
@@ -266,7 +230,7 @@ export default function AdminLogs() {
                 </div>
               </div>
               <div className="mt-4">
-                <Button onClick={fetchLogs} disabled={loadingLogs}>
+                <Button onClick={() => fetchLogs(filters)} disabled={loadingLogs}>
                   Aplicar Filtros
                 </Button>
               </div>
@@ -342,8 +306,9 @@ export default function AdminLogs() {
               )}
             </CardContent>
           </Card>
-        </div>
-      </SuperAdminLayout>
+          </div>
+        </SuperAdminLayout>
+      </SuperAdminGuard>
     </>
   )
 }
