@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
-import { createClient } from '../../../lib/supabase/server'
+import { requireSuperAdmin } from '../../../lib/auth/api-auth-fixed'
+import { createAdminClient } from '../../../lib/supabase/server'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -9,11 +9,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // Verificar que el usuario sea super_admin
-    const { supabase, role } = await requireCompanyAccess(req, res)
+    const { role } = await requireSuperAdmin(req, res)
     
-    if (role !== 'super_admin') {
-      return res.status(403).json({ error: 'Super admin access required' })
-    }
+    // Use admin client to bypass RLS for super admin queries
+    const supabase = createAdminClient()
 
     // Obtener estadísticas del sistema
     const [
