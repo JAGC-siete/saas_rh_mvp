@@ -1,331 +1,339 @@
-import { useEffect, useState } from 'react'
-import { useAuth } from '../../../lib/auth'
-import { useRouter } from 'next/router'
+import { useCallback, useEffect, useState } from 'react'
 import Head from 'next/head'
-import DashboardLayout from '../../../components/DashboardLayout'
+import Link from 'next/link'
+import { useAuth } from '../../../lib/auth'
+import SuperAdminGuard from '../../../components/SuperAdminGuard'
+import SuperAdminLayout from '../../../components/SuperAdminLayout'
+import EnvironmentError from '../../../components/EnvironmentError'
+import ClientEnvDebug from '../../../components/ClientEnvDebug'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card'
 import { Button } from '../../../components/ui/button'
-import { 
-  Users, 
-  Building2, 
-  CreditCard, 
-  FileText, 
-  Settings, 
-  Shield,
+import {
   Activity,
+  AlertCircle,
+  Building2,
+  CreditCard,
   Database,
-  AlertCircle
+  FileText,
+  RefreshCw,
+  Server,
+  Settings,
+  Shield,
+  Users
 } from 'lucide-react'
-import Link from 'next/link'
+
+interface SystemStats {
+  totalCompanies: number
+  totalUsers: number
+  totalEmployees: number
+  activeCompanies: number
+  inactiveCompanies: number
+  totalRevenue: number
+  monthlyRevenue: number
+  systemHealth: 'healthy' | 'warning' | 'critical'
+  lastBackup: string
+  serverUptime: string
+}
+
+const EMPTY_STATS: SystemStats = {
+  totalCompanies: 0,
+  totalUsers: 0,
+  totalEmployees: 0,
+  activeCompanies: 0,
+  inactiveCompanies: 0,
+  totalRevenue: 0,
+  monthlyRevenue: 0,
+  systemHealth: 'healthy',
+  lastBackup: '',
+  serverUptime: ''
+}
 
 export default function AdminDashboard() {
-  const { user, userProfile, loading } = useAuth()
-  const router = useRouter()
-  const [stats, setStats] = useState<any>(null)
+  const { userProfile } = useAuth()
+  const [systemStats, setSystemStats] = useState<SystemStats>(EMPTY_STATS)
   const [loadingStats, setLoadingStats] = useState(true)
+  const [statsError, setStatsError] = useState<string | null>(null)
+  const [envError, setEnvError] = useState(false)
 
-  useEffect(() => {
-    // Esperar a que termine de cargar antes de verificar
-    if (loading) return
-
-    // Si no hay usuario, redirigir a login (no a /auth/start que es para registro)
-    if (!user) {
-      router.push('/app/login')
-      return
-    }
-
-    // Si hay usuario pero no tiene perfil aún, esperar un momento más
-    // o verificar permisos si ya tiene perfil
-    if (userProfile) {
-      if (!['super_admin', 'company_admin', 'hr_manager'].includes(userProfile.role)) {
-        router.push('/app/dashboard')
-        return
-      }
-    }
-    // Si hay usuario pero no hay perfil aún, no hacer nada (esperar a que se cargue)
-  }, [user, userProfile, loading, router])
-
-  useEffect(() => {
-    if (userProfile && ['super_admin', 'company_admin', 'hr_manager'].includes(userProfile.role)) {
-      fetchStats()
-    }
-  }, [userProfile])
-
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       setLoadingStats(true)
-      
-      // Fetch basic stats from multiple endpoints
-      const [employeesRes, departmentsRes, reportsRes] = await Promise.allSettled([
-        fetch('/api/employees'),
-        fetch('/api/departments'),
-        fetch('/api/reports')
-      ])
+      setStatsError(null)
+      setEnvError(false)
 
-      const stats = {
-        employees: { count: 0, error: null as string | null },
-        departments: { count: 0, error: null as string | null },
-        reports: { count: 0, error: null as string | null }
+      const response = await fetch('/api/admin/stats', { credentials: 'include' })
+      const payload = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        if (response.status === 500) {
+          setEnvError(true)
+        }
+        throw new Error(payload?.error || 'No se pudieron cargar las estadísticas')
       }
 
-      if (employeesRes.status === 'fulfilled' && employeesRes.value.ok) {
-        const data = await employeesRes.value.json()
-        stats.employees.count = data.employees?.length || 0
-      } else {
-        stats.employees.error = 'Failed to load'
-      }
-
-      if (departmentsRes.status === 'fulfilled' && departmentsRes.value.ok) {
-        const data = await departmentsRes.value.json()
-        stats.departments.count = data.departments?.length || 0
-      } else {
-        stats.departments.error = 'Failed to load'
-      }
-
-      setStats(stats)
+      setSystemStats(payload?.stats || EMPTY_STATS)
     } catch (error) {
       console.error('Error fetching admin stats:', error)
+      setStatsError(error instanceof Error ? error.message : 'Error desconocido')
     } finally {
       setLoadingStats(false)
     }
-  }
+  }, [])
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    )
-  }
+  useEffect(() => {
+    if (userProfile?.role === 'super_admin') {
+      fetchStats()
+    }
+  }, [userProfile?.role, fetchStats])
 
-  if (!user || !userProfile || !['super_admin', 'company_admin', 'hr_manager'].includes(userProfile.role)) {
-    return null
-  }
+  const quickActions = [
+    {
+      title: 'Gestión de Empresas',
+      description: 'Administrar tenants y suscripciones',
+      href: '/app/admin/companies',
+      icon: Building2
+    },
+    {
+      title: 'Usuarios del Sistema',
+      description: 'Control de super admins y company admins',
+      href: '/app/admin/users',
+      icon: Users
+    },
+    {
+      title: 'Facturación',
+      description: 'Planes, cobros y facturas',
+      href: '/app/admin/billing',
+      icon: CreditCard
+    },
+    {
+      title: 'Seguridad',
+      description: 'RLS, permisos y auditorías',
+      href: '/app/admin/security',
+      icon: Shield
+    },
+    {
+      title: 'Estado del Sistema',
+      description: 'Salud global y uptime',
+      href: '/app/admin/system',
+      icon: Server
+    },
+    {
+      title: 'Logs y Auditoría',
+      description: 'Eventos recientes e incidentes',
+      href: '/app/admin/logs',
+      icon: FileText
+    }
+  ]
+
+  const healthBadge = (() => {
+    switch (systemStats.systemHealth) {
+      case 'warning':
+        return 'text-yellow-600 bg-yellow-100'
+      case 'critical':
+        return 'text-red-600 bg-red-100'
+      default:
+        return 'text-green-600 bg-green-100'
+    }
+  })()
 
   return (
     <>
       <Head>
-        <title>Panel de Administración - Sistema HR</title>
-        <meta name="description" content="Panel de administración del sistema de recursos humanos" />
+        <title>Panel de Administración - Humano SISU</title>
+        <meta
+          name="description"
+          content="Panel principal para operaciones multi-tenant y super administración"
+        />
       </Head>
 
-      <DashboardLayout>
-        <div className="space-y-6">
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Panel de Administración</h1>
-              <p className="text-gray-600">Gestiona todos los aspectos del sistema HR</p>
+      <SuperAdminGuard>
+        <SuperAdminLayout>
+          <div className="space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <p className="text-sm text-gray-500 uppercase tracking-wide">Panel global</p>
+                <h1 className="text-3xl font-semibold text-gray-900">Administración Central</h1>
+                <p className="text-gray-600">
+                  Controla empresas, usuarios, facturación y salud del sistema
+                </p>
+              </div>
+              <div className="flex items-center gap-2 rounded-full bg-blue-50 px-4 py-2 text-blue-700">
+                <Shield className="h-4 w-4" />
+                <span className="text-sm font-medium">
+                  {userProfile?.role === 'super_admin' ? 'Super Admin' : 'Acceso restringido'}
+                </span>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-blue-600" />
-              <span className="text-sm font-medium text-blue-600">
-                {userProfile.role === 'super_admin' ? 'Super Admin' : 
-                 userProfile.role === 'company_admin' ? 'Admin Empresa' : 'HR Manager'}
-              </span>
-            </div>
-          </div>
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Empleados</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {loadingStats ? '...' : stats?.employees?.error ? 'Error' : stats?.employees?.count || 0}
-                </div>
-                {stats?.employees?.error && (
-                  <p className="text-xs text-red-600 flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3" />
-                    {stats.employees.error}
-                  </p>
+            {envError ? (
+              <div className="space-y-6">
+                <EnvironmentError />
+                <ClientEnvDebug />
+              </div>
+            ) : (
+              <>
+                {statsError && (
+                  <Card className="border-red-200 bg-red-50">
+                    <CardContent className="flex flex-wrap items-center justify-between gap-3 pt-4">
+                      <div className="flex items-center gap-2 text-sm text-red-800">
+                        <AlertCircle className="h-4 w-4" />
+                        <span>{statsError}</span>
+                      </div>
+                      <Button variant="outline" size="sm" onClick={fetchStats}>
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        Reintentar
+                      </Button>
+                    </CardContent>
+                  </Card>
                 )}
-              </CardContent>
-            </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Departamentos</CardTitle>
-                <Building2 className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {loadingStats ? '...' : stats?.departments?.error ? 'Error' : stats?.departments?.count || 0}
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
+                  {[
+                    {
+                      label: 'Empresas totales',
+                      value: systemStats.totalCompanies,
+                      sublabel: `${systemStats.activeCompanies} activas`,
+                      icon: Building2
+                    },
+                    {
+                      label: 'Usuarios admin',
+                      value: systemStats.totalUsers,
+                      sublabel: 'Super admins y company admins',
+                      icon: Users
+                    },
+                    {
+                      label: 'Empleados registrados',
+                      value: systemStats.totalEmployees.toLocaleString(),
+                      sublabel: 'Across all tenants',
+                      icon: Activity
+                    },
+                    {
+                      label: 'Ingresos mensuales',
+                      value: `L. ${systemStats.monthlyRevenue.toLocaleString()}`,
+                      sublabel: `Total: L. ${systemStats.totalRevenue.toLocaleString()}`,
+                      icon: CreditCard
+                    }
+                  ].map((card, index) => (
+                    <Card key={card.label}>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">{card.label}</CardTitle>
+                        <card.icon className="h-4 w-4 text-muted-foreground" />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">
+                          {loadingStats && index !== 3 ? '…' : card.value}
+                        </div>
+                        <p className="text-xs text-muted-foreground">{card.sublabel}</p>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
-                {stats?.departments?.error && (
-                  <p className="text-xs text-red-600 flex items-center gap-1">
-                    <AlertCircle className="h-3 w-3" />
-                    {stats.departments.error}
-                  </p>
-                )}
-              </CardContent>
-            </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Estado del Sistema</CardTitle>
-                <Activity className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">Activo</div>
-                <p className="text-xs text-muted-foreground">Todos los servicios funcionando</p>
-              </CardContent>
-            </Card>
-          </div>
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                  <Card className="lg:col-span-2">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <div>
+                        <CardTitle className="text-base font-semibold">
+                          Acciones rápidas
+                        </CardTitle>
+                        <CardDescription>Atajos a los módulos críticos del panel</CardDescription>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={fetchStats}
+                        disabled={loadingStats}
+                      >
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        {loadingStats ? 'Actualizando…' : 'Actualizar datos'}
+                      </Button>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        {quickActions.map((action) => (
+                          <Link key={action.href} href={action.href} className="block" prefetch={false}>
+                            <Card className="h-full border border-gray-200 transition hover:border-blue-200 hover:shadow-md">
+                              <CardHeader className="space-y-1">
+                                <CardTitle className="flex items-center gap-2 text-base font-semibold">
+                                  <action.icon className="h-5 w-5 text-blue-600" />
+                                  {action.title}
+                                </CardTitle>
+                                <CardDescription>{action.description}</CardDescription>
+                              </CardHeader>
+                              <CardContent>
+                                <Button variant="outline" className="w-full">
+                                  Abrir módulo
+                                </Button>
+                              </CardContent>
+                            </Card>
+                          </Link>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
 
-          {/* Quick Actions */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-              <Link href="/app/employees">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5 text-blue-600" />
-                    Gestión de Empleados
-                  </CardTitle>
-                  <CardDescription>
-                    Administra empleados, perfiles y asignaciones
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button variant="outline" className="w-full">
-                    Gestionar Empleados
-                  </Button>
-                </CardContent>
-              </Link>
-            </Card>
-
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-              <Link href="/app/departments">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Building2 className="h-5 w-5 text-green-600" />
-                    Departamentos
-                  </CardTitle>
-                  <CardDescription>
-                    Organiza la estructura departamental
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button variant="outline" className="w-full">
-                    Ver Departamentos
-                  </Button>
-                </CardContent>
-              </Link>
-            </Card>
-
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-              <Link href="/app/payroll">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <CreditCard className="h-5 w-5 text-purple-600" />
-                    Sistema de Nómina
-                  </CardTitle>
-                  <CardDescription>
-                    Procesa y gestiona pagos de empleados
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button variant="outline" className="w-full">
-                    Gestionar Nómina
-                  </Button>
-                </CardContent>
-              </Link>
-            </Card>
-
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-              <Link href="/app/reports">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-orange-600" />
-                    Reportes y Análisis
-                  </CardTitle>
-                  <CardDescription>
-                    Genera reportes detallados del sistema
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button variant="outline" className="w-full">
-                    Ver Reportes
-                  </Button>
-                </CardContent>
-              </Link>
-            </Card>
-
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-              <Link href="/app/settings">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Settings className="h-5 w-5 text-gray-600" />
-                    Configuración
-                  </CardTitle>
-                  <CardDescription>
-                    Ajustes generales del sistema
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Button variant="outline" className="w-full">
-                    Configurar Sistema
-                  </Button>
-                </CardContent>
-              </Link>
-            </Card>
-
-            {userProfile.role === 'super_admin' && (
-              <Link href="/app/admin/super-admin">
-                <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Database className="h-5 w-5 text-red-600" />
-                      Administración Avanzada
-                    </CardTitle>
-                    <CardDescription>
-                      Herramientas de super administrador
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Button variant="outline" className="w-full">
-                      Super Admin Panel
-                    </Button>
-                  </CardContent>
-                </Card>
-              </Link>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Activity className="h-5 w-5 text-green-600" />
+                        Estado del Sistema
+                      </CardTitle>
+                      <CardDescription>Monitoreo de la plataforma multi-tenant</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex items-center justify-between rounded-md bg-gray-50 px-3 py-2">
+                        <div>
+                          <p className="text-sm font-medium text-gray-700">Salud general</p>
+                          <p className="text-xs text-gray-500">
+                            Último backup: {systemStats.lastBackup || 'Sin registros'}
+                          </p>
+                        </div>
+                        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${healthBadge}`}>
+                          {systemStats.systemHealth}
+                        </span>
+                      </div>
+                      <div className="space-y-3 text-sm text-gray-600">
+                        <div className="flex items-center justify-between">
+                          <span className="flex items-center gap-2">
+                            <Database className="h-4 w-4 text-green-600" /> Base de Datos
+                          </span>
+                          <span className="font-semibold text-green-600">Operativa</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="flex items-center gap-2">
+                            <Server className="h-4 w-4 text-green-600" /> APIs
+                          </span>
+                          <span className="font-semibold text-green-600">Online</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="flex items-center gap-2">
+                            <Shield className="h-4 w-4 text-green-600" /> Autenticación
+                          </span>
+                          <span className="font-semibold text-green-600">Activa</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-green-600" /> Reportes
+                          </span>
+                          <span className="font-semibold text-green-600">Generando</span>
+                        </div>
+                      </div>
+                      <div className="rounded-md border border-dashed border-gray-200 p-3">
+                        <p className="text-xs uppercase tracking-wide text-gray-500">
+                          Tiempo activo
+                        </p>
+                        <p className="text-lg font-semibold text-gray-900">
+                          {systemStats.serverUptime || '—'}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </>
             )}
           </div>
-
-          {/* System Status */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="h-5 w-5 text-green-600" />
-                Estado del Sistema
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">✓</div>
-                  <div className="text-sm text-gray-600">Base de Datos</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">✓</div>
-                  <div className="text-sm text-gray-600">APIs</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">✓</div>
-                  <div className="text-sm text-gray-600">Autenticación</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">✓</div>
-                  <div className="text-sm text-gray-600">Reportes</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </DashboardLayout>
+        </SuperAdminLayout>
+      </SuperAdminGuard>
     </>
   )
 }
