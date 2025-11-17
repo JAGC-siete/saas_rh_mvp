@@ -26,6 +26,7 @@ export default function UsersAdminPage() {
   const [users, setUsers] = useState<UserRow[]>([])
   const [loadingUsers, setLoadingUsers] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [authorized, setAuthorized] = useState(false)
 
   const [search, setSearch] = useState('')
   const [role, setRole] = useState('')
@@ -39,9 +40,19 @@ export default function UsersAdminPage() {
   const [form, setForm] = useState({ email: '', password: '', role: 'company_admin', company_id: '' })
 
   useEffect(() => {
-    if (!loading && userProfile && !['super_admin', 'company_admin', 'hr_manager'].includes(userProfile.role)) {
-      router.push('/app/dashboard')
+    if (loading) return
+
+    if (!userProfile) {
+      router.replace('/app/login?redirect=/app/admin/users')
+      return
     }
+
+    if (userProfile.role !== 'super_admin') {
+      router.replace('/app/dashboard')
+      return
+    }
+
+    setAuthorized(true)
   }, [userProfile, loading, router])
 
   useEffect(() => {
@@ -132,7 +143,10 @@ export default function UsersAdminPage() {
           setCompanies((data.companies || []).map((c: any) => ({ id: c.id, name: c.name })))
         }
       }
-    } catch (_) {}
+    } catch (err) {
+      console.error('Error loading companies list', err)
+      addNotification({ type: 'error', title: 'Error', message: 'No se pudieron cargar las empresas' })
+    }
   }
 
   const createUser = async (e: React.FormEvent) => {
@@ -159,7 +173,7 @@ export default function UsersAdminPage() {
     }
   }
 
-  if (loading) {
+  if (loading || !authorized) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -206,6 +220,11 @@ export default function UsersAdminPage() {
               <CardTitle className="text-base">Listado ({filtered.length})</CardTitle>
             </CardHeader>
             <CardContent>
+              {error && (
+                <div className="mb-4 border border-red-200 bg-red-50 text-sm text-red-700 px-3 py-2 rounded-md">
+                  {error}
+                </div>
+              )}
               {showCreate && (
                 <div className="mb-4 border rounded-md p-4 bg-gray-50">
                   <form onSubmit={createUser} className="grid grid-cols-1 md:grid-cols-2 gap-4">

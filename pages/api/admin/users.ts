@@ -2,7 +2,6 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../lib/supabase/server'
 import { logger } from '../../../lib/logger'
 import { createSecureErrorResponse, createAuthErrorResponse } from '../../../lib/security/error-handling'
-import { withIdleTimeout } from '../../../lib/middleware/idle-timeout'
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
@@ -61,8 +60,16 @@ async function getUsers(supabase: any, req: NextApiRequest, res: NextApiResponse
         is_active,
         last_login,
         created_at,
-        company_id
+        company_id,
+        companies(name),
+        auth_users:users(email, last_sign_in_at)
       `, { count: 'exact' })
+
+    if (q) {
+      const sanitized = q.replace(/[%]/g, '').replace(/,/g, ' ')
+      const searchPattern = `%${sanitized}%`
+      query = query.or(`auth_users.email.ilike.${searchPattern},companies.name.ilike.${searchPattern}`)
+    }
 
     if (role) {
       query = query.eq('role', role)
@@ -80,15 +87,14 @@ async function getUsers(supabase: any, req: NextApiRequest, res: NextApiResponse
       throw error
     }
 
-    // Por ahora, devolver datos básicos sin emails para evitar errores
     const usersData = profiles?.map((profile: any) => ({
       id: profile.id,
-      email: `user-${profile.id.substring(0, 8)}@temp.com`, // Email temporal
+      email: profile.auth_users?.email || '',
       role: profile.role,
       company_id: profile.company_id,
-      company_name: null, // Se cargará después
+      company_name: profile.companies?.name || null,
       is_active: profile.is_active,
-      last_login: profile.last_login,
+      last_login: profile.last_login || profile.auth_users?.last_sign_in_at || null,
       created_at: profile.created_at
     })) || []
 

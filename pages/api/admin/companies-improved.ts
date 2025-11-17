@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createAdminClient } from '../../../lib/supabase/server'
+import { createAdminClient, createClient } from '../../../lib/supabase/server'
 import { logger } from '../../../lib/logger'
 
 interface ListResponse {
@@ -21,15 +21,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
   }
 
   try {
-    const supabase = createAdminClient()
+    const authClient = createClient(req, res)
+    const { data: { user }, error: userError } = await authClient.auth.getUser()
 
-    // Auth: require super_admin
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
     if (userError || !user) {
       return res.status(401).json({ success: false, error: 'Authentication required' })
     }
 
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await authClient
       .from('user_profiles')
       .select('role')
       .eq('id', user.id)
@@ -38,6 +37,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     if (profileError || !profile || profile.role !== 'super_admin') {
       return res.status(403).json({ success: false, error: 'Super admin access required' })
     }
+
+    const supabase = createAdminClient()
 
     // Query params
     const q = (req.query.q as string | undefined)?.trim().toLowerCase() || ''

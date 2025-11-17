@@ -27,6 +27,7 @@ export default function CompaniesAdminPage() {
   const [total, setTotal] = useState(0)
   const [selected, setSelected] = useState<Record<string, boolean>>({})
   const { addNotification } = useNotificationContext()
+  const [authorized, setAuthorized] = useState(false)
 
   // UI state
   const [search, setSearch] = useState('')
@@ -44,9 +45,19 @@ export default function CompaniesAdminPage() {
 
   // Guard: only admins
   useEffect(() => {
-    if (!loading && userProfile && !['super_admin', 'company_admin', 'hr_manager'].includes(userProfile.role)) {
-      router.push('/app/dashboard')
+    if (loading) return
+
+    if (!userProfile) {
+      router.replace('/app/login?redirect=/app/admin/companies')
+      return
     }
+
+    if (userProfile.role !== 'super_admin') {
+      router.replace('/app/dashboard')
+      return
+    }
+
+    setAuthorized(true)
   }, [userProfile, loading, router])
 
   // Load companies with server pagination and filters
@@ -175,7 +186,7 @@ export default function CompaniesAdminPage() {
     if (page > totalPages) setPage(totalPages)
   }, [totalPages, page])
 
-  if (loading) {
+  if (loading || !authorized) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
