@@ -104,18 +104,20 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
   ]
 
   return (
-    <div className="h-screen flex overflow-hidden bg-gray-50">
+    <div className="min-h-screen flex overflow-hidden bg-app text-white relative">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.12),_transparent_45%),_radial-gradient(circle_at_bottom,_rgba(59,130,246,0.2),_transparent_50%)]" />
+
       {/* Super Admin Sidebar */}
-      <div className={`${sidebarOpen ? 'w-80' : 'w-16'} bg-gradient-to-b from-gray-900 to-gray-800 border-r border-gray-700 transition-all duration-300 ease-in-out shadow-xl`}>
+      <div className={`${sidebarOpen ? 'w-80' : 'w-16'} relative glass-strong border-r border-white/10 transition-all duration-300 ease-in-out shadow-glass`}>
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="flex items-center justify-between h-16 px-4 border-b border-gray-700 bg-gray-900">
+          <div className="flex items-center justify-between h-16 px-4 border-b border-white/10 bg-white/5 backdrop-blur-lg">
             {sidebarOpen && (
               <div className="flex items-center space-x-3">
-                <Crown className="h-8 w-8 text-yellow-400" />
+                <Crown className="h-8 w-8 text-amber-300" />
                 <div>
                   <h1 className="text-lg font-bold text-white">Super Admin</h1>
-                  <p className="text-xs text-gray-400">Humano SISU</p>
+                  <p className="text-xs text-white/70">Humano SISU</p>
                 </div>
               </div>
             )}
@@ -123,7 +125,7 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
               variant="ghost"
               size="sm"
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-1 text-gray-300 hover:text-white hover:bg-gray-700"
+              className="p-1 text-white/70 hover:text-white hover:bg-white/10"
             >
               {sidebarOpen ? '←' : '→'}
             </Button>
@@ -138,17 +140,17 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
                   <div
                     className={`group flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                       isActive
-                        ? 'bg-yellow-500 text-gray-900 shadow-lg'
-                        : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                        ? 'bg-white/90 text-slate-900 shadow-lg'
+                        : 'text-white/70 hover:bg-white/10 hover:text-white'
                     }`}
                   >
                     <item.icon className={`mr-3 h-5 w-5 flex-shrink-0 ${
-                      isActive ? 'text-gray-900' : 'text-gray-400 group-hover:text-white'
+                      isActive ? 'text-slate-900' : 'text-white/50 group-hover:text-white'
                     }`} />
                     {sidebarOpen && (
                       <div className="flex-1">
                         <div className="text-sm font-medium">{item.name}</div>
-                        <div className="text-xs text-gray-400">{item.description}</div>
+                        <div className="text-xs text-white/60">{item.description}</div>
                       </div>
                     )}
                   </div>
@@ -158,12 +160,12 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
           </nav>
 
           {/* User Section */}
-          <div className="border-t border-gray-700 p-4">
+          <div className="border-t border-white/10 p-4">
             {sidebarOpen ? (
               <div className="space-y-3">
                 <div className="flex items-center space-x-3">
-                  <div className="h-8 w-8 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 flex items-center justify-center">
-                    <span className="text-sm font-bold text-gray-900">
+                  <div className="h-8 w-8 rounded-full bg-gradient-to-r from-amber-300 to-orange-500 flex items-center justify-center">
+                    <span className="text-sm font-bold text-slate-900">
                       {user?.email?.charAt(0).toUpperCase() || 'A'}
                     </span>
                   </div>
@@ -171,7 +173,7 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
                     <p className="text-sm font-medium text-white truncate">
                       {user?.email}
                     </p>
-                    <p className="text-xs text-gray-400">Super Administrador</p>
+                    <p className="text-xs text-white/60">Super Administrador</p>
                   </div>
                 </div>
                 <div className="flex space-x-2">
@@ -179,7 +181,7 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
                     variant="outline"
                     size="sm"
                     onClick={() => router.push('/app/dashboard')}
-                    className="flex-1 text-xs bg-gray-700 text-white border-gray-600 hover:bg-gray-600"
+                    className="flex-1 text-xs bg-white/10 text-white border-white/20 hover:bg-white/20"
                   >
                     Ver Dashboard Normal
                   </Button>
@@ -187,7 +189,7 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
                     variant="outline"
                     size="sm"
                     onClick={handleSignOut}
-                    className="flex-1 text-xs bg-red-600 text-white border-red-600 hover:bg-red-700"
+                    className="flex-1 text-xs bg-rose-500/90 text-white border-rose-400 hover:bg-rose-500"
                   >
                     Cerrar Sesión
                   </Button>
@@ -195,8 +197,8 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
               </div>
             ) : (
               <div className="flex flex-col items-center space-y-2">
-                <div className="h-8 w-8 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 flex items-center justify-center">
-                  <span className="text-sm font-bold text-gray-900">
+                <div className="h-8 w-8 rounded-full bg-gradient-to-r from-amber-300 to-orange-500 flex items-center justify-center">
+                  <span className="text-sm font-bold text-slate-900">
                     {user?.email?.charAt(0).toUpperCase() || 'A'}
                   </span>
                 </div>
@@ -204,7 +206,7 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
                   variant="ghost"
                   size="sm"
                   onClick={handleSignOut}
-                  className="p-1 text-gray-300 hover:text-white hover:bg-gray-700"
+                  className="p-1 text-white/70 hover:text-white hover:bg-white/10"
                 >
                   <LogOut className="h-4 w-4" />
                 </Button>
@@ -215,25 +217,25 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden relative">
         {/* Top Bar */}
-        <header className="bg-white shadow-sm border-b border-gray-200">
+        <header className="glass border border-white/10 shadow-glass">
           <div className="px-6 py-4">
             <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <Crown className="h-6 w-6 text-yellow-500" />
-              <h2 className="text-xl font-semibold text-gray-900">
-                Panel de Super Administrador
-              </h2>
-            </div>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2 text-sm text-gray-500">
-                <Activity className="h-4 w-4" />
-                <span>Sistema Activo</span>
+              <div className="flex items-center space-x-3">
+                <Crown className="h-6 w-6 text-amber-300" />
+                <h2 className="text-xl font-semibold text-white">
+                  Panel de Super Administrador
+                </h2>
               </div>
-                <div className="h-6 w-px bg-gray-300" />
-                <div className="text-sm text-gray-500">
-                  {new Date().toLocaleDateString('es-HN')}
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2 text-sm text-white/70">
+                  <Activity className="h-4 w-4" />
+                  <span>Sistema Activo</span>
+                </div>
+                <div className="h-6 w-px bg-white/20" />
+                <div className="text-sm text-white/70">
+                  {new Date().toLocaleDateString('es-HN', { timeZone: 'America/Tegucigalpa' })}
                 </div>
               </div>
             </div>
@@ -241,8 +243,9 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto bg-gray-50">
-          <div className="p-6">
+        <main className="flex-1 overflow-y-auto px-6 py-8 relative">
+          <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(800px_400px_at_80%_0%,rgba(255,255,255,0.08),transparent),radial-gradient(700px_500px_at_0%_50%,rgba(59,130,246,0.12),transparent)]" />
+          <div className="relative space-y-6">
             {children}
           </div>
         </main>

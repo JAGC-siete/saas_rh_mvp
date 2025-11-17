@@ -128,11 +128,11 @@ export default function AdminDashboard() {
   const healthBadge = (() => {
     switch (systemStats.systemHealth) {
       case 'warning':
-        return 'text-yellow-600 bg-yellow-100'
+        return 'text-amber-100 bg-amber-500/20 border border-amber-300/40'
       case 'critical':
-        return 'text-red-600 bg-red-100'
+        return 'text-rose-100 bg-rose-500/20 border border-rose-400/40'
       default:
-        return 'text-green-600 bg-green-100'
+        return 'text-emerald-100 bg-emerald-500/20 border border-emerald-300/40'
     }
   })()
 
@@ -148,18 +148,18 @@ export default function AdminDashboard() {
 
       <SuperAdminGuard>
         <SuperAdminLayout>
-          <div className="space-y-6">
+          <div className="space-y-6 text-white">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
-                <p className="text-sm text-gray-500 uppercase tracking-wide">Panel global</p>
-                <h1 className="text-3xl font-semibold text-gray-900">Administración Central</h1>
-                <p className="text-gray-600">
+                <p className="text-xs uppercase tracking-[0.3em] text-white/60">Panel global</p>
+                <h1 className="text-3xl font-semibold text-white">Administración Central</h1>
+                <p className="text-white/70">
                   Controla empresas, usuarios, facturación y salud del sistema
                 </p>
               </div>
-              <div className="flex items-center gap-2 rounded-full bg-blue-50 px-4 py-2 text-blue-700">
-                <Shield className="h-4 w-4" />
-                <span className="text-sm font-medium">
+              <div className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-white">
+                <Shield className="h-4 w-4 text-amber-300" />
+                <span className="text-sm font-medium tracking-wide">
                   {userProfile?.role === 'super_admin' ? 'Super Admin' : 'Acceso restringido'}
                 </span>
               </div>
@@ -173,13 +173,13 @@ export default function AdminDashboard() {
             ) : (
               <>
                 {statsError && (
-                  <Card className="border-red-200 bg-red-50">
+                  <Card className="border-red-200/40 bg-red-500/10 text-red-50">
                     <CardContent className="flex flex-wrap items-center justify-between gap-3 pt-4">
-                      <div className="flex items-center gap-2 text-sm text-red-800">
+                      <div className="flex items-center gap-2 text-sm">
                         <AlertCircle className="h-4 w-4" />
                         <span>{statsError}</span>
                       </div>
-                      <Button variant="outline" size="sm" onClick={fetchStats}>
+                      <Button variant="outline" size="sm" onClick={fetchStats} className="border-white/30 text-white hover:bg-white/10">
                         <RefreshCw className="mr-2 h-4 w-4" />
                         Reintentar
                       </Button>
@@ -214,35 +214,38 @@ export default function AdminDashboard() {
                       icon: CreditCard
                     }
                   ].map((card, index) => (
-                    <Card key={card.label}>
+                    <Card key={card.label} variant="glass" className="border-white/10">
                       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">{card.label}</CardTitle>
-                        <card.icon className="h-4 w-4 text-muted-foreground" />
+                        <card.icon className="h-4 w-4 text-white/70" />
                       </CardHeader>
                       <CardContent>
                         <div className="text-2xl font-bold">
                           {loadingStats && index !== 3 ? '…' : card.value}
                         </div>
-                        <p className="text-xs text-muted-foreground">{card.sublabel}</p>
+                        <p className="text-xs text-white/70">{card.sublabel}</p>
                       </CardContent>
                     </Card>
                   ))}
                 </div>
 
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-                  <Card className="lg:col-span-2">
+                  <Card variant="glass" className="lg:col-span-2 border-white/10">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                       <div>
                         <CardTitle className="text-base font-semibold">
                           Acciones rápidas
                         </CardTitle>
-                        <CardDescription>Atajos a los módulos críticos del panel</CardDescription>
+                        <CardDescription className="text-white/70">
+                          Atajos a los módulos críticos del panel
+                        </CardDescription>
                       </div>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={fetchStats}
                         disabled={loadingStats}
+                        className="border-white/30 text-white hover:bg-white/10"
                       >
                         <RefreshCw className="mr-2 h-4 w-4" />
                         {loadingStats ? 'Actualizando…' : 'Actualizar datos'}
@@ -252,16 +255,24 @@ export default function AdminDashboard() {
                       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         {quickActions.map((action) => (
                           <Link key={action.href} href={action.href} className="block" prefetch={false}>
-                            <Card className="h-full border border-gray-200 transition hover:border-blue-200 hover:shadow-md">
+                            <Card
+                              variant="glass"
+                              className="h-full border border-white/10 transition hover:border-white/30 hover:shadow-glass"
+                            >
                               <CardHeader className="space-y-1">
                                 <CardTitle className="flex items-center gap-2 text-base font-semibold">
-                                  <action.icon className="h-5 w-5 text-blue-600" />
+                                  <action.icon className="h-5 w-5 text-amber-200" />
                                   {action.title}
                                 </CardTitle>
-                                <CardDescription>{action.description}</CardDescription>
+                                <CardDescription className="text-white/70">
+                                  {action.description}
+                                </CardDescription>
                               </CardHeader>
                               <CardContent>
-                                <Button variant="outline" className="w-full">
+                                <Button
+                                  variant="outline"
+                                  className="w-full border-white/30 text-white hover:bg-white/10"
+                                >
                                   Abrir módulo
                                 </Button>
                               </CardContent>
@@ -272,19 +283,21 @@ export default function AdminDashboard() {
                     </CardContent>
                   </Card>
 
-                  <Card>
+                  <Card variant="glass" className="border-white/10">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
-                        <Activity className="h-5 w-5 text-green-600" />
+                        <Activity className="h-5 w-5 text-emerald-200" />
                         Estado del Sistema
                       </CardTitle>
-                      <CardDescription>Monitoreo de la plataforma multi-tenant</CardDescription>
+                      <CardDescription className="text-white/70">
+                        Monitoreo de la plataforma multi-tenant
+                      </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div className="flex items-center justify-between rounded-md bg-gray-50 px-3 py-2">
+                      <div className="flex items-center justify-between rounded-md bg-white/5 px-3 py-2 border border-white/10">
                         <div>
-                          <p className="text-sm font-medium text-gray-700">Salud general</p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-sm font-medium text-white">Salud general</p>
+                          <p className="text-xs text-white/70">
                             Último backup: {systemStats.lastBackup || 'Sin registros'}
                           </p>
                         </div>
@@ -292,37 +305,37 @@ export default function AdminDashboard() {
                           {systemStats.systemHealth}
                         </span>
                       </div>
-                      <div className="space-y-3 text-sm text-gray-600">
+                      <div className="space-y-3 text-sm text-white/80">
                         <div className="flex items-center justify-between">
                           <span className="flex items-center gap-2">
-                            <Database className="h-4 w-4 text-green-600" /> Base de Datos
+                            <Database className="h-4 w-4 text-emerald-200" /> Base de Datos
                           </span>
-                          <span className="font-semibold text-green-600">Operativa</span>
+                          <span className="font-semibold text-emerald-200">Operativa</span>
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="flex items-center gap-2">
-                            <Server className="h-4 w-4 text-green-600" /> APIs
+                            <Server className="h-4 w-4 text-emerald-200" /> APIs
                           </span>
-                          <span className="font-semibold text-green-600">Online</span>
+                          <span className="font-semibold text-emerald-200">Online</span>
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="flex items-center gap-2">
-                            <Shield className="h-4 w-4 text-green-600" /> Autenticación
+                            <Shield className="h-4 w-4 text-emerald-200" /> Autenticación
                           </span>
-                          <span className="font-semibold text-green-600">Activa</span>
+                          <span className="font-semibold text-emerald-200">Activa</span>
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="flex items-center gap-2">
-                            <FileText className="h-4 w-4 text-green-600" /> Reportes
+                            <FileText className="h-4 w-4 text-emerald-200" /> Reportes
                           </span>
-                          <span className="font-semibold text-green-600">Generando</span>
+                          <span className="font-semibold text-emerald-200">Generando</span>
                         </div>
                       </div>
-                      <div className="rounded-md border border-dashed border-gray-200 p-3">
-                        <p className="text-xs uppercase tracking-wide text-gray-500">
+                      <div className="rounded-md border border-dashed border-white/30 p-3">
+                        <p className="text-xs uppercase tracking-wide text-white/60">
                           Tiempo activo
                         </p>
-                        <p className="text-lg font-semibold text-gray-900">
+                        <p className="text-lg font-semibold text-white">
                           {systemStats.serverUptime || '—'}
                         </p>
                       </div>
