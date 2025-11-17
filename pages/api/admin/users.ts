@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../lib/supabase/server'
+import { createClient, createAdminClient } from '../../../lib/supabase/server'
 import { logger } from '../../../lib/logger'
 import { createSecureErrorResponse, createAuthErrorResponse } from '../../../lib/security/error-handling'
 
@@ -51,8 +51,11 @@ async function getUsers(supabase: any, req: NextApiRequest, res: NextApiResponse
     const from = (page - 1) * pageSize
     const to = from + pageSize - 1
 
-    // Base query con count
-    let query = supabase
+    // Use admin client for queries that need to access auth data
+    const adminClient = createAdminClient()
+
+    // Base query - get profiles without trying to join users table
+    let query = adminClient
       .from('user_profiles')
       .select(`
         id,
@@ -61,15 +64,8 @@ async function getUsers(supabase: any, req: NextApiRequest, res: NextApiResponse
         last_login,
         created_at,
         company_id,
-        companies(name),
-        auth_users:users(email, last_sign_in_at)
+        companies(name)
       `, { count: 'exact' })
-
-    if (q) {
-      const sanitized = q.replace(/[%]/g, '').replace(/,/g, ' ')
-      const searchPattern = `%${sanitized}%`
-      query = query.or(`auth_users.email.ilike.${searchPattern},companies.name.ilike.${searchPattern}`)
-    }
 
     if (role) {
       query = query.eq('role', role)
@@ -87,16 +83,51 @@ async function getUsers(supabase: any, req: NextApiRequest, res: NextApiResponse
       throw error
     }
 
-    const usersData = profiles?.map((profile: any) => ({
-      id: profile.id,
-      email: profile.auth_users?.email || '',
-      role: profile.role,
-      company_id: profile.company_id,
-      company_name: profile.companies?.name || null,
-      is_active: profile.is_active,
-      last_login: profile.last_login || profile.auth_users?.last_sign_in_at || null,
-      created_at: profile.created_at
-    })) || []
+    // Get all user IDs to fetch emails from auth
+    const userIds = profiles?.map((p: any) => p.id) || []
+    
+    // Fetch emails from auth.users using admin client
+    const authUsersMap = new Map<string, { email: string; last_sign_in_at: string | null }>()
+    
+    if (userIds.length > 0) {
+      try {
+        const { data: authUsers } = await adminClient.auth.admin.listUsers()
+        authUsers?.users?.forEach((user: any) => {
+          if (userIds.includes(user.id)) {
+            authUsersMap.set(user.id, {
+              email: user.email || '',
+              last_sign_in_at: user.last_sign_in_at || null
+            })
+          }
+        })
+      } catch (authError: any) {
+        logger.warn('Error fetching auth users, continuing without emails', { error: authError?.message || String(authError) })
+      }
+    }
+
+    // Combine profile data with auth data
+    let usersData = profiles?.map((profile: any) => {
+      const authData = authUsersMap.get(profile.id)
+      return {
+        id: profile.id,
+        email: authData?.email || '',
+        role: profile.role,
+        company_id: profile.company_id,
+        company_name: profile.companies?.name || null,
+        is_active: profile.is_active,
+        last_login: profile.last_login || authData?.last_sign_in_at || null,
+        created_at: profile.created_at
+      }
+    }) || []
+
+    // Apply text search filter if provided (after fetching emails)
+    if (q) {
+      const searchLower = q.toLowerCase()
+      usersData = usersData.filter((user: any) => 
+        user.email?.toLowerCase().includes(searchLower) ||
+        user.company_name?.toLowerCase().includes(searchLower)
+      )
+    }
 
     return res.status(200).json({
       success: true,
