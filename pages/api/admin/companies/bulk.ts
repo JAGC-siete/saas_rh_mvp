@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../../lib/supabase/server'
+import { createAdminClient } from '../../../../lib/supabase/server'
+import { requireSuperAdmin } from '../../../../lib/auth/api-auth-fixed'
 import { createSecureErrorResponse, createAuthErrorResponse } from '../../../../lib/security/error-handling'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -9,26 +10,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const supabase = createClient(req, res)
     const { action, ids } = req.body as { action: 'activate' | 'deactivate' | 'delete'; ids: string[] }
 
     if (!action || !Array.isArray(ids) || ids.length === 0) {
       return res.status(400).json({ error: 'Invalid payload' })
     }
 
-    // Auth
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return res.status(401).json(createAuthErrorResponse('Authentication required'))
-
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (!profile || profile.role !== 'super_admin') {
-      return res.status(403).json(createAuthErrorResponse('Super admin access required'))
-    }
+    // Verify super admin using standardized auth
+    await requireSuperAdmin(req, res)
+    
+    // Use admin client for all database operations (bypasses RLS)
+    const supabase = createAdminClient()
 
     if (action === 'delete') {
       // Safety: ensure no employees or users exist
@@ -65,7 +57,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     return res.status(200).json({ success: true })
-  } catch (error) {
+  } catch (error: any) {
+    // If error is from requireSuperAdmin, it already sent response
+    if (error.message === 'UNAUTHORIZED' || error.message === 'INSUFFICIENT_PERMISSIONS') {
+      return // Response already sent
+    }
     return res.status(500).json(createSecureErrorResponse(error))
   }
 }

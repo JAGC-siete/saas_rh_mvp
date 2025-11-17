@@ -11,14 +11,20 @@ export default function BackupPage() {
       </Head>
       <SuperAdminGuard>
         <SuperAdminLayout>
-          <div className="space-y-6">
-            <h1 className="text-2xl font-bold">Backup</h1>
-            <Card>
+          <div className="space-y-6 text-white">
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-white/60">Respaldo de datos</p>
+              <h1 className="text-3xl font-semibold text-white">Backup</h1>
+              <p className="text-white/70">
+                Respaldo y restauración de datos
+              </p>
+            </div>
+            <Card variant="glass" className="border-white/10">
               <CardHeader>
-                <CardTitle>Próximamente</CardTitle>
+                <CardTitle className="text-white">Próximamente</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-sm text-gray-600">Placeholder para respaldo y restauración de datos.</div>
+                <div className="text-sm text-white/70">Placeholder para respaldo y restauración de datos.</div>
               </CardContent>
             </Card>
           </div>

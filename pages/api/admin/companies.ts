@@ -1,30 +1,17 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createAdminClient } from '../../../lib/supabase/server'
+import { createClient, createAdminClient } from '../../../lib/supabase/server'
+import { requireSuperAdmin } from '../../../lib/auth/api-auth-fixed'
 import { logger } from '../../../lib/logger'
 import { createSecureErrorResponse, createAuthErrorResponse } from '../../../lib/security/error-handling'
 
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
+    // Verify super admin using standardized auth
+    await requireSuperAdmin(req, res)
+    
+    // Use admin client for all database operations (bypasses RLS)
     const supabase = createAdminClient()
-    
-    // Get user and verify super admin role
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    
-    if (userError || !user) {
-      return res.status(401).json(createAuthErrorResponse('Authentication required'))
-    }
-
-    // Check if user is super admin
-    const { data: profile, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (profileError || !profile || profile.role !== 'super_admin') {
-      return res.status(403).json(createAuthErrorResponse('Super admin access required'))
-    }
 
     switch (req.method) {
       case 'GET':
@@ -35,7 +22,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         res.setHeader('Allow', ['GET', 'POST'])
         return res.status(405).json({ error: 'Method not allowed' })
     }
-  } catch (error) {
+  } catch (error: any) {
+    // If error is from requireSuperAdmin, it already sent response
+    if (error.message === 'UNAUTHORIZED' || error.message === 'INSUFFICIENT_PERMISSIONS') {
+      return // Response already sent
+    }
     logger.error('Error in companies admin API', error)
     return res.status(500).json(createSecureErrorResponse(error))
   }

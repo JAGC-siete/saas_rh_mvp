@@ -174,89 +174,109 @@ export default function CompaniesAdminPage() {
       </Head>
       <SuperAdminGuard>
         <SuperAdminLayout>
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h1 className="text-2xl font-bold">Empresas</h1>
+          <div className="space-y-6 text-white">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] text-white/60">Gestión de empresas</p>
+                <h1 className="text-3xl font-semibold text-white">Empresas</h1>
+                <p className="text-white/70">
+                  Administra empresas, suscripciones y planes
+                </p>
+              </div>
               <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => { setPage(1); setSearch(e.target.value) }}
-                placeholder="Buscar por nombre, subdominio o plan"
-                className="px-3 py-2 border rounded-md w-72"
-              />
-              <label className="text-sm flex items-center gap-2">
-                <input type="checkbox" checked={showOnlyActive} onChange={(e) => { setPage(1); setShowOnlyActive(e.target.checked) }} />
-                Sólo activas
-              </label>
-              <Button onClick={() => setShowCreate(true)}>Nueva empresa</Button>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => { setPage(1); setSearch(e.target.value) }}
+                  placeholder="Buscar por nombre, subdominio o plan"
+                  className="px-3 py-2 border border-white/20 rounded-md w-72 bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
+                />
+                <label className="text-sm flex items-center gap-2 text-white/80">
+                  <input 
+                    type="checkbox" 
+                    checked={showOnlyActive} 
+                    onChange={(e) => { setPage(1); setShowOnlyActive(e.target.checked) }}
+                    className="w-4 h-4 rounded border-white/20 bg-white/10 text-amber-300 focus:ring-amber-300/50"
+                  />
+                  Sólo activas
+                </label>
+                <Button onClick={() => setShowCreate(true)}>Nueva empresa</Button>
               </div>
             </div>
 
             {error && (
-              <Card className="border-red-200 bg-red-50">
-                <CardContent className="pt-4 text-red-800 text-sm">{error}</CardContent>
+              <Card variant="glass" className="border-red-400/40 bg-red-500/10">
+                <CardContent className="pt-4 text-red-100 text-sm">{error}</CardContent>
               </Card>
             )}
 
-            <Card>
+            <Card variant="glass" className="border-white/10">
               <CardHeader>
-                <CardTitle className="text-base">Listado ({showOnlyActive || search ? filtered.length : total})</CardTitle>
+                <CardTitle className="text-base text-white">Listado ({showOnlyActive || search ? filtered.length : total})</CardTitle>
               </CardHeader>
               <CardContent>
-              <div className="flex items-center gap-2 mb-3">
-                <Button variant="outline" size="sm" onClick={toggleSelectAll}>Seleccionar todos</Button>
-                <Button variant="outline" size="sm" disabled={!selectedIds.length} onClick={() => bulk('activate')}>Activar</Button>
-                <Button variant="outline" size="sm" disabled={!selectedIds.length} onClick={() => bulk('deactivate')}>Desactivar</Button>
-                <Button variant="outline" size="sm" disabled={!selectedIds.length} onClick={() => bulk('delete')}>Eliminar</Button>
-                {selectedIds.length > 0 && <span className="text-sm text-gray-600">{selectedIds.length} seleccionadas</span>}
+              <div className="flex flex-wrap items-center gap-2 mb-3">
+                <Button variant="outline" size="sm" onClick={toggleSelectAll} className="border-white/30 text-white hover:bg-white/10">Seleccionar todos</Button>
+                <Button variant="outline" size="sm" disabled={!selectedIds.length} onClick={() => bulk('activate')} className="border-white/30 text-white hover:bg-white/10">Activar</Button>
+                <Button variant="outline" size="sm" disabled={!selectedIds.length} onClick={() => bulk('deactivate')} className="border-white/30 text-white hover:bg-white/10">Desactivar</Button>
+                <Button variant="outline" size="sm" disabled={!selectedIds.length} onClick={() => bulk('delete')} className="border-red-400/40 text-red-100 hover:bg-red-500/20">Eliminar</Button>
+                {selectedIds.length > 0 && <span className="text-sm text-white/70">{selectedIds.length} seleccionadas</span>}
               </div>
               {loadingCompanies ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {Array.from({ length: pageSize }).map((_, i) => (
-                    <div key={i} className="h-28 bg-gray-100 animate-pulse rounded-md" />
+                    <div key={i} className="h-28 bg-white/5 animate-pulse rounded-md border border-white/10" />
                   ))}
                 </div>
               ) : (
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {pageItems.map((company) => (
-                      <Card key={company.id} className={`${!company.is_active ? 'opacity-60' : ''}`}>
+                      <Card key={company.id} variant="glass" className={`border-white/10 ${!company.is_active ? 'opacity-60' : ''}`}>
                         <CardHeader>
-                          <CardTitle className="flex items-center justify-between text-base">
+                          <CardTitle className="flex items-center justify-between text-base text-white">
                             <span className="flex items-center gap-2">
-                              <input type="checkbox" checked={!!selected[company.id]} onChange={() => toggleSelect(company.id)} />
+                              <input 
+                                type="checkbox" 
+                                checked={!!selected[company.id]} 
+                                onChange={() => toggleSelect(company.id)}
+                                className="w-4 h-4 rounded border-white/20 bg-white/10 text-amber-300 focus:ring-amber-300/50"
+                              />
                               {company.name}
                             </span>
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${company.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-700'}`}>
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${company.is_active ? 'bg-emerald-500/20 text-emerald-100 border border-emerald-300/40' : 'bg-gray-500/20 text-gray-300 border border-gray-400/40'}`}>
                               {company.is_active ? 'Activa' : 'Inactiva'}
                             </span>
                           </CardTitle>
                         </CardHeader>
                         <CardContent>
-                          <div className="text-sm text-gray-600 space-y-1">
-                            <div>Subdominio: {company.subdomain}</div>
-                            <div>Plan: {company.plan_type}</div>
-                            <div>Empleados: {company.employee_count ?? 0}</div>
+                          <div className="text-sm text-white/70 space-y-1">
+                            <div>Subdominio: <span className="text-white/90">{company.subdomain}</span></div>
+                            <div>Plan: <span className="text-white/90">{company.plan_type}</span></div>
+                            <div>Empleados: <span className="text-white/90">{company.employee_count ?? 0}</span></div>
                           </div>
                           <div className="mt-3 flex gap-2">
-                            <Button variant="outline" size="sm" onClick={() => router.push(`/app/admin/companies/${company.id}`)}>Ver</Button>
-                            <Button variant="outline" size="sm" onClick={() => router.push(`/app/admin/companies/${company.id}?edit=1`)}>Editar</Button>
+                            <Button variant="outline" size="sm" onClick={() => router.push(`/app/admin/companies/${company.id}`)} className="border-white/30 text-white hover:bg-white/10">Ver</Button>
+                            <Button variant="outline" size="sm" onClick={() => router.push(`/app/admin/companies/${company.id}?edit=1`)} className="border-white/30 text-white hover:bg-white/10">Editar</Button>
                           </div>
                         </CardContent>
                       </Card>
                     ))}
                   </div>
 
-                  <div className="flex items-center justify-between mt-4">
-                    <div className="text-sm text-gray-600">Página {page} de {totalPages}</div>
+                  <div className="flex flex-wrap items-center justify-between gap-4 mt-4">
+                    <div className="text-sm text-white/70">Página {page} de {totalPages}</div>
                     <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>Anterior</Button>
-                      <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>Siguiente</Button>
-                      <select className="border rounded-md text-sm px-2 py-1" value={pageSize} onChange={(e) => { setPage(1); setPageSize(Number(e.target.value)) }}>
-                        <option value={6}>6</option>
-                        <option value={12}>12</option>
-                        <option value={24}>24</option>
+                      <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="border-white/30 text-white hover:bg-white/10">Anterior</Button>
+                      <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="border-white/30 text-white hover:bg-white/10">Siguiente</Button>
+                      <select 
+                        className="border border-white/20 rounded-md text-sm px-2 py-1 bg-white/10 text-white focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50" 
+                        value={pageSize} 
+                        onChange={(e) => { setPage(1); setPageSize(Number(e.target.value)) }}
+                      >
+                        <option value={6} className="bg-slate-800">6</option>
+                        <option value={12} className="bg-slate-800">12</option>
+                        <option value={24} className="bg-slate-800">24</option>
                       </select>
                     </div>
                   </div>
@@ -269,40 +289,67 @@ export default function CompaniesAdminPage() {
       </SuperAdminGuard>
 
       {showCreate && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6">
-            <h2 className="text-lg font-semibold mb-4">Crear empresa</h2>
-            <div className="grid grid-cols-1 gap-4">
-              <div>
-                <label className="block text-sm">Nombre</label>
-                <input className="w-full border rounded px-3 py-2" value={createForm.name} onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })} />
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <Card variant="glass" className="w-full max-w-lg border-white/20 shadow-glass">
+            <CardHeader>
+              <CardTitle className="text-white">Crear empresa</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <label className="block text-sm text-white/80 mb-1">Nombre</label>
+                  <input 
+                    className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50" 
+                    value={createForm.name} 
+                    onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })} 
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-white/80 mb-1">Subdominio</label>
+                  <input 
+                    className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50" 
+                    placeholder="ej: acme" 
+                    value={createForm.subdomain} 
+                    onChange={(e) => setCreateForm({ ...createForm, subdomain: e.target.value })} 
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-white/80 mb-1">Plan</label>
+                  <select 
+                    className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50" 
+                    value={createForm.plan_type} 
+                    onChange={(e) => setCreateForm({ ...createForm, plan_type: e.target.value })}
+                  >
+                    <option value="basic" className="bg-slate-800">basic</option>
+                    <option value="premium" className="bg-slate-800">premium</option>
+                    <option value="enterprise" className="bg-slate-800">enterprise</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm text-white/80 mb-1">Correo admin</label>
+                  <input 
+                    className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50" 
+                    type="email" 
+                    value={createForm.admin_email} 
+                    onChange={(e) => setCreateForm({ ...createForm, admin_email: e.target.value })} 
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-white/80 mb-1">Contraseña admin</label>
+                  <input 
+                    className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50" 
+                    type="password" 
+                    value={createForm.admin_password} 
+                    onChange={(e) => setCreateForm({ ...createForm, admin_password: e.target.value })} 
+                  />
+                </div>
+                <div className="flex items-center justify-end gap-2 pt-2">
+                  <Button variant="outline" onClick={() => setShowCreate(false)} className="border-white/30 text-white hover:bg-white/10">Cancelar</Button>
+                  <Button onClick={createCompany}>Crear</Button>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm">Subdominio</label>
-                <input className="w-full border rounded px-3 py-2" placeholder="ej: acme" value={createForm.subdomain} onChange={(e) => setCreateForm({ ...createForm, subdomain: e.target.value })} />
-              </div>
-              <div>
-                <label className="block text-sm">Plan</label>
-                <select className="w-full border rounded px-3 py-2" value={createForm.plan_type} onChange={(e) => setCreateForm({ ...createForm, plan_type: e.target.value })}>
-                  <option value="basic">basic</option>
-                  <option value="premium">premium</option>
-                  <option value="enterprise">enterprise</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm">Correo admin</label>
-                <input className="w-full border rounded px-3 py-2" type="email" value={createForm.admin_email} onChange={(e) => setCreateForm({ ...createForm, admin_email: e.target.value })} />
-              </div>
-              <div>
-                <label className="block text-sm">Contraseña admin</label>
-                <input className="w-full border rounded px-3 py-2" type="password" value={createForm.admin_password} onChange={(e) => setCreateForm({ ...createForm, admin_password: e.target.value })} />
-              </div>
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <Button variant="outline" onClick={() => setShowCreate(false)}>Cancelar</Button>
-                <Button onClick={createCompany}>Crear</Button>
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       )}
     </>

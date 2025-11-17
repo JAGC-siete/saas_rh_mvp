@@ -160,121 +160,163 @@ export default function UsersAdminPage() {
       </Head>
       <SuperAdminGuard>
         <SuperAdminLayout>
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h1 className="text-2xl font-bold">Usuarios</h1>
+          <div className="space-y-6 text-white">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] text-white/60">Gestión de usuarios</p>
+                <h1 className="text-3xl font-semibold text-white">Usuarios</h1>
+                <p className="text-white/70">
+                  Administra usuarios del sistema y sus permisos
+                </p>
+              </div>
               <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => { setPage(1); setSearch(e.target.value) }}
-                placeholder="Buscar por email"
-                className="px-3 py-2 border rounded-md w-72"
-              />
-              <select className="border rounded-md px-2 py-2 text-sm" value={role} onChange={(e) => { setPage(1); setRole(e.target.value) }}>
-                <option value="">Todos los roles</option>
-                <option value="super_admin">Super admin</option>
-                <option value="company_admin">Admin empresa</option>
-                <option value="hr_manager">HR manager</option>
-                <option value="manager">Manager</option>
-                <option value="employee">Empleado</option>
-              </select>
-              <select className="border rounded-md px-2 py-2 text-sm" value={state} onChange={(e) => { setPage(1); setState(e.target.value) }}>
-                <option value="">Todos</option>
-                <option value="active">Activos</option>
-                <option value="inactive">Inactivos</option>
-              </select>
-              <Button onClick={invite}>Invitar</Button>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => { setPage(1); setSearch(e.target.value) }}
+                  placeholder="Buscar por email"
+                  className="px-3 py-2 border border-white/20 rounded-md w-72 bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
+                />
+                <select 
+                  className="border border-white/20 rounded-md px-2 py-2 text-sm bg-white/10 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50" 
+                  value={role} 
+                  onChange={(e) => { setPage(1); setRole(e.target.value) }}
+                >
+                  <option value="" className="bg-slate-800">Todos los roles</option>
+                  <option value="super_admin" className="bg-slate-800">Super admin</option>
+                  <option value="company_admin" className="bg-slate-800">Admin empresa</option>
+                  <option value="hr_manager" className="bg-slate-800">HR manager</option>
+                  <option value="manager" className="bg-slate-800">Manager</option>
+                  <option value="employee" className="bg-slate-800">Empleado</option>
+                </select>
+                <select 
+                  className="border border-white/20 rounded-md px-2 py-2 text-sm bg-white/10 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50" 
+                  value={state} 
+                  onChange={(e) => { setPage(1); setState(e.target.value) }}
+                >
+                  <option value="" className="bg-slate-800">Todos</option>
+                  <option value="active" className="bg-slate-800">Activos</option>
+                  <option value="inactive" className="bg-slate-800">Inactivos</option>
+                </select>
+                <Button onClick={invite}>Invitar</Button>
               </div>
             </div>
 
-            <Card>
+            <Card variant="glass" className="border-white/10">
               <CardHeader>
-                <CardTitle className="text-base">Listado ({filtered.length})</CardTitle>
+                <CardTitle className="text-base text-white">Listado ({filtered.length})</CardTitle>
               </CardHeader>
               <CardContent>
               {error && (
-                <div className="mb-4 border border-red-200 bg-red-50 text-sm text-red-700 px-3 py-2 rounded-md">
-                  {error}
-                </div>
+                <Card variant="glass" className="mb-4 border-red-400/40 bg-red-500/10">
+                  <CardContent className="pt-4 text-red-100 text-sm">{error}</CardContent>
+                </Card>
               )}
               {showCreate && (
-                <div className="mb-4 border rounded-md p-4 bg-gray-50">
-                  <form onSubmit={createUser} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm">Email</label>
-                      <input type="email" required className="w-full border rounded px-3 py-2" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-                    </div>
-                    <div>
-                      <label className="block text-sm">Contraseña</label>
-                      <input type="password" required minLength={8} className="w-full border rounded px-3 py-2" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
-                    </div>
-                    <div>
-                      <label className="block text-sm">Rol</label>
-                      <select className="w-full border rounded px-3 py-2" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
-                        <option value="company_admin">Administrador de Empresa</option>
-                        <option value="hr_manager">HR Manager</option>
-                        <option value="manager">Manager</option>
-                        <option value="employee">Empleado</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm">Empresa</label>
-                      <select required className="w-full border rounded px-3 py-2" value={form.company_id} onChange={(e) => setForm({ ...form, company_id: e.target.value })}>
-                        <option value="">Seleccionar...</option>
-                        {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                      </select>
-                    </div>
-                    <div className="md:col-span-2 flex items-center gap-2">
-                      <Button type="submit">Crear usuario</Button>
-                      <Button type="button" variant="outline" onClick={() => setShowCreate(false)}>Cancelar</Button>
-                    </div>
-                  </form>
-                </div>
+                <Card variant="glass" className="mb-4 border-white/20">
+                  <CardContent className="pt-4">
+                    <form onSubmit={createUser} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm text-white/80 mb-1">Email</label>
+                        <input 
+                          type="email" 
+                          required 
+                          className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50" 
+                          value={form.email} 
+                          onChange={(e) => setForm({ ...form, email: e.target.value })} 
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-white/80 mb-1">Contraseña</label>
+                        <input 
+                          type="password" 
+                          required 
+                          minLength={8} 
+                          className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50" 
+                          value={form.password} 
+                          onChange={(e) => setForm({ ...form, password: e.target.value })} 
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-white/80 mb-1">Rol</label>
+                        <select 
+                          className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50" 
+                          value={form.role} 
+                          onChange={(e) => setForm({ ...form, role: e.target.value })}
+                        >
+                          <option value="company_admin" className="bg-slate-800">Administrador de Empresa</option>
+                          <option value="hr_manager" className="bg-slate-800">HR Manager</option>
+                          <option value="manager" className="bg-slate-800">Manager</option>
+                          <option value="employee" className="bg-slate-800">Empleado</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm text-white/80 mb-1">Empresa</label>
+                        <select 
+                          required 
+                          className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50" 
+                          value={form.company_id} 
+                          onChange={(e) => setForm({ ...form, company_id: e.target.value })}
+                        >
+                          <option value="" className="bg-slate-800">Seleccionar...</option>
+                          {companies.map(c => <option key={c.id} value={c.id} className="bg-slate-800">{c.name}</option>)}
+                        </select>
+                      </div>
+                      <div className="md:col-span-2 flex items-center gap-2">
+                        <Button type="submit">Crear usuario</Button>
+                        <Button type="button" variant="outline" onClick={() => setShowCreate(false)} className="border-white/30 text-white hover:bg-white/10">Cancelar</Button>
+                      </div>
+                    </form>
+                  </CardContent>
+                </Card>
               )}
               {loadingUsers ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {Array.from({ length: pageSize }).map((_, i) => (
-                    <div key={i} className="h-24 bg-gray-100 animate-pulse rounded-md" />
+                    <div key={i} className="h-24 bg-white/5 animate-pulse rounded-md border border-white/10" />
                   ))}
                 </div>
               ) : (
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {pageItems.map((u) => (
-                      <Card key={u.id}>
+                      <Card key={u.id} variant="glass" className="border-white/10">
                         <CardHeader>
-                          <CardTitle className="flex items-center justify-between text-base">
-                            <span>{u.email}</span>
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${u.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-700'}`}>
+                          <CardTitle className="flex items-center justify-between text-base text-white">
+                            <span className="truncate">{u.email}</span>
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${u.is_active ? 'bg-emerald-500/20 text-emerald-100 border border-emerald-300/40' : 'bg-gray-500/20 text-gray-300 border border-gray-400/40'}`}>
                               {u.is_active ? 'Activo' : 'Inactivo'}
                             </span>
                           </CardTitle>
                         </CardHeader>
                         <CardContent>
-                          <div className="text-sm text-gray-600 space-y-1">
-                            <div>Rol: {u.role}</div>
-                            <div>Empresa: {u.company_name || u.company_id || '—'}</div>
-                            <div>Último login: {u.last_login ? new Date(u.last_login).toLocaleString('es-HN') : '—'}</div>
+                          <div className="text-sm text-white/70 space-y-1">
+                            <div>Rol: <span className="text-white/90">{u.role}</span></div>
+                            <div>Empresa: <span className="text-white/90">{u.company_name || u.company_id || '—'}</span></div>
+                            <div>Último login: <span className="text-white/90">{u.last_login ? new Date(u.last_login).toLocaleString('es-HN') : '—'}</span></div>
                           </div>
                           <div className="mt-3 flex gap-2">
-                            <Button variant="outline" size="sm" onClick={() => toggleActive(u)}>{u.is_active ? 'Desactivar' : 'Activar'}</Button>
-                            <Button variant="outline" size="sm" onClick={() => resetPassword(u)}>Reset contraseña</Button>
+                            <Button variant="outline" size="sm" onClick={() => toggleActive(u)} className="border-white/30 text-white hover:bg-white/10">{u.is_active ? 'Desactivar' : 'Activar'}</Button>
+                            <Button variant="outline" size="sm" onClick={() => resetPassword(u)} className="border-white/30 text-white hover:bg-white/10">Reset contraseña</Button>
                           </div>
                         </CardContent>
                       </Card>
                     ))}
                   </div>
 
-                  <div className="flex items-center justify-between mt-4">
-                    <div className="text-sm text-gray-600">Página {page} de {totalPages}</div>
+                  <div className="flex flex-wrap items-center justify-between gap-4 mt-4">
+                    <div className="text-sm text-white/70">Página {page} de {totalPages}</div>
                     <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>Anterior</Button>
-                      <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>Siguiente</Button>
-                      <select className="border rounded-md text-sm px-2 py-1" value={pageSize} onChange={(e) => { setPage(1); setPageSize(Number(e.target.value)) }}>
-                        <option value={6}>6</option>
-                        <option value={12}>12</option>
-                        <option value={24}>24</option>
+                      <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="border-white/30 text-white hover:bg-white/10">Anterior</Button>
+                      <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="border-white/30 text-white hover:bg-white/10">Siguiente</Button>
+                      <select 
+                        className="border border-white/20 rounded-md text-sm px-2 py-1 bg-white/10 text-white focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50" 
+                        value={pageSize} 
+                        onChange={(e) => { setPage(1); setPageSize(Number(e.target.value)) }}
+                      >
+                        <option value={6} className="bg-slate-800">6</option>
+                        <option value={12} className="bg-slate-800">12</option>
+                        <option value={24} className="bg-slate-800">24</option>
                       </select>
                     </div>
                   </div>

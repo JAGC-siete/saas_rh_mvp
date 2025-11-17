@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
-import { createClient } from '../../../lib/supabase/server'
+import { requireSuperAdmin } from '../../../lib/auth/api-auth-fixed'
+import { createAdminClient } from '../../../lib/supabase/server'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -8,12 +8,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Verificar que el usuario sea super_admin
-    const { supabase, role } = await requireCompanyAccess(req, res)
+    // Verify super admin using standardized auth
+    await requireSuperAdmin(req, res)
     
-    if (role !== 'super_admin') {
-      return res.status(403).json({ error: 'Super admin access required' })
-    }
+    // Use admin client for all database operations (bypasses RLS)
+    const supabase = createAdminClient()
 
     // Obtener actividad reciente del sistema
     const [
@@ -112,7 +111,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     res.status(200).json({ activities: recentActivities })
 
-  } catch (error) {
+  } catch (error: any) {
+    // If error is from requireSuperAdmin, it already sent response
+    if (error.message === 'UNAUTHORIZED' || error.message === 'INSUFFICIENT_PERMISSIONS') {
+      return // Response already sent
+    }
     console.error('Error fetching recent activity:', error)
     res.status(500).json({ error: 'Internal server error' })
   }

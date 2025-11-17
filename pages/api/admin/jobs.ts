@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { executeScheduledJob, executeAllScheduledJobs, jobManager } from '../../../lib/jobs'
 import { logger } from '../../../lib/logger'
-import { createAdminClient } from '../../../lib/supabase/server'
+import { requireSuperAdmin } from '../../../lib/auth/api-auth-fixed'
 
 interface JobsResponse {
   success: boolean
@@ -16,37 +16,16 @@ export default async function handler(
 ) {
   // Verificar autenticación y autorización
   try {
-    const supabase = createAdminClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
-    if (authError || !user) {
-      logger.error('jobs_api_unauthorized', { error: authError?.message })
-      return res.status(401).json({
-        success: false,
-        message: 'Unauthorized',
-        error: 'Authentication required'
-      })
-    }
-
-    // Verificar si el usuario es admin
-    const { data: profile, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (profileError || !profile || profile.role !== 'admin') {
-      logger.error('jobs_api_forbidden', { userId: user.id, role: profile?.role })
-      return res.status(403).json({
-        success: false,
-        message: 'Forbidden',
-        error: 'Admin privileges required'
-      })
-    }
+    // Verify super admin using standardized auth
+    const { user } = await requireSuperAdmin(req, res)
 
     logger.info('jobs_api_access', { userId: user.id, method: req.method })
 
-  } catch (error) {
+  } catch (error: any) {
+    // If error is from requireSuperAdmin, it already sent response
+    if (error.message === 'UNAUTHORIZED' || error.message === 'INSUFFICIENT_PERMISSIONS') {
+      return // Response already sent
+    }
     logger.error('Jobs API authentication error', { error })
     return res.status(500).json({
       success: false,

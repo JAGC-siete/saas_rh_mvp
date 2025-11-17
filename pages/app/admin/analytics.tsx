@@ -11,14 +11,20 @@ export default function AnalyticsPage() {
       </Head>
       <SuperAdminGuard>
         <SuperAdminLayout>
-          <div className="space-y-6">
-            <h1 className="text-2xl font-bold">Estadísticas</h1>
-            <Card>
+          <div className="space-y-6 text-white">
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-white/60">Analytics globales</p>
+              <h1 className="text-3xl font-semibold text-white">Estadísticas</h1>
+              <p className="text-white/70">
+                Métricas y análisis del sistema
+              </p>
+            </div>
+            <Card variant="glass" className="border-white/10">
               <CardHeader>
-                <CardTitle>Próximamente</CardTitle>
+                <CardTitle className="text-white">Próximamente</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-sm text-gray-600">Vista placeholder para estadísticas globales.</div>
+                <div className="text-sm text-white/70">Vista placeholder para estadísticas globales.</div>
               </CardContent>
             </Card>
           </div>

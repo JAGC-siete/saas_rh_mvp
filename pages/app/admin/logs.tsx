@@ -113,12 +113,13 @@ export default function AdminLogs() {
 
       <SuperAdminGuard>
         <SuperAdminLayout>
-          <div className="space-y-6">
+          <div className="space-y-6 text-white">
           {/* Header */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Logs del Sistema</h1>
-              <p className="text-gray-600">Monitorea la actividad y errores del sistema</p>
+              <p className="text-xs uppercase tracking-[0.3em] text-white/60">Registros del sistema</p>
+              <h1 className="text-3xl font-semibold text-white">Logs del Sistema</h1>
+              <p className="text-white/70">Monitorea la actividad y errores del sistema</p>
             </div>
             <div className="flex items-center gap-2">
               <Button 
@@ -126,6 +127,7 @@ export default function AdminLogs() {
                 disabled={loadingLogs}
                 variant="outline"
                 size="sm"
+                className="border-white/30 text-white hover:bg-white/10"
               >
                 {loadingLogs ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -140,43 +142,43 @@ export default function AdminLogs() {
           {/* Statistics */}
           {logs && (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Card>
+              <Card variant="glass" className="border-white/10">
                 <CardContent className="p-4">
-                  <div className="text-2xl font-bold">{logs.statistics.total}</div>
-                  <div className="text-sm text-gray-600">Total de logs</div>
+                  <div className="text-2xl font-bold text-white">{logs.statistics.total}</div>
+                  <div className="text-sm text-white/70">Total de logs</div>
                 </CardContent>
               </Card>
-              <Card>
+              <Card variant="glass" className="border-white/10">
                 <CardContent className="p-4">
-                  <div className="text-2xl font-bold text-red-600">
+                  <div className="text-2xl font-bold text-red-300">
                     {logs.statistics.last24Hours?.error || 0}
                   </div>
-                  <div className="text-sm text-gray-600">Errores (24h)</div>
+                  <div className="text-sm text-white/70">Errores (24h)</div>
                 </CardContent>
               </Card>
-              <Card>
+              <Card variant="glass" className="border-white/10">
                 <CardContent className="p-4">
-                  <div className="text-2xl font-bold text-yellow-600">
+                  <div className="text-2xl font-bold text-yellow-300">
                     {logs.statistics.last24Hours?.warn || 0}
                   </div>
-                  <div className="text-sm text-gray-600">Advertencias (24h)</div>
+                  <div className="text-sm text-white/70">Advertencias (24h)</div>
                 </CardContent>
               </Card>
-              <Card>
+              <Card variant="glass" className="border-white/10">
                 <CardContent className="p-4">
-                  <div className="text-2xl font-bold text-blue-600">
+                  <div className="text-2xl font-bold text-blue-300">
                     {logs.statistics.last24Hours?.info || 0}
                   </div>
-                  <div className="text-sm text-gray-600">Info (24h)</div>
+                  <div className="text-sm text-white/70">Info (24h)</div>
                 </CardContent>
               </Card>
             </div>
           )}
 
           {/* Filters */}
-          <Card>
+          <Card variant="glass" className="border-white/10">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-white">
                 <Filter className="h-5 w-5" />
                 Filtros
               </CardTitle>
@@ -184,46 +186,46 @@ export default function AdminLogs() {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
-                  <label className="text-sm font-medium">Nivel</label>
+                  <label className="text-sm font-medium text-white/80 mb-1 block">Nivel</label>
                   <select 
-                    className="w-full mt-1 p-2 border rounded-md"
+                    className="w-full mt-1 p-2 border border-white/20 rounded-md bg-white/10 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
                     value={filters.level}
                     onChange={(e) => setFilters(prev => ({ ...prev, level: e.target.value }))}
                   >
-                    <option value="">Todos</option>
-                    <option value="error">Error</option>
-                    <option value="warn">Advertencia</option>
-                    <option value="info">Info</option>
-                    <option value="debug">Debug</option>
+                    <option value="" className="bg-slate-800">Todos</option>
+                    <option value="error" className="bg-slate-800">Error</option>
+                    <option value="warn" className="bg-slate-800">Advertencia</option>
+                    <option value="info" className="bg-slate-800">Info</option>
+                    <option value="debug" className="bg-slate-800">Debug</option>
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Límite</label>
+                  <label className="text-sm font-medium text-white/80 mb-1 block">Límite</label>
                   <select 
-                    className="w-full mt-1 p-2 border rounded-md"
+                    className="w-full mt-1 p-2 border border-white/20 rounded-md bg-white/10 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
                     value={filters.limit}
                     onChange={(e) => setFilters(prev => ({ ...prev, limit: parseInt(e.target.value) }))}
                   >
-                    <option value="50">50</option>
-                    <option value="100">100</option>
-                    <option value="200">200</option>
-                    <option value="500">500</option>
+                    <option value="50" className="bg-slate-800">50</option>
+                    <option value="100" className="bg-slate-800">100</option>
+                    <option value="200" className="bg-slate-800">200</option>
+                    <option value="500" className="bg-slate-800">500</option>
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Fecha Inicio</label>
+                  <label className="text-sm font-medium text-white/80 mb-1 block">Fecha Inicio</label>
                   <input 
                     type="datetime-local"
-                    className="w-full mt-1 p-2 border rounded-md"
+                    className="w-full mt-1 p-2 border border-white/20 rounded-md bg-white/10 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
                     value={filters.startDate}
                     onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))}
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Fecha Fin</label>
+                  <label className="text-sm font-medium text-white/80 mb-1 block">Fecha Fin</label>
                   <input 
                     type="datetime-local"
-                    className="w-full mt-1 p-2 border rounded-md"
+                    className="w-full mt-1 p-2 border border-white/20 rounded-md bg-white/10 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
                     value={filters.endDate}
                     onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))}
                   />
@@ -239,9 +241,9 @@ export default function AdminLogs() {
 
           {/* Error State */}
           {error && (
-            <Card className="border-red-200 bg-red-50">
+            <Card variant="glass" className="border-red-400/40 bg-red-500/10">
               <CardContent className="p-4">
-                <div className="flex items-center gap-2 text-red-700">
+                <div className="flex items-center gap-2 text-red-100">
                   <AlertCircle className="h-5 w-5" />
                   <span className="font-medium">Error al cargar logs:</span>
                   <span>{error}</span>
@@ -251,29 +253,29 @@ export default function AdminLogs() {
           )}
 
           {/* Logs */}
-          <Card>
+          <Card variant="glass" className="border-white/10">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 text-white">
                 <FileText className="h-5 w-5" />
                 Entradas de Log
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-white/70">
                 {loadingLogs ? 'Cargando logs...' : `Mostrando ${logs?.logs?.length || 0} entradas`}
               </CardDescription>
             </CardHeader>
             <CardContent>
               {loadingLogs ? (
                 <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                  <Loader2 className="h-8 w-8 animate-spin text-amber-300" />
                 </div>
               ) : logs?.logs?.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 text-white/70">
                   No se encontraron logs para los filtros seleccionados
                 </div>
               ) : (
                 <div className="space-y-2 max-h-96 overflow-y-auto">
                   {logs?.logs?.map((log, index) => (
-                    <div key={index} className="flex items-start gap-3 p-3 border rounded-lg hover:bg-gray-50">
+                    <div key={index} className="flex items-start gap-3 p-3 border border-white/10 rounded-lg hover:bg-white/5 transition-colors">
                       <div className="flex-shrink-0 mt-0.5">
                         {getLevelIcon(log.level)}
                       </div>
@@ -282,19 +284,19 @@ export default function AdminLogs() {
                           <Badge variant={getLevelBadgeColor(log.level) as any}>
                             {log.level?.toUpperCase()}
                           </Badge>
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-white/60">
                             {new Date(log.timestamp).toLocaleString('es-HN')}
                           </span>
                         </div>
-                        <p className="text-sm text-gray-900 break-words">
+                        <p className="text-sm text-white/90 break-words">
                           {log.message}
                         </p>
                         {log.metadata && (
                           <details className="mt-2">
-                            <summary className="text-xs text-blue-600 cursor-pointer">
+                            <summary className="text-xs text-amber-300 cursor-pointer hover:text-amber-200">
                               Ver detalles
                             </summary>
-                            <pre className="text-xs bg-gray-100 p-2 rounded mt-1 overflow-x-auto">
+                            <pre className="text-xs bg-white/5 border border-white/10 p-2 rounded mt-1 overflow-x-auto text-white/80">
                               {JSON.stringify(log.metadata, null, 2)}
                             </pre>
                           </details>

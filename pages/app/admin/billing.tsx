@@ -11,14 +11,20 @@ export default function BillingPage() {
       </Head>
       <SuperAdminGuard>
         <SuperAdminLayout>
-          <div className="space-y-6">
-            <h1 className="text-2xl font-bold">Facturación</h1>
-            <Card>
+          <div className="space-y-6 text-white">
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-white/60">Gestión de pagos</p>
+              <h1 className="text-3xl font-semibold text-white">Facturación</h1>
+              <p className="text-white/70">
+                Administra planes, cobros y facturas
+              </p>
+            </div>
+            <Card variant="glass" className="border-white/10">
               <CardHeader>
-                <CardTitle>Próximamente</CardTitle>
+                <CardTitle className="text-white">Próximamente</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-sm text-gray-600">Vista placeholder para gestión de pagos y planes.</div>
+                <div className="text-sm text-white/70">Vista placeholder para gestión de pagos y planes.</div>
               </CardContent>
             </Card>
           </div>

@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../../lib/supabase/server'
+import { createAdminClient } from '../../../../lib/supabase/server'
+import { requireSuperAdmin } from '../../../../lib/auth/api-auth-fixed'
 import { logger } from '../../../../lib/logger'
 import { createSecureErrorResponse, createAuthErrorResponse } from '../../../../lib/security/error-handling'
 
@@ -7,29 +8,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Ensure id is available in catch scope
   const id = typeof req.query.id === 'string' ? req.query.id : Array.isArray(req.query.id) ? req.query.id[0] : undefined
   try {
-    const supabase = createClient(req, res)
-
     if (!id) {
       return res.status(400).json({ error: 'Company ID is required' })
     }
     
-    // Get user and verify super admin role
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    // Verify super admin using standardized auth
+    await requireSuperAdmin(req, res)
     
-    if (userError || !user) {
-      return res.status(401).json(createAuthErrorResponse('Authentication required'))
-    }
-
-    // Check if user is super admin
-    const { data: profile, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (profileError || !profile || profile.role !== 'super_admin') {
-      return res.status(403).json(createAuthErrorResponse('Super admin access required'))
-    }
+    // Use admin client for all database operations (bypasses RLS)
+    const supabase = createAdminClient()
 
     switch (req.method) {
       case 'GET':
@@ -42,7 +29,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         res.setHeader('Allow', ['GET', 'PATCH', 'DELETE'])
         return res.status(405).json({ error: 'Method not allowed' })
     }
-  } catch (error) {
+  } catch (error: any) {
+    // If error is from requireSuperAdmin, it already sent response
+    if (error.message === 'UNAUTHORIZED' || error.message === 'INSUFFICIENT_PERMISSIONS') {
+      return // Response already sent
+    }
     logger.error('Error in company admin API', {
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
@@ -54,6 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
 async function getCompany(supabase: any, id: string, res: NextApiResponse) {
   try {
+    // Get company data without trying to join users table
     const { data: company, error } = await supabase
       .from('companies')
       .select(`
@@ -70,8 +62,7 @@ async function getCompany(supabase: any, id: string, res: NextApiResponse) {
           id,
           role,
           is_active,
-          created_at,
-          auth_users:users(email)
+          created_at
         )
       `)
       .eq('id', id)
@@ -82,6 +73,23 @@ async function getCompany(supabase: any, id: string, res: NextApiResponse) {
         return res.status(404).json({ error: 'Company not found' })
       }
       throw error
+    }
+
+    // Get user IDs to fetch emails from auth
+    const userIds = company.user_profiles?.map((p: any) => p.id) || []
+    const authUsersMap = new Map<string, string>()
+    
+    if (userIds.length > 0) {
+      try {
+        const { data: authUsers } = await supabase.auth.admin.listUsers()
+        authUsers?.users?.forEach((user: any) => {
+          if (userIds.includes(user.id)) {
+            authUsersMap.set(user.id, user.email || '')
+          }
+        })
+      } catch (authError) {
+        logger.warn('Error fetching auth users for company', { id, error: authError })
+      }
     }
 
     // Transform data
@@ -95,7 +103,7 @@ async function getCompany(supabase: any, id: string, res: NextApiResponse) {
         role: profile.role,
         is_active: profile.is_active,
         created_at: profile.created_at,
-        email: profile.auth_users?.email
+        email: authUsersMap.get(profile.id) || ''
       }))
     }
 
