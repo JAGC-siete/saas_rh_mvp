@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../../lib/supabase/server'
+import { createClient, createAdminClient } from '../../../../lib/supabase/server'
 import { logger } from '../../../../lib/logger'
 import { createSecureErrorResponse, createAuthErrorResponse } from '../../../../lib/security/error-handling'
 
@@ -289,14 +289,34 @@ async function postActions(supabase: any, id: string, req: NextApiRequest, res: 
     if (action === 'reset-password') {
       const { new_password } = req.body as { new_password: string }
       if (!new_password || new_password.length < 8) {
-        return res.status(400).json({ error: 'New password must be at least 8 characters' })
+        return res.status(400).json({ 
+          error: 'New password must be at least 8 characters',
+          message: 'La contraseña debe tener al menos 8 caracteres'
+        })
       }
-      const { error } = await supabase.auth.admin.updateUserById(id, { password: new_password })
-      if (error) throw error
-      return res.status(200).json({ success: true, message: 'Password reset successfully' })
+
+      // Use admin client with SERVICE_ROLE_KEY to update password
+      // This allows password reset without requiring user email access
+      const adminClient = createAdminClient()
+      const { error } = await adminClient.auth.admin.updateUserById(id, { 
+        password: new_password 
+      })
+      
+      if (error) {
+        logger.error('Error resetting password', { userId: id, error })
+        throw error
+      }
+
+      logger.info('Password reset successfully', { userId: id })
+      return res.status(200).json({ 
+        success: true, 
+        message: 'Password reset successfully',
+        user: { id }
+      })
     }
     return res.status(400).json({ error: 'Unknown action' })
-  } catch (error) {
+  } catch (error: any) {
+    logger.error('Error in postActions', { action: req.query.action, error })
     return res.status(500).json(createSecureErrorResponse(error))
   }
 }

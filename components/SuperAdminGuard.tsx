@@ -8,7 +8,7 @@ interface SuperAdminGuardProps {
 }
 
 export default function SuperAdminGuard({ children, redirectPath }: SuperAdminGuardProps) {
-  const { userProfile, loading } = useAuth()
+  const { userProfile, loading, user } = useAuth()
   const router = useRouter()
 
   const target = useMemo(() => {
@@ -20,17 +20,47 @@ export default function SuperAdminGuard({ children, redirectPath }: SuperAdminGu
   useEffect(() => {
     if (!router.isReady || loading) return
 
-    if (!userProfile) {
+    // If no user at all, redirect to login
+    if (!user) {
       router.replace(`/app/login?redirect=${encodeURIComponent(target)}`)
       return
     }
 
-    if (userProfile.role !== 'super_admin') {
-      router.replace('/app/dashboard')
+    // If user exists but profile is still loading, wait
+    if (!userProfile && user) {
+      // Give it a moment for profile to load from localStorage or API
+      return
     }
-  }, [userProfile, loading, router, target])
 
-  if (!router.isReady || loading || !userProfile || userProfile.role !== 'super_admin') {
+    // If profile loaded but not super_admin, redirect
+    if (userProfile && userProfile.role !== 'super_admin') {
+      console.log('User is not super_admin, redirecting to dashboard', {
+        role: userProfile.role,
+        userId: userProfile.id
+      })
+      router.replace('/app/dashboard')
+      return
+    }
+
+    // If we have user but no profile yet, try to get it from localStorage
+    if (user && !userProfile && typeof window !== 'undefined') {
+      try {
+        const userData = localStorage.getItem('user')
+        if (userData) {
+          const parsed = JSON.parse(userData)
+          if (parsed.role === 'super_admin') {
+            // Profile will be loaded by useAuth, just wait
+            return
+          }
+        }
+      } catch (e) {
+        // Ignore localStorage errors
+      }
+    }
+  }, [userProfile, loading, router, target, user])
+
+  // Show loading while checking auth
+  if (!router.isReady || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -38,6 +68,34 @@ export default function SuperAdminGuard({ children, redirectPath }: SuperAdminGu
     )
   }
 
+  // If no user, show loading (redirect will happen in useEffect)
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  // If user exists but profile not loaded yet, wait a bit
+  if (!userProfile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  // If profile loaded but not super_admin, show loading (redirect will happen)
+  if (userProfile.role !== 'super_admin') {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  // All checks passed, render children
   return <>{children}</>
 }
 

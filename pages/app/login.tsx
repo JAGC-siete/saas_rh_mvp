@@ -54,8 +54,14 @@ export default function LoginExisting() {
         console.warn('No se pudo sincronizar la sesión del navegador', e)
       }
       
+      // Check for redirect parameter first
+      const redirectParam = router.query.redirect as string | undefined
+      
       // Check user role and redirect accordingly using router for better state management
-      if (data.user.role === 'super_admin') {
+      if (redirectParam && redirectParam.startsWith('/app/admin') && data.user.role === 'super_admin') {
+        // Respect redirect parameter for super admin
+        router.push(redirectParam)
+      } else if (data.user.role === 'super_admin') {
         // Super admin goes to the full dashboard
         router.push('/app/admin/super-admin-dashboard')
       } else if (!data.user.company_id) {
