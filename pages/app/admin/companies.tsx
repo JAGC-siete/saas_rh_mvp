@@ -25,6 +25,7 @@ export default function CompaniesAdminPage() {
   const [error, setError] = useState<string | null>(null)
   const [total, setTotal] = useState(0)
   const [selected, setSelected] = useState<Record<string, boolean>>({})
+  const [processingBulk, setProcessingBulk] = useState(false)
   const { addNotification } = useNotificationContext()
 
   // UI state
@@ -93,6 +94,7 @@ export default function CompaniesAdminPage() {
     if (!selectedIds.length) return
     if (action === 'delete' && !confirm('¿Eliminar empresas seleccionadas? Esta acción no se puede deshacer.')) return
     try {
+      setProcessingBulk(true)
       setLoadingCompanies(true)
       const res = await fetch('/api/admin/companies/bulk', {
         method: 'POST',
@@ -119,6 +121,7 @@ export default function CompaniesAdminPage() {
       addNotification({ type: 'error', title: 'Error', message: err.message || 'Acción fallida' })
     } finally {
       setLoadingCompanies(false)
+      setProcessingBulk(false)
     }
   }
 
@@ -350,6 +353,17 @@ export default function CompaniesAdminPage() {
               </div>
             </CardContent>
           </Card>
+        </div>
+      )}
+
+      {/* Loading overlay with glass effect for bulk operations */}
+      {processingBulk && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="glass border border-white/20 rounded-lg shadow-2xl p-6 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+            <p className="text-white text-lg">Procesando...</p>
+            <p className="text-white/70 text-sm mt-2">Por favor espera</p>
+          </div>
         </div>
       )}
     </>

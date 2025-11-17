@@ -23,6 +23,7 @@ export default function UsersAdminPage() {
   const [users, setUsers] = useState<UserRow[]>([])
   const [loadingUsers, setLoadingUsers] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [processingUserId, setProcessingUserId] = useState<string | null>(null)
 
   const [search, setSearch] = useState('')
   const [role, setRole] = useState('')
@@ -75,6 +76,7 @@ export default function UsersAdminPage() {
 
   const toggleActive = async (u: UserRow) => {
     try {
+      setProcessingUserId(u.id)
       const res = await fetch(`/api/admin/users/${u.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -87,6 +89,8 @@ export default function UsersAdminPage() {
       setUsers(prev => prev.map(x => x.id === u.id ? { ...x, is_active: !u.is_active } : x))
     } catch (err: any) {
       addNotification({ type: 'error', title: 'Error', message: err.message || 'No se pudo actualizar' })
+    } finally {
+      setProcessingUserId(null)
     }
   }
 
@@ -94,6 +98,7 @@ export default function UsersAdminPage() {
     const newPass = prompt('Nueva contraseña (min 8 caracteres):')
     if (!newPass) return
     try {
+      setProcessingUserId(u.id)
       const res = await fetch(`/api/admin/users/${u.id}?action=reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -105,6 +110,8 @@ export default function UsersAdminPage() {
       addNotification({ type: 'success', title: 'Contraseña actualizada', message: u.email })
     } catch (err: any) {
       addNotification({ type: 'error', title: 'Error', message: err.message || 'No se pudo resetear' })
+    } finally {
+      setProcessingUserId(null)
     }
   }
 
@@ -296,8 +303,24 @@ export default function UsersAdminPage() {
                             <div>Último login: <span className="text-white/90">{u.last_login ? new Date(u.last_login).toLocaleString('es-HN') : '—'}</span></div>
                           </div>
                           <div className="mt-3 flex gap-2">
-                            <Button variant="outline" size="sm" onClick={() => toggleActive(u)} className="border-white/30 text-white hover:bg-white/10">{u.is_active ? 'Desactivar' : 'Activar'}</Button>
-                            <Button variant="outline" size="sm" onClick={() => resetPassword(u)} className="border-white/30 text-white hover:bg-white/10">Reset contraseña</Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => toggleActive(u)} 
+                              disabled={processingUserId === u.id}
+                              className="border-white/30 text-white hover:bg-white/10 disabled:opacity-50"
+                            >
+                              {processingUserId === u.id ? 'Procesando...' : (u.is_active ? 'Desactivar' : 'Activar')}
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => resetPassword(u)} 
+                              disabled={processingUserId === u.id}
+                              className="border-white/30 text-white hover:bg-white/10 disabled:opacity-50"
+                            >
+                              Reset contraseña
+                            </Button>
                           </div>
                         </CardContent>
                       </Card>
@@ -327,6 +350,17 @@ export default function UsersAdminPage() {
           </div>
         </SuperAdminLayout>
       </SuperAdminGuard>
+
+      {/* Loading overlay with glass effect */}
+      {processingUserId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="glass border border-white/20 rounded-lg shadow-2xl p-6 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+            <p className="text-white text-lg">Procesando...</p>
+            <p className="text-white/70 text-sm mt-2">Por favor espera</p>
+          </div>
+        </div>
+      )}
     </>
   )
 }
