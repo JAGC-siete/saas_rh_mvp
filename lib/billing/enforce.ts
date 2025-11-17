@@ -1,4 +1,5 @@
 import { startOfMonth } from 'date-fns'
+import { createAdminClient } from '../supabase/server'
 
 export type BillingAction = 'create_employee' | 'generate_payroll' | 'view_reports' | 'send_voucher'
 
@@ -22,21 +23,76 @@ export async function requirePlanAndQuota(
   company_id: string, 
   action: BillingAction
 ): Promise<SubscriptionStatus> {
-  // 1) Get subscription status
-  const { data: sub, error: subError } = await supabase
-    .from('company_subscriptions')
-    .select('status, plan, trial_end')
-    .eq('company_id', company_id)
+  // Use admin client to bypass RLS when checking subscription
+  const adminSupabase = createAdminClient()
+  
+  // 1) Get subscription status from companies table (not company_subscriptions)
+  const { data: company, error: companyError } = await adminSupabase
+    .from('companies')
+    .select('plan_type, subscription_status, subscription_start_date, subscription_end_date, settings, is_active')
+    .eq('id', company_id)
     .single()
 
-  if (subError && subError.code !== 'PGRST116') {
-    console.error('Error fetching subscription:', subError)
+  if (companyError) {
+    console.error('Error fetching company subscription:', companyError)
+    throw new Error('SUBSCRIPTION_ERROR')
+  }
+
+  if (!company) {
     throw new Error('SUBSCRIPTION_ERROR')
   }
 
   const now = new Date()
-  const inTrial = sub && sub.status === 'trial' && new Date(sub.trial_end) > now
-  const isActive = sub && sub.status === 'active'
+  
+  // Determine status based on plan_type and subscription_status
+  let status: 'trial' | 'active' | 'past_due' | 'canceled' = 'trial'
+  let isActive = false
+  let inTrial = false
+  
+  // Check if company is active
+  if (!company.is_active) {
+    throw new Error('PLAN_REQUIRED')
+  }
+
+  // Determine subscription status
+  if (company.plan_type === 'trial') {
+    status = 'trial'
+    // Check trial end date from settings
+    const settings = company.settings as any
+    const trialActivatedAt = settings?.trial_activated_at
+    if (trialActivatedAt) {
+      const trialEnd = new Date(trialActivatedAt)
+      trialEnd.setDate(trialEnd.getDate() + 30) // 30 days trial
+      inTrial = trialEnd > now
+      if (!inTrial) {
+        throw new Error('PLAN_REQUIRED')
+      }
+    } else {
+      // If no trial_activated_at, allow as trial (backward compatibility)
+      inTrial = true
+    }
+  } else if (company.subscription_status === 'active') {
+    status = 'active'
+    isActive = true
+    // Check if subscription hasn't expired
+    if (company.subscription_end_date) {
+      const endDate = new Date(company.subscription_end_date)
+      if (endDate < now) {
+        status = 'past_due'
+        isActive = false
+      }
+    }
+  } else if (company.subscription_status === 'inactive' || !company.subscription_status) {
+    // If plan_type is not trial but subscription is inactive, check if it's a paid plan
+    if (['basic', 'premium', 'enterprise'].includes(company.plan_type || '')) {
+      throw new Error('PLAN_REQUIRED')
+    }
+    // Otherwise treat as trial
+    status = 'trial'
+    inTrial = true
+  } else {
+    status = company.subscription_status as any
+  }
 
   if (!(inTrial || isActive)) {
     throw new Error('PLAN_REQUIRED')
@@ -50,9 +106,9 @@ export async function requirePlanAndQuota(
     employees: 1000
   }
 
-  // 3) Get current month usage
+  // 3) Get current month usage (use admin client for consistency)
   const month = startOfMonth(now).toISOString().slice(0, 10)
-  const { data: meter, error: meterError } = await supabase
+  const { data: meter, error: meterError } = await adminSupabase
     .from('company_meters')
     .select('pdfs_generated, vouchers_sent, attendances_recorded, employees_created')
     .eq('company_id', company_id)
@@ -78,10 +134,19 @@ export async function requirePlanAndQuota(
   }
 
   // 5) Return subscription status
+  const settings = company.settings as any
+  const trialActivatedAt = settings?.trial_activated_at
+  let trialEnd: string | undefined
+  if (trialActivatedAt) {
+    const endDate = new Date(trialActivatedAt)
+    endDate.setDate(endDate.getDate() + 30)
+    trialEnd = endDate.toISOString()
+  }
+
   return {
-    status: sub?.status || 'trial',
-    plan: sub?.plan || 'basic',
-    trial_end: sub?.trial_end,
+    status,
+    plan: company.plan_type || 'basic',
+    trial_end: trialEnd,
     isActive,
     inTrial
   }
