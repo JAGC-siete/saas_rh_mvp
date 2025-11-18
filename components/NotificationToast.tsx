@@ -27,7 +27,7 @@ export default function NotificationToast({ notification, onRemove }: Notificati
   const colorClass = colorMap[notification.type]
 
   return (
-    <div className={`fixed top-4 right-4 z-50 max-w-sm w-full bg-white shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden ${colorClass}`}>
+    <div className={`max-w-sm w-full shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden ${colorClass}`}>
       <div className="p-4">
         <div className="flex items-start">
           <div className="flex-shrink-0">
@@ -43,7 +43,7 @@ export default function NotificationToast({ notification, onRemove }: Notificati
           </div>
           <div className="ml-4 flex-shrink-0 flex">
             <button
-              className="rounded-md inline-flex text-white hover:text-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              className="rounded-md inline-flex hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white"
               onClick={() => onRemove(notification.id)}
             >
               <span className="sr-only">Close</span>

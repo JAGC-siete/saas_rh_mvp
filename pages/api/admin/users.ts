@@ -176,8 +176,11 @@ async function createUser(supabase: any, req: NextApiRequest, res: NextApiRespon
       })
     }
 
+    // Use admin client for admin operations
+    const adminClient = createAdminClient()
+
     // Verify company exists and is active
-    const { data: company, error: companyError } = await supabase
+    const { data: company, error: companyError } = await adminClient
       .from('companies')
       .select('id, name, is_active')
       .eq('id', company_id)
@@ -198,7 +201,7 @@ async function createUser(supabase: any, req: NextApiRequest, res: NextApiRespon
     }
 
     // Check if user already exists
-    const { data: existingUser } = await supabase.auth.admin.getUserByEmail(email)
+    const { data: existingUser } = await adminClient.auth.admin.getUserByEmail(email)
     if (existingUser.user) {
       return res.status(409).json({
         error: 'User already exists',
@@ -207,7 +210,7 @@ async function createUser(supabase: any, req: NextApiRequest, res: NextApiRespon
     }
 
     // Create user using Supabase Auth Admin API
-    const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+    const { data: authUser, error: authError } = await adminClient.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
@@ -269,7 +272,7 @@ async function createUser(supabase: any, req: NextApiRequest, res: NextApiRespon
     }
 
     // Create user profile
-    const { error: profileError } = await supabase
+    const { error: profileError } = await adminClient
       .from('user_profiles')
       .insert({
         id: authUser.user.id,
@@ -281,7 +284,7 @@ async function createUser(supabase: any, req: NextApiRequest, res: NextApiRespon
 
     if (profileError) {
       // Rollback: delete auth user
-      await supabase.auth.admin.deleteUser(authUser.user.id)
+      await adminClient.auth.admin.deleteUser(authUser.user.id)
       throw profileError
     }
 
