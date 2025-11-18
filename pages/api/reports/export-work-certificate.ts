@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
 import { getHondurasTimestamp, formatDateForHonduras, nowInHonduras } from '../../../lib/timezone'
+import { createAdminClient } from '../../../lib/supabase/server'
 
 interface WorkCertificateData {
   employee: {
@@ -100,8 +101,11 @@ async function generateWorkCertificateData(
   additionalInfo: string
 ): Promise<WorkCertificateData | null> {
   try {
+    // Use admin client to bypass RLS policies
+    const adminClient = createAdminClient()
+    
     // Construir query base para empleado (incluir termination_date para empleados inactivos)
-    let employeeQuery = supabase
+    let employeeQuery = adminClient
       .from('employees')
       .select(`
         id,
@@ -127,9 +131,13 @@ async function generateWorkCertificateData(
 
     let { data: employee, error: empError } = await employeeQuery.single()
 
+    if (empError) {
+      console.error('Error querying employee for certificate:', empError)
+    }
+
     // Fallback: si no se encuentra y el rol es admin, intentar sin filtro de empresa
-    if ((empError || !employee) && role !== 'super_admin' && companyId) {
-      const { data: fallbackEmp, error: fallbackErr } = await supabase
+    if ((!employee || empError) && role !== 'super_admin' && companyId) {
+      const { data: fallbackEmp, error: fallbackErr } = await adminClient
         .from('employees')
         .select(`
           id,
