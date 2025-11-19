@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../../lib/supabase/server'
+import { createClient, createAdminClient } from '../../../../lib/supabase/server'
 import { logger } from '../../../../lib/logger'
+import { requireAdmin } from '../../../../lib/auth/api-auth-fixed'
 
 interface ListInvitationsResponse {
   success: boolean
@@ -17,33 +18,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
   }
 
   try {
-    // Verificar autenticación y permisos de admin
-    const supabase = createClient(req, res)
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Use standardized admin authentication
+    const { user, userProfile, role } = await requireAdmin(req, res)
 
-    if (authError || !user) {
-      return res.status(401).json({ 
-        success: false, 
-        error: 'No autorizado' 
-      })
-    }
+    // Use admin client to bypass RLS for queries
+    const adminClient = createAdminClient()
 
-    // Verificar que el usuario es admin
-    const { data: userProfile } = await supabase
-      .from('user_profiles')
-      .select('role, company_id')
-      .eq('id', user.id)
-      .single()
-
-    if (!userProfile || !['super_admin', 'admin'].includes(userProfile.role)) {
-      return res.status(403).json({ 
-        success: false, 
-        error: 'Permisos insuficientes' 
-      })
-    }
-
-    // Obtener invitaciones de la empresa del admin
-    const { data: invitations, error: invitationsError } = await supabase
+    // Build query - super_admin can see all invitations, others see only their company
+    let query = adminClient
       .from('employee_invitations')
       .select(`
         id,
@@ -53,14 +35,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         created_at,
         accepted_at,
         employee_id,
+        company_id,
         employees(
           name,
           email,
           role
         )
       `)
-      .eq('company_id', userProfile.company_id)
       .order('created_at', { ascending: false })
+
+    // Filter by company if not super_admin
+    if (role !== 'super_admin' && userProfile.company_id) {
+      query = query.eq('company_id', userProfile.company_id)
+    }
+
+    const { data: invitations, error: invitationsError } = await query
 
     if (invitationsError) {
       logger.error('Failed to fetch invitations', { error: invitationsError })
@@ -70,12 +59,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       })
     }
 
+    logger.info('Invitations retrieved', {
+      userId: user.id,
+      role,
+      count: invitations?.length || 0
+    })
+
     return res.status(200).json({
       success: true,
       invitations: invitations || []
     })
 
-  } catch (error) {
+  } catch (error: any) {
+    // Handle authentication errors
+    if (error.message === 'UNAUTHORIZED' || error.message === 'ADMIN_REQUIRED') {
+      return // Response already sent
+    }
+    
     logger.error('List invitations error', error)
     return res.status(500).json({
       success: false,

@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { logger } from '../../../lib/logger'
 import { requireAdmin } from "../../../lib/auth/api-auth-fixed"
 import { nowInHonduras } from '../../../lib/timezone'
+import { createAdminClient } from '../../../lib/supabase/server'
 
 interface LogsResponse {
   success: boolean
@@ -16,7 +17,10 @@ export default async function handler(
 ) {
   try {
     // Use standardized admin authentication
-    const { supabase, user } = await requireAdmin(req, res)
+    const { user } = await requireAdmin(req, res)
+    
+    // Use admin client to bypass RLS for system logs
+    const adminClient = createAdminClient()
     
     logger.info('logs_api_access', { userId: user.id, method: req.method })
 
@@ -34,7 +38,7 @@ export default async function handler(
 
     // Obtener logs desde Supabase (asumiendo que tienes una tabla de logs)
     
-    let query = supabase
+    let query = adminClient
       .from('system_logs')
       .select('*')
       .order('created_at', { ascending: false })
@@ -66,7 +70,7 @@ export default async function handler(
     }
 
     // Obtener estadísticas de logs
-    const { data: stats, error: statsError } = await supabase
+    const { data: stats, error: statsError } = await adminClient
       .from('system_logs')
       .select('level')
       .gte('created_at', new Date(nowInHonduras().getTime() - 24 * 60 * 60 * 1000).toISOString()) // Últimas 24 horas
