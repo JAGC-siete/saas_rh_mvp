@@ -632,76 +632,256 @@ async function enviarCorreoBienvenida(data: {
         const resend = new Resend(apiKey)
         
     const emailHtml = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-              <meta charset="utf-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Bienvenido a SISU</title>
-              <style>
-                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-                .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-          .credentials { background: white; padding: 20px; border-radius: 5px; margin: 20px 0; border: 2px solid #667eea; }
-          .credential-row { margin: 15px 0; }
-          .label { font-weight: bold; color: #667eea; }
-          .value { font-family: monospace; font-size: 16px; color: #333; background: #f0f0f0; padding: 8px; border-radius: 4px; }
-                .button { display: inline-block; background: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-          .warning { background: #fff3cd; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #f59e0b; }
-                .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
-              </style>
-            </head>
-            <body>
-              <div class="container">
-                <div class="header">
-            <h1>🎉 ¡Bienvenido a SISU!</h1>
-                  <p>Empresa: <strong>${data.empresa}</strong></p>
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <title>Bienvenido a SISU</title>
+          <style>
+            :root {
+              color-scheme: light;
+            }
+            body {
+              margin: 0;
+              font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+              background: #0b1020;
+              color: #e2e8f0;
+            }
+            .outer {
+              width: 100%;
+              padding: 32px 16px;
+              background: linear-gradient(135deg, #04070f 0%, #111a33 60%, #102040 100%);
+            }
+            .card {
+              max-width: 640px;
+              margin: 0 auto;
+              background: rgba(11, 17, 31, 0.92);
+              border-radius: 28px;
+              border: 1px solid rgba(96, 165, 250, 0.25);
+              box-shadow: 0 20px 60px rgba(15, 23, 42, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+              overflow: hidden;
+            }
+            .hero {
+              padding: 40px 40px 28px 40px;
+              background: radial-gradient(circle at 20% 20%, rgba(37, 99, 235, 0.45), transparent 60%),
+                radial-gradient(circle at 80% 0%, rgba(236, 72, 153, 0.3), transparent 55%),
+                linear-gradient(135deg, #111a33 0%, #1f2b4a 100%);
+              text-align: center;
+            }
+            .hero h1 {
+              margin: 0;
+              font-size: 28px;
+              color: #ffffff;
+              letter-spacing: -0.5px;
+            }
+            .hero p {
+              margin: 12px 0 0 0;
+              font-size: 15px;
+              color: #cbd5f5;
+            }
+            .hero .badge {
+              display: inline-block;
+              margin-bottom: 18px;
+              padding: 6px 14px;
+              border-radius: 999px;
+              font-size: 13px;
+              text-transform: uppercase;
+              letter-spacing: 0.08em;
+              background: rgba(15, 118, 110, 0.15);
+              color: #5eead4;
+              border: 1px solid rgba(94, 234, 212, 0.3);
+            }
+            .content {
+              padding: 32px 40px 40px 40px;
+            }
+            .pill {
+              background: rgba(15, 118, 110, 0.12);
+              border: 1px solid rgba(34, 197, 94, 0.2);
+              border-radius: 16px;
+              padding: 18px 20px;
+              font-size: 15px;
+              color: #bbf7d0;
+              margin-bottom: 24px;
+            }
+            .section-title {
+              font-size: 16px;
+              text-transform: uppercase;
+              letter-spacing: 0.12em;
+              color: #93c5fd;
+              margin: 24px 0 12px 0;
+            }
+            .credentials {
+              background: rgba(15, 23, 42, 0.75);
+              border: 1px solid rgba(96, 165, 250, 0.3);
+              border-radius: 18px;
+              padding: 24px;
+              margin-bottom: 24px;
+            }
+            .credential-row + .credential-row {
+              margin-top: 16px;
+            }
+            .label {
+              font-size: 13px;
+              letter-spacing: 0.08em;
+              color: #94a3b8;
+              text-transform: uppercase;
+            }
+            .value {
+              margin-top: 8px;
+              font-family: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+              background: rgba(15, 118, 110, 0.12);
+              border-radius: 10px;
+              padding: 12px 14px;
+              display: inline-block;
+              color: #f8fafc;
+            }
+            .cta {
+              text-align: center;
+              margin: 32px 0 12px 0;
+            }
+            .cta a {
+              display: inline-block;
+              padding: 14px 32px;
+              border-radius: 999px;
+              font-weight: 600;
+              text-decoration: none;
+              background: linear-gradient(135deg, #22d3ee, #0ea5e9 60%, #6366f1);
+              color: #0b1120;
+              box-shadow: 0 15px 35px rgba(14, 165, 233, 0.35);
+            }
+            .cta p {
+              margin-top: 12px;
+              font-size: 13px;
+              color: #94a3b8;
+            }
+            .grid {
+              display: flex;
+              flex-wrap: wrap;
+              gap: 16px;
+            }
+            .grid > div {
+              flex: 1 1 180px;
+              background: rgba(15, 23, 42, 0.6);
+              border: 1px solid rgba(99, 102, 241, 0.25);
+              border-radius: 16px;
+              padding: 16px;
+            }
+            .grid h4 {
+              margin: 0 0 6px 0;
+              font-size: 15px;
+              color: #f8fafc;
+            }
+            .grid p {
+              margin: 0;
+              font-size: 13px;
+              color: #cbd5f5;
+              line-height: 1.5;
+            }
+            .warning {
+              background: rgba(251, 191, 36, 0.12);
+              border: 1px solid rgba(245, 158, 11, 0.3);
+              border-radius: 16px;
+              padding: 18px 20px;
+              color: #fde68a;
+              font-size: 14px;
+              margin: 24px 0;
+            }
+            .footer {
+              text-align: center;
+              padding: 28px 24px 36px 24px;
+              font-size: 12px;
+              color: #94a3b8;
+            }
+            .footer hr {
+              border: 0;
+              border-top: 1px solid rgba(148, 163, 184, 0.2);
+              margin-bottom: 18px;
+            }
+            @media (max-width: 520px) {
+              .hero, .content {
+                padding: 24px;
+              }
+              .grid {
+                flex-direction: column;
+              }
+              .cta a {
+                width: 100%;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="outer">
+            <div class="card">
+              <div class="hero">
+                <div class="badge">Trial Activado</div>
+                <h1>¡Tu entorno SISU ya está vivo!</h1>
+                <p>${data.empresa} quedó configurada con toda la demo lista para tu equipo.</p>
+              </div>
+              <div class="content">
+                <div class="pill">
+                  ${data.nombre || 'Equipo'}: ya puedes ingresar, validar horarios, planilla legal hondureña y dashboards de talento en un mismo lugar.
                 </div>
-                
-                <div class="content">
-                  <h2>¡Hola ${data.nombre}!</h2>
-                  <p>Tu entorno de prueba SISU está listo y funcionando. Ya puedes empezar a explorar todas las funcionalidades.</p>
-                  
-            <div class="credentials">
-              <h3 style="color: #667eea; margin-top: 0;">📧 Tus credenciales de acceso:</h3>
-              <div class="credential-row">
-                <div class="label">Email:</div>
-                <div class="value">${data.email}</div>
+
+                <div class="section-title">Credenciales seguras</div>
+                <div class="credentials">
+                  <div class="credential-row">
+                    <div class="label">Email</div>
+                    <div class="value">${data.email}</div>
                   </div>
-              <div class="credential-row">
-                <div class="label">Contraseña:</div>
-                <div class="value">${data.password}</div>
-                    </div>
-                  </div>
-            
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${data.loginUrl}" class="button">🚀 Iniciar Sesión</a>
-            </div>
-            
-            <div class="warning">
-              <strong>⚠️ Importante:</strong> Por favor, cambia tu contraseña después de iniciar sesión por primera vez.
-            </div>
-                  
-                  <div style="background: #e8f4fd; padding: 20px; border-radius: 5px; margin: 20px 0;">
-                    <h4>📱 ¿Necesitas ayuda?</h4>
-              <p>Responde a este email o escríbenos por WhatsApp al <strong>+504 9470-7007</strong></p>
-                  </div>
-                  
-                  <div style="background: #fff3cd; padding: 20px; border-radius: 5px; margin: 20px 0;">
-              <h4>⏰ Tu trial expira en ${TRIAL_CONFIG.DURATION_DAYS} día${TRIAL_CONFIG.DURATION_DAYS > 1 ? 's' : ''}</h4>
-                    <p>Disfruta explorando SISU y conoce todas las funcionalidades que te ofrecemos.</p>
+                  <div class="credential-row">
+                    <div class="label">Contraseña temporal</div>
+                    <div class="value">${data.password}</div>
                   </div>
                 </div>
-                
-                <div class="footer">
-                  <p>Este email fue enviado desde SISU - Sistema de Gestión de Recursos Humanos</p>
-                  <p>Si no solicitaste este trial, puedes ignorar este mensaje.</p>
+
+                <div class="cta">
+                  <a href="${data.loginUrl}">Entrar al panel</a>
+                  <p>Si el botón no funciona, copia este enlace en tu navegador: ${data.loginUrl}</p>
+                </div>
+
+                <div class="section-title">Lo que ya tienes listo</div>
+                <div class="grid">
+                  <div>
+                    <h4>📊 Panel inteligente</h4>
+                    <p>Asistencia, planilla y reportes conectados con roles y auditoría.</p>
+                  </div>
+                  <div>
+                    <h4>👥 Equipo demo</h4>
+                    <p>${data.empresa} incluye empleados de ejemplo y departamentos para hacer pruebas.</p>
+                  </div>
+                  <div>
+                    <h4>⚙️ Entorno seguro</h4>
+                    <p>Tenant aislado con cifrado, logs de acceso y timezone Tegucigalpa.</p>
+                  </div>
+                </div>
+
+                <div class="warning">
+                  ⚠️ Por seguridad cambia la contraseña al ingresar. Tu trial dura ${TRIAL_CONFIG.DURATION_DAYS} día${TRIAL_CONFIG.DURATION_DAYS > 1 ? 's' : ''}.
+                </div>
+
+                <div class="section-title">Estamos atentos</div>
+                <div class="grid">
+                  <div>
+                    <h4>📱 WhatsApp</h4>
+                    <p>+504 9470-7007 • Respuesta en horario laboral.</p>
+                  </div>
+                  <div>
+                    <h4>📧 Email</h4>
+                    <p>Responde este mensaje y llegas directo a soporte.</p>
+                  </div>
                 </div>
               </div>
-            </body>
-            </html>
-          `
+              <div class="footer">
+                <hr />
+                SISU · Plataforma hondureña de Recursos Humanos. Si tú no solicitaste este acceso, puedes ignorar el correo.
+              </div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `
 
     const result = await resend.emails.send({
       from: process.env.RESEND_FROM || 'SISU <noreply@humanosisu.net>',
