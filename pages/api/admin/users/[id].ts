@@ -83,6 +83,14 @@ async function getUser(supabase: any, id: string, res: NextApiResponse) {
     const authUser = authUsers?.users?.find((u: any) => u.id === id)
 
     // Transform data
+    const companies = userProfile.companies as any
+    const companyName = companies 
+      ? (Array.isArray(companies) ? companies[0]?.name : companies.name)
+      : null
+    const companySubdomain = companies
+      ? (Array.isArray(companies) ? companies[0]?.subdomain : companies.subdomain)
+      : null
+
     const userData = {
       id: userProfile.id,
       email: authUser?.email || '',
@@ -94,8 +102,8 @@ async function getUser(supabase: any, id: string, res: NextApiResponse) {
       updated_at: userProfile.updated_at,
       company: {
         id: userProfile.company_id,
-        name: userProfile.companies?.name,
-        subdomain: userProfile.companies?.subdomain
+        name: companyName,
+        subdomain: companySubdomain
       }
     }
 

@@ -48,6 +48,12 @@ yarn-error.log*
 # vercel
 .vercel
 
+# Legacy setup scripts (contains hardcoded credentials - DO NOT COMMIT)
+scripts/create-prohalca.ts
+scripts/create-prohalca.js
+scripts/create-prohalca*.sql
+scripts/migrations/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
