@@ -201,8 +201,9 @@ async function createUser(supabase: any, req: NextApiRequest, res: NextApiRespon
     }
 
     // Check if user already exists
-    const { data: existingUser } = await adminClient.auth.admin.getUserByEmail(email)
-    if (existingUser.user) {
+    const { data: authUsers } = await adminClient.auth.admin.listUsers()
+    const existingUser = authUsers?.users?.find((u: any) => u.email === email)
+    if (existingUser) {
       return res.status(409).json({
         error: 'User already exists',
         message: 'A user with this email already exists'

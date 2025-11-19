@@ -119,8 +119,8 @@ async function generateWorkCertificateData(
         base_salary,
         status,
         company_id,
-        departments(name),
-        companies(name)
+        departments!employees_department_id_fkey(name),
+        companies!employees_company_id_fkey(name)
       `)
       .eq('id', employeeId)
 
@@ -151,8 +151,8 @@ async function generateWorkCertificateData(
           base_salary,
           status,
           company_id,
-          departments(name),
-          companies(name)
+          departments!employees_department_id_fkey(name),
+          companies!employees_company_id_fkey(name)
         `)
         .eq('id', employeeId)
         .single()
@@ -173,6 +173,18 @@ async function generateWorkCertificateData(
       return null
     }
 
+    // Safely extract department and company names (handle both array and object responses)
+    const departments = employee.departments as any
+    const companies = employee.companies as any
+    
+    const departmentName = departments 
+      ? (Array.isArray(departments) ? departments[0]?.name : departments.name)
+      : 'No especificado'
+    
+    const companyName = companies
+      ? (Array.isArray(companies) ? companies[0]?.name : companies.name)
+      : 'No especificado'
+
     const certificateData: WorkCertificateData = {
       employee: {
         id: employee.id,
@@ -181,8 +193,8 @@ async function generateWorkCertificateData(
         employee_code: employee.employee_code,
         dni: employee.dni,
         position: employee.position || 'No especificado',
-        department_name: employee.departments?.name || 'No especificado',
-        company_name: employee.companies?.name || 'No especificado',
+        department_name: departmentName || 'No especificado',
+        company_name: companyName || 'No especificado',
         hire_date: employee.hire_date,
         termination_date: employee.termination_date || null,
         base_salary: employee.base_salary,

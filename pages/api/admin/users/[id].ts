@@ -52,7 +52,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
 async function getUser(supabase: any, id: string, res: NextApiResponse) {
   try {
-    const { data: userProfile, error } = await supabase
+    // Use admin client to bypass RLS
+    const adminClient = createAdminClient()
+    
+    const { data: userProfile, error } = await adminClient
       .from('user_profiles')
       .select(`
         id,
@@ -63,8 +66,7 @@ async function getUser(supabase: any, id: string, res: NextApiResponse) {
         created_at,
         updated_at,
         company_id,
-        companies:companies(name, subdomain),
-        auth_users:users(email, created_at, last_sign_in_at)
+        companies:companies(name, subdomain)
       `)
       .eq('id', id)
       .single()
@@ -76,14 +78,18 @@ async function getUser(supabase: any, id: string, res: NextApiResponse) {
       throw error
     }
 
+    // Get email from auth.users
+    const { data: authUsers } = await adminClient.auth.admin.listUsers()
+    const authUser = authUsers?.users?.find((u: any) => u.id === id)
+
     // Transform data
     const userData = {
       id: userProfile.id,
-      email: userProfile.auth_users?.email,
+      email: authUser?.email || '',
       role: userProfile.role,
       is_active: userProfile.is_active,
       permissions: userProfile.permissions,
-      last_login: userProfile.last_login || userProfile.auth_users?.last_sign_in_at,
+      last_login: userProfile.last_login || authUser?.last_sign_in_at,
       created_at: userProfile.created_at,
       updated_at: userProfile.updated_at,
       company: {
@@ -107,6 +113,9 @@ async function updateUser(supabase: any, id: string, req: NextApiRequest, res: N
   try {
     const { role, is_active, permissions, company_id } = req.body
 
+    // Use admin client to bypass RLS
+    const adminClient = createAdminClient()
+
     // Build update object with only provided fields
     const updateData: any = {}
     if (role !== undefined) {
@@ -123,7 +132,7 @@ async function updateUser(supabase: any, id: string, req: NextApiRequest, res: N
     if (permissions !== undefined) updateData.permissions = permissions
     if (company_id !== undefined) {
       // Verify company exists
-      const { data: company, error: companyError } = await supabase
+      const { data: company, error: companyError } = await adminClient
         .from('companies')
         .select('id, is_active')
         .eq('id', company_id)
@@ -154,7 +163,7 @@ async function updateUser(supabase: any, id: string, req: NextApiRequest, res: N
     }
 
     // Check if user exists
-    const { data: existingUser, error: existingError } = await supabase
+    const { data: existingUser, error: existingError } = await adminClient
       .from('user_profiles')
       .select('id, role')
       .eq('id', id)
@@ -166,7 +175,7 @@ async function updateUser(supabase: any, id: string, req: NextApiRequest, res: N
 
     // Prevent demoting the last super admin
     if (existingUser.role === 'super_admin' && role && role !== 'super_admin') {
-      const { data: superAdmins, error: superAdminError } = await supabase
+      const { data: superAdmins, error: superAdminError } = await adminClient
         .from('user_profiles')
         .select('id')
         .eq('role', 'super_admin')
@@ -184,7 +193,7 @@ async function updateUser(supabase: any, id: string, req: NextApiRequest, res: N
       }
     }
 
-    const { data: updatedUser, error } = await supabase
+    const { data: updatedUser, error } = await adminClient
       .from('user_profiles')
       .update(updateData)
       .eq('id', id)
@@ -220,8 +229,11 @@ async function updateUser(supabase: any, id: string, req: NextApiRequest, res: N
 
 async function deleteUser(supabase: any, id: string, res: NextApiResponse) {
   try {
+    // Use admin client to bypass RLS
+    const adminClient = createAdminClient()
+    
     // Check if user exists and get role
-    const { data: userProfile, error: userError } = await supabase
+    const { data: userProfile, error: userError } = await adminClient
       .from('user_profiles')
       .select('id, role')
       .eq('id', id)
@@ -233,7 +245,7 @@ async function deleteUser(supabase: any, id: string, res: NextApiResponse) {
 
     // Prevent deleting the last super admin
     if (userProfile.role === 'super_admin') {
-      const { data: superAdmins, error: superAdminError } = await supabase
+      const { data: superAdmins, error: superAdminError } = await adminClient
         .from('user_profiles')
         .select('id')
         .eq('role', 'super_admin')
@@ -252,7 +264,7 @@ async function deleteUser(supabase: any, id: string, res: NextApiResponse) {
     }
 
     // Delete user profile first (will cascade due to foreign key)
-    const { error: profileError } = await supabase
+    const { error: profileError } = await adminClient
       .from('user_profiles')
       .delete()
       .eq('id', id)
@@ -262,7 +274,7 @@ async function deleteUser(supabase: any, id: string, res: NextApiResponse) {
     }
 
     // Delete from Supabase Auth
-    const { error: authError } = await supabase.auth.admin.deleteUser(id)
+    const { error: authError } = await adminClient.auth.admin.deleteUser(id)
     
     if (authError) {
       logger.warn('Failed to delete user from auth, but profile deleted', {
