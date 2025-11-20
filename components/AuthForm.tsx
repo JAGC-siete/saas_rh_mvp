@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 export default function AuthForm() {
   const [loading, setLoading] = useState(false)
   const [isSignUp, setIsSignUp] = useState(false)
+  const [isB2C, setIsB2C] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('') // Form input state, not a credential
   const [fullName, setFullName] = useState('')
@@ -25,19 +26,34 @@ export default function AuthForm() {
 
     try {
       if (isSignUp) {
-        setError('Sign up is not available in this version. Please contact your administrator.')
-        setLoading(false)
-        return
+        if (isB2C) {
+          // B2C registration
+          const response = await fetch('/api/auth/register-b2c', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password, fullName })
+          })
+
+          if (!response.ok) {
+            const data = await response.json()
+            throw new Error(data.error || 'Failed to register')
+          }
+
+          // After registration, perhaps auto-login or redirect
+          await login(email, password)
+        } else {
+          // Standard B2B signup (existing logic)
+          setError('Sign up is not available in this version. Please contact your administrator.')
+        }
       } else {
-        // Sign in existing user
+        // Existing login
         const success = await login(email, password)
-        
         if (!success) {
           setError('Invalid email or password')
         }
       }
-    } catch (error: any) {
-      setError(error.message)
+    } catch (err: any) {
+      setError(err.message)
     }
 
     setLoading(false)
@@ -134,6 +150,18 @@ export default function AuthForm() {
               className="w-full"
             >
               {loading ? 'Processing...' : (isSignUp ? 'Create Account' : 'Sign In')}
+            </Button>
+
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setIsSignUp(true)
+                setIsB2C(true)
+              }}
+              className="w-full"
+            >
+              Registro Individual (B2C)
             </Button>
 
             <Button

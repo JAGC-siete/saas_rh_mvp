@@ -1,0 +1,6 @@
+# Humano SISU
+User-agent: *
+Allow: /
+
+# Note: emergency.humanosisu.net blocked via X-Robots-Tag header (not here)
+
