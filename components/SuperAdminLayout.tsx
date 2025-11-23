@@ -60,6 +60,12 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
       description: 'Usuarios del sistema'
     },
     {
+      name: 'Afiliados',
+      href: '/app/admin/affiliates',
+      icon: Users,
+      description: 'Gestión de afiliados'
+    },
+    {
       name: 'Estadísticas',
       href: '/app/admin/analytics',
       icon: TrendingUp,

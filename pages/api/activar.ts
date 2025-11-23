@@ -18,6 +18,7 @@ interface ActivationData {
   contactoEmail: string
   departamentos: number
   aceptaTrial: boolean
+  referralCode?: string // Add referral code
 }
 
 
@@ -41,10 +42,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       contactoWhatsApp,
       contactoEmail,
       departamentos,
-      aceptaTrial
+      aceptaTrial,
+      referralCode // Destructure referral code
     }: ActivationData = req.body
 
-    console.log('📝 Datos recibidos:', { empleados, empresa, nombre, contactoWhatsApp, contactoEmail, departamentos, aceptaTrial })
+    console.log('📝 Datos recibidos:', { empleados, empresa, nombre, contactoWhatsApp, contactoEmail, departamentos, aceptaTrial, referralCode })
 
     // Validar campos requeridos
     if (!contactoEmail) {
@@ -160,7 +162,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       nombre: nombre || 'Contacto no especificado',
       contactoEmail,
       empleados,
-      departamentos
+      departamentos,
+      referralCode // Pass referral code
     })
 
     if (trialEnvironment.success) {
@@ -326,10 +329,30 @@ async function crearEntornoTrial(supabase: any, data: {
   contactoEmail: string
   empleados: number
   departamentos: number
+  referralCode?: string // Add referral code to function signature
 }) {
   try {
     console.log('🏗️ Creando entorno completo de trial para:', data.empresa)
     
+    // 0. Check for referral code
+    let affiliateId: string | null = null
+    if (data.referralCode) {
+      const { data: affiliate, error: affiliateError } = await supabase
+        .from('affiliates')
+        .select('id')
+        .eq('referral_code', data.referralCode)
+        .eq('status', 'approved')
+        .single()
+
+      if (affiliateError) {
+        console.warn('⚠️ Error al buscar afiliado:', affiliateError.message)
+      }
+      if (affiliate) {
+        affiliateId = affiliate.id
+        console.log(`🔗 Afiliado encontrado: ${affiliateId}`)
+      }
+    }
+
     // 1. Crear company única
     console.log('📦 Paso 1: Creando company...')
     const companyId = randomUUID()
@@ -347,7 +370,8 @@ async function crearEntornoTrial(supabase: any, data: {
           trial_employee_limit: data.empleados,
             timezone: 'America/Tegucigalpa'
           },
-          is_active: true
+          is_active: true,
+          referred_by_affiliate_id: affiliateId // Set affiliate ID
         }])
         .select()
       .single()
