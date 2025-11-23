@@ -48,6 +48,12 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
       description: 'Vista general del sistema'
     },
     {
+      name: 'Afiliados',
+      href: '/app/admin/affiliates',
+      icon: Users,
+      description: 'Gestión de afiliados'
+    },
+    {
       name: 'Empresas',
       href: '/app/admin/companies',
       icon: Building2,
@@ -58,12 +64,6 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
       href: '/app/admin/users',
       icon: Users,
       description: 'Usuarios del sistema'
-    },
-    {
-      name: 'Afiliados',
-      href: '/app/admin/affiliates',
-      icon: Users,
-      description: 'Gestión de afiliados'
     },
     {
       name: 'Estadísticas',
