@@ -102,6 +102,12 @@ export default function LandingPage() {
                   >
                     Servicios
                   </a>
+                  <Link
+                    href="/afiliados"
+                    className="text-brand-200 hover:text-white px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap"
+                  >
+                    Programa de Afiliados
+                  </Link>
                   <button
                     onClick={() => window.location.href = '/activar'}
                     className="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 shadow-lg shadow-black/20 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap min-w-[160px] text-center"
@@ -159,6 +165,13 @@ export default function LandingPage() {
                 >
                   Servicios
                 </a>
+                <Link
+                  href="/afiliados"
+                  className="block px-3 py-2 text-base font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Programa de Afiliados
+                </Link>
                 <button
                   onClick={() => {
                     setIsMobileMenuOpen(false)
