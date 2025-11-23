@@ -75,47 +75,6 @@ export default function AfiliadosPage() {
           </p>
         </section>
 
-        <section className="mb-12">
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="bg-gray-800 border-gray-700">
-              <CardHeader>
-                <CardTitle className="text-lg">0–30 Empleados</CardTitle>
-                <CardDescription>Licencia Anual</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold">$1,440</p>
-              </CardContent>
-            </Card>
-            <Card className="bg-gray-800 border-gray-700">
-              <CardHeader>
-                <CardTitle className="text-lg">31–100 Empleados</CardTitle>
-                <CardDescription>Licencia Anual</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold">$1,860</p>
-              </CardContent>
-            </Card>
-            <Card className="bg-gray-800 border-gray-700">
-              <CardHeader>
-                <CardTitle className="text-lg">101–200 Empleados</CardTitle>
-                <CardDescription>Licencia Anual</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold">$2,340</p>
-              </CardContent>
-            </Card>
-            <Card className="bg-gray-800 border-gray-700">
-              <CardHeader>
-                <CardTitle className="text-lg">201–300 Empleados</CardTitle>
-                <CardDescription>Licencia Anual</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold">$3,240</p>
-              </CardContent>
-            </Card>
-          </div>
-        </section>
-
         <section className="grid md:grid-cols-2 gap-8 items-start">
           <div className="space-y-6">
             <div>
