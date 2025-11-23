@@ -75,30 +75,75 @@ export default function AfiliadosPage() {
           </p>
         </section>
 
-        <section className="grid md:grid-cols-2 gap-8 items-center">
-          <div>
-            <h2 className="text-3xl font-bold mb-4">¿Cómo funciona?</h2>
-            <ul className="space-y-4 text-gray-300">
-              <li className="flex items-start">
-                <span className="bg-blue-500 rounded-full h-6 w-6 text-center mr-4 mt-1">1</span>
-                <span>Regístrate en el formulario para obtener tu enlace de referido único.</span>
-              </li>
-              <li className="flex items-start">
-                <span className="bg-blue-500 rounded-full h-6 w-6 text-center mr-4 mt-1">2</span>
-                <span>Comparte tu enlace con empresas que necesiten automatizar sus RRHH.</span>
-              </li>
-              <li className="flex items-start">
-                <span className="bg-blue-500 rounded-full h-6 w-6 text-center mr-4 mt-1">3</span>
-                <span>Cuando una empresa se suscribe a través de tu enlace, ganas una comisión.</span>
-              </li>
-              <li className="flex items-start">
-                <span className="bg-blue-500 rounded-full h-6 w-6 text-center mr-4 mt-1">4</span>
-                <span>Recibe pagos mensuales por todas tus referencias activas.</span>
-              </li>
-            </ul>
+        <section className="mb-12">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="bg-gray-800 border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-lg">0–30 Empleados</CardTitle>
+                <CardDescription>Licencia Anual</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold">$1,440</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-gray-800 border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-lg">31–100 Empleados</CardTitle>
+                <CardDescription>Licencia Anual</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold">$1,860</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-gray-800 border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-lg">101–200 Empleados</CardTitle>
+                <CardDescription>Licencia Anual</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold">$2,340</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-gray-800 border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-lg">201–300 Empleados</CardTitle>
+                <CardDescription>Licencia Anual</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold">$3,240</p>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+
+        <section className="grid md:grid-cols-2 gap-8 items-start">
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-3xl font-bold mb-4">Estructura de Comisiones 2026</h2>
+              <ul className="list-disc list-inside space-y-2 text-gray-300">
+                <li><strong className="text-white">10% de comisión</strong> por tu primer negocio cerrado.</li>
+                <li><strong className="text-white">1% de comisión adicional</strong> por cada nuevo negocio, hasta un tope del <strong className="text-white">20%</strong>.</li>
+                <li>El nivel de comisión que alcances se mantendrá fijo durante todo el año 2026.</li>
+              </ul>
+            </div>
+            <div>
+              <h2 className="text-3xl font-bold mb-4">Bono de Rendimiento 2026</h2>
+              <ul className="list-disc list-inside space-y-2 text-gray-300">
+                <li>Gana un <strong className="text-white">5% de comisiones adicional</strong> durante todo el 2026.</li>
+                <li>Condición: cierra 10 negocios antes del <strong className="text-white">1 de febrero de 2026</strong>.</li>
+              </ul>
+            </div>
+            <div>
+              <h2 className="text-3xl font-bold mb-4">Reglas del Programa</h2>
+              <ul className="list-disc list-inside space-y-2 text-gray-300">
+                <li>La comisión se paga sobre el valor anual de la licencia del cliente referido.</li>
+                <li>Un negocio se considera &quot;cerrado&quot; únicamente cuando la empresa ha pagado su licencia anual.</li>
+                <li>Los pagos de comisiones se realizan mensualmente.</li>
+              </ul>
+            </div>
           </div>
           <div>
-            <Card className="bg-gray-800 border-gray-700">
+            <Card className="bg-gray-800 border-gray-700 sticky top-24">
               <CardHeader>
                 <CardTitle>Regístrate Ahora</CardTitle>
                 <CardDescription>Completa el formulario para empezar.</CardDescription>

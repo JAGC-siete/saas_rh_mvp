@@ -30,6 +30,7 @@ interface UserPermissions {
   gamification?: boolean
   settings?: boolean
   admin?: boolean
+  affiliates?: boolean // Add affiliates permission
 }
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
@@ -46,7 +47,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     reports: true,
     gamification: true,
     settings: true, // Por defecto true, se ajustará según rol
-    admin: true    // Por defecto true, se ajustará según rol
+    admin: true,    // Por defecto true, se ajustará según rol
+    affiliates: true // Show affiliates link to all users
   })
   const [loadingPermissions, setLoadingPermissions] = useState(true)
   const router = useRouter()
@@ -95,7 +97,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             reports: true,
             gamification: true,
             settings: canAccessSettings,
-            admin: isAdmin
+            admin: isAdmin,
+            affiliates: true // Show affiliates link to all users
           }
           
           setUserPermissions(permissions)
@@ -165,7 +168,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           gamification: true,
           // CRÍTICO: Forzar estos valores basado en rol, ignorar lo que venga de la DB
           settings: canAccessSettings,
-          admin: isAdmin
+          admin: isAdmin,
+          affiliates: true // Show affiliates link to all users
         }
         
         console.log('✅ Final permissions FORCED by role:', {
@@ -208,6 +212,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Nómina', href: '/app/payroll', icon: CurrencyDollarIcon, permission: 'payroll' },
     { name: 'Reportes', href: '/app/reports', icon: ChartBarIcon, permission: 'reports' },
     { name: 'Gamificación', href: '/app/gamification', icon: TrophyIcon, permission: 'gamification' },
+    { name: 'Programa de Afiliados', href: '/app/affiliates', icon: CurrencyDollarIcon, permission: 'affiliates' },
     { name: 'Parametros', href: '/app/settings', icon: Cog6ToothIcon, permission: 'settings' },
   ]
 
