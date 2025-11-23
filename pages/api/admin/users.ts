@@ -1,46 +1,34 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient, createAdminClient } from '../../../lib/supabase/server'
+import { createAdminClient } from '../../../lib/supabase/server'
 import { logger } from '../../../lib/logger'
-import { createSecureErrorResponse, createAuthErrorResponse } from '../../../lib/security/error-handling'
+import { createSecureErrorResponse } from '../../../lib/security/error-handling'
+import { requireSuperAdmin } from '../../../lib/auth/api-auth-fixed'
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const supabase = createClient(req, res)
-    
-    // Get user and verify super admin role
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    
-    if (userError || !user) {
-      return res.status(401).json(createAuthErrorResponse('Authentication required'))
-    }
-
-    // Check if user is super admin
-    const { data: profile, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (profileError || !profile || profile.role !== 'super_admin') {
-      return res.status(403).json(createAuthErrorResponse('Super admin access required'))
-    }
+    // Use the centralized super admin check
+    await requireSuperAdmin(req, res)
 
     switch (req.method) {
       case 'GET':
-        return await getUsers(supabase, req, res)
+        return await getUsers(req, res)
       case 'POST':
-        return await createUser(supabase, req, res)
+        return await createUser(req, res)
       default:
         res.setHeader('Allow', ['GET', 'POST'])
         return res.status(405).json({ error: 'Method not allowed' })
     }
-  } catch (error) {
+  } catch (error: any) {
+    // Gracefully handle auth errors thrown by requireSuperAdmin
+    if (error.message === 'UNAUTHORIZED' || error.message === 'INSUFFICIENT_PERMISSIONS') {
+      return // Response is already sent by the helper
+    }
     logger.error('Error in users admin API', error)
     return res.status(500).json(createSecureErrorResponse(error))
   }
 }
 
-async function getUsers(supabase: any, req: NextApiRequest, res: NextApiResponse) {
+async function getUsers(req: NextApiRequest, res: NextApiResponse) {
   try {
     // Query params
     const q = (req.query.q as string | undefined)?.trim() || ''
@@ -147,7 +135,7 @@ async function getUsers(supabase: any, req: NextApiRequest, res: NextApiResponse
   }
 }
 
-async function createUser(supabase: any, req: NextApiRequest, res: NextApiResponse) {
+async function createUser(req: NextApiRequest, res: NextApiResponse) {
   try {
     const { email, password, role, company_id } = req.body
 

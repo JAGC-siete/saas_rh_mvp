@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient, createAdminClient } from '../../../lib/supabase/server'
+import { createAdminClient } from '../../../lib/supabase/server'
 import { requireSuperAdmin } from '../../../lib/auth/api-auth-fixed'
 import { logger } from '../../../lib/logger'
 import { createSecureErrorResponse, createAuthErrorResponse } from '../../../lib/security/error-handling'
@@ -8,11 +8,8 @@ import { createSecureErrorResponse, createAuthErrorResponse } from '../../../lib
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     // Verify super admin using standardized auth
-    await requireSuperAdmin(req, res)
+    const { supabase } = await requireSuperAdmin(req, res)
     
-    // Use admin client for all database operations (bypasses RLS)
-    const supabase = createAdminClient()
-
     switch (req.method) {
       case 'GET':
         return await getCompanies(supabase, res)
