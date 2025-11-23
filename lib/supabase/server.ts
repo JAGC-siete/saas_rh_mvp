@@ -120,6 +120,13 @@ export function createAdminClient() {
   const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY
   const anonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
+  // Enhanced logging for debugging environment variables
+  console.log('--- createAdminClient ---')
+  console.log(`Supabase URL Loaded: ${!!supabaseUrl}`)
+  console.log(`Service Role Key Loaded: ${!!serviceKey}`)
+  console.log(`Anon Key Loaded: ${!!anonKey}`)
+  console.log('--- End createAdminClient ---')
+
   // Check if environment variables are available
   if (!supabaseUrl) {
     console.error('❌ Missing Supabase URL environment variable (NEXT_PUBLIC_SUPABASE_URL)')
