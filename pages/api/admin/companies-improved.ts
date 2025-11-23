@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createAdminClient, createClient } from '../../../lib/supabase/server'
+import { createAdminClient } from '../../../lib/supabase/server'
 import { logger } from '../../../lib/logger'
+import { requireSuperAdmin } from '../../../lib/auth/api-auth-fixed'
 
 interface ListResponse {
   success: boolean
@@ -21,22 +22,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
   }
 
   try {
-    const authClient = createClient(req, res)
-    const { data: { user }, error: userError } = await authClient.auth.getUser()
-
-    if (userError || !user) {
-      return res.status(401).json({ success: false, error: 'Authentication required' })
-    }
-
-    const { data: profile, error: profileError } = await authClient
-      .from('user_profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (profileError || !profile || profile.role !== 'super_admin') {
-      return res.status(403).json({ success: false, error: 'Super admin access required' })
-    }
+    // Use the centralized super admin check
+    await requireSuperAdmin(req, res)
 
     const supabase = createAdminClient()
 
@@ -109,7 +96,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         pageSize
       }
     })
-  } catch (err) {
+  } catch (err: any) {
+    // Gracefully handle auth errors thrown by requireSuperAdmin
+    if (err.message === 'UNAUTHORIZED' || err.message === 'INSUFFICIENT_PERMISSIONS') {
+      return // Response is already sent by the helper
+    }
     logger.error('Error in companies-improved', err)
     return res.status(500).json({ success: false, error: 'Internal server error' })
   }
