@@ -102,7 +102,7 @@ export default function AfiliadosPage() {
             </div>
           </div>
           <div>
-            <Card className="bg-gray-800 border-gray-700 sticky top-24">
+            <Card className="glass-strong sticky top-24">
               <CardHeader>
                 <CardTitle>Regístrate Ahora</CardTitle>
                 <CardDescription>Completa el formulario para empezar.</CardDescription>
@@ -114,17 +114,17 @@ export default function AfiliadosPage() {
                   </div>
                 ) : (
                   <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                      <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-1">Nombre Completo</label>
-                      <Input id="name" name="name" type="text" required onChange={handleChange} className="bg-gray-700 border-gray-600" />
+                    <div className="space-y-2">
+                      <label htmlFor="name">Nombre Completo</label>
+                      <Input id="name" name="name" type="text" required onChange={handleChange} />
                     </div>
-                    <div>
-                      <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-1">Correo Electrónico</label>
-                      <Input id="email" name="email" type="email" required onChange={handleChange} className="bg-gray-700 border-gray-600" />
+                    <div className="space-y-2">
+                      <label htmlFor="email">Correo Electrónico</label>
+                      <Input id="email" name="email" type="email" required onChange={handleChange} />
                     </div>
-                    <div>
-                      <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-1">Contraseña</label>
-                      <Input id="password" name="password" type="password" required onChange={handleChange} className="bg-gray-700 border-gray-600" />
+                    <div className="space-y-2">
+                      <label htmlFor="password">Contraseña</label>
+                      <Input id="password" name="password" type="password" required onChange={handleChange} />
                     </div>
                     {error && <p className="text-red-500 text-sm">{error}</p>}
                     <Button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700">
