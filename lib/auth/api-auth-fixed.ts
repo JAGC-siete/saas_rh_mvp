@@ -1,25 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { createClient } from '../supabase/server'
 import { createAdminClient } from '../supabase/server'
-
-// New helper function for creating a server client in Pages Router
-const createPagesServerClient = (req: NextApiRequest, res: NextApiResponse) => {
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get: (name: string) => req.cookies[name],
-        set: (name: string, value: string, options: CookieOptions) => {
-          res.setHeader('Set-Cookie', `${name}=${value}; Path=${options.path}; Max-Age=${options.maxAge}; HttpOnly; SameSite=${options.sameSite}`)
-        },
-        remove: (name: string, options: CookieOptions) => {
-          res.setHeader('Set-Cookie', `${name}=; Path=${options.path}; Max-Age=0; HttpOnly; SameSite=${options.sameSite}`)
-        },
-      },
-    }
-  )
-}
 
 export interface AuthenticatedUser {
   supabase: any
@@ -53,8 +34,8 @@ export async function authenticateUser(
   } = options
 
   try {
-    // Create Supabase client with cookies from request - USE THE NEW HELPER
-    const supabase = createPagesServerClient(req, res)
+    // Create Supabase client with cookies from request - USAR createClient de server.ts
+    const supabase = createClient(req, res)
 
     // Get user from auth
     const { data: { user }, error: authError } = await supabase.auth.getUser()
