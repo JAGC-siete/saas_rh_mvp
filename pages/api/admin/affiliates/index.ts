@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient } from '../../../../lib/supabase/server'
+import { requireSuperAdmin } from '../../../../lib/auth/api-auth-fixed'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -7,6 +8,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    // Add Super Admin check
+    await requireSuperAdmin(req, res)
+
     const supabase = createAdminClient()
 
     // 1. Fetch all affiliates
