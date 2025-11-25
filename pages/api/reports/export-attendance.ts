@@ -58,7 +58,7 @@ async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse
           name,
           employee_code,
           department,
-          position,
+          role,
           company_id
         )
       `)
@@ -167,7 +167,7 @@ async function exportToExcel(attendanceRecords: any[], startDate: string, endDat
         'Código': record.employees?.employee_code || '',
         'Nombre': record.employees?.name || '',
         'Departamento': record.employees?.department || '',
-        'Posición': record.employees?.position || '',
+        'Posición': record.employees?.role || '',
         'Fecha': new Date(record.date).toLocaleDateString('es-HN'),
         'Día de la Semana': new Date(record.date).toLocaleDateString('es-HN', { weekday: 'long' }),
         'Hora de Entrada': checkIn ? checkIn.toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
@@ -307,7 +307,7 @@ async function exportToPDF(attendanceRecords: any[], startDate: string, endDate:
         employee_code: record.employees?.employee_code || '',
         name: record.employees?.name || '',
         department: record.employees?.department || 'Sin Departamento',
-        position: record.employees?.position || 'Sin Posición',
+        position: record.employees?.role || 'Sin Posición',
         date: record.date,
         check_in: record.check_in,
         check_out: record.check_out,

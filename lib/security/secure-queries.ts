@@ -46,7 +46,6 @@ export class SecureQueryBuilder {
           name,
           employee_code,
           role,
-          position,
           company_id,
           department_id
         )
