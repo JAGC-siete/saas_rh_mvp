@@ -24,29 +24,25 @@ export function useCompanyContext() {
 
       try {
         // Get user profile via API (bypasses RLS on server side)
-        console.log('🔍 Buscando perfil para usuario:', user.id)
+        console.log('🔍 [CompanyContext] Buscando perfil para usuario:', user.id, 'Rol:', user.user_metadata?.role)
         const response = await fetch('/api/user-profile')
         
         if (!response.ok) {
-          throw new Error('Failed to fetch user profile')
+          const errorBody = await response.text()
+          console.error('❌ [CompanyContext] Falló la obtención del perfil de usuario. Status:', response.status, 'Body:', errorBody)
+          throw new Error(`Failed to fetch user profile: ${response.status}`)
         }
         
         const { data: userProfile } = await response.json()
-        console.log('📊 Resultado perfil:', { userProfile })
+        console.log('📊 [CompanyContext] Perfil de usuario obtenido:', userProfile)
 
-        if (userProfile) {
+        if (userProfile && userProfile.company_id) {
           setCompanyId(userProfile.company_id)
           
           // Get company info using client
-          const supabase = await createClient()
+          const supabase = createClient() // No necesita await
           const currentCompanyId = userProfile.company_id
-          console.log('🏢 Buscando empresa con ID:', currentCompanyId)
-          
-          if (!currentCompanyId) {
-            setError('No se pudo obtener el ID de la empresa')
-            setLoading(false)
-            return
-          }
+          console.log('🏢 [CompanyContext] Buscando empresa con ID:', currentCompanyId)
           
           const { data: companyData, error: companyError } = await supabase
             .from('companies')
@@ -54,16 +50,16 @@ export function useCompanyContext() {
             .eq('id', currentCompanyId)
             .single()
           
-          console.log('📊 Resultado empresa:', { companyData, companyError })
-
           if (companyError) {
-            console.error('❌ Error obteniendo empresa:', companyError)
-            setError('No se pudo cargar la información de la empresa')
+            console.error('❌ [CompanyContext] Error obteniendo empresa desde Supabase:', companyError)
+            setError('No se pudo cargar la información de la empresa. Verifique los permisos (RLS).')
           } else {
+            console.log('✅ [CompanyContext] Empresa encontrada:', companyData)
             setCompany(companyData)
           }
         } else {
-          setError('No se pudo obtener el perfil de usuario')
+          console.error('❌ [CompanyContext] Perfil de usuario no tiene un company_id o el perfil es nulo.')
+          setError('El perfil de usuario no está asociado a ninguna empresa.')
         }
 
       } catch (err) {
