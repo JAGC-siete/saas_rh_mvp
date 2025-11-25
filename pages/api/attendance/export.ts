@@ -48,13 +48,24 @@ async function attendanceExportHandler(req: NextApiRequest, res: NextApiResponse
     // Usar preset si está disponible, sino usar fechas del body
     let exportData: any
     if (preset && typeof preset === 'string') {
-      const range = getDateRange(preset)
-      exportData = {
-        startDate: range.from.split('T')[0],
-        endDate: range.to.split('T')[0],
-        formato: formato || 'excel',
-        role: roleFilter || null,
-        employee_id: employee_id || null
+      // Si es custom, usar fechas de query params si están disponibles
+      if (preset === 'custom' && req.query.startDate && req.query.endDate) {
+        exportData = {
+          startDate: req.query.startDate,
+          endDate: req.query.endDate,
+          formato: formato || 'excel',
+          role: roleFilter || null,
+          employee_id: employee_id || null
+        }
+      } else {
+        const range = getDateRange(preset)
+        exportData = {
+          startDate: range.from.split('T')[0],
+          endDate: range.to.split('T')[0],
+          formato: formato || 'excel',
+          role: roleFilter || null,
+          employee_id: employee_id || null
+        }
       }
     } else {
       // VALIDACIÓN SEGURA CON ZOD para fechas específicas

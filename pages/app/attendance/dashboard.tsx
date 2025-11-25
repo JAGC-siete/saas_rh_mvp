@@ -74,29 +74,58 @@ export default function AttendanceDashboardApp() {
 
   const handleExport = async (format: string) => {
     try {
-      // Usar API client (como payroll)
-      const params = {
-        preset,
-        formato: format as 'excel' | 'csv' | 'pdf',
-        employee_id: selectedEmployeeId || undefined,
-        role: selectedRole || undefined
+      // Construir URL con query params (como payroll)
+      const searchParams = new URLSearchParams()
+      searchParams.set('preset', preset)
+      // El endpoint acepta 'excel' o 'xlsx', usar 'excel' para consistencia
+      searchParams.set('formato', format === 'xlsx' ? 'excel' : format)
+      if (selectedEmployeeId) searchParams.set('employee_id', selectedEmployeeId)
+      if (selectedRole) searchParams.set('role', selectedRole)
+      
+      // Si hay rango personalizado, agregarlo
+      if (preset === 'custom' && from && to) {
+        const fromDate = from.split('T')[0]
+        const toDate = to.split('T')[0]
+        searchParams.set('startDate', fromDate)
+        searchParams.set('endDate', toDate)
       }
       
-      const response = await attendanceApi.export(params)
+      const url = `/api/attendance/export?${searchParams.toString()}`
       
-      // Descargar archivo directamente (como payroll)
+      // Hacer fetch y descargar blob (como payroll)
+      const response = await fetch(url, {
+        credentials: 'include',
+        headers: {
+          'Accept': format === 'pdf' 
+            ? 'application/pdf' 
+            : format === 'csv' 
+            ? 'text/csv' 
+            : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        }
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }))
+        throw new Error(errorData.error || errorData.message || `Error ${response.status}`)
+      }
+      
+      // Obtener blob y descargar
+      const blob = await response.blob()
+      const downloadUrl = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
-      link.href = response.url
+      link.href = downloadUrl
       
-      // Determinar el nombre del archivo basado en preset y empleado (usando timezone de Honduras)
+      // Determinar nombre del archivo basado en preset y empleado
       const employeePart = selectedEmployeeId ? '_empleado' : ''
       const datePart = new Date().toLocaleString('sv-SE', { timeZone: 'America/Tegucigalpa' }).split(' ')[0]
-      const fileName = `asistencia_${preset}${employeePart}_${datePart}.${format}`
+      const fileExtension = format === 'xlsx' ? 'xlsx' : format
+      const fileName = `asistencia_${preset}${employeePart}_${datePart}.${fileExtension}`
       link.download = fileName
       
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
+      window.URL.revokeObjectURL(downloadUrl)
       
     } catch (error: any) {
       console.error('Error al exportar:', error)
