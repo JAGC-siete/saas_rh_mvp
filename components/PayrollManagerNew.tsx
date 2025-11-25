@@ -265,7 +265,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
             ...r,
             total_earnings: newBruto,
             total: newNeto,
-            metadata: metadata
+            metadata: normalizedMetadata
           }
         }
         return r
