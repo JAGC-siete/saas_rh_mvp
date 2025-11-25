@@ -72,7 +72,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     )
 
     if (!certificateData) {
-      return res.status(404).json({ error: 'Empleado no encontrado o sin permisos' })
+      // Log detallado para diagnóstico
+      console.error('Error generando constancia:', {
+        employeeId,
+        companyId,
+        role,
+        timestamp: new Date().toISOString()
+      })
+      return res.status(404).json({ 
+        error: 'Empleado no encontrado o sin permisos',
+        details: 'Verifique que el empleado existe y pertenece a su empresa'
+      })
     }
 
     // Generar reporte según formato
@@ -113,7 +123,7 @@ async function generateWorkCertificateData(
         email,
         employee_code,
         dni,
-        position,
+        role,
         hire_date,
         termination_date,
         base_salary,
@@ -132,11 +142,18 @@ async function generateWorkCertificateData(
     let { data: employee, error: empError } = await employeeQuery.single()
 
     if (empError) {
-      console.error('Error querying employee for certificate:', empError)
+      console.error('Error querying employee for certificate:', {
+        error: empError,
+        employeeId,
+        companyId,
+        role,
+        query: 'primary with company filter'
+      })
     }
 
     // Fallback: si no se encuentra y el rol es admin, intentar sin filtro de empresa
     if ((!employee || empError) && role !== 'super_admin' && companyId) {
+      console.log('Intentando fallback query sin filtro de empresa para employeeId:', employeeId)
       const { data: fallbackEmp, error: fallbackErr } = await adminClient
         .from('employees')
         .select(`
@@ -145,7 +162,7 @@ async function generateWorkCertificateData(
           email,
           employee_code,
           dni,
-          position,
+          role,
           hire_date,
           termination_date,
           base_salary,
@@ -158,18 +175,37 @@ async function generateWorkCertificateData(
         .single()
 
       if (!fallbackErr && fallbackEmp) {
+        console.log('Empleado encontrado en fallback query:', {
+          employeeId: fallbackEmp.id,
+          employeeCompanyId: fallbackEmp.company_id,
+          userCompanyId: companyId
+        })
         employee = fallbackEmp
+      } else if (fallbackErr) {
+        console.error('Error en fallback query:', fallbackErr)
       }
     }
 
     if (!employee) {
-      console.error('Empleado no encontrado para constancia (id=', employeeId, ')')
+      console.error('Empleado no encontrado para constancia:', {
+        employeeId,
+        companyId,
+        role,
+        primaryError: empError?.message,
+        searchedWithCompanyFilter: role !== 'super_admin' && companyId
+      })
       return null
     }
 
     // Verificar que el empleado pertenece a la empresa del usuario (si no es superadmin)
     if (role !== 'super_admin' && companyId && employee.company_id !== companyId) {
-      console.error('Empleado no pertenece a la empresa del usuario')
+      console.error('Empleado no pertenece a la empresa del usuario:', {
+        employeeId: employee.id,
+        employeeName: employee.name,
+        employeeCompanyId: employee.company_id,
+        userCompanyId: companyId,
+        role
+      })
       return null
     }
 
@@ -192,7 +228,7 @@ async function generateWorkCertificateData(
         email: employee.email,
         employee_code: employee.employee_code,
         dni: employee.dni,
-        position: employee.position || 'No especificado',
+        position: employee.role || 'No especificado',
         department_name: departmentName || 'No especificado',
         company_name: companyName || 'No especificado',
         hire_date: employee.hire_date,
