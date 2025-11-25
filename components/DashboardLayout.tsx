@@ -210,9 +210,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Asistencia', href: '/app/attendance/dashboard', icon: ClockIcon, permission: 'attendance' },
     { name: 'Permisos', href: '/app/leave', icon: UserIcon, permission: 'leave' },
     { name: 'Nómina', href: '/app/payroll', icon: CurrencyDollarIcon, permission: 'payroll' },
-    { name: 'Reportes', href: '/app/reports', icon: ChartBarIcon, permission: 'reports' },
-    { name: 'Gamificación', href: '/app/gamification', icon: TrophyIcon, permission: 'gamification' },
-    { name: 'Programa de Afiliados', href: '/app/affiliates', icon: CurrencyDollarIcon, permission: 'affiliates' },
+    // { name: 'Reportes', href: '/app/reports', icon: ChartBarIcon, permission: 'reports' },
+    // { name: 'Gamificación', href: '/app/gamification', icon: TrophyIcon, permission: 'gamification' },
+    // { name: 'Programa de Afiliados', href: '/app/affiliates', icon: CurrencyDollarIcon, permission: 'affiliates' },
     { name: 'Parametros', href: '/app/settings', icon: Cog6ToothIcon, permission: 'settings' },
   ]
 
