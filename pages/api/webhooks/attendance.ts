@@ -28,29 +28,69 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
     const eventDataString = fields.AccessControllerEvent?.[0];
     if (!eventDataString) {
-      // Si no viene el campo esperado, salimos silenciosamente para no generar logs innecesarios
       return res.status(200).json({ success: true, message: 'Empty event received' });
     }
 
     const eventData = JSON.parse(eventDataString);
 
-    // *** LA SOLUCIÓN AL RATE LIMIT ESTÁ AQUÍ ***
-    // Si es un heartbeat, respondemos OK y no hacemos nada más para evitar la inundación de logs.
     if (eventData.eventType === 'heartBeat') {
       return res.status(200).json({ success: true, message: 'Heartbeat acknowledged' });
     }
 
-    // Si NO es un heartbeat, ahora sí lo registramos para poder depurarlo.
     console.log('--- HIKVISION EVENT RECEIVED (NON-HEARTBEAT) ---');
-    console.log('Company ID:', company_id);
-    console.log('Event Type:', eventData.eventType);
     console.log('Parsed Event Data:', JSON.stringify(eventData, null, 2));
     console.log('--- END HIKVISION EVENT ---');
 
-    // Aquí irá la lógica de inserción una vez que descifremos el evento de asistencia
-    // ...
+    // Suponemos que el evento de autenticación facial se llama 'faceAuthentication'.
+    // Si vemos otro nombre en los logs, lo ajustaremos aquí.
+    const isAuthEvent = eventData.eventType === 'faceAuthentication';
 
-    return res.status(200).json({ success: true, message: 'Event received and processed' });
+    if (isAuthEvent) {
+      // Suponemos que el DNI del empleado viene en el campo 'employeeNoString'.
+      const employeeDNI = eventData.employeeNoString;
+      const timestamp = eventData.dateTime || new Date().toISOString();
+
+      if (!employeeDNI) {
+        console.warn('Auth event received without employee ID (DNI).', eventData);
+        return res.status(200).json({ success: false, message: 'Event lacked employee ID.' });
+      }
+
+      const supabase = createPagesServerClient({ req, res });
+
+      // 1. Buscar al empleado por DNI dentro de la compañía correcta.
+      const { data: employee, error: employeeError } = await supabase
+        .from('employees')
+        .select('id, user_id, company_id')
+        .eq('company_id', company_id as string)
+        .eq('national_id', employeeDNI) // Asumimos que la columna del DNI se llama 'national_id'
+        .single();
+
+      if (employeeError || !employee) {
+        console.error(`Failed to find employee with DNI ${employeeDNI} for company ${company_id}.`, employeeError);
+        return res.status(200).json({ success: false, message: `Employee with DNI ${employeeDNI} not found.` });
+      }
+
+      // 2. Si se encuentra, insertar el registro de asistencia.
+      const { error: insertError } = await supabase.from('attendance').insert({
+        employee_id: employee.id,
+        user_id: employee.user_id,
+        company_id: employee.company_id,
+        timestamp: timestamp,
+        source: 'device_hikvision', // Buena práctica para saber de dónde vino el registro
+        raw_payload: eventData,     // Guardamos el evento original para auditorías
+      });
+
+      if (insertError) {
+        // Si falla la inserción en la BD, es un error 500 real.
+        throw insertError;
+      }
+
+      console.log(`Successfully recorded attendance for employee DNI ${employeeDNI}`);
+    } else {
+      console.warn(`Unknown eventType received: ${eventData.eventType}`);
+    }
+
+    return res.status(200).json({ success: true, message: 'Event processed' });
   } catch (error) {
     logError(error as Error, {
       additionalData: {
