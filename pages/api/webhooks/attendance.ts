@@ -1,9 +1,9 @@
 import { createPagesServerClient } from '@supabase/auth-helpers-nextjs';
 import { NextApiRequest, NextApiResponse } from 'next';
-import getRawBody from 'raw-body';
+import formidable from 'formidable';
 import { logError } from '../../../lib/logger';
 
-// Desactivamos el parser de body de Next.js para poder leer el stream de datos crudo.
+// Desactivamos el parser de body de Next.js para que formidable pueda procesar el stream.
 export const config = {
   api: {
     bodyParser: false,
@@ -23,35 +23,56 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 
   try {
-    const rawBody = await getRawBody(req, {
-      length: req.headers['content-length'],
-      limit: '1mb',
-      encoding: true, // Devuelve el body como string
-    });
+    const form = formidable({});
+    const [fields] = await form.parse(req);
 
-    // ¡Aquí está la clave! Registramos todo lo que recibimos.
-    console.log('--- HIKVISION WEBHOOK RECEIVED ---');
+    // Los datos JSON vienen como un string en el campo 'AccessControllerEvent'
+    const eventDataString = fields.AccessControllerEvent?.[0];
+    if (!eventDataString) {
+      throw new Error('AccessControllerEvent field not found in multipart data');
+    }
+
+    const eventData = JSON.parse(eventDataString);
+
+    console.log('--- HIKVISION EVENT PARSED ---');
     console.log('Company ID:', company_id);
-    console.log('Headers:', JSON.stringify(req.headers, null, 2));
-    console.log('Raw Body:', rawBody);
-    console.log('--- END HIKVISION WEBHOOK ---');
+    console.log('Event Type:', eventData.eventType);
+    console.log('Parsed Event Data:', JSON.stringify(eventData, null, 2));
+    console.log('--- END HIKVISION EVENT ---');
 
-    // Por ahora, no procesaremos los datos, solo confirmaremos la recepción.
-    // TODO: Una vez que conozcamos el formato del 'rawBody', lo procesaremos aquí.
-    // Probablemente será XML, por lo que necesitaremos un parser como 'xml2js'.
-    /*
-    const supabase = createPagesServerClient({ req, res });
-    // const parsedData = ... parse rawBody ...
-    const { error } = await supabase.from('attendance').insert({
-        company_id: company_id,
-        employee_code: parsedData.employeeId,
-        timestamp: parsedData.timestamp,
-        raw_payload: parsedData // Guardar el payload original puede ser útil
-    });
-    if (error) throw error;
-    */
+    // Ahora podemos manejar diferentes tipos de eventos
+    switch (eventData.eventType) {
+      case 'heartBeat':
+        // Es solo una señal de vida, no hacemos nada más que confirmar.
+        console.log(`Heartbeat received from company ${company_id}`);
+        break;
+      
+      case 'faceAuthentication': // Asumo el nombre del evento, podría ser otro
+      case 'authenticationSuccess': // O algo similar
+        // ¡ESTE ES EL EVENTO QUE NOS INTERESA!
+        console.log(`Attendance event received for company ${company_id}`);
+        
+        // TODO: Mapear los campos de 'eventData' a la tabla 'attendance'
+        // const employeeCode = eventData.employeeNoString; // Ejemplo
+        // const timestamp = eventData.dateTime; // Ejemplo
 
-    return res.status(200).json({ success: true, message: 'Data received and logged' });
+        /*
+        const supabase = createPagesServerClient({ req, res });
+        const { error } = await supabase.from('attendance').insert({
+            company_id: company_id,
+            employee_code: employeeCode,
+            timestamp: timestamp,
+            raw_payload: eventData
+        });
+        if (error) throw error;
+        */
+        break;
+
+      default:
+        console.warn(`Unknown eventType received: ${eventData.eventType}`);
+    }
+
+    return res.status(200).json({ success: true, message: 'Event received and processed' });
   } catch (error) {
     logError(error as Error, {
       additionalData: {
