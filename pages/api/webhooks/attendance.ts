@@ -42,25 +42,43 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     }
 
     const eventData = JSON.parse(eventDataString);
+    const eventType = eventData.eventType;
 
-    // Filtrar heartbeats para evitar log flooding
-    if (eventData.eventType === 'heartBeat') {
+    // Intentar extraer el DNI del empleado de diferentes campos posibles
+    const employeeDNI = eventData.employeeNoString || eventData.employeeNo || eventData.dni || eventData.employee_id;
+
+    // Si es un heartbeat sin datos de empleado (DNI), ignorarlo para evitar log flooding
+    if (eventType === 'heartBeat' && !employeeDNI) {
       return res.status(200).json({ success: true, message: 'Heartbeat acknowledged' });
     }
 
-    // Si no es un heartbeat, lo registramos para depuración.
-    logger.info('--- HIKVISION EVENT RECEIVED (NON-HEARTBEAT) ---', {
-      companyId: company_id,
-      parsedEventData: eventData,
-    });
-    
-    const eventType = eventData.eventType;
+    // Si es un heartbeat CON datos de empleado, procesarlo como asistencia
+    if (eventType === 'heartBeat' && employeeDNI) {
+      logger.info('--- HIKVISION HEARTBEAT WITH EMPLOYEE DATA ---', {
+        companyId: company_id,
+        parsedEventData: eventData,
+      });
+    } else if (eventType !== 'heartBeat') {
+      // Si no es un heartbeat, lo registramos para depuración.
+      logger.info('--- HIKVISION EVENT RECEIVED (NON-HEARTBEAT) ---', {
+        companyId: company_id,
+        parsedEventData: eventData,
+      });
+    }
 
-    // Comprobamos si el evento es uno de los que consideramos como asistencia.
-    if (VALID_AUTHENTICATION_EVENTS.includes(eventType)) {
-      // Intentar extraer el DNI del empleado de diferentes campos posibles
-      const employeeDNI = eventData.employeeNoString || eventData.employeeNo || eventData.dni || eventData.employee_id;
-      
+    // Procesar cualquier evento que tenga DNI (incluyendo heartbeats con datos de empleado)
+    // o eventos de autenticación válidos
+    if (employeeDNI || VALID_AUTHENTICATION_EVENTS.includes(eventType)) {
+      // Si no hay DNI pero es un evento de autenticación válido, no procesar
+      if (!employeeDNI) {
+        logger.warn(`[ATTENDANCE] Auth event '${eventType}' received without employee ID (DNI)`, {
+          companyId: company_id,
+          eventType: eventType,
+          parsedEventData: eventData,
+        });
+        return res.status(200).json({ success: false, message: 'Event lacked employee ID.' });
+      }
+
       // Intentar extraer el timestamp del evento
       let eventTimestamp: Date;
       if (eventData.dateTime) {
@@ -69,15 +87,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         eventTimestamp = new Date(eventData.timestamp);
       } else {
         eventTimestamp = nowInHonduras();
-      }
-
-      if (!employeeDNI) {
-        logger.warn(`[ATTENDANCE] Auth event '${eventType}' received without employee ID (DNI)`, {
-          companyId: company_id,
-          eventType: eventType,
-          parsedEventData: eventData,
-        });
-        return res.status(200).json({ success: false, message: 'Event lacked employee ID.' });
       }
 
       const supabase = createPagesServerClient({ req, res });
