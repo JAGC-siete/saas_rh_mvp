@@ -1,7 +1,8 @@
 import { createPagesServerClient } from '@supabase/auth-helpers-nextjs';
 import { NextApiRequest, NextApiResponse } from 'next';
 import formidable from 'formidable';
-import { logError } from '../../../lib/logger';
+import { logError, logger } from '../../../lib/logger';
+import { getTodayInHonduras, nowInHonduras } from '../../../lib/timezone';
 
 // Desactivamos el parser de body de Next.js para que formidable pueda procesar el stream.
 export const config = {
@@ -9,6 +10,13 @@ export const config = {
     bodyParser: false,
   },
 };
+
+// Lista de posibles nombres de eventos que consideraremos como una marcación de asistencia válida.
+const VALID_AUTHENTICATION_EVENTS = [
+  'faceAuthentication', // Autenticado mediante rostro
+  'cardAndFaceAuthentication', // Si se requiere tarjeta + rostro
+  'AccessControllerEvent', // A veces el tipo de evento principal viene con este nombre
+];
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method !== 'POST') {
@@ -19,6 +27,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const { company_id } = req.query;
 
   if (!company_id || typeof company_id !== 'string') {
+    logger.warn('[ATTENDANCE WEBHOOK] Missing company_id', { query: req.query });
     return res.status(400).json({ error: 'company_id is required' });
   }
 
@@ -28,74 +37,127 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
     const eventDataString = fields.AccessControllerEvent?.[0];
     if (!eventDataString) {
+      logger.info('[ATTENDANCE WEBHOOK] Empty event received', { companyId: company_id });
       return res.status(200).json({ success: true, message: 'Empty event received' });
     }
 
     const eventData = JSON.parse(eventDataString);
 
+    // Filtrar heartbeats para evitar log flooding
     if (eventData.eventType === 'heartBeat') {
       return res.status(200).json({ success: true, message: 'Heartbeat acknowledged' });
     }
 
-    console.log('--- HIKVISION EVENT RECEIVED (NON-HEARTBEAT) ---');
-    console.log('Parsed Event Data:', JSON.stringify(eventData, null, 2));
-    console.log('--- END HIKVISION EVENT ---');
+    // Si no es un heartbeat, lo registramos para depuración.
+    logger.info('--- HIKVISION EVENT RECEIVED (NON-HEARTBEAT) ---', {
+      companyId: company_id,
+      parsedEventData: eventData,
+    });
+    
+    const eventType = eventData.eventType;
 
-    // Suponemos que el evento de autenticación facial se llama 'faceAuthentication'.
-    // Si vemos otro nombre en los logs, lo ajustaremos aquí.
-    const isAuthEvent = eventData.eventType === 'faceAuthentication';
-
-    if (isAuthEvent) {
-      // Suponemos que el DNI del empleado viene en el campo 'employeeNoString'.
-      const employeeDNI = eventData.employeeNoString;
-      const timestamp = eventData.dateTime || new Date().toISOString();
+    // Comprobamos si el evento es uno de los que consideramos como asistencia.
+    if (VALID_AUTHENTICATION_EVENTS.includes(eventType)) {
+      // Intentar extraer el DNI del empleado de diferentes campos posibles
+      const employeeDNI = eventData.employeeNoString || eventData.employeeNo || eventData.dni || eventData.employee_id;
+      
+      // Intentar extraer el timestamp del evento
+      let eventTimestamp: Date;
+      if (eventData.dateTime) {
+        eventTimestamp = new Date(eventData.dateTime);
+      } else if (eventData.timestamp) {
+        eventTimestamp = new Date(eventData.timestamp);
+      } else {
+        eventTimestamp = nowInHonduras();
+      }
 
       if (!employeeDNI) {
-        console.warn('Auth event received without employee ID (DNI).', eventData);
+        logger.warn(`[ATTENDANCE] Auth event '${eventType}' received without employee ID (DNI)`, {
+          companyId: company_id,
+          eventType: eventType,
+          parsedEventData: eventData,
+        });
         return res.status(200).json({ success: false, message: 'Event lacked employee ID.' });
       }
 
       const supabase = createPagesServerClient({ req, res });
 
-      // 1. Buscar al empleado por DNI dentro de la compañía correcta.
+      // Buscar empleado por DNI y company_id
       const { data: employee, error: employeeError } = await supabase
         .from('employees')
-        .select('id, user_id, company_id')
+        .select('id, company_id, work_schedule_id')
         .eq('company_id', company_id as string)
-        .eq('national_id', employeeDNI) // Asumimos que la columna del DNI se llama 'national_id'
+        .eq('dni', employeeDNI)
+        .eq('status', 'active')
         .single();
 
       if (employeeError || !employee) {
-        console.error(`Failed to find employee with DNI ${employeeDNI} for company ${company_id}.`, employeeError);
+        logger.warn(`[ATTENDANCE] Employee not found with DNI ${employeeDNI} for company ${company_id}`, {
+          companyId: company_id,
+          employeeDNI: employeeDNI,
+          eventType: eventType,
+          error: employeeError,
+        });
         return res.status(200).json({ success: false, message: `Employee with DNI ${employeeDNI} not found.` });
       }
 
-      // 2. Si se encuentra, insertar el registro de asistencia.
-      const { error: insertError } = await supabase.from('attendance').insert({
-        employee_id: employee.id,
-        user_id: employee.user_id,
-        company_id: employee.company_id,
-        timestamp: timestamp,
-        source: 'device_hikvision', // Buena práctica para saber de dónde vino el registro
-        raw_payload: eventData,     // Guardamos el evento original para auditorías
-      });
+      // Obtener la fecha en formato YYYY-MM-DD para Honduras
+      const todayDate = getTodayInHonduras();
+      
+      // Convertir el timestamp del evento a ISO string (UTC)
+      const checkInTimestamp = eventTimestamp.toISOString();
 
-      if (insertError) {
-        // Si falla la inserción en la BD, es un error 500 real.
-        throw insertError;
+      // Insertar o actualizar el registro de asistencia
+      // Si ya existe un registro para hoy, actualizamos el check_in
+      const { data: record, error: upsertError } = await supabase
+        .from('attendance_records')
+        .upsert({
+          employee_id: employee.id,
+          date: todayDate,
+          check_in: checkInTimestamp,
+          tz: 'America/Tegucigalpa',
+          tz_offset_minutes: -360,
+          status: 'present',
+        }, {
+          onConflict: 'employee_id,date',
+        })
+        .select()
+        .single();
+
+      if (upsertError) {
+        logger.error(`[ATTENDANCE] Failed to upsert attendance record`, upsertError, {
+          companyId: company_id,
+          employeeId: employee.id,
+          employeeDNI: employeeDNI,
+          eventType: eventType,
+        });
+        return res.status(500).json({ success: false, error: 'Failed to save attendance record.' });
       }
 
-      console.log(`Successfully recorded attendance for employee DNI ${employeeDNI}`);
-    } else {
-      console.warn(`Unknown eventType received: ${eventData.eventType}`);
-    }
+      logger.info(`[SUCCESS] Recorded attendance for employee DNI ${employeeDNI} via event '${eventType}'`, {
+        companyId: company_id,
+        employeeId: employee.id,
+        employeeDNI: employeeDNI,
+        eventType: eventType,
+        recordId: record?.id,
+        checkIn: checkInTimestamp,
+      });
 
-    return res.status(200).json({ success: true, message: 'Event processed' });
+      return res.status(200).json({ success: true, message: 'Attendance recorded successfully' });
+
+    } else {
+      // Si es otro tipo de evento conocido pero no de asistencia (ej. "door open"), solo lo registramos.
+      logger.info(`[INFO] Ignored non-attendance event of type '${eventType}'`, {
+        companyId: company_id,
+        eventType: eventType,
+        parsedEventData: eventData,
+      });
+      return res.status(200).json({ success: true, message: `Event type ${eventType} received and ignored` });
+    }
   } catch (error) {
     logError(error as Error, {
       additionalData: {
         company_id: company_id,
-        headers: req.headers,
       },
       endpoint: '/api/webhooks/attendance',
     });
