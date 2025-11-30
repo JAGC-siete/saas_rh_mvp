@@ -3,7 +3,9 @@ import { createAdminClient } from '../../../lib/supabase/server'
 import { requireUser } from '../../../lib/auth/requireUser'
 import { getHondurasTimestamp } from '../../../lib/timezone'
 import { requirePlanAndQuota, incrementUsage } from '../../../lib/billing/enforce'
-import { auditEmployeeCreated } from '../../../lib/audit'
+import { createPagesServerClient } from '@supabase/auth-helpers-nextjs';
+import { addEmployeeSyncJob } from '../../../lib/queues/employeeSyncQueue';
+import { trace, context } from '@opentelemetry/api';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -94,11 +96,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       emergency_contact_phone: emergency_contact_phone || null,
       address: address || null,
       metadata: metadata || null,
+      sync_status: 'pending', // Set status to pending on creation
       created_at: getHondurasTimestamp(),
       updated_at: getHondurasTimestamp()
     }
 
-    const { data: inserted, error: insertError } = await adminSupabase
+    const { data: newEmployee, error: insertError } = await adminSupabase
       .from('employees')
       .insert([employeeData])
       .select()
@@ -119,13 +122,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Log audit event
     try {
-      await auditEmployeeCreated(supabase, user.id, companyId, inserted.id)
+      // await auditEmployeeCreated(supabase, user.id, companyId, inserted.id) // This line was removed as per the new_code
     } catch (error) {
       console.warn('Failed to log audit event:', error)
       // Don't fail the request if audit fails
     }
 
-    return res.status(201).json({ message: 'Employee created successfully', employee: inserted })
   } catch (error: any) {
     console.error('Error in protected employee create API:', error)
     
@@ -149,6 +151,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       error: error.message || 'Internal server error' 
     })
   }
+
+  // Send the job to the queue after the response is sent
+  res.on('finish', () => {
+    addEmployeeSyncJob(newEmployee.id);
+  });
+
+  res.status(201).json(newEmployee);
 }
 
 

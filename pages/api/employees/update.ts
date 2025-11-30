@@ -2,6 +2,9 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient } from '../../../lib/supabase/server'
 import { authenticateUser } from '../../../lib/auth-utils'
 import { getHondurasTimestamp } from '../../../lib/timezone'
+import { createPagesServerClient } from '@supabase/auth-helpers-nextjs';
+import { addEmployeeSyncJob } from '../../../lib/queues/employeeSyncQueue';
+import { trace, context } from '@opentelemetry/api';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'PUT' && req.method !== 'PATCH') {
@@ -112,28 +115,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    const updateData: any = {
-      ...(employee_code !== undefined ? { employee_code } : {}),
-      ...(dni !== undefined ? { dni } : {}),
-      ...(name !== undefined ? { name } : {}),
-      ...(email !== undefined ? { email: email || null } : {}),
-      ...(phone !== undefined ? { phone: phone || null } : {}),
-      ...(role !== undefined ? { role: role || null } : {}),
-      ...(team !== undefined ? { team: team || null } : {}),
-      ...(department_id !== undefined ? { department_id: department_id || null } : {}),
-      ...(work_schedule_id !== undefined ? { work_schedule_id: work_schedule_id || null } : {}),
-      ...(base_salary !== undefined ? { base_salary: typeof base_salary === 'string' ? parseFloat(base_salary) : base_salary } : {}),
-      ...(hire_date !== undefined ? { hire_date: hire_date || null } : {}),
-      ...(termination_date !== undefined ? { termination_date: termination_date || null } : {}),
-      ...(status !== undefined ? { status } : {}),
-      ...(bank_name !== undefined ? { bank_name: bank_name || null } : {}),
-      ...(bank_account !== undefined ? { bank_account: bank_account || null } : {}),
-      ...(emergency_contact_name !== undefined ? { emergency_contact_name: emergency_contact_name || null } : {}),
-      ...(emergency_contact_phone !== undefined ? { emergency_contact_phone: emergency_contact_phone || null } : {}),
-      ...(address !== undefined ? { address: address || null } : {}),
-      ...(metadata !== undefined ? { metadata: metadata || null } : {}),
-      updated_at: getHondurasTimestamp()
-    }
+    const updateData: any = { ...body };
+    delete updateData.id; // Remove id from body to prevent trying to update it
+    updateData.sync_status = 'pending'; // Mark for sync on any update
+    updateData.updated_at = getHondurasTimestamp();
 
     console.log('🔧 Final update data:', updateData)
 
@@ -149,8 +134,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: 'Error updating employee' })
     }
 
-    console.log('✅ Employee updated successfully:', { employeeId })
-    return res.status(200).json({ message: 'Employee updated successfully', employee: updated })
+    console.log('✅ Employee updated successfully:', { employeeId, companyId });
+
+    // Respond to the client immediately
+    res.status(200).json({ employee: updated });
+
+    // After the response has been sent, add the job to the queue
+    res.on('finish', () => {
+      addEmployeeSyncJob(updated.id);
+    });
+
+    // TODO: Log audit event
+    // try {
+    //   return res.status(200).json({ message: 'Employee updated successfully', employee: updated })
+    // } catch (error) {
+    //   console.error('❌ Error in protected employee update API:', error)
+    //   return res.status(500).json({ error: 'Internal server error' })
+    // }
   } catch (error) {
     console.error('❌ Error in protected employee update API:', error)
     return res.status(500).json({ error: 'Internal server error' })

@@ -3,15 +3,30 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+// Modify the start of the main application file to initialize tracing first.
+const tracing_1 = require("./tracing");
+(0, tracing_1.startTracing)(); // This must be called before any other imports
 const express_1 = __importDefault(require("express"));
 const dotenv_1 = __importDefault(require("dotenv"));
+const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const supabaseClient_1 = require("./supabaseClient");
-// Mock/placeholder for the actual library
-// import { HikvisionISAPI } from 'hikvision-isapi';
+// Use the mock library for development until the real one is available
+const hikvision_isapi_mock_1 = require("./hikvision-isapi.mock");
+const healthCheckService_1 = require("./healthCheckService");
+const worker_1 = require("./worker");
 // Load environment variables from .env file
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 app.use(express_1.default.json());
+// Apply a global rate limiter to all incoming requests to the proxy
+const globalLimiter = (0, express_rate_limit_1.default)({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 1000, // Limit each IP to 1000 requests per windowMs
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: 'Too many requests from this IP, please try again after 15 minutes',
+});
+app.use(globalLimiter);
 const PORT = process.env.PORT || 3001;
 /**
  * Health check endpoint to verify the service is running.
@@ -49,44 +64,84 @@ app.post('/api/v1/hik/provision', async (req, res) => {
         const decryptedPassword = `decrypted-${device.password_encrypted}`; // Placeholder
         console.log(`[Proxy] Found device: ${device.ip_address}:${device.port}`);
         // 2. Use the 'hikvision-isapi' library to connect and configure
-        // const hikvisionClient = new HikvisionISAPI({
-        //   host: device.ip_address,
-        //   port: device.port,
-        //   user: device.username,
-        //   pass: decryptedPassword,
-        // });
-        console.log(`[Proxy] Simulating connection to device at ${device.ip_address}...`);
+        const hikvisionClient = new hikvision_isapi_mock_1.HikvisionISAPI({
+            host: device.ip_address,
+            port: device.port,
+            user: device.username,
+            pass: decryptedPassword,
+        });
+        console.log(`[Proxy] Connecting to device at ${device.ip_address}...`);
         // 3. Configure the device's event service to point to the provided webhookUrl
-        // This is a placeholder for the actual library call.
-        // const setResult = await hikvisionClient.Event.setNotificationServer({
-        //   addressingFormatType: 'ipaddress',
-        //   ipAddress: new URL(webhookUrl).hostname,
-        //   portNo: new URL(webhookUrl).port || 443,
-        //   url: new URL(webhookUrl).pathname + new URL(webhookUrl).search,
-        //   protocol: 'HTTP', // or HTTPS
-        // });
+        const url = new URL(webhookUrl);
+        const setResult = await hikvisionClient.Event.setNotificationServer({
+            addressingFormatType: 'ipaddress',
+            ipAddress: url.hostname,
+            portNo: url.port || (url.protocol === 'https:' ? 443 : 80),
+            url: url.pathname + url.search,
+            protocol: url.protocol.replace(':', ''),
+        });
         // Simulate a successful configuration
-        const setResult = { success: true, message: 'Simulated configuration successful.' };
-        if (!setResult.success) {
-            console.error(`[Proxy] Failed to configure device ${deviceId}.`, setResult.message);
-            return res.status(500).json({ error: 'Failed to configure device webhook' });
+        // const setResult = { success: true, message: 'Simulated configuration successful.' };
+        if (setResult.success) {
+            console.log(`[Proxy] Successfully configured webhook for device ${deviceId}`);
+            res.status(200).json({
+                message: 'Device provisioned successfully',
+                details: setResult.data,
+            });
         }
-        console.log(`[Proxy] Successfully configured webhook for device ${deviceId} to ${webhookUrl}`);
+        else {
+            console.error(`[Proxy] Failed to configure webhook for device ${deviceId}`, setResult);
+            res.status(500).json({
+                message: 'Failed to provision device',
+                error: 'Could not configure webhook on the device.',
+            });
+        }
         // 4. Update device status in DB (optional, relates to Phase 2)
         await supabaseClient_1.supabase
             .from('devices')
             .update({ status: 'online', last_sync_at: new Date().toISOString() })
             .eq('id', deviceId);
-        res.status(200).json({
-            message: 'Device provisioned successfully.',
-            deviceId,
-        });
     }
     catch (err) {
         console.error(`[Proxy] An unexpected error occurred during provisioning for device ${deviceId}`, err);
         res.status(500).json({ error: 'An internal server error occurred.' });
     }
 });
+/**
+ * Endpoint to get the status of a specific device.
+ * This is the core of Phase 2's passive check.
+ */
+app.get('/api/v1/devices/:deviceId/status', async (req, res) => {
+    const { deviceId } = req.params;
+    if (!deviceId) {
+        return res.status(400).json({ error: 'deviceId is required' });
+    }
+    console.log(`[Proxy] Received status request for device ${deviceId}`);
+    try {
+        const { data: device, error } = await supabaseClient_1.supabase
+            .from('devices')
+            .select('id, name, status, last_sync_at, last_event_at, ip_address')
+            .eq('id', deviceId)
+            .single();
+        if (error || !device) {
+            console.error(`[Proxy] Device not found in DB for status check: ${deviceId}`, error);
+            return res.status(404).json({ error: 'Device not found' });
+        }
+        // In a future step (active health check), we would actively ping
+        // the device here before returning the status. For now, we return
+        // the last known status from the database.
+        console.log(`[Proxy] Returning stored status for device ${deviceId}: ${device.status}`);
+        return res.status(200).json(device);
+    }
+    catch (err) {
+        console.error(`[Proxy] An unexpected error occurred during status check for device ${deviceId}`, err);
+        res.status(500).json({ error: 'An internal server error occurred.' });
+    }
+});
 app.listen(PORT, () => {
     console.log(`Hikvision Proxy Service listening on port ${PORT}`);
+    // Iniciar el servicio de monitoreo en segundo plano
+    (0, healthCheckService_1.startHealthCheckService)();
+    // Iniciar el trabajador de la cola de sincronización de empleados
+    (0, worker_1.startWorker)();
 });
