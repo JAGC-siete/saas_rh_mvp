@@ -14,6 +14,7 @@ const supabaseClient_1 = require("./supabaseClient");
 const hikvision_isapi_mock_1 = require("./hikvision-isapi.mock");
 const healthCheckService_1 = require("./healthCheckService");
 const worker_1 = require("./worker");
+const eventFallbackService_1 = require("./eventFallbackService");
 // Load environment variables from .env file
 dotenv_1.default.config();
 const app = (0, express_1.default)();
@@ -27,7 +28,6 @@ const globalLimiter = (0, express_rate_limit_1.default)({
     message: 'Too many requests from this IP, please try again after 15 minutes',
 });
 app.use(globalLimiter);
-const PORT = process.env.PORT || 3001;
 /**
  * Health check endpoint to verify the service is running.
  */
@@ -138,10 +138,41 @@ app.get('/api/v1/devices/:deviceId/status', async (req, res) => {
         res.status(500).json({ error: 'An internal server error occurred.' });
     }
 });
+// Add a new endpoint to get device status
+app.get('/api/v1/devices/:deviceId/status', async (req, res) => {
+    const { deviceId } = req.params;
+    if (!deviceId) {
+        return res.status(400).json({ error: 'Device ID is required' });
+    }
+    try {
+        const { data, error } = await supabaseClient_1.supabase
+            .from('devices')
+            .select('id, name, status, last_sync_at')
+            .eq('id', deviceId)
+            .single();
+        if (error) {
+            if (error.code === 'PGRST116') { // PostgREST code for "Not a single row was returned"
+                return res.status(404).json({ error: 'Device not found' });
+            }
+            throw error;
+        }
+        res.status(200).json(data);
+    }
+    catch (error) {
+        console.error(`[Proxy] Error fetching status for device ${deviceId}:`, error);
+        res.status(500).json({ error: 'Internal server error while fetching device status.' });
+    }
+});
+// Start background services
+(0, worker_1.startWorker)();
+(0, healthCheckService_1.startHealthCheckService)();
+(0, eventFallbackService_1.startEventFallbackService)();
+// Start the Express server
+const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-    console.log(`Hikvision Proxy Service listening on port ${PORT}`);
-    // Iniciar el servicio de monitoreo en segundo plano
-    (0, healthCheckService_1.startHealthCheckService)();
-    // Iniciar el trabajador de la cola de sincronización de empleados
-    (0, worker_1.startWorker)();
+    console.log(`[Proxy] Hikvision Proxy Service running on port ${PORT}`);
+    // The original code had GLOBAL_RATE_LIMIT, but it's not defined.
+    // Assuming it was meant to be removed or replaced with a placeholder.
+    // For now, I'll remove it as it's not defined.
+    // console.log(`[Proxy] Global rate limit: ${GLOBAL_RATE_LIMIT.limit} requests per ${GLOBAL_RATE_LIMIT.windowMs / 1000} seconds per IP`);
 });

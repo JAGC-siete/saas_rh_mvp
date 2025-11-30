@@ -1,84 +1,76 @@
 import { supabase } from './supabaseClient';
-// import { HikvisionISAPI } from 'hikvision-isapi';
+import { HikvisionISAPI } from './hikvision-isapi.mock';
 
-// Intervalo de chequeo en milisegundos (ej. cada 5 minutos)
-const HEALTH_CHECK_INTERVAL = 5 * 60 * 1000;
+const CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
-/**
- * Realiza un chequeo de salud activo en un solo dispositivo.
- * @param device - El objeto del dispositivo a chequear.
- */
-async function checkDeviceHealth(device: any) {
-  console.log(`[HealthCheck] Checking device: ${device.name} (${device.ip_address})`);
-  let isOnline = false;
+async function performHealthCheck() {
+  console.log('[HealthCheck] Starting periodic health check for all active devices...');
 
-  try {
-    // En una implementación real, aquí iría la lógica de conexión
-    // usando la librería `hikvision-isapi`.
-    // const hikvisionClient = new HikvisionISAPI({ ... });
-    // const systemInfo = await hikvisionClient.System.getSystemInfo();
-    // isOnline = !!systemInfo;
-    
-    // Simulamos una conexión. Para probar, podemos hacer que falle aleatoriamente.
-    isOnline = Math.random() > 0.2; // 80% de probabilidad de estar online
+  const { data: devices, error } = await supabase
+    .from('devices')
+    .select('id, ip_address, port, username, password_encrypted, name')
+    .eq('is_active', true);
 
-    console.log(`[HealthCheck] Device ${device.name} is ${isOnline ? 'online' : 'offline'}`);
+  if (error) {
+    console.error('[HealthCheck] CRITICAL: Could not fetch devices from database.', error);
+    return;
+  }
 
-    // Actualizar el estado en la base de datos
-    const { error } = await supabase
+  if (!devices || devices.length === 0) {
+    console.log('[HealthCheck] No active devices found to check.');
+    return;
+  }
+
+  console.log(`[HealthCheck] Found ${devices.length} active devices. Pinging each one.`);
+
+  for (const device of devices) {
+    let currentStatus: 'online' | 'offline' = 'offline';
+    try {
+      // In a real scenario, we would decrypt this password.
+      const decryptedPassword = `decrypted-${device.password_encrypted}`;
+      
+      const hikvisionClient = new HikvisionISAPI({
+        host: device.ip_address,
+        port: device.port,
+        user: device.username,
+        pass: decryptedPassword,
+        timeout: 5000, // 5-second timeout for health checks
+      });
+
+      // A lightweight call to check if the device is responsive.
+      const result = await hikvisionClient.System.getSystemInfo();
+
+      if (result.success) {
+        currentStatus = 'online';
+      }
+    } catch (e: any) {
+      // Errors are expected for offline devices. We log it for debugging but don't treat it as a system crisis.
+      console.log(`[HealthCheck] Device ${device.name} (${device.ip_address}) appears to be offline. Error: ${e.message}`);
+    }
+
+    // Update the device status in the database
+    const { error: updateError } = await supabase
       .from('devices')
       .update({
-        status: isOnline ? 'online' : 'offline',
+        status: currentStatus,
         last_sync_at: new Date().toISOString(),
       })
       .eq('id', device.id);
 
-    if (error) {
-      console.error(`[HealthCheck] Error updating status for device ${device.name}`, error);
+    if (updateError) {
+      console.error(`[HealthCheck] Failed to update status for device ${device.name}`, updateError);
+    } else {
+      console.log(`[HealthCheck] Device ${device.name} status updated to: ${currentStatus}`);
     }
-
-  } catch (error) {
-    console.error(`[HealthCheck] Failed to connect to device ${device.name}`, error);
-    // Si la conexión falla, asegurarnos de marcarlo como offline
-    await supabase
-      .from('devices')
-      .update({ status: 'offline', last_sync_at: new Date().toISOString() })
-      .eq('id', device.id);
   }
 }
 
 /**
- * Inicia el servicio de monitoreo que se ejecuta periódicamente.
+ * Starts the background service that periodically checks the health of all registered devices.
  */
 export function startHealthCheckService() {
-  console.log('[HealthCheck] Starting health check service...');
-
-  const runChecks = async () => {
-    console.log('[HealthCheck] Running scheduled health checks...');
-    
-    const { data: devices, error } = await supabase
-      .from('devices')
-      .select('*')
-      .eq('is_active', true);
-
-    if (error) {
-      console.error('[HealthCheck] Could not fetch devices for health check', error);
-      return;
-    }
-
-    if (!devices || devices.length === 0) {
-      console.log('[HealthCheck] No active devices to check.');
-      return;
-    }
-
-    console.log(`[HealthCheck] Found ${devices.length} active devices to check.`);
-    // Ejecutar los chequeos en paralelo
-    await Promise.all(devices.map(checkDeviceHealth));
-  };
-
-  // Ejecutar al iniciar y luego cada X intervalo
-  runChecks();
-  setInterval(runChecks, HEALTH_CHECK_INTERVAL);
-
-  console.log(`[HealthCheck] Service started. Checks will run every ${HEALTH_CHECK_INTERVAL / 1000} seconds.`);
+  console.log('[HealthCheck] Health Check Service has been initialized.');
+  // Run the check immediately on start, then set the interval.
+  performHealthCheck();
+  setInterval(performHealthCheck, CHECK_INTERVAL_MS);
 }

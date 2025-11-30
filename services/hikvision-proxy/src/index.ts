@@ -10,6 +10,7 @@ import { supabase } from './supabaseClient';
 import { HikvisionISAPI } from './hikvision-isapi.mock';
 import { startHealthCheckService } from './healthCheckService';
 import { startWorker } from './worker';
+import { startEventFallbackService } from './eventFallbackService';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -26,8 +27,6 @@ const globalLimiter = rateLimit({
   message: 'Too many requests from this IP, please try again after 15 minutes',
 });
 app.use(globalLimiter);
-
-const PORT = process.env.PORT || 3001;
 
 /**
  * Health check endpoint to verify the service is running.
@@ -159,13 +158,47 @@ app.get('/api/v1/devices/:deviceId/status', async (req: Request, res: Response) 
   }
 });
 
+// Add a new endpoint to get device status
+app.get('/api/v1/devices/:deviceId/status', async (req, res) => {
+  const { deviceId } = req.params;
 
+  if (!deviceId) {
+    return res.status(400).json({ error: 'Device ID is required' });
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('devices')
+      .select('id, name, status, last_sync_at')
+      .eq('id', deviceId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') { // PostgREST code for "Not a single row was returned"
+        return res.status(404).json({ error: 'Device not found' });
+      }
+      throw error;
+    }
+
+    res.status(200).json(data);
+  } catch (error: any) {
+    console.error(`[Proxy] Error fetching status for device ${deviceId}:`, error);
+    res.status(500).json({ error: 'Internal server error while fetching device status.' });
+  }
+});
+
+
+// Start background services
+startWorker();
+startHealthCheckService();
+startEventFallbackService();
+
+// Start the Express server
+const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-  console.log(`Hikvision Proxy Service listening on port ${PORT}`);
-  
-  // Iniciar el servicio de monitoreo en segundo plano
-  startHealthCheckService();
-  
-  // Iniciar el trabajador de la cola de sincronización de empleados
-  startWorker();
+  console.log(`[Proxy] Hikvision Proxy Service running on port ${PORT}`);
+  // The original code had GLOBAL_RATE_LIMIT, but it's not defined.
+  // Assuming it was meant to be removed or replaced with a placeholder.
+  // For now, I'll remove it as it's not defined.
+  // console.log(`[Proxy] Global rate limit: ${GLOBAL_RATE_LIMIT.limit} requests per ${GLOBAL_RATE_LIMIT.windowMs / 1000} seconds per IP`);
 });
