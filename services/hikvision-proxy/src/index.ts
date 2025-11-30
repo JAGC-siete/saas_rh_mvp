@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import dotenv from 'dotenv';
 import { supabase } from './supabaseClient';
+import { startHealthCheckService } from './healthCheckService';
 // Mock/placeholder for the actual library
 // import { HikvisionISAPI } from 'hikvision-isapi';
 
@@ -102,7 +103,48 @@ app.post('/api/v1/hik/provision', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * Endpoint to get the status of a specific device.
+ * This is the core of Phase 2's passive check.
+ */
+app.get('/api/v1/devices/:deviceId/status', async (req: Request, res: Response) => {
+  const { deviceId } = req.params;
+
+  if (!deviceId) {
+    return res.status(400).json({ error: 'deviceId is required' });
+  }
+
+  console.log(`[Proxy] Received status request for device ${deviceId}`);
+
+  try {
+    const { data: device, error } = await supabase
+      .from('devices')
+      .select('id, name, status, last_sync_at, last_event_at, ip_address')
+      .eq('id', deviceId)
+      .single();
+
+    if (error || !device) {
+      console.error(`[Proxy] Device not found in DB for status check: ${deviceId}`, error);
+      return res.status(404).json({ error: 'Device not found' });
+    }
+
+    // In a future step (active health check), we would actively ping
+    // the device here before returning the status. For now, we return
+    // the last known status from the database.
+    console.log(`[Proxy] Returning stored status for device ${deviceId}: ${device.status}`);
+
+    return res.status(200).json(device);
+
+  } catch (err) {
+    console.error(`[Proxy] An unexpected error occurred during status check for device ${deviceId}`, err);
+    res.status(500).json({ error: 'An internal server error occurred.' });
+  }
+});
+
 
 app.listen(PORT, () => {
   console.log(`Hikvision Proxy Service listening on port ${PORT}`);
+  
+  // Iniciar el servicio de monitoreo en segundo plano
+  startHealthCheckService();
 });
