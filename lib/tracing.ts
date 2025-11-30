@@ -13,12 +13,7 @@ export const startTracing = () => {
       url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:4318/v1/traces',
     }),
     // Automatically instrument popular libraries (Next.js, http, Redis, etc.)
-    instrumentations: [getNodeAutoInstrumentations({
-      // Instrument Next.js server-side components
-      '@opentelemetry/instrumentation-nextjs': {
-        enabled: true,
-      },
-    })],
+    instrumentations: [getNodeAutoInstrumentations()],
     spanProcessors: [new SimpleSpanProcessor(new OTLPTraceExporter())],
   });
 

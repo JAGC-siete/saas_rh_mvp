@@ -9,18 +9,18 @@ import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
 
 interface Department {
   id: string
-  company_id: string
+  company_id: string | null
   name: string
-  description?: string
-  manager_id?: string
-  created_at: string
+  description?: string | null
+  manager_id?: string | null
+  created_at: string | null
   employees?: Employee[]
 }
 
 interface Employee {
   id: string
   name: string
-  email: string
+  email: string | null
 }
 
 const INITIAL_FORM_DATA = {
@@ -62,7 +62,12 @@ export default function DepartmentManager({ companyId: propCompanyId }: { compan
       const { data, error } = await query
 
       if (error) throw error
-      setDepartments(data || [])
+      // Map the data to ensure employees is always an array
+      const departments = (data || []).map((dept: any) => ({
+        ...dept,
+        employees: Array.isArray(dept.employees) ? dept.employees : (dept.employees ? [dept.employees] : [])
+      })) as Department[]
+      setDepartments(departments)
     } catch (error) {
       console.error('Error fetching departments:', error)
     } finally {
@@ -73,14 +78,14 @@ export default function DepartmentManager({ companyId: propCompanyId }: { compan
   const fetchEmployees = useCallback(async () => {
     try {
       const supabaseClient = createClient()
-      const { data, error } = await supabaseClient
+      const { data, error } = await (supabaseClient as any)
         .from('employees')
         .select('id, name, email')
         .eq('status', 'active')
         .order('name')
 
       if (error) throw error
-      setEmployees(data || [])
+      setEmployees((data || []) as Employee[])
     } catch (error) {
       console.error('Error fetching employees:', error)
     }
@@ -110,14 +115,14 @@ export default function DepartmentManager({ companyId: propCompanyId }: { compan
 
       const supabaseClient = createClient()
       if (editingDepartment) {
-        const { error } = await supabaseClient
+        const { error } = await (supabaseClient as any)
           .from('departments')
           .update(departmentData)
           .eq('id', editingDepartment.id)
 
         if (error) throw error
       } else {
-        const { error } = await supabaseClient
+        const { error } = await (supabaseClient as any)
           .from('departments')
           .insert([{ ...departmentData, company_id: companyId || userProfile?.company_id }])
 

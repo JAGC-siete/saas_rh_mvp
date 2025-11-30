@@ -357,7 +357,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       console.log('🔍 Fetching employees for user:', user.id)
       
       const supabaseClient = createClient()
-      let query = supabaseClient
+      let query = (supabaseClient as any)
         .from('employees')
         .select(`
           *,
@@ -369,7 +369,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       }
       const { data, error } = await query
       if (error) throw error
-      setEmployees(data || [])
+      setEmployees((data || []) as Employee[])
     } catch (err) {
       console.error('Fetch error:', err)
       setEmployeesError(getErrorMessage(err))

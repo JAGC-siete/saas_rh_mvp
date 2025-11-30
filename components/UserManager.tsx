@@ -11,8 +11,9 @@ export default function UserManager({ companyId: propCompanyId }: { companyId?: 
   // Form states, etc.
 
   const fetchUsers = useCallback(async () => {
+    if (!companyId) return
     const supabaseClient = createClient()
-    const { data } = await supabaseClient.from('user_profiles').select('*').eq('company_id', companyId)
+    const { data } = await (supabaseClient as any).from('user_profiles').select('*').eq('company_id', companyId)
     setUsers(data || [])
   }, [companyId])
 

@@ -22,7 +22,7 @@ export default function AttendanceIndex() {
 
       try {
         // Fetch user profile to determine role
-        const { data: profile } = await supabase
+        const { data: profile } = await (supabase as any)
           .from('user_profiles')
           .select('role')
           .eq('id', user.id)

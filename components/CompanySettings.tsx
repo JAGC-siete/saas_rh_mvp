@@ -22,22 +22,22 @@ interface Company {
 interface WorkSchedule {
   id: string
   name: string
-  monday_start?: string
-  monday_end?: string
-  tuesday_start?: string
-  tuesday_end?: string
-  wednesday_start?: string
-  wednesday_end?: string
-  thursday_start?: string
-  thursday_end?: string
-  friday_start?: string
-  friday_end?: string
-  saturday_start?: string
-  saturday_end?: string
-  sunday_start?: string
-  sunday_end?: string
-  break_duration: number
-  timezone: string
+  monday_start?: string | null
+  monday_end?: string | null
+  tuesday_start?: string | null
+  tuesday_end?: string | null
+  wednesday_start?: string | null
+  wednesday_end?: string | null
+  thursday_start?: string | null
+  thursday_end?: string | null
+  friday_start?: string | null
+  friday_end?: string | null
+  saturday_start?: string | null
+  saturday_end?: string | null
+  sunday_start?: string | null
+  sunday_end?: string | null
+  break_duration: number | null
+  timezone: string | null
 }
 
 export default function CompanySettings() {
@@ -118,14 +118,35 @@ export default function CompanySettings() {
       
       const supabaseClient = createClient()
       if (editingSchedule) {
-        const { error } = await supabaseClient
+        // Convert empty strings to null for time fields, and keep valid time strings as-is
+        // Supabase accepts string format for time fields (e.g., "08:00:00")
+        const updateData = {
+          name: scheduleForm.name,
+          monday_start: scheduleForm.monday_start || null,
+          monday_end: scheduleForm.monday_end || null,
+          tuesday_start: scheduleForm.tuesday_start || null,
+          tuesday_end: scheduleForm.tuesday_end || null,
+          wednesday_start: scheduleForm.wednesday_start || null,
+          wednesday_end: scheduleForm.wednesday_end || null,
+          thursday_start: scheduleForm.thursday_start || null,
+          thursday_end: scheduleForm.thursday_end || null,
+          friday_start: scheduleForm.friday_start || null,
+          friday_end: scheduleForm.friday_end || null,
+          saturday_start: scheduleForm.saturday_start || null,
+          saturday_end: scheduleForm.saturday_end || null,
+          sunday_start: scheduleForm.sunday_start || null,
+          sunday_end: scheduleForm.sunday_end || null,
+          break_duration: scheduleForm.break_duration,
+          timezone: scheduleForm.timezone,
+        };
+        const { error } = await (supabaseClient as any)
           .from('work_schedules')
-          .update(scheduleForm)
+          .update(updateData)
           .eq('id', editingSchedule.id)
 
         if (error) throw error
       } else {
-        const { error } = await supabaseClient
+        const { error } = await (supabaseClient as any)
           .from('work_schedules')
           .insert([{ ...scheduleForm, company_id: company?.id }])
 
@@ -179,8 +200,8 @@ export default function CompanySettings() {
       saturday_end: schedule.saturday_end || '',
       sunday_start: schedule.sunday_start || '',
       sunday_end: schedule.sunday_end || '',
-      break_duration: schedule.break_duration,
-      timezone: schedule.timezone
+      break_duration: schedule.break_duration || 60,
+      timezone: schedule.timezone || 'America/Tegucigalpa'
     })
     setShowScheduleForm(true)
   }

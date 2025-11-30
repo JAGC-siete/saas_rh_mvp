@@ -6,6 +6,9 @@ import { getClientEnvSync, areClientEnvVarsAvailable } from '../env-client'
 // Singleton instance for browser client
 let browserClient: SupabaseClient<Database> | null = null
 
+// Type assertion helper to ensure Database type compatibility
+const typedCreateBrowserClient = createBrowserClient as <T = Database>(url: string, key: string, options?: any) => SupabaseClient<T>
+
 /**
  * Creates a Supabase client for browser usage only.
  * This should NEVER be used in server-side code or middleware.
@@ -70,7 +73,7 @@ export function createClient(): SupabaseClient<Database> {
     // Create browser client with proper configuration
     // CRITICAL: autoRefreshToken disabled for 90-min idle timeout enforcement
     // See: https://supabase.com/docs/guides/auth/sessions
-    browserClient = createBrowserClient<Database>(supabaseUrl, supabaseAnonKey, {
+    browserClient = typedCreateBrowserClient<Database>(supabaseUrl, supabaseAnonKey, {
       auth: {
         autoRefreshToken: false, // Disabled to enforce idle timeout
         persistSession: true,
@@ -121,7 +124,7 @@ export function createCallbackClient(): SupabaseClient<Database> {
     throw new Error('Supabase environment variables not configured')
   }
 
-  return createBrowserClient<Database>(supabaseUrl, supabaseAnonKey, {
+  return typedCreateBrowserClient<Database>(supabaseUrl, supabaseAnonKey, {
     auth: {
       autoRefreshToken: false, // Disabled for idle timeout
       persistSession: true,

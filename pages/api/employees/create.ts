@@ -128,6 +128,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Don't fail the request if audit fails
     }
 
+    // Send the job to the queue after the response is sent
+    res.on('finish', () => {
+      if (newEmployee) {
+        addEmployeeSyncJob(newEmployee.id);
+      }
+    });
+
+    res.status(201).json(newEmployee);
+
   } catch (error: any) {
     console.error('Error in protected employee create API:', error)
     
@@ -151,13 +160,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       error: error.message || 'Internal server error' 
     })
   }
-
-  // Send the job to the queue after the response is sent
-  res.on('finish', () => {
-    addEmployeeSyncJob(newEmployee.id);
-  });
-
-  res.status(201).json(newEmployee);
 }
 
 

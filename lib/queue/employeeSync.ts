@@ -3,7 +3,7 @@ import Redis from 'ioredis';
 import { trace, context, propagation } from '@opentelemetry/api';
 
 // Ensure we only have one instance of Redis and Queue
-let redis: Redis.Redis | undefined;
+let redis: Redis | undefined;
 let employeeSyncQueue: Queue | undefined;
 
 const getRedisInstance = () => {

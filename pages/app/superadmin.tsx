@@ -23,7 +23,7 @@ export default function SuperAdminDashboard() {
   }, [userProfile])
 
   const fetchCompanies = async () => {
-    const { data } = await supabase.from('companies').select('*')
+    const { data } = await (supabase as any).from('companies').select('*')
     setCompanies(data || [])
     if ((data?.length ?? 0) > 0) setSelectedCompany(data?.[0]?.id ?? '')
   }
