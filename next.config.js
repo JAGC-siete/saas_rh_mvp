@@ -10,6 +10,13 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   
+  // Exclude services directory from Next.js file tracing (standalone output)
+  outputFileTracingExcludes: {
+    '*': [
+      './services/**/*',
+    ],
+  },
+  
   // Environment variables configuration - Force injection for client
   env: {
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -24,6 +31,17 @@ const nextConfig = {
   
   // Webpack configuration to ensure environment variables are available
   webpack: (config, { isServer }) => {
+    // Exclude services directory from Next.js compilation
+    config.resolve.alias = {
+      ...config.resolve.alias,
+    }
+    
+    // Ignore services directory during compilation
+    config.watchOptions = {
+      ...config.watchOptions,
+      ignored: ['**/node_modules/**', '**/services/**'],
+    }
+    
     if (!isServer) {
       // Force environment variables to be available on client-side
       config.plugins.push(

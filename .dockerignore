@@ -98,3 +98,6 @@ supabase/migrations/
 
 # Scripts not needed in production
 scripts/
+
+# Services (separate microservices, not part of Next.js build)
+services/
