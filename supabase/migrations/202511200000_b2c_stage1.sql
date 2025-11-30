@@ -11,6 +11,11 @@ ALTER TABLE public.user_profiles
 ALTER TABLE public.user_profiles
   ALTER COLUMN company_id DROP NOT NULL;
 
+-- Fix existing violating rows by setting is_b2c = TRUE where company_id IS NULL
+UPDATE public.user_profiles
+SET is_b2c = TRUE
+WHERE company_id IS NULL;
+
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -32,6 +37,11 @@ ALTER TABLE public.employees
 
 ALTER TABLE public.employees
   ALTER COLUMN company_id DROP NOT NULL;
+
+-- Fix existing violating rows by setting is_b2c = TRUE where company_id IS NULL
+UPDATE public.employees
+SET is_b2c = TRUE
+WHERE company_id IS NULL;
 
 DO $$
 BEGIN

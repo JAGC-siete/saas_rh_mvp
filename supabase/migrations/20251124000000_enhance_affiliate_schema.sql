@@ -27,3 +27,4 @@ CREATE POLICY "own_yearly_stats_row"
 
 -- Add indexes
 CREATE INDEX IF NOT EXISTS idx_affiliate_yearly_stats_affiliate_id_year ON public.affiliate_yearly_stats(affiliate_id, year);
+

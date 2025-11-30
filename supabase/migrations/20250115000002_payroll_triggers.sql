@@ -88,11 +88,19 @@ $$ LANGUAGE plpgsql;
 -- C) Auditoría genérica de updates en líneas
 CREATE OR REPLACE FUNCTION audit_payroll_lines_update()
 RETURNS TRIGGER AS $$
+DECLARE
+  v_user_id uuid;
 BEGIN
+  -- Intentar obtener user_id del contexto Supabase (cuando viene de la app)
+  v_user_id := auth.uid();
+
+  -- Si no hay contexto (migraciones, superusuario, etc.), no abortar y usar NULL
+  -- El TODO existente ya reconocía este problema.
+
   INSERT INTO audit_logs(company_id, user_id, action, resource_type, resource_id, old_values, new_values)
   VALUES (
-    NEW.company_uuid, 
-    NULL, -- TODO: obtener user_id del contexto
+    NEW.company_id, -- Corregido de NEW.company_uuid a NEW.company_id
+    v_user_id, -- Usar la variable que puede ser NULL
     TG_OP,
     'payroll_run_lines', 
     NEW.id, 
@@ -100,6 +108,12 @@ BEGIN
     to_jsonb(NEW) - 'updated_at'
   );
   RETURN NEW;
+
+EXCEPTION
+  WHEN others THEN
+    -- Nunca abortar DML/DDL por un fallo en la auditoría.
+    RAISE NOTICE 'audit_payroll_lines_update suppressed error: %', SQLERRM;
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 

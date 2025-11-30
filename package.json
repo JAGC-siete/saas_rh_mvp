@@ -8,9 +8,11 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
     "lint": "next lint",
+    "lint:ci": "next lint --quiet",
+    "build": "cd services/hikvision-proxy && npm install && npm run build && cd ../.. && next build",
+    "analyze": "ANALYZE=true next build",
+    "start": "next start",
     "test": "node --test tests/*.js",
     "audit": "./scripts/run-complete-audit.sh",
     "audit:system": "node scripts/audit-system.js",

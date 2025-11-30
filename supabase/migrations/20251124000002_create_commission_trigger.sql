@@ -29,3 +29,4 @@ CREATE TRIGGER on_subscription_activated
 
 COMMENT ON TRIGGER on_subscription_activated ON public.company_subscriptions
   IS 'When a company subscription becomes active, trigger the commission creation process.';
+
