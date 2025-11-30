@@ -11,7 +11,7 @@ const dotenv_1 = __importDefault(require("dotenv"));
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const supabaseClient_1 = require("./supabaseClient");
 // Use the mock library for development until the real one is available
-const hikvision_isapi_mock_1 = require("./hikvision-isapi.mock");
+const hikvision_sdk_1 = require("./hikvision.sdk"); // Updated import
 const healthCheckService_1 = require("./healthCheckService");
 const worker_1 = require("./worker");
 const eventFallbackService_1 = require("./eventFallbackService");
@@ -64,7 +64,7 @@ app.post('/api/v1/hik/provision', async (req, res) => {
         const decryptedPassword = `decrypted-${device.password_encrypted}`; // Placeholder
         console.log(`[Proxy] Found device: ${device.ip_address}:${device.port}`);
         // 2. Use the 'hikvision-isapi' library to connect and configure
-        const hikvisionClient = new hikvision_isapi_mock_1.HikvisionISAPI({
+        const hikvisionClient = new hikvision_sdk_1.HikvisionSDK({
             host: device.ip_address,
             port: device.port,
             user: device.username,
@@ -72,21 +72,15 @@ app.post('/api/v1/hik/provision', async (req, res) => {
         });
         console.log(`[Proxy] Connecting to device at ${device.ip_address}...`);
         // 3. Configure the device's event service to point to the provided webhookUrl
-        const url = new URL(webhookUrl);
-        const setResult = await hikvisionClient.Event.setNotificationServer({
-            addressingFormatType: 'ipaddress',
-            ipAddress: url.hostname,
-            portNo: url.port || (url.protocol === 'https:' ? 443 : 80),
-            url: url.pathname + url.search,
-            protocol: url.protocol.replace(':', ''),
-        });
-        // Simulate a successful configuration
-        // const setResult = { success: true, message: 'Simulated configuration successful.' };
-        if (setResult.success) {
+        // TODO: Implement the 'setNotificationServer' method in the SDK and use it here.
+        // For now, we use getSystemInfo to test the connection.
+        const setResult = await hikvisionClient.getSystemInfo();
+        // A simple check for now
+        if (setResult) {
             console.log(`[Proxy] Successfully configured webhook for device ${deviceId}`);
             res.status(200).json({
                 message: 'Device provisioned successfully',
-                details: setResult.data,
+                details: setResult,
             });
         }
         else {

@@ -26,7 +26,8 @@ const deviceLimiter = new RateLimiterRedis({
 const circuitBreakers: Map<string, CircuitBreaker> = new Map();
 
 // Cache for concurrency limiters, one per device
-const concurrencyLimiters: Map<string, pLimit.Limit> = new Map();
+type Limit = ReturnType<typeof pLimit>;
+const concurrencyLimiters: Map<string, Limit> = new Map();
 
 const getCircuitBreaker = (deviceId: string): CircuitBreaker => {
   if (!circuitBreakers.has(deviceId)) {
@@ -47,7 +48,7 @@ const getCircuitBreaker = (deviceId: string): CircuitBreaker => {
   return circuitBreakers.get(deviceId)!;
 };
 
-const getConcurrencyLimiter = (deviceId: string): pLimit.Limit => {
+const getConcurrencyLimiter = (deviceId: string): ReturnType<typeof pLimit> => {
   if (!concurrencyLimiters.has(deviceId)) {
     // Limit to 2 concurrent operations per device
     concurrencyLimiters.set(deviceId, pLimit(2));
@@ -141,7 +142,7 @@ export const employeeSyncWorker = new Worker('employee-sync',
             try {
               // The job will wait here if the concurrency limit for this device is reached.
               return await limit(async () => {
-                const span = trace.getSpan(trace.context.active());
+                const span = trace.getSpan(context.active());
                 span?.addEvent('Concurrency lock passed. Attempting to acquire rate limit token.');
 
                 await deviceLimiter.consume(device.id);
@@ -183,7 +184,7 @@ export const employeeSyncWorker = new Worker('employee-sync',
               });
 
             } catch (error: any) {
-              const span = trace.getSpan(trace.context.active());
+              const span = trace.getSpan(context.active());
               const translatedError = translateHikvisionError(error, device.id);
 
               span?.recordException(error);
@@ -216,12 +217,24 @@ export const employeeSyncWorker = new Worker('employee-sync',
           });
           
           const results = await Promise.allSettled(syncPromises);
-          const failedDevices = results.filter(r => !r.value.success);
+          const failedDevices: Array<{ deviceId: string; error?: string }> = [];
+          
+          for (const result of results) {
+            if (result.status === 'fulfilled') {
+              const value = result.value as { deviceId: string; success: boolean; error?: string };
+              if (!value.success) {
+                failedDevices.push({ deviceId: value.deviceId, error: value.error });
+              }
+            } else {
+              // Rejected promises are also considered failures
+              failedDevices.push({ deviceId: 'unknown', error: result.reason?.message || 'Promise rejected' });
+            }
+          }
 
           if (failedDevices.length > 0) {
             const errorInfo = {
               message: `Failed to sync to ${failedDevices.length}/${devices.length} devices.`,
-              failedDevices: failedDevices.map(d => ({ id: d.value.deviceId, error: d.value.error })),
+              failedDevices,
             };
             throw new Error(JSON.stringify(errorInfo));
           }

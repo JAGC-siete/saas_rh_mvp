@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.startHealthCheckService = startHealthCheckService;
 const supabaseClient_1 = require("./supabaseClient");
-const hikvision_isapi_mock_1 = require("./hikvision-isapi.mock");
+const hikvision_sdk_1 = require("./hikvision.sdk"); // Updated import
 const CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 async function performHealthCheck() {
     console.log('[HealthCheck] Starting periodic health check for all active devices...');
@@ -24,7 +24,7 @@ async function performHealthCheck() {
         try {
             // In a real scenario, we would decrypt this password.
             const decryptedPassword = `decrypted-${device.password_encrypted}`;
-            const hikvisionClient = new hikvision_isapi_mock_1.HikvisionISAPI({
+            const hikvisionClient = new hikvision_sdk_1.HikvisionSDK({
                 host: device.ip_address,
                 port: device.port,
                 user: device.username,
@@ -32,8 +32,10 @@ async function performHealthCheck() {
                 timeout: 5000, // 5-second timeout for health checks
             });
             // A lightweight call to check if the device is responsive.
-            const result = await hikvisionClient.System.getSystemInfo();
-            if (result.success) {
+            const result = await hikvisionClient.getSystemInfo();
+            // Simple check, assuming any successful response means it's online.
+            // A more robust check might validate the content of 'result'.
+            if (result) {
                 currentStatus = 'online';
             }
         }
