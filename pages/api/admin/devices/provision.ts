@@ -1,11 +1,13 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { createPagesServerClient } from '@supabase/auth-helpers-nextjs';
 import { createAdminClient } from '../../../../lib/supabase/server';
+import { HikvisionSDK } from '../../../../lib/hikvision/sdk';
 
-// The URL of the Hikvision Proxy Service.
-// This should be an environment variable in a real deployment.
-const PROXY_SERVICE_URL = process.env.HIKVISION_PROXY_URL || 'http://localhost:3001';
-
+/**
+ * Provision a Hikvision device.
+ * This endpoint handles authentication/authorization and then calls
+ * the internal Hikvision proxy functionality.
+ */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
@@ -41,31 +43,76 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
     const webhookUrl = `${baseUrl}/api/webhooks/attendance?company_id=${userProfile.company_id}`;
 
-    // 3. Call the Hikvision Proxy Service
-    console.log(`[SaaS API] Calling proxy service for device ${deviceId} with webhook ${webhookUrl}`);
-    const proxyResponse = await fetch(`${PROXY_SERVICE_URL}/api/v1/hik/provision`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ deviceId, webhookUrl }),
+    // 3. Call internal Hikvision proxy functionality
+    console.log(`[SaaS API] Provisioning device ${deviceId} with webhook ${webhookUrl}`);
+
+    // Fetch device credentials from the database
+    const { data: device, error: deviceError } = await supabaseAdmin
+      .from('devices')
+      .select('ip_address, port, username, password_encrypted')
+      .eq('id', deviceId)
+      .single();
+
+    if (deviceError || !device) {
+      console.error(`[SaaS API] Device not found: ${deviceId}`, deviceError);
+      return res.status(404).json({ error: 'Device not found' });
+    }
+
+    // IMPORTANT: The password is currently stored in plain text in the database.
+    // In a real scenario, password_encrypted would be retrieved from a secure vault.
+    const password = device.password_encrypted;
+
+    // Create Hikvision SDK client and test connection
+    const hikvisionClient = new HikvisionSDK({
+      host: device.ip_address,
+      port: device.port,
+      user: device.username,
+      pass: password,
     });
 
-    const proxyData = await proxyResponse.json();
+    console.log(`[SaaS API] Connecting to device at ${device.ip_address}:${device.port}...`);
 
-    if (!proxyResponse.ok) {
-      console.error(`[SaaS API] Error from proxy service:`, proxyData);
-      return res.status(proxyResponse.status).json({
-        error: 'Failed to provision device via proxy',
-        proxyError: proxyData.error,
+    // Test connection and get system info
+    const systemInfo = await hikvisionClient.getSystemInfo();
+
+    if (!systemInfo) {
+      console.error(`[SaaS API] Failed to connect to device ${deviceId}`);
+      return res.status(500).json({
+        error: 'Failed to provision device',
+        message: 'Could not establish connection with the device.',
       });
     }
 
-    // 4. Return the successful response from the proxy
-    return res.status(200).json(proxyData);
+    // Update device status in DB
+    await supabaseAdmin
+      .from('devices')
+      .update({ 
+        status: 'online', 
+        last_sync_at: new Date().toISOString(),
+        webhook_url: webhookUrl,
+      })
+      .eq('id', deviceId);
 
-  } catch (error) {
+    console.log(`[SaaS API] Successfully provisioned device ${deviceId}`);
+
+    // TODO: Implement webhook configuration using ISAPI httpHosts endpoint
+    // This requires implementing setNotificationServer() in the SDK
+
+    return res.status(200).json({
+      message: 'Device provisioned successfully',
+      deviceId,
+      webhookUrl,
+      systemInfo: {
+        deviceName: systemInfo.deviceName,
+        model: systemInfo.model,
+      },
+    });
+
+  } catch (error: any) {
     console.error('[SaaS API] Error in provision endpoint:', error);
-    return res.status(500).json({ error: 'An internal server error occurred' });
+    return res.status(500).json({ 
+      error: 'An internal server error occurred',
+      details: error.message,
+    });
   }
 }

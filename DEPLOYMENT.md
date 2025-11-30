@@ -40,6 +40,9 @@ SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN="your_twilio_token"
 SUPABASE_AUTH_SMS_TWILIO_ACCOUNT_SID="your_twilio_sid"
 SUPABASE_AUTH_SMS_TWILIO_MESSAGE_SERVICE_SID="your_message_sid"
 
+# Hikvision Proxy Service
+HIKVISION_PROXY_URL="https://your-hikvision-proxy-service.railway.app"
+
 # PayPal
 PAYPAL_CLIENT_ID="your_paypal_client_id"
 PAYPAL_CLIENT_SECRET="your_paypal_secret"

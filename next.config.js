@@ -10,6 +10,12 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   
+  // Configuración de TypeScript para hacer el build más resiliente
+  typescript: {
+    // Ignorar errores de tipo durante el build solo si es necesario (problemas de red)
+    ignoreBuildErrors: false, // Mantenerlo en false para detectar errores reales
+  },
+  
   // Exclude services directory from Next.js file tracing (standalone output)
   outputFileTracingExcludes: {
     '*': [
@@ -19,12 +25,6 @@ const nextConfig = {
   
   // Environment variables configuration - Force injection for client
   env: {
-    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  },
-  
-  // Additional configuration for Railway deployment
-  publicRuntimeConfig: {
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   },
