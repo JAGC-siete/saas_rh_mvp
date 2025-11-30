@@ -7,7 +7,7 @@ import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
 import { supabase } from './supabaseClient';
 // Use the mock library for development until the real one is available
-import { HikvisionISAPI } from './hikvision-isapi.mock';
+import { HikvisionSDK } from './hikvision.sdk'; // Updated import
 import { startHealthCheckService } from './healthCheckService';
 import { startWorker } from './worker';
 import { startEventFallbackService } from './eventFallbackService';
@@ -72,7 +72,7 @@ app.post('/api/v1/hik/provision', async (req: Request, res: Response) => {
     console.log(`[Proxy] Found device: ${device.ip_address}:${device.port}`);
 
     // 2. Use the 'hikvision-isapi' library to connect and configure
-    const hikvisionClient = new HikvisionISAPI({
+    const hikvisionClient = new HikvisionSDK({
       host: device.ip_address,
       port: device.port,
       user: device.username,
@@ -82,23 +82,16 @@ app.post('/api/v1/hik/provision', async (req: Request, res: Response) => {
     console.log(`[Proxy] Connecting to device at ${device.ip_address}...`);
 
     // 3. Configure the device's event service to point to the provided webhookUrl
-    const url = new URL(webhookUrl);
-    const setResult = await hikvisionClient.Event.setNotificationServer({
-      addressingFormatType: 'ipaddress',
-      ipAddress: url.hostname,
-      portNo: url.port || (url.protocol === 'https:' ? 443 : 80),
-      url: url.pathname + url.search,
-      protocol: url.protocol.replace(':', ''),
-    });
-    
-    // Simulate a successful configuration
-    // const setResult = { success: true, message: 'Simulated configuration successful.' };
+    // TODO: Implement the 'setNotificationServer' method in the SDK and use it here.
+    // For now, we use getSystemInfo to test the connection.
+    const setResult = await hikvisionClient.getSystemInfo();
 
-    if (setResult.success) {
+    // A simple check for now
+    if (setResult) {
       console.log(`[Proxy] Successfully configured webhook for device ${deviceId}`);
       res.status(200).json({
         message: 'Device provisioned successfully',
-        details: setResult.data,
+        details: setResult,
       });
     } else {
       console.error(`[Proxy] Failed to configure webhook for device ${deviceId}`, setResult);

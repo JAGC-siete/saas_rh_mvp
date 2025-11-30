@@ -2,9 +2,11 @@ import { Worker, Job } from 'bullmq';
 import Redis from 'ioredis';
 import { trace, context, propagation, SpanStatusCode } from '@opentelemetry/api';
 import { RateLimiterRedis } from 'rate-limiter-flexible';
+import CircuitBreaker from 'opossum';
+import pLimit from 'p-limit';
 import { supabase } from './supabaseClient';
 import { translateHikvisionError } from './hikvisionErrors';
-import { HikvisionISAPI } from './hikvision-isapi.mock';
+import { HikvisionSDK } from './hikvision.sdk'; // Updated import
 
 const redisConnection = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
   maxRetriesPerRequest: null,
@@ -19,6 +21,39 @@ const deviceLimiter = new RateLimiterRedis({
   points: 5, // 5 requests
   duration: 1, // per 1 second
 });
+
+// Cache for circuit breakers, one per device
+const circuitBreakers: Map<string, CircuitBreaker> = new Map();
+
+// Cache for concurrency limiters, one per device
+const concurrencyLimiters: Map<string, pLimit.Limit> = new Map();
+
+const getCircuitBreaker = (deviceId: string): CircuitBreaker => {
+  if (!circuitBreakers.has(deviceId)) {
+    const options: CircuitBreaker.Options = {
+      timeout: 15000, // If the function takes longer than 15s, trigger a failure
+      errorThresholdPercentage: 50, // When 50% of requests fail, open the circuit
+      resetTimeout: 30000, // After 30s, try again.
+    };
+    const breaker = new CircuitBreaker(async (action: () => Promise<any>) => action(), options);
+    
+    // Log state changes for observability
+    breaker.on('open', () => console.warn(`[CircuitBreaker] Breaker for device ${deviceId} has opened.`));
+    breaker.on('close', () => console.log(`[CircuitBreaker] Breaker for device ${deviceId} has closed. Resuming normal operations.`));
+    breaker.on('fallback', () => console.log(`[CircuitBreaker] Fallback triggered for device ${deviceId}.`));
+
+    circuitBreakers.set(deviceId, breaker);
+  }
+  return circuitBreakers.get(deviceId)!;
+};
+
+const getConcurrencyLimiter = (deviceId: string): pLimit.Limit => {
+  if (!concurrencyLimiters.has(deviceId)) {
+    // Limit to 2 concurrent operations per device
+    concurrencyLimiters.set(deviceId, pLimit(2));
+  }
+  return concurrencyLimiters.get(deviceId)!;
+};
 
 /**
  * Updates the sync status of an employee in the database.
@@ -100,47 +135,93 @@ export const employeeSyncWorker = new Worker('employee-sync',
 
           // 2. Iterate and sync to each device
           const syncPromises = devices.map(async (device) => {
+            const breaker = getCircuitBreaker(device.id);
+            const limit = getConcurrencyLimiter(device.id);
+
             try {
-              await deviceLimiter.consume(device.id);
+              // The job will wait here if the concurrency limit for this device is reached.
+              return await limit(async () => {
+                const span = trace.getSpan(trace.context.active());
+                span?.addEvent('Concurrency lock passed. Attempting to acquire rate limit token.');
 
-              console.log(`[Worker] -> Syncing to device: ${device.name} (${device.ip_address})`);
-              
-              const decryptedPassword = `decrypted-${device.password_encrypted}`;
+                await deviceLimiter.consume(device.id);
+                span?.addEvent('Rate limit token acquired. Firing circuit breaker.');
 
-              const hikvisionClient = new HikvisionISAPI({
-                host: device.ip_address,
-                port: device.port,
-                user: device.username,
-                pass: decryptedPassword,
+                const result = await breaker.fire(async () => {
+                  console.log(`[Worker] -> Syncing to device: ${device.name} (${device.ip_address})`);
+                  const decryptedPassword = `decrypted-${device.password_encrypted}`;
+
+                  const hikvisionClient = new HikvisionSDK({
+                    host: device.ip_address,
+                    port: device.port,
+                    user: device.username,
+                    pass: decryptedPassword,
+                  });
+
+                  span?.setAttributes({
+                    'isapi.endpoint': '/ISAPI/AccessControl/UserInfo/SetUp',
+                    'device.ip': device.ip_address,
+                    'device.name': device.name,
+                  });
+
+                  const syncResult = await hikvisionClient.userInfoSetUp({
+                    employeeNo: employeeData.dni,
+                    name: employeeData.name,
+                  });
+                  
+                  span?.setAttributes({
+                    'isapi.response.statusString': syncResult.statusString,
+                    'isapi.response.statusCode': syncResult.statusCode,
+                  });
+                  span?.addEvent('Successfully synced to device.');
+                  
+                  console.log(`[Worker] -> Successfully synced to device ${device.name}`, syncResult);
+                  return { deviceId: device.id, success: true, result: syncResult };
+                });
+
+                return result;
               });
 
-              await hikvisionClient.UserInfo.addOrUpdate({
-                employeeNo: employeeData.dni,
-                name: employeeData.name,
-              });
-              
-              console.log(`[Worker] -> Successfully synced to device ${device.name}`);
-              return { deviceId: device.id, success: true };
             } catch (error: any) {
-              const readableError = translateHikvisionError(error, device.id);
-              console.error(`[Worker] -> FAILED to sync to device ${device.name}. Reason: ${readableError}`);
-              
-              if (error?.name === 'RateLimiterRes') {
-                console.warn(`[Worker] -> Rate limit exceeded for device ${device.name}. Job will be retried.`);
-                throw error;
+              const span = trace.getSpan(trace.context.active());
+              const translatedError = translateHikvisionError(error, device.id);
+
+              span?.recordException(error);
+              span?.setAttributes({
+                'error.isapi.description': translatedError.description,
+                'error.isapi.severity': translatedError.severity,
+                'error.isapi.retryable': translatedError.retryable,
+                'error.isapi.debugSuggestion': translatedError.debugSuggestion,
+                'isapi.response.raw': translatedError.rawError,
+              });
+              span?.setStatus({ code: SpanStatusCode.ERROR, message: translatedError.description });
+
+              console.error(`[Worker] -> FAILED to sync to device ${device.name}. `, {
+                ...translatedError,
+                isBreakerError: error.name === 'BreakerOpenError' || error.name === 'BreakerFailure'
+              });
+
+              // IMPORTANT: Logic to control BullMQ's retry
+              // If the error is NOT retryable, we want to fail the job permanently.
+              if (!translatedError.retryable) {
+                // By re-throwing an error with a specific flag or type,
+                // we can catch it later and prevent BullMQ from retrying.
+                const finalError = new Error(translatedError.description);
+                (finalError as any).isFinal = true; // Mark error as not to be retried by BullMQ
+                throw finalError;
               }
-              
-              return { deviceId: device.id, success: false, error: readableError };
+
+              throw new Error(translatedError.description);
             }
           });
           
-          const results = await Promise.all(syncPromises);
-          const failedDevices = results.filter(r => !r.success);
+          const results = await Promise.allSettled(syncPromises);
+          const failedDevices = results.filter(r => !r.value.success);
 
           if (failedDevices.length > 0) {
             const errorInfo = {
               message: `Failed to sync to ${failedDevices.length}/${devices.length} devices.`,
-              failedDevices: failedDevices.map(d => ({ id: d.deviceId, error: d.error })),
+              failedDevices: failedDevices.map(d => ({ id: d.value.deviceId, error: d.value.error })),
             };
             throw new Error(JSON.stringify(errorInfo));
           }

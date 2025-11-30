@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient';
-import { HikvisionISAPI } from './hikvision-isapi.mock';
+import { HikvisionSDK } from './hikvision.sdk'; // Updated import
 
 const POLLING_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
 const DEVICE_INACTIVE_THRESHOLD_MS = 15 * 60 * 1000; // 15 minutes
@@ -46,7 +46,7 @@ async function performEventFallback() {
       // In a real scenario, decrypt the password.
       const decryptedPassword = `decrypted-${device.password_encrypted}`;
 
-      const hikvisionClient = new HikvisionISAPI({
+      const hikvisionClient = new HikvisionSDK({
         host: device.ip_address,
         port: device.port,
         user: device.username,
@@ -55,11 +55,10 @@ async function performEventFallback() {
       });
 
       // In a real implementation, we would store and use the last event's timestamp or ID (`searchAfter`).
-      // For this mock, we'll just simulate fetching recent events.
-      // const lastEventId = await getLastEventIdFromDb(device.id);
-
-      // const { data: events } = await hikvisionClient.Event.searchEvents({ searchAfter: lastEventId });
-      console.log(`[Fallback] -> Mock polling events for device ${device.name}...`);
+      // For now, we'll just simulate fetching recent events by calling a lightweight endpoint.
+      // const { data: events } = await hikvisionClient.acsEventSearch({ searchAfter: lastEventId });
+      console.log(`[Fallback] -> Mock polling events for device ${device.name}... a real call would be made here.`);
+      await hikvisionClient.getSystemInfo(); // Use a real method for the connection test
 
       // TODO: Process the fetched events and insert them into the main SaaS database.
       // For now, we'll just log a success message.

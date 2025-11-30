@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient';
-import { HikvisionISAPI } from './hikvision-isapi.mock';
+import { HikvisionSDK } from './hikvision.sdk'; // Updated import
 
 const CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -29,7 +29,7 @@ async function performHealthCheck() {
       // In a real scenario, we would decrypt this password.
       const decryptedPassword = `decrypted-${device.password_encrypted}`;
       
-      const hikvisionClient = new HikvisionISAPI({
+      const hikvisionClient = new HikvisionSDK({
         host: device.ip_address,
         port: device.port,
         user: device.username,
@@ -38,9 +38,11 @@ async function performHealthCheck() {
       });
 
       // A lightweight call to check if the device is responsive.
-      const result = await hikvisionClient.System.getSystemInfo();
+      const result = await hikvisionClient.getSystemInfo();
 
-      if (result.success) {
+      // Simple check, assuming any successful response means it's online.
+      // A more robust check might validate the content of 'result'.
+      if (result) {
         currentStatus = 'online';
       }
     } catch (e: any) {

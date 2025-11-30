@@ -15,11 +15,14 @@
     "@opentelemetry/exporter-trace-otlp-http": "^0.51.0",
     "@opentelemetry/sdk-node": "^0.51.0",
     "@supabase/supabase-js": "^2.39.0",
+    "axios": "^1.13.2",
     "bullmq": "^5.7.9",
     "dotenv": "^16.0.3",
     "express": "^4.17.1",
     "express-rate-limit": "^7.2.0",
     "ioredis": "^5.4.1",
+    "opossum": "^9.0.0",
+    "p-limit": "^7.2.0",
     "rate-limiter-flexible": "^5.0.0"
   },
   "devDependencies": {
