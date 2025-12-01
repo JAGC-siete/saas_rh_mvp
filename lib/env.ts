@@ -130,17 +130,20 @@ export function areEnvVarsAvailable(): boolean {
 }
 
 // Don't validate immediately on import - wait for variables to be loaded
-// Only log the current state for debugging
-if (typeof window === 'undefined') {
-  // Server-side: just log current state
-  console.log('🔍 Server-side environment check:', {
-    NEXT_PUBLIC_SUPABASE_URL: env.NEXT_PUBLIC_SUPABASE_URL ? '✅ Set' : '❌ Missing',
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '✅ Set' : '❌ Missing',
-  })
-} else {
-  // Client-side: just log current state
-  console.log('🔍 Client-side environment check:', {
-    NEXT_PUBLIC_SUPABASE_URL: env.NEXT_PUBLIC_SUPABASE_URL ? '✅ Set' : '❌ Missing',
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '✅ Set' : '❌ Missing',
-  })
+// Only log the current state for debugging in development
+// In production, skip logging to avoid noise and potential issues during build
+if (process.env.NODE_ENV !== 'production') {
+  if (typeof window === 'undefined') {
+    // Server-side: just log current state (development only)
+    console.log('🔍 Server-side environment check:', {
+      NEXT_PUBLIC_SUPABASE_URL: env.NEXT_PUBLIC_SUPABASE_URL ? '✅ Set' : '❌ Missing',
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '✅ Set' : '❌ Missing',
+    })
+  } else {
+    // Client-side: just log current state (development only)
+    console.log('🔍 Client-side environment check:', {
+      NEXT_PUBLIC_SUPABASE_URL: env.NEXT_PUBLIC_SUPABASE_URL ? '✅ Set' : '❌ Missing',
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '✅ Set' : '❌ Missing',
+    })
+  }
 }

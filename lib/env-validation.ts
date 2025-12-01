@@ -11,7 +11,8 @@ const requiredEnvVars = {
 }
 
 // Validate that all required environment variables are present
-export function validateEnvironmentVariables() {
+// Returns false instead of throwing to prevent crashes during server startup
+export function validateEnvironmentVariables(): boolean {
   const missingVars: string[] = []
 
   for (const [key, value] of Object.entries(requiredEnvVars)) {
@@ -21,10 +22,11 @@ export function validateEnvironmentVariables() {
   }
 
   if (missingVars.length > 0) {
-    throw new Error(
-      `Missing required environment variables: ${missingVars.join(', ')}\n` +
+    console.error(
+      `❌ Missing required environment variables: ${missingVars.join(', ')}\n` +
       'Please check your .env.local file and ensure all variables are properly set.'
     )
+    return false
   }
 
   return true
