@@ -138,5 +138,160 @@ export class HikvisionSDK {
     const response = await this.axiosInstance.put('/ISAPI/AccessControl/UserInfo/SetUp?format=json', payload);
     return response.data;
   }
+
+  /**
+   * Get capabilities for HTTP notification hosts.
+   * Returns information about supported protocols, formats, and limits.
+   * Based on ISAPI manual: GET /ISAPI/Event/notification/httpHosts/capabilities
+   */
+  public async getHttpHostsCapabilities() {
+    const response = await this.axiosInstance.get('/ISAPI/Event/notification/httpHosts/capabilities?format=json');
+    return response.data;
+  }
+
+  /**
+   * Configure HTTP notification server (httpHosts) on the device.
+   * Based on ISAPI manual: PUT /ISAPI/Event/notification/httpHosts
+   * 
+   * This method:
+   * 1. Optionally checks capabilities
+   * 2. Constructs XML_HttpHostNotificationList according to ISAPI spec
+   * 3. Sends PUT request to configure the notification server
+   * 4. Tests the configuration using POST /httpHosts/<ID>/test
+   * 
+   * @param params Configuration parameters
+   * @param params.webhookUrl Full webhook URL (e.g., https://app.humanosisu.net/api/webhooks/attendance?company_id=XYZ)
+   * @param params.hostId HTTP host ID (default: "1")
+   * @returns Object with success status and test result
+   */
+  public async setNotificationServer(params: {
+    webhookUrl: string;
+    hostId?: string;
+  }): Promise<{ success: boolean; testResult?: any; error?: string }> {
+    const hostId = params.hostId || '1';
+
+    try {
+      // Step 1: (Optional) Get capabilities to validate support
+      try {
+        const capabilities = await this.getHttpHostsCapabilities();
+        console.log(`[HikvisionSDK] Device capabilities:`, capabilities);
+      } catch (capError) {
+        console.warn(`[HikvisionSDK] Could not fetch capabilities, continuing anyway:`, capError);
+        // Continue even if capabilities check fails
+      }
+
+      // Step 2: Parse webhook URL to extract components
+      const webhookUrlObj = new URL(params.webhookUrl);
+      const hostName = webhookUrlObj.hostname;
+      const portNo = webhookUrlObj.port || (webhookUrlObj.protocol === 'https:' ? '443' : '80');
+
+      // Step 3: Construct XML_HttpHostNotificationList according to ISAPI manual
+      const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
+<HttpHostNotificationList version="2.0" xmlns="http://www.isapi.org/ver20/XMLSchema">
+  <HttpHostNotification>
+    <id>${hostId}</id>
+    <url>${params.webhookUrl}</url>
+    <protocolType>HTTP</protocolType>
+    <parameterFormatType>JSON</parameterFormatType>
+    <addressingFormatType>hostname</addressingFormatType>
+    <hostName>${hostName}</hostName>
+    <portNo>${portNo}</portNo>
+    <httpAuthenticationMethod>none</httpAuthenticationMethod>
+    <eventMode>all</eventMode>
+  </HttpHostNotification>
+</HttpHostNotificationList>`;
+
+      console.log(`[HikvisionSDK] Configuring HTTP notification server with XML:`, xmlBody);
+
+      // Step 4: PUT /ISAPI/Event/notification/httpHosts
+      const putResponse = await this.axiosInstance.put(
+        '/ISAPI/Event/notification/httpHosts',
+        xmlBody,
+        {
+          headers: {
+            'Content-Type': 'application/xml',
+          },
+        }
+      );
+
+      console.log(`[HikvisionSDK] PUT httpHosts response:`, putResponse.data);
+
+      // Step 5: Test the configured httpHost using POST /ISAPI/Event/notification/httpHosts/<ID>/test
+      const testXmlBody = `<?xml version="1.0" encoding="UTF-8"?>
+<HttpHostNotification xmlns="http://www.isapi.org/ver20/XMLSchema">
+  <id>${hostId}</id>
+</HttpHostNotification>`;
+
+      console.log(`[HikvisionSDK] Testing HTTP notification server with ID ${hostId}...`);
+
+      const testResponse = await this.axiosInstance.post(
+        `/ISAPI/Event/notification/httpHosts/${hostId}/test`,
+        testXmlBody,
+        {
+          headers: {
+            'Content-Type': 'application/xml',
+          },
+        }
+      );
+
+      console.log(`[HikvisionSDK] Test result:`, testResponse.data);
+
+      // Parse XML response to check if test succeeded
+      // The response should be XML_HttpHostTestResult according to ISAPI manual
+      const testResult = testResponse.data;
+      let isSuccess = false;
+      
+      if (typeof testResult === 'string') {
+        // XML string response - check for succeeded status
+        // ISAPI returns: <HttpHostTestResult><status>succeeded</status> or <status>failed</status>
+        isSuccess = testResult.includes('<status>succeeded</status>') || 
+                   testResult.includes('status="succeeded"') ||
+                   testResult.includes('succeeded');
+      } else if (testResult && typeof testResult === 'object') {
+        // JSON response (if device supports JSON format)
+        isSuccess = testResult.status === 'succeeded' ||
+                   (testResult.HttpHostTestResult && testResult.HttpHostTestResult.status === 'succeeded');
+      }
+
+      return {
+        success: isSuccess,
+        testResult: testResult,
+      };
+
+    } catch (error: any) {
+      console.error(`[HikvisionSDK] Error configuring notification server:`, error);
+      
+      // Try to extract error details from XML/JSON response
+      let errorMessage = error.message;
+      if (error.response?.data) {
+        const responseData = error.response.data;
+        
+        if (typeof responseData === 'string') {
+          // XML error response - extract statusString if present
+          // ISAPI error format: <ResponseStatus><statusCode>...</statusCode><statusString>...</statusString></ResponseStatus>
+          const statusStringMatch = responseData.match(/<statusString>(.*?)<\/statusString>/);
+          const statusCodeMatch = responseData.match(/<statusCode>(.*?)<\/statusCode>/);
+          
+          if (statusStringMatch) {
+            errorMessage = `ISAPI Error: ${statusStringMatch[1]}`;
+          } else if (statusCodeMatch) {
+            errorMessage = `ISAPI Error Code: ${statusCodeMatch[1]}`;
+          } else {
+            errorMessage = `ISAPI Error: ${responseData.substring(0, 200)}`;
+          }
+        } else if (responseData.statusString) {
+          // JSON error response
+          errorMessage = `ISAPI Error: ${responseData.statusString}`;
+        } else if (responseData.statusCode) {
+          errorMessage = `ISAPI Error Code: ${responseData.statusCode}`;
+        }
+      }
+
+      return {
+        success: false,
+        error: errorMessage,
+      };
+    }
+  }
 }
 

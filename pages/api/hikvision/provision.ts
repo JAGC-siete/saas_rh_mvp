@@ -59,8 +59,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log(`[Hikvision Proxy] Connecting to device at ${device.ip_address}...`);
 
     // 3. Test connection and get system info
-    // TODO: Implement setNotificationServer() method in SDK for webhook configuration
-    // For now, we use getSystemInfo to test the connection.
     const systemInfo = await hikvisionClient.getSystemInfo();
 
     if (!systemInfo) {
@@ -73,18 +71,51 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log(`[Hikvision Proxy] Successfully connected to device ${deviceId}`);
 
-    // 4. Update device status in DB
+    // 4. Configure HTTP notification server (httpHosts) on the device
+    console.log(`[Hikvision Proxy] Configuring webhook URL on device: ${webhookUrl}`);
+    const notificationResult = await hikvisionClient.setNotificationServer({
+      webhookUrl: webhookUrl,
+      hostId: '1',
+    });
+
+    if (!notificationResult.success) {
+      console.error(`[Hikvision Proxy] Failed to configure notification server:`, notificationResult.error);
+      
+      // Update device status with error
+      await supabase
+        .from('devices')
+        .update({ 
+          status: 'error', 
+          last_sync_at: new Date().toISOString(),
+          webhook_url: webhookUrl,
+          webhook_configured: false,
+          last_webhook_test_at: new Date().toISOString(),
+          webhook_test_result: { error: notificationResult.error },
+        })
+        .eq('id', deviceId);
+
+      return res.status(500).json({
+        message: 'Failed to configure notification server on device',
+        error: notificationResult.error || 'Unknown error configuring webhook',
+        deviceId,
+      });
+    }
+
+    console.log(`[Hikvision Proxy] Successfully configured notification server. Test result:`, notificationResult.testResult);
+
+    // 5. Update device status in DB with webhook configuration details
     await supabase
       .from('devices')
       .update({ 
         status: 'online', 
         last_sync_at: new Date().toISOString(),
         webhook_url: webhookUrl,
+        http_host_id: '1',
+        webhook_configured: true,
+        last_webhook_test_at: new Date().toISOString(),
+        webhook_test_result: notificationResult.testResult ? { result: notificationResult.testResult } : null,
       })
       .eq('id', deviceId);
-
-    // TODO: Implement webhook configuration using ISAPI httpHosts endpoint
-    // This requires implementing setNotificationServer() in the SDK
     
     res.status(200).json({
       message: 'Device provisioned successfully',
@@ -94,6 +125,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         deviceName: systemInfo.deviceName,
         model: systemInfo.model,
       },
+      notificationConfigured: true,
+      testResult: notificationResult.testResult,
     });
 
   } catch (err: any) {
