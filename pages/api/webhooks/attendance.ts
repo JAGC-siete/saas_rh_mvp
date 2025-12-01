@@ -1,8 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import formidable from 'formidable';
+import { createPagesServerClient } from '@supabase/auth-helpers-nextjs';
 import { logError, logger } from '../../../lib/logger';
 import { getTodayInHonduras, nowInHonduras } from '../../../lib/timezone';
-import { createAdminClient } from '../../../lib/supabase/server';
 
 // Desactivamos el parser de body de Next.js para que formidable pueda procesar el stream.
 export const config = {
@@ -138,20 +138,9 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         eventTimestamp = nowInHonduras();
       }
 
-      // Usar createAdminClient para webhooks (no requiere autenticación de usuario)
-      // Wrap in try-catch to prevent server crashes if env vars are missing
-      let supabase;
-      try {
-        supabase = createAdminClient();
-      } catch (error) {
-        logger.error('[ATTENDANCE] Failed to create admin client', error as Error, {
-          companyId: company_id,
-        });
-        return res.status(503).json({ 
-          success: false, 
-          error: 'Service temporarily unavailable. Please check server configuration.' 
-        });
-      }
+      // Usar createPagesServerClient para webhooks (versión funcional antes del commit c2f239cf)
+      // Revertido de createAdminClient que estaba causando crashes del servidor
+      const supabase = createPagesServerClient({ req, res });
 
       // Buscar empleado por DNI y company_id
       // Intentar búsqueda exacta primero, luego búsqueda flexible (sin padding de ceros)
