@@ -42,11 +42,46 @@ process.on('unhandledRejection', (reason, promise) => {
 
 // Add timeout to detect if server never starts listening
 let serverStarted = false;
+let logBuffer = [];
+
 const startupTimeout = setTimeout(() => {
   if (!serverStarted) {
     console.error('❌ TIMEOUT: Server did not start listening within 30 seconds');
     console.error('This usually means the server crashed during initialization');
+    console.error('');
+    console.error('📋 DIAGNOSTIC INFORMATION:');
+    console.error('  - Working directory:', __dirname);
+    console.error('  - PORT:', process.env.PORT || '8080');
+    console.error('  - HOSTNAME:', process.env.HOSTNAME || '0.0.0.0');
+    console.error('  - NODE_ENV:', process.env.NODE_ENV || 'development');
+    console.error('  - Node version:', process.version);
+    console.error('  - Platform:', process.platform);
+    console.error('');
+    console.error('📝 Last 30 log entries:');
+    logBuffer.slice(-30).forEach((entry, i) => {
+      console.error(`  ${i + 1}. [${entry.type.toUpperCase()}] ${entry.message.substring(0, 200)}`);
+    });
+    console.error('');
+    console.error('🔍 Checking if port is in use...');
+    
+    // Try to check if port is available
+    const net = require('net');
+    const port = parseInt(process.env.PORT || '8080', 10);
+    const testServer = net.createServer();
+    testServer.listen(port, '0.0.0.0', () => {
+      console.error(`  ✅ Port ${port} is available`);
+      testServer.close();
+    });
+    testServer.on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        console.error(`  ❌ Port ${port} is already in use!`);
+      } else {
+        console.error(`  ⚠️ Port check error: ${err.message}`);
+      }
+    });
+    
     // Keep process alive for debugging
+    console.log('');
     console.log('⚠️ Keeping process alive for 60 seconds to allow log inspection...');
     setTimeout(() => {
       console.log('⏰ Timeout reached, exiting...');
@@ -58,29 +93,73 @@ const startupTimeout = setTimeout(() => {
 // Try to start the server
 try {
   console.log('📦 Loading server.js...');
+  console.log('📊 Process memory:', {
+    rss: Math.round(process.memoryUsage().rss / 1024 / 1024) + 'MB',
+    heapTotal: Math.round(process.memoryUsage().heapTotal / 1024 / 1024) + 'MB',
+    heapUsed: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + 'MB'
+  });
+  
+  // Intercept console methods to detect server startup
+  const originalLog = console.log;
+  const originalError = console.error;
+  const originalWarn = console.warn;
+  
+  let logBuffer = [];
+  const maxBufferSize = 100;
+  
+  // Wrap console methods to capture logs
+  console.log = function(...args) {
+    const message = args.join(' ');
+    logBuffer.push({ type: 'log', message, timestamp: new Date().toISOString() });
+    if (logBuffer.length > maxBufferSize) logBuffer.shift();
+    
+    if (message.includes('Ready on') || message.includes('started server') || message.includes('Local:')) {
+      serverStarted = true;
+      clearTimeout(startupTimeout);
+      console.log = originalLog;
+      console.error = originalError;
+      console.warn = originalWarn;
+      console.log('✅ SERVER IS LISTENING:', ...args);
+      return;
+    }
+    originalLog.apply(console, args);
+  };
+  
+  console.error = function(...args) {
+    const message = args.join(' ');
+    logBuffer.push({ type: 'error', message, timestamp: new Date().toISOString() });
+    if (logBuffer.length > maxBufferSize) logBuffer.shift();
+    originalError.apply(console, args);
+  };
+  
+  console.warn = function(...args) {
+    const message = args.join(' ');
+    logBuffer.push({ type: 'warn', message, timestamp: new Date().toISOString() });
+    if (logBuffer.length > maxBufferSize) logBuffer.shift();
+    originalWarn.apply(console, args);
+  };
   
   // Require the server - this will execute the server.js code
   require('./server.js');
   
   // If we get here, server.js loaded successfully
-  console.log('✅ server.js loaded successfully');
+  console.log('✅ server.js loaded successfully (but may not be listening yet)');
   
-  // Monitor for server listening (Next.js logs "Ready on http://...")
-  const originalLog = console.log;
-  console.log = function(...args) {
-    const message = args.join(' ');
-    if (message.includes('Ready on') || message.includes('started server')) {
-      serverStarted = true;
-      clearTimeout(startupTimeout);
-      console.log = originalLog; // Restore original
-      console.log('✅ SERVER IS LISTENING:', ...args);
+  // Check if server started after a short delay
+  setTimeout(() => {
+    if (!serverStarted) {
+      console.log('⚠️ Server loaded but not listening yet. Recent logs:');
+      logBuffer.slice(-20).forEach(entry => {
+        console.log(`  [${entry.type.toUpperCase()}] ${entry.message}`);
+      });
     }
-    originalLog.apply(console, args);
-  };
+  }, 5000);
   
 } catch (error) {
   console.error('❌ FATAL ERROR loading server.js:', error);
   console.error('Stack:', error.stack);
+  console.error('Error name:', error.name);
+  console.error('Error message:', error.message);
   clearTimeout(startupTimeout);
   
   // Keep process alive for debugging
