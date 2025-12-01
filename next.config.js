@@ -57,8 +57,13 @@ const nextConfig = {
   // Configuración para rutas internas (no subdominios)
   async rewrites() {
     return [
-      // No necesitamos rewrites para rutas internas
-      // Las rutas /app/* funcionan directamente
+      // Rewrite /favicon.ico to logo to prevent 502 errors
+      // Browsers automatically request /favicon.ico, and if it doesn't exist,
+      // it can cause 502 errors when behind a proxy like Cloudflare
+      {
+        source: '/favicon.ico',
+        destination: '/logo-humano-sisu.png',
+      },
     ]
   },
   
