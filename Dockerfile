@@ -70,6 +70,9 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 # Expose port 8080 for Railway
 EXPOSE 8080
 
-# Start the application using the standalone server
-# Add error handling wrapper to prevent silent crashes
-CMD ["sh", "-c", "echo 'Starting server...' && node server.js 2>&1 || (echo 'Server failed to start. Error details:' && cat /proc/self/fd/2 && sleep 10)"]
+# Copy server wrapper
+COPY --from=builder --chown=nextjs:nodejs /app/server-wrapper.js ./server-wrapper.js
+
+# Start the application using the server wrapper
+# The wrapper ensures the server starts even with errors and provides better logging
+CMD ["node", "server-wrapper.js"]
