@@ -71,4 +71,5 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 EXPOSE 8080
 
 # Start the application using the standalone server
-CMD ["node", "server.js"]
+# Add error handling wrapper to prevent silent crashes
+CMD ["sh", "-c", "echo 'Starting server...' && node server.js 2>&1 || (echo 'Server failed to start. Error details:' && cat /proc/self/fd/2 && sleep 10)"]
