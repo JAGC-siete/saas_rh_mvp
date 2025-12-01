@@ -139,6 +139,32 @@ try {
     originalWarn.apply(console, args);
   };
   
+  // Intercept process.exit to prevent silent crashes
+  const originalExit = process.exit;
+  let exitIntercepted = false;
+  
+  process.exit = function(code) {
+    if (!exitIntercepted && !serverStarted) {
+      exitIntercepted = true;
+      console.error('');
+      console.error('🚨 INTERCEPTED process.exit() - Server tried to exit before listening!');
+      console.error('   Exit code:', code);
+      console.error('   This means startServer() failed or threw an error');
+      console.error('');
+      console.error('📝 Recent logs before exit:');
+      logBuffer.slice(-30).forEach((entry, i) => {
+        console.error(`  ${i + 1}. [${entry.type.toUpperCase()}] ${entry.message.substring(0, 200)}`);
+      });
+      console.error('');
+      console.error('⚠️ Preventing exit to allow debugging. Server will not accept connections.');
+      console.error('   Check the logs above to find the root cause.');
+      // Don't actually exit - keep process alive for debugging
+      return;
+    }
+    // If server already started or we've already intercepted, allow normal exit
+    originalExit.call(process, code);
+  };
+  
   // Require the server - this will execute the server.js code
   require('./server.js');
   
@@ -147,7 +173,7 @@ try {
   
   // Check if server started after a short delay
   setTimeout(() => {
-    if (!serverStarted) {
+    if (!serverStarted && !exitIntercepted) {
       console.log('⚠️ Server loaded but not listening yet. Recent logs:');
       logBuffer.slice(-20).forEach(entry => {
         console.log(`  [${entry.type.toUpperCase()}] ${entry.message}`);
