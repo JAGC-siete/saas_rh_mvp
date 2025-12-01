@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import formidable from 'formidable';
-import { createPagesServerClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '../../../lib/supabase/server';
 import { logError, logger } from '../../../lib/logger';
 import { getTodayInHonduras, nowInHonduras } from '../../../lib/timezone';
 
@@ -138,9 +138,9 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         eventTimestamp = nowInHonduras();
       }
 
-      // Usar createPagesServerClient para webhooks (versión funcional antes del commit c2f239cf)
-      // Revertido de createAdminClient que estaba causando crashes del servidor
-      const supabase = createPagesServerClient({ req, res });
+      // Usar createClient de lib/supabase/server que es resiliente y no crashea el servidor
+      // Este cliente retorna un mock client si faltan variables de entorno, manteniendo el servidor vivo
+      const supabase = createClient(req, res);
 
       // Buscar empleado por DNI y company_id
       // Intentar búsqueda exacta primero, luego búsqueda flexible (sin padding de ceros)
