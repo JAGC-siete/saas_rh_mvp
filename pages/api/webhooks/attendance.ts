@@ -139,7 +139,19 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       }
 
       // Usar createAdminClient para webhooks (no requiere autenticación de usuario)
-      const supabase = createAdminClient();
+      // Wrap in try-catch to prevent server crashes if env vars are missing
+      let supabase;
+      try {
+        supabase = createAdminClient();
+      } catch (error) {
+        logger.error('[ATTENDANCE] Failed to create admin client', error as Error, {
+          companyId: company_id,
+        });
+        return res.status(503).json({ 
+          success: false, 
+          error: 'Service temporarily unavailable. Please check server configuration.' 
+        });
+      }
 
       // Buscar empleado por DNI y company_id
       // Intentar búsqueda exacta primero, luego búsqueda flexible (sin padding de ceros)

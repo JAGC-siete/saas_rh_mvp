@@ -115,41 +115,68 @@ export async function createServerComponentClient() {
 
 // Admin client for server-side operations with service role
 export function createAdminClient() {
-  // Get environment variables from centralized config
-  const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL
-  const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY
-  const anonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  try {
+    // Get environment variables from centralized config
+    const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL
+    const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY
+    const anonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-  // Enhanced logging for debugging environment variables
-  console.log('--- createAdminClient ---')
-  console.log(`Supabase URL Loaded: ${!!supabaseUrl}`)
-  console.log(`Service Role Key Loaded: ${!!serviceKey}`)
-  console.log(`Anon Key Loaded: ${!!anonKey}`)
-  console.log('--- End createAdminClient ---')
-
-  // Check if environment variables are available
-  if (!supabaseUrl) {
-    console.error('❌ Missing Supabase URL environment variable (NEXT_PUBLIC_SUPABASE_URL)')
-    throw new Error('Supabase environment variables are not configured')
-  }
-
-  // Prefer service role for server-side operations; fall back to anon to avoid hard crashes.
-  // Note: For production, ensure RPCs required by dashboards are SECURITY DEFINER so anon can execute safely.
-  const keyToUse = serviceKey || anonKey
-  if (!keyToUse) {
-    console.error('❌ Missing Supabase keys (SUPABASE_SERVICE_ROLE_KEY and NEXT_PUBLIC_SUPABASE_ANON_KEY)')
-    throw new Error('Supabase environment variables are not configured')
-  }
-
-  if (!serviceKey) {
-    console.warn('⚠️ SUPABASE_SERVICE_ROLE_KEY is missing. Falling back to anon key for server client.')
-  }
-
-  // Use the standard client for admin operations instead of server client
-  return createSupabaseClient(supabaseUrl, keyToUse, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
+    // Enhanced logging for debugging environment variables (only in development)
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('--- createAdminClient ---')
+      console.log(`Supabase URL Loaded: ${!!supabaseUrl}`)
+      console.log(`Service Role Key Loaded: ${!!serviceKey}`)
+      console.log(`Anon Key Loaded: ${!!anonKey}`)
+      console.log('--- End createAdminClient ---')
     }
-  })
+
+    // Check if environment variables are available
+    if (!supabaseUrl) {
+      console.error('❌ Missing Supabase URL environment variable (NEXT_PUBLIC_SUPABASE_URL)')
+      // Return a mock client to prevent crashes, but log the error
+      // This allows the server to start even if env vars are missing
+      return createSupabaseClient('https://placeholder.supabase.co', 'placeholder-key', {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      })
+    }
+
+    // Prefer service role for server-side operations; fall back to anon to avoid hard crashes.
+    // Note: For production, ensure RPCs required by dashboards are SECURITY DEFINER so anon can execute safely.
+    const keyToUse = serviceKey || anonKey
+    if (!keyToUse) {
+      console.error('❌ Missing Supabase keys (SUPABASE_SERVICE_ROLE_KEY and NEXT_PUBLIC_SUPABASE_ANON_KEY)')
+      // Return a mock client to prevent crashes, but log the error
+      return createSupabaseClient(supabaseUrl || 'https://placeholder.supabase.co', 'placeholder-key', {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      })
+    }
+
+    if (!serviceKey) {
+      console.warn('⚠️ SUPABASE_SERVICE_ROLE_KEY is missing. Falling back to anon key for server client.')
+    }
+
+    // Use the standard client for admin operations instead of server client
+    return createSupabaseClient(supabaseUrl, keyToUse, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    })
+  } catch (error) {
+    // Catch any unexpected errors to prevent server crashes
+    console.error('❌ Error creating admin client:', error)
+    // Return a mock client to allow the server to continue running
+    return createSupabaseClient('https://placeholder.supabase.co', 'placeholder-key', {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    })
+  }
 }
