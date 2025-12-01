@@ -1,9 +1,12 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { createPagesServerClient } from '@supabase/auth-helpers-nextjs';
 import { createAdminClient } from '../../../../lib/supabase/server';
+import { HikvisionSDK } from '../../../../lib/hikvision/sdk';
 
-const PROXY_SERVICE_URL = process.env.HIKVISION_PROXY_URL || 'http://localhost:3001';
-
+/**
+ * Get device status using integrated Hikvision SDK.
+ * This endpoint uses the SDK directly instead of calling a separate proxy service.
+ */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method Not Allowed' });
@@ -33,20 +36,70 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'deviceId is required in the query' });
     }
 
-    const proxyResponse = await fetch(`${PROXY_SERVICE_URL}/api/v1/devices/${deviceId}/status`);
-    const proxyData = await proxyResponse.json();
+    // Fetch device credentials from the database
+    const { data: device, error: deviceError } = await supabaseAdmin
+      .from('devices')
+      .select('ip_address, port, username, password_encrypted, status, last_sync_at')
+      .eq('id', deviceId)
+      .single();
 
-    if (!proxyResponse.ok) {
-      return res.status(proxyResponse.status).json({
-        error: 'Failed to get device status from proxy',
-        proxyError: proxyData.error,
+    if (deviceError || !device) {
+      return res.status(404).json({ error: 'Device not found' });
+    }
+
+    // Use integrated SDK to get device status
+    const hikvisionClient = new HikvisionSDK({
+      host: device.ip_address,
+      port: device.port,
+      user: device.username,
+      pass: device.password_encrypted,
+    });
+
+    try {
+      const systemInfo = await hikvisionClient.getSystemInfo();
+      
+      // Update device status in DB
+      const isOnline = !!systemInfo;
+      await supabaseAdmin
+        .from('devices')
+        .update({ 
+          status: isOnline ? 'online' : 'offline',
+          last_sync_at: new Date().toISOString(),
+        })
+        .eq('id', deviceId);
+
+      return res.status(200).json({
+        deviceId,
+        status: isOnline ? 'online' : 'offline',
+        lastSyncAt: new Date().toISOString(),
+        systemInfo: systemInfo ? {
+          deviceName: systemInfo.deviceName,
+          model: systemInfo.model,
+        } : null,
+      });
+    } catch (deviceError) {
+      // Device is offline or unreachable
+      await supabaseAdmin
+        .from('devices')
+        .update({ 
+          status: 'offline',
+          last_sync_at: new Date().toISOString(),
+        })
+        .eq('id', deviceId);
+
+      return res.status(200).json({
+        deviceId,
+        status: 'offline',
+        lastSyncAt: new Date().toISOString(),
+        error: 'Device unreachable',
       });
     }
 
-    return res.status(200).json(proxyData);
-
-  } catch (error) {
+  } catch (error: any) {
     console.error('[SaaS API] Error in device status endpoint:', error);
-    return res.status(500).json({ error: 'An internal server error occurred' });
+    return res.status(500).json({ 
+      error: 'An internal server error occurred',
+      details: error.message,
+    });
   }
 }
