@@ -9,10 +9,22 @@ let employeeSyncQueue: Queue | undefined;
 
 const getRedisInstance = () => {
   if (!redis) {
-    if (process.env.REDIS_URL) {
-      redis = new Redis(process.env.REDIS_URL, { maxRetriesPerRequest: null });
-    } else {
-      redis = new Redis({ host: 'localhost', port: 6379, maxRetriesPerRequest: null });
+    try {
+      if (process.env.REDIS_URL) {
+        redis = new Redis(process.env.REDIS_URL, { 
+          maxRetriesPerRequest: null,
+          lazyConnect: true, // Don't connect immediately
+          retryStrategy: () => null, // Don't retry if connection fails
+        });
+      } else {
+        // In production without REDIS_URL, don't create Redis connection
+        // This prevents crashes if Redis is not available
+        console.warn('[Queue] REDIS_URL not set, queue operations will be disabled');
+        return null;
+      }
+    } catch (error) {
+      console.error('[Queue] Failed to create Redis instance:', error);
+      return null;
     }
   }
   return redis;
@@ -20,20 +32,46 @@ const getRedisInstance = () => {
 
 const getQueueInstance = () => {
   if (!employeeSyncQueue) {
-    employeeSyncQueue = new Queue('employee-sync', {
-      connection: getRedisInstance(),
-    });
+    const redisInstance = getRedisInstance();
+    if (!redisInstance) {
+      return null;
+    }
+    try {
+      employeeSyncQueue = new Queue('employee-sync', {
+        connection: redisInstance,
+      });
+    } catch (error) {
+      console.error('[Queue] Failed to create queue instance:', error);
+      return null;
+    }
   }
   return employeeSyncQueue;
 };
 
 export const addEmployeeSyncJob = (employeeId: string) => {
-  const activeContext = context.active();
-  const traceData = {};
-  propagation.inject(activeContext, traceData);
+  try {
+    const redisInstance = getRedisInstance();
+    if (!redisInstance) {
+      console.warn('[Queue] Redis not available, skipping employee sync job');
+      return;
+    }
 
-  getQueueInstance().add('sync-employee', {
-    employeeId,
-    traceData,
-  });
+    const queueInstance = getQueueInstance();
+    if (!queueInstance) {
+      console.warn('[Queue] Queue not available, skipping employee sync job');
+      return;
+    }
+
+    const activeContext = context.active();
+    const traceData = {};
+    propagation.inject(activeContext, traceData);
+
+    queueInstance.add('sync-employee', {
+      employeeId,
+      traceData,
+    });
+  } catch (error) {
+    console.error('[Queue] Failed to add employee sync job:', error);
+    // Don't throw - allow the request to continue even if queue fails
+  }
 };
