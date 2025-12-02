@@ -256,13 +256,17 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
               normalizedDNI: normalizedDNI,
               totalEmployeesChecked: allEmployees.length,
               closestMatches: allEmployees
-                .map(emp => ({
-                  storedDNI: emp.dni,
-                  normalized: normalizeDNI(emp.dni),
-                  similarity: normalizedDNI && normalizeDNI(emp.dni) 
-                    ? (normalizeDNI(emp.dni).includes(normalizedDNI) || normalizedDNI.includes(normalizeDNI(emp.dni)))
-                    : false,
-                }))
+                .map(emp => {
+                  const empNormalized = normalizeDNI(emp.dni);
+                  const hasSimilarity = normalizedDNI && empNormalized
+                    ? (empNormalized.includes(normalizedDNI) || normalizedDNI.includes(empNormalized))
+                    : false;
+                  return {
+                    storedDNI: emp.dni,
+                    normalized: empNormalized,
+                    similarity: hasSimilarity,
+                  };
+                })
                 .filter(m => m.similarity)
                 .slice(0, 3),
             });
