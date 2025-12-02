@@ -3,6 +3,7 @@ import formidable from 'formidable';
 import { createClient } from '../../../lib/supabase/server';
 import { logError, logger } from '../../../lib/logger';
 import { getTodayInHonduras, nowInHonduras } from '../../../lib/timezone';
+import fs from 'fs';
 
 // Desactivamos el parser de body de Next.js para que formidable pueda procesar el stream.
 export const config = {
@@ -95,14 +96,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     });
 
     // Extract event data from multiple possible formats:
-    // 1. Field named "AccessControllerEvent" (curl test format) - SUPPORTED
-    // 2. JSON part with EventNotificationAlert.AccessControllerEvent (Hikvision real format) - TODO: requires busboy
+    // 1. Field named "AccessControllerEvent" (curl test format)
+    // 2. JSON part in files (Hikvision EventNotificationAlert format - unnamed part)
     // 3. Other field names as fallback
     let eventDataString: string | null = null;
 
-    // Try field-based extraction (curl test format and named fields)
-    // TODO: For Hikvision EventNotificationAlert format (unnamed JSON part in multipart),
-    // we need to implement busboy parser to capture parts without field names
+    // Step 1: Try field-based extraction (curl test format and named fields)
     eventDataString = fields.AccessControllerEvent?.[0]
       || fields.accessControllerEvent?.[0]
       || fields.event?.[0]
@@ -110,13 +109,94 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       || fields.json?.[0]
       || (Object.keys(fields).length > 0 ? fields[Object.keys(fields)[0]]?.[0] : null);
     
-    // If we found a field, check if it's EventNotificationAlert format and extract AccessControllerEvent
+    // Step 2: If no field found, check files for JSON part (Hikvision EventNotificationAlert format)
+    // Formidable treats unnamed parts as "files"
+    if (!eventDataString && files && Object.keys(files).length > 0) {
+      // Look through all files - try to find JSON content
+      // Hikvision sends unnamed JSON parts that formidable classifies as files
+      for (const fileKey of Object.keys(files)) {
+        const fileArray = files[fileKey];
+        if (Array.isArray(fileArray) && fileArray.length > 0) {
+          const file = fileArray[0];
+          
+          // Check if it might be JSON:
+          // - Has JSON mimetype
+          // - Or is small enough to be JSON (Hikvision events are typically < 1KB)
+          // - Or has no extension (unnamed part)
+          const mightBeJson = file.mimetype === 'application/json' 
+            || file.mimetype === 'text/json'
+            || file.originalFilename?.endsWith('.json')
+            || (!file.originalFilename && file.size && file.size < 5000); // Small unnamed file likely JSON
+          
+          if (mightBeJson && file.filepath) {
+            try {
+              logger.info('[ATTENDANCE WEBHOOK] Found potential JSON file part, reading content', {
+                companyId: company_id,
+                fileKey: fileKey,
+                mimetype: file.mimetype,
+                size: file.size,
+                originalFilename: file.originalFilename || '(unnamed)',
+              });
+              
+              // Read file content
+              const fileContent = fs.readFileSync(file.filepath, 'utf-8');
+              
+              // Check if it starts like JSON
+              const trimmed = fileContent.trim();
+              if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+                // Try to parse as JSON
+                const parsed = JSON.parse(fileContent);
+                
+                logger.info('[ATTENDANCE WEBHOOK] Successfully parsed JSON from file part', {
+                  companyId: company_id,
+                  rootKeys: Object.keys(parsed),
+                  hasEventNotificationAlert: !!parsed.EventNotificationAlert,
+                  hasAccessControllerEvent: !!parsed.AccessControllerEvent,
+                });
+                
+                // Extract AccessControllerEvent from EventNotificationAlert wrapper
+                if (parsed.EventNotificationAlert?.AccessControllerEvent) {
+                  logger.info('[ATTENDANCE WEBHOOK] Extracted AccessControllerEvent from EventNotificationAlert in file part', {
+                    companyId: company_id,
+                  });
+                  eventDataString = JSON.stringify(parsed.EventNotificationAlert.AccessControllerEvent);
+                } else if (parsed.AccessControllerEvent) {
+                  // Direct AccessControllerEvent
+                  eventDataString = JSON.stringify(parsed.AccessControllerEvent);
+                } else if (parsed.eventType) {
+                  // Root object is the event
+                  eventDataString = fileContent;
+                }
+              }
+              
+              // Clean up temp file
+              try {
+                fs.unlinkSync(file.filepath);
+              } catch (unlinkError) {
+                // Ignore cleanup errors
+              }
+              
+              if (eventDataString) break; // Found what we need
+            } catch (fileError) {
+              // Not JSON or parse error - continue to next file
+              logger.debug('[ATTENDANCE WEBHOOK] File part is not valid JSON, skipping', {
+                companyId: company_id,
+                fileKey: fileKey,
+                error: fileError instanceof Error ? fileError.message : String(fileError),
+              });
+            }
+          }
+        }
+      }
+    }
+    
+    // Step 3: If we found a field, check if it's EventNotificationAlert format and extract AccessControllerEvent
     if (eventDataString) {
       try {
         const parsed = JSON.parse(eventDataString);
         // Check if it's EventNotificationAlert wrapper format
         if (parsed.EventNotificationAlert?.AccessControllerEvent) {
-          logger.info('[ATTENDANCE WEBHOOK] Found EventNotificationAlert wrapper, extracting AccessControllerEvent', {
+          logger.info('[ATTENDANCE WEBHOOK] Found EventNotificationAlert wrapper in field, extracting AccessControllerEvent', {
             companyId: company_id,
           });
           eventDataString = JSON.stringify(parsed.EventNotificationAlert.AccessControllerEvent);
@@ -148,7 +228,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         allFieldsData: allFieldsData,
         contentType: req.headers['content-type'],
         contentLength: req.headers['content-length'],
-        hint: 'Device may be sending: (1) empty heartbeat (normal), (2) XML format (not yet supported), (3) Hikvision EventNotificationAlert format with unnamed JSON part (requires busboy parser - TODO), or (4) data in unexpected format',
+        hint: 'Device may be sending: (1) empty heartbeat (normal), (2) XML format (not yet supported), (3) Hikvision EventNotificationAlert format with unnamed JSON part (check files array), or (4) data in unexpected format',
       });
       return res.status(200).json({ success: true, message: 'Empty event received' });
     }
