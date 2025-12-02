@@ -53,8 +53,15 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     // Parse form and capture any errors
     let fields: any;
     let files: any;
+    
     try {
+      // Parse with formidable - it will handle named fields
+      // NOTE: Formidable v3 doesn't easily capture unnamed JSON parts in multipart
+      // For Hikvision EventNotificationAlert format (unnamed JSON part), we would need
+      // to use busboy directly or implement custom multipart parser
+      // For MVP, we handle named fields and log when empty to diagnose
       [fields, files] = await form.parse(req);
+      
     } catch (parseError) {
       logger.error('[ATTENDANCE WEBHOOK] Formidable parse error', parseError as Error, {
         companyId: company_id,
@@ -67,6 +74,11 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         details: parseError instanceof Error ? parseError.message : String(parseError),
       });
     }
+    
+    // Note: Formidable v3 may not capture unnamed JSON parts in multipart
+    // If fields are empty but we have multipart, the device is likely sending
+    // EventNotificationAlert in a part without field name - this requires
+    // a different parser (busboy) which we'll add if needed
 
     // Log all form fields received (for debugging)
     logger.info('[ATTENDANCE WEBHOOK] Form parsing completed', {
@@ -79,15 +91,44 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       ),
       hasFiles: files && Object.keys(files).length > 0,
       allFieldKeys: Object.keys(fields),
+      note: fields && Object.keys(fields).length === 0 ? 'No fields found - device may be sending unnamed JSON part (Hikvision EventNotificationAlert format)' : undefined,
     });
 
-    // Try multiple possible field names that Hikvision might use
-    const eventDataString = fields.AccessControllerEvent?.[0]
+    // Extract event data from multiple possible formats:
+    // 1. Field named "AccessControllerEvent" (curl test format) - SUPPORTED
+    // 2. JSON part with EventNotificationAlert.AccessControllerEvent (Hikvision real format) - TODO: requires busboy
+    // 3. Other field names as fallback
+    let eventDataString: string | null = null;
+
+    // Try field-based extraction (curl test format and named fields)
+    // TODO: For Hikvision EventNotificationAlert format (unnamed JSON part in multipart),
+    // we need to implement busboy parser to capture parts without field names
+    eventDataString = fields.AccessControllerEvent?.[0]
       || fields.accessControllerEvent?.[0]
       || fields.event?.[0]
       || fields.data?.[0]
       || fields.json?.[0]
       || (Object.keys(fields).length > 0 ? fields[Object.keys(fields)[0]]?.[0] : null);
+    
+    // If we found a field, check if it's EventNotificationAlert format and extract AccessControllerEvent
+    if (eventDataString) {
+      try {
+        const parsed = JSON.parse(eventDataString);
+        // Check if it's EventNotificationAlert wrapper format
+        if (parsed.EventNotificationAlert?.AccessControllerEvent) {
+          logger.info('[ATTENDANCE WEBHOOK] Found EventNotificationAlert wrapper, extracting AccessControllerEvent', {
+            companyId: company_id,
+          });
+          eventDataString = JSON.stringify(parsed.EventNotificationAlert.AccessControllerEvent);
+        } else if (parsed.AccessControllerEvent) {
+          // Direct AccessControllerEvent in field
+          eventDataString = JSON.stringify(parsed.AccessControllerEvent);
+        }
+        // Otherwise use the field as-is
+      } catch {
+        // Not JSON, use as-is
+      }
+    }
 
     if (!eventDataString) {
       // Log detailed information about what was received
@@ -100,23 +141,24 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         ])
       );
 
-      logger.warn('[ATTENDANCE WEBHOOK] Empty event received - no AccessControllerEvent field', {
+      logger.warn('[ATTENDANCE WEBHOOK] Empty event received - no AccessControllerEvent found', {
         companyId: company_id,
         availableFields: Object.keys(fields),
         fieldCount: Object.keys(fields).length,
         allFieldsData: allFieldsData,
         contentType: req.headers['content-type'],
         contentLength: req.headers['content-length'],
-        hint: 'Device may be sending empty heartbeat or data in unexpected format',
+        hint: 'Device may be sending: (1) empty heartbeat (normal), (2) XML format (not yet supported), (3) Hikvision EventNotificationAlert format with unnamed JSON part (requires busboy parser - TODO), or (4) data in unexpected format',
       });
       return res.status(200).json({ success: true, message: 'Empty event received' });
     }
 
     // Log raw event data (truncated for security)
-    logger.debug('[ATTENDANCE WEBHOOK] Raw event data received', {
+    logger.info('[ATTENDANCE WEBHOOK] Event data extracted', {
       companyId: company_id,
       dataLength: eventDataString.length,
       dataPreview: eventDataString.substring(0, 500),
+      source: 'form field',
       isJSON: eventDataString.trim().startsWith('{') || eventDataString.trim().startsWith('['),
     });
 
@@ -130,6 +172,20 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         eventType: eventData.eventType,
       });
     } catch (parseError) {
+      // Check if it might be XML (Hikvision can send XML if parameterFormatType=XML)
+      if (eventDataString.trim().startsWith('<?xml') || eventDataString.trim().startsWith('<')) {
+        logger.warn('[ATTENDANCE WEBHOOK] Received XML format (not yet supported)', {
+          companyId: company_id,
+          xmlPreview: eventDataString.substring(0, 500),
+          hint: 'Device is sending XML format. JSON format is required. Check device parameterFormatType setting.',
+        });
+        return res.status(200).json({ 
+          success: false, 
+          message: 'XML format received but not yet supported. Device must use JSON format.',
+          hint: 'Check device parameterFormatType setting in HTTP Listening configuration',
+        });
+      }
+      
       logger.error(`[ATTENDANCE] Failed to parse JSON event data`, parseError as Error, {
         companyId: company_id,
         rawData: eventDataString?.substring(0, 1000), // Primeros 1000 caracteres para debugging
