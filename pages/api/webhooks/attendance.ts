@@ -32,23 +32,64 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 
   try {
+    // Log incoming request metadata
+    logger.info('[ATTENDANCE WEBHOOK] Request received', {
+      companyId: company_id,
+      method: req.method,
+      contentType: req.headers['content-type'],
+      userAgent: req.headers['user-agent'],
+      ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+    });
+
     const form = formidable({});
     const [fields] = await form.parse(req);
 
+    // Log all form fields received (for debugging)
+    logger.debug('[ATTENDANCE WEBHOOK] Form fields received', {
+      companyId: company_id,
+      fieldNames: Object.keys(fields),
+      fieldCounts: Object.fromEntries(
+        Object.entries(fields).map(([key, value]) => [key, Array.isArray(value) ? value.length : 1])
+      ),
+    });
+
     const eventDataString = fields.AccessControllerEvent?.[0];
     if (!eventDataString) {
-      logger.info('[ATTENDANCE WEBHOOK] Empty event received', { companyId: company_id });
+      logger.warn('[ATTENDANCE WEBHOOK] Empty event received - no AccessControllerEvent field', {
+        companyId: company_id,
+        availableFields: Object.keys(fields),
+        fieldsPreview: Object.fromEntries(
+          Object.entries(fields).map(([key, value]) => [
+            key,
+            Array.isArray(value) ? value[0]?.substring?.(0, 200) : String(value)?.substring?.(0, 200)
+          ])
+        ),
+      });
       return res.status(200).json({ success: true, message: 'Empty event received' });
     }
+
+    // Log raw event data (truncated for security)
+    logger.debug('[ATTENDANCE WEBHOOK] Raw event data received', {
+      companyId: company_id,
+      dataLength: eventDataString.length,
+      dataPreview: eventDataString.substring(0, 500),
+      isJSON: eventDataString.trim().startsWith('{') || eventDataString.trim().startsWith('['),
+    });
 
     // Parsear JSON con manejo de errores específico
     let eventData: any;
     try {
       eventData = JSON.parse(eventDataString);
+      logger.debug('[ATTENDANCE WEBHOOK] Successfully parsed JSON', {
+        companyId: company_id,
+        eventKeys: Object.keys(eventData),
+        eventType: eventData.eventType,
+      });
     } catch (parseError) {
       logger.error(`[ATTENDANCE] Failed to parse JSON event data`, parseError as Error, {
         companyId: company_id,
-        rawData: eventDataString?.substring(0, 500), // Primeros 500 caracteres para debugging
+        rawData: eventDataString?.substring(0, 1000), // Primeros 1000 caracteres para debugging
+        dataLength: eventDataString?.length,
       });
       return res.status(400).json({ 
         success: false, 
@@ -79,6 +120,11 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
     // Si es un heartbeat sin datos de empleado (DNI), ignorarlo para evitar log flooding
     if (eventType === 'heartBeat' && !normalizedDNI) {
+      logger.debug('[ATTENDANCE WEBHOOK] Heartbeat received without employee data', {
+        companyId: company_id,
+        eventType: eventType,
+        hasEventData: !!eventData,
+      });
       return res.status(200).json({ success: true, message: 'Heartbeat acknowledged' });
     }
 
@@ -144,6 +190,13 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
       // Buscar empleado por DNI y company_id
       // Intentar búsqueda exacta primero, luego búsqueda flexible (sin padding de ceros)
+      logger.debug('[ATTENDANCE WEBHOOK] Searching for employee', {
+        companyId: company_id,
+        normalizedDNI: normalizedDNI,
+        originalDNI: employeeDNI,
+        searchType: 'exact',
+      });
+
       let { data: employee, error: employeeError } = await supabase
         .from('employees')
         .select('id, company_id, work_schedule_id, dni')
@@ -157,6 +210,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         logger.info(`[ATTENDANCE] Exact DNI match not found, trying flexible search`, {
           companyId: company_id,
           normalizedDNI: normalizedDNI,
+          originalDNI: employeeDNI,
+          exactSearchError: employeeError?.message,
         });
         
         // Buscar todos los empleados de la compañía y hacer match manual
@@ -166,7 +221,21 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           .eq('company_id', company_id as string)
           .eq('status', 'active');
 
-        if (!allEmployeesError && allEmployees) {
+        if (allEmployeesError) {
+          logger.error(`[ATTENDANCE] Error fetching all employees for flexible search`, allEmployeesError, {
+            companyId: company_id,
+          });
+        } else if (allEmployees) {
+          logger.debug(`[ATTENDANCE] Flexible search: found ${allEmployees.length} active employees in company`, {
+            companyId: company_id,
+            employeeCount: allEmployees.length,
+            sampleDNIs: allEmployees.slice(0, 5).map(emp => ({
+              id: emp.id,
+              dni: emp.dni,
+              normalized: normalizeDNI(emp.dni),
+            })),
+          });
+
           // Buscar match flexible (normalizar DNIs de la BD también)
           employee = allEmployees.find(emp => {
             const empDNI = normalizeDNI(emp.dni);
@@ -181,8 +250,31 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
               storedDNI: employee.dni,
               matchedDNI: normalizedDNI,
             });
+          } else {
+            logger.warn(`[ATTENDANCE] No employee match found in flexible search`, {
+              companyId: company_id,
+              normalizedDNI: normalizedDNI,
+              totalEmployeesChecked: allEmployees.length,
+              closestMatches: allEmployees
+                .map(emp => ({
+                  storedDNI: emp.dni,
+                  normalized: normalizeDNI(emp.dni),
+                  similarity: normalizedDNI && normalizeDNI(emp.dni) 
+                    ? (normalizeDNI(emp.dni).includes(normalizedDNI) || normalizedDNI.includes(normalizeDNI(emp.dni)))
+                    : false,
+                }))
+                .filter(m => m.similarity)
+                .slice(0, 3),
+            });
           }
         }
+      } else {
+        logger.debug(`[ATTENDANCE] Employee found with exact DNI match`, {
+          companyId: company_id,
+          employeeId: employee.id,
+          storedDNI: employee.dni,
+          matchedDNI: normalizedDNI,
+        });
       }
 
       if (employeeError || !employee) {
@@ -191,14 +283,17 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           originalDNI: employeeDNI,
           normalizedDNI: normalizedDNI,
           eventType: eventType,
-          error: employeeError,
+          error: employeeError?.message || 'Employee not found',
+          errorCode: employeeError?.code,
           allEventData: eventData, // Log completo para debugging
+          timestamp: eventData.dateTime || eventData.timestamp,
         });
         return res.status(200).json({ 
           success: false, 
           message: `Employee with DNI ${normalizedDNI} not found.`,
           receivedDNI: employeeDNI,
           normalizedDNI: normalizedDNI,
+          hint: 'Verify employee exists in database with status=active and matching DNI',
         });
       }
 
@@ -244,9 +339,18 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           companyId: company_id,
           employeeId: employee.id,
           employeeDNI: employeeDNI,
+          normalizedDNI: normalizedDNI,
           eventType: eventType,
+          recordDate: recordDate,
+          checkInTimestamp: checkInTimestamp,
+          errorDetails: upsertError.message,
+          errorCode: upsertError.code,
         });
-        return res.status(500).json({ success: false, error: 'Failed to save attendance record.' });
+        return res.status(500).json({ 
+          success: false, 
+          error: 'Failed to save attendance record.',
+          details: upsertError.message,
+        });
       }
 
       logger.info(`[SUCCESS] Recorded attendance for employee DNI ${normalizedDNI} (original: ${employeeDNI}) via event '${eventType}'`, {
@@ -266,12 +370,19 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
     } else {
       // Si es otro tipo de evento conocido pero no de asistencia (ej. "door open"), solo lo registramos.
-      logger.info(`[INFO] Ignored non-attendance event of type '${eventType}'`, {
+      logger.info(`[ATTENDANCE WEBHOOK] Ignored non-attendance event of type '${eventType}'`, {
         companyId: company_id,
         eventType: eventType,
+        hasDNI: !!normalizedDNI,
+        normalizedDNI: normalizedDNI,
+        isValidAuthEvent: VALID_AUTHENTICATION_EVENTS.includes(eventType),
         parsedEventData: eventData,
       });
-      return res.status(200).json({ success: true, message: `Event type ${eventType} received and ignored` });
+      return res.status(200).json({ 
+        success: true, 
+        message: `Event type ${eventType} received and ignored`,
+        reason: !normalizedDNI ? 'No employee DNI in event' : `Event type ${eventType} is not a valid attendance event`,
+      });
     }
   } catch (error) {
     logError(error as Error, {
