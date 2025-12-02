@@ -39,31 +39,75 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       contentType: req.headers['content-type'],
       userAgent: req.headers['user-agent'],
       ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+      contentLength: req.headers['content-length'],
+      hasBody: !!req.body,
     });
 
-    const form = formidable({});
-    const [fields] = await form.parse(req);
+    // Configure formidable with more verbose options
+    const form = formidable({
+      keepExtensions: false,
+      maxFileSize: 10 * 1024 * 1024, // 10MB
+      multiples: false,
+    });
+
+    // Parse form and capture any errors
+    let fields: any;
+    let files: any;
+    try {
+      [fields, files] = await form.parse(req);
+    } catch (parseError) {
+      logger.error('[ATTENDANCE WEBHOOK] Formidable parse error', parseError as Error, {
+        companyId: company_id,
+        contentType: req.headers['content-type'],
+        errorMessage: parseError instanceof Error ? parseError.message : String(parseError),
+      });
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Failed to parse form data',
+        details: parseError instanceof Error ? parseError.message : String(parseError),
+      });
+    }
 
     // Log all form fields received (for debugging)
-    logger.debug('[ATTENDANCE WEBHOOK] Form fields received', {
+    logger.info('[ATTENDANCE WEBHOOK] Form parsing completed', {
       companyId: company_id,
       fieldNames: Object.keys(fields),
+      fieldCount: Object.keys(fields).length,
+      fileCount: files ? Object.keys(files).length : 0,
       fieldCounts: Object.fromEntries(
         Object.entries(fields).map(([key, value]) => [key, Array.isArray(value) ? value.length : 1])
       ),
+      hasFiles: files && Object.keys(files).length > 0,
+      allFieldKeys: Object.keys(fields),
     });
 
-    const eventDataString = fields.AccessControllerEvent?.[0];
+    // Try multiple possible field names that Hikvision might use
+    const eventDataString = fields.AccessControllerEvent?.[0]
+      || fields.accessControllerEvent?.[0]
+      || fields.event?.[0]
+      || fields.data?.[0]
+      || fields.json?.[0]
+      || (Object.keys(fields).length > 0 ? fields[Object.keys(fields)[0]]?.[0] : null);
+
     if (!eventDataString) {
+      // Log detailed information about what was received
+      const allFieldsData = Object.fromEntries(
+        Object.entries(fields).map(([key, value]) => [
+          key,
+          Array.isArray(value) 
+            ? (value[0]?.substring?.(0, 500) || `[Array of ${value.length} items]`)
+            : (String(value)?.substring?.(0, 500) || String(value))
+        ])
+      );
+
       logger.warn('[ATTENDANCE WEBHOOK] Empty event received - no AccessControllerEvent field', {
         companyId: company_id,
         availableFields: Object.keys(fields),
-        fieldsPreview: Object.fromEntries(
-          Object.entries(fields).map(([key, value]) => [
-            key,
-            Array.isArray(value) ? value[0]?.substring?.(0, 200) : String(value)?.substring?.(0, 200)
-          ])
-        ),
+        fieldCount: Object.keys(fields).length,
+        allFieldsData: allFieldsData,
+        contentType: req.headers['content-type'],
+        contentLength: req.headers['content-length'],
+        hint: 'Device may be sending empty heartbeat or data in unexpected format',
       });
       return res.status(200).json({ success: true, message: 'Empty event received' });
     }
