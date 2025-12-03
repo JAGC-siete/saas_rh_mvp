@@ -12,11 +12,31 @@ export const config = {
   },
 };
 
+/**
+ * Webhook para recibir eventos de asistencia desde dispositivos Hikvision
+ * 
+ * FORMATO ESPERADO (según manual Hikvision ISAPI):
+ * - Multipart/form-data con parte JSON sin nombre (Content-Type: application/json)
+ * - JSON contiene EventNotificationAlert con:
+ *   * eventType: "heartBeat" (conectividad) o "AccessControllerEvent" (eventos de acceso)
+ *   * AccessControllerEvent: { cardNo, employeeNoString, name, majorEventType, ... }
+ * 
+ * CONFIGURACIÓN REQUERIDA EN EL DISPOSITIVO (según manual ISAPI 4.13.6):
+ * 1. GET /ISAPI/Event/notification/httpHosts/capabilities - Verificar capacidades
+ * 2. PUT /ISAPI/Event/notification/httpHosts - Configurar servidor HTTP (IP, puerto, protocolo)
+ * 3. POST /ISAPI/Event/notification/httpHosts/<ID>/test - Probar conexión
+ * 4. Configurar Event Linkage para eventos de acceso (card swipe, face auth, etc.)
+ * 
+ * NOTA: Los heartbeats se envían automáticamente cuando no hay eventos.
+ * Para recibir eventos de acceso reales, se debe configurar el Event Linkage.
+ * El código está listo para procesar ambos tipos de eventos.
+ */
+
 // Lista de posibles nombres de eventos que consideraremos como una marcación de asistencia válida.
 const VALID_AUTHENTICATION_EVENTS = [
   'faceAuthentication', // Autenticado mediante rostro
   'cardAndFaceAuthentication', // Si se requiere tarjeta + rostro
-  'AccessControllerEvent', // A veces el tipo de evento principal viene con este nombre
+  'AccessControllerEvent', // Evento principal de control de acceso según manual ISAPI
 ];
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
