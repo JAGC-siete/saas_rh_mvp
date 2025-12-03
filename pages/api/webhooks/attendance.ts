@@ -163,8 +163,11 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
                 } else if (parsed.AccessControllerEvent) {
                   // Direct AccessControllerEvent
                   eventDataString = JSON.stringify(parsed.AccessControllerEvent);
+                } else if (parsed.eventType === 'AccessControllerEvent' && parsed.AccessControllerEvent) {
+                  // eventType is AccessControllerEvent and has nested AccessControllerEvent node
+                  eventDataString = JSON.stringify(parsed.AccessControllerEvent);
                 } else if (parsed.eventType) {
-                  // Root object is the event
+                  // Root object is the event (heartbeat, etc.)
                   eventDataString = fileContent;
                 }
               }
@@ -280,13 +283,19 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     const eventType = eventData.eventType;
 
     // Intentar extraer el DNI del empleado de diferentes campos posibles
-    // El dispositivo Hikvision puede usar diferentes nombres de campo según configuración
+    // Según manual Hikvision ISAPI, AccessControllerEvent puede incluir:
+    // - cardNo (número de tarjeta/DNI)
+    // - employeeNoString (número de empleado como string)
+    // - employeeNo (número de empleado)
+    // - name (nombre del empleado)
+    // - majorEventType (tipo de evento principal)
     const employeeDNI = eventData.employeeNoString 
       || eventData.employeeNo 
       || eventData.employeeNoHex
       || eventData.dni 
       || eventData.employee_id
-      || eventData.cardNo; // Algunos dispositivos envían DNI como cardNo
+      || eventData.cardNo // Campo estándar según manual Hikvision ISAPI
+      || eventData.cardNumber; // Variante alternativa
 
     // Normalizar DNI: remover espacios, guiones, y padding de ceros a la izquierda
     const normalizeDNI = (dni: string | number | undefined): string | undefined => {
@@ -299,11 +308,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     const normalizedDNI = normalizeDNI(employeeDNI);
 
     // Si es un heartbeat sin datos de empleado (DNI), ignorarlo para evitar log flooding
+    // Los heartbeats son normales y esperados - solo confirman que el dispositivo está conectado
     if (eventType === 'heartBeat' && !normalizedDNI) {
-      logger.debug('[ATTENDANCE WEBHOOK] Heartbeat received without employee data', {
+      logger.info('[ATTENDANCE WEBHOOK] Heartbeat received (normal - device connectivity check)', {
         companyId: company_id,
         eventType: eventType,
-        hasEventData: !!eventData,
+        note: 'Heartbeats are expected. For attendance records, device must send AccessControllerEvent with employee data.',
       });
       return res.status(200).json({ success: true, message: 'Heartbeat acknowledged' });
     }
@@ -318,11 +328,16 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       });
     } else if (eventType !== 'heartBeat') {
       // Si no es un heartbeat, lo registramos para depuración.
+      // AccessControllerEvent real incluye: cardNo, name, majorEventType, etc.
       logger.info('--- HIKVISION EVENT RECEIVED (NON-HEARTBEAT) ---', {
         companyId: company_id,
         eventType: eventType,
         originalDNI: employeeDNI,
         normalizedDNI: normalizedDNI,
+        hasCardNo: !!eventData.cardNo,
+        hasEmployeeNo: !!eventData.employeeNo || !!eventData.employeeNoString,
+        majorEventType: eventData.majorEventType,
+        eventKeys: Object.keys(eventData),
         parsedEventData: eventData,
       });
     }
