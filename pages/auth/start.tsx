@@ -10,6 +10,7 @@ import { Input } from '../../components/ui/input'
 import { Mail, Phone, /* Facebook, */ Loader2 } from 'lucide-react'
 import Image from 'next/image'
 import { createClient as createSupabaseBrowserClient } from '../../lib/supabase/client'
+import MainHeader from '../../components/MainHeader'
 
 export default function AuthStart() {
   const [email, setEmail] = useState('')
@@ -253,11 +254,15 @@ export default function AuthStart() {
         <meta name="description" content="Accede a tu cuenta de forma segura" />
       </Head>
 
-      <div className="min-h-screen bg-app flex items-center justify-center p-4 relative">
-        <CloudBackground />
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiMxZTI5M2IiIGZpbGwtb3BhY2l0eT0iMC4xIj48Y2lyY2xlIGN4PSIzMCIgY3k9IjMwIiByPSI0Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
+      <div className="min-h-screen bg-app flex flex-col relative">
+        {/* Header */}
+        <MainHeader enableScrollEffect={false} fixed={true} />
         
-        <div className="relative w-full max-w-md space-y-8 z-10">
+        <div className="flex-grow flex items-center justify-center p-4 pt-24 relative">
+          <CloudBackground />
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiMxZTI5M2IiIGZpbGwtb3BhY2l0eT0iMC4xIj48Y2lyY2xlIGN4PSIzMCIgY3k9IjMwIiByPSI0Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
+          
+          <div className="relative w-full max-w-md space-y-8 z-10">
           {/* Header */}
           <div className="text-center">
             {/* Badges */}
@@ -519,6 +524,7 @@ export default function AuthStart() {
             <p className="text-xs text-brand-200/60">
               Sesión segura. Podés desvincular el acceso cuando quieras.
             </p>
+          </div>
           </div>
         </div>
       </div>

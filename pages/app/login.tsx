@@ -6,10 +6,10 @@ const CloudBackground = dynamic(() => import('../../components/CloudBackground')
 import { Card, CardContent } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
-import { Mail, Lock, ArrowRight } from 'lucide-react'
-import Link from 'next/link'
+import { ArrowRight } from 'lucide-react'
 import Image from 'next/image'
 import { createClient } from '../../lib/supabase/client'
+import MainHeader from '../../components/MainHeader'
 
 export default function LoginExisting() {
   const [email, setEmail] = useState('')
@@ -86,19 +86,9 @@ export default function LoginExisting() {
       </Head>
 
       <div className="min-h-screen bg-gray-900 text-white flex flex-col">
-        <header className="p-4 border-b border-gray-700 bg-gray-950/50">
-          <div className="container mx-auto flex justify-between items-center">
-            <Link href="/">
-              <a className="text-xl font-bold text-white">Humano SISU</a>
-            </Link>
-            <nav>
-              <Link href="/app/register">
-                <a className="text-gray-300 hover:text-white">Registro</a>
-              </Link>
-            </nav>
-          </div>
-        </header>
-        <main className="flex-grow flex items-center justify-center p-4">
+        {/* Header */}
+        <MainHeader enableScrollEffect={false} fixed={true} />
+        <main className="flex-grow flex items-center justify-center p-4 pt-24">
           <CloudBackground />
           <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiMxZTI5M2IiIGZpbGwtb3BhY2l0eT0iMC4xIj48Y2lyY2xlIGN4PSIzMCIgY3k9IjMwIiByPSI0Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
           

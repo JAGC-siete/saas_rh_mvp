@@ -1,11 +1,11 @@
-import Head from 'next/head'
 import Link from 'next/link'
 import { useState } from 'react'
-import { ArrowLeftIcon, CheckCircleIcon, ClockIcon, CurrencyDollarIcon, ShieldCheckIcon, UserGroupIcon, DocumentTextIcon, RocketLaunchIcon, BoltIcon, CpuChipIcon } from '@heroicons/react/24/outline'
+import { ArrowLeftIcon, CheckCircleIcon, RocketLaunchIcon, CpuChipIcon } from '@heroicons/react/24/outline'
 import dynamic from 'next/dynamic'
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
+import { Card, CardContent, CardTitle } from '../components/ui/card'
 import { TRIAL_CONFIG } from '../lib/config/trial'
 import { motion } from 'framer-motion'
+import MainHeader from '../components/MainHeader'
 
 interface FormData {
   empleados: number
@@ -181,7 +181,7 @@ export default function ActivarPage() {
       let data
       try {
         data = await response.json()
-      } catch (e) {
+      } catch {
         // Si no hay JSON, usar mensaje genérico
         data = { error: 'Error al procesar tu solicitud. Por favor, intenta de nuevo.' }
       }
@@ -286,22 +286,9 @@ export default function ActivarPage() {
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
       </div>
 
-      <header className="relative z-10 p-4 border-b border-white/10 bg-slate-900/30 backdrop-blur-xl">
-        <div className="container mx-auto flex justify-between items-center">
-          <Link href="/">
-            <a className="text-xl font-bold text-white hover:text-cyan-300 transition-colors flex items-center gap-2">
-              <CpuChipIcon className="w-6 h-6 text-cyan-400" />
-              Humano SISU
-            </a>
-          </Link>
-          <nav>
-            <Link href="/app/login">
-              <a className="text-gray-300 hover:text-white px-4 py-2 rounded-lg hover:bg-white/5 transition-all">Iniciar Sesión</a>
-            </Link>
-          </nav>
-        </div>
-      </header>
-      <main className="flex-grow flex items-center justify-center p-4 relative z-10">
+      {/* Header */}
+      <MainHeader enableScrollEffect={false} fixed={true} />
+      <main className="flex-grow flex items-center justify-center p-4 pt-24 relative z-10">
         <Card className="w-full max-w-md bg-slate-800/40 backdrop-blur-xl border-white/20 shadow-2xl relative overflow-hidden">
           {/* Glowing border effect */}
           <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-purple-500/20 opacity-50 blur-xl"></div>
