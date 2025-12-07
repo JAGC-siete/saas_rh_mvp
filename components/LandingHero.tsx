@@ -20,8 +20,8 @@ export default function LandingHero() {
 
   return (
     <div className="relative isolate overflow-hidden">
-       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 lg:py-20">
-         <div className="glass-strong rounded-3xl p-8 lg:p-12 backdrop-blur-sm border border-white/20 shadow-2xl">
+       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8 md:py-12 lg:py-20">
+         <div className="glass-strong rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 lg:p-12 backdrop-blur-sm border border-white/20 shadow-2xl">
            <div className="text-center space-y-8">
              {/* Carrusel de imágenes del sistema - Centrado */}
              <div className="relative max-w-4xl mx-auto">
@@ -29,8 +29,8 @@ export default function LandingHero() {
              </div>
 
              {/* Información debajo del carrusel */}
-             <div className="space-y-6">
-               <p className="text-lg text-brand-200/90">
+             <div className="space-y-4 sm:space-y-6">
+               <p className="text-base sm:text-lg text-brand-200/90 px-2">
                  Generá planilla en 5 minutos, con IHSS, RAP e ISR listos y vouchers enviados por Mail/WhatsApp.
                </p>
 
@@ -50,16 +50,16 @@ export default function LandingHero() {
                </ul>
 
                {/* Email CTA Section */}
-               <div className="space-y-4">
-                 <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+               <div className="space-y-3 sm:space-y-4">
+                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 max-w-md mx-auto px-2">
                    <input
                      type="email"
                      placeholder="Tu email"
-                     className="flex-1 px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-brand-200/70 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent"
+                     className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-brand-200/70 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent text-sm sm:text-base"
                    />
                    <button
                      onClick={() => window.location.href = '/activar'}
-                     className="inline-flex items-center justify-center rounded-xl px-6 py-3 text-lg font-semibold shadow-sm bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all duration-300 hover:-translate-y-1 whitespace-nowrap"
+                     className="inline-flex items-center justify-center rounded-xl px-5 sm:px-6 py-2.5 sm:py-3 text-base sm:text-lg font-semibold shadow-sm bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all duration-300 hover:-translate-y-1 whitespace-nowrap"
                      data-analytics="cta_hero_click"
                    >
                      Probalo HOY
@@ -67,7 +67,7 @@ export default function LandingHero() {
                  </div>
                  
                  {/* Features text below CTA */}
-                 <div className="text-sm text-brand-200/60">
+                 <div className="text-xs sm:text-sm text-brand-200/60 px-2">
                    <p>Usalo gratis 30 días. Empleados ilimitados.</p>
                  </div>
                </div>
@@ -75,8 +75,8 @@ export default function LandingHero() {
            </div>
           
           {/* Frase de urgencia al final del componente */}
-          <div className="text-center mt-12">
-            <p className="text-xl font-semibold text-brand-200/90">
+          <div className="text-center mt-8 sm:mt-10 md:mt-12 px-2">
+            <p className="text-base sm:text-lg md:text-xl font-semibold text-brand-200/90">
               Próxima planilla: {nextPayday.toLocaleDateString()}. ¿Otra vez la vas a hacer desde cero?
             </p>
           </div>

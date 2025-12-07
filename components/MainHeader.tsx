@@ -48,18 +48,18 @@ export default function MainHeader({ enableScrollEffect = false, fixed = true }:
 
       {/* Main Header with Glass Effect */}
       <div className={`w-full transition-all duration-300 ${backgroundClasses}`}>
-        <nav className="px-6 lg:px-8">
-          <div className="flex items-center h-16">
+          <nav className="px-3 sm:px-4 md:px-6 lg:px-8">
+            <div className="flex items-center h-14 sm:h-16">
             {/* Logo SISU */}
             <Link href="/">
               <div className="flex items-center cursor-pointer">
-                <div className="bg-white/10 px-6 py-4 rounded-lg border border-white/20 backdrop-blur-sm">
+                <div className="bg-white/10 px-2 py-1 sm:px-4 sm:py-2 md:px-6 md:py-4 rounded-lg border border-white/20 backdrop-blur-sm transition-all">
                   <Image
                     src="/logo-humano-sisu.png"
                     alt="Humano SISU Logo"
                     width={128}
                     height={128}
-                    className="rounded-lg"
+                    className="rounded-lg w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 xl:w-32 xl:h-32"
                   />
                 </div>
               </div>

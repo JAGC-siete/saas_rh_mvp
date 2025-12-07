@@ -5,7 +5,7 @@ import CountdownTimer from './CountdownTimer'
 
 export default function ServicesSection() {
   return (
-    <section id="servicios" className="relative py-20 px-6 max-w-7xl mx-auto">
+    <section id="servicios" className="relative py-12 sm:py-16 md:py-20 px-4 sm:px-6 max-w-7xl mx-auto">
       {/* sutil glow de fondo */}
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div className="mx-auto h-72 w-72 blur-3xl rounded-full opacity-20 bg-brand-600/40 translate-y-8" />
@@ -13,61 +13,61 @@ export default function ServicesSection() {
 
       {/* Cómo funciona section */}
 
-      <header className="max-w-3xl mb-10 mx-auto text-center">
-        <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight">
-          <span className="text-white">Presentamos: Tus robots de</span>
+      <header className="max-w-3xl mb-8 sm:mb-10 mx-auto text-center px-2">
+        <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight">
+          <span className="text-white block sm:inline">Presentamos: Tus robots de</span>
           <span className="hidden sm:inline"> </span>
-          <span className="text-brand-300">Recursos Humanos</span>
+          <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">Recursos Humanos</span>
         </h2>
-        <p className="mt-3 text-brand-200">
+        <p className="mt-3 text-sm sm:text-base text-brand-200 px-2">
           Reemplazá tareas repetitivas y propensas a error con <span className="text-brand-400">automatización verificable</span>.
         </p>
       </header>
 
       {/* El Libro Rojo - Asistencia */}
-      <div id="libro-rojo" className="mb-16">
-        <h3 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6 text-center">
-          <span className="text-white">Pulso</span>
+      <div id="libro-rojo" className="mb-12 sm:mb-16">
+        <h3 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight mb-4 sm:mb-6 text-center px-2">
+          <span className="text-white block sm:inline">Pulso</span>
           <span className="hidden sm:inline"> </span>
-          <span className="text-brand-300">Laboral</span>
+          <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">Laboral</span>
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           {/* SOPORTE: Asistencia */}
-          <article className="group relative overflow-hidden rounded-2xl glass border border-white/15 p-6 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 grid place-items-center rounded-lg bg-white/10 border border-white/15">
-                <ClockIcon className="h-5 w-5 text-brand-300" />
+          <article className="group relative overflow-hidden rounded-xl sm:rounded-2xl glass border border-white/15 p-4 sm:p-6 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="h-8 w-8 sm:h-10 sm:w-10 grid place-items-center rounded-lg bg-white/10 border border-white/15 flex-shrink-0">
+                <ClockIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-300" />
               </div>
-              <div>
-                <h3 className="text-xl font-bold text-white">Asistencia en tiempo real</h3>
-                <p className="text-sm text-brand-300/90">Checadas, tolerancias, alertas y bienestar</p>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-lg sm:text-xl font-bold text-white">Asistencia en tiempo real</h3>
+                <p className="text-xs sm:text-sm text-brand-300/90">Checadas, tolerancias, alertas y bienestar</p>
               </div>
             </div>
 
-            <ul className="mt-4 space-y-3">
-              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Tolerancia configurada + justificación inteligente</li>
-              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Antifraude: patrones de tardanza y ubicación</li>
-              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Pulso laboral: semáforo aleatorio (R/A/V)</li>
+            <ul className="mt-3 sm:mt-4 space-y-2 sm:space-y-3">
+              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>Tolerancia configurada + justificación inteligente</span></li>
+              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>Antifraude: patrones de tardanza y ubicación</span></li>
+              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>Pulso laboral: semáforo aleatorio (R/A/V)</span></li>
             </ul>
 
           </article>
 
           {/* SOPORTE: Reportes ejecutivos */}
-          <article className="group relative overflow-hidden rounded-2xl glass border border-white/15 p-6 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 grid place-items-center rounded-lg bg-white/10 border border-white/15">
-                <CheckCircleIcon className="h-5 w-5 text-brand-300" />
+          <article className="group relative overflow-hidden rounded-xl sm:rounded-2xl glass border border-white/15 p-4 sm:p-6 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="h-8 w-8 sm:h-10 sm:w-10 grid place-items-center rounded-lg bg-white/10 border border-white/15 flex-shrink-0">
+                <CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-300" />
               </div>
-              <div>
-                <h3 className="text-xl font-bold text-white">Reportes ejecutivos</h3>
-                <p className="text-sm text-brand-300/90">Dashboard interactivo y exportación automática</p>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-lg sm:text-xl font-bold text-white">Reportes ejecutivos</h3>
+                <p className="text-xs sm:text-sm text-brand-300/90">Dashboard interactivo y exportación automática</p>
               </div>
             </div>
 
-            <ul className="mt-4 space-y-3">
-              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Métricas en tiempo real</li>
-              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Exportación Excel/PDF automática</li>
-              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Alertas inteligentes y notificaciones</li>
+            <ul className="mt-3 sm:mt-4 space-y-2 sm:space-y-3">
+              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>Métricas en tiempo real</span></li>
+              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>Exportación Excel/PDF automática</span></li>
+              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>Alertas inteligentes y notificaciones</span></li>
             </ul>
 
           </article>
@@ -75,49 +75,49 @@ export default function ServicesSection() {
       </div>
 
       {/* El Planillero - Nómina */}
-      <div id="planillero" className="mb-16">
-        <h3 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6 text-center">
-          <span className="text-white">Nomina</span>
+      <div id="planillero" className="mb-12 sm:mb-16">
+        <h3 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight mb-4 sm:mb-6 text-center px-2">
+          <span className="text-white block sm:inline">Nomina</span>
           <span className="hidden sm:inline"> </span>
-          <span className="text-brand-300">PRO</span>
+          <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">PRO</span>
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           {/* SOPORTE: Nómina sin errores */}
-          <article className="group relative overflow-hidden rounded-2xl glass border border-white/15 p-6 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 grid place-items-center rounded-lg bg-white/10 border border-white/15">
-                <CurrencyDollarIcon className="h-5 w-5 text-brand-300" />
+          <article className="group relative overflow-hidden rounded-xl sm:rounded-2xl glass border border-white/15 p-4 sm:p-6 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="h-8 w-8 sm:h-10 sm:w-10 grid place-items-center rounded-lg bg-white/10 border border-white/15 flex-shrink-0">
+                <CurrencyDollarIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-300" />
               </div>
-              <div>
-                <h3 className="text-xl font-bold text-white">Nómina sin errores</h3>
-                <p className="text-sm text-brand-300/90">IHSS, RAP, ISR; PDF + vouchers por email/WhatsApp</p>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-lg sm:text-xl font-bold text-white">Nómina sin errores</h3>
+                <p className="text-xs sm:text-sm text-brand-300/90">IHSS, RAP, ISR; PDF + vouchers por email/WhatsApp</p>
               </div>
             </div>
 
-            <ul className="mt-4 space-y-3">
-              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Cálculo legal automático (Honduras)</li>
-              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> 4 horas → 4 minutos (comprobado en Paragon)</li>
-              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> ZIP de vouchers + envío masivo</li>
+            <ul className="mt-3 sm:mt-4 space-y-2 sm:space-y-3">
+              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>Cálculo legal automático (Honduras)</span></li>
+              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>4 horas → 4 minutos (comprobado en Paragon)</span></li>
+              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>ZIP de vouchers + envío masivo</span></li>
             </ul>
 
           </article>
 
           {/* SOPORTE: Cálculo automático */}
-          <article className="group relative overflow-hidden rounded-2xl glass border border-white/15 p-6 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 grid place-items-center rounded-lg bg-white/10 border border-white/15">
-                <CurrencyDollarIcon className="h-5 w-5 text-brand-300" />
+          <article className="group relative overflow-hidden rounded-xl sm:rounded-2xl glass border border-white/15 p-4 sm:p-6 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="h-8 w-8 sm:h-10 sm:w-10 grid place-items-center rounded-lg bg-white/10 border border-white/15 flex-shrink-0">
+                <CurrencyDollarIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-300" />
               </div>
-              <div>
-                <h3 className="text-xl font-bold text-white">Cálculo automático</h3>
-                <p className="text-sm text-brand-300/90">IHSS, RAP, ISR automáticos según ley hondureña</p>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-lg sm:text-xl font-bold text-white">Cálculo automático</h3>
+                <p className="text-xs sm:text-sm text-brand-300/90">IHSS, RAP, ISR automáticos según ley hondureña</p>
               </div>
             </div>
 
-            <ul className="mt-4 space-y-3">
-              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Cumplimiento legal 100% automático</li>
-              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Vouchers PDF + envío por email/WhatsApp</li>
-              <li className="flex gap-3 text-brand-200"><CheckCircleIcon className="h-5 w-5 text-brand-400" /> Auditoría completa y trazabilidad</li>
+            <ul className="mt-3 sm:mt-4 space-y-2 sm:space-y-3">
+              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>Cumplimiento legal 100% automático</span></li>
+              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>Vouchers PDF + envío por email/WhatsApp</span></li>
+              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>Auditoría completa y trazabilidad</span></li>
             </ul>
 
           </article>

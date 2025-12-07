@@ -14,7 +14,7 @@ const CloudBackground = dynamic(() => import('../components/CloudBackground'), {
 export default function LandingPage() {
 
   return (
-    <div className="min-h-screen bg-app pt-24 relative">
+    <div className="min-h-screen bg-app pt-16 sm:pt-20 md:pt-24 relative">
       <Head>
         <title>Servicio Hondureño de Recursos Humanos | Digital & Automatizado</title>
         <link rel="icon" href="/logo-humano-sisu.png" />
@@ -42,10 +42,10 @@ export default function LandingPage() {
       <MainHeader enableScrollEffect={true} fixed={true} />
 
       {/* Main Hero - LandingHero enfocado en conversión */}
-      <section className="py-8 relative overflow-hidden">
+      <section className="py-4 sm:py-6 md:py-8 relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Trust badges */}
-          <div className="flex flex-wrap justify-center gap-3 md:gap-6 mb-8 animate-fade-up-subtle">
+          <div className="flex flex-wrap justify-center gap-2 sm:gap-3 md:gap-6 mb-6 sm:mb-8 animate-fade-up-subtle">
             <span className="px-3 py-1 bg-green-500/20 text-green-300 text-xs rounded-full border border-green-500/30">
               Cumplí STSS Honduras
             </span>
@@ -61,11 +61,11 @@ export default function LandingPage() {
           </div>
 
           {/* Hero Title - Centrado */}
-          <div className="text-center mb-8">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight">
-              <span className="text-white">Este 2026 multiplicá el valor de tu equipo: automatizá lo repetitivo</span>
+          <div className="text-center mb-6 sm:mb-8 px-2">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight sm:leading-tight">
+              <span className="text-white block sm:inline">Este 2026 multiplicá el valor de tu equipo: automatizá lo repetitivo</span>
               <span className="hidden sm:inline"> </span>
-              <span className="text-brand-300">y enfocá a tu gente en lo que realmente produce resultados.</span>
+              <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">y enfocá a tu gente en lo que realmente produce resultados.</span>
             </h1>
           </div>
 
@@ -127,13 +127,13 @@ export default function LandingPage() {
       <CloudBackground />
 
       {/* Footer */}
-      <footer className="border-t border-white/10 mt-20">
-        <div className="max-w-6xl mx-auto px-4 py-12">
+      <footer className="border-t border-white/10 mt-12 sm:mt-16 md:mt-20">
+        <div className="max-w-6xl mx-auto px-4 py-8 sm:py-10 md:py-12">
           <div className="text-center">
-            <p className="text-slate-400 mb-4">
+            <p className="text-sm sm:text-base text-slate-400 mb-3 sm:mb-4 px-2">
               Protegemos tu información. <strong>Solo será utilizada para contactarte</strong>.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center text-sm">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 justify-center items-center text-xs sm:text-sm px-2">
               <Link 
                 href="/politicadeprivacidad" 
                 className="text-brand-300 hover:text-brand-400 transition-colors underline decoration-brand-400/30 hover:decoration-brand-400"
