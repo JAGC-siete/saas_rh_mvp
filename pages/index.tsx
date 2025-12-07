@@ -200,24 +200,18 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Trust badges */}
           <div className="flex flex-wrap justify-center gap-3 md:gap-6 mb-8 animate-fade-up-subtle">
-            <ul className="space-y-4 text-lg">
-              <li className="flex items-center gap-3">
-                <CheckCircleIcon className="w-6 h-6 text-cyan-400" />
-                Cumplí STSS Honduras
-              </li>
-              <li className="flex items-center gap-3">
-                <CheckCircleIcon className="w-6 h-6 text-cyan-400" />
-                Setup inicial en instantaneo
-              </li>
-              <li className="flex items-center gap-3">
-                <CheckCircleIcon className="w-6 h-6 text-cyan-400" />
-                30 días gratis
-              </li>
-              <li className="flex items-center gap-3">
-                <CheckCircleIcon className="w-6 h-6 text-cyan-400" />
-                Licencia anual
-              </li>
-            </ul>
+            <span className="px-3 py-1 bg-green-500/20 text-green-300 text-xs rounded-full border border-green-500/30">
+              Cumplí STSS Honduras
+            </span>
+            <span className="px-3 py-1 bg-blue-500/20 text-blue-300 text-xs rounded-full border border-blue-500/30">
+              Setup inicial en instantaneo
+            </span>
+            <span className="px-3 py-1 bg-purple-500/20 text-purple-300 text-xs rounded-full border border-purple-500/30">
+              30 días gratis
+            </span>
+            <span className="px-3 py-1 bg-orange-500/20 text-orange-300 text-xs rounded-full border border-orange-500/30">
+              Licencia anual
+            </span>
           </div>
 
           {/* Hero Title - Centrado */}
