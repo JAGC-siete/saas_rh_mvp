@@ -3,21 +3,22 @@ import { createClient } from '@supabase/supabase-js'
 import { randomBytes } from 'crypto'
 import { withRateLimit } from '../../../lib/security/rate-limiting'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-if (!supabaseUrl || !supabaseServiceRoleKey) {
-  throw new Error('Supabase URL and service role key are required.')
-}
-
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey)
-
 export default withRateLimit('general')(handler)
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' })
   }
+
+  // Initialize Supabase client inside handler to avoid build-time errors
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
+    return res.status(500).json({ error: 'Supabase configuration is missing.' })
+  }
+
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey)
 
   if (Array.isArray(req.body)) {
     const results = []
