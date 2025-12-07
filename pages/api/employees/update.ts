@@ -2,7 +2,6 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient } from '../../../lib/supabase/server'
 import { authenticateUser } from '../../../lib/auth-utils'
 import { getHondurasTimestamp } from '../../../lib/timezone'
-import { createPagesServerClient } from '@supabase/auth-helpers-nextjs';
 import { addEmployeeSyncJob } from '../../../lib/queues/employeeSyncQueue';
 import { trace, context } from '@opentelemetry/api';
 

@@ -26,7 +26,10 @@
     "logs:prod": "node scripts/logs-prod.js",
     "test:cookies": "node scripts/test-supabase-cookies.js",
     "prepare": "husky || true",
-    "svgo": "svgo -f public -r"
+    "svgo": "svgo -f public -r",
+    "staging:setup": "./scripts/setup-railway-staging.sh",
+    "staging:check": "./scripts/check-staging-env.sh",
+    "staging:deploy": "railway environment use staging && railway up"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -40,8 +43,6 @@
     "@opentelemetry/sdk-node": "^0.208.0",
     "@radix-ui/react-select": "^2.2.5",
     "@sendgrid/mail": "^8.1.5",
-    "@supabase/auth-helpers-nextjs": "^0.10.0",
-    "@supabase/auth-helpers-react": "^0.5.0",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.52.1",
     "@tailwindcss/forms": "^0.5.10",
@@ -85,7 +86,6 @@
     "raw-body": "^3.0.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "react-router-dom": "^7.6.2",
     "recharts": "^3.2.1",
     "resend": "^6.1.0",
     "tailwind-merge": "^3.3.1",
