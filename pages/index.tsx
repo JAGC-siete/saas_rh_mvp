@@ -14,7 +14,7 @@ const CloudBackground = dynamic(() => import('../components/CloudBackground'), {
 export default function LandingPage() {
 
   return (
-    <div className="min-h-screen bg-app pt-20 relative">
+    <div className="min-h-screen bg-app pt-24 relative">
       <Head>
         <title>Servicio Hondureño de Recursos Humanos | Digital & Automatizado</title>
         <link rel="icon" href="/logo-humano-sisu.png" />

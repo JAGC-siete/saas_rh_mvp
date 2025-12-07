@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
+import MainHeader from '../components/MainHeader'
 
 export default function AfiliadosPage() {
   const [formData, setFormData] = useState({
@@ -46,24 +47,14 @@ export default function AfiliadosPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white flex flex-col">
+    <div className="min-h-screen bg-app text-white flex flex-col pt-24 relative">
       <Head>
         <title>Programa de Afiliados - Humano SISU</title>
         <meta name="description" content="Únete a nuestro programa de afiliados y gana comisiones." />
       </Head>
 
-      <header className="p-4 border-b border-gray-700 bg-gray-950/50">
-        <div className="container mx-auto flex justify-between items-center">
-          <Link href="/">
-            <a className="text-xl font-bold text-white">Humano SISU</a>
-          </Link>
-          <nav>
-            <Link href="/app/login">
-              <a className="text-gray-300 hover:text-white">Iniciar Sesión</a>
-            </Link>
-          </nav>
-        </div>
-      </header>
+      {/* Header */}
+      <MainHeader enableScrollEffect={false} fixed={true} />
 
       <main className="flex-grow container mx-auto px-4 py-8">
         <section className="text-center mb-12">
@@ -138,9 +129,13 @@ export default function AfiliadosPage() {
         </section>
       </main>
 
-      <footer className="p-4 border-t border-gray-700">
-        <div className="container mx-auto text-center text-gray-500">
-          &copy; {new Date().getFullYear()} Humano SISU. Todos los derechos reservados.
+      <footer className="border-t border-white/10 mt-20">
+        <div className="max-w-6xl mx-auto px-4 py-12">
+          <div className="text-center">
+            <p className="text-slate-400 mb-4">
+              &copy; {new Date().getFullYear()} Humano SISU. Todos los derechos reservados.
+            </p>
+          </div>
         </div>
       </footer>
     </div>

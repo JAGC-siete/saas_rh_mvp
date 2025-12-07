@@ -85,7 +85,7 @@ export default function LoginExisting() {
         <meta name="description" content="Accede a tu cuenta de Humano SISU" />
       </Head>
 
-      <div className="min-h-screen bg-gray-900 text-white flex flex-col">
+      <div className="min-h-screen bg-app text-white flex flex-col relative">
         {/* Header */}
         <MainHeader enableScrollEffect={false} fixed={true} />
         <main className="flex-grow flex items-center justify-center p-4 pt-24">
