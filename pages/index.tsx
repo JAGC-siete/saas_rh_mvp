@@ -63,9 +63,9 @@ export default function LandingPage() {
           {/* Hero Title - Centrado */}
           <div className="text-center mb-8">
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight">
-              <span className="text-white">Recursos Humanos 100% digital y automático</span>
+              <span className="text-white">Este 2026 multiplicá el valor de tu equipo: automatizá lo repetitivo</span>
               <span className="hidden sm:inline"> </span>
-              <span className="text-brand-300">activa, cumple y olvídate de las tareas repetitivas para siempre</span>
+              <span className="text-brand-300">y enfocá a tu gente en lo que realmente produce resultados.</span>
             </h1>
           </div>
 
