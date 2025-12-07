@@ -661,7 +661,7 @@ async function enviarCorreoBienvenida(data: {
         <head>
           <meta charset="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-          <title>Bienvenido a SISU</title>
+          <title>Acceso Exclusivo a SISU</title>
           <style>
             :root {
               color-scheme: light;
@@ -839,13 +839,13 @@ async function enviarCorreoBienvenida(data: {
           <div class="outer">
             <div class="card">
               <div class="hero">
-                <div class="badge">Trial Activado</div>
-                <h1>¡Tu entorno SISU ya está vivo!</h1>
-                <p>${data.empresa} quedó configurada con toda la demo lista para tu equipo.</p>
+                <div class="badge">Acceso Exclusivo</div>
+                <h1>¡Has sido seleccionado para explorar SISU!</h1>
+                <p>${data.nombre || 'Equipo'}, te damos la bienvenida a SISU, el nuevo sistema hondureño de recursos humanos diseñado para transformar la forma en que gestionas tu equipo. Has recibido este acceso limitado y gratuito por 30 días para descubrir cómo SISU elimina tareas repetitivas y libera tiempo valioso para lo que realmente importa.</p>
               </div>
               <div class="content">
                 <div class="pill">
-                  ${data.nombre || 'Equipo'}: ya puedes ingresar, validar horarios, planilla legal hondureña y dashboards de talento en un mismo lugar.
+                  SISU convierte horas de trabajo operativo en minutos: asistencia automática, nómina precisa, portal para empleados y dashboards inteligentes. Todo en una plataforma segura y fácil de usar, hecha para empresas hondureñas.
                 </div>
 
                 <div class="section-title">Credenciales seguras</div>
@@ -865,24 +865,24 @@ async function enviarCorreoBienvenida(data: {
                   <p>Si el botón no funciona, copia este enlace en tu navegador: ${data.loginUrl}</p>
                 </div>
 
-                <div class="section-title">Lo que ya tienes listo</div>
+                <div class="section-title">Explora SISU: Tu entorno exclusivo ya está listo</div>
                 <div class="grid">
                   <div>
-                    <h4>📊 Panel inteligente</h4>
-                    <p>Asistencia, planilla y reportes conectados con roles y auditoría.</p>
+                    <h4>🚀 Asistencia sin fricciones</h4>
+                    <p>Registro por DNI, huella, rostro o tarjeta. Detecta retrasos y genera reportes automáticos.</p>
                   </div>
                   <div>
-                    <h4>👥 Equipo demo</h4>
-                    <p>${data.empresa} incluye empleados de ejemplo y departamentos para hacer pruebas.</p>
+                    <h4>👥 Empleados y Nómina</h4>
+                    <p>Fichas completas, cálculos IHSS/RAP/ISR exactos, ajustes y envíos automáticos de comprobantes.</p>
                   </div>
                   <div>
-                    <h4>⚙️ Entorno seguro</h4>
-                    <p>Tenant aislado con cifrado, logs de acceso y timezone Tegucigalpa.</p>
+                    <h4>📊 Portal y Productividad</h4>
+                    <p>Acceso self-service para empleados, dashboards ejecutivos y exportaciones precisas para decisiones rápidas.</p>
                   </div>
                 </div>
 
                 <div class="warning">
-                  ⚠️ Por seguridad cambia la contraseña al ingresar. Tu trial dura ${TRIAL_CONFIG.DURATION_DAYS} día${TRIAL_CONFIG.DURATION_DAYS > 1 ? 's' : ''}.
+                  ⚠️ Este es un acceso exclusivo y limitado: tu prueba gratuita dura 30 días. Por seguridad, cambia la contraseña al ingresar. Explora cómo SISU reduce errores legales, da transparencia en tiempo real y libera a tu equipo para enfocarse en lo que mueve tu empresa.
                 </div>
 
                 <div class="section-title">Estamos atentos</div>
