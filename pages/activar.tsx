@@ -1,7 +1,7 @@
 import Head from 'next/head'
 import Link from 'next/link'
 import { useState } from 'react'
-import { ArrowLeftIcon, CheckCircleIcon, ClockIcon, CurrencyDollarIcon, ShieldCheckIcon, UserGroupIcon, DocumentTextIcon, RocketLaunchIcon, BoltIcon } from '@heroicons/react/24/outline'
+import { ArrowLeftIcon, CheckCircleIcon, ClockIcon, CurrencyDollarIcon, ShieldCheckIcon, UserGroupIcon, DocumentTextIcon, RocketLaunchIcon, BoltIcon, CpuChipIcon } from '@heroicons/react/24/outline'
 import dynamic from 'next/dynamic'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { TRIAL_CONFIG } from '../lib/config/trial'
@@ -279,45 +279,78 @@ export default function ActivarPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 to-indigo-900 flex flex-col">
-      <header className="p-4 border-b border-gray-700 bg-blue-950/50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex flex-col relative overflow-hidden">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+      </div>
+
+      <header className="relative z-10 p-4 border-b border-white/10 bg-slate-900/30 backdrop-blur-xl">
         <div className="container mx-auto flex justify-between items-center">
           <Link href="/">
-            <a className="text-xl font-bold text-white">Humano SISU</a>
+            <a className="text-xl font-bold text-white hover:text-cyan-300 transition-colors flex items-center gap-2">
+              <CpuChipIcon className="w-6 h-6 text-cyan-400" />
+              Humano SISU
+            </a>
           </Link>
           <nav>
             <Link href="/app/login">
-              <a className="text-gray-300 hover:text-white">Iniciar Sesión</a>
+              <a className="text-gray-300 hover:text-white px-4 py-2 rounded-lg hover:bg-white/5 transition-all">Iniciar Sesión</a>
             </Link>
           </nav>
         </div>
       </header>
-      <main className="flex-grow flex items-center justify-center p-4">
-        <Card className="w-full max-w-md bg-white/5 backdrop-blur-md border-white/10 shadow-2xl">
-          <CardContent className="p-8">
+      <main className="flex-grow flex items-center justify-center p-4 relative z-10">
+        <Card className="w-full max-w-md bg-slate-800/40 backdrop-blur-xl border-white/20 shadow-2xl relative overflow-hidden">
+          {/* Glowing border effect */}
+          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-purple-500/20 opacity-50 blur-xl"></div>
+          <CardContent className="p-8 relative z-10">
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
+              className="text-center mb-8"
             >
-              <h1 className="text-5xl font-bold text-white mb-2 flex items-center justify-center gap-2">
-                <BoltIcon className="w-10 h-10 text-cyan-300" />
+              <motion.div
+                initial={{ scale: 0.8, rotate: -10 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className="inline-block mb-4"
+              >
+                <CpuChipIcon className="w-16 h-16 text-cyan-400 mx-auto drop-shadow-lg" />
+              </motion.div>
+              <h1 className="text-4xl md:text-5xl font-bold text-white mb-3 leading-tight">
                 Deja que los robots trabajen por vos.
               </h1>
-              <p className="text-xl text-white/80 mb-8 text-center">Gratis por 30 días. Lista en segundos. Sin tarjeta. Sin compromiso.</p>
+              <p className="text-lg md:text-xl text-cyan-100/90 mb-6">Gratis por 30 días. Lista en segundos. Sin tarjeta. Sin compromiso.</p>
+              {/* Feature pills */}
+              <div className="flex flex-wrap justify-center gap-2 mb-6">
+                <span className="px-3 py-1 bg-green-500/20 text-green-300 text-xs rounded-full border border-green-500/30">
+                  ⚡ Setup instantáneo
+                </span>
+                <span className="px-3 py-1 bg-blue-500/20 text-blue-300 text-xs rounded-full border border-blue-500/30">
+                  🔒 100% seguro
+                </span>
+                <span className="px-3 py-1 bg-purple-500/20 text-purple-300 text-xs rounded-full border border-purple-500/30">
+                  🚀 Sin código
+                </span>
+              </div>
             </motion.div>
 
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
               className="space-y-6"
             >
-              <CardTitle className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-                <BoltIcon className="w-6 h-6 text-cyan-300" />
-                Información mínima necesaria
-              </CardTitle>
-              <p className="text-white/70 text-sm mb-6">Con esta información SISU creará automáticamente tu empresa, departamentos, horarios de trabajo y empleados con nombres bíblicos y salarios aleatorios.</p>
+              <div className="border-t border-white/10 pt-6">
+                <CardTitle className="text-xl md:text-2xl font-bold text-white mb-3 flex items-center gap-2">
+                  <span className="text-cyan-400">⚡</span>
+                  Información mínima necesaria
+                </CardTitle>
+                <p className="text-cyan-100/80 text-sm leading-relaxed mb-6">Con esta información SISU creará automáticamente tu empresa, departamentos, horarios de trabajo y empleados con nombres bíblicos y salarios aleatorios.</p>
+              </div>
 
               <div className="space-y-6">
                 {/* Company Name */}
@@ -327,9 +360,9 @@ export default function ActivarPage() {
                     type="text"
                     value={formData.empresa}
                     onChange={(e) => handleInputChange('empresa', e.target.value)}
-                    className={`w-full p-3 rounded-lg glass border text-white placeholder-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all ${
-                      errors.empresa ? 'border-red-500/50' : 'border-brand-600/30'
-                    } hover:shadow-lg transition-shadow`}
+                    className={`w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all ${
+                      errors.empresa ? 'border-red-500/50 bg-red-500/5' : 'border-white/20'
+                    } hover:border-cyan-400/30 hover:bg-white/10`}
                     placeholder="Mi Empresa S.A."
                     required
                   />
@@ -347,7 +380,7 @@ export default function ActivarPage() {
                     type="text"
                     value={formData.nombre}
                     onChange={(e) => handleInputChange('nombre', e.target.value)}
-                    className="w-full p-3 rounded-lg glass border text-white placeholder-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all border-brand-600/30 hover:shadow-lg transition-shadow"
+                    className="w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all hover:border-cyan-400/30 hover:bg-white/10"
                     placeholder="María González"
                   />
                   <p className="text-brand-400 text-sm mt-2">(opcional)</p>
@@ -360,9 +393,9 @@ export default function ActivarPage() {
                     type="tel"
                     value={formData.contactoWhatsApp}
                     onChange={(e) => handleInputChange('contactoWhatsApp', e.target.value)}
-                    className={`w-full p-3 rounded-lg glass border text-white placeholder-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all ${
-                      errors.contactoWhatsApp ? 'border-red-500/50' : 'border-brand-600/30'
-                    } hover:shadow-lg transition-shadow`}
+                    className={`w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all ${
+                      errors.contactoWhatsApp ? 'border-red-500/50 bg-red-500/5' : 'border-white/20'
+                    } hover:border-cyan-400/30 hover:bg-white/10`}
                     placeholder="+504 9999-9999"
                   />
                   {errors.contactoWhatsApp ? (
@@ -381,9 +414,9 @@ export default function ActivarPage() {
                     type="email"
                     value={formData.contactoEmail}
                     onChange={(e) => handleInputChange('contactoEmail', e.target.value)}
-                    className={`w-full p-3 rounded-lg glass border text-white placeholder-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all ${
-                      errors.contactoEmail ? 'border-red-500/50' : 'border-brand-600/30'
-                    } hover:shadow-lg transition-shadow`}
+                    className={`w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all ${
+                      errors.contactoEmail ? 'border-red-500/50 bg-red-500/5' : 'border-white/20'
+                    } hover:border-cyan-400/30 hover:bg-white/10`}
                     placeholder="admin@miempresa.com"
                     required
                   />
@@ -403,7 +436,7 @@ export default function ActivarPage() {
                   <div className="flex items-center justify-center space-x-4">
                     <button
                       onClick={() => handleEmpleadosChange(formData.empleados - 1)}
-                      className="w-12 h-12 rounded-full glass border border-brand-600/30 hover:border-brand-500 flex items-center justify-center text-2xl font-bold transition-all text-white hover:text-brand-200"
+                      className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 hover:border-cyan-400/50 hover:bg-cyan-500/20 flex items-center justify-center text-2xl font-bold transition-all text-white hover:text-cyan-300 disabled:opacity-30 disabled:cursor-not-allowed"
                       disabled={formData.empleados <= 1}
                     >
                       -
@@ -414,9 +447,9 @@ export default function ActivarPage() {
                         type="number"
                         value={formData.empleados}
                         onChange={(e) => handleEmpleadosChange(parseInt(e.target.value) || 1)}
-                        className={`w-24 h-16 text-3xl font-bold text-center glass border-2 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 transition-all ${
-                          errors.empleados ? 'border-red-500/50' : 'border-brand-500'
-                        } hover:shadow-lg transition-shadow`}
+                        className={`w-24 h-16 text-3xl font-bold text-center bg-white/5 backdrop-blur-sm border-2 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all ${
+                          errors.empleados ? 'border-red-500/50 bg-red-500/5' : 'border-cyan-400/30'
+                        } hover:border-cyan-400/50`}
                         min="1"
                         required
                       />
@@ -430,7 +463,7 @@ export default function ActivarPage() {
                     
                     <button
                       onClick={() => handleEmpleadosChange(formData.empleados + 1)}
-                      className="w-12 h-12 rounded-full glass border border-brand-600/30 hover:border-brand-500 flex items-center justify-center text-2xl font-bold transition-all text-white hover:text-brand-200"
+                      className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 hover:border-cyan-400/50 hover:bg-cyan-500/20 flex items-center justify-center text-2xl font-bold transition-all text-white hover:text-cyan-300"
                     >
                       +
                     </button>
@@ -443,7 +476,7 @@ export default function ActivarPage() {
                   <div className="flex items-center justify-center space-x-4">
                     <button
                       onClick={() => handleDepartamentosChange(formData.departamentos - 1)}
-                      className="w-12 h-12 rounded-full glass border border-brand-600/30 hover:border-brand-500 flex items-center justify-center text-2xl font-bold transition-all text-white hover:text-brand-200"
+                      className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 hover:border-cyan-400/50 hover:bg-cyan-500/20 flex items-center justify-center text-2xl font-bold transition-all text-white hover:text-cyan-300 disabled:opacity-30 disabled:cursor-not-allowed"
                       disabled={formData.departamentos <= 1}
                     >
                       -
@@ -454,9 +487,9 @@ export default function ActivarPage() {
                         type="number"
                         value={formData.departamentos}
                         onChange={(e) => handleDepartamentosChange(parseInt(e.target.value) || 1)}
-                        className={`w-24 h-16 text-3xl font-bold text-center glass border-2 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 transition-all ${
-                          errors.departamentos ? 'border-red-500/50' : 'border-brand-500'
-                        } hover:shadow-lg transition-shadow`}
+                        className={`w-24 h-16 text-3xl font-bold text-center bg-white/5 backdrop-blur-sm border-2 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all ${
+                          errors.departamentos ? 'border-red-500/50 bg-red-500/5' : 'border-cyan-400/30'
+                        } hover:border-cyan-400/50`}
                         min="1"
                         required
                       />
@@ -470,7 +503,7 @@ export default function ActivarPage() {
                     
                     <button
                       onClick={() => handleDepartamentosChange(formData.departamentos + 1)}
-                      className="w-12 h-12 rounded-full glass border border-brand-600/30 hover:border-brand-500 flex items-center justify-center text-2xl font-bold transition-all text-white hover:text-brand-200"
+                      className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 hover:border-cyan-400/50 hover:bg-cyan-500/20 flex items-center justify-center text-2xl font-bold transition-all text-white hover:text-cyan-300"
                     >
                       +
                     </button>
@@ -478,25 +511,25 @@ export default function ActivarPage() {
                 </div>
 
                 {/* Trial Checkbox */}
-                <div className="flex items-start space-x-3 p-4 glass rounded-lg border border-brand-500/30">
+                <div className="flex items-start space-x-3 p-4 bg-cyan-500/10 backdrop-blur-sm rounded-xl border border-cyan-400/30">
                   <input
                     type="checkbox"
                     id="acepta-trial"
                     checked={formData.aceptaTrial}
-                    onChange={(e) => handleInputChange('aceptaTrial', e.target.value)}
-                    className="mt-1 w-5 h-5 text-brand-600 bg-brand-600/20 border-brand-500 rounded focus:ring-brand-500 focus:ring-2"
+                    onChange={(e) => handleInputChange('aceptaTrial', e.target.checked)}
+                    className="mt-1 w-5 h-5 text-cyan-500 bg-white/10 border-cyan-400/50 rounded focus:ring-cyan-400 focus:ring-2 cursor-pointer"
                   />
-                  <label htmlFor="acepta-trial" className="text-white text-sm leading-relaxed">
+                  <label htmlFor="acepta-trial" className="text-white text-sm leading-relaxed cursor-pointer">
                     Deseo crear mi entorno de prueba ahora. Recibiré acceso inmediato con empleados y departamentos configurados.
                   </label>
-                  <p className="text-brand-400 text-xs mt-2 ml-8">Trial de 7 días. Sin costo. Sin compromiso.</p>
+                  <p className="text-cyan-200/70 text-xs mt-2 ml-8">Trial de 30 días. Sin costo. Sin compromiso.</p>
                 </div>
 
                 {/* Submit Button */}
                 <button
                   onClick={handleSubmit}
                   disabled={!formData.contactoEmail || !formData.empresa || formData.departamentos < 1 || isLoading || Object.keys(errors).length > 0}
-                  className="w-full bg-brand-600 hover:bg-brand-700 text-white px-8 py-4 rounded-lg font-semibold inline-flex items-center justify-center transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-lg"
+                  className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white px-8 py-4 rounded-xl font-semibold inline-flex items-center justify-center transition-all shadow-lg shadow-cyan-500/25 hover:shadow-xl hover:shadow-cyan-500/40 disabled:opacity-50 disabled:cursor-not-allowed text-lg hover:scale-[1.02] active:scale-[0.98]"
                 >
                   {isLoading ? (
                     <>
@@ -526,8 +559,8 @@ export default function ActivarPage() {
                 )}
               </div>
             </motion.div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
       </main>
     </div>
   )
