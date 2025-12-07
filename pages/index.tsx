@@ -63,9 +63,9 @@ export default function LandingPage() {
           {/* Hero Title - Centrado */}
           <div className="text-center mb-6 sm:mb-8 px-2">
             <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight sm:leading-tight">
-              <span className="text-white block sm:inline">Este 2026 multiplicá el valor de tu equipo: automatizá lo repetitivo</span>
+              <span className="text-white block sm:inline">Este 2026 multiplica el valor de tu equipo: automatiza lo repetitivo</span>
               <span className="hidden sm:inline"> </span>
-              <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">y enfocá a tu gente en lo que realmente produce resultados.</span>
+              <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">y enfoca a tu equipo en lo que realmente produce resultados.</span>
             </h1>
           </div>
 
