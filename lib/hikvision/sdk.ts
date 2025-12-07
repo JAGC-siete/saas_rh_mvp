@@ -35,7 +35,7 @@ export class HikvisionSDK {
     this.options = options;
     this.axiosInstance = axios.create({
       baseURL: `http://${options.host}:${options.port}`,
-      timeout: options.timeout || 10000,
+      timeout: options.timeout || 30000, // 30 seconds for ISAPI operations (devices may be on slow networks)
     });
 
     this.setupAuthInterceptor();
@@ -184,6 +184,11 @@ export class HikvisionSDK {
       const webhookUrlObj = new URL(params.webhookUrl);
       const hostName = webhookUrlObj.hostname;
       const portNo = webhookUrlObj.port || (webhookUrlObj.protocol === 'https:' ? '443' : '80');
+      
+      // Determine protocol type based on URL scheme (HTTPS or HTTP)
+      // According to ISAPI manual, some devices treat HTTPS as HTTP + port 443,
+      // but it's better to be explicit about the protocol
+      const protocolType = webhookUrlObj.protocol === 'https:' ? 'HTTPS' : 'HTTP';
 
       // Step 3: Construct XML_HttpHostNotificationList according to ISAPI manual
       const xmlBody = `<?xml version="1.0" encoding="UTF-8"?>
@@ -191,7 +196,7 @@ export class HikvisionSDK {
   <HttpHostNotification>
     <id>${hostId}</id>
     <url>${params.webhookUrl}</url>
-    <protocolType>HTTP</protocolType>
+    <protocolType>${protocolType}</protocolType>
     <parameterFormatType>JSON</parameterFormatType>
     <addressingFormatType>hostname</addressingFormatType>
     <hostName>${hostName}</hostName>

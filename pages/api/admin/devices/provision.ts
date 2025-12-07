@@ -40,8 +40,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // 2. Construct the full webhook URL for the device
     // The device needs to know which company its events belong to.
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    // Use fallback chain: NEXT_PUBLIC_SITE_URL -> RAILWAY_PUBLIC_DOMAIN -> production domain
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 
+                    process.env.RAILWAY_PUBLIC_DOMAIN || 
+                    'https://humanosisu.net';
+    
+    // Validate that baseUrl is a proper URL (not localhost in production)
+    if (baseUrl.includes('localhost') && process.env.NODE_ENV === 'production') {
+      console.error('[SaaS API] CRITICAL: NEXT_PUBLIC_SITE_URL is localhost in production!');
+      return res.status(500).json({ 
+        error: 'Configuration error: NEXT_PUBLIC_SITE_URL must be set to a public domain in production' 
+      });
+    }
+    
     const webhookUrl = `${baseUrl}/api/webhooks/attendance?company_id=${userProfile.company_id}`;
+    console.log(`[SaaS API] Constructed webhook URL: ${webhookUrl}`);
 
     // 3. Call internal Hikvision proxy functionality
     console.log(`[SaaS API] Provisioning device ${deviceId} with webhook ${webhookUrl}`);

@@ -9,6 +9,7 @@ import LandingHero from '../components/LandingHero'
 import dynamic from 'next/dynamic'
 import Image from 'next/image'
 import AffiliateProgramSection from '../components/AffiliateProgramSection'
+import { CheckCircleIcon } from '@heroicons/react/24/outline'
 
 const CloudBackground = dynamic(() => import('../components/CloudBackground'), { ssr: false })
 
@@ -199,10 +200,24 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Trust badges */}
           <div className="flex flex-wrap justify-center gap-3 md:gap-6 mb-8 animate-fade-up-subtle">
-            <span className="text-sm bg-green-500/10 text-green-400 px-3 py-1 rounded-full border border-green-500/20 hover:bg-green-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-100">Cumplí STSS Honduras</span>
-            <span className="text-sm bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full border border-blue-500/20 hover:bg-blue-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-200">Setup en 5 minutos</span>
-            <span className="text-sm bg-purple-500/10 text-purple-400 px-3 py-1 rounded-full border border-purple-500/20 hover:bg-purple-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-300">30 días gratis</span>
-            <span className="text-sm bg-orange-500/10 text-orange-400 px-3 py-1 rounded-full border border-orange-500/20 hover:bg-orange-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-400">Empleados ilimitados</span>
+            <ul className="space-y-4 text-lg">
+              <li className="flex items-center gap-3">
+                <CheckCircleIcon className="w-6 h-6 text-cyan-400" />
+                Cumplí STSS Honduras
+              </li>
+              <li className="flex items-center gap-3">
+                <CheckCircleIcon className="w-6 h-6 text-cyan-400" />
+                Setup inicial en instantaneo
+              </li>
+              <li className="flex items-center gap-3">
+                <CheckCircleIcon className="w-6 h-6 text-cyan-400" />
+                30 días gratis
+              </li>
+              <li className="flex items-center gap-3">
+                <CheckCircleIcon className="w-6 h-6 text-cyan-400" />
+                Licencia anual
+              </li>
+            </ul>
           </div>
 
           {/* Hero Title - Centrado */}

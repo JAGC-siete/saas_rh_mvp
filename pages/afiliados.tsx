@@ -52,13 +52,13 @@ export default function AfiliadosPage() {
         <meta name="description" content="Únete a nuestro programa de afiliados y gana comisiones." />
       </Head>
 
-      <header className="p-4 border-b border-gray-700">
+      <header className="p-4 border-b border-gray-700 bg-gray-950/50">
         <div className="container mx-auto flex justify-between items-center">
           <Link href="/">
-            <a className="text-xl font-bold">Humano SISU</a>
+            <a className="text-xl font-bold text-white">Humano SISU</a>
           </Link>
           <nav>
-            <Link href="/login">
+            <Link href="/app/login">
               <a className="text-gray-300 hover:text-white">Iniciar Sesión</a>
             </Link>
           </nav>

@@ -119,9 +119,18 @@ deploy_to_railway() {
     fi
     
     # Link project if not already linked
-    if [[ ! -f "railway.json" ]]; then
+    if [[ ! -f "railway.json" ]] && [[ ! -f ".railway" ]]; then
         print_info "Linking Railway project..."
         railway link
+    fi
+    
+    # Switch to the correct environment
+    print_info "Switching to $environment environment..."
+    if railway environment use "$environment" 2>/dev/null; then
+        print_status "Using $environment environment"
+    else
+        print_warning "Environment $environment not found or already active"
+        print_info "Continuing with current environment..."
     fi
     
     # Deploy
@@ -132,7 +141,7 @@ deploy_to_railway() {
         print_status "Deployment successful!"
         
         # Get deployment URL
-        DEPLOY_URL=$(railway domain)
+        DEPLOY_URL=$(railway domain 2>/dev/null || echo "")
         if [[ -n "$DEPLOY_URL" ]]; then
             print_status "Application URL: https://$DEPLOY_URL"
         fi

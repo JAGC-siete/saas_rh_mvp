@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { TRIAL_CONFIG } from '../lib/config/trial'
 import { motion } from 'framer-motion'
+import { BoltIcon } from '@heroicons/react/24/outline' // Use BoltIcon as robotic symbol if RobotIcon not available
 
 interface FormData {
   empleados: number
@@ -279,242 +280,256 @@ export default function ActivarPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 to-indigo-900 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md bg-white/5 backdrop-blur-md border-white/10 shadow-2xl">
-        <CardContent className="p-8">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <h1 className="text-5xl font-bold text-white mb-2 flex items-center justify-center gap-2">
-              <RobotIcon className="w-10 h-10 text-cyan-300" />
-              Deja que los robots trabajen por vos.
-            </h1>
-            <p className="text-xl text-white/80 mb-8 text-center">Gratis por 30 días. Lista en segundos. Sin tarjeta. Sin compromiso.</p>
-          </motion.div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-900 to-indigo-900 flex flex-col">
+      <header className="p-4 border-b border-gray-700 bg-blue-950/50">
+        <div className="container mx-auto flex justify-between items-center">
+          <Link href="/">
+            <a className="text-xl font-bold text-white">Humano SISU</a>
+          </Link>
+          <nav>
+            <Link href="/app/login">
+              <a className="text-gray-300 hover:text-white">Iniciar Sesión</a>
+            </Link>
+          </nav>
+        </div>
+      </header>
+      <main className="flex-grow flex items-center justify-center p-4">
+        <Card className="w-full max-w-md bg-white/5 backdrop-blur-md border-white/10 shadow-2xl">
+          <CardContent className="p-8">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <h1 className="text-5xl font-bold text-white mb-2 flex items-center justify-center gap-2">
+                <BoltIcon className="w-10 h-10 text-cyan-300" />
+                Deja que los robots trabajen por vos.
+              </h1>
+              <p className="text-xl text-white/80 mb-8 text-center">Gratis por 30 días. Lista en segundos. Sin tarjeta. Sin compromiso.</p>
+            </motion.div>
 
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="space-y-6"
-          >
-            <CardTitle className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-              <RobotIcon className="w-6 h-6 text-cyan-300" />
-              Información mínima necesaria
-            </CardTitle>
-            <p className="text-white/70 text-sm mb-6">Con esta información SISU creará automáticamente tu empresa, departamentos, horarios de trabajo y empleados con nombres bíblicos y salarios aleatorios.</p>
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="space-y-6"
+            >
+              <CardTitle className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+                <RobotIcon className="w-6 h-6 text-cyan-300" />
+                Información mínima necesaria
+              </CardTitle>
+              <p className="text-white/70 text-sm mb-6">Con esta información SISU creará automáticamente tu empresa, departamentos, horarios de trabajo y empleados con nombres bíblicos y salarios aleatorios.</p>
 
-            <div className="space-y-6">
-              {/* Company Name */}
-              <div>
-                <label className="block text-white font-medium mb-2">Nombre de la empresa *</label>
-                <input
-                  type="text"
-                  value={formData.empresa}
-                  onChange={(e) => handleInputChange('empresa', e.target.value)}
-                  className={`w-full p-3 rounded-lg glass border text-white placeholder-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all ${
-                    errors.empresa ? 'border-red-500/50' : 'border-brand-600/30'
-                  } hover:shadow-lg transition-shadow`}
-                  placeholder="Mi Empresa S.A."
-                  required
-                />
-                {errors.empresa && (
-                  <p className="text-red-400 text-sm mt-2 font-medium flex items-center">
-                    {errors.empresa}
-                  </p>
-                )}
-              </div>
+              <div className="space-y-6">
+                {/* Company Name */}
+                <div>
+                  <label className="block text-white font-medium mb-2">Nombre de la empresa *</label>
+                  <input
+                    type="text"
+                    value={formData.empresa}
+                    onChange={(e) => handleInputChange('empresa', e.target.value)}
+                    className={`w-full p-3 rounded-lg glass border text-white placeholder-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all ${
+                      errors.empresa ? 'border-red-500/50' : 'border-brand-600/30'
+                    } hover:shadow-lg transition-shadow`}
+                    placeholder="Mi Empresa S.A."
+                    required
+                  />
+                  {errors.empresa && (
+                    <p className="text-red-400 text-sm mt-2 font-medium flex items-center">
+                      {errors.empresa}
+                    </p>
+                  )}
+                </div>
 
-              {/* Contact Name */}
-              <div>
-                <label className="block text-white font-medium mb-2">Tu nombre</label>
-                <input
-                  type="text"
-                  value={formData.nombre}
-                  onChange={(e) => handleInputChange('nombre', e.target.value)}
-                  className="w-full p-3 rounded-lg glass border text-white placeholder-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all border-brand-600/30 hover:shadow-lg transition-shadow"
-                  placeholder="María González"
-                />
-                <p className="text-brand-400 text-sm mt-2">(opcional)</p>
-              </div>
+                {/* Contact Name */}
+                <div>
+                  <label className="block text-white font-medium mb-2">Tu nombre</label>
+                  <input
+                    type="text"
+                    value={formData.nombre}
+                    onChange={(e) => handleInputChange('nombre', e.target.value)}
+                    className="w-full p-3 rounded-lg glass border text-white placeholder-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all border-brand-600/30 hover:shadow-lg transition-shadow"
+                    placeholder="María González"
+                  />
+                  <p className="text-brand-400 text-sm mt-2">(opcional)</p>
+                </div>
 
-              {/* WhatsApp */}
-              <div>
-                <label className="block text-white font-medium mb-2">WhatsApp</label>
-                <input
-                  type="tel"
-                  value={formData.contactoWhatsApp}
-                  onChange={(e) => handleInputChange('contactoWhatsApp', e.target.value)}
-                  className={`w-full p-3 rounded-lg glass border text-white placeholder-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all ${
-                    errors.contactoWhatsApp ? 'border-red-500/50' : 'border-brand-600/30'
-                  } hover:shadow-lg transition-shadow`}
-                  placeholder="+504 9999-9999"
-                />
-                {errors.contactoWhatsApp ? (
-                  <p className="text-red-400 text-sm mt-2 font-medium flex items-center">
-                    {errors.contactoWhatsApp}
-                  </p>
-                ) : (
-                  <p className="text-brand-400 text-sm mt-2">Formato: +504 9999-9999 (opcional)</p>
-                )}
-              </div>
+                {/* WhatsApp */}
+                <div>
+                  <label className="block text-white font-medium mb-2">WhatsApp</label>
+                  <input
+                    type="tel"
+                    value={formData.contactoWhatsApp}
+                    onChange={(e) => handleInputChange('contactoWhatsApp', e.target.value)}
+                    className={`w-full p-3 rounded-lg glass border text-white placeholder-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all ${
+                      errors.contactoWhatsApp ? 'border-red-500/50' : 'border-brand-600/30'
+                    } hover:shadow-lg transition-shadow`}
+                    placeholder="+504 9999-9999"
+                  />
+                  {errors.contactoWhatsApp ? (
+                    <p className="text-red-400 text-sm mt-2 font-medium flex items-center">
+                      {errors.contactoWhatsApp}
+                    </p>
+                  ) : (
+                    <p className="text-brand-400 text-sm mt-2">Formato: +504 9999-9999 (opcional)</p>
+                  )}
+                </div>
 
-              {/* Email */}
-              <div>
-                <label className="block text-white font-medium mb-2">Email  *</label>
-                <input
-                  type="email"
-                  value={formData.contactoEmail}
-                  onChange={(e) => handleInputChange('contactoEmail', e.target.value)}
-                  className={`w-full p-3 rounded-lg glass border text-white placeholder-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all ${
-                    errors.contactoEmail ? 'border-red-500/50' : 'border-brand-600/30'
-                  } hover:shadow-lg transition-shadow`}
-                  placeholder="admin@miempresa.com"
-                  required
-                />
-                {errors.contactoEmail && (
-                  <p className="text-red-400 text-sm mt-2 font-medium flex items-center">
-                    {errors.contactoEmail}
-                  </p>
-                )}
-                {!errors.contactoEmail && (
-                  <p className="text-brand-400 text-sm mt-2">Te enviaremos tu email y contraseña de acceso aquí</p>
-                )}
-              </div>
+                {/* Email */}
+                <div>
+                  <label className="block text-white font-medium mb-2">Email  *</label>
+                  <input
+                    type="email"
+                    value={formData.contactoEmail}
+                    onChange={(e) => handleInputChange('contactoEmail', e.target.value)}
+                    className={`w-full p-3 rounded-lg glass border text-white placeholder-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all ${
+                      errors.contactoEmail ? 'border-red-500/50' : 'border-brand-600/30'
+                    } hover:shadow-lg transition-shadow`}
+                    placeholder="admin@miempresa.com"
+                    required
+                  />
+                  {errors.contactoEmail && (
+                    <p className="text-red-400 text-sm mt-2 font-medium flex items-center">
+                      {errors.contactoEmail}
+                    </p>
+                  )}
+                  {!errors.contactoEmail && (
+                    <p className="text-brand-400 text-sm mt-2">Te enviaremos tu email y contraseña de acceso aquí</p>
+                  )}
+                </div>
 
-              {/* Employee Count */}
-              <div>
-                <label className="block text-white font-medium mb-2 text-center"># empleados en planilla *</label>
-                <div className="flex items-center justify-center space-x-4">
-                  <button
-                    onClick={() => handleEmpleadosChange(formData.empleados - 1)}
-                    className="w-12 h-12 rounded-full glass border border-brand-600/30 hover:border-brand-500 flex items-center justify-center text-2xl font-bold transition-all text-white hover:text-brand-200"
-                    disabled={formData.empleados <= 1}
-                  >
-                    -
-                  </button>
-                  
-                  <div className="text-center">
-                    <input
-                      type="number"
-                      value={formData.empleados}
-                      onChange={(e) => handleEmpleadosChange(parseInt(e.target.value) || 1)}
-                      className={`w-24 h-16 text-3xl font-bold text-center glass border-2 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 transition-all ${
-                        errors.empleados ? 'border-red-500/50' : 'border-brand-500'
-                      } hover:shadow-lg transition-shadow`}
-                      min="1"
-                      required
-                    />
-                    <p className="text-brand-400 text-sm mt-2">empleados de prueba</p>
-                    {errors.empleados ? (
-                      <p className="text-red-400 text-xs mt-1 font-medium">{errors.empleados}</p>
-                    ) : (
-                      <p className="text-brand-400 text-xs mt-1">Se crearán automáticamente con datos de ejemplo</p>
-                    )}
+                {/* Employee Count */}
+                <div>
+                  <label className="block text-white font-medium mb-2 text-center"># empleados en planilla *</label>
+                  <div className="flex items-center justify-center space-x-4">
+                    <button
+                      onClick={() => handleEmpleadosChange(formData.empleados - 1)}
+                      className="w-12 h-12 rounded-full glass border border-brand-600/30 hover:border-brand-500 flex items-center justify-center text-2xl font-bold transition-all text-white hover:text-brand-200"
+                      disabled={formData.empleados <= 1}
+                    >
+                      -
+                    </button>
+                    
+                    <div className="text-center">
+                      <input
+                        type="number"
+                        value={formData.empleados}
+                        onChange={(e) => handleEmpleadosChange(parseInt(e.target.value) || 1)}
+                        className={`w-24 h-16 text-3xl font-bold text-center glass border-2 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 transition-all ${
+                          errors.empleados ? 'border-red-500/50' : 'border-brand-500'
+                        } hover:shadow-lg transition-shadow`}
+                        min="1"
+                        required
+                      />
+                      <p className="text-brand-400 text-sm mt-2">empleados de prueba</p>
+                      {errors.empleados ? (
+                        <p className="text-red-400 text-xs mt-1 font-medium">{errors.empleados}</p>
+                      ) : (
+                        <p className="text-brand-400 text-xs mt-1">Se crearán automáticamente con datos de ejemplo</p>
+                      )}
+                    </div>
+                    
+                    <button
+                      onClick={() => handleEmpleadosChange(formData.empleados + 1)}
+                      className="w-12 h-12 rounded-full glass border border-brand-600/30 hover:border-brand-500 flex items-center justify-center text-2xl font-bold transition-all text-white hover:text-brand-200"
+                    >
+                      +
+                    </button>
                   </div>
-                  
-                  <button
-                    onClick={() => handleEmpleadosChange(formData.empleados + 1)}
-                    className="w-12 h-12 rounded-full glass border border-brand-600/30 hover:border-brand-500 flex items-center justify-center text-2xl font-bold transition-all text-white hover:text-brand-200"
-                  >
-                    +
-                  </button>
                 </div>
-              </div>
 
-              {/* Departments Count */}
-              <div>
-                <label className="block text-white font-medium mb-2 text-center"># departamentos *</label>
-                <div className="flex items-center justify-center space-x-4">
-                  <button
-                    onClick={() => handleDepartamentosChange(formData.departamentos - 1)}
-                    className="w-12 h-12 rounded-full glass border border-brand-600/30 hover:border-brand-500 flex items-center justify-center text-2xl font-bold transition-all text-white hover:text-brand-200"
-                    disabled={formData.departamentos <= 1}
-                  >
-                    -
-                  </button>
-                  
-                  <div className="text-center">
-                    <input
-                      type="number"
-                      value={formData.departamentos}
-                      onChange={(e) => handleDepartamentosChange(parseInt(e.target.value) || 1)}
-                      className={`w-24 h-16 text-3xl font-bold text-center glass border-2 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 transition-all ${
-                        errors.departamentos ? 'border-red-500/50' : 'border-brand-500'
-                      } hover:shadow-lg transition-shadow`}
-                      min="1"
-                      required
-                    />
-                    <p className="text-brand-400 text-sm mt-2">departamentos</p>
-                    {errors.departamentos ? (
-                      <p className="text-red-400 text-xs mt-1 font-medium">{errors.departamentos}</p>
-                    ) : (
-                      <p className="text-brand-400 text-xs mt-1">Se crearán automáticamente con nombres por defecto</p>
-                    )}
+                {/* Departments Count */}
+                <div>
+                  <label className="block text-white font-medium mb-2 text-center"># departamentos *</label>
+                  <div className="flex items-center justify-center space-x-4">
+                    <button
+                      onClick={() => handleDepartamentosChange(formData.departamentos - 1)}
+                      className="w-12 h-12 rounded-full glass border border-brand-600/30 hover:border-brand-500 flex items-center justify-center text-2xl font-bold transition-all text-white hover:text-brand-200"
+                      disabled={formData.departamentos <= 1}
+                    >
+                      -
+                    </button>
+                    
+                    <div className="text-center">
+                      <input
+                        type="number"
+                        value={formData.departamentos}
+                        onChange={(e) => handleDepartamentosChange(parseInt(e.target.value) || 1)}
+                        className={`w-24 h-16 text-3xl font-bold text-center glass border-2 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-400 transition-all ${
+                          errors.departamentos ? 'border-red-500/50' : 'border-brand-500'
+                        } hover:shadow-lg transition-shadow`}
+                        min="1"
+                        required
+                      />
+                      <p className="text-brand-400 text-sm mt-2">departamentos</p>
+                      {errors.departamentos ? (
+                        <p className="text-red-400 text-xs mt-1 font-medium">{errors.departamentos}</p>
+                      ) : (
+                        <p className="text-brand-400 text-xs mt-1">Se crearán automáticamente con nombres por defecto</p>
+                      )}
+                    </div>
+                    
+                    <button
+                      onClick={() => handleDepartamentosChange(formData.departamentos + 1)}
+                      className="w-12 h-12 rounded-full glass border border-brand-600/30 hover:border-brand-500 flex items-center justify-center text-2xl font-bold transition-all text-white hover:text-brand-200"
+                    >
+                      +
+                    </button>
                   </div>
-                  
-                  <button
-                    onClick={() => handleDepartamentosChange(formData.departamentos + 1)}
-                    className="w-12 h-12 rounded-full glass border border-brand-600/30 hover:border-brand-500 flex items-center justify-center text-2xl font-bold transition-all text-white hover:text-brand-200"
-                  >
-                    +
-                  </button>
                 </div>
-              </div>
 
-              {/* Trial Checkbox */}
-              <div className="flex items-start space-x-3 p-4 glass rounded-lg border border-brand-500/30">
-                <input
-                  type="checkbox"
-                  id="acepta-trial"
-                  checked={formData.aceptaTrial}
-                  onChange={(e) => handleInputChange('aceptaTrial', e.target.value)}
-                  className="mt-1 w-5 h-5 text-brand-600 bg-brand-600/20 border-brand-500 rounded focus:ring-brand-500 focus:ring-2"
-                />
-                <label htmlFor="acepta-trial" className="text-white text-sm leading-relaxed">
-                  Deseo crear mi entorno de prueba ahora. Recibiré acceso inmediato con empleados y departamentos configurados.
-                </label>
-                <p className="text-brand-400 text-xs mt-2 ml-8">Trial de 7 días. Sin costo. Sin compromiso.</p>
-              </div>
+                {/* Trial Checkbox */}
+                <div className="flex items-start space-x-3 p-4 glass rounded-lg border border-brand-500/30">
+                  <input
+                    type="checkbox"
+                    id="acepta-trial"
+                    checked={formData.aceptaTrial}
+                    onChange={(e) => handleInputChange('aceptaTrial', e.target.value)}
+                    className="mt-1 w-5 h-5 text-brand-600 bg-brand-600/20 border-brand-500 rounded focus:ring-brand-500 focus:ring-2"
+                  />
+                  <label htmlFor="acepta-trial" className="text-white text-sm leading-relaxed">
+                    Deseo crear mi entorno de prueba ahora. Recibiré acceso inmediato con empleados y departamentos configurados.
+                  </label>
+                  <p className="text-brand-400 text-xs mt-2 ml-8">Trial de 7 días. Sin costo. Sin compromiso.</p>
+                </div>
 
-              {/* Submit Button */}
-              <button
-                onClick={handleSubmit}
-                disabled={!formData.contactoEmail || !formData.empresa || formData.departamentos < 1 || isLoading || Object.keys(errors).length > 0}
-                className="w-full bg-brand-600 hover:bg-brand-700 text-white px-8 py-4 rounded-lg font-semibold inline-flex items-center justify-center transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-lg"
-              >
-                {isLoading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                    Creando tu entorno completo...
-                  </>
-                ) : (
-                  <>
-                    <RocketLaunchIcon className="h-5 w-5 mr-2" /> Crear mi entorno de prueba ahora
-                  </>
+                {/* Submit Button */}
+                <button
+                  onClick={handleSubmit}
+                  disabled={!formData.contactoEmail || !formData.empresa || formData.departamentos < 1 || isLoading || Object.keys(errors).length > 0}
+                  className="w-full bg-brand-600 hover:bg-brand-700 text-white px-8 py-4 rounded-lg font-semibold inline-flex items-center justify-center transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-lg"
+                >
+                  {isLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                      Creando tu entorno completo...
+                    </>
+                  ) : (
+                    <>
+                      <RocketLaunchIcon className="h-5 w-5 mr-2" /> Crear mi entorno de prueba ahora
+                    </>
+                  )}
+                </button>
+
+                {/* Error general del submit */}
+                {errors.submit && (
+                  <div className="error-message bg-red-500/10 border border-red-500/50 rounded-lg p-4 mt-4">
+                    <p className="text-red-400 text-sm font-medium text-center">
+                      {errors.submit}
+                    </p>
+                  </div>
                 )}
-              </button>
-
-              {/* Error general del submit */}
-              {errors.submit && (
-                <div className="error-message bg-red-500/10 border border-red-500/50 rounded-lg p-4 mt-4">
-                  <p className="text-red-400 text-sm font-medium text-center">
-                    {errors.submit}
+                
+                {!errors.submit && (
+                  <p className="text-brand-400 text-xs text-center">
+                    Recibirás acceso inmediato por email con credenciales. Tu entorno vendrá con empleados de prueba, departamentos y horarios ya configurados. Sin tarjeta. Puedes cancelar cuando quieras.
                   </p>
-                </div>
-              )}
-              
-              {!errors.submit && (
-                <p className="text-brand-400 text-xs text-center">
-                  Recibirás acceso inmediato por email con credenciales. Tu entorno vendrá con empleados de prueba, departamentos y horarios ya configurados. Sin tarjeta. Puedes cancelar cuando quieras.
-                </p>
-              )}
-            </div>
-          </motion.div>
-        </CardContent>
-      </Card>
+                )}
+              </div>
+            </motion.div>
+          </CardContent>
+        </Card>
+      </main>
     </div>
   )
 }

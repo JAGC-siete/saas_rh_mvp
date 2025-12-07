@@ -12,13 +12,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await requireSuperAdmin(req, res)
 
     const { id } = req.query
-    const { status } = req.body
+    const { status, autoApprove } = req.body
 
     if (!id || typeof id !== 'string') {
       return res.status(400).json({ error: 'ID de afiliado inválido.' })
     }
 
-    if (!status || !['approved', 'rejected'].includes(status)) {
+    // Si autoApprove es true, establecer status a 'approved'
+    const finalStatus = autoApprove === true ? 'approved' : status
+
+    if (!finalStatus || !['approved', 'rejected'].includes(finalStatus)) {
       return res.status(400).json({ error: 'Estado inválido.' })
     }
 
@@ -26,7 +29,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { error } = await supabase
       .from('affiliates')
-      .update({ status })
+      .update({ status: finalStatus })
       .eq('id', id)
 
     if (error) throw error

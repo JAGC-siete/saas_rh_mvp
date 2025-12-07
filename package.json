@@ -69,6 +69,7 @@
     "dotenv": "^17.2.2",
     "exceljs": "^4.4.0",
     "formidable": "^3.5.4",
+    "framer-motion": "^12.23.25",
     "ioredis": "^5.8.2",
     "jsonwebtoken": "^9.0.2",
     "lodash": "^4.17.21",

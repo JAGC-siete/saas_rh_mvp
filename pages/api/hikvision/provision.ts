@@ -18,11 +18,41 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const { deviceId, webhookUrl } = req.body;
 
-  if (!deviceId || !webhookUrl) {
-    return res.status(400).json({ error: 'deviceId and webhookUrl are required' });
+  if (!deviceId) {
+    return res.status(400).json({ error: 'deviceId is required' });
   }
 
-  console.log(`[Hikvision Proxy] Received provisioning request for device ${deviceId}`);
+  // If webhookUrl is not provided, construct it from environment variables
+  let finalWebhookUrl = webhookUrl;
+  if (!finalWebhookUrl) {
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 
+                    process.env.RAILWAY_PUBLIC_DOMAIN || 
+                    'https://humanosisu.net';
+    
+    // Validate that baseUrl is a proper URL (not localhost in production)
+    if (baseUrl.includes('localhost') && process.env.NODE_ENV === 'production') {
+      console.error('[Hikvision Proxy] CRITICAL: NEXT_PUBLIC_SITE_URL is localhost in production!');
+      return res.status(500).json({ 
+        error: 'Configuration error: NEXT_PUBLIC_SITE_URL must be set to a public domain in production' 
+      });
+    }
+    
+    // Try to get company_id from device record if available
+    const supabase = createAdminClient();
+    const { data: device } = await supabase
+      .from('devices')
+      .select('company_id')
+      .eq('id', deviceId)
+      .single();
+    
+    if (device?.company_id) {
+      finalWebhookUrl = `${baseUrl}/api/webhooks/attendance?company_id=${device.company_id}`;
+    } else {
+      return res.status(400).json({ error: 'webhookUrl is required or device must have company_id' });
+    }
+  }
+
+    console.log(`[Hikvision Proxy] Received provisioning request for device ${deviceId} with webhook: ${finalWebhookUrl}`);
 
   try {
     const supabase = createAdminClient();
@@ -72,9 +102,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log(`[Hikvision Proxy] Successfully connected to device ${deviceId}`);
 
     // 4. Configure HTTP notification server (httpHosts) on the device
-    console.log(`[Hikvision Proxy] Configuring webhook URL on device: ${webhookUrl}`);
+    console.log(`[Hikvision Proxy] Configuring webhook URL on device: ${finalWebhookUrl}`);
     const notificationResult = await hikvisionClient.setNotificationServer({
-      webhookUrl: webhookUrl,
+      webhookUrl: finalWebhookUrl,
       hostId: '1',
     });
 
@@ -87,7 +117,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .update({ 
           status: 'error', 
           last_sync_at: new Date().toISOString(),
-          webhook_url: webhookUrl,
+          webhook_url: finalWebhookUrl,
           webhook_configured: false,
           last_webhook_test_at: new Date().toISOString(),
           webhook_test_result: { error: notificationResult.error },
@@ -109,7 +139,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .update({ 
         status: 'online', 
         last_sync_at: new Date().toISOString(),
-        webhook_url: webhookUrl,
+        webhook_url: finalWebhookUrl,
         http_host_id: '1',
         webhook_configured: true,
         last_webhook_test_at: new Date().toISOString(),
@@ -120,7 +150,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.status(200).json({
       message: 'Device provisioned successfully',
       deviceId,
-      webhookUrl,
+      webhookUrl: finalWebhookUrl,
       systemInfo: {
         deviceName: systemInfo.deviceName,
         model: systemInfo.model,

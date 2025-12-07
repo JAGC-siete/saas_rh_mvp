@@ -1,0 +1,32 @@
+[build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+# Health check endpoint
+healthcheckPath = "/health"
+healthcheckTimeout = 30
+restartPolicyType = "on_failure"
+numReplicas = 1
+
+[variables]
+# Public/operational variables (OK in repo)
+PORT = "3001"
+NODE_ENV = "production"
+TZ = "America/Tegucigalpa"
+
+# These should be configured in Railway Dashboard (secrets):
+# NEXT_PUBLIC_SUPABASE_URL
+# SUPABASE_SERVICE_ROLE_KEY
+# REDIS_URL (optional, for BullMQ queue system)
+# OTEL_EXPORTER_OTLP_ENDPOINT (optional, for OpenTelemetry tracing)
+
+[railway]
+serviceType = "web"
+
+
+
+
+
+
+
