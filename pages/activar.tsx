@@ -1,12 +1,11 @@
 import Head from 'next/head'
 import Link from 'next/link'
 import { useState } from 'react'
-import { ArrowLeftIcon, CheckCircleIcon, ClockIcon, CurrencyDollarIcon, ShieldCheckIcon, UserGroupIcon, DocumentTextIcon, RocketLaunchIcon, RobotIcon } from '@heroicons/react/24/outline'
+import { ArrowLeftIcon, CheckCircleIcon, ClockIcon, CurrencyDollarIcon, ShieldCheckIcon, UserGroupIcon, DocumentTextIcon, RocketLaunchIcon, BoltIcon } from '@heroicons/react/24/outline'
 import dynamic from 'next/dynamic'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { TRIAL_CONFIG } from '../lib/config/trial'
 import { motion } from 'framer-motion'
-import { BoltIcon } from '@heroicons/react/24/outline' // Use BoltIcon as robotic symbol if RobotIcon not available
 
 interface FormData {
   empleados: number
@@ -315,7 +314,7 @@ export default function ActivarPage() {
               className="space-y-6"
             >
               <CardTitle className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-                <RobotIcon className="w-6 h-6 text-cyan-300" />
+                <BoltIcon className="w-6 h-6 text-cyan-300" />
                 Información mínima necesaria
               </CardTitle>
               <p className="text-white/70 text-sm mb-6">Con esta información SISU creará automáticamente tu empresa, departamentos, horarios de trabajo y empleados con nombres bíblicos y salarios aleatorios.</p>
