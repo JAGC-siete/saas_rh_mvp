@@ -299,25 +299,16 @@ export default function ActivarPage() {
             Volver a inicio
           </Link>
           
-          <h1 className="text-5xl font-bold text-white mb-6">
-            Activa un demo de RRHH gratuito<br className="hidden md:block" />
-            <span className="text-brand-300">Listo en segundos. Sin tarjeta. Sin compromiso.</span>
-          </h1>
-          <p className="text-2xl text-brand-300 mb-8">
-            Gratis por {TRIAL_CONFIG.DURATION_DAYS} días.
-          </p>
+          <h1 className="text-3xl font-bold text-white mb-2">Deja que los robots trabajen por vos.</h1>
+          <p className="text-white/80 mb-8">Gratis por 30 días. Lista en segundos. Sin tarjeta. Sin compromiso.</p>
         </div>
 
         {/* Main Form */}
         <div className="max-w-2xl mx-auto mb-16">
           <Card variant="glass">
             <CardContent className="p-8">
-              <h2 className="text-2xl font-bold text-white mb-6 text-center">
-                Configura tu entorno de prueba
-              </h2>
-              <p className="text-brand-300 text-center mb-6">
-                Con esta información crearemos automáticamente tu empresa, departamentos, horarios de trabajo y empleados de prueba.
-              </p>
+              <h2 className="text-2xl font-bold text-white mb-6 text-center">Información mínima necesaria</h2>
+              <p className="text-white/70 text-sm mb-6">Con esta información el puede crear automáticamente tu empresa, departamentos, horarios de trabajo y empleados con nombres bíblicos y salarios aleatorios.</p>
 
               <div className="space-y-6">
                 {/* Company Name */}
