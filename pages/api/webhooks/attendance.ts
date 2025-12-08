@@ -170,8 +170,40 @@ async function processAccessEvent(
 ) {
   const supabase = createAdminClient();
 
-  // Extraer identificador del empleado
-  const rawId = acs.employeeNoString ?? acs.employeeNo ?? acs.cardNo ?? null;
+  // Extraer campos del AccessControllerEvent/AcsEvent según manual Hikvision
+  // Los campos pueden estar en acs o en root (según versión de firmware)
+  // Campos requeridos: cardNo, employeeNoString, doorNo, readerNo, currentVerifyMode
+  
+  // Identificador del empleado (prioridad según manual)
+  const rawId = 
+    acs?.employeeNoString ?? 
+    acs?.employeeNo ?? 
+    acs?.cardNo ??
+    root?.employeeNoString ??  // También puede estar en root
+    root?.employeeNo ??
+    root?.cardNo ??
+    null;
+
+  // Campos adicionales del Access Control Event (según manual)
+  const doorNo = acs?.doorNo ?? root?.doorNo ?? null;
+  const readerNo = acs?.readerNo ?? root?.readerNo ?? null;
+  const verifyMode = acs?.currentVerifyMode ?? root?.currentVerifyMode ?? root?.verifyMode ?? null;
+  const cardNo = acs?.cardNo ?? root?.cardNo ?? null;
+  const employeeNoString = acs?.employeeNoString ?? root?.employeeNoString ?? null;
+
+  // Log campos extraídos para debugging
+  logger.debug('[ACCESS EVENT] Extracted Access Control fields', {
+    companyId,
+    doorNo,
+    readerNo,
+    verifyMode,
+    cardNo,
+    employeeNoString,
+    hasAcs: !!acs,
+    acsKeys: acs ? Object.keys(acs) : [],
+    rootKeys: Object.keys(root),
+  });
+
   const normalizedId = normalizeIdentifier(rawId);
 
   if (!normalizedId) {
@@ -303,6 +335,12 @@ async function processAccessEvent(
     recordId: record?.id,
     recordDate,
     checkIn: checkInTimestamp,
+    // Incluir campos del Access Control Event para auditoría
+    doorNo,
+    readerNo,
+    verifyMode,
+    cardNo,
+    employeeNoString,
   });
 }
 
@@ -412,36 +450,50 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       return res.status(200).json({ success: false, message: 'Failed to parse form data' });
     }
 
-    // Extraer JSON root según especificación:
-    // 1. Si fields está vacío y files tiene 1 entrada con mimetype application/json → leer ese file
-    // 2. Si hay fields, intentar extraer de ahí
+    // Extraer JSON root según especificación del manual Hikvision:
+    // - Multipart puede tener múltiples partes (JSON + binarios/imágenes)
+    // - La parte JSON puede venir sin nombre (fieldname) y será tratada como "file"
+    // - Debe iterar TODAS las partes para encontrar la JSON entre varias
     let jsonString: string | null = null;
+    const tempFilesToCleanup: string[] = [];
 
-    // Caso 1: JSON sin nombre en files (formato Hikvision EventNotificationAlert)
-    if (Object.keys(fields).length === 0 && files && Object.keys(files).length === 1) {
-      const fileKey = Object.keys(files)[0];
-      const fileArray = files[fileKey];
-      if (Array.isArray(fileArray) && fileArray.length > 0) {
-        const file = fileArray[0];
-        if (file.mimetype === 'application/json' && file.filepath) {
-          try {
-            jsonString = fs.readFileSync(file.filepath, 'utf-8');
-            // Clean up temp file
-            try {
-              fs.unlinkSync(file.filepath);
-            } catch {
-              // Ignore cleanup errors
+    // Caso 1: Buscar JSON en files (partes sin nombre - formato Hikvision EventNotificationAlert)
+    // Iterar TODAS las partes, no solo la primera
+    if (files && Object.keys(files).length > 0) {
+      for (const fileKey of Object.keys(files)) {
+        const fileArray = files[fileKey];
+        if (Array.isArray(fileArray)) {
+          for (const file of fileArray) {
+            // Buscar parte con mimetype application/json
+            if (file.mimetype === 'application/json' && file.filepath) {
+              try {
+                const content = fs.readFileSync(file.filepath, 'utf-8');
+                // Verificar que realmente es JSON
+                if (content.trim().startsWith('{') || content.trim().startsWith('[')) {
+                  jsonString = content;
+                  tempFilesToCleanup.push(file.filepath);
+                  logger.info('[ATTENDANCE WEBHOOK] Found JSON in multipart file part', {
+                    companyId: company_id,
+                    fileKey,
+                    mimetype: file.mimetype,
+                    size: file.size,
+                  });
+                  break; // Encontramos la parte JSON, salir
+                }
+              } catch (fileError) {
+                logger.error('[ATTENDANCE WEBHOOK] Error reading JSON file part', fileError as Error, {
+                  companyId: company_id,
+                  fileKey,
+                });
+              }
             }
-          } catch (fileError) {
-            logger.error('[ATTENDANCE WEBHOOK] Error reading JSON file', fileError as Error, {
-              companyId: company_id,
-            });
           }
+          if (jsonString) break; // Ya encontramos JSON, salir del loop externo
         }
       }
     }
 
-    // Caso 2: JSON en fields (formato curl test o named fields)
+    // Caso 2: Buscar JSON en fields (formato curl test o named fields)
     if (!jsonString && Object.keys(fields).length > 0) {
       // Intentar extraer de cualquier campo que parezca JSON
       for (const [key, value] of Object.entries(fields)) {
@@ -449,9 +501,22 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           const fieldValue = value[0];
           if (typeof fieldValue === 'string' && (fieldValue.trim().startsWith('{') || fieldValue.trim().startsWith('['))) {
             jsonString = fieldValue;
+            logger.info('[ATTENDANCE WEBHOOK] Found JSON in multipart field', {
+              companyId: company_id,
+              fieldName: key,
+            });
             break;
           }
         }
+      }
+    }
+
+    // Cleanup: eliminar archivos temporales de partes JSON procesadas
+    for (const filepath of tempFilesToCleanup) {
+      try {
+        fs.unlinkSync(filepath);
+      } catch {
+        // Ignore cleanup errors
       }
     }
 
