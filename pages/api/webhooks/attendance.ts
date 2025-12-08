@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import formidable from 'formidable';
 import { createAdminClient } from '../../../lib/supabase/server';
 import { logError, logger } from '../../../lib/logger';
-import { getTodayInHonduras, nowInHonduras } from '../../../lib/timezone';
+import { getTodayInHonduras, nowInHonduras, toHN, convertToHondurasTime, HONDURAS_TIMEZONE } from '../../../lib/timezone';
 import { createHash } from 'crypto';
 import fs from 'fs';
 
@@ -37,6 +37,95 @@ function normalizeIdentifier(raw: string | number | undefined): string | undefin
   if (!raw) return undefined;
   const digits = String(raw).replace(/\D/g, '');
   return digits || undefined;
+}
+
+/**
+ * Parsea y normaliza fecha/hora del dispositivo Hikvision a hora local de Honduras
+ * 
+ * El dispositivo puede enviar fecha en diferentes formatos:
+ * - ISO 8601 con Z (UTC): "2024-12-02T14:30:00Z"
+ * - ISO 8601 sin zona: "2024-12-02T14:30:00" (asumimos hora local de Honduras)
+ * - Formato Hikvision: puede variar según firmware
+ * 
+ * Esta función garantiza que el timestamp resultante represente la hora REAL del evento
+ * en zona horaria de Honduras (America/Tegucigalpa, UTC-6).
+ */
+function parseDeviceDateTime(dateTimeStr: string | undefined | null): Date {
+  if (!dateTimeStr) {
+    logger.warn('[PARSE DATE] No dateTime provided, using current Honduras time');
+    return nowInHonduras();
+  }
+
+  let parsedDate: Date;
+  
+  // Intentar parsear como ISO 8601
+  parsedDate = new Date(dateTimeStr);
+  
+  if (isNaN(parsedDate.getTime())) {
+    logger.warn('[PARSE DATE] Invalid dateTime format, using current Honduras time', {
+      received: dateTimeStr,
+    });
+    return nowInHonduras();
+  }
+
+  // Detectar si tiene indicador de zona horaria (Z, +HH:MM, -HH:MM)
+  const hasTimezone = /[Zz]|[\+\-]\d{2}:?\d{2}$/.test(dateTimeStr);
+  
+  if (hasTimezone) {
+    // Si tiene zona horaria explícita, el dispositivo envió UTC o con offset
+    // Convertir a hora local de Honduras
+    const hondurasDate = convertToHondurasTime(parsedDate);
+    
+    logger.debug('[PARSE DATE] Device dateTime has timezone, converted to Honduras', {
+      original: dateTimeStr,
+      parsedUTC: parsedDate.toISOString(),
+      hondurasLocal: hondurasDate.toISOString(),
+    });
+    
+    return hondurasDate;
+  } else {
+    // Si NO tiene zona horaria, asumimos que es hora LOCAL del dispositivo
+    // El dispositivo está configurado en hora de Honduras, así que el string
+    // representa directamente la hora local de Honduras (America/Tegucigalpa, UTC-6)
+    
+    // Parsear el string para extraer componentes (sin interpretar como hora local del servidor)
+    // Formato esperado: "YYYY-MM-DDTHH:mm:ss" o variantes
+    const dateMatch = dateTimeStr.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2}):(\d{2})/);
+    
+    if (!dateMatch) {
+      logger.warn('[PARSE DATE] Could not parse dateTime format, using current Honduras time', {
+        received: dateTimeStr,
+      });
+      return nowInHonduras();
+    }
+    
+    const [, yearStr, monthStr, dayStr, hourStr, minuteStr, secondStr] = dateMatch;
+    const year = parseInt(yearStr, 10);
+    const month = parseInt(monthStr, 10) - 1; // JavaScript months are 0-indexed
+    const day = parseInt(dayStr, 10);
+    const hours = parseInt(hourStr, 10);
+    const minutes = parseInt(minuteStr, 10);
+    const seconds = parseInt(secondStr, 10);
+    
+    // Crear fecha interpretando estos valores como hora LOCAL de Honduras
+    // Para almacenar correctamente en BD, necesitamos crear un Date UTC que represente
+    // esa hora. Si el dispositivo dice "14:30" en Honduras, eso es "20:30 UTC"
+    // (porque Honduras está 6 horas detrás de UTC)
+    const hondurasOffsetHours = 6; // UTC-6
+    const utcHours = hours + hondurasOffsetHours;
+    
+    // Crear fecha UTC que represente la hora correcta
+    const utcDate = new Date(Date.UTC(year, month, day, utcHours, minutes, seconds));
+    
+    logger.debug('[PARSE DATE] Device dateTime without timezone, assumed Honduras local', {
+      original: dateTimeStr,
+      parsedAsHonduras: `${yearStr}-${monthStr}-${dayStr} ${hourStr}:${minuteStr}:${secondStr}`,
+      storedAsUTC: utcDate.toISOString(),
+      verification: toHN(utcDate), // Verificar que al convertir de vuelta dé la hora correcta
+    });
+    
+    return utcDate;
+  }
 }
 
 /**
@@ -235,7 +324,7 @@ async function processAccessEvent(
     return;
   }
 
-  // Buscar empleado
+  // Buscar empleado con work_schedule_id
   let { data: employee, error: employeeError } = await supabase
     .from('employees')
     .select('id, company_id, work_schedule_id, dni')
@@ -270,34 +359,113 @@ async function processAccessEvent(
     return;
   }
 
-  // Extraer timestamp del evento
+  // Extraer timestamp del evento usando función que garantiza hora de Honduras
   let eventTimestamp: Date;
-  if (root.dateTime) {
-    eventTimestamp = new Date(root.dateTime);
-  } else if (acs.dateTime) {
-    eventTimestamp = new Date(acs.dateTime);
-  } else {
-    eventTimestamp = nowInHonduras();
-  }
+  const dateTimeStr = root.dateTime ?? acs?.dateTime ?? null;
+  
+  eventTimestamp = parseDeviceDateTime(dateTimeStr);
+  
+  // Convertir a hora local de Honduras para cálculos y logging
+  const hondurasTime = toHN(eventTimestamp);
+  
+  logger.debug('[ACCESS EVENT] Parsed device timestamp', {
+    companyId,
+    deviceDateTime: dateTimeStr,
+    parsedTimestamp: eventTimestamp.toISOString(),
+    hondurasDate: hondurasTime.date,
+    hondurasTime: hondurasTime.time,
+    dayOfWeek: hondurasTime.dow,
+  });
 
-  if (isNaN(eventTimestamp.getTime())) {
-    eventTimestamp = nowInHonduras();
-  }
-
-  // Calcular fecha del registro
-  const eventDate = eventTimestamp.toISOString().split('T')[0];
+  // Calcular fecha del registro usando hora local de Honduras
+  // eventTimestamp ya está normalizado (UTC interno que representa hora de Honduras)
+  const eventDate = hondurasTime.date; // Fecha en formato YYYY-MM-DD en hora de Honduras
   const todayDate = getTodayInHonduras();
+  
+  // Comparar fechas (no timestamps) para decidir si usar fecha del evento o hoy
+  // Si el evento es de hace más de 24 horas, usar su fecha; si no, usar hoy
   const hoursDiff = (nowInHonduras().getTime() - eventTimestamp.getTime()) / (1000 * 60 * 60);
   const recordDate = hoursDiff > 24 ? eventDate : todayDate;
+  
+  // check_in se guarda como ISO string (UTC), pero representa la hora real del evento
   const checkInTimestamp = eventTimestamp.toISOString();
+  
+  logger.debug('[ACCESS EVENT] Date calculation', {
+    companyId,
+    eventDateHonduras: eventDate,
+    todayDateHonduras: todayDate,
+    hoursDiff,
+    recordDate,
+    checkInTimestamp,
+  });
 
-  // Insertar registro de asistencia con event_uid
+  // Calcular late_minutes y expected_check_in si el empleado tiene horario
+  let lateMinutes: number | null = null;
+  let expectedCheckIn: string | null = null;
+
+  if (employee.work_schedule_id) {
+    try {
+      // Obtener horario del empleado
+      const { data: schedule, error: scheduleError } = await supabase
+        .from('work_schedules')
+        .select('*')
+        .eq('id', employee.work_schedule_id)
+        .single();
+
+      if (!scheduleError && schedule) {
+        // Obtener día de la semana usando hora local de Honduras
+        // eventTimestamp ya está normalizado, usar toHN para obtener día correcto
+        const hondurasTime = toHN(eventTimestamp);
+        const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        const dayName = dayNames[hondurasTime.dow];
+
+        // Obtener horario esperado para ese día
+        expectedCheckIn = (schedule as Record<string, any>)?.[`${dayName}_start`] 
+          || (schedule as Record<string, any>)?.monday_start 
+          || '08:00';
+
+        // Calcular late_minutes: diferencia entre check_in y expected_check_in
+        if (expectedCheckIn) {
+          // Convertir eventTimestamp a hora local de Honduras
+          const checkInTime = toHN(eventTimestamp);
+
+          const [expectedHour, expectedMin] = expectedCheckIn.split(':').map(Number);
+          const [checkInHour, checkInMin] = checkInTime.time.split(':').map(Number);
+
+          const expectedMinutes = expectedHour * 60 + expectedMin;
+          const checkInMinutes = checkInHour * 60 + checkInMin;
+          
+          // late_minutes puede ser negativo (temprano) o positivo (tarde)
+          lateMinutes = checkInMinutes - expectedMinutes;
+
+          logger.debug('[ACCESS EVENT] Calculated late_minutes', {
+            companyId,
+            employeeId: employee.id,
+            expectedCheckIn,
+            checkInTime: checkInTime.time,
+            lateMinutes,
+          });
+        }
+      }
+    } catch (scheduleError) {
+      logger.warn('[ACCESS EVENT] Error calculating late_minutes', {
+        companyId,
+        employeeId: employee.id,
+        error: scheduleError instanceof Error ? scheduleError.message : String(scheduleError),
+      });
+      // Continuar sin late_minutes si hay error
+    }
+  }
+
+  // Insertar registro de asistencia con event_uid, late_minutes y expected_check_in
   const { data: record, error: upsertError } = await supabase
     .from('attendance_records')
     .insert({
       employee_id: employee.id,
       date: recordDate,
       check_in: checkInTimestamp,
+      expected_check_in: expectedCheckIn,
+      late_minutes: lateMinutes,
       event_uid: eventUid,
       tz: 'America/Tegucigalpa',
       tz_offset_minutes: -360,
