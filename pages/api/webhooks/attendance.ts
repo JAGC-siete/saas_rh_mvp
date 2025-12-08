@@ -1,8 +1,9 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import formidable from 'formidable';
-import { createClient } from '../../../lib/supabase/server';
+import { createAdminClient } from '../../../lib/supabase/server';
 import { logError, logger } from '../../../lib/logger';
 import { getTodayInHonduras, nowInHonduras } from '../../../lib/timezone';
+import { createHash } from 'crypto';
 import fs from 'fs';
 
 // Desactivamos el parser de body de Next.js para que formidable pueda procesar el stream.
@@ -13,31 +14,354 @@ export const config = {
 };
 
 /**
- * Webhook para recibir eventos de asistencia desde dispositivos Hikvision
+ * Webhook para recibir eventos desde dispositivos Hikvision DS-K1T344MBWX-QRE1
  * 
- * FORMATO ESPERADO (según manual Hikvision ISAPI):
+ * FORMATO ESPERADO (según manual ISAPI):
  * - Multipart/form-data con parte JSON sin nombre (Content-Type: application/json)
  * - JSON contiene EventNotificationAlert con:
- *   * eventType: "heartBeat" (conectividad) o "AccessControllerEvent" (eventos de acceso)
- *   * AccessControllerEvent: { cardNo, employeeNoString, name, majorEventType, ... }
+ *   * eventType: "heartBeat" (conectividad) o eventos de acceso
+ *   * Para eventos de acceso: AccessControllerEvent/AcsEvent con cardNo/employeeNoString
  * 
- * CONFIGURACIÓN REQUERIDA EN EL DISPOSITIVO (según manual ISAPI 4.13.6):
- * 1. GET /ISAPI/Event/notification/httpHosts/capabilities - Verificar capacidades
- * 2. PUT /ISAPI/Event/notification/httpHosts - Configurar servidor HTTP (IP, puerto, protocolo)
- * 3. POST /ISAPI/Event/notification/httpHosts/<ID>/test - Probar conexión
- * 4. Configurar Event Linkage para eventos de acceso (card swipe, face auth, etc.)
- * 
- * NOTA: Los heartbeats se envían automáticamente cuando no hay eventos.
- * Para recibir eventos de acceso reales, se debe configurar el Event Linkage.
- * El código está listo para procesar ambos tipos de eventos.
+ * ARQUITECTURA:
+ * - Responde 200 OK inmediatamente después de parsear el JSON
+ * - Procesamiento asíncrono para no bloquear al dispositivo
+ * - Heartbeats actualizan device health (NO generan asistencia)
+ * - Access events generan attendance_records con event_uid para idempotencia
  */
 
-// Lista de posibles nombres de eventos que consideraremos como una marcación de asistencia válida.
-const VALID_AUTHENTICATION_EVENTS = [
-  'faceAuthentication', // Autenticado mediante rostro
-  'cardAndFaceAuthentication', // Si se requiere tarjeta + rostro
-  'AccessControllerEvent', // Evento principal de control de acceso según manual ISAPI
-];
+/**
+ * Normaliza identificador de empleado (DNI)
+ * Política: remover caracteres no numéricos, mantener tal cual
+ */
+function normalizeIdentifier(raw: string | number | undefined): string | undefined {
+  if (!raw) return undefined;
+  const digits = String(raw).replace(/\D/g, '');
+  return digits || undefined;
+}
+
+/**
+ * Genera event_uid para idempotencia
+ * Formato: SHA256(macAddress|channelID|activePostCount|dateTime|employeeId)
+ * Prioriza MAC sobre IP (MAC es identificador estable según manual Hikvision)
+ */
+function generateEventUid(root: any, acs: any, normalizedId: string | undefined): string {
+  // Usar MAC como identificador principal (estable), fallback a IP si no hay MAC
+  const deviceId = root.macAddress ?? root.ipAddress ?? '';
+  
+  const uidSource = [
+    deviceId,
+    String(root.channelID ?? ''),
+    String(root.activePostCount ?? ''),
+    String(root.dateTime ?? ''),
+    normalizedId ?? ''
+  ].join('|');
+  
+  return createHash('sha256').update(uidSource).digest('hex');
+}
+
+/**
+ * Procesa heartbeat: actualiza device health
+ */
+async function processHeartbeat(root: any, companyId: string) {
+  const supabase = createAdminClient();
+  
+  const ipAddress = root.ipAddress;
+  const macAddress = root.macAddress;
+  
+  if (!ipAddress && !macAddress) {
+    logger.warn('[HEARTBEAT] No ipAddress or macAddress in heartbeat', {
+      companyId,
+      rootKeys: Object.keys(root),
+    });
+    return;
+  }
+
+  // Buscar dispositivo: primero por MAC (identificador estable), luego por IP (puede cambiar con DHCP)
+  // Según manual Hikvision: MAC/serial es la identidad estable del dispositivo
+  let deviceQuery = supabase
+    .from('devices')
+    .select('id, company_id, ip_address, mac_address')
+    .eq('company_id', companyId);
+
+  if (macAddress) {
+    deviceQuery = deviceQuery.eq('mac_address', macAddress);
+  } else if (ipAddress) {
+    deviceQuery = deviceQuery.eq('ip_address', ipAddress);
+  } else {
+    logger.warn('[HEARTBEAT] No macAddress or ipAddress provided, cannot find device', {
+      companyId,
+    });
+    return;
+  }
+
+  const { data: devices, error } = await deviceQuery;
+
+  if (error) {
+    logger.error('[HEARTBEAT] Error finding device', error, {
+      companyId,
+      ipAddress,
+      macAddress,
+    });
+    return;
+  }
+
+  if (!devices || devices.length === 0) {
+    logger.warn('[HEARTBEAT] Device not found in database', {
+      companyId,
+      ipAddress,
+      macAddress,
+      hint: 'Device may need to be registered in devices table. MAC address is the stable identifier.',
+    });
+    return;
+  }
+
+  // Actualizar todos los dispositivos encontrados (por si hay múltiples matches)
+  for (const device of devices) {
+    // Preparar update: incluir mac_address si viene en el heartbeat y no está en BD
+    const updateData: any = {
+      last_seen_at: new Date().toISOString(),
+      status: 'online',
+      webhook_configured: true,
+    };
+
+    // Si el heartbeat trae MAC y el dispositivo no lo tiene, actualizarlo
+    if (macAddress && !device.mac_address) {
+      updateData.mac_address = macAddress;
+    }
+
+    // Si el heartbeat trae IP y es diferente, actualizarlo (IP puede cambiar con DHCP)
+    if (ipAddress && device.ip_address !== ipAddress) {
+      updateData.ip_address = ipAddress;
+    }
+
+    const { error: updateError } = await supabase
+      .from('devices')
+      .update(updateData)
+      .eq('id', device.id);
+
+    if (updateError) {
+      logger.error('[HEARTBEAT] Error updating device', updateError, {
+        companyId,
+        deviceId: device.id,
+        ipAddress,
+        macAddress,
+      });
+    } else {
+      logger.info('[HEARTBEAT] Device health updated', {
+        companyId,
+        deviceId: device.id,
+        ipAddress,
+        macAddress,
+        status: 'online',
+        macAddressUpdated: macAddress && !device.mac_address,
+        ipAddressUpdated: ipAddress && device.ip_address !== ipAddress,
+      });
+    }
+  }
+}
+
+/**
+ * Procesa evento de acceso: crea registro de asistencia
+ */
+async function processAccessEvent(
+  root: any,
+  acs: any,
+  companyId: string
+) {
+  const supabase = createAdminClient();
+
+  // Extraer identificador del empleado
+  const rawId = acs.employeeNoString ?? acs.employeeNo ?? acs.cardNo ?? null;
+  const normalizedId = normalizeIdentifier(rawId);
+
+  if (!normalizedId) {
+    logger.warn('[ACCESS EVENT] No employee identifier found', {
+      companyId,
+      acsKeys: Object.keys(acs),
+      rootKeys: Object.keys(root),
+    });
+    return;
+  }
+
+  // Generar event_uid para idempotencia
+  const eventUid = generateEventUid(root, acs, normalizedId);
+
+  // Verificar si ya existe (idempotencia)
+  const { data: existingRecord } = await supabase
+    .from('attendance_records')
+    .select('id')
+    .eq('event_uid', eventUid)
+    .single();
+
+  if (existingRecord) {
+    logger.info('[ACCESS EVENT] Duplicate event ignored (idempotency)', {
+      companyId,
+      eventUid,
+      normalizedId,
+      existingRecordId: existingRecord.id,
+    });
+    return;
+  }
+
+  // Buscar empleado
+  let { data: employee, error: employeeError } = await supabase
+    .from('employees')
+    .select('id, company_id, work_schedule_id, dni')
+    .eq('company_id', companyId)
+    .eq('dni', normalizedId)
+    .eq('status', 'active')
+    .single();
+
+  // Si no hay match exacto, intentar búsqueda flexible
+  if (employeeError || !employee) {
+    const { data: allEmployees } = await supabase
+      .from('employees')
+      .select('id, company_id, work_schedule_id, dni')
+      .eq('company_id', companyId)
+      .eq('status', 'active');
+
+    if (allEmployees) {
+      employee = allEmployees.find(emp => {
+        const empNormalized = normalizeIdentifier(emp.dni);
+        return empNormalized === normalizedId;
+      }) || null;
+    }
+  }
+
+  if (!employee) {
+    logger.warn('[ACCESS EVENT] Employee not found', {
+      companyId,
+      normalizedId,
+      originalId: rawId,
+      eventUid,
+    });
+    return;
+  }
+
+  // Extraer timestamp del evento
+  let eventTimestamp: Date;
+  if (root.dateTime) {
+    eventTimestamp = new Date(root.dateTime);
+  } else if (acs.dateTime) {
+    eventTimestamp = new Date(acs.dateTime);
+  } else {
+    eventTimestamp = nowInHonduras();
+  }
+
+  if (isNaN(eventTimestamp.getTime())) {
+    eventTimestamp = nowInHonduras();
+  }
+
+  // Calcular fecha del registro
+  const eventDate = eventTimestamp.toISOString().split('T')[0];
+  const todayDate = getTodayInHonduras();
+  const hoursDiff = (nowInHonduras().getTime() - eventTimestamp.getTime()) / (1000 * 60 * 60);
+  const recordDate = hoursDiff > 24 ? eventDate : todayDate;
+  const checkInTimestamp = eventTimestamp.toISOString();
+
+  // Insertar registro de asistencia con event_uid
+  const { data: record, error: upsertError } = await supabase
+    .from('attendance_records')
+    .insert({
+      employee_id: employee.id,
+      date: recordDate,
+      check_in: checkInTimestamp,
+      event_uid: eventUid,
+      tz: 'America/Tegucigalpa',
+      tz_offset_minutes: -360,
+      status: 'present',
+    })
+    .select()
+    .single();
+
+  if (upsertError) {
+    // Si es error de duplicado por event_uid, ignorar (ya lo verificamos, pero por si acaso)
+    if (upsertError.code === '23505') {
+      logger.info('[ACCESS EVENT] Duplicate event_uid (race condition)', {
+        companyId,
+        eventUid,
+        normalizedId,
+      });
+      return;
+    }
+
+    logger.error('[ACCESS EVENT] Failed to insert attendance record', upsertError, {
+      companyId,
+      employeeId: employee.id,
+      normalizedId,
+      eventUid,
+      recordDate,
+    });
+    return;
+  }
+
+  logger.info('[ACCESS EVENT] Attendance recorded successfully', {
+    companyId,
+    employeeId: employee.id,
+    normalizedId,
+    eventUid,
+    recordId: record?.id,
+    recordDate,
+    checkIn: checkInTimestamp,
+  });
+}
+
+/**
+ * Procesa evento de forma asíncrona
+ */
+async function processEvent(rawEvent: any, companyId: string) {
+  try {
+    const root = rawEvent;
+
+    // Extraer eventType y eventState
+    const eventType = root.eventType;
+    const eventState = root.eventState;
+
+    // Detectar si hay bloque de Access Control
+    const hasAcsEvent =
+      !!root.AccessControllerEvent ||
+      !!root.EventNotificationAlert?.AccessControllerEvent ||
+      !!root.AcsEvent ||
+      !!root.EventNotificationAlert?.AcsEvent;
+
+    const acs =
+      root.AccessControllerEvent ??
+      root.EventNotificationAlert?.AccessControllerEvent ??
+      root.AcsEvent ??
+      root.EventNotificationAlert?.AcsEvent ??
+      null;
+
+    // Heartbeat: actualizar device health
+    if (eventType === 'heartBeat') {
+      await processHeartbeat(root, companyId);
+      return;
+    }
+
+    // Access event: crear registro de asistencia
+    if (hasAcsEvent && acs) {
+      await processAccessEvent(root, acs, companyId);
+      return;
+    }
+
+    // Evento desconocido
+    logger.info('[WEBHOOK] Unknown event type received', {
+      companyId,
+      eventType,
+      eventState,
+      hasAcsEvent,
+      rootKeys: Object.keys(root),
+    });
+
+  } catch (error) {
+    logError(error as Error, {
+      additionalData: {
+        company_id: companyId,
+        rawEvent,
+      },
+      endpoint: '/api/webhooks/attendance',
+    });
+  }
+}
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method !== 'POST') {
@@ -49,8 +373,11 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
   if (!company_id || typeof company_id !== 'string') {
     logger.warn('[ATTENDANCE WEBHOOK] Missing company_id', { query: req.query });
-    return res.status(400).json({ error: 'company_id is required' });
+    // Responder 200 incluso si falta company_id (no bloquear dispositivo)
+    return res.status(200).json({ success: false, message: 'company_id is required' });
   }
+
+  let rawEvent: any = null;
 
   try {
     // Log incoming request metadata
@@ -61,559 +388,128 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       userAgent: req.headers['user-agent'],
       ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
       contentLength: req.headers['content-length'],
-      hasBody: !!req.body,
     });
 
-    // Configure formidable with more verbose options
+    // Configure formidable
     const form = formidable({
       keepExtensions: false,
       maxFileSize: 10 * 1024 * 1024, // 10MB
       multiples: false,
     });
 
-    // Parse form and capture any errors
+    // Parse multipart
     let fields: any;
     let files: any;
-    
+
     try {
-      // Parse with formidable - it will handle named fields
-      // NOTE: Formidable v3 doesn't easily capture unnamed JSON parts in multipart
-      // For Hikvision EventNotificationAlert format (unnamed JSON part), we would need
-      // to use busboy directly or implement custom multipart parser
-      // For MVP, we handle named fields and log when empty to diagnose
       [fields, files] = await form.parse(req);
-      
     } catch (parseError) {
       logger.error('[ATTENDANCE WEBHOOK] Formidable parse error', parseError as Error, {
         companyId: company_id,
         contentType: req.headers['content-type'],
-        errorMessage: parseError instanceof Error ? parseError.message : String(parseError),
       });
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Failed to parse form data',
-        details: parseError instanceof Error ? parseError.message : String(parseError),
-      });
+      // Responder 200 incluso si hay error de parsing (no bloquear dispositivo)
+      return res.status(200).json({ success: false, message: 'Failed to parse form data' });
     }
-    
-    // Note: Formidable v3 may not capture unnamed JSON parts in multipart
-    // If fields are empty but we have multipart, the device is likely sending
-    // EventNotificationAlert in a part without field name - this requires
-    // a different parser (busboy) which we'll add if needed
 
-    // Log all form fields received (for debugging)
-    logger.info('[ATTENDANCE WEBHOOK] Form parsing completed', {
-      companyId: company_id,
-      fieldNames: Object.keys(fields),
-      fieldCount: Object.keys(fields).length,
-      fileCount: files ? Object.keys(files).length : 0,
-      fieldCounts: Object.fromEntries(
-        Object.entries(fields).map(([key, value]) => [key, Array.isArray(value) ? value.length : 1])
-      ),
-      hasFiles: files && Object.keys(files).length > 0,
-      allFieldKeys: Object.keys(fields),
-      note: fields && Object.keys(fields).length === 0 ? 'No fields found - device may be sending unnamed JSON part (Hikvision EventNotificationAlert format)' : undefined,
-    });
+    // Extraer JSON root según especificación:
+    // 1. Si fields está vacío y files tiene 1 entrada con mimetype application/json → leer ese file
+    // 2. Si hay fields, intentar extraer de ahí
+    let jsonString: string | null = null;
 
-    // Extract event data from multiple possible formats:
-    // 1. Field named "AccessControllerEvent" (curl test format)
-    // 2. JSON part in files (Hikvision EventNotificationAlert format - unnamed part)
-    // 3. Other field names as fallback
-    let eventDataString: string | null = null;
-
-    // Step 1: Try field-based extraction (curl test format and named fields)
-    eventDataString = fields.AccessControllerEvent?.[0]
-      || fields.accessControllerEvent?.[0]
-      || fields.event?.[0]
-      || fields.data?.[0]
-      || fields.json?.[0]
-      || (Object.keys(fields).length > 0 ? fields[Object.keys(fields)[0]]?.[0] : null);
-    
-    // Step 2: If no field found, check files for JSON part (Hikvision EventNotificationAlert format)
-    // Formidable treats unnamed parts as "files"
-    if (!eventDataString && files && Object.keys(files).length > 0) {
-      // Look through all files - try to find JSON content
-      // Hikvision sends unnamed JSON parts that formidable classifies as files
-      for (const fileKey of Object.keys(files)) {
-        const fileArray = files[fileKey];
-        if (Array.isArray(fileArray) && fileArray.length > 0) {
-          const file = fileArray[0];
-          
-          // Check if it might be JSON:
-          // - Has JSON mimetype
-          // - Or is small enough to be JSON (Hikvision events are typically < 1KB)
-          // - Or has no extension (unnamed part)
-          const mightBeJson = file.mimetype === 'application/json' 
-            || file.mimetype === 'text/json'
-            || file.originalFilename?.endsWith('.json')
-            || (!file.originalFilename && file.size && file.size < 5000); // Small unnamed file likely JSON
-          
-          if (mightBeJson && file.filepath) {
+    // Caso 1: JSON sin nombre en files (formato Hikvision EventNotificationAlert)
+    if (Object.keys(fields).length === 0 && files && Object.keys(files).length === 1) {
+      const fileKey = Object.keys(files)[0];
+      const fileArray = files[fileKey];
+      if (Array.isArray(fileArray) && fileArray.length > 0) {
+        const file = fileArray[0];
+        if (file.mimetype === 'application/json' && file.filepath) {
+          try {
+            jsonString = fs.readFileSync(file.filepath, 'utf-8');
+            // Clean up temp file
             try {
-              logger.info('[ATTENDANCE WEBHOOK] Found potential JSON file part, reading content', {
-                companyId: company_id,
-                fileKey: fileKey,
-                mimetype: file.mimetype,
-                size: file.size,
-                originalFilename: file.originalFilename || '(unnamed)',
-              });
-              
-              // Read file content
-              const fileContent = fs.readFileSync(file.filepath, 'utf-8');
-              
-              // Check if it starts like JSON
-              const trimmed = fileContent.trim();
-              if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
-                // Try to parse as JSON
-                const parsed = JSON.parse(fileContent);
-                
-                logger.info('[ATTENDANCE WEBHOOK] Successfully parsed JSON from file part', {
-                  companyId: company_id,
-                  rootKeys: Object.keys(parsed),
-                  hasEventNotificationAlert: !!parsed.EventNotificationAlert,
-                  hasAccessControllerEvent: !!parsed.AccessControllerEvent,
-                });
-                
-                // Extract AccessControllerEvent from EventNotificationAlert wrapper
-                if (parsed.EventNotificationAlert?.AccessControllerEvent) {
-                  logger.info('[ATTENDANCE WEBHOOK] Extracted AccessControllerEvent from EventNotificationAlert in file part', {
-                    companyId: company_id,
-                  });
-                  eventDataString = JSON.stringify(parsed.EventNotificationAlert.AccessControllerEvent);
-                } else if (parsed.AccessControllerEvent) {
-                  // Direct AccessControllerEvent
-                  eventDataString = JSON.stringify(parsed.AccessControllerEvent);
-                } else if (parsed.eventType === 'AccessControllerEvent' && parsed.AccessControllerEvent) {
-                  // eventType is AccessControllerEvent and has nested AccessControllerEvent node
-                  eventDataString = JSON.stringify(parsed.AccessControllerEvent);
-                } else if (parsed.eventType) {
-                  // Root object is the event (heartbeat, etc.)
-                  eventDataString = fileContent;
-                }
-              }
-              
-              // Clean up temp file
-              try {
-                fs.unlinkSync(file.filepath);
-              } catch (unlinkError) {
-                // Ignore cleanup errors
-              }
-              
-              if (eventDataString) break; // Found what we need
-            } catch (fileError) {
-              // Not JSON or parse error - continue to next file
-              logger.debug('[ATTENDANCE WEBHOOK] File part is not valid JSON, skipping', {
-                companyId: company_id,
-                fileKey: fileKey,
-                error: fileError instanceof Error ? fileError.message : String(fileError),
-              });
+              fs.unlinkSync(file.filepath);
+            } catch {
+              // Ignore cleanup errors
             }
+          } catch (fileError) {
+            logger.error('[ATTENDANCE WEBHOOK] Error reading JSON file', fileError as Error, {
+              companyId: company_id,
+            });
           }
         }
       }
     }
-    
-    // Step 3: If we found a field, check if it's EventNotificationAlert format and extract AccessControllerEvent
-    if (eventDataString) {
-      try {
-        const parsed = JSON.parse(eventDataString);
-        // Check if it's EventNotificationAlert wrapper format
-        if (parsed.EventNotificationAlert?.AccessControllerEvent) {
-          logger.info('[ATTENDANCE WEBHOOK] Found EventNotificationAlert wrapper in field, extracting AccessControllerEvent', {
-            companyId: company_id,
-          });
-          eventDataString = JSON.stringify(parsed.EventNotificationAlert.AccessControllerEvent);
-        } else if (parsed.AccessControllerEvent) {
-          // Direct AccessControllerEvent in field
-          eventDataString = JSON.stringify(parsed.AccessControllerEvent);
+
+    // Caso 2: JSON en fields (formato curl test o named fields)
+    if (!jsonString && Object.keys(fields).length > 0) {
+      // Intentar extraer de cualquier campo que parezca JSON
+      for (const [key, value] of Object.entries(fields)) {
+        if (Array.isArray(value) && value.length > 0) {
+          const fieldValue = value[0];
+          if (typeof fieldValue === 'string' && (fieldValue.trim().startsWith('{') || fieldValue.trim().startsWith('['))) {
+            jsonString = fieldValue;
+            break;
+          }
         }
-        // Otherwise use the field as-is
-      } catch {
-        // Not JSON, use as-is
       }
     }
 
-    if (!eventDataString) {
-      // Log detailed information about what was received
-      const allFieldsData = Object.fromEntries(
-        Object.entries(fields).map(([key, value]) => [
-          key,
-          Array.isArray(value) 
-            ? (value[0]?.substring?.(0, 500) || `[Array of ${value.length} items]`)
-            : (String(value)?.substring?.(0, 500) || String(value))
-        ])
-      );
+    // Parsear JSON root
+    if (jsonString) {
+      try {
+        rawEvent = JSON.parse(jsonString);
+      } catch (parseError) {
+        logger.error('[ATTENDANCE WEBHOOK] JSON parse error', parseError as Error, {
+          companyId: company_id,
+          jsonPreview: jsonString.substring(0, 500),
+        });
+        // Responder 200 incluso si hay error de parsing (no bloquear dispositivo)
+        return res.status(200).json({ success: false, message: 'Invalid JSON format' });
+      }
+    }
 
-      logger.warn('[ATTENDANCE WEBHOOK] Empty event received - no AccessControllerEvent found', {
+    // Si no se encontró JSON, responder 200 (puede ser heartbeat vacío o formato desconocido)
+    if (!rawEvent) {
+      logger.warn('[ATTENDANCE WEBHOOK] No JSON found in request', {
         companyId: company_id,
-        availableFields: Object.keys(fields),
         fieldCount: Object.keys(fields).length,
-        allFieldsData: allFieldsData,
-        contentType: req.headers['content-type'],
-        contentLength: req.headers['content-length'],
-        hint: 'Device may be sending: (1) empty heartbeat (normal), (2) XML format (not yet supported), (3) Hikvision EventNotificationAlert format with unnamed JSON part (check files array), or (4) data in unexpected format',
+        fileCount: files ? Object.keys(files).length : 0,
       });
       return res.status(200).json({ success: true, message: 'Empty event received' });
     }
 
-    // Log raw event data (truncated for security)
-    logger.info('[ATTENDANCE WEBHOOK] Event data extracted', {
-      companyId: company_id,
-      dataLength: eventDataString.length,
-      dataPreview: eventDataString.substring(0, 500),
-      source: 'form field',
-      isJSON: eventDataString.trim().startsWith('{') || eventDataString.trim().startsWith('['),
+    // **RESPONDER 200 INMEDIATAMENTE** después de parsear el JSON
+    // El procesamiento se hace de forma asíncrona
+    res.status(200).json({ success: true, message: 'Event received' });
+
+    // Procesar evento de forma asíncrona (no esperar)
+    processEvent(rawEvent, company_id).catch((error) => {
+      logError(error as Error, {
+        additionalData: {
+          company_id: company_id,
+          rawEvent,
+        },
+        endpoint: '/api/webhooks/attendance',
+      });
     });
 
-    // Parsear JSON con manejo de errores específico
-    let eventData: any;
-    try {
-      eventData = JSON.parse(eventDataString);
-      logger.debug('[ATTENDANCE WEBHOOK] Successfully parsed JSON', {
-        companyId: company_id,
-        eventKeys: Object.keys(eventData),
-        eventType: eventData.eventType,
-      });
-    } catch (parseError) {
-      // Check if it might be XML (Hikvision can send XML if parameterFormatType=XML)
-      if (eventDataString.trim().startsWith('<?xml') || eventDataString.trim().startsWith('<')) {
-        logger.warn('[ATTENDANCE WEBHOOK] Received XML format (not yet supported)', {
-          companyId: company_id,
-          xmlPreview: eventDataString.substring(0, 500),
-          hint: 'Device is sending XML format. JSON format is required. Check device parameterFormatType setting.',
-        });
-        return res.status(200).json({ 
-          success: false, 
-          message: 'XML format received but not yet supported. Device must use JSON format.',
-          hint: 'Check device parameterFormatType setting in HTTP Listening configuration',
-        });
-      }
-      
-      logger.error(`[ATTENDANCE] Failed to parse JSON event data`, parseError as Error, {
-        companyId: company_id,
-        rawData: eventDataString?.substring(0, 1000), // Primeros 1000 caracteres para debugging
-        dataLength: eventDataString?.length,
-      });
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Invalid JSON format in event data' 
-      });
-    }
-
-    const eventType = eventData.eventType;
-
-    // Intentar extraer el DNI del empleado de diferentes campos posibles
-    // Según manual Hikvision ISAPI, AccessControllerEvent puede incluir:
-    // - cardNo (número de tarjeta/DNI)
-    // - employeeNoString (número de empleado como string)
-    // - employeeNo (número de empleado)
-    // - name (nombre del empleado)
-    // - majorEventType (tipo de evento principal)
-    const employeeDNI = eventData.employeeNoString 
-      || eventData.employeeNo 
-      || eventData.employeeNoHex
-      || eventData.dni 
-      || eventData.employee_id
-      || eventData.cardNo // Campo estándar según manual Hikvision ISAPI
-      || eventData.cardNumber; // Variante alternativa
-
-    // Normalizar DNI: remover espacios, guiones, y padding de ceros a la izquierda
-    const normalizeDNI = (dni: string | number | undefined): string | undefined => {
-      if (!dni) return undefined;
-      const dniStr = String(dni).trim().replace(/[\s-]/g, '');
-      // Remover ceros a la izquierda, pero mantener al menos un dígito
-      return dniStr.replace(/^0+/, '') || dniStr;
-    };
-
-    const normalizedDNI = normalizeDNI(employeeDNI);
-
-    // Si es un heartbeat sin datos de empleado (DNI), ignorarlo para evitar log flooding
-    // Los heartbeats son normales y esperados - solo confirman que el dispositivo está conectado
-    if (eventType === 'heartBeat' && !normalizedDNI) {
-      logger.info('[ATTENDANCE WEBHOOK] Heartbeat received (normal - device connectivity check)', {
-        companyId: company_id,
-        eventType: eventType,
-        note: 'Heartbeats are expected. For attendance records, device must send AccessControllerEvent with employee data.',
-      });
-      return res.status(200).json({ success: true, message: 'Heartbeat acknowledged' });
-    }
-
-    // Si es un heartbeat CON datos de empleado, procesarlo como asistencia
-    if (eventType === 'heartBeat' && normalizedDNI) {
-      logger.info('--- HIKVISION HEARTBEAT WITH EMPLOYEE DATA ---', {
-        companyId: company_id,
-        originalDNI: employeeDNI,
-        normalizedDNI: normalizedDNI,
-        parsedEventData: eventData,
-      });
-    } else if (eventType !== 'heartBeat') {
-      // Si no es un heartbeat, lo registramos para depuración.
-      // AccessControllerEvent real incluye: cardNo, name, majorEventType, etc.
-      logger.info('--- HIKVISION EVENT RECEIVED (NON-HEARTBEAT) ---', {
-        companyId: company_id,
-        eventType: eventType,
-        originalDNI: employeeDNI,
-        normalizedDNI: normalizedDNI,
-        hasCardNo: !!eventData.cardNo,
-        hasEmployeeNo: !!eventData.employeeNo || !!eventData.employeeNoString,
-        majorEventType: eventData.majorEventType,
-        eventKeys: Object.keys(eventData),
-        parsedEventData: eventData,
-      });
-    }
-
-    // Procesar cualquier evento que tenga DNI (incluyendo heartbeats con datos de empleado)
-    // o eventos de autenticación válidos
-    if (normalizedDNI || VALID_AUTHENTICATION_EVENTS.includes(eventType)) {
-      // Si no hay DNI pero es un evento de autenticación válido, no procesar
-      if (!normalizedDNI) {
-        logger.warn(`[ATTENDANCE] Auth event '${eventType}' received without employee ID (DNI)`, {
-          companyId: company_id,
-          eventType: eventType,
-          parsedEventData: eventData,
-        });
-        return res.status(200).json({ success: false, message: 'Event lacked employee ID.' });
-      }
-
-      // Intentar extraer el timestamp del evento
-      let eventTimestamp: Date;
-      if (eventData.dateTime) {
-        eventTimestamp = new Date(eventData.dateTime);
-      } else if (eventData.timestamp) {
-        // Si es un número (Unix timestamp), convertir a milisegundos
-        const ts = typeof eventData.timestamp === 'number' 
-          ? eventData.timestamp * 1000 
-          : parseInt(eventData.timestamp, 10) * 1000;
-        eventTimestamp = new Date(ts);
-      } else {
-        eventTimestamp = nowInHonduras();
-      }
-
-      // Validar que el timestamp sea válido
-      if (isNaN(eventTimestamp.getTime())) {
-        logger.warn(`[ATTENDANCE] Invalid timestamp received, using current time`, {
-          companyId: company_id,
-          dateTime: eventData.dateTime,
-          timestamp: eventData.timestamp,
-        });
-        eventTimestamp = nowInHonduras();
-      }
-
-      // Usar createClient de lib/supabase/server que es resiliente y no crashea el servidor
-      // Este cliente retorna un mock client si faltan variables de entorno, manteniendo el servidor vivo
-      const supabase = createClient(req, res);
-
-      // Buscar empleado por DNI y company_id
-      // Intentar búsqueda exacta primero, luego búsqueda flexible (sin padding de ceros)
-      logger.debug('[ATTENDANCE WEBHOOK] Searching for employee', {
-        companyId: company_id,
-        normalizedDNI: normalizedDNI,
-        originalDNI: employeeDNI,
-        searchType: 'exact',
-      });
-
-      let { data: employee, error: employeeError } = await supabase
-        .from('employees')
-        .select('id, company_id, work_schedule_id, dni')
-        .eq('company_id', company_id as string)
-        .eq('dni', normalizedDNI)
-        .eq('status', 'active')
-        .single();
-
-      // Si no se encuentra con búsqueda exacta, intentar búsqueda flexible
-      if (employeeError || !employee) {
-        logger.info(`[ATTENDANCE] Exact DNI match not found, trying flexible search`, {
-          companyId: company_id,
-          normalizedDNI: normalizedDNI,
-          originalDNI: employeeDNI,
-          exactSearchError: employeeError?.message,
-        });
-        
-        // Buscar todos los empleados de la compañía y hacer match manual
-        const { data: allEmployees, error: allEmployeesError } = await supabase
-          .from('employees')
-          .select('id, company_id, work_schedule_id, dni')
-          .eq('company_id', company_id as string)
-          .eq('status', 'active');
-
-        if (allEmployeesError) {
-          logger.error(`[ATTENDANCE] Error fetching all employees for flexible search`, allEmployeesError, {
-            companyId: company_id,
-          });
-        } else if (allEmployees) {
-          logger.debug(`[ATTENDANCE] Flexible search: found ${allEmployees.length} active employees in company`, {
-            companyId: company_id,
-            employeeCount: allEmployees.length,
-            sampleDNIs: allEmployees.slice(0, 5).map(emp => ({
-              id: emp.id,
-              dni: emp.dni,
-              normalized: normalizeDNI(emp.dni),
-            })),
-          });
-
-          // Buscar match flexible (normalizar DNIs de la BD también)
-          employee = allEmployees.find(emp => {
-            const empDNI = normalizeDNI(emp.dni);
-            return empDNI === normalizedDNI;
-          }) || null; // Si find() devuelve undefined, asigna null
-          
-          if (employee) {
-            employeeError = null;
-            logger.info(`[ATTENDANCE] Found employee with flexible DNI match`, {
-              companyId: company_id,
-              employeeId: employee.id,
-              storedDNI: employee.dni,
-              matchedDNI: normalizedDNI,
-            });
-          } else {
-            logger.warn(`[ATTENDANCE] No employee match found in flexible search`, {
-              companyId: company_id,
-              normalizedDNI: normalizedDNI,
-              totalEmployeesChecked: allEmployees.length,
-              closestMatches: allEmployees
-                .map(emp => {
-                  const empNormalized = normalizeDNI(emp.dni);
-                  const hasSimilarity = normalizedDNI && empNormalized
-                    ? (empNormalized.includes(normalizedDNI) || normalizedDNI.includes(empNormalized))
-                    : false;
-                  return {
-                    storedDNI: emp.dni,
-                    normalized: empNormalized,
-                    similarity: hasSimilarity,
-                  };
-                })
-                .filter(m => m.similarity)
-                .slice(0, 3),
-            });
-          }
-        }
-      } else {
-        logger.debug(`[ATTENDANCE] Employee found with exact DNI match`, {
-          companyId: company_id,
-          employeeId: employee.id,
-          storedDNI: employee.dni,
-          matchedDNI: normalizedDNI,
-        });
-      }
-
-      if (employeeError || !employee) {
-        logger.warn(`[ATTENDANCE] Employee not found with DNI ${normalizedDNI} (original: ${employeeDNI}) for company ${company_id}`, {
-          companyId: company_id,
-          originalDNI: employeeDNI,
-          normalizedDNI: normalizedDNI,
-          eventType: eventType,
-          error: employeeError?.message || 'Employee not found',
-          errorCode: employeeError?.code,
-          allEventData: eventData, // Log completo para debugging
-          timestamp: eventData.dateTime || eventData.timestamp,
-        });
-        return res.status(200).json({ 
-          success: false, 
-          message: `Employee with DNI ${normalizedDNI} not found.`,
-          receivedDNI: employeeDNI,
-          normalizedDNI: normalizedDNI,
-          hint: 'Verify employee exists in database with status=active and matching DNI',
-        });
-      }
-
-      // Usar la fecha del timestamp del evento, no la fecha actual
-      // Esto es importante si el evento ocurrió ayer o el dispositivo tiene desincronización
-      const eventDate = eventTimestamp.toISOString().split('T')[0];
-      const todayDate = getTodayInHonduras();
-      
-      // Si el evento es de hace más de 24 horas, usar la fecha del evento
-      // Si es reciente (menos de 24 horas), usar la fecha de hoy
-      const hoursDiff = (nowInHonduras().getTime() - eventTimestamp.getTime()) / (1000 * 60 * 60);
-      const recordDate = hoursDiff > 24 ? eventDate : todayDate;
-      
-      logger.info(`[ATTENDANCE] Using date for record`, {
-        eventDate: eventDate,
-        todayDate: todayDate,
-        hoursDiff: hoursDiff.toFixed(2),
-        recordDate: recordDate,
-      });
-      
-      // Convertir el timestamp del evento a ISO string (UTC)
-      const checkInTimestamp = eventTimestamp.toISOString();
-
-      // Insertar o actualizar el registro de asistencia
-      // Si ya existe un registro para la fecha, actualizamos el check_in
-      const { data: record, error: upsertError } = await supabase
-        .from('attendance_records')
-        .upsert({
-          employee_id: employee.id,
-          date: recordDate, // Usar fecha calculada (evento o hoy)
-          check_in: checkInTimestamp,
-          tz: 'America/Tegucigalpa',
-          tz_offset_minutes: -360,
-          status: 'present',
-        }, {
-          onConflict: 'employee_id,date',
-        })
-        .select()
-        .single();
-
-      if (upsertError) {
-        logger.error(`[ATTENDANCE] Failed to upsert attendance record`, upsertError, {
-          companyId: company_id,
-          employeeId: employee.id,
-          employeeDNI: employeeDNI,
-          normalizedDNI: normalizedDNI,
-          eventType: eventType,
-          recordDate: recordDate,
-          checkInTimestamp: checkInTimestamp,
-          errorDetails: upsertError.message,
-          errorCode: upsertError.code,
-        });
-        return res.status(500).json({ 
-          success: false, 
-          error: 'Failed to save attendance record.',
-          details: upsertError.message,
-        });
-      }
-
-      logger.info(`[SUCCESS] Recorded attendance for employee DNI ${normalizedDNI} (original: ${employeeDNI}) via event '${eventType}'`, {
-        companyId: company_id,
-        employeeId: employee.id,
-        originalDNI: employeeDNI,
-        normalizedDNI: normalizedDNI,
-        storedDNI: employee.dni,
-        eventType: eventType,
-        recordId: record?.id,
-        recordDate: recordDate,
-        checkIn: checkInTimestamp,
-        eventTimestamp: eventTimestamp.toISOString(),
-      });
-
-      return res.status(200).json({ success: true, message: 'Attendance recorded successfully' });
-
-    } else {
-      // Si es otro tipo de evento conocido pero no de asistencia (ej. "door open"), solo lo registramos.
-      logger.info(`[ATTENDANCE WEBHOOK] Ignored non-attendance event of type '${eventType}'`, {
-        companyId: company_id,
-        eventType: eventType,
-        hasDNI: !!normalizedDNI,
-        normalizedDNI: normalizedDNI,
-        isValidAuthEvent: VALID_AUTHENTICATION_EVENTS.includes(eventType),
-        parsedEventData: eventData,
-      });
-      return res.status(200).json({ 
-        success: true, 
-        message: `Event type ${eventType} received and ignored`,
-        reason: !normalizedDNI ? 'No employee DNI in event' : `Event type ${eventType} is not a valid attendance event`,
-      });
-    }
   } catch (error) {
+    // Cualquier error: responder 200 para no bloquear dispositivo
     logError(error as Error, {
       additionalData: {
         company_id: company_id,
       },
       endpoint: '/api/webhooks/attendance',
     });
-    return res.status(500).json({
-      success: false,
-      error: 'An internal server error occurred.',
-    });
+    
+    // Si aún no se ha respondido, responder 200
+    if (!res.headersSent) {
+      return res.status(200).json({
+        success: false,
+        error: 'An internal server error occurred.',
+      });
+    }
   }
 };
 
