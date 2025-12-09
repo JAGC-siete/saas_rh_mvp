@@ -114,6 +114,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
+    // Validate pay_type if provided
+    if (body.pay_type && !['fixed', 'hourly'].includes(body.pay_type)) {
+      console.log('❌ Invalid pay_type:', { pay_type: body.pay_type })
+      return res.status(400).json({ error: 'Invalid pay_type. Must be "fixed" or "hourly"' })
+    }
+
     const updateData: any = { ...body };
     delete updateData.id; // Remove id from body to prevent trying to update it
     updateData.sync_status = 'pending'; // Mark for sync on any update

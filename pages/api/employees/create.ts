@@ -42,6 +42,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       department_id,
       work_schedule_id,
       base_salary,
+      pay_type = 'fixed', // Default: fixed (administrativo/permanente)
       hire_date,
       termination_date,
       status = 'active',
@@ -74,6 +75,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(409).json({ error: 'Employee code already exists' })
     }
 
+    // Validate pay_type
+    if (pay_type && !['fixed', 'hourly'].includes(pay_type)) {
+      return res.status(400).json({
+        error: 'Invalid pay_type. Must be "fixed" or "hourly"'
+      })
+    }
+
     const employeeData: any = {
       company_id: companyId,
       employee_code,
@@ -86,6 +94,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       department_id: department_id || null,
       work_schedule_id: work_schedule_id || null,
       base_salary: typeof base_salary === 'string' ? parseFloat(base_salary) : base_salary,
+      pay_type: pay_type || 'fixed', // Default to 'fixed' if not provided
       hire_date: hire_date || null,
       termination_date: termination_date || null,
       status,

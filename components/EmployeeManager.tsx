@@ -33,6 +33,7 @@ const INITIAL_FORM_DATA = {
   department_id: '',
   work_schedule_id: '',
   base_salary: '',
+  pay_type: 'fixed', // Default: fixed (administrativo/permanente)
   hire_date: '',
   termination_date: '',
   status: 'active',
@@ -583,6 +584,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       department_id: employee.department_id || '',
       work_schedule_id: employee.work_schedule_id || '',
       base_salary: employee.base_salary?.toString() || '',
+      pay_type: (employee as any).pay_type || 'fixed', // Include pay_type from employee
       hire_date: employee.hire_date || '',
       termination_date: employee.termination_date || '',
       status: employee.status || 'active',

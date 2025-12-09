@@ -277,6 +277,33 @@ function AddEmployeeForm({
               </div>
 
               <div>
+                <label className="block text-sm font-medium text-white mb-1" htmlFor="pay_type">
+                  Tipo de Pago *
+                </label>
+                <select
+                  id="pay_type"
+                  name="pay_type"
+                  disabled={loading}
+                  value={v(formData?.pay_type) || 'fixed'}
+                  onChange={(e) => onFormChange('pay_type', e.target.value)}
+                  className="w-full p-2 border border-white/20 rounded-md focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white/10 text-white"
+                  required
+                >
+                  <option value="fixed" className="bg-brand-900 text-white">
+                    Administrativo/Permanente (Horario fijo)
+                  </option>
+                  <option value="hourly" className="bg-brand-900 text-white">
+                    Por Hora (Eventos consecutivos)
+                  </option>
+                </select>
+                <p className="text-xs text-gray-400 mt-1">
+                  <strong>Administrativo:</strong> Usa horario fijo para inferir entrada/salida.
+                  <br />
+                  <strong>Por Hora:</strong> Primera marca = entrada, siguiente = salida (máx. 30h).
+                </p>
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium text-white mb-1" htmlFor="hire_date">
                   Fecha de Contratación
                 </label>
