@@ -228,7 +228,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     if (empError) {
       console.error('Error obteniendo empleados:', empError)
-      return res.status(500).json({ error: 'Error obteniendo empleados' })
+      console.error('Error details:', JSON.stringify(empError, null, 2))
+      return res.status(500).json({ 
+        error: 'Error obteniendo empleados',
+        details: empError.message || String(empError),
+        code: empError.code
+      })
     }
 
     if (!employees || employees.length === 0) {
@@ -248,15 +253,29 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     })))
 
     // Obtener registros de asistencia del período
-    const { data: attendanceRecords, error: attError } = await supabase
-      .from('attendance_records')
-      .select('employee_id, date, check_in, check_out, status')
-      .gte('date', fechaInicio)
-      .lte('date', fechaFin)
+    // Filtrar solo por empleados de esta empresa usando los IDs ya obtenidos
+    const employeeIds = employees.map((emp: any) => emp.id);
+    
+    let attendanceRecords: any[] = [];
+    if (employeeIds.length > 0) {
+      const { data: attData, error: attError } = await supabase
+        .from('attendance_records')
+        .select('employee_id, date, check_in, check_out, status')
+        .in('employee_id', employeeIds)
+        .gte('date', fechaInicio)
+        .lte('date', fechaFin)
 
-    if (attError) {
-      console.error('Error obteniendo registros de asistencia:', attError)
-      return res.status(500).json({ error: 'Error obteniendo registros de asistencia' })
+      if (attError) {
+        console.error('Error obteniendo registros de asistencia:', attError)
+        console.error('Error details:', JSON.stringify(attError, null, 2))
+        return res.status(500).json({ 
+          error: 'Error obteniendo registros de asistencia',
+          details: attError.message || String(attError),
+          code: attError.code
+        })
+      }
+      
+      attendanceRecords = attData || [];
     }
 
     // Filtrar empleados según criterio de asistencia (diferente por pay_type)
@@ -495,8 +514,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   } catch (error: any) {
     console.error('Payroll Preview API error:', error)
+    console.error('Error stack:', error.stack)
+    console.error('Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2))
     return res.status(error.message === 'UNAUTHORIZED' ? 401 : 500).json({
-      error: error.message || 'Internal server error'
+      error: error.message || 'Internal server error',
+      details: error.stack || String(error),
+      type: error.constructor?.name || typeof error
     })
   }
 }
