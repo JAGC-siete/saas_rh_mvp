@@ -57,7 +57,8 @@ export default function UnifiedPayrollTable({
   companyId
 }: UnifiedPayrollTableProps) {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
-  const [currentPage, setCurrentPage] = useState(1)
+  const [currentPageFixed, setCurrentPageFixed] = useState(1)
+  const [currentPageHourly, setCurrentPageHourly] = useState(1)
   const [itemsPerPage] = useState(10)
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [sortBy, setSortBy] = useState<'name' | 'department'>('name')
@@ -220,23 +221,22 @@ export default function UnifiedPayrollTable({
     }, { totalBruto: 0, totalDeducciones: 0, totalNeto: 0, totalHoras: 0 })
   }, [filteredAndSortedHourlyRows])
 
-  // Paginate results separately
+  // Paginate results separately with independent pagination
   const paginatedFixedRows = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage
+    const startIndex = (currentPageFixed - 1) * itemsPerPage
     const endIndex = startIndex + itemsPerPage
     return filteredAndSortedFixedRows.slice(startIndex, endIndex)
-  }, [filteredAndSortedFixedRows, currentPage, itemsPerPage])
+  }, [filteredAndSortedFixedRows, currentPageFixed, itemsPerPage])
 
   const paginatedHourlyRows = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage
+    const startIndex = (currentPageHourly - 1) * itemsPerPage
     const endIndex = startIndex + itemsPerPage
     return filteredAndSortedHourlyRows.slice(startIndex, endIndex)
-  }, [filteredAndSortedHourlyRows, currentPage, itemsPerPage])
+  }, [filteredAndSortedHourlyRows, currentPageHourly, itemsPerPage])
 
-  // Calculate total pages (use the larger of the two)
+  // Calculate total pages independently
   const totalPagesFixed = Math.ceil(filteredAndSortedFixedRows.length / itemsPerPage)
   const totalPagesHourly = Math.ceil(filteredAndSortedHourlyRows.length / itemsPerPage)
-  const totalPages = Math.max(totalPagesFixed, totalPagesHourly)
 
   const toggleSortOrder = () => {
     setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')
@@ -356,7 +356,8 @@ export default function UnifiedPayrollTable({
               value={departmentFilter}
               onChange={(e) => {
                 setDepartmentFilter(e.target.value)
-                setCurrentPage(1)
+                setCurrentPageFixed(1)
+                setCurrentPageHourly(1)
               }}
               className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
             >
@@ -406,24 +407,52 @@ export default function UnifiedPayrollTable({
 
         {/* Sección 1: Nómina — Empleados Fijos (fixed) */}
         {fixedRows.length > 0 && (
-          <PayrollFixedTable
-            rows={paginatedFixedRows}
-            onGenerateVoucher={onGenerateVoucher}
-            onEditCustomFields={onEditCustomFields}
-            loading={loading}
-            hasCustom={hasCustom}
-          />
+          <>
+            <PayrollFixedTable
+              rows={paginatedFixedRows}
+              onGenerateVoucher={onGenerateVoucher}
+              onEditCustomFields={onEditCustomFields}
+              loading={loading}
+              hasCustom={hasCustom}
+            />
+            {/* Paginación independiente para empleados fijos */}
+            {totalPagesFixed > 1 && (
+              <div className="mb-6">
+                <Pagination
+                  currentPage={currentPageFixed}
+                  totalPages={totalPagesFixed}
+                  totalItems={filteredAndSortedFixedRows.length}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={setCurrentPageFixed}
+                />
+              </div>
+            )}
+          </>
         )}
 
         {/* Sección 2: Nómina — Detalle por Empleado (hourly) */}
         {hourlyRows.length > 0 && (
-          <PayrollHourlyTable
-            rows={paginatedHourlyRows}
-            onGenerateVoucher={onGenerateVoucher}
-            onEditCustomFields={onEditCustomFields}
-            loading={loading}
-            hasCustom={hasCustom}
-          />
+          <>
+            <PayrollHourlyTable
+              rows={paginatedHourlyRows}
+              onGenerateVoucher={onGenerateVoucher}
+              onEditCustomFields={onEditCustomFields}
+              loading={loading}
+              hasCustom={hasCustom}
+            />
+            {/* Paginación independiente para empleados por hora */}
+            {totalPagesHourly > 1 && (
+              <div className="mb-6">
+                <Pagination
+                  currentPage={currentPageHourly}
+                  totalPages={totalPagesHourly}
+                  totalItems={filteredAndSortedHourlyRows.length}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={setCurrentPageHourly}
+                />
+              </div>
+            )}
+          </>
         )}
 
         {/* Mensaje si no hay empleados */}
@@ -431,18 +460,6 @@ export default function UnifiedPayrollTable({
           <div className="text-center py-8 text-gray-400">
             No hay empleados para este período
           </div>
-        )}
-
-
-        {/* Pagination - Solo mostrar si hay más de una página */}
-        {(totalPagesFixed > 1 || totalPagesHourly > 1) && (
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={filteredAndSortedFixedRows.length + filteredAndSortedHourlyRows.length}
-            itemsPerPage={itemsPerPage}
-            onPageChange={setCurrentPage}
-          />
         )}
 
         {/* Action Buttons */}
