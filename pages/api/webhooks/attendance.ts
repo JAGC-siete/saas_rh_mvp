@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import formidable from 'formidable';
 import { createAdminClient } from '../../../lib/supabase/server';
 import { logError, logger } from '../../../lib/logger';
-import { getTodayInHonduras, nowInHonduras, toHN, convertToHondurasTime, HONDURAS_TIMEZONE } from '../../../lib/timezone';
+import { getTodayInHonduras, nowInHonduras, toHN, convertToHondurasTime } from '../../../lib/timezone';
 import { createHash } from 'crypto';
 import fs from 'fs';
 
@@ -244,10 +244,10 @@ async function processHeartbeat(root: any, companyId: string) {
         status: 'online',
         macAddressUpdated: macAddress && !device.mac_address,
         ipAddressUpdated: ipAddress && device.ip_address !== ipAddress,
-      });
-    }
-  }
-}
+              });
+            }
+          }
+        }
 
 /**
  * Maneja eventos de empleados administrativos/permanentes (pay_type = 'fixed')
@@ -368,6 +368,17 @@ async function handleFixedEmployeeEvent(
       // Crear registro con check_in
       const lateMinutes = Math.max(0, diffToInMinutes);
       
+      // Construir metadata con información del dispositivo Hikvision
+      const deviceMetadata: Record<string, any> = {};
+      if (doorNo !== null && doorNo !== undefined) deviceMetadata.doorNo = doorNo;
+      if (readerNo !== null && readerNo !== undefined) deviceMetadata.readerNo = readerNo;
+      if (verifyMode !== null && verifyMode !== undefined) deviceMetadata.verifyMode = verifyMode;
+      if (cardNo !== null && cardNo !== undefined) deviceMetadata.cardNo = cardNo;
+      if (employeeNoString !== null && employeeNoString !== undefined) deviceMetadata.employeeNoString = employeeNoString;
+      if (Object.keys(deviceMetadata).length > 0) {
+        deviceMetadata.source = 'hikvision_webhook';
+      }
+
       const { data: record, error: insertError } = await supabase
         .from('attendance_records')
         .insert({
@@ -380,6 +391,7 @@ async function handleFixedEmployeeEvent(
           tz: 'America/Tegucigalpa',
           tz_offset_minutes: -360,
           status: 'present',
+          metadata: Object.keys(deviceMetadata).length > 0 ? deviceMetadata : null,
         })
         .select()
         .single();
@@ -404,6 +416,17 @@ async function handleFixedEmployeeEvent(
     // (llegó tarde al final del día)
     if (Math.abs(diffToOutMinutes) < Math.abs(diffToInMinutes) && 
         diffToOutMinutes >= -WINDOW_OUT_BEFORE && diffToOutMinutes <= WINDOW_OUT_AFTER) {
+      // Construir metadata con información del dispositivo Hikvision
+      const deviceMetadata: Record<string, any> = {};
+      if (doorNo !== null && doorNo !== undefined) deviceMetadata.doorNo = doorNo;
+      if (readerNo !== null && readerNo !== undefined) deviceMetadata.readerNo = readerNo;
+      if (verifyMode !== null && verifyMode !== undefined) deviceMetadata.verifyMode = verifyMode;
+      if (cardNo !== null && cardNo !== undefined) deviceMetadata.cardNo = cardNo;
+      if (employeeNoString !== null && employeeNoString !== undefined) deviceMetadata.employeeNoString = employeeNoString;
+      if (Object.keys(deviceMetadata).length > 0) {
+        deviceMetadata.source = 'hikvision_webhook';
+      }
+
       // Crear registro completo con check_in esperado y check_out del evento
       const { data: record, error: insertError } = await supabase
         .from('attendance_records')
@@ -419,6 +442,7 @@ async function handleFixedEmployeeEvent(
           tz: 'America/Tegucigalpa',
           tz_offset_minutes: -360,
           status: 'present',
+          metadata: Object.keys(deviceMetadata).length > 0 ? deviceMetadata : null,
         })
         .select()
         .single();
@@ -454,14 +478,33 @@ async function handleFixedEmployeeEvent(
   if (openRecord) {
     // Verificar si está en ventana de salida
     if (diffToOutMinutes >= -WINDOW_OUT_BEFORE && diffToOutMinutes <= WINDOW_OUT_AFTER) {
+      // Construir metadata con información del dispositivo Hikvision
+      const deviceMetadata: Record<string, any> = {};
+      if (doorNo !== null && doorNo !== undefined) deviceMetadata.doorNo = doorNo;
+      if (readerNo !== null && readerNo !== undefined) deviceMetadata.readerNo = readerNo;
+      if (verifyMode !== null && verifyMode !== undefined) deviceMetadata.verifyMode = verifyMode;
+      if (cardNo !== null && cardNo !== undefined) deviceMetadata.cardNo = cardNo;
+      if (employeeNoString !== null && employeeNoString !== undefined) deviceMetadata.employeeNoString = employeeNoString;
+      if (Object.keys(deviceMetadata).length > 0) {
+        deviceMetadata.source = 'hikvision_webhook';
+        // Preservar metadata existente si existe
+        const existingMetadata = (openRecord as any).metadata || {};
+        Object.assign(deviceMetadata, existingMetadata);
+      }
+
       // Actualizar registro con check_out
+      const updateData: any = {
+        check_out: eventTimestamp.toISOString(),
+        expected_check_out: expectedCheckOutStr,
+        updated_at: new Date().toISOString(),
+      };
+      if (Object.keys(deviceMetadata).length > 0) {
+        updateData.metadata = deviceMetadata;
+      }
+
       const { error: updateError } = await supabase
         .from('attendance_records')
-        .update({
-          check_out: eventTimestamp.toISOString(),
-          expected_check_out: expectedCheckOutStr,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', openRecord.id);
 
       if (updateError) {
@@ -548,6 +591,17 @@ async function handleHourlyEmployeeEvent(
 
   // REGLA 1: No hay registro abierto → crear nuevo check_in
   if (!openRecord) {
+    // Construir metadata con información del dispositivo Hikvision
+    const deviceMetadata: Record<string, any> = {};
+    if (doorNo !== null && doorNo !== undefined) deviceMetadata.doorNo = doorNo;
+    if (readerNo !== null && readerNo !== undefined) deviceMetadata.readerNo = readerNo;
+    if (verifyMode !== null && verifyMode !== undefined) deviceMetadata.verifyMode = verifyMode;
+    if (cardNo !== null && cardNo !== undefined) deviceMetadata.cardNo = cardNo;
+    if (employeeNoString !== null && employeeNoString !== undefined) deviceMetadata.employeeNoString = employeeNoString;
+    if (Object.keys(deviceMetadata).length > 0) {
+      deviceMetadata.source = 'hikvision_webhook';
+    }
+
     const { data: record, error: insertError } = await supabase
       .from('attendance_records')
       .insert({
@@ -558,6 +612,7 @@ async function handleHourlyEmployeeEvent(
         tz: 'America/Tegucigalpa',
         tz_offset_minutes: -360,
         status: 'present',
+        metadata: Object.keys(deviceMetadata).length > 0 ? deviceMetadata : null,
       })
       .select()
       .single();
@@ -594,13 +649,32 @@ async function handleHourlyEmployeeEvent(
 
   // Si la diferencia es positiva y está dentro de la ventana de 30 horas
   if (diffMs > 0 && diffMs <= MAX_SHIFT_MS) {
+    // Construir metadata con información del dispositivo Hikvision
+    const deviceMetadata: Record<string, any> = {};
+    if (doorNo !== null && doorNo !== undefined) deviceMetadata.doorNo = doorNo;
+    if (readerNo !== null && readerNo !== undefined) deviceMetadata.readerNo = readerNo;
+    if (verifyMode !== null && verifyMode !== undefined) deviceMetadata.verifyMode = verifyMode;
+    if (cardNo !== null && cardNo !== undefined) deviceMetadata.cardNo = cardNo;
+    if (employeeNoString !== null && employeeNoString !== undefined) deviceMetadata.employeeNoString = employeeNoString;
+    if (Object.keys(deviceMetadata).length > 0) {
+      deviceMetadata.source = 'hikvision_webhook';
+      // Preservar metadata existente si existe
+      const existingMetadata = (openRecord as any).metadata || {};
+      Object.assign(deviceMetadata, existingMetadata);
+    }
+
     // Actualizar registro con check_out
+    const updateData: any = {
+      check_out: eventTimestamp.toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    if (Object.keys(deviceMetadata).length > 0) {
+      updateData.metadata = deviceMetadata;
+    }
+
     const { error: updateError } = await supabase
       .from('attendance_records')
-      .update({
-        check_out: eventTimestamp.toISOString(),
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('id', openRecord.id);
 
     if (updateError) {
@@ -644,6 +718,17 @@ async function handleHourlyEmployeeEvent(
 
   // Cerrar registro huérfano (opcional: puedes dejarlo abierto o cerrarlo con hora estimada)
   // Por ahora, lo dejamos abierto y creamos un nuevo check_in
+  // Construir metadata con información del dispositivo Hikvision
+  const deviceMetadata: Record<string, any> = {};
+  if (doorNo !== null && doorNo !== undefined) deviceMetadata.doorNo = doorNo;
+  if (readerNo !== null && readerNo !== undefined) deviceMetadata.readerNo = readerNo;
+  if (verifyMode !== null && verifyMode !== undefined) deviceMetadata.verifyMode = verifyMode;
+  if (cardNo !== null && cardNo !== undefined) deviceMetadata.cardNo = cardNo;
+  if (employeeNoString !== null && employeeNoString !== undefined) deviceMetadata.employeeNoString = employeeNoString;
+  if (Object.keys(deviceMetadata).length > 0) {
+    deviceMetadata.source = 'hikvision_webhook';
+  }
+
   const { data: newRecord, error: insertError } = await supabase
     .from('attendance_records')
     .insert({
@@ -654,6 +739,7 @@ async function handleHourlyEmployeeEvent(
       tz: 'America/Tegucigalpa',
       tz_offset_minutes: -360,
       status: 'present',
+      metadata: Object.keys(deviceMetadata).length > 0 ? deviceMetadata : null,
     })
     .select()
     .single();
@@ -663,7 +749,7 @@ async function handleHourlyEmployeeEvent(
       companyId,
       employeeId: employee.id,
     });
-  } else {
+      } else {
     logger.info('[HOURLY EMPLOYEE] New check_in created after orphan record', {
       companyId,
       employeeId: employee.id,
@@ -750,21 +836,21 @@ async function processAccessEvent(
   }
 
   // Buscar empleado con work_schedule_id y pay_type
-  let { data: employee, error: employeeError } = await supabase
-    .from('employees')
+      let { data: employee, error: employeeError } = await supabase
+        .from('employees')
     .select('id, company_id, work_schedule_id, dni, pay_type')
     .eq('company_id', companyId)
     .eq('dni', normalizedId)
-    .eq('status', 'active')
-    .single();
+        .eq('status', 'active')
+        .single();
 
   // Si no hay match exacto, intentar búsqueda flexible
-  if (employeeError || !employee) {
+      if (employeeError || !employee) {
     const { data: allEmployees } = await supabase
-      .from('employees')
+          .from('employees')
       .select('id, company_id, work_schedule_id, dni, pay_type')
       .eq('company_id', companyId)
-      .eq('status', 'active');
+          .eq('status', 'active');
 
     if (allEmployees) {
       employee = allEmployees.find(emp => {
@@ -826,7 +912,7 @@ async function processAccessEvent(
   
   logger.debug('[ACCESS EVENT] Routing by pay_type', {
     companyId,
-    employeeId: employee.id,
+              employeeId: employee.id,
     payType,
     normalizedId,
   });
@@ -861,7 +947,7 @@ async function processAccessEvent(
       cardNo,
       employeeNoString
     );
-  } else {
+          } else {
     logger.warn('[ACCESS EVENT] Unknown pay_type, defaulting to fixed', {
       companyId,
       employeeId: employee.id,
@@ -984,7 +1070,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       [fields, files] = await form.parse(req);
     } catch (parseError) {
       logger.error('[ATTENDANCE WEBHOOK] Formidable parse error', parseError as Error, {
-        companyId: company_id,
+          companyId: company_id,
         contentType: req.headers['content-type'],
       });
       // Responder 200 incluso si hay error de parsing (no bloquear dispositivo)
@@ -1043,7 +1129,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
           if (typeof fieldValue === 'string' && (fieldValue.trim().startsWith('{') || fieldValue.trim().startsWith('['))) {
             jsonString = fieldValue;
             logger.info('[ATTENDANCE WEBHOOK] Found JSON in multipart field', {
-              companyId: company_id,
+        companyId: company_id,
               fieldName: key,
             });
             break;
@@ -1067,7 +1153,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         rawEvent = JSON.parse(jsonString);
       } catch (parseError) {
         logger.error('[ATTENDANCE WEBHOOK] JSON parse error', parseError as Error, {
-          companyId: company_id,
+        companyId: company_id,
           jsonPreview: jsonString.substring(0, 500),
         });
         // Responder 200 incluso si hay error de parsing (no bloquear dispositivo)
@@ -1112,9 +1198,9 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     // Si aún no se ha respondido, responder 200
     if (!res.headersSent) {
       return res.status(200).json({
-        success: false,
-        error: 'An internal server error occurred.',
-      });
+      success: false,
+      error: 'An internal server error occurred.',
+    });
     }
   }
 };

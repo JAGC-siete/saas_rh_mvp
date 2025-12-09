@@ -376,7 +376,24 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       console.log('🔍 DEBUG - Lógica de deducciones: tipo=' + tipoParam + ' → deducciones=' + (tipoParam === 'CON' ? 'SÍ' : 'NO'))
 
     // Calcular planilla con CÁLCULOS CORRECTOS 2025
-    const planilla: any[] = []
+    // Separar en dos arrays: fixed y hourly
+    const planilla_fixed: any[] = []
+    const planilla_hourly: any[] = []
+    
+    // Función auxiliar para calcular horas trabajadas desde registros
+    const calculateHoursWorked = (registros: any[]): number => {
+      let totalHours = 0
+      for (const record of registros) {
+        if (record.check_in && record.check_out) {
+          const checkIn = new Date(record.check_in)
+          const checkOut = new Date(record.check_out)
+          const diffMs = checkOut.getTime() - checkIn.getTime()
+          const hours = diffMs / (1000 * 60 * 60) // Convertir a horas
+          totalHours += Math.max(0, hours) // Evitar horas negativas
+        }
+      }
+      return totalHours
+    }
     
     for (const emp of empleadosParaNomina) {
       const payType = emp.pay_type || 'fixed'; // Default a 'fixed'
@@ -398,157 +415,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         );
       }
       
-      // Si hay registros de asistencia, usar la cantidad real
-      // Si no hay registros, asumir que trabajó todos los días del período (solo para fixed)
-      const days_worked = registros.length > 0 
-        ? registros.length 
-        : (payType === 'fixed' ? diasPeriodo : 0); // Por hora: 0 si no hay registros completos
-      const days_absent = diasPeriodo - days_worked
-      
       const base_salary = Number(emp.base_salary) || 0
       
-      // CALCULAR SALARIO SEGÚN payment_frequency
-      let total_earnings = 0
-      if (paymentFrequency === 'monthly') {
-        // Nómina mensual: usar salario completo proporcional a días trabajados
-        // Validar que ultimoDia no sea 0 para evitar división por cero
-        if (ultimoDia > 0) {
-          total_earnings = (base_salary / ultimoDia) * days_worked
-        } else {
-          console.warn(`⚠️ WARNING - ultimoDia es 0 para empleado ${emp.name}, usando salario completo`)
-          total_earnings = base_salary
-        }
-      } else {
-        // Nómina quincenal (biweekly): dividir salario mensual / 2 y ajustar por días trabajados
-        const salarioQuincenal = base_salary / 2
-        // Validar que diasPeriodo no sea 0 para evitar división por cero
-        if (diasPeriodo > 0) {
-          total_earnings = salarioQuincenal * (days_worked / diasPeriodo)
-        } else {
-          console.warn(`⚠️ WARNING - diasPeriodo es 0 para empleado ${emp.name}, usando salario quincenal completo`)
-          total_earnings = salarioQuincenal
-        }
-      }
-      
-      // Validar que total_earnings sea un número válido
-      if (!isFinite(total_earnings) || isNaN(total_earnings)) {
-        console.error(`❌ ERROR - total_earnings inválido para empleado ${emp.name}:`, total_earnings)
-        total_earnings = 0
-      }
-      
-      let IHSS = 0, RAP = 0, ISR = 0, total_deductions = 0, total = 0
-
-      // APLICAR DEDUCCIONES SEGÚN legal_deductions (solo si tipoParam === 'CON')
-      if (tipoParam === 'CON') {
-        // CÁLCULOS CORRECTOS 2025 - DEDUCCIONES MENSUALES COMPLETAS
-        // Aplicar solo si están habilitadas en legal_deductions
-        if (legalDeductions.ihss) {
-          IHSS = Math.min(base_salary, 11903.13) * 0.05  // Deducción mensual completa
-        }
-        
-        if (legalDeductions.rap) {
-          RAP = Math.max(0, base_salary - 11903.13) * 0.015    // Deducción mensual completa
-        }
-        
-        if (legalDeductions.isr) {
-          // ISR según tabla MENSUAL de Honduras 2025
-          if (base_salary > 21457.76) {
-            if (base_salary <= 30969.88) {
-              ISR = (base_salary - 21457.76) * 0.15
-            } else if (base_salary <= 67604.36) {
-              ISR = 1428.32 + (base_salary - 30969.88) * 0.20
-            } else {
-              ISR = 8734.32 + (base_salary - 67604.36) * 0.25
-            }
-          }
-        }
-        
-        // INFOP (si está configurado, aunque no es común en Honduras)
-        // if (legalDeductions.infop) {
-        //   INFOP = calcularINFOP(base_salary)
-        // }
-        
-        total_deductions = IHSS + RAP + ISR
-        total = total_earnings - total_deductions
-      } else {
-        // Tipo 'SIN': solo salario proporcional, sin deducciones
-        total = total_earnings
-      }
-
-      // Validar que runId existe antes de insertar
-      if (!runId) {
-        console.error(`❌ ERROR - runId es null/undefined para empleado ${emp.name}`)
-        return res.status(500).json({ 
-          error: 'Error interno: runId no disponible',
-          message: `No se pudo obtener el ID de la corrida para insertar la línea del empleado ${emp.name}`
-        })
-      }
-
-      // Validar que todos los valores numéricos sean válidos antes de insertar
-      const numericValues = {
-        days_worked,
-        total_earnings,
-        IHSS,
-        RAP,
-        ISR,
-        total
-      }
-      
-      for (const [key, value] of Object.entries(numericValues)) {
-        if (!isFinite(value) || isNaN(value)) {
-          console.error(`❌ ERROR - Valor inválido ${key} para empleado ${emp.name}:`, value)
-          return res.status(500).json({ 
-            error: 'Error en cálculo de nómina',
-            message: `Valor inválido ${key} para el empleado ${emp.name}: ${value}`
-          })
-        }
-      }
-
-      // Insertar línea en payroll_run_lines para que la autorización funcione
-      const { data: insertedLine, error: lineError } = await supabase
-        .from('payroll_run_lines')
-        .upsert({
-          run_id: runId,
-          company_id: companyId,
-          employee_id: emp.id,
-          calc_hours: days_worked,
-          calc_bruto: total_earnings,
-          calc_ihss: IHSS,
-          calc_rap: RAP,
-          calc_isr: ISR,
-          calc_neto: total,
-          eff_hours: days_worked,
-          eff_bruto: total_earnings,
-          eff_ihss: IHSS,
-          eff_rap: RAP,
-          eff_isr: ISR,
-          eff_neto: total,
-          edited: false
-        }, {
-          onConflict: 'run_id,employee_id',
-          ignoreDuplicates: false
-        })
-        .select('id')
-        .maybeSingle()
-        
-      if (lineError) {
-        console.error(`❌ ERROR insertando línea para empleado ${emp.name}:`, lineError)
-        return res.status(500).json({ 
-          error: 'Error insertando línea de nómina',
-          message: `No se pudo insertar la línea para el empleado ${emp.name}: ${lineError.message}`,
-          details: lineError,
-          code: lineError.code
-        })
-      }
-      
-      if (!insertedLine) {
-        console.error(`❌ ERROR - No se retornó línea insertada para empleado ${emp.name}`)
-        return res.status(500).json({ 
-          error: 'Error insertando línea de nómina',
-          message: `No se pudo obtener el ID de la línea insertada para el empleado ${emp.name}`
-        })
-      }
-
       // Manejar el caso donde departments puede ser null o un array
       let departmentName = 'Sin Departamento'
       if (emp.departments) {
@@ -559,28 +427,342 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         }
       }
 
-      planilla.push({
-        employee_id: emp.id,
-        id: emp.dni || emp.id, // Usar ID si no hay DNI
-        name: emp?.name || 'Sin nombre',
-        bank: emp.bank_name || 'No especificado',
-        bank_account: emp.bank_account || 'No especificado',
-        department: departmentName,
-        base_salary: base_salary,
-        monthly_salary: base_salary,
-        days_worked,
-        days_absent,
-        total_earnings: Math.round(total_earnings * 100) / 100,
-        IHSS: Math.round(IHSS * 100) / 100,
-        RAP: Math.round(RAP * 100) / 100,
-        ISR: Math.round(ISR * 100) / 100,
-        total_deducciones: Math.round(total_deductions * 100) / 100,
-        total: Math.round(total * 100) / 100,
-        line_id: insertedLine.id // Ya validamos que existe arriba
-      })
+      if (payType === 'fixed') {
+        // ========== EMPLEADOS FIJOS (FIXED) ==========
+        // Si hay registros de asistencia, usar la cantidad real
+        // Si no hay registros, asumir que trabajó todos los días del período
+        const days_worked = registros.length > 0 
+          ? registros.length 
+          : diasPeriodo
+        const days_absent = diasPeriodo - days_worked
+        
+        // CALCULAR SALARIO SEGÚN payment_frequency
+        let total_earnings = 0
+        if (paymentFrequency === 'monthly') {
+          // Nómina mensual: usar salario completo proporcional a días trabajados
+          if (ultimoDia > 0) {
+            total_earnings = (base_salary / ultimoDia) * days_worked
+          } else {
+            console.warn(`⚠️ WARNING - ultimoDia es 0 para empleado ${emp.name}, usando salario completo`)
+            total_earnings = base_salary
+          }
+        } else {
+          // Nómina quincenal (biweekly): dividir salario mensual / 2 y ajustar por días trabajados
+          const salarioQuincenal = base_salary / 2
+          if (diasPeriodo > 0) {
+            total_earnings = salarioQuincenal * (days_worked / diasPeriodo)
+          } else {
+            console.warn(`⚠️ WARNING - diasPeriodo es 0 para empleado ${emp.name}, usando salario quincenal completo`)
+            total_earnings = salarioQuincenal
+          }
+        }
+        
+        // Validar que total_earnings sea un número válido
+        if (!isFinite(total_earnings) || isNaN(total_earnings)) {
+          console.error(`❌ ERROR - total_earnings inválido para empleado ${emp.name}:`, total_earnings)
+          total_earnings = 0
+        }
+        
+        let IHSS = 0, RAP = 0, ISR = 0, total_deductions = 0, total = 0
+
+        // APLICAR DEDUCCIONES SEGÚN legal_deductions (solo si tipoParam === 'CON')
+        if (tipoParam === 'CON') {
+          // CÁLCULOS CORRECTOS 2025 - DEDUCCIONES MENSUALES COMPLETAS
+          if (legalDeductions.ihss) {
+            IHSS = Math.min(base_salary, 11903.13) * 0.05
+          }
+          
+          if (legalDeductions.rap) {
+            RAP = Math.max(0, base_salary - 11903.13) * 0.015
+          }
+          
+          if (legalDeductions.isr) {
+            // ISR según tabla MENSUAL de Honduras 2025
+            if (base_salary > 21457.76) {
+              if (base_salary <= 30969.88) {
+                ISR = (base_salary - 21457.76) * 0.15
+              } else if (base_salary <= 67604.36) {
+                ISR = 1428.32 + (base_salary - 30969.88) * 0.20
+              } else {
+                ISR = 8734.32 + (base_salary - 67604.36) * 0.25
+              }
+            }
+          }
+          
+          total_deductions = IHSS + RAP + ISR
+          total = total_earnings - total_deductions
+        } else {
+          // Tipo 'SIN': solo salario proporcional, sin deducciones
+          total = total_earnings
+        }
+
+        // Validar que runId existe antes de insertar
+        if (!runId) {
+          console.error(`❌ ERROR - runId es null/undefined para empleado ${emp.name}`)
+          return res.status(500).json({ 
+            error: 'Error interno: runId no disponible',
+            message: `No se pudo obtener el ID de la corrida para insertar la línea del empleado ${emp.name}`
+          })
+        }
+
+        // Validar que todos los valores numéricos sean válidos antes de insertar
+        const numericValues = {
+          days_worked,
+          total_earnings,
+          IHSS,
+          RAP,
+          ISR,
+          total
+        }
+        
+        for (const [key, value] of Object.entries(numericValues)) {
+          if (!isFinite(value) || isNaN(value)) {
+            console.error(`❌ ERROR - Valor inválido ${key} para empleado ${emp.name}:`, value)
+            return res.status(500).json({ 
+              error: 'Error en cálculo de nómina',
+              message: `Valor inválido ${key} para el empleado ${emp.name}: ${value}`
+            })
+          }
+        }
+
+        // Insertar línea en payroll_run_lines
+        const { data: insertedLine, error: lineError } = await supabase
+          .from('payroll_run_lines')
+          .upsert({
+            run_id: runId,
+            company_id: companyId,
+            employee_id: emp.id,
+            calc_hours: days_worked,
+            calc_bruto: total_earnings,
+            calc_ihss: IHSS,
+            calc_rap: RAP,
+            calc_isr: ISR,
+            calc_neto: total,
+            eff_hours: days_worked,
+            eff_bruto: total_earnings,
+            eff_ihss: IHSS,
+            eff_rap: RAP,
+            eff_isr: ISR,
+            eff_neto: total,
+            edited: false
+          }, {
+            onConflict: 'run_id,employee_id',
+            ignoreDuplicates: false
+          })
+          .select('id')
+          .maybeSingle()
+          
+        if (lineError) {
+          console.error(`❌ ERROR insertando línea para empleado ${emp.name}:`, lineError)
+          return res.status(500).json({ 
+            error: 'Error insertando línea de nómina',
+            message: `No se pudo insertar la línea para el empleado ${emp.name}: ${lineError.message}`,
+            details: lineError,
+            code: lineError.code
+          })
+        }
+        
+        if (!insertedLine) {
+          console.error(`❌ ERROR - No se retornó línea insertada para empleado ${emp.name}`)
+          return res.status(500).json({ 
+            error: 'Error insertando línea de nómina',
+            message: `No se pudo obtener el ID de la línea insertada para el empleado ${emp.name}`
+          })
+        }
+
+        planilla_fixed.push({
+          employee_id: emp.id,
+          id: emp.dni || emp.id,
+          name: emp?.name || 'Sin nombre',
+          bank: emp.bank_name || 'No especificado',
+          bank_account: emp.bank_account || 'No especificado',
+          department: departmentName,
+          base_salary: base_salary,
+          monthly_salary: base_salary,
+          days_worked,
+          days_absent,
+          total_earnings: Math.round(total_earnings * 100) / 100,
+          IHSS: Math.round(IHSS * 100) / 100,
+          RAP: Math.round(RAP * 100) / 100,
+          ISR: Math.round(ISR * 100) / 100,
+          total_deducciones: Math.round(total_deductions * 100) / 100,
+          total: Math.round(total * 100) / 100,
+          line_id: insertedLine.id,
+          pay_type: 'fixed'
+        })
+        
+      } else {
+        // ========== EMPLEADOS POR HORA (HOURLY) ==========
+        const days_worked = registros.length
+        const days_absent = diasPeriodo - days_worked
+        
+        // Calcular horas totales trabajadas
+        const total_hours_worked = calculateHoursWorked(registros)
+        
+        // Calcular tarifa por hora desde el salario base mensual
+        // Asumir 8 horas por día y 30 días al mes = 240 horas mensuales
+        // O usar días del período si es quincenal
+        const horasMensualesEstimadas = paymentFrequency === 'monthly' 
+          ? 240 // 8 horas * 30 días
+          : 120 // 8 horas * 15 días (quincena)
+        const hourly_rate = horasMensualesEstimadas > 0 
+          ? base_salary / horasMensualesEstimadas 
+          : 0
+        
+        // Calcular salario bruto del período basado en horas trabajadas
+        const total_earnings = total_hours_worked * hourly_rate
+        
+        // Validar que total_earnings sea un número válido
+        if (!isFinite(total_earnings) || isNaN(total_earnings)) {
+          console.error(`❌ ERROR - total_earnings inválido para empleado ${emp.name}:`, total_earnings)
+          total_earnings = 0
+        }
+        
+        let IHSS = 0, RAP = 0, ISR = 0, total_deductions = 0, total = 0
+
+        // APLICAR DEDUCCIONES SEGÚN legal_deductions (solo si tipoParam === 'CON')
+        // Para hourly, las deducciones se calculan sobre el salario base mensual (no proporcional)
+        if (tipoParam === 'CON') {
+          if (legalDeductions.ihss) {
+            IHSS = Math.min(base_salary, 11903.13) * 0.05
+          }
+          
+          if (legalDeductions.rap) {
+            RAP = Math.max(0, base_salary - 11903.13) * 0.015
+          }
+          
+          if (legalDeductions.isr) {
+            // ISR según tabla MENSUAL de Honduras 2025
+            if (base_salary > 21457.76) {
+              if (base_salary <= 30969.88) {
+                ISR = (base_salary - 21457.76) * 0.15
+              } else if (base_salary <= 67604.36) {
+                ISR = 1428.32 + (base_salary - 30969.88) * 0.20
+              } else {
+                ISR = 8734.32 + (base_salary - 67604.36) * 0.25
+              }
+            }
+          }
+          
+          // Proporcionar deducciones según horas trabajadas vs horas estimadas
+          const deductionFactor = horasMensualesEstimadas > 0 
+            ? total_hours_worked / horasMensualesEstimadas 
+            : 0
+          IHSS = IHSS * deductionFactor
+          RAP = RAP * deductionFactor
+          ISR = ISR * deductionFactor
+          
+          total_deductions = IHSS + RAP + ISR
+          total = total_earnings - total_deductions
+        } else {
+          // Tipo 'SIN': solo salario por horas, sin deducciones
+          total = total_earnings
+        }
+
+        // Validar que runId existe antes de insertar
+        if (!runId) {
+          console.error(`❌ ERROR - runId es null/undefined para empleado ${emp.name}`)
+          return res.status(500).json({ 
+            error: 'Error interno: runId no disponible',
+            message: `No se pudo obtener el ID de la corrida para insertar la línea del empleado ${emp.name}`
+          })
+        }
+
+        // Validar que todos los valores numéricos sean válidos antes de insertar
+        const numericValues = {
+          days_worked,
+          total_hours_worked,
+          hourly_rate,
+          total_earnings,
+          IHSS,
+          RAP,
+          ISR,
+          total
+        }
+        
+        for (const [key, value] of Object.entries(numericValues)) {
+          if (!isFinite(value) || isNaN(value)) {
+            console.error(`❌ ERROR - Valor inválido ${key} para empleado ${emp.name}:`, value)
+            return res.status(500).json({ 
+              error: 'Error en cálculo de nómina',
+              message: `Valor inválido ${key} para el empleado ${emp.name}: ${value}`
+            })
+          }
+        }
+
+        // Insertar línea en payroll_run_lines
+        // Para hourly, guardamos horas en calc_hours
+        const { data: insertedLine, error: lineError } = await supabase
+          .from('payroll_run_lines')
+          .upsert({
+            run_id: runId,
+            company_id: companyId,
+            employee_id: emp.id,
+            calc_hours: total_hours_worked, // Horas trabajadas para hourly
+            calc_bruto: total_earnings,
+            calc_ihss: IHSS,
+            calc_rap: RAP,
+            calc_isr: ISR,
+            calc_neto: total,
+            eff_hours: total_hours_worked,
+            eff_bruto: total_earnings,
+            eff_ihss: IHSS,
+            eff_rap: RAP,
+            eff_isr: ISR,
+            eff_neto: total,
+            edited: false
+          }, {
+            onConflict: 'run_id,employee_id',
+            ignoreDuplicates: false
+          })
+          .select('id')
+          .maybeSingle()
+          
+        if (lineError) {
+          console.error(`❌ ERROR insertando línea para empleado ${emp.name}:`, lineError)
+          return res.status(500).json({ 
+            error: 'Error insertando línea de nómina',
+            message: `No se pudo insertar la línea para el empleado ${emp.name}: ${lineError.message}`,
+            details: lineError,
+            code: lineError.code
+          })
+        }
+        
+        if (!insertedLine) {
+          console.error(`❌ ERROR - No se retornó línea insertada para empleado ${emp.name}`)
+          return res.status(500).json({ 
+            error: 'Error insertando línea de nómina',
+            message: `No se pudo obtener el ID de la línea insertada para el empleado ${emp.name}`
+          })
+        }
+
+        planilla_hourly.push({
+          employee_id: emp.id,
+          id: emp.dni || emp.id,
+          name: emp?.name || 'Sin nombre',
+          bank: emp.bank_name || 'No especificado',
+          bank_account: emp.bank_account || 'No especificado',
+          department: departmentName,
+          base_salary: base_salary,
+          monthly_salary: base_salary,
+          days_worked,
+          days_absent,
+          total_hours_worked: Math.round(total_hours_worked * 100) / 100,
+          hourly_rate: Math.round(hourly_rate * 100) / 100,
+          total_earnings: Math.round(total_earnings * 100) / 100,
+          IHSS: Math.round(IHSS * 100) / 100,
+          RAP: Math.round(RAP * 100) / 100,
+          ISR: Math.round(ISR * 100) / 100,
+          total_deducciones: Math.round(total_deductions * 100) / 100,
+          total: Math.round(total * 100) / 100,
+          line_id: insertedLine.id,
+          pay_type: 'hourly'
+        })
+      }
     }
 
-    console.log(`Preview de nómina generado exitosamente para ${planilla.length} empleados`)
+    const totalEmpleados = planilla_fixed.length + planilla_hourly.length
+    console.log(`Preview de nómina generado exitosamente: ${planilla_fixed.length} empleados fijos, ${planilla_hourly.length} empleados por hora`)
     console.log('🔍 DEBUG - RunId generado:', runId)
     console.log('🔍 DEBUG - Tipo procesado:', tipoParam)
 
@@ -601,6 +783,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // Determinar si es una regeneración
     const isRegeneration = existingRun && existingRun.status === 'authorized'
     
+    // Calcular totales separados
+    const totalBrutoFixed = planilla_fixed.reduce((sum: number, row: any) => sum + row.total_earnings, 0)
+    const totalDeduccionesFixed = planilla_fixed.reduce((sum: number, row: any) => sum + row.total_deducciones, 0)
+    const totalNetoFixed = planilla_fixed.reduce((sum: number, row: any) => sum + row.total, 0)
+    
+    const totalBrutoHourly = planilla_hourly.reduce((sum: number, row: any) => sum + row.total_earnings, 0)
+    const totalDeduccionesHourly = planilla_hourly.reduce((sum: number, row: any) => sum + row.total_deducciones, 0)
+    const totalNetoHourly = planilla_hourly.reduce((sum: number, row: any) => sum + row.total, 0)
+    
     return res.status(200).json({
       message: isRegeneration 
         ? 'Preview regenerado - se actualizó el registro existente'
@@ -611,11 +802,25 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       month: monthNum,
       quincena: quincenaNum,
       tipo: tipoParam,
-      empleados: planilla.length,
-      totalBruto: planilla.reduce((sum: number, row: any) => sum + row.total_earnings, 0),
-      totalDeducciones: planilla.reduce((sum: number, row: any) => sum + row.total_deducciones, 0),
-      totalNeto: planilla.reduce((sum: number, row: any) => sum + row.total, 0),
-      planilla,
+      empleados: totalEmpleados,
+      empleados_fixed: planilla_fixed.length,
+      empleados_hourly: planilla_hourly.length,
+      // Totales generales (compatibilidad hacia atrás)
+      totalBruto: totalBrutoFixed + totalBrutoHourly,
+      totalDeducciones: totalDeduccionesFixed + totalDeduccionesHourly,
+      totalNeto: totalNetoFixed + totalNetoHourly,
+      // Totales separados por tipo
+      totalBrutoFixed,
+      totalDeduccionesFixed,
+      totalNetoFixed,
+      totalBrutoHourly,
+      totalDeduccionesHourly,
+      totalNetoHourly,
+      // Planillas separadas
+      planilla_fixed,
+      planilla_hourly,
+      // Compatibilidad hacia atrás: mantener planilla combinada
+      planilla: [...planilla_fixed, ...planilla_hourly],
       warning: isRegeneration ? 'Ya existía un registro generado para el período seleccionado. Esta acción actualizó el registro.' : null,
       noAttendanceWarning
     })

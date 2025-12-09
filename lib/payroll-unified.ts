@@ -16,6 +16,10 @@ export type PlanillaRow = {
   late_days: number;
   department?: string;
   line_id?: string;
+  pay_type?: 'fixed' | 'hourly';
+  // Campos específicos para hourly
+  total_hours_worked?: number;
+  hourly_rate?: number;
 };
 
 export type DetalleRow = {
@@ -75,10 +79,18 @@ export async function fetchUnifiedPayroll(
 
     const planillaData = await planillaRes.json();
     
-    // Extract the actual array from the API response
-    const planilla: PlanillaRow[] = Array.isArray(planillaData.planilla) ? planillaData.planilla : [];
+    // Extract separated arrays from API response (new format)
+    const planilla_fixed: PlanillaRow[] = Array.isArray(planillaData.planilla_fixed) ? planillaData.planilla_fixed : [];
+    const planilla_hourly: PlanillaRow[] = Array.isArray(planillaData.planilla_hourly) ? planillaData.planilla_hourly : [];
+    
+    // Fallback to combined planilla for backward compatibility
+    const planilla: PlanillaRow[] = planilla_fixed.length > 0 || planilla_hourly.length > 0
+      ? [...planilla_fixed, ...planilla_hourly]
+      : (Array.isArray(planillaData.planilla) ? planillaData.planilla : []);
     
     console.log('📊 Payroll data loaded:', {
+      planillaFixedCount: planilla_fixed.length,
+      planillaHourlyCount: planilla_hourly.length,
       planillaCount: planilla.length,
       planillaDataKeys: Object.keys(planillaData)
     });
@@ -88,10 +100,11 @@ export async function fetchUnifiedPayroll(
     // Convert planilla data to unified format (base rows without metadata)
     let rows: UnifiedRow[] = planilla.map(p => ({
       ...p,
-      horas_trabajadas: 0,
+      horas_trabajadas: (p as any).total_hours_worked || 0, // Para hourly, usar horas trabajadas
       extras: { horas: 0, monto: 0 },
       observaciones: '',
-      status: 'completo' as const
+      status: 'completo' as const,
+      pay_type: (p as any).pay_type || 'fixed' // Incluir pay_type
     }));
 
     // If we have a run_id, fetch run lines to enrich rows with metadata
