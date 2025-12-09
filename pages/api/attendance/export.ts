@@ -6,6 +6,7 @@ import { withExportRateLimit } from '../../../lib/security/rate-limiting'
 import { getDateRange } from '../../../lib/attendance'
 import ExcelJS from 'exceljs'
 import { generateAttendancePDF } from '../../../lib/pdf/attendance-pdf-generator'
+import { formatTimeDisplay } from '../../../lib/timezone'
 
 // Aplicar rate limiting
 const handlerWithSecurity = withExportRateLimit()(attendanceExportHandler)
@@ -206,8 +207,8 @@ async function exportToExcel(attendanceRecords: any[], startDate: string, endDat
         'Posición': record.employees?.role || '',
         'Fecha': new Date(record.date).toLocaleDateString('es-HN'),
         'Día de la Semana': new Date(record.date).toLocaleDateString('es-HN', { weekday: 'long' }),
-        'Hora de Entrada': checkIn ? checkIn.toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
-        'Hora de Salida': checkOut ? checkOut.toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
+        'Hora de Entrada': checkIn ? formatTimeDisplay(checkIn.toISOString()) : 'N/A',
+        'Hora de Salida': checkOut ? formatTimeDisplay(checkOut.toISOString()) : 'N/A',
         'Horas Trabajadas': hoursWorked.toFixed(2),
         'Estado': record.status === 'present' ? 'Presente' : record.status === 'late' ? 'Tardanza' : 'Ausente',
         'Minutos de Tardanza': lateMinutes,
@@ -363,8 +364,8 @@ async function exportToCSV(attendanceRecords: any[], startDate: string, endDate:
       record.employees?.role || '',
       new Date(record.date).toLocaleDateString('es-HN'),
       new Date(record.date).toLocaleDateString('es-HN', { weekday: 'long' }),
-      checkIn ? checkIn.toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
-      checkOut ? checkOut.toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
+      checkIn ? formatTimeDisplay(checkIn.toISOString()) : 'N/A',
+      checkOut ? formatTimeDisplay(checkOut.toISOString()) : 'N/A',
       hoursWorked.toFixed(2),
       record.status === 'present' ? 'Presente' : record.status === 'late' ? 'Tardanza' : 'Ausente',
       lateMinutes,

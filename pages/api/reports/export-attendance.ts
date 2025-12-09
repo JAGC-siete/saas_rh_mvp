@@ -13,6 +13,7 @@ import {
   secureLog,
   sanitizeFilename
 } from '../../../lib/security/export-security'
+import { formatTimeDisplay } from '../../../lib/timezone'
 
 // Aplicar rate limiting, validación de entrada y seguridad de exportación
 const handlerWithSecurity = withExportRateLimit()(
@@ -170,8 +171,8 @@ async function exportToExcel(attendanceRecords: any[], startDate: string, endDat
         'Posición': record.employees?.role || '',
         'Fecha': new Date(record.date).toLocaleDateString('es-HN'),
         'Día de la Semana': new Date(record.date).toLocaleDateString('es-HN', { weekday: 'long' }),
-        'Hora de Entrada': checkIn ? checkIn.toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
-        'Hora de Salida': checkOut ? checkOut.toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
+        'Hora de Entrada': checkIn ? formatTimeDisplay(checkIn.toISOString()) : 'N/A',
+        'Hora de Salida': checkOut ? formatTimeDisplay(checkOut.toISOString()) : 'N/A',
         'Horas Trabajadas': hoursWorked.toFixed(2),
         'Estado': record.status === 'present' ? 'Presente' : record.status === 'late' ? 'Tardanza' : 'Ausente',
         'Minutos de Tardanza': lateMinutes,

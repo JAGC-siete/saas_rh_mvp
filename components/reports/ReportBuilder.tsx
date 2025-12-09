@@ -5,7 +5,7 @@ import ReportFilters from './ReportFilters'
 import ReportPreview from './ReportPreview'
 import ReportKPIs from './ReportKPIs'
 import ExportBar from './ExportBar'
-import { nowInHonduras } from '../../lib/timezone'
+import { nowInHonduras, formatTimeDisplay } from '../../lib/timezone'
 import { useCompanyContext } from '../../lib/useCompanyContext'
 import { useReportsExport } from '../../lib/hooks/useReportsExport'
 import { 
@@ -107,8 +107,8 @@ export default function ReportBuilder() {
           const attendanceRows = (attendanceData.data || []).map((row: any) => [
             row.employee_name,
             row.date,
-            row.check_in ? new Date(row.check_in).toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' }) : '--',
-            row.check_out ? new Date(row.check_out).toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' }) : '--',
+            row.check_in ? formatTimeDisplay(row.check_in) : '--',
+            row.check_out ? formatTimeDisplay(row.check_out) : '--',
             row.status,
             row.hours_worked ? `${row.hours_worked.toFixed(1)}h` : '0h',
             row.late_minutes !== null ? `${row.late_minutes} min` : '--'

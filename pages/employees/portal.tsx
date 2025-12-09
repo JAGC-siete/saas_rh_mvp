@@ -17,6 +17,7 @@ import {
 import { clientLogger } from '../../lib/logger-client'
 import EmployeePermissionForm from '../../components/employee-portal/EmployeePermissionForm'
 import EmployeePermissionHistory from '../../components/employee-portal/EmployeePermissionHistory'
+import { formatTimeDisplay } from '../../lib/timezone'
 
 // Component for attendance records list
 function AttendanceRecordsList({ employeeId }: { employeeId?: string }) {
@@ -51,16 +52,8 @@ function AttendanceRecordsList({ employeeId }: { employeeId?: string }) {
 
   const formatTime = (timeString: string) => {
     if (!timeString) return 'N/A'
-    try {
-      const date = new Date(timeString)
-      return date.toLocaleTimeString('es-HN', { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        hour12: true 
-      })
-    } catch {
-      return timeString
-    }
+    // Usar formatTimeDisplay que maneja correctamente la conversión de UTC a hora de Honduras
+    return formatTimeDisplay(timeString)
   }
 
   const calculateHours = (checkIn: string, checkOut: string) => {

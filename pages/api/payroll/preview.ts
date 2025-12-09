@@ -58,12 +58,17 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     // Obtener configuración de payroll de la empresa (leer desde metadata)
-    const { data: payrollConfig } = await supabase
+    const { data: payrollConfig, error: configError } = await supabase
       .from('company_payroll_configs')
       .select('metadata')
       .eq('company_id', companyId)
       .eq('is_active', true)
-      .single()
+      .maybeSingle()
+    
+    if (configError) {
+      console.error('Error obteniendo configuración de payroll:', configError)
+      // Continuar con valores por defecto en lugar de fallar
+    }
     
     // Extraer parámetros desde metadata
     const payrollMetadata = payrollConfig?.metadata || {}
@@ -89,6 +94,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     
     // Calcular fechas del período según configuración
     const ultimoDia = new Date(yearNum, monthNum, 0).getDate()
+    
+    // Validar que ultimoDia sea válido
+    if (!ultimoDia || ultimoDia < 1 || ultimoDia > 31) {
+      console.error(`❌ ERROR - ultimoDia inválido: ${ultimoDia} para año ${yearNum}, mes ${monthNum}`)
+      return res.status(400).json({ 
+        error: 'Período inválido',
+        message: `No se pudo calcular el último día del mes ${monthNum} del año ${yearNum}`
+      })
+    }
+    
     let fechaInicio: string
     let fechaFin: string
     let diasPeriodo: number
@@ -143,7 +158,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .eq('month', monthNum)
       .eq('quincena', quincenaNum)
       .eq('tipo', tipoParam)
-      .single()
+      .maybeSingle()
+
+    if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows found, which is OK
+      console.error('Error verificando corrida existente:', checkError)
+      return res.status(500).json({ 
+        error: 'Error verificando corrida existente',
+        details: checkError.message 
+      })
+    }
 
     console.log('🔍 DEBUG - Existing run check:', { existingRun, checkError })
 
@@ -210,17 +233,35 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         return res.status(500).json({ error: 'Error creando nueva corrida de planilla' })
       }
 
+      if (!newRun || !newRun.id) {
+        console.error('❌ ERROR - No se pudo obtener el ID de la nueva corrida')
+        return res.status(500).json({ 
+          error: 'Error creando nueva corrida de planilla',
+          message: 'No se pudo obtener el ID de la corrida creada'
+        })
+      }
+
       runId = newRun.id
+    }
+
+    // Validar que runId existe antes de continuar
+    if (!runId) {
+      console.error('❌ ERROR - runId es null/undefined después de crear/obtener corrida')
+      return res.status(500).json({ 
+        error: 'Error interno: runId no disponible',
+        message: 'No se pudo obtener o crear el ID de la corrida'
+      })
     }
 
     console.log('🔍 DEBUG - Final RunId:', runId, 'Type:', typeof runId)
 
     // Obtener empleados activos con información de departamento y pay_type
+    // Usar left join para manejar empleados sin departamento asignado
     const { data: employees, error: empError } = await supabase
       .from('employees')
       .select(`
         id, name, dni, base_salary, bank_name, bank_account, status, department_id, pay_type,
-        departments!employees_department_id_fkey(name)
+        departments:department_id(name)
       `)
       .eq('status', 'active')
       .eq('company_id', companyId)
@@ -370,11 +411,29 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       let total_earnings = 0
       if (paymentFrequency === 'monthly') {
         // Nómina mensual: usar salario completo proporcional a días trabajados
-        total_earnings = (base_salary / ultimoDia) * days_worked
+        // Validar que ultimoDia no sea 0 para evitar división por cero
+        if (ultimoDia > 0) {
+          total_earnings = (base_salary / ultimoDia) * days_worked
+        } else {
+          console.warn(`⚠️ WARNING - ultimoDia es 0 para empleado ${emp.name}, usando salario completo`)
+          total_earnings = base_salary
+        }
       } else {
         // Nómina quincenal (biweekly): dividir salario mensual / 2 y ajustar por días trabajados
         const salarioQuincenal = base_salary / 2
-        total_earnings = salarioQuincenal * (days_worked / diasPeriodo)
+        // Validar que diasPeriodo no sea 0 para evitar división por cero
+        if (diasPeriodo > 0) {
+          total_earnings = salarioQuincenal * (days_worked / diasPeriodo)
+        } else {
+          console.warn(`⚠️ WARNING - diasPeriodo es 0 para empleado ${emp.name}, usando salario quincenal completo`)
+          total_earnings = salarioQuincenal
+        }
+      }
+      
+      // Validar que total_earnings sea un número válido
+      if (!isFinite(total_earnings) || isNaN(total_earnings)) {
+        console.error(`❌ ERROR - total_earnings inválido para empleado ${emp.name}:`, total_earnings)
+        total_earnings = 0
       }
       
       let IHSS = 0, RAP = 0, ISR = 0, total_deductions = 0, total = 0
@@ -416,6 +475,35 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         total = total_earnings
       }
 
+      // Validar que runId existe antes de insertar
+      if (!runId) {
+        console.error(`❌ ERROR - runId es null/undefined para empleado ${emp.name}`)
+        return res.status(500).json({ 
+          error: 'Error interno: runId no disponible',
+          message: `No se pudo obtener el ID de la corrida para insertar la línea del empleado ${emp.name}`
+        })
+      }
+
+      // Validar que todos los valores numéricos sean válidos antes de insertar
+      const numericValues = {
+        days_worked,
+        total_earnings,
+        IHSS,
+        RAP,
+        ISR,
+        total
+      }
+      
+      for (const [key, value] of Object.entries(numericValues)) {
+        if (!isFinite(value) || isNaN(value)) {
+          console.error(`❌ ERROR - Valor inválido ${key} para empleado ${emp.name}:`, value)
+          return res.status(500).json({ 
+            error: 'Error en cálculo de nómina',
+            message: `Valor inválido ${key} para el empleado ${emp.name}: ${value}`
+          })
+        }
+      }
+
       // Insertar línea en payroll_run_lines para que la autorización funcione
       const { data: insertedLine, error: lineError } = await supabase
         .from('payroll_run_lines')
@@ -441,34 +529,54 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           ignoreDuplicates: false
         })
         .select('id')
-        .single()
+        .maybeSingle()
         
       if (lineError) {
+        console.error(`❌ ERROR insertando línea para empleado ${emp.name}:`, lineError)
         return res.status(500).json({ 
           error: 'Error insertando línea de nómina',
           message: `No se pudo insertar la línea para el empleado ${emp.name}: ${lineError.message}`,
-          details: lineError
+          details: lineError,
+          code: lineError.code
         })
+      }
+      
+      if (!insertedLine) {
+        console.error(`❌ ERROR - No se retornó línea insertada para empleado ${emp.name}`)
+        return res.status(500).json({ 
+          error: 'Error insertando línea de nómina',
+          message: `No se pudo obtener el ID de la línea insertada para el empleado ${emp.name}`
+        })
+      }
+
+      // Manejar el caso donde departments puede ser null o un array
+      let departmentName = 'Sin Departamento'
+      if (emp.departments) {
+        if (Array.isArray(emp.departments) && emp.departments.length > 0) {
+          departmentName = emp.departments[0]?.name || 'Sin Departamento'
+        } else if (typeof emp.departments === 'object' && emp.departments.name) {
+          departmentName = emp.departments.name
+        }
       }
 
       planilla.push({
         employee_id: emp.id,
-        id: emp.dni,
-        name: emp?.name,
+        id: emp.dni || emp.id, // Usar ID si no hay DNI
+        name: emp?.name || 'Sin nombre',
         bank: emp.bank_name || 'No especificado',
         bank_account: emp.bank_account || 'No especificado',
-        department: emp.departments?.name || 'Sin Departamento',
+        department: departmentName,
         base_salary: base_salary,
         monthly_salary: base_salary,
         days_worked,
         days_absent,
-        total_earnings,
+        total_earnings: Math.round(total_earnings * 100) / 100,
         IHSS: Math.round(IHSS * 100) / 100,
         RAP: Math.round(RAP * 100) / 100,
         ISR: Math.round(ISR * 100) / 100,
         total_deducciones: Math.round(total_deductions * 100) / 100,
         total: Math.round(total * 100) / 100,
-        line_id: insertedLine?.id || null // ID de la línea insertada
+        line_id: insertedLine.id // Ya validamos que existe arriba
       })
     }
 
@@ -481,7 +589,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .from('payroll_runs')
       .select('status, authorized_by, authorized_at')
       .eq('id', runId)
-      .single()
+      .maybeSingle()
 
     if (statusError) {
       console.error('Error obteniendo estado de corrida:', statusError)
