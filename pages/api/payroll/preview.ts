@@ -610,7 +610,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           : 0
         
         // Calcular salario bruto del período basado en horas trabajadas
-        const total_earnings = total_hours_worked * hourly_rate
+        let total_earnings = total_hours_worked * hourly_rate
         
         // Validar que total_earnings sea un número válido
         if (!isFinite(total_earnings) || isNaN(total_earnings)) {
