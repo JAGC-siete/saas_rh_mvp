@@ -45,13 +45,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .maybeSingle() // Use maybeSingle() to handle 0 rows gracefully
 
     if (profileError) {
-      console.error('Error fetching user profile:', profileError)
-      return res.status(500).json({ error: 'Failed to fetch user profile' })
+      console.error('❌ [user-profile API] Error fetching user profile:', profileError)
+      console.error('❌ [user-profile API] Error details:', {
+        code: profileError.code,
+        message: profileError.message,
+        details: profileError.details,
+        hint: profileError.hint
+      })
+      return res.status(500).json({ 
+        error: 'Failed to fetch user profile',
+        details: profileError.message,
+        code: profileError.code
+      })
     }
 
     if (!userProfile) {
-      return res.status(404).json({ error: 'User profile not found' })
+      console.warn('⚠️ [user-profile API] User profile not found for user:', user.id)
+      return res.status(404).json({ 
+        error: 'User profile not found',
+        userId: user.id,
+        email: user.email
+      })
     }
+
+    console.log('✅ [user-profile API] User profile found:', {
+      userId: userProfile.id,
+      companyId: userProfile.company_id,
+      role: userProfile.role,
+      hasEmployeeId: !!userProfile.employee_id
+    })
 
     res.status(200).json({
       success: true,

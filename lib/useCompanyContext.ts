@@ -52,13 +52,21 @@ export function useCompanyContext() {
           
           if (companyError) {
             console.error('❌ [CompanyContext] Error obteniendo empresa desde Supabase:', companyError)
-            setError('No se pudo cargar la información de la empresa. Verifique los permisos (RLS).')
+            console.error('❌ [CompanyContext] Detalles del error:', {
+              code: companyError.code,
+              message: companyError.message,
+              details: companyError.details,
+              hint: companyError.hint
+            })
+            // No establecer error aquí, solo loguear - el companyId ya está establecido
+            // setError('No se pudo cargar la información de la empresa. Verifique los permisos (RLS).')
           } else {
             console.log('✅ [CompanyContext] Empresa encontrada:', companyData)
             setCompany(companyData)
           }
         } else {
           console.error('❌ [CompanyContext] Perfil de usuario no tiene un company_id o el perfil es nulo.')
+          console.error('❌ [CompanyContext] Perfil completo recibido:', userProfile)
           setError('El perfil de usuario no está asociado a ninguna empresa.')
         }
 
