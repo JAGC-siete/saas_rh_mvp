@@ -65,16 +65,22 @@ export function getHondurasTimeISO(): string {
 
 /**
  * Format time for display in HH:MM format
+ * Converts UTC timestamp to Honduras local time (America/Tegucigalpa, UTC-6)
  */
 export function formatTimeDisplay(timestamp: string | Date | null): string {
   if (!timestamp) return '--:--';
   
   const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
   
-  // Convert to Honduras time for display
-  const hondurasTime = convertToHondurasTime(date);
+  // Check if date is valid
+  if (isNaN(date.getTime())) {
+    return '--:--';
+  }
   
-  return hondurasTime.toLocaleTimeString('es-HN', {
+  // Use toLocaleTimeString with explicit timeZone to convert UTC to Honduras time
+  // This correctly handles the UTC-6 offset for America/Tegucigalpa
+  return date.toLocaleTimeString('es-HN', {
+    timeZone: HONDURAS_TIMEZONE, // 'America/Tegucigalpa'
     hour: '2-digit',
     minute: '2-digit',
     hour12: false
