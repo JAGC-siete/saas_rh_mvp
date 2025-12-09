@@ -320,6 +320,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // Filtrar solo por empleados de esta empresa usando los IDs ya obtenidos
     const employeeIds = employees.map((emp: any) => emp.id);
     
+    console.log('🔍 DEBUG - Buscando registros de asistencia:', {
+      totalEmployees: employeeIds.length,
+      fechaInicio,
+      fechaFin,
+      primeros3EmployeeIds: employeeIds.slice(0, 3)
+    });
+    
     let attendanceRecords: any[] = [];
     if (employeeIds.length > 0) {
       const { data: attData, error: attError } = await supabase
@@ -340,6 +347,28 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       }
       
       attendanceRecords = attData || [];
+      
+      // DEBUG: Verificar si hay registros pero no coinciden con employee_ids
+      if (attendanceRecords.length === 0) {
+        console.warn('⚠️ WARNING - No se encontraron registros de asistencia en el rango de fechas')
+        console.log('🔍 DEBUG - Verificando si hay registros fuera del rango...')
+        
+        // Consulta adicional para ver si hay registros de estos empleados en otras fechas
+        const { data: attDataAnyDate, error: attErrorAnyDate } = await supabase
+          .from('attendance_records')
+          .select('employee_id, date, check_in, check_out, status')
+          .in('employee_id', employeeIds.slice(0, 5)) // Solo primeros 5 para no sobrecargar
+          .order('date', { ascending: false })
+          .limit(10)
+        
+        if (!attErrorAnyDate && attDataAnyDate && attDataAnyDate.length > 0) {
+          console.log('🔍 DEBUG - Se encontraron registros de asistencia fuera del rango:', {
+            totalRegistrosFueraRango: attDataAnyDate.length,
+            fechasEncontradas: [...new Set(attDataAnyDate.map((r: any) => r.date))],
+            rangoBuscado: { fechaInicio, fechaFin }
+          })
+        }
+      }
     }
     
     // DEBUG: Log información de asistencia antes del filtro
