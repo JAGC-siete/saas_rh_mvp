@@ -122,21 +122,56 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const updateData: any = { ...body };
     delete updateData.id; // Remove id from body to prevent trying to update it
-    updateData.sync_status = 'pending'; // Mark for sync on any update
     updateData.updated_at = getHondurasTimestamp();
 
     console.log('🔧 Final update data:', updateData)
 
-    const { data: updated, error: updErr } = await supabase
+    let updated: any = null
+    let updErr: any = null
+
+    // Try to include sync_status, but handle gracefully if column doesn't exist
+    updateData.sync_status = 'pending'; // Mark for sync on any update
+
+    const { data: updateResult, error: updateError } = await supabase
       .from('employees')
       .update(updateData)
       .eq('id', employeeId)
       .select()
       .single()
 
+    updErr = updateError
+    updated = updateResult
+
+    // If error is about sync_status column not found, retry without it
+    if (updErr && updErr.message && (updErr.message.includes('sync_status') || updErr.code === 'PGRST204')) {
+      console.warn('⚠️ sync_status column not found, retrying update without it')
+      const updateDataWithoutSync = { ...updateData }
+      delete updateDataWithoutSync.sync_status
+      
+      const { data: retryResult, error: retryErr } = await supabase
+        .from('employees')
+        .update(updateDataWithoutSync)
+        .eq('id', employeeId)
+        .select()
+        .single()
+      
+      if (retryErr) {
+        console.error('❌ Error updating employee (admin):', retryErr)
+        return res.status(500).json({ error: 'Error updating employee', details: retryErr.message })
+      }
+      
+      updated = retryResult
+      updErr = null
+    }
+
     if (updErr) {
       console.error('❌ Error updating employee (admin):', updErr)
-      return res.status(500).json({ error: 'Error updating employee' })
+      return res.status(500).json({ error: 'Error updating employee', details: updErr.message })
+    }
+
+    if (!updated) {
+      console.error('❌ No data returned from update')
+      return res.status(500).json({ error: 'Error updating employee: No data returned' })
     }
 
     console.log('✅ Employee updated successfully:', { employeeId, companyId });

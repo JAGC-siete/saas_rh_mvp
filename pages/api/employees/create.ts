@@ -104,7 +104,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       emergency_contact_phone: emergency_contact_phone || null,
       address: address || null,
       metadata: metadata || null,
-      sync_status: 'pending', // Set status to pending on creation
+      // sync_status will be added only if column exists (handled by database default)
+      // sync_status: 'pending', // Set status to pending on creation
       created_at: getHondurasTimestamp(),
       updated_at: getHondurasTimestamp()
     }
