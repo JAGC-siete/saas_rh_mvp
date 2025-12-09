@@ -572,6 +572,9 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
   }, [resetForm])
 
   const handleEdit = useCallback((employee: Employee) => {
+    // Mostrar estado de carga
+    setEmployeesLoading(true)
+    
     setEditingEmployee(employee)
     setFormData({
       employee_code: employee.employee_code || '',
@@ -604,16 +607,38 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
     setProfileImageError(null)
     setRemoveExistingProfileImage(false)
     setExistingProfileImagePath(employee.profile_image_path || null)
-    if (employee.profile_image_path) {
-      getSignedProfileImageUrl(employee.profile_image_path)
-        .then((url) => setProfileImagePreview(url))
-        .catch((err) => {
+    
+    // Cargar imagen de perfil si existe
+    const loadImage = async () => {
+      if (employee.profile_image_path) {
+        try {
+          const url = await getSignedProfileImageUrl(employee.profile_image_path)
+          setProfileImagePreview(url)
+        } catch (err) {
           console.error('Error loading profile image preview for edit:', err)
           setProfileImagePreview(null)
-        })
-    } else {
-      setProfileImagePreview(null)
+        } finally {
+          setEmployeesLoading(false)
+        }
+      } else {
+        setProfileImagePreview(null)
+        setEmployeesLoading(false)
+      }
     }
+    
+    loadImage()
+    
+    // Scroll suave al formulario después de un pequeño delay para permitir que el DOM se actualice
+    setTimeout(() => {
+      const formElement = document.querySelector('[data-employee-form]')
+      if (formElement) {
+        formElement.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start',
+          inline: 'nearest'
+        })
+      }
+    }, 100)
   }, [profileImagePreview, getSignedProfileImageUrl])
 
   const handleDeactivate = useCallback((employee: Employee) => {
@@ -900,23 +925,54 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
   return (
     <div className="space-y-6">
       {showForm ? (
-        <AddEmployeeForm
-          formData={formData}
-          onFormChange={handleFormChange}
-          onSubmit={handleSubmit}
-          onCancel={handleCancel}
-          departments={departments}
-          workSchedules={workSchedules}
-          loading={isSubmitting}
-          isEditing={!!editingEmployee}
-          profileImagePreview={profileImagePreview}
-          profileImageUploading={profileImageUploading}
-          profileImageError={profileImageError}
-          onProfileImageChange={handleProfileImageSelected}
-          onToggleProfileImage={handleProfileImageToggle}
-          canRemoveProfileImage={Boolean(profileImagePreview || editingEmployee?.profile_image_path)}
-          isProfileImageMarkedForRemoval={removeExistingProfileImage}
-        />
+        <div 
+          data-employee-form 
+          className="transition-all duration-300 ease-in-out animate-in fade-in slide-in-from-top-4"
+        >
+          {editingEmployee && (
+            <div className="mb-4 p-4 bg-blue-500/20 border border-blue-500/30 rounded-lg flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+              <div className="flex-shrink-0">
+                <div className="h-10 w-10 rounded-full bg-blue-500/30 flex items-center justify-center">
+                  <PencilIcon className="h-5 w-5 text-blue-400" />
+                </div>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-blue-300">
+                  Editando empleado: <span className="text-white font-semibold">{editingEmployee.name}</span>
+                </p>
+                <p className="text-xs text-blue-400/80 mt-1">
+                  {editingEmployee.employee_code || 'Sin código'} • {editingEmployee.dni}
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleCancel}
+                className="bg-white/5 border-white/20 text-white hover:bg-white/10"
+                title="Cancelar edición"
+              >
+                ✕
+              </Button>
+            </div>
+          )}
+          <AddEmployeeForm
+            formData={formData}
+            onFormChange={handleFormChange}
+            onSubmit={handleSubmit}
+            onCancel={handleCancel}
+            departments={departments}
+            workSchedules={workSchedules}
+            loading={isSubmitting || employeesLoading}
+            isEditing={!!editingEmployee}
+            profileImagePreview={profileImagePreview}
+            profileImageUploading={profileImageUploading}
+            profileImageError={profileImageError}
+            onProfileImageChange={handleProfileImageSelected}
+            onToggleProfileImage={handleProfileImageToggle}
+            canRemoveProfileImage={Boolean(profileImagePreview || editingEmployee?.profile_image_path)}
+            isProfileImageMarkedForRemoval={removeExistingProfileImage}
+          />
+        </div>
       ) : (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
@@ -1008,7 +1064,14 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                 const whatsappLink = getWhatsAppLink(employee.phone, employee.name)
 
                 return (
-                  <div key={employee.id} className="border border-white/10 rounded-lg p-4 bg-white/5 hover:bg-white/10 transition-colors">
+                  <div 
+                    key={employee.id} 
+                    className={`border rounded-lg p-4 transition-all duration-200 ${
+                      editingEmployee?.id === employee.id 
+                        ? 'border-blue-500/50 bg-blue-500/10 shadow-lg shadow-blue-500/20' 
+                        : 'border-white/10 bg-white/5 hover:bg-white/10'
+                    }`}
+                  >
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
@@ -1109,10 +1172,18 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                           size="sm"
                           variant="outline"
                           onClick={() => handleEdit(employee)}
-                          className="flex items-center gap-1 bg-white/5 border-white/20 text-white hover:bg-white/10"
+                          className="flex items-center gap-1 bg-blue-500/20 border-blue-500/30 text-blue-400 hover:bg-blue-500/30 transition-all"
+                          title={`Editar ${employee.name}`}
+                          disabled={employeesLoading}
                         >
-                          <PencilIcon className="h-4 w-4" />
-                          <span className="hidden sm:inline">Editar</span>
+                          {employeesLoading && editingEmployee?.id === employee.id ? (
+                            <div className="h-4 w-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <PencilIcon className="h-4 w-4" />
+                          )}
+                          <span className="hidden sm:inline">
+                            {employeesLoading && editingEmployee?.id === employee.id ? 'Cargando...' : 'Editar'}
+                          </span>
                         </Button>
                         
                         {employee.status === 'active' && (
