@@ -30,7 +30,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     
     // Validaciones
     if (!year || !month || !quincena) {
-      return res.status(400).json({ error: 'year, month, y quincena son requeridos' })
+      console.error('❌ ERROR - Parámetros faltantes:', { year, month, quincena, tipo })
+      return res.status(400).json({ 
+        error: 'year, month, y quincena son requeridos',
+        received: { year, month, quincena, tipo }
+      })
     }
     
     const yearNum = parseInt(year as string)
@@ -38,12 +42,29 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const quincenaNum = parseInt(quincena as string)
     const tipoParam = tipo as string || 'CON'
     
+    if (isNaN(yearNum) || isNaN(monthNum) || isNaN(quincenaNum)) {
+      console.error('❌ ERROR - Parámetros inválidos (NaN):', { yearNum, monthNum, quincenaNum })
+      return res.status(400).json({ 
+        error: 'Parámetros numéricos inválidos',
+        received: { year, month, quincena },
+        parsed: { yearNum, monthNum, quincenaNum }
+      })
+    }
+    
     if (![1, 2].includes(quincenaNum)) {
-      return res.status(400).json({ error: 'Quincena inválida (debe ser 1 o 2)' })
+      console.error('❌ ERROR - Quincena inválida:', quincenaNum)
+      return res.status(400).json({ 
+        error: 'Quincena inválida (debe ser 1 o 2)',
+        received: quincenaNum
+      })
     }
 
     if (!['CON', 'SIN'].includes(tipoParam)) {
-      return res.status(400).json({ error: 'Tipo inválido (debe ser CON o SIN)' })
+      console.error('❌ ERROR - Tipo inválido:', tipoParam)
+      return res.status(400).json({ 
+        error: 'Tipo inválido (debe ser CON o SIN)',
+        received: tipoParam
+      })
     }
 
     // Validar que no sea un período futuro
@@ -278,9 +299,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     if (!employees || employees.length === 0) {
+      console.error('❌ ERROR - No hay empleados activos para company_id:', companyId)
       return res.status(400).json({ 
         error: 'No hay empleados activos',
-        message: 'No se encontraron empleados activos para generar la nómina'
+        message: 'No se encontraron empleados activos para generar la nómina',
+        companyId: companyId
       })
     }
     
@@ -361,9 +384,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     if (empleadosParaNomina.length === 0) {
+      console.error('❌ ERROR - No hay empleados disponibles después del filtro de asistencia')
+      console.error('🔍 DEBUG - Total empleados activos:', employees.length)
+      console.error('🔍 DEBUG - Total registros de asistencia:', attendanceRecords.length)
       return res.status(400).json({ 
         error: 'No hay empleados disponibles',
-        message: 'No se encontraron empleados activos para generar la nómina'
+        message: 'No se encontraron empleados activos con asistencia para generar la nómina',
+        totalEmployees: employees.length,
+        totalAttendanceRecords: attendanceRecords.length,
+        periodo: { fechaInicio, fechaFin }
       })
     }
 
