@@ -341,6 +341,21 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       
       attendanceRecords = attData || [];
     }
+    
+    // DEBUG: Log información de asistencia antes del filtro
+    console.log('🔍 DEBUG - Total registros de asistencia encontrados:', attendanceRecords.length)
+    console.log('🔍 DEBUG - Rango de fechas buscado:', { fechaInicio, fechaFin })
+    if (attendanceRecords.length > 0) {
+      console.log('🔍 DEBUG - Primeros 5 registros de asistencia:', attendanceRecords.slice(0, 5).map((r: any) => ({
+        employee_id: r.employee_id,
+        date: r.date,
+        check_in: r.check_in ? 'SI' : 'NO',
+        check_out: r.check_out ? 'SI' : 'NO',
+        status: r.status
+      })))
+    }
+    console.log('🔍 DEBUG - Total empleados activos antes del filtro:', employees.length)
+    console.log('🔍 DEBUG - IDs de empleados activos:', employees.map((e: any) => ({ id: e.id, name: e.name, pay_type: e.pay_type })))
 
     // Filtrar empleados según criterio de asistencia (diferente por pay_type)
     let empleadosParaNomina = employees
@@ -349,29 +364,54 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // Si hay registros de asistencia, filtrar según tipo de pago
     if (attendanceRecords.length > 0) {
       empleadosParaNomina = employees.filter((emp: any) => {
-        const empRecords = attendanceRecords.filter((record: any) => 
-          record.employee_id === emp.id && 
+        // Buscar TODOS los registros del empleado (sin filtrar por check_in todavía)
+        const allEmpRecords = attendanceRecords.filter((record: any) => 
+          record.employee_id === emp.id
+        );
+        
+        console.log(`🔍 DEBUG - Empleado ${emp.name} (${emp.id}):`, {
+          pay_type: emp.pay_type,
+          totalRecords: allEmpRecords.length,
+          records: allEmpRecords.map((r: any) => ({
+            date: r.date,
+            check_in: r.check_in,
+            check_out: r.check_out,
+            status: r.status
+          }))
+        });
+        
+        // Filtrar registros válidos (con check_in y no ausentes)
+        const empRecords = allEmpRecords.filter((record: any) => 
           record.check_in &&
           record.status !== 'absent'
         );
 
-        if (empRecords.length === 0) return false;
+        if (empRecords.length === 0) {
+          console.log(`❌ DEBUG - Empleado ${emp.name} rechazado: sin registros válidos`)
+          return false;
+        }
 
         const payType = emp.pay_type || 'fixed'; // Default a 'fixed'
 
         if (payType === 'fixed') {
           // Administrativos: requieren check_in (check_out opcional para MVP)
           // Aceptar si tiene al menos check_in
-          return empRecords.some((record: any) => record.check_in);
+          const hasValidRecord = empRecords.some((record: any) => record.check_in);
+          console.log(`✅ DEBUG - Empleado ${emp.name} (fixed): ${hasValidRecord ? 'ACEPTADO' : 'RECHAZADO'}`)
+          return hasValidRecord;
         } else if (payType === 'hourly') {
           // Por hora: requieren check_in Y check_out para contar horas trabajadas
-          return empRecords.some((record: any) => 
+          const hasValidRecord = empRecords.some((record: any) => 
             record.check_in && record.check_out
           );
+          console.log(`✅ DEBUG - Empleado ${emp.name} (hourly): ${hasValidRecord ? 'ACEPTADO' : 'RECHAZADO'}`)
+          return hasValidRecord;
         }
 
         // Default: aceptar si tiene check_in
-        return empRecords.some((record: any) => record.check_in);
+        const hasValidRecord = empRecords.some((record: any) => record.check_in);
+        console.log(`✅ DEBUG - Empleado ${emp.name} (default): ${hasValidRecord ? 'ACEPTADO' : 'RECHAZADO'}`)
+        return hasValidRecord;
       });
     } else {
       // Si no hay registros de asistencia, incluir todos los empleados activos

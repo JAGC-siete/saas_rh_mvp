@@ -408,13 +408,13 @@ export default function UnifiedPayrollTable({
         {/* Sección 1: Nómina — Empleados Fijos (fixed) */}
         {fixedRows.length > 0 && (
           <>
-            <PayrollFixedTable
-              rows={paginatedFixedRows}
-              onGenerateVoucher={onGenerateVoucher}
-              onEditCustomFields={onEditCustomFields}
-              loading={loading}
-              hasCustom={hasCustom}
-            />
+          <PayrollFixedTable
+            rows={paginatedFixedRows}
+            onGenerateVoucher={onGenerateVoucher}
+            onEditCustomFields={onEditCustomFields}
+            loading={loading}
+            hasCustom={hasCustom}
+          />
             {/* Paginación independiente para empleados fijos */}
             {totalPagesFixed > 1 && (
               <div className="mb-6">
@@ -433,13 +433,13 @@ export default function UnifiedPayrollTable({
         {/* Sección 2: Nómina — Detalle por Empleado (hourly) */}
         {hourlyRows.length > 0 && (
           <>
-            <PayrollHourlyTable
-              rows={paginatedHourlyRows}
-              onGenerateVoucher={onGenerateVoucher}
-              onEditCustomFields={onEditCustomFields}
-              loading={loading}
-              hasCustom={hasCustom}
-            />
+          <PayrollHourlyTable
+            rows={paginatedHourlyRows}
+            onGenerateVoucher={onGenerateVoucher}
+            onEditCustomFields={onEditCustomFields}
+            loading={loading}
+            hasCustom={hasCustom}
+          />
             {/* Paginación independiente para empleados por hora */}
             {totalPagesHourly > 1 && (
               <div className="mb-6">
