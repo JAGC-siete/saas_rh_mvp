@@ -424,15 +424,44 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     if (empleadosParaNomina.length === 0) {
-      console.error('❌ ERROR - No hay empleados disponibles después del filtro de asistencia')
-      console.error('🔍 DEBUG - Total empleados activos:', employees.length)
-      console.error('🔍 DEBUG - Total registros de asistencia:', attendanceRecords.length)
-      return res.status(400).json({ 
-        error: 'No hay empleados disponibles',
-        message: 'No se encontraron empleados activos con asistencia para generar la nómina',
-        totalEmployees: employees.length,
-        totalAttendanceRecords: attendanceRecords.length,
-        periodo: { fechaInicio, fechaFin }
+      console.warn('⚠️ WARNING - No hay empleados disponibles después del filtro de asistencia')
+      console.log('🔍 DEBUG - Total empleados activos:', employees.length)
+      console.log('🔍 DEBUG - Total registros de asistencia:', attendanceRecords.length)
+      console.log('🔍 DEBUG - Rango de fechas:', { fechaInicio, fechaFin })
+      
+      // En lugar de retornar error 400, retornar datos vacíos (comportamiento estándar)
+      // Esto permite que la UI muestre "0 empleados" en lugar de un error
+      return res.status(200).json({
+        message: 'No hay empleados con asistencia para el período seleccionado',
+        run_id: runId,
+        status: 'draft',
+        year: yearNum,
+        month: monthNum,
+        quincena: quincenaNum,
+        tipo: tipoParam,
+        empleados: 0,
+        empleados_fixed: 0,
+        empleados_hourly: 0,
+        totalBruto: 0,
+        totalDeducciones: 0,
+        totalNeto: 0,
+        totalBrutoFixed: 0,
+        totalDeduccionesFixed: 0,
+        totalNetoFixed: 0,
+        totalBrutoHourly: 0,
+        totalDeduccionesHourly: 0,
+        totalNetoHourly: 0,
+        planilla_fixed: [],
+        planilla_hourly: [],
+        planilla: [],
+        warning: attendanceRecords.length === 0 
+          ? 'No se encontraron registros de asistencia para el período seleccionado'
+          : 'No se encontraron empleados con asistencia válida para el período seleccionado',
+        noAttendanceWarning: attendanceRecords.length === 0 ? {
+          message: 'No se encontraron registros de asistencia para el período seleccionado.',
+          detail: 'Se incluirán todos los empleados activos en la nómina.',
+          action: 'confirm'
+        } : null
       })
     }
 
