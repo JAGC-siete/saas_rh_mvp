@@ -250,6 +250,431 @@ async function processHeartbeat(root: any, companyId: string) {
 }
 
 /**
+ * Maneja eventos de empleados administrativos/permanentes (pay_type = 'fixed')
+ * Infiere entrada vs salida usando el horario asignado y ventanas de tiempo
+ */
+async function handleFixedEmployeeEvent(
+  employee: any,
+  root: any,
+  acs: any,
+  eventTimestamp: Date,
+  recordDate: string,
+  eventUid: string,
+  companyId: string,
+  doorNo: any,
+  readerNo: any,
+  verifyMode: any,
+  cardNo: any,
+  employeeNoString: any
+) {
+  const supabase = createAdminClient();
+
+  // Constantes de ventanas de decisión (en minutos)
+  const WINDOW_IN_BEFORE = 120; // 2 horas antes de expected_check_in
+  const WINDOW_IN_AFTER = 120;  // 2 horas después de expected_check_in
+  const WINDOW_OUT_BEFORE = 120; // 2 horas antes de expected_check_out
+  const WINDOW_OUT_AFTER = 120;  // 2 horas después de expected_check_out
+
+  // Obtener horario del empleado
+  if (!employee.work_schedule_id) {
+    logger.warn('[FIXED EMPLOYEE] No work_schedule_id, cannot infer check_in/check_out', {
+      companyId,
+      employeeId: employee.id,
+    });
+    return;
+  }
+
+  const { data: schedule, error: scheduleError } = await supabase
+    .from('work_schedules')
+    .select('*')
+    .eq('id', employee.work_schedule_id)
+    .single();
+
+  if (scheduleError || !schedule) {
+    logger.warn('[FIXED EMPLOYEE] Error fetching schedule', {
+      companyId,
+      employeeId: employee.id,
+      error: scheduleError,
+    });
+    return;
+  }
+
+  // Obtener día de la semana
+  const hondurasTime = toHN(eventTimestamp);
+  const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const dayName = dayNames[hondurasTime.dow];
+
+  // Obtener horarios esperados para ese día
+  const expectedCheckInStr = (schedule as Record<string, any>)?.[`${dayName}_start`] 
+    || (schedule as Record<string, any>)?.monday_start 
+    || '08:00';
+  
+  const expectedCheckOutStr = (schedule as Record<string, any>)?.[`${dayName}_end`] 
+    || (schedule as Record<string, any>)?.monday_end 
+    || '17:00';
+
+  // Convertir horarios esperados a Date para comparación
+  const [expectedInHour, expectedInMin] = expectedCheckInStr.split(':').map(Number);
+  const [expectedOutHour, expectedOutMin] = expectedCheckOutStr.split(':').map(Number);
+  
+  // Crear Date objects para el día del evento
+  const eventDateObj = new Date(eventTimestamp);
+  const expectedCheckIn = new Date(Date.UTC(
+    eventDateObj.getUTCFullYear(),
+    eventDateObj.getUTCMonth(),
+    eventDateObj.getUTCDate(),
+    expectedInHour + 6, // Convertir hora Honduras a UTC
+    expectedInMin,
+    0
+  ));
+  
+  const expectedCheckOut = new Date(Date.UTC(
+    eventDateObj.getUTCFullYear(),
+    eventDateObj.getUTCMonth(),
+    eventDateObj.getUTCDate(),
+    expectedOutHour + 6, // Convertir hora Honduras a UTC
+    expectedOutMin,
+    0
+  ));
+
+  // Calcular diferencias en minutos
+  const diffToInMinutes = (eventTimestamp.getTime() - expectedCheckIn.getTime()) / 60000;
+  const diffToOutMinutes = (eventTimestamp.getTime() - expectedCheckOut.getTime()) / 60000;
+
+  // Buscar registro abierto del día (sin check_out)
+  const { data: openRecord } = await supabase
+    .from('attendance_records')
+    .select('id, check_in, check_out')
+    .eq('employee_id', employee.id)
+    .eq('date', recordDate)
+    .is('check_out', null)
+    .maybeSingle();
+
+  logger.debug('[FIXED EMPLOYEE] Event classification', {
+    companyId,
+    employeeId: employee.id,
+    recordDate,
+    hasOpenRecord: !!openRecord,
+    diffToInMinutes,
+    diffToOutMinutes,
+    expectedCheckIn: expectedCheckInStr,
+    expectedCheckOut: expectedCheckOutStr,
+  });
+
+  // REGLA 1: No hay registro abierto
+  if (!openRecord) {
+    // Verificar si está en ventana de entrada
+    if (diffToInMinutes >= -WINDOW_IN_BEFORE && diffToInMinutes <= WINDOW_IN_AFTER) {
+      // Crear registro con check_in
+      const lateMinutes = Math.max(0, diffToInMinutes);
+      
+      const { data: record, error: insertError } = await supabase
+        .from('attendance_records')
+        .insert({
+          employee_id: employee.id,
+          date: recordDate,
+          check_in: eventTimestamp.toISOString(),
+          expected_check_in: expectedCheckInStr,
+          late_minutes: Math.round(lateMinutes),
+          event_uid: eventUid,
+          tz: 'America/Tegucigalpa',
+          tz_offset_minutes: -360,
+          status: 'present',
+        })
+        .select()
+        .single();
+
+      if (insertError && insertError.code !== '23505') {
+        logger.error('[FIXED EMPLOYEE] Error creating check_in record', insertError, {
+          companyId,
+          employeeId: employee.id,
+        });
+      } else {
+        logger.info('[FIXED EMPLOYEE] Check_in recorded', {
+          companyId,
+          employeeId: employee.id,
+          recordId: record?.id,
+          eventUid,
+        });
+      }
+      return;
+    }
+
+    // Si está más cerca de expected_check_out que de expected_check_in
+    // (llegó tarde al final del día)
+    if (Math.abs(diffToOutMinutes) < Math.abs(diffToInMinutes) && 
+        diffToOutMinutes >= -WINDOW_OUT_BEFORE && diffToOutMinutes <= WINDOW_OUT_AFTER) {
+      // Crear registro completo con check_in esperado y check_out del evento
+      const { data: record, error: insertError } = await supabase
+        .from('attendance_records')
+        .insert({
+          employee_id: employee.id,
+          date: recordDate,
+          check_in: expectedCheckIn.toISOString(), // Usar hora esperada
+          check_out: eventTimestamp.toISOString(),
+          expected_check_in: expectedCheckInStr,
+          expected_check_out: expectedCheckOutStr,
+          late_minutes: 0, // Asumir que llegó a tiempo si usamos hora esperada
+          event_uid: eventUid,
+          tz: 'America/Tegucigalpa',
+          tz_offset_minutes: -360,
+          status: 'present',
+        })
+        .select()
+        .single();
+
+      if (insertError && insertError.code !== '23505') {
+        logger.error('[FIXED EMPLOYEE] Error creating complete record', insertError, {
+          companyId,
+          employeeId: employee.id,
+        });
+      } else {
+        logger.info('[FIXED EMPLOYEE] Complete record created (late arrival)', {
+          companyId,
+          employeeId: employee.id,
+          recordId: record?.id,
+          eventUid,
+        });
+      }
+      return;
+    }
+
+    // Evento fuera de ventanas
+    logger.warn('[FIXED EMPLOYEE] Event outside time windows, ignoring', {
+      companyId,
+      employeeId: employee.id,
+      diffToInMinutes,
+      diffToOutMinutes,
+      eventTimestamp: eventTimestamp.toISOString(),
+    });
+    return;
+  }
+
+  // REGLA 2: Hay registro abierto (con check_in pero sin check_out)
+  if (openRecord) {
+    // Verificar si está en ventana de salida
+    if (diffToOutMinutes >= -WINDOW_OUT_BEFORE && diffToOutMinutes <= WINDOW_OUT_AFTER) {
+      // Actualizar registro con check_out
+      const { error: updateError } = await supabase
+        .from('attendance_records')
+        .update({
+          check_out: eventTimestamp.toISOString(),
+          expected_check_out: expectedCheckOutStr,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', openRecord.id);
+
+      if (updateError) {
+        logger.error('[FIXED EMPLOYEE] Error updating check_out', updateError, {
+          companyId,
+          employeeId: employee.id,
+          recordId: openRecord.id,
+        });
+      } else {
+        logger.info('[FIXED EMPLOYEE] Check_out recorded', {
+          companyId,
+          employeeId: employee.id,
+          recordId: openRecord.id,
+          eventUid,
+        });
+      }
+      return;
+    }
+
+    // Si el evento cae otra vez en ventana de entrada (doble entrada)
+    if (diffToInMinutes >= -WINDOW_IN_BEFORE && diffToInMinutes <= WINDOW_IN_AFTER) {
+      logger.warn('[FIXED EMPLOYEE] Double entry detected, ignoring', {
+        companyId,
+        employeeId: employee.id,
+        existingRecordId: openRecord.id,
+        eventUid,
+      });
+      return;
+    }
+
+    // Evento fuera de ventanas con registro abierto
+    logger.warn('[FIXED EMPLOYEE] Event outside time windows with open record', {
+      companyId,
+      employeeId: employee.id,
+      recordId: openRecord.id,
+      diffToInMinutes,
+      diffToOutMinutes,
+    });
+  }
+}
+
+/**
+ * Maneja eventos de empleados por hora (pay_type = 'hourly')
+ * La primera marca es entrada, la siguiente es salida (dentro de 30 horas)
+ */
+async function handleHourlyEmployeeEvent(
+  employee: any,
+  root: any,
+  acs: any,
+  eventTimestamp: Date,
+  recordDate: string,
+  eventUid: string,
+  companyId: string,
+  doorNo: any,
+  readerNo: any,
+  verifyMode: any,
+  cardNo: any,
+  employeeNoString: any
+) {
+  const supabase = createAdminClient();
+
+  // Constante de ventana máxima para un turno (30 horas)
+  const MAX_SHIFT_HOURS = 30;
+  const MAX_SHIFT_MS = MAX_SHIFT_HOURS * 60 * 60 * 1000;
+
+  // Buscar último registro abierto del empleado (sin check_out)
+  const { data: openRecord } = await supabase
+    .from('attendance_records')
+    .select('id, check_in, check_out, date')
+    .eq('employee_id', employee.id)
+    .is('check_out', null)
+    .order('check_in', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  logger.debug('[HOURLY EMPLOYEE] Event processing', {
+    companyId,
+    employeeId: employee.id,
+    recordDate,
+    hasOpenRecord: !!openRecord,
+    openRecordDate: openRecord?.date,
+    eventTimestamp: eventTimestamp.toISOString(),
+  });
+
+  // REGLA 1: No hay registro abierto → crear nuevo check_in
+  if (!openRecord) {
+    const { data: record, error: insertError } = await supabase
+      .from('attendance_records')
+      .insert({
+        employee_id: employee.id,
+        date: recordDate,
+        check_in: eventTimestamp.toISOString(),
+        event_uid: eventUid,
+        tz: 'America/Tegucigalpa',
+        tz_offset_minutes: -360,
+        status: 'present',
+      })
+      .select()
+      .single();
+
+    if (insertError && insertError.code !== '23505') {
+      logger.error('[HOURLY EMPLOYEE] Error creating check_in record', insertError, {
+        companyId,
+        employeeId: employee.id,
+      });
+    } else {
+      logger.info('[HOURLY EMPLOYEE] Check_in recorded', {
+        companyId,
+        employeeId: employee.id,
+        recordId: record?.id,
+        eventUid,
+      });
+    }
+    return;
+  }
+
+  // REGLA 2: Hay registro abierto → calcular diferencia
+  const openRecordCheckIn = new Date(openRecord.check_in);
+  const diffMs = eventTimestamp.getTime() - openRecordCheckIn.getTime();
+
+  logger.debug('[HOURLY EMPLOYEE] Time difference calculation', {
+    companyId,
+    employeeId: employee.id,
+    openRecordId: openRecord.id,
+    openRecordCheckIn: openRecordCheckIn.toISOString(),
+    eventTimestamp: eventTimestamp.toISOString(),
+    diffMs,
+    diffHours: diffMs / (60 * 60 * 1000),
+  });
+
+  // Si la diferencia es positiva y está dentro de la ventana de 30 horas
+  if (diffMs > 0 && diffMs <= MAX_SHIFT_MS) {
+    // Actualizar registro con check_out
+    const { error: updateError } = await supabase
+      .from('attendance_records')
+      .update({
+        check_out: eventTimestamp.toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', openRecord.id);
+
+    if (updateError) {
+      logger.error('[HOURLY EMPLOYEE] Error updating check_out', updateError, {
+        companyId,
+        employeeId: employee.id,
+        recordId: openRecord.id,
+      });
+    } else {
+      logger.info('[HOURLY EMPLOYEE] Check_out recorded', {
+        companyId,
+        employeeId: employee.id,
+        recordId: openRecord.id,
+        eventUid,
+        shiftDurationHours: diffMs / (60 * 60 * 1000),
+      });
+    }
+    return;
+  }
+
+  // Si diffMs <= 0 (evento anterior o igual al check_in)
+  if (diffMs <= 0) {
+    logger.warn('[HOURLY EMPLOYEE] Event out of order, ignoring', {
+      companyId,
+      employeeId: employee.id,
+      openRecordId: openRecord.id,
+      diffMs,
+      eventUid,
+    });
+    return;
+  }
+
+  // Si diffMs > MAX_SHIFT_MS (pasaron más de 30 horas)
+  // Cerrar registro huérfano y crear nuevo check_in
+  logger.warn('[HOURLY EMPLOYEE] Shift exceeded 30 hours, closing orphan record', {
+    companyId,
+    employeeId: employee.id,
+    openRecordId: openRecord.id,
+    diffHours: diffMs / (60 * 60 * 1000),
+  });
+
+  // Cerrar registro huérfano (opcional: puedes dejarlo abierto o cerrarlo con hora estimada)
+  // Por ahora, lo dejamos abierto y creamos un nuevo check_in
+  const { data: newRecord, error: insertError } = await supabase
+    .from('attendance_records')
+    .insert({
+      employee_id: employee.id,
+      date: recordDate,
+      check_in: eventTimestamp.toISOString(),
+      event_uid: eventUid,
+      tz: 'America/Tegucigalpa',
+      tz_offset_minutes: -360,
+      status: 'present',
+    })
+    .select()
+    .single();
+
+  if (insertError && insertError.code !== '23505') {
+    logger.error('[HOURLY EMPLOYEE] Error creating new check_in after orphan', insertError, {
+      companyId,
+      employeeId: employee.id,
+    });
+  } else {
+    logger.info('[HOURLY EMPLOYEE] New check_in created after orphan record', {
+      companyId,
+      employeeId: employee.id,
+      newRecordId: newRecord?.id,
+      orphanRecordId: openRecord.id,
+      eventUid,
+    });
+  }
+}
+
+/**
  * Procesa evento de acceso: crea registro de asistencia
  */
 async function processAccessEvent(
@@ -324,10 +749,10 @@ async function processAccessEvent(
     return;
   }
 
-  // Buscar empleado con work_schedule_id
+  // Buscar empleado con work_schedule_id y pay_type
   let { data: employee, error: employeeError } = await supabase
     .from('employees')
-    .select('id, company_id, work_schedule_id, dni')
+    .select('id, company_id, work_schedule_id, dni, pay_type')
     .eq('company_id', companyId)
     .eq('dni', normalizedId)
     .eq('status', 'active')
@@ -337,7 +762,7 @@ async function processAccessEvent(
   if (employeeError || !employee) {
     const { data: allEmployees } = await supabase
       .from('employees')
-      .select('id, company_id, work_schedule_id, dni')
+      .select('id, company_id, work_schedule_id, dni, pay_type')
       .eq('company_id', companyId)
       .eq('status', 'active');
 
@@ -387,129 +812,77 @@ async function processAccessEvent(
   const hoursDiff = (nowInHonduras().getTime() - eventTimestamp.getTime()) / (1000 * 60 * 60);
   const recordDate = hoursDiff > 24 ? eventDate : todayDate;
   
-  // check_in se guarda como ISO string (UTC), pero representa la hora real del evento
-  const checkInTimestamp = eventTimestamp.toISOString();
-  
   logger.debug('[ACCESS EVENT] Date calculation', {
     companyId,
     eventDateHonduras: eventDate,
     todayDateHonduras: todayDate,
     hoursDiff,
     recordDate,
-    checkInTimestamp,
+    eventTimestamp: eventTimestamp.toISOString(),
   });
 
-  // Calcular late_minutes y expected_check_in si el empleado tiene horario
-  let lateMinutes: number | null = null;
-  let expectedCheckIn: string | null = null;
-
-  if (employee.work_schedule_id) {
-    try {
-      // Obtener horario del empleado
-      const { data: schedule, error: scheduleError } = await supabase
-        .from('work_schedules')
-        .select('*')
-        .eq('id', employee.work_schedule_id)
-        .single();
-
-      if (!scheduleError && schedule) {
-        // Obtener día de la semana usando hora local de Honduras
-        // eventTimestamp ya está normalizado, usar toHN para obtener día correcto
-        const hondurasTime = toHN(eventTimestamp);
-        const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-        const dayName = dayNames[hondurasTime.dow];
-
-        // Obtener horario esperado para ese día
-        expectedCheckIn = (schedule as Record<string, any>)?.[`${dayName}_start`] 
-          || (schedule as Record<string, any>)?.monday_start 
-          || '08:00';
-
-        // Calcular late_minutes: diferencia entre check_in y expected_check_in
-        if (expectedCheckIn) {
-          // Convertir eventTimestamp a hora local de Honduras
-          const checkInTime = toHN(eventTimestamp);
-
-          const [expectedHour, expectedMin] = expectedCheckIn.split(':').map(Number);
-          const [checkInHour, checkInMin] = checkInTime.time.split(':').map(Number);
-
-          const expectedMinutes = expectedHour * 60 + expectedMin;
-          const checkInMinutes = checkInHour * 60 + checkInMin;
-          
-          // late_minutes puede ser negativo (temprano) o positivo (tarde)
-          lateMinutes = checkInMinutes - expectedMinutes;
-
-          logger.debug('[ACCESS EVENT] Calculated late_minutes', {
-            companyId,
-            employeeId: employee.id,
-            expectedCheckIn,
-            checkInTime: checkInTime.time,
-            lateMinutes,
-          });
-        }
-      }
-    } catch (scheduleError) {
-      logger.warn('[ACCESS EVENT] Error calculating late_minutes', {
-        companyId,
-        employeeId: employee.id,
-        error: scheduleError instanceof Error ? scheduleError.message : String(scheduleError),
-      });
-      // Continuar sin late_minutes si hay error
-    }
-  }
-
-  // Insertar registro de asistencia con event_uid, late_minutes y expected_check_in
-  const { data: record, error: upsertError } = await supabase
-    .from('attendance_records')
-    .insert({
-      employee_id: employee.id,
-      date: recordDate,
-      check_in: checkInTimestamp,
-      expected_check_in: expectedCheckIn,
-      late_minutes: lateMinutes,
-      event_uid: eventUid,
-      tz: 'America/Tegucigalpa',
-      tz_offset_minutes: -360,
-      status: 'present',
-    })
-    .select()
-    .single();
-
-  if (upsertError) {
-    // Si es error de duplicado por event_uid, ignorar (ya lo verificamos, pero por si acaso)
-    if (upsertError.code === '23505') {
-      logger.info('[ACCESS EVENT] Duplicate event_uid (race condition)', {
-        companyId,
-        eventUid,
-        normalizedId,
-      });
-      return;
-    }
-
-    logger.error('[ACCESS EVENT] Failed to insert attendance record', upsertError, {
-      companyId,
-      employeeId: employee.id,
-      normalizedId,
-      eventUid,
-      recordDate,
-    });
-    return;
-  }
-
-  logger.info('[ACCESS EVENT] Attendance recorded successfully', {
+  // Ramificar según tipo de pago del empleado
+  const payType = (employee as any).pay_type || 'fixed'; // Default a 'fixed' si no existe
+  
+  logger.debug('[ACCESS EVENT] Routing by pay_type', {
     companyId,
     employeeId: employee.id,
+    payType,
     normalizedId,
-    eventUid,
-    recordId: record?.id,
-    recordDate,
-    checkIn: checkInTimestamp,
-    // Incluir campos del Access Control Event para auditoría
-    doorNo,
-    readerNo,
-    verifyMode,
-    cardNo,
-    employeeNoString,
   });
+
+  if (payType === 'fixed') {
+    await handleFixedEmployeeEvent(
+      employee,
+      root,
+      acs,
+      eventTimestamp,
+      recordDate,
+      eventUid,
+      companyId,
+      doorNo,
+      readerNo,
+      verifyMode,
+      cardNo,
+      employeeNoString
+    );
+  } else if (payType === 'hourly') {
+    await handleHourlyEmployeeEvent(
+      employee,
+      root,
+      acs,
+      eventTimestamp,
+      recordDate,
+      eventUid,
+      companyId,
+      doorNo,
+      readerNo,
+      verifyMode,
+      cardNo,
+      employeeNoString
+    );
+  } else {
+    logger.warn('[ACCESS EVENT] Unknown pay_type, defaulting to fixed', {
+      companyId,
+      employeeId: employee.id,
+      payType,
+    });
+    // Default a fixed si pay_type es desconocido
+    await handleFixedEmployeeEvent(
+      employee,
+      root,
+      acs,
+      eventTimestamp,
+      recordDate,
+      eventUid,
+      companyId,
+      doorNo,
+      readerNo,
+      verifyMode,
+      cardNo,
+      employeeNoString
+    );
+  }
 }
 
 /**

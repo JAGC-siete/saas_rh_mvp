@@ -215,11 +215,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     console.log('🔍 DEBUG - Final RunId:', runId, 'Type:', typeof runId)
 
-    // Obtener empleados activos con información de departamento
+    // Obtener empleados activos con información de departamento y pay_type
     const { data: employees, error: empError } = await supabase
       .from('employees')
       .select(`
-        id, name, dni, base_salary, bank_name, bank_account, status, department_id,
+        id, name, dni, base_salary, bank_name, bank_account, status, department_id, pay_type,
         departments!employees_department_id_fkey(name)
       `)
       .eq('status', 'active')
@@ -259,20 +259,37 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       return res.status(500).json({ error: 'Error obteniendo registros de asistencia' })
     }
 
-    // Filtrar empleados según criterio de asistencia
+    // Filtrar empleados según criterio de asistencia (diferente por pay_type)
     let empleadosParaNomina = employees
     let noAttendanceWarning = null
     
-    // Si hay registros de asistencia, filtrar por empleados con asistencia
-    // Si no hay registros de asistencia, incluir todos los empleados activos
+    // Si hay registros de asistencia, filtrar según tipo de pago
     if (attendanceRecords.length > 0) {
-      empleadosParaNomina = employees.filter((emp: any) =>
-        attendanceRecords.some((record: any) => 
+      empleadosParaNomina = employees.filter((emp: any) => {
+        const empRecords = attendanceRecords.filter((record: any) => 
           record.employee_id === emp.id && 
-          record.check_in && 
-          record.check_out &&
-          record.status !== 'absent')
-      )
+          record.check_in &&
+          record.status !== 'absent'
+        );
+
+        if (empRecords.length === 0) return false;
+
+        const payType = emp.pay_type || 'fixed'; // Default a 'fixed'
+
+        if (payType === 'fixed') {
+          // Administrativos: requieren check_in (check_out opcional para MVP)
+          // Aceptar si tiene al menos check_in
+          return empRecords.some((record: any) => record.check_in);
+        } else if (payType === 'hourly') {
+          // Por hora: requieren check_in Y check_out para contar horas trabajadas
+          return empRecords.some((record: any) => 
+            record.check_in && record.check_out
+          );
+        }
+
+        // Default: aceptar si tiene check_in
+        return empRecords.some((record: any) => record.check_in);
+      });
     } else {
       // Si no hay registros de asistencia, incluir todos los empleados activos
       empleadosParaNomina = employees
@@ -302,14 +319,30 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const planilla: any[] = []
     
     for (const emp of empleadosParaNomina) {
-      const registros = attendanceRecords.filter((record: any) => 
-        record.employee_id === emp.id && 
-        record.check_in && 
-        record.check_out)
+      const payType = emp.pay_type || 'fixed'; // Default a 'fixed'
+      
+      // Filtrar registros según tipo de pago
+      let registros: any[];
+      if (payType === 'fixed') {
+        // Administrativos: contar días con check_in (check_out opcional)
+        registros = attendanceRecords.filter((record: any) => 
+          record.employee_id === emp.id && 
+          record.check_in
+        );
+      } else {
+        // Por hora: solo contar registros completos (check_in y check_out)
+        registros = attendanceRecords.filter((record: any) => 
+          record.employee_id === emp.id && 
+          record.check_in && 
+          record.check_out
+        );
+      }
       
       // Si hay registros de asistencia, usar la cantidad real
-      // Si no hay registros, asumir que trabajó todos los días del período
-      const days_worked = registros.length > 0 ? registros.length : diasPeriodo
+      // Si no hay registros, asumir que trabajó todos los días del período (solo para fixed)
+      const days_worked = registros.length > 0 
+        ? registros.length 
+        : (payType === 'fixed' ? diasPeriodo : 0); // Por hora: 0 si no hay registros completos
       const days_absent = diasPeriodo - days_worked
       
       const base_salary = Number(emp.base_salary) || 0
