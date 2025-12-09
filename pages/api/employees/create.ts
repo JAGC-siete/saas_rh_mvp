@@ -5,6 +5,7 @@ import { getHondurasTimestamp } from '../../../lib/timezone'
 import { requirePlanAndQuota, incrementUsage } from '../../../lib/billing/enforce'
 import { addEmployeeSyncJob } from '../../../lib/queues/employeeSyncQueue';
 import { trace, context } from '@opentelemetry/api';
+import { normalizeEmployeeData } from '../../../lib/utils/normalize-employee-data';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -82,33 +83,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    const employeeData: any = {
+    // Normalize employee data using centralized function
+    const rawEmployeeData = {
       company_id: companyId,
       employee_code,
       dni,
       name,
-      email: email || null,
-      phone: phone || null,
-      role: role || null,
-      team: team || null,
-      department_id: department_id || null,
-      work_schedule_id: work_schedule_id || null,
-      base_salary: typeof base_salary === 'string' ? parseFloat(base_salary) : base_salary,
+      email,
+      phone,
+      role,
+      team,
+      department_id,
+      work_schedule_id,
+      base_salary,
       pay_type: pay_type || 'fixed', // Default to 'fixed' if not provided
-      hire_date: hire_date || null,
-      termination_date: termination_date || null,
+      hire_date,
+      termination_date,
       status,
-      bank_name: bank_name || null,
-      bank_account: bank_account || null,
-      emergency_contact_name: emergency_contact_name || null,
-      emergency_contact_phone: emergency_contact_phone || null,
+      bank_name,
+      bank_account,
+      emergency_contact_name,
+      emergency_contact_phone,
       address: address || null,
       metadata: metadata || null,
-      // sync_status will be added only if column exists (handled by database default)
-      // sync_status: 'pending', // Set status to pending on creation
       created_at: getHondurasTimestamp(),
       updated_at: getHondurasTimestamp()
-    }
+    };
+
+    const employeeData = normalizeEmployeeData(rawEmployeeData);
 
     const { data: newEmployee, error: insertError } = await adminSupabase
       .from('employees')

@@ -4,6 +4,7 @@ import { authenticateUser } from '../../../lib/auth-utils'
 import { getHondurasTimestamp } from '../../../lib/timezone'
 import { addEmployeeSyncJob } from '../../../lib/queues/employeeSyncQueue';
 import { trace, context } from '@opentelemetry/api';
+import { normalizeEmployeeData } from '../../../lib/utils/normalize-employee-data';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'PUT' && req.method !== 'PATCH') {
@@ -120,8 +121,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Invalid pay_type. Must be "fixed" or "hourly"' })
     }
 
-    const updateData: any = { ...body };
-    delete updateData.id; // Remove id from body to prevent trying to update it
+    // Normalize employee data (handles empty strings, date formatting, etc.)
+    const updateData = normalizeEmployeeData(body);
     updateData.updated_at = getHondurasTimestamp();
 
     console.log('🔧 Final update data:', updateData)

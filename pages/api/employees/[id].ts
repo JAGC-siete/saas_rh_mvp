@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireUser } from '../../../lib/auth/requireUser'
+import { normalizeEmployeeData } from '../../../lib/utils/normalize-employee-data';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
@@ -30,19 +31,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           return res.status(400).json({ error: 'Employee name is required' })
         }
 
+        // Normalize employee data before update
+        const updateData = normalizeEmployeeData({
+          name,
+          email,
+          phone,
+          employee_code,
+          position,
+          department_id,
+          base_salary: base_salary || 0,
+          hire_date,
+          status: status || 'active'
+        });
+
         const { data: updatedEmployee, error: updateError } = await supabase
           .from('employees')
-          .update({
-            name,
-            email: email || null,
-            phone: phone || null,
-            employee_code: employee_code || null,
-            position: position || null,
-            department_id: department_id || null,
-            base_salary: base_salary || 0,
-            hire_date: hire_date || null,
-            status: status || 'active'
-          })
+          .update(updateData)
           .eq('id', id)
           .eq('company_id', companyId)
           .select(`

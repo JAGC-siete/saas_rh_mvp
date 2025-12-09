@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
+import { normalizeEmployeeData } from '../../../lib/utils/normalize-employee-data';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
@@ -40,19 +41,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           return res.status(400).json({ error: 'Employee name is required' })
         }
 
+        // Normalize employee data before insert
+        const employeeData = normalizeEmployeeData({
+          company_id: companyId,
+          name,
+          email,
+          phone,
+          employee_code,
+          position,
+          department_id,
+          base_salary: base_salary || 0,
+          hire_date
+        });
+
         const { data: newEmployee, error: createError } = await supabase
           .from('employees')
-          .insert([{
-            company_id: companyId,
-            name,
-            email: email || null,
-            phone: phone || null,
-            employee_code: employee_code || null,
-            position: position || null,
-            department_id: department_id || null,
-            base_salary: base_salary || 0,
-            hire_date: hire_date || null
-          }])
+          .insert([employeeData])
           .select(`
             *,
             departments!employees_department_id_fkey(name)
