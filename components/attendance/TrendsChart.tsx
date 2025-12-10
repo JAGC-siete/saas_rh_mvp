@@ -53,7 +53,7 @@ export default function TrendsChart({ trends, loading = false }: TrendsChartProp
 
   return (
     <div className="h-[260px] w-full bg-gradient-to-br from-white/5 to-white/0 rounded-xl p-4">
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height={260} minHeight={260}>
         <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
           <XAxis 
