@@ -73,16 +73,17 @@ function parseDeviceDateTime(dateTimeStr: string | undefined | null): Date {
   
   if (hasTimezone) {
     // Si tiene zona horaria explícita, el dispositivo envió UTC o con offset
-    // Convertir a hora local de Honduras
-    const hondurasDate = convertToHondurasTime(parsedDate);
+    // ✅ CORRECCIÓN: NO convertir aquí. Guardar el timestamp UTC directamente.
+    // El frontend ya hace la conversión correcta usando toLocaleTimeString() con timeZone.
+    // Si convertimos aquí restando horas, guardamos un timestamp incorrecto.
     
-    logger.debug('[PARSE DATE] Device dateTime has timezone, converted to Honduras', {
+    logger.debug('[PARSE DATE] Device dateTime has timezone, storing as UTC (frontend will convert)', {
       original: dateTimeStr,
-      parsedUTC: parsedDate.toISOString(),
-      hondurasLocal: hondurasDate.toISOString(),
+      storedAsUTC: parsedDate.toISOString(),
+      note: 'Frontend will convert to Honduras timezone for display',
     });
     
-    return hondurasDate;
+    return parsedDate; // ✅ Devolver el timestamp UTC sin modificar
   } else {
     // Si NO tiene zona horaria, asumimos que es hora LOCAL del dispositivo
     // El dispositivo está configurado en hora de Honduras, así que el string
@@ -379,6 +380,14 @@ async function handleFixedEmployeeEvent(
         deviceMetadata.source = 'hikvision_webhook';
       }
 
+      // 🔍 PASO 2: Log justo ANTES de guardar en BD
+      logger.info('[ACCESS EVENT] About to save check_in to DB', {
+        companyId,
+        employeeId: employee.id,
+        check_in_value: eventTimestamp.toISOString(),
+        check_in_type: typeof eventTimestamp.toISOString(),
+      });
+      
       const { data: record, error: insertError } = await supabase
         .from('attendance_records')
         .insert({
@@ -874,7 +883,24 @@ async function processAccessEvent(
   let eventTimestamp: Date;
   const dateTimeStr = root.dateTime ?? acs?.dateTime ?? null;
   
+  // 🔍 PASO 2: Instrumentar el webhook - Log del campo crudo del dispositivo
+  logger.info('[ACCESS EVENT] RAW event payload time fields', {
+    companyId,
+    rawTimestampField: dateTimeStr,
+    rootDateTime: root.dateTime,
+    acsDateTime: acs?.dateTime,
+    hasTimezone: dateTimeStr ? /[Zz]|[\+\-]\d{2}:?\d{2}$/.test(dateTimeStr) : null,
+  });
+  
   eventTimestamp = parseDeviceDateTime(dateTimeStr);
+  
+  // 🔍 PASO 2: Log del timestamp parseado ANTES de guardar
+  logger.info('[ACCESS EVENT] Parsed eventTimestamp BEFORE saving', {
+    companyId,
+    asString: eventTimestamp.toString(),
+    asISOString: eventTimestamp.toISOString(),
+    rawInput: dateTimeStr,
+  });
   
   // Convertir a hora local de Honduras para cálculos y logging
   const hondurasTime = toHN(eventTimestamp);

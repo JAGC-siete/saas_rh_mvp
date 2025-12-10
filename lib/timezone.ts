@@ -74,17 +74,44 @@ export function formatTimeDisplay(timestamp: string | Date | null): string {
   
   // Check if date is valid
   if (isNaN(date.getTime())) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[formatTimeDisplay] Invalid timestamp:', timestamp);
+    }
     return '--:--';
+  }
+  
+  // DEBUG: Validar que el timestamp tenga sentido (no sea del año 1970 o futuro lejano)
+  const year = date.getFullYear();
+  if (process.env.NODE_ENV === 'development' && (year < 2020 || year > 2100)) {
+    console.warn('[formatTimeDisplay] Suspicious timestamp year:', {
+      year,
+      timestamp,
+      iso: date.toISOString(),
+      utc: date.toUTCString()
+    });
   }
   
   // Use toLocaleTimeString with explicit timeZone to convert UTC to Honduras time
   // This correctly handles the UTC-6 offset for America/Tegucigalpa
-  return date.toLocaleTimeString('es-HN', {
+  const result = date.toLocaleTimeString('es-HN', {
     timeZone: HONDURAS_TIMEZONE, // 'America/Tegucigalpa'
     hour: '2-digit',
     minute: '2-digit',
     hour12: false
   });
+  
+  // DEBUG: Log en desarrollo para diagnosticar problemas
+  if (process.env.NODE_ENV === 'development') {
+    console.debug('[formatTimeDisplay]', {
+      input: timestamp,
+      output: result,
+      date_iso: date.toISOString(),
+      date_utc: date.toUTCString(),
+      date_local: date.toLocaleString('es-HN', { timeZone: HONDURAS_TIMEZONE })
+    });
+  }
+  
+  return result;
 }
 
 /**

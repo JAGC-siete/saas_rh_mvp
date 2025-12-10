@@ -147,7 +147,21 @@ export default function ArrivalTable({ earlyData, lateData, title, onSelect, pag
                       {row.delta > 0 ? `+${row.delta}m` : row.delta < 0 ? `${row.delta}m` : '0m'}
                     </span>
                     <span className="text-sm text-gray-400">
-                      {formatTimeDisplay(row.check_in_time || null)}
+                      {(() => {
+                        // 🔍 PASO 3: Instrumentar el frontend - Log de lo que llega al cliente
+                        if (process.env.NODE_ENV === 'development' && row.check_in_time) {
+                          const jsDate = new Date(row.check_in_time);
+                          console.log('[ArrivalTable] check-in data:', {
+                            employee: row.name || row.id,
+                            raw: row.check_in_time,
+                            typeofRaw: typeof row.check_in_time,
+                            jsDateISO: jsDate.toISOString(),
+                            jsDateValid: !isNaN(jsDate.getTime()),
+                            formatted: formatTimeDisplay(row.check_in_time || null),
+                          });
+                        }
+                        return formatTimeDisplay(row.check_in_time || null);
+                      })()}
                     </span>
                   </div>
                 </div>
