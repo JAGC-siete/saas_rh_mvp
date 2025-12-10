@@ -59,7 +59,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
       
       return events
-    }).sort((a, b) => new Date(b.ts_local).getTime() - new Date(a.ts_local).getTime()) // Sort by date descending
+    }).sort((a: any, b: any) => new Date(b.ts_local).getTime() - new Date(a.ts_local).getTime()) // Sort by date descending
 
     // Get employee details
     const { data: employee, error: employeeError } = await supabase

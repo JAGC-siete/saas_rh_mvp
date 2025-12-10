@@ -74,44 +74,32 @@ export function formatTimeDisplay(timestamp: string | Date | null): string {
   
   // Check if date is valid
   if (isNaN(date.getTime())) {
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('[formatTimeDisplay] Invalid timestamp:', timestamp);
-    }
     return '--:--';
   }
   
-  // DEBUG: Validar que el timestamp tenga sentido (no sea del año 1970 o futuro lejano)
-  const year = date.getFullYear();
-  if (process.env.NODE_ENV === 'development' && (year < 2020 || year > 2100)) {
-    console.warn('[formatTimeDisplay] Suspicious timestamp year:', {
-      year,
-      timestamp,
-      iso: date.toISOString(),
-      utc: date.toUTCString()
-    });
+  // SOLUCIÓN SIMPLE: Si el timestamp está guardado como hora local de Honduras (sin conversión),
+  // extraer la hora directamente. Si está en UTC, convertir a Honduras.
+  // Detectar si el timestamp está en formato incorrecto (hora local guardada como UTC)
+  const timestampStr = typeof timestamp === 'string' ? timestamp : date.toISOString();
+  const utcHours = date.getUTCHours();
+  const utcMinutes = date.getUTCMinutes();
+  
+  // Si las horas UTC están entre 0-6, probablemente está guardado como hora local
+  // (porque 7:00 AM Honduras = 13:00 UTC, no 07:00 UTC)
+  // Mostrar directamente la hora UTC como si fuera hora local
+  if (utcHours >= 0 && utcHours < 7) {
+    const hours = String(utcHours).padStart(2, '0');
+    const minutes = String(utcMinutes).padStart(2, '0');
+    return `${hours}:${minutes}`;
   }
   
-  // Use toLocaleTimeString with explicit timeZone to convert UTC to Honduras time
-  // This correctly handles the UTC-6 offset for America/Tegucigalpa
-  const result = date.toLocaleTimeString('es-HN', {
-    timeZone: HONDURAS_TIMEZONE, // 'America/Tegucigalpa'
+  // Si está en UTC correcto (13:00+ = 7:00 AM Honduras), convertir
+  return date.toLocaleTimeString('es-HN', {
+    timeZone: HONDURAS_TIMEZONE,
     hour: '2-digit',
     minute: '2-digit',
     hour12: false
   });
-  
-  // DEBUG: Log en desarrollo para diagnosticar problemas
-  if (process.env.NODE_ENV === 'development') {
-    console.debug('[formatTimeDisplay]', {
-      input: timestamp,
-      output: result,
-      date_iso: date.toISOString(),
-      date_utc: date.toUTCString(),
-      date_local: date.toLocaleString('es-HN', { timeZone: HONDURAS_TIMEZONE })
-    });
-  }
-  
-  return result;
 }
 
 /**
