@@ -49,13 +49,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       return res.status(404).json({ error: 'Corrida de nómina no encontrada' })
     }
 
-    // Obtener las líneas de nómina con datos completos de empleados y departamentos
+    // Obtener las líneas de nómina con datos completos de empleados y departamentos (incluyendo pay_type)
     const { data: payrollLines, error: linesError } = await supabase
       .from('payroll_run_lines')
       .select(`
         *,
         employees!payroll_run_lines_employee_id_fkey(
-          id, name, dni, base_salary, bank_name, bank_account,
+          id, name, dni, base_salary, bank_name, bank_account, pay_type,
           departments!employees_department_id_fkey(name)
         )
       `)
@@ -119,6 +119,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
       const statutoryDeductions = (Number(line.eff_ihss) || 0) + (Number(line.eff_rap) || 0) + (Number(line.eff_isr) || 0)
       const totalDeductions = statutoryDeductions + customDeductions
+      const payType = line.employees?.pay_type || 'fixed'
+      const totalHours = Number(line.eff_hours) || 0
+      const hourlyRate = payType === 'hourly' && totalHours > 0 
+        ? (Number(line.eff_bruto) || 0) / totalHours 
+        : 0
 
       return {
         id: line.employees?.dni || '',
@@ -127,7 +132,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         bank_account: line.employees?.bank_account || 'No especificado',
         department: line.employees?.departments?.name || 'Sin Departamento',
         monthly_salary: Number(line.employees?.base_salary) || 0,
-        days_worked: Number(line.eff_hours) / 8 || 0, // Convertir horas a días - usar EFECTIVO
+        days_worked: payType === 'hourly' ? (totalHours / 8) : (totalHours / 8),
         days_absent: 0, // Calcular si es necesario
         late_days: 0, // Calcular si es necesario
         total_earnings: Number(line.eff_bruto) || 0, // EFECTIVO incluye campos personalizados
@@ -138,7 +143,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         total: Number(line.eff_neto) || 0, // NETO EFECTIVO con deducciones personalizadas
         notes_on_ingress: line.edited ? 'Editado' : '',
         notes_on_deductions: deductionsNotes,
-        metadata: line.metadata || {} // Include metadata for custom fields display
+        metadata: line.metadata || {}, // Include metadata for custom fields display
+        pay_type: payType, // Include pay_type for separation
+        total_hours_worked: payType === 'hourly' ? totalHours : undefined,
+        hourly_rate: payType === 'hourly' ? hourlyRate : undefined
       }
       })
     )
@@ -206,8 +214,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       payment_cut_dates: paymentCutDates
     }
 
+    // Separate fixed and hourly employees
+    const planillaFixed = planilla.filter(p => (p as any).pay_type !== 'hourly')
+    const planillaHourly = planilla.filter(p => (p as any).pay_type === 'hourly')
+
     const pdf = await generateConsolidatedPayrollPDF(
-      planilla, 
+      planillaFixed,
+      planillaHourly,
       periodo, 
       payrollRun.quincena, 
       user.email, 

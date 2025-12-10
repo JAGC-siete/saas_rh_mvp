@@ -36,11 +36,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Check plan and quota before processing
     await requirePlanAndQuota(supabase, companyId, 'generate_payroll')
 
-    // Obtener información de empleados para completar los datos
+    // Obtener información de empleados para completar los datos (incluyendo pay_type)
     const employeeIds = draftData.rows.map((row: any) => row.employee_id)
     const { data: employees, error: empError } = await supabase
       .from('employees')
-      .select('id, name, employee_code, department, position, bank_name, bank_account')
+      .select('id, name, employee_code, department, position, bank_name, bank_account, pay_type')
       .in('id', employeeIds)
       .eq('company_id', companyId)
 
@@ -55,6 +55,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Mapear datos del draft a estructura de PlanillaItem
     const planilla: PlanillaItem[] = draftData.rows.map((row: any) => {
       const employee = employees.find((e: any) => e.id === row.employee_id)
+      const payType = employee?.pay_type || 'fixed'
+      const totalHours = Number(row.total_hours_worked) || (Number(row.days_worked) || 0) * 8
+      const hourlyRate = payType === 'hourly' && totalHours > 0 
+        ? (Number(row.gross_salary) || 0) / totalHours 
+        : 0
+      
       return {
         id: employee?.employee_code || row.employee_code || '',
         name: employee?.name || row.name || '',
@@ -72,7 +78,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         total_deductions: Number(row.total_deductions) || 0,
         total: Number(row.net_salary) || 0,
         notes_on_ingress: row.adj_bonus ? `Bono: L. ${row.adj_bonus.toFixed(2)}` : '',
-        notes_on_deductions: row.adj_discount ? `Descuento: L. ${row.adj_discount.toFixed(2)}` : ''
+        notes_on_deductions: row.adj_discount ? `Descuento: L. ${row.adj_discount.toFixed(2)}` : '',
+        pay_type: payType,
+        total_hours_worked: payType === 'hourly' ? totalHours : undefined,
+        hourly_rate: payType === 'hourly' ? hourlyRate : undefined
       }
     })
 
@@ -115,8 +124,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq('id', companyId)
       .single()
 
+    // Separate fixed and hourly employees
+    const planillaFixed = planilla.filter(p => (p as any).pay_type !== 'hourly')
+    const planillaHourly = planilla.filter(p => (p as any).pay_type === 'hourly')
+
     const pdf = await generateConsolidatedPayrollPDF(
-      planilla, 
+      planillaFixed,
+      planillaHourly,
       periodo, 
       Number(quincena), 
       user?.email, 
