@@ -8,6 +8,7 @@ import LandingHero from '../components/LandingHero'
 import MainHeader from '../components/MainHeader'
 import dynamic from 'next/dynamic'
 import AffiliateProgramSection from '../components/AffiliateProgramSection'
+import MailListSection from '../components/MailListSection'
 
 const CloudBackground = dynamic(() => import('../components/CloudBackground'), { ssr: false })
 
@@ -89,6 +90,9 @@ export default function LandingPage() {
 
       {/* AWS Certifications Section */}
       <AWSCertificationsSection />
+
+      {/* Mail List Subscription Section */}
+      <MailListSection />
 
       {/* Social Proof Section - Comentada temporalmente */}
       {/* <section id="servicios" className="py-16 bg-white/5">
