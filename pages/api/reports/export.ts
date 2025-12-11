@@ -23,12 +23,19 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
+  let user: any = null
+  let reportType: string | undefined
+  let format: string | undefined
+  let dateFilter: any
+
   try {
     // Autenticación usando el mismo método que payroll
-    const { supabase, companyId, role, user } = await requireCompanyAccess(req, res)
+    const authResult = await requireCompanyAccess(req, res)
+    const { supabase, companyId, role, user: authUser } = authResult
+    user = authUser
     
-    // Verificar permisos (solo admins y HR managers pueden generar reportes)
-    if (!['super_admin', 'company_admin', 'hr_manager'].includes(role)) {
+    // Verificar permisos (solo admins, HR managers y managers pueden generar reportes)
+    if (!['super_admin', 'company_admin', 'hr_manager', 'manager'].includes(role)) {
       return res.status(403).json({ 
         error: 'Permisos insuficientes',
         message: 'No tiene permisos para generar reportes'
@@ -41,7 +48,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       companyId: companyId 
     })
 
-    const { format, dateFilter, reportType } = req.body
+    const body = req.body
+    format = body.format
+    dateFilter = body.dateFilter
+    reportType = body.reportType
     
     // Validaciones
     if (!reportType || !['attendance', 'payroll', 'employees'].includes(reportType)) {
@@ -119,12 +129,20 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
   } catch (error) {
-    console.error('Error generando reporte:', error)
+    console.error('Error generando reporte:', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      user: user?.email,
+      reportType,
+      format,
+      dateFilter
+    })
     // Solo enviar error JSON si no se han enviado headers aún
     if (!res.headersSent) {
       return res.status(500).json({ 
         error: 'Error interno del servidor', 
-        message: error instanceof Error ? error.message : 'Error desconocido'
+        message: error instanceof Error ? error.message : 'Error desconocido',
+        details: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : undefined) : undefined
       })
     }
   }
@@ -530,21 +548,42 @@ async function generateAttendanceReportData(supabase: any, dateFilter: any, comp
   }
 
   const { data: employees, error: empError } = await employeesQuery
-  if (empError) throw new Error('Error obteniendo empleados')
+  if (empError) {
+    console.error('Error obteniendo empleados:', empError)
+    throw new Error(`Error obteniendo empleados: ${empError.message}`)
+  }
 
-  // Obtener registros de asistencia
+  // Obtener IDs de empleados para filtrar asistencia
+  const employeeIds = (employees || []).map((e: any) => e.id)
+
+  // Obtener registros de asistencia con filtro por employee_ids de la empresa
   let attendanceQuery = supabase
     .from('attendance_records')
-    .select('*, employees!inner(id, name, employee_code, company_id)')
+    .select(`
+      *,
+      employees!attendance_records_employee_id_fkey(
+        id,
+        name,
+        employee_code,
+        company_id
+      )
+    `)
     .gte('date', dateFilter.startDate)
     .lte('date', dateFilter.endDate)
 
-  if (companyId) {
-    attendanceQuery = attendanceQuery.eq('employees.company_id', companyId)
+  // Filtrar por employee_ids de la empresa (más seguro que usar !inner join)
+  if (companyId && employeeIds.length > 0) {
+    attendanceQuery = attendanceQuery.in('employee_id', employeeIds)
+  } else if (companyId && employeeIds.length === 0) {
+    // Si no hay empleados para la empresa, devolver array vacío
+    attendanceQuery = attendanceQuery.eq('employee_id', '__none__')
   }
 
   const { data: attendance, error: attError } = await attendanceQuery
-  if (attError) throw new Error('Error obteniendo asistencia')
+  if (attError) {
+    console.error('Error obteniendo registros de asistencia:', attError)
+    throw new Error(`Error obteniendo asistencia: ${attError.message}`)
+  }
 
   return { employees: employees || [], attendance: attendance || [], dateFilter }
 }
