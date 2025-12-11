@@ -9,6 +9,7 @@ import {
   secureLog,
   sanitizeFilename
 } from '../../../lib/security/export-security'
+import ExcelJS from 'exceljs'
 
 // Aplicar seguridad de exportación
 const handlerWithSecurity = withExportSecurity(exportEmployeesHandler)
@@ -26,8 +27,8 @@ async function exportEmployeesHandler(req: NextApiRequest, res: NextApiResponse)
     const { format = 'pdf' } = req.body
     
     // Validaciones
-    if (!format || !['pdf', 'csv'].includes(format)) {
-      return res.status(400).json({ error: 'Formato inválido (debe ser pdf o csv)' })
+    if (!format || !['pdf', 'csv', 'excel', 'xlsx'].includes(format)) {
+      return res.status(400).json({ error: 'Formato inválido (debe ser pdf, csv o excel)' })
     }
 
     console.log('📊 Generando reporte de empleados:', { 
@@ -38,8 +39,12 @@ async function exportEmployeesHandler(req: NextApiRequest, res: NextApiResponse)
     // Obtener datos del reporte
     const reportData = await generateEmployeeReportData(supabase, companyId)
 
-    if (format === 'pdf') {
+    const exportFormat = format === 'xlsx' ? 'excel' : format
+
+    if (exportFormat === 'pdf') {
       return generateEmployeePDFReport(res, reportData)
+    } else if (exportFormat === 'excel') {
+      return generateEmployeeExcelReport(res, reportData)
     } else {
       return generateEmployeeCSVReport(res, reportData)
     }
@@ -146,6 +151,21 @@ function generateEmployeePDFReport(res: NextApiResponse, reportData: any) {
       }
     })
     
+    const pageWidth = doc.page.width
+    const pageHeight = doc.page.height
+    
+    // Colores consistentes
+    const colors = {
+      primary: '#1e40af',
+      primaryDark: '#1e3a8a',
+      success: '#059669',
+      warning: '#d97706',
+      danger: '#dc2626',
+      muted: '#64748b',
+      lightGray: '#f1f5f9',
+      borderGray: '#e2e8f0'
+    }
+    
     let buffers: Buffer[] = []
 
     doc.on('data', (chunk: Buffer) => buffers.push(chunk))
@@ -159,151 +179,409 @@ function generateEmployeePDFReport(res: NextApiResponse, reportData: any) {
 
     // ===== PÁGINA 1: HEADER Y RESUMEN EJECUTIVO =====
     
-    // Header con branding
-    doc.rect(0, 0, 595, 80).fill('#1e40af')
+    // Header mejorado con mejor diseño
+    doc.rect(0, 0, pageWidth, 100).fill(colors.primary)
     doc.fillColor('white')
-    doc.fontSize(20).text('SISTEMA DE RECURSOS HUMANOS', 30, 20, { align: 'center', width: 535 })
-    doc.fontSize(16).text('Reporte de Empleados', 30, 45, { align: 'center', width: 535 })
-    doc.fontSize(12).text(`Generado el ${formatDateForHonduras(nowInHonduras())}`, 30, 65, { align: 'center', width: 535 })
+    doc.fontSize(24).font('Helvetica-Bold').text(
+      'SISTEMA DE RECURSOS HUMANOS', 
+      30, 25, 
+      { align: 'center', width: pageWidth - 60 }
+    )
+    doc.fontSize(16).font('Helvetica').text(
+      'Reporte de Empleados', 
+      30, 55, 
+      { align: 'center', width: pageWidth - 60 }
+    )
+    doc.fontSize(12).text(
+      `Generado el ${formatDateForHonduras(nowInHonduras())}`, 
+      30, 80, 
+      { align: 'center', width: pageWidth - 60 }
+    )
     
-    // Reset colors
-    doc.fillColor('black')
+    doc.fillColor('#0f172a')
     
-    // Información del reporte
-    doc.fontSize(10).text('INFORMACIÓN DEL REPORTE:', 30, 100)
-    doc.fontSize(9).text(`Fecha de generación: ${formatDateForHonduras(nowInHonduras())}`, 30, 115)
-    doc.fontSize(9).text(`Tipo: Reporte Completo de Empleados`, 30, 130)
-    doc.fontSize(9).text(`Total de registros: ${reportData.employees.length}`, 30, 145)
+    // Información del reporte en caja destacada
+    const infoBoxY = 120
+    doc.roundedRect(30, infoBoxY, pageWidth - 60, 50, 5).fill(colors.lightGray).stroke(colors.borderGray)
+    doc.fontSize(10).font('Helvetica-Bold').fillColor('#475569').text('INFORMACIÓN DEL REPORTE', 40, infoBoxY + 8)
+    doc.fontSize(9).font('Helvetica').fillColor('#0f172a')
+    doc.text(`Fecha de generación: ${formatDateForHonduras(nowInHonduras())}`, 40, infoBoxY + 22)
+    doc.text(`Total de registros: ${reportData.employees.length}`, 40, infoBoxY + 35)
     
-    // Resumen ejecutivo
-    doc.rect(30, 170, 535, 120).stroke()
-    doc.fontSize(14).text('RESUMEN EJECUTIVO', 35, 180)
+    // KPIs mejorados con diseño visual
+    const kpiY = 190
+    const kpiWidth = (pageWidth - 90) / 4
+    const kpiHeight = 70
     
-    doc.fontSize(10).text('Total Empleados:', 40, 200)
-    doc.fontSize(10).text(reportData.stats.totalEmployees.toString(), 200, 200)
+    // KPI 1: Total Empleados
+    doc.roundedRect(30, kpiY, kpiWidth, kpiHeight, 8)
+      .fill(colors.primary).stroke(colors.primaryDark)
+    doc.fillColor('white')
+    doc.fontSize(9).font('Helvetica').text('TOTAL', 35, kpiY + 8, { width: kpiWidth - 10, align: 'center' })
+    doc.fontSize(24).font('Helvetica-Bold').text(reportData.stats.totalEmployees.toString(), 35, kpiY + 20, { width: kpiWidth - 10, align: 'center' })
     
-    doc.fontSize(10).text('Empleados Activos:', 40, 215)
-    doc.fontSize(10).text(reportData.stats.activeEmployees.toString(), 200, 215)
+    // KPI 2: Activos
+    doc.roundedRect(30 + kpiWidth + 10, kpiY, kpiWidth, kpiHeight, 8)
+      .fill(colors.success).stroke('#047857')
+    doc.fillColor('white')
+    doc.fontSize(9).font('Helvetica').text('ACTIVOS', 35 + kpiWidth + 10, kpiY + 8, { width: kpiWidth - 10, align: 'center' })
+    doc.fontSize(24).font('Helvetica-Bold').text(reportData.stats.activeEmployees.toString(), 35 + kpiWidth + 10, kpiY + 20, { width: kpiWidth - 10, align: 'center' })
     
-    doc.fontSize(10).text('Empleados Inactivos:', 40, 230)
-    doc.fontSize(10).text(reportData.stats.inactiveEmployees.toString(), 200, 230)
+    // KPI 3: Inactivos
+    doc.roundedRect(30 + (kpiWidth + 10) * 2, kpiY, kpiWidth, kpiHeight, 8)
+      .fill(colors.warning).stroke('#b45309')
+    doc.fillColor('white')
+    doc.fontSize(9).font('Helvetica').text('INACTIVOS', 35 + (kpiWidth + 10) * 2, kpiY + 8, { width: kpiWidth - 10, align: 'center' })
+    doc.fontSize(24).font('Helvetica-Bold').text(reportData.stats.inactiveEmployees.toString(), 35 + (kpiWidth + 10) * 2, kpiY + 20, { width: kpiWidth - 10, align: 'center' })
     
-    doc.fontSize(10).text('Empleados Terminados:', 40, 245)
-    doc.fontSize(10).text(reportData.stats.terminatedEmployees.toString(), 200, 245)
+    // KPI 4: Terminados
+    doc.roundedRect(30 + (kpiWidth + 10) * 3, kpiY, kpiWidth, kpiHeight, 8)
+      .fill(colors.danger).stroke('#b91c1c')
+    doc.fillColor('white')
+    doc.fontSize(9).font('Helvetica').text('TERMINADOS', 35 + (kpiWidth + 10) * 3, kpiY + 8, { width: kpiWidth - 10, align: 'center' })
+    doc.fontSize(24).font('Helvetica-Bold').text(reportData.stats.terminatedEmployees.toString(), 35 + (kpiWidth + 10) * 3, kpiY + 20, { width: kpiWidth - 10, align: 'center' })
     
-    doc.fontSize(10).text('Salario Total:', 40, 260)
-    doc.fontSize(10).text(`L. ${reportData.stats.totalSalary.toLocaleString('es-HN')}`, 200, 260)
+    // Métricas financieras
+    doc.fillColor('#0f172a')
+    const metricsY = kpiY + kpiHeight + 20
+    doc.roundedRect(30, metricsY, pageWidth - 60, 60, 8).fill(colors.lightGray).stroke(colors.borderGray)
+    doc.fontSize(11).font('Helvetica-Bold').fillColor('#475569').text('MÉTRICAS FINANCIERAS', 40, metricsY + 8)
     
-    doc.fontSize(10).text('Salario Promedio:', 40, 275)
-    doc.fontSize(10).text(`L. ${reportData.stats.averageSalary.toLocaleString('es-HN')}`, 200, 275)
+    const formatHNL = (n: number) => `L. ${Number(n || 0).toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    const metricColWidth = (pageWidth - 100) / 2
+    doc.fontSize(9).font('Helvetica').fillColor('#0f172a')
+    doc.text(`Salario Total:`, 40, metricsY + 25)
+    doc.font('Helvetica-Bold').fillColor(colors.primary).text(formatHNL(reportData.stats.totalSalary), 150, metricsY + 25)
+    
+    doc.font('Helvetica').fillColor('#0f172a')
+    doc.text(`Salario Promedio:`, 40, metricsY + 40)
+    doc.font('Helvetica-Bold').fillColor(colors.primary).text(formatHNL(reportData.stats.averageSalary), 150, metricsY + 40)
     
     // Mensaje si no hay datos
     if (reportData.employees.length === 0) {
-      doc.fontSize(12).text('⚠️ NO HAY EMPLEADOS REGISTRADOS', 40, 300, { align: 'center', width: 455 })
-      doc.fontSize(10).text('No se encontraron empleados en el sistema.', 40, 320, { align: 'center', width: 455 })
-      doc.fontSize(10).text('Agrega empleados desde la sección de Gestión de Empleados.', 40, 335, { align: 'center', width: 455 })
+      doc.fontSize(14).font('Helvetica-Bold').fillColor(colors.warning).text('⚠️ NO HAY EMPLEADOS REGISTRADOS', 40, metricsY + 70, { align: 'center', width: pageWidth - 80 })
+      doc.fontSize(10).font('Helvetica').fillColor('#0f172a').text('No se encontraron empleados en el sistema.', 40, metricsY + 90, { align: 'center', width: pageWidth - 80 })
+      doc.text('Agrega empleados desde la sección de Gestión de Empleados.', 40, metricsY + 105, { align: 'center', width: pageWidth - 80 })
     }
     
     // ===== PÁGINA 2: LISTA DE EMPLEADOS =====
     if (reportData.employees.length > 0) {
       doc.addPage()
       
-      doc.fontSize(14).text('LISTA COMPLETA DE EMPLEADOS', 30, 30, { align: 'center', width: 535 })
+      doc.fontSize(16).font('Helvetica-Bold').fillColor(colors.primary).text(
+        'LISTA COMPLETA DE EMPLEADOS', 
+        30, 30, 
+        { align: 'center', width: pageWidth - 60 }
+      )
       
-      // Tabla de empleados
+      // Tabla de empleados mejorada
       const headers = ['Código', 'Nombre', 'Cargo', 'Departamento', 'Salario', 'Estado']
       const colWidths = [60, 120, 80, 100, 80, 60]
       const startX = 30
       let y = 70
-      const rowHeight = 15
+      const rowHeight = 18
       
-      // Header de tabla
+      // Header de tabla mejorado
       headers.forEach((h: string, i: number) => {
         const x = startX + colWidths.slice(0, i).reduce((a: number, b: number) => a + b, 0)
-        doc.rect(x, y, colWidths[i], rowHeight).fillAndStroke('#1e40af', '#000')
+        doc.roundedRect(x, y, colWidths[i], rowHeight, 2)
+          .fill(colors.primary)
+          .stroke(colors.primaryDark)
         doc.fillColor('white')
-        doc.fontSize(8).text(h, x + 2, y + 4, { width: colWidths[i] - 4, align: 'center' })
-        doc.fillColor('black')
+        doc.fontSize(8).font('Helvetica-Bold').text(
+          h, 
+          x + 3, 
+          y + 6, 
+          { width: colWidths[i] - 6, align: 'center' }
+        )
       })
       y += rowHeight
       
-      // Datos de empleados
+      // Datos de empleados con alternancia de colores
+      let rowIndex = 0
       reportData.employees.forEach((emp: any) => {
-        if (y > 750) {
+        if (y > pageHeight - 60) {
           doc.addPage()
           y = 30
+          // Re-dibujar headers en nueva página
+          headers.forEach((h: string, i: number) => {
+            const x = startX + colWidths.slice(0, i).reduce((a: number, b: number) => a + b, 0)
+            doc.roundedRect(x, y, colWidths[i], rowHeight, 2)
+              .fill(colors.primary)
+              .stroke(colors.primaryDark)
+            doc.fillColor('white')
+            doc.fontSize(8).font('Helvetica-Bold').text(
+              h, 
+              x + 3, 
+              y + 6, 
+              { width: colWidths[i] - 6, align: 'center' }
+            )
+          })
+          y += rowHeight
         }
         
-        const values = [
-          emp.employee_code || 'N/A',
-          emp.name || 'N/A',
-          emp.role || 'N/A',
-          emp.departments?.name || 'N/A',
-          emp.base_salary ? `L. ${emp.base_salary.toLocaleString('es-HN')}` : 'N/A',
-          emp.status === 'active' ? 'Activo' : emp.status === 'inactive' ? 'Inactivo' : 'Terminado'
-        ]
+        const isEven = rowIndex % 2 === 0
+        const statusColors: Record<string, string> = {
+          'active': colors.success,
+          'inactive': colors.warning,
+          'terminated': colors.danger
+        }
+        const statusLabels: Record<string, string> = {
+          'active': 'Activo',
+          'inactive': 'Inactivo',
+          'terminated': 'Terminado'
+        }
         
-        values.forEach((val: any, i: number) => {
+        headers.forEach((_h: string, i: number) => {
           const x = startX + colWidths.slice(0, i).reduce((a: number, b: number) => a + b, 0)
-          doc.rect(x, y, colWidths[i], rowHeight).stroke()
-          doc.fontSize(7).text(val.toString(), x + 2, y + 4, { width: colWidths[i] - 4, align: 'center' })
+          
+          // Fondo alternado
+          if (isEven) {
+            doc.rect(x, y, colWidths[i], rowHeight).fill(colors.lightGray)
+          }
+          doc.rect(x, y, colWidths[i], rowHeight).stroke(colors.borderGray)
+          
+          doc.fillColor('#0f172a')
+          doc.fontSize(7).font('Helvetica')
+          
+          let value = ''
+          switch (i) {
+            case 0: // Código
+              value = emp.employee_code || 'N/A'
+              break
+            case 1: // Nombre
+              value = emp.name || 'N/A'
+              break
+            case 2: // Cargo
+              value = emp.role || 'N/A'
+              break
+            case 3: // Departamento
+              value = emp.departments?.name || 'N/A'
+              break
+            case 4: // Salario
+              value = emp.base_salary ? formatHNL(emp.base_salary) : 'N/A'
+              break
+            case 5: // Estado
+              value = statusLabels[emp.status] || emp.status || 'N/A'
+              doc.fillColor(statusColors[emp.status] || '#0f172a')
+              break
+          }
+          
+          doc.text(value, x + 3, y + 5, { width: colWidths[i] - 6, align: 'center' })
+          doc.fillColor('#0f172a')
         })
+        
         y += rowHeight
+        rowIndex++
       })
       
       // ===== PÁGINA 3: ESTADÍSTICAS POR DEPARTAMENTO =====
       if (reportData.departmentStats.length > 0) {
         doc.addPage()
         
-        doc.fontSize(14).text('ESTADÍSTICAS POR DEPARTAMENTO', 30, 30, { align: 'center', width: 535 })
+        doc.fontSize(16).font('Helvetica-Bold').fillColor(colors.primary).text(
+          'ESTADÍSTICAS POR DEPARTAMENTO', 
+          30, 30, 
+          { align: 'center', width: pageWidth - 60 }
+        )
         
-        // Tabla de departamentos
+        // Tabla de departamentos mejorada
         const deptHeaders = ['Departamento', 'Empleados', 'Activos', 'Salario Total']
-        const deptColWidths = [150, 80, 80, 120]
+        const deptColWidths = [200, 100, 100, 150]
         const deptStartX = 30
         let deptY = 70
         
         // Header tabla departamentos
         deptHeaders.forEach((h: string, i: number) => {
           const x = deptStartX + deptColWidths.slice(0, i).reduce((a: number, b: number) => a + b, 0)
-          doc.rect(x, deptY, deptColWidths[i], rowHeight).fillAndStroke('#1e40af', '#000')
+          doc.roundedRect(x, deptY, deptColWidths[i], rowHeight, 2)
+            .fill(colors.primary)
+            .stroke(colors.primaryDark)
           doc.fillColor('white')
-          doc.fontSize(8).text(h, x + 2, deptY + 4, { width: deptColWidths[i] - 4, align: 'center' })
-          doc.fillColor('black')
+          doc.fontSize(8).font('Helvetica-Bold').text(
+            h, 
+            x + 3, 
+            deptY + 6, 
+            { width: deptColWidths[i] - 6, align: 'center' }
+          )
         })
         deptY += rowHeight
         
-        // Datos de departamentos
+        // Datos de departamentos con alternancia
+        let deptRowIndex = 0
         reportData.departmentStats.forEach((stat: any) => {
-          if (deptY > 750) {
+          if (deptY > pageHeight - 60) {
             doc.addPage()
             deptY = 30
+            // Re-dibujar headers
+            deptHeaders.forEach((h: string, i: number) => {
+              const x = deptStartX + deptColWidths.slice(0, i).reduce((a: number, b: number) => a + b, 0)
+              doc.roundedRect(x, deptY, deptColWidths[i], rowHeight, 2)
+                .fill(colors.primary)
+                .stroke(colors.primaryDark)
+              doc.fillColor('white')
+              doc.fontSize(8).font('Helvetica-Bold').text(
+                h, 
+                x + 3, 
+                deptY + 6, 
+                { width: deptColWidths[i] - 6, align: 'center' }
+              )
+            })
+            deptY += rowHeight
           }
+          
+          const isEven = deptRowIndex % 2 === 0
           
           const values = [
             stat.department.name,
             stat.employeeCount.toString(),
             stat.activeCount.toString(),
-            `L. ${stat.totalSalary.toLocaleString('es-HN')}`
+            formatHNL(stat.totalSalary)
           ]
           
           values.forEach((val: any, i: number) => {
             const x = deptStartX + deptColWidths.slice(0, i).reduce((a: number, b: number) => a + b, 0)
-            doc.rect(x, deptY, deptColWidths[i], rowHeight).stroke()
-            doc.fontSize(7).text(val.toString(), x + 2, deptY + 4, { width: deptColWidths[i] - 4, align: 'center' })
+            if (isEven) {
+              doc.rect(x, deptY, deptColWidths[i], rowHeight).fill(colors.lightGray)
+            }
+            doc.rect(x, deptY, deptColWidths[i], rowHeight).stroke(colors.borderGray)
+            doc.fillColor('#0f172a')
+            doc.fontSize(7).font('Helvetica').text(
+              val.toString(), 
+              x + 3, 
+              deptY + 5, 
+              { width: deptColWidths[i] - 6, align: 'center' }
+            )
           })
           deptY += rowHeight
+          deptRowIndex++
         })
       }
     }
     
-    // Pie de página
-    doc.fontSize(8).text('Documento generado automáticamente - Sistema de Recursos Humanos', 30, 800, { align: 'center', width: 535 })
-    doc.fontSize(8).text(`Fecha de generación: ${formatDateTimeForHonduras(nowInHonduras())}`, 30, 815, { align: 'center', width: 535 })
+    // Footer mejorado
+    doc.fillColor(colors.muted)
+    doc.fontSize(8).font('Helvetica')
+    doc.text(
+      'Sistema de Recursos Humanos - Documento generado automáticamente', 
+      30, 
+      pageHeight - 40, 
+      { align: 'center', width: pageWidth - 60 }
+    )
+    doc.text(
+      `Fecha de generación: ${formatDateTimeForHonduras(nowInHonduras())}`, 
+      30, 
+      pageHeight - 25, 
+      { align: 'center', width: pageWidth - 60 }
+    )
 
     doc.end()
   } catch (error) {
     console.error('Error generando PDF de empleados:', error)
+    throw error
+  }
+}
+
+async function generateEmployeeExcelReport(res: NextApiResponse, reportData: any) {
+  try {
+    const workbook = new ExcelJS.Workbook()
+    
+    // Hoja 1: Lista de Empleados
+    const sheet = workbook.addWorksheet('Empleados')
+    sheet.columns = [
+      { header: 'Código', key: 'code', width: 12 },
+      { header: 'DNI', key: 'dni', width: 15 },
+      { header: 'Nombre', key: 'name', width: 25 },
+      { header: 'Email', key: 'email', width: 25 },
+      { header: 'Teléfono', key: 'phone', width: 15 },
+      { header: 'Cargo', key: 'role', width: 20 },
+      { header: 'Departamento', key: 'department', width: 20 },
+      { header: 'Salario Base', key: 'salary', width: 15 },
+      { header: 'Fecha Ingreso', key: 'hire_date', width: 14 },
+      { header: 'Estado', key: 'status', width: 12 }
+    ]
+
+    const formatHNL = (n: number) => `L. ${Number(n || 0).toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    
+    for (const emp of reportData.employees) {
+      sheet.addRow({
+        code: emp.employee_code || '',
+        dni: emp.dni || '',
+        name: emp.name || '',
+        email: emp.email || '',
+        phone: emp.phone || '',
+        role: emp.role || '',
+        department: emp.departments?.name || 'Sin Departamento',
+        salary: formatHNL(emp.base_salary || 0),
+        hire_date: emp.hire_date ? new Date(emp.hire_date).toLocaleDateString('es-HN') : '',
+        status: emp.status === 'active' ? 'Activo' : emp.status === 'inactive' ? 'Inactivo' : 'Terminado'
+      })
+    }
+
+    // Estilo del encabezado
+    sheet.getRow(1).font = { bold: true }
+    sheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF1e40af' }
+    }
+    sheet.getRow(1).font = { ...sheet.getRow(1).font, color: { argb: 'FFFFFFFF' } }
+
+    // Hoja 2: Resumen
+    const summarySheet = workbook.addWorksheet('Resumen')
+    summarySheet.columns = [
+      { header: 'Concepto', key: 'concept', width: 30 },
+      { header: 'Valor', key: 'value', width: 20 }
+    ]
+
+    summarySheet.addRow({ concept: 'Total Empleados', value: reportData.stats.totalEmployees })
+    summarySheet.addRow({ concept: 'Empleados Activos', value: reportData.stats.activeEmployees })
+    summarySheet.addRow({ concept: 'Empleados Inactivos', value: reportData.stats.inactiveEmployees })
+    summarySheet.addRow({ concept: 'Empleados Terminados', value: reportData.stats.terminatedEmployees })
+    summarySheet.addRow({ concept: 'Salario Total', value: formatHNL(reportData.stats.totalSalary) })
+    summarySheet.addRow({ concept: 'Salario Promedio', value: formatHNL(reportData.stats.averageSalary) })
+
+    summarySheet.getRow(1).font = { bold: true }
+    summarySheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE0E0E0' }
+    }
+
+    // Hoja 3: Estadísticas por Departamento
+    if (reportData.departmentStats.length > 0) {
+      const deptSheet = workbook.addWorksheet('Por Departamento')
+      deptSheet.columns = [
+        { header: 'Departamento', key: 'department', width: 25 },
+        { header: 'Total Empleados', key: 'total', width: 15 },
+        { header: 'Activos', key: 'active', width: 15 },
+        { header: 'Salario Total', key: 'salary', width: 20 }
+      ]
+
+      for (const stat of reportData.departmentStats) {
+        deptSheet.addRow({
+          department: stat.department.name,
+          total: stat.employeeCount,
+          active: stat.activeCount,
+          salary: formatHNL(stat.totalSalary)
+        })
+      }
+
+      deptSheet.getRow(1).font = { bold: true }
+      deptSheet.getRow(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE0E0E0' }
+      }
+    }
+
+    const buffer = await workbook.xlsx.writeBuffer()
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    const safeFilename = sanitizeFilename(`reporte_empleados_${getHondurasTimestamp().split('T')[0]}.xlsx`)
+    res.setHeader('Content-Disposition', `attachment; filename=${safeFilename}`)
+    res.send(Buffer.from(buffer))
+  } catch (error) {
+    console.error('Error generando Excel de empleados:', error)
     throw error
   }
 }

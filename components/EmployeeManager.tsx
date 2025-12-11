@@ -9,7 +9,7 @@ import { useCompanyContext } from '../lib/useCompanyContext'
 import { Employee } from '../lib/types/employee'
 import AddEmployeeForm from './AddEmployeeForm'
 import WorkCertificateModal from './WorkCertificateModal'
-import { PlusIcon, PencilIcon, TrashIcon, EyeIcon, MagnifyingGlassIcon, FunnelIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, ChevronDownIcon, DocumentTextIcon, UserCircleIcon, ChatBubbleBottomCenterTextIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, PencilIcon, TrashIcon, EyeIcon, MagnifyingGlassIcon, FunnelIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, ChevronDownIcon, DocumentTextIcon, UserCircleIcon, ChatBubbleBottomCenterTextIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline'
 import { getHondurasTimestamp, formatTimeDisplay } from '../lib/timezone'
 
 interface Department {
@@ -646,6 +646,45 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
     setShowDeactivateModal(true)
   }, [])
 
+  const handleExport = useCallback(async (format: 'pdf' | 'excel' | 'csv') => {
+    try {
+      const response = await fetch('/api/reports/export-employees', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ format })
+      })
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Error al exportar' }))
+        throw new Error(error.error || `Error HTTP ${response.status}`)
+      }
+
+      // Obtener el blob
+      const blob = await response.blob()
+      
+      // Crear URL temporal y descargar
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      
+      // Determinar extensión del archivo
+      const extension = format === 'excel' ? 'xlsx' : format
+      const filename = `reporte_empleados_${new Date().toISOString().split('T')[0]}.${extension}`
+      
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Error exporting employees:', error)
+      setEmployeesError(error instanceof Error ? error.message : 'Error al exportar empleados')
+    }
+  }, [])
+
   const handleViewDetails = useCallback((employee: Employee) => {
     setSelectedEmployee(employee)
     setShowDetailsModal(true)
@@ -1045,12 +1084,48 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
 
       <Card variant="glass">
         <CardHeader>
-          <CardTitle className="text-white">
-            Lista de Empleados ({filteredAndSortedEmployees.length}{searchTerm && ` de ${employees.length}`})
-          </CardTitle>
-          <CardDescription className="text-gray-300">
-            Empleados registrados en el sistema {totalPages > 1 && `- Página ${currentPage} de ${totalPages}`}
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-white">
+                Lista de Empleados ({filteredAndSortedEmployees.length}{searchTerm && ` de ${employees.length}`})
+              </CardTitle>
+              <CardDescription className="text-gray-300">
+                Empleados registrados en el sistema {totalPages > 1 && `- Página ${currentPage} de ${totalPages}`}
+              </CardDescription>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => handleExport('pdf')}
+                variant="outline"
+                size="sm"
+                className="bg-white/5 border-white/20 text-white hover:bg-white/10"
+                title="Exportar a PDF"
+              >
+                <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
+                PDF
+              </Button>
+              <Button
+                onClick={() => handleExport('excel')}
+                variant="outline"
+                size="sm"
+                className="bg-white/5 border-white/20 text-white hover:bg-white/10"
+                title="Exportar a Excel"
+              >
+                <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
+                Excel
+              </Button>
+              <Button
+                onClick={() => handleExport('csv')}
+                variant="outline"
+                size="sm"
+                className="bg-white/5 border-white/20 text-white hover:bg-white/10"
+                title="Exportar a CSV"
+              >
+                <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
+                CSV
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {filteredAndSortedEmployees.length === 0 ? (
