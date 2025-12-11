@@ -3,16 +3,66 @@ import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { getCompanyData } from '../../../lib/helpers/company-filter'
 import { getHondurasTimestamp, formatDateForHonduras, nowInHonduras, formatDateTimeForHonduras } from '../../../lib/timezone'
 import { 
-  withExportSecurity, 
   validateCompanyAccess, 
   buildSecureQuery, 
   secureLog,
-  sanitizeFilename
+  sanitizeFilename,
+  fileFormatSchema
 } from '../../../lib/security/export-security'
 import ExcelJS from 'exceljs'
+import { z } from 'zod'
+
+// Schema de validación para exportación de empleados (sin fechas)
+const employeeExportSchema = z.object({
+  format: fileFormatSchema,
+  filters: z.object({
+    status: z.array(z.enum(['active', 'inactive', 'terminated'])).optional(),
+    departmentIds: z.array(z.string()).optional(), // Permitir cualquier string, no solo UUIDs estrictos
+    employeeIds: z.array(z.string()).optional()
+  }).optional()
+})
+
+// Middleware de seguridad específico para exportación de empleados
+function withEmployeeExportSecurity(handler: any) {
+  return async (req: NextApiRequest, res: NextApiResponse) => {
+    try {
+      // Validar método HTTP
+      if (req.method !== 'POST') {
+        return res.status(405).json({ 
+          error: 'Método no permitido',
+          message: 'Solo se permite POST para exportaciones'
+        })
+      }
+
+      // Validar datos de entrada
+      const validation = employeeExportSchema.safeParse(req.body)
+      if (!validation.success) {
+        return res.status(400).json({
+          error: 'Datos de entrada inválidos',
+          message: 'Los datos proporcionados no son válidos',
+          details: validation.error.issues.map(err => ({
+            field: err.path.join('.'),
+            message: err.message
+          }))
+        })
+      }
+
+      // Agregar datos validados al request
+      req.validatedData = validation.data
+      
+      return handler(req, res)
+    } catch (error) {
+      secureLog('Error en middleware de seguridad de exportación de empleados', { error })
+      return res.status(500).json({
+        error: 'Error interno del servidor',
+        message: 'Ha ocurrido un error inesperado'
+      })
+    }
+  }
+}
 
 // Aplicar seguridad de exportación
-const handlerWithSecurity = withExportSecurity(exportEmployeesHandler)
+const handlerWithSecurity = withEmployeeExportSecurity(exportEmployeesHandler)
 
 export default handlerWithSecurity
 
@@ -24,20 +74,23 @@ async function exportEmployeesHandler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Company ID is required' })
     }
 
-    const { format = 'pdf' } = req.body
+    // Usar datos validados del middleware
+    const validatedData = (req as any).validatedData || req.body
+    const { format = 'pdf', filters } = validatedData
     
-    // Validaciones
+    // Validaciones adicionales (por si acaso)
     if (!format || !['pdf', 'csv', 'excel', 'xlsx'].includes(format)) {
       return res.status(400).json({ error: 'Formato inválido (debe ser pdf, csv o excel)' })
     }
 
     console.log('📊 Generando reporte de empleados:', { 
       format, 
-      companyId 
+      companyId,
+      filters 
     })
 
-    // Obtener datos del reporte
-    const reportData = await generateEmployeeReportData(supabase, companyId)
+    // Obtener datos del reporte con filtros
+    const reportData = await generateEmployeeReportData(supabase, companyId, filters)
 
     const exportFormat = format === 'xlsx' ? 'excel' : format
 
@@ -57,9 +110,13 @@ async function exportEmployeesHandler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-async function generateEmployeeReportData(supabase: any, companyId: string) {
-  // Obtener empleados activos con información completa usando getCompanyData
-  const { data: employees, error: empError } = await getCompanyData(
+async function generateEmployeeReportData(supabase: any, companyId: string, filters?: {
+  status?: string[]
+  departmentIds?: string[]
+  employeeIds?: string[]
+}) {
+  // Construir query base
+  let query = getCompanyData(
     supabase,
     'employees',
     companyId,
@@ -80,7 +137,23 @@ async function generateEmployeeReportData(supabase: any, companyId: string) {
       departments!employees_department_id_fkey(name),
       companies(name)
     `
-  ).order('name')
+  )
+
+  // Aplicar filtros
+  if (filters?.status && filters.status.length > 0) {
+    query = query.in('status', filters.status)
+  }
+
+  if (filters?.departmentIds && filters.departmentIds.length > 0) {
+    query = query.in('department_id', filters.departmentIds)
+  }
+
+  if (filters?.employeeIds && filters.employeeIds.length > 0) {
+    query = query.in('id', filters.employeeIds)
+  }
+
+  // Obtener empleados con información completa
+  const { data: employees, error: empError } = await query.order('name')
 
   if (empError) {
     console.error('Error obteniendo empleados:', empError)

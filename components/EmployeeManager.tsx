@@ -170,6 +170,14 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
   const [selectedEmployeeImageLoading, setSelectedEmployeeImageLoading] = useState(false)
   const [selectedEmployeeImageError, setSelectedEmployeeImageError] = useState<string | null>(null)
   const [detailsActiveTab, setDetailsActiveTab] = useState<(typeof EMPLOYEE_DETAIL_TABS)[number]['id']>('personal')
+  const [showExportModal, setShowExportModal] = useState(false)
+  const [exportFormat, setExportFormat] = useState<'pdf' | 'excel' | 'csv' | null>(null)
+  const [exportFilters, setExportFilters] = useState({
+    status: [] as string[],
+    departmentIds: [] as string[],
+    employeeIds: [] as string[]
+  })
+  const [isExporting, setIsExporting] = useState(false)
 
   const canSendInstantMessage = userProfile?.role === 'company_admin'
 
@@ -646,7 +654,15 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
     setShowDeactivateModal(true)
   }, [])
 
-  const handleExport = useCallback(async (format: 'pdf' | 'excel' | 'csv') => {
+  const handleExportClick = useCallback((format: 'pdf' | 'excel' | 'csv') => {
+    setExportFormat(format)
+    setShowExportModal(true)
+  }, [])
+
+  const handleExportConfirm = useCallback(async () => {
+    if (!exportFormat) return
+
+    setIsExporting(true)
     try {
       const response = await fetch('/api/reports/export-employees', {
         method: 'POST',
@@ -654,7 +670,16 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({ format })
+        body: JSON.stringify({ 
+          format: exportFormat,
+          ...(exportFilters.status.length > 0 || exportFilters.departmentIds.length > 0 || exportFilters.employeeIds.length > 0 ? {
+            filters: {
+              ...(exportFilters.status.length > 0 && { status: exportFilters.status }),
+              ...(exportFilters.departmentIds.length > 0 && { departmentIds: exportFilters.departmentIds }),
+              ...(exportFilters.employeeIds.length > 0 && { employeeIds: exportFilters.employeeIds })
+            }
+          } : {})
+        })
       })
 
       if (!response.ok) {
@@ -671,7 +696,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       link.href = url
       
       // Determinar extensión del archivo
-      const extension = format === 'excel' ? 'xlsx' : format
+      const extension = exportFormat === 'excel' ? 'xlsx' : exportFormat
       const filename = `reporte_empleados_${new Date().toISOString().split('T')[0]}.${extension}`
       
       link.download = filename
@@ -679,11 +704,18 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       link.click()
       document.body.removeChild(link)
       window.URL.revokeObjectURL(url)
+
+      // Cerrar modal y resetear
+      setShowExportModal(false)
+      setExportFormat(null)
+      setExportFilters({ status: [], departmentIds: [], employeeIds: [] })
     } catch (error) {
       console.error('Error exporting employees:', error)
       setEmployeesError(error instanceof Error ? error.message : 'Error al exportar empleados')
+    } finally {
+      setIsExporting(false)
     }
-  }, [])
+  }, [exportFormat, exportFilters])
 
   const handleViewDetails = useCallback((employee: Employee) => {
     setSelectedEmployee(employee)
@@ -1095,31 +1127,34 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
             </div>
             <div className="flex gap-2">
               <Button
-                onClick={() => handleExport('pdf')}
+                onClick={() => handleExportClick('pdf')}
                 variant="outline"
                 size="sm"
                 className="bg-white/5 border-white/20 text-white hover:bg-white/10"
                 title="Exportar a PDF"
+                disabled={isExporting}
               >
                 <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
                 PDF
               </Button>
               <Button
-                onClick={() => handleExport('excel')}
+                onClick={() => handleExportClick('excel')}
                 variant="outline"
                 size="sm"
                 className="bg-white/5 border-white/20 text-white hover:bg-white/10"
                 title="Exportar a Excel"
+                disabled={isExporting}
               >
                 <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
                 Excel
               </Button>
               <Button
-                onClick={() => handleExport('csv')}
+                onClick={() => handleExportClick('csv')}
                 variant="outline"
                 size="sm"
                 className="bg-white/5 border-white/20 text-white hover:bg-white/10"
                 title="Exportar a CSV"
+                disabled={isExporting}
               >
                 <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
                 CSV
@@ -1819,6 +1854,204 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
         }}
         employee={employeeForCertificate}
       />
+
+      {/* Modal de Filtros de Exportación */}
+      {showExportModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 border border-white/20 rounded-lg p-6 max-w-2xl w-full mx-4 backdrop-blur-sm max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold text-white">
+                Opciones de Exportación - {exportFormat?.toUpperCase()}
+              </h3>
+              <Button
+                onClick={() => {
+                  setShowExportModal(false)
+                  setExportFormat(null)
+                  setExportFilters({ status: [], departmentIds: [], employeeIds: [] })
+                }}
+                variant="outline"
+                size="sm"
+                className="bg-white/5 border-white/20 text-white hover:bg-white/10"
+                disabled={isExporting}
+              >
+                ✕
+              </Button>
+            </div>
+
+            <div className="space-y-6">
+              {/* Resumen de filtros */}
+              {(exportFilters.status.length > 0 || exportFilters.departmentIds.length > 0 || exportFilters.employeeIds.length > 0) && (
+                <div className="bg-brand-500/20 border border-brand-500/30 rounded-lg p-4">
+                  <p className="text-sm font-medium text-brand-300 mb-2">Filtros aplicados:</p>
+                  <div className="text-xs text-brand-200 space-y-1">
+                    {exportFilters.status.length > 0 && (
+                      <p>• Estados: {exportFilters.status.map(s => s === 'active' ? 'Activos' : s === 'inactive' ? 'Inactivos' : 'Terminados').join(', ')}</p>
+                    )}
+                    {exportFilters.departmentIds.length > 0 && (
+                      <p>• Departamentos: {exportFilters.departmentIds.length} seleccionado(s)</p>
+                    )}
+                    {exportFilters.employeeIds.length > 0 && (
+                      <p>• Empleados: {exportFilters.employeeIds.length} seleccionado(s)</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Filtro por Estado */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-3">
+                  Estado de Empleados
+                </label>
+                <div className="space-y-2">
+                  {['active', 'inactive', 'terminated'].map((status) => (
+                    <label key={status} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={exportFilters.status.includes(status)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setExportFilters(prev => ({
+                              ...prev,
+                              status: [...prev.status, status]
+                            }))
+                          } else {
+                            setExportFilters(prev => ({
+                              ...prev,
+                              status: prev.status.filter(s => s !== status)
+                            }))
+                          }
+                        }}
+                        className="w-4 h-4 rounded border-white/20 bg-white/10 text-brand-600 focus:ring-brand-500 focus:ring-offset-0"
+                        disabled={isExporting}
+                      />
+                      <span className="text-white">
+                        {status === 'active' ? 'Activos' : status === 'inactive' ? 'Inactivos' : 'Terminados'}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-400 mt-2">
+                  Si no seleccionas ningún estado, se exportarán todos los empleados
+                </p>
+              </div>
+
+              {/* Filtro por Departamentos */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-3">
+                  Departamentos
+                </label>
+                {departments.length === 0 ? (
+                  <p className="text-sm text-gray-400">No hay departamentos disponibles</p>
+                ) : (
+                  <div className="max-h-48 overflow-y-auto space-y-2 border border-white/10 rounded-lg p-3 bg-white/5">
+                    {departments.map((dept) => (
+                      <label key={dept.id} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={exportFilters.departmentIds.includes(dept.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setExportFilters(prev => ({
+                                ...prev,
+                                departmentIds: [...prev.departmentIds, dept.id]
+                              }))
+                            } else {
+                              setExportFilters(prev => ({
+                                ...prev,
+                                departmentIds: prev.departmentIds.filter(id => id !== dept.id)
+                              }))
+                            }
+                          }}
+                          className="w-4 h-4 rounded border-white/20 bg-white/10 text-brand-600 focus:ring-brand-500 focus:ring-offset-0"
+                          disabled={isExporting}
+                        />
+                        <span className="text-white">{dept.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+                <p className="text-xs text-gray-400 mt-2">
+                  Si no seleccionas ningún departamento, se exportarán empleados de todos los departamentos
+                </p>
+              </div>
+
+              {/* Filtro por Empleados Específicos */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-3">
+                  Empleados Específicos
+                </label>
+                {employees.length === 0 ? (
+                  <p className="text-sm text-gray-400">No hay empleados disponibles</p>
+                ) : (
+                  <div className="max-h-48 overflow-y-auto space-y-2 border border-white/10 rounded-lg p-3 bg-white/5">
+                    {employees.map((emp) => (
+                      <label key={emp.id} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={exportFilters.employeeIds.includes(emp.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setExportFilters(prev => ({
+                                ...prev,
+                                employeeIds: [...prev.employeeIds, emp.id]
+                              }))
+                            } else {
+                              setExportFilters(prev => ({
+                                ...prev,
+                                employeeIds: prev.employeeIds.filter(id => id !== emp.id)
+                              }))
+                            }
+                          }}
+                          className="w-4 h-4 rounded border-white/20 bg-white/10 text-brand-600 focus:ring-brand-500 focus:ring-offset-0"
+                          disabled={isExporting}
+                        />
+                        <span className="text-white">
+                          {emp.name} {emp.employee_code && `(${emp.employee_code})`}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+                <p className="text-xs text-gray-400 mt-2">
+                  Si no seleccionas ningún empleado, se exportarán todos los empleados que cumplan los otros filtros
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6 pt-4 border-t border-white/10">
+              <Button
+                onClick={() => {
+                  setShowExportModal(false)
+                  setExportFormat(null)
+                  setExportFilters({ status: [], departmentIds: [], employeeIds: [] })
+                }}
+                variant="outline"
+                className="flex-1 bg-white/5 border-white/20 text-white hover:bg-white/10"
+                disabled={isExporting}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleExportConfirm}
+                className="flex-1 bg-brand-600 hover:bg-brand-700"
+                disabled={isExporting}
+              >
+                {isExporting ? (
+                  <>
+                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                    Exportando...
+                  </>
+                ) : (
+                  <>
+                    <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
+                    Exportar
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
