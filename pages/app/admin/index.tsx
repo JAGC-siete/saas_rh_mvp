@@ -19,7 +19,10 @@ import {
   Server,
   Settings,
   Shield,
-  Users
+  Users,
+  CheckCircle,
+  Clock,
+  Globe
 } from 'lucide-react'
 
 interface SystemStats {
@@ -33,6 +36,14 @@ interface SystemStats {
   systemHealth: 'healthy' | 'warning' | 'critical'
   lastBackup: string
   serverUptime: string
+}
+
+interface RecentActivity {
+  id: string
+  type: 'company_created' | 'user_registered' | 'system_alert' | 'backup_completed'
+  message: string
+  timestamp: string
+  severity?: 'info' | 'warning' | 'error'
 }
 
 const EMPTY_STATS: SystemStats = {
@@ -51,6 +62,7 @@ const EMPTY_STATS: SystemStats = {
 export default function AdminDashboard() {
   const { userProfile } = useAuth()
   const [systemStats, setSystemStats] = useState<SystemStats>(EMPTY_STATS)
+  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([])
   const [loadingStats, setLoadingStats] = useState(true)
   const [statsError, setStatsError] = useState<string | null>(null)
   const [envError, setEnvError] = useState(false)
@@ -61,17 +73,28 @@ export default function AdminDashboard() {
       setStatsError(null)
       setEnvError(false)
 
-      const response = await fetch('/api/admin/stats', { credentials: 'include' })
-      const payload = await response.json().catch(() => null)
+      // Load stats and recent activity in parallel
+      const [statsRes, activityRes] = await Promise.all([
+        fetch('/api/admin/stats', { credentials: 'include' }),
+        fetch('/api/admin/recent-activity', { credentials: 'include' })
+      ])
 
-      if (!response.ok) {
-        if (response.status === 500) {
+      const statsPayload = await statsRes.json().catch(() => null)
+
+      if (!statsRes.ok) {
+        if (statsRes.status === 500) {
           setEnvError(true)
         }
-        throw new Error(payload?.error || 'No se pudieron cargar las estadísticas')
+        throw new Error(statsPayload?.error || 'No se pudieron cargar las estadísticas')
       }
 
-      setSystemStats(payload?.stats || EMPTY_STATS)
+      setSystemStats(statsPayload?.stats || EMPTY_STATS)
+
+      // Load recent activity if available
+      if (activityRes.ok) {
+        const activityPayload = await activityRes.json().catch(() => null)
+        setRecentActivity(activityPayload?.activities || [])
+      }
     } catch (error) {
       console.error('Error fetching admin stats:', error)
       setStatsError(error instanceof Error ? error.message : 'Error desconocido')
@@ -135,6 +158,16 @@ export default function AdminDashboard() {
         return 'text-emerald-100 bg-emerald-500/20 border border-emerald-300/40'
     }
   })()
+
+  const getActivityIcon = (type: string) => {
+    switch (type) {
+      case 'company_created': return <Building2 className="h-4 w-4 text-blue-400" />
+      case 'user_registered': return <Users className="h-4 w-4 text-green-400" />
+      case 'system_alert': return <AlertCircle className="h-4 w-4 text-red-400" />
+      case 'backup_completed': return <Database className="h-4 w-4 text-purple-400" />
+      default: return <Activity className="h-4 w-4 text-white/50" />
+    }
+  }
 
   return (
     <>
@@ -342,6 +375,47 @@ export default function AdminDashboard() {
                     </CardContent>
                   </Card>
                 </div>
+
+                {/* Recent Activity */}
+                <Card variant="glass" className="border-white/10">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Activity className="h-5 w-5 text-blue-200" />
+                      Actividad Reciente
+                    </CardTitle>
+                    <CardDescription className="text-white/70">
+                      Últimas acciones en el sistema
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {recentActivity.length > 0 ? (
+                        recentActivity.slice(0, 5).map((activity) => (
+                          <div key={activity.id} className="flex items-start gap-3 p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
+                            {getActivityIcon(activity.type)}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-white">
+                                {activity.message}
+                              </p>
+                              <p className="text-xs text-white/60">
+                                {new Date(activity.timestamp).toLocaleString('es-HN', { 
+                                  timeZone: 'America/Tegucigalpa',
+                                  dateStyle: 'short',
+                                  timeStyle: 'short'
+                                })}
+                              </p>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-8 text-white/60">
+                          <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                          <p className="text-sm">No hay actividad reciente</p>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
               </>
             )}
           </div>
