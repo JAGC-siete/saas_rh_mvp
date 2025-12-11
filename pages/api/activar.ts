@@ -100,17 +100,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Validar email duplicado
-    console.log('🔍 Verificando si el email ya tiene un trial activo...')
     const validacionEmail = await verificarEmailDuplicado(supabase, contactoEmail)
     
     if (!validacionEmail.puedeContinuar) {
-      console.log('⚠️ Email duplicado detectado:', validacionEmail.razon)
       return res.status(409).json({ 
         error: validacionEmail.razon || 'Este email ya tiene un trial activo. Por favor, utiliza otro email o espera a que expire tu trial actual.'
       })
     }
-
-    console.log('✅ Validaciones pasadas exitosamente')
 
     // Generar tenant_id único
     const tenant_id = `tnt_${nowInHonduras().getTime()}_${Math.random().toString(36).substr(2, 9)}`
@@ -507,10 +503,8 @@ async function crearEntornoTrial(supabase: any, data: {
         console.error('⚠️ Error creando/actualizando perfil de usuario:', profileError)
         console.error('⚠️ Detalles del error:', JSON.stringify(profileError, null, 2))
       } else {
+        // Log exitoso sin exponer información sensible
         console.log('✅ Perfil de usuario creado/actualizado correctamente')
-        console.log('✅ Company ID asignado:', companyId)
-        console.log('✅ Rol asignado: company_admin')
-        console.log('✅ Permisos asignados:', JSON.stringify(companyAdminPermissions, null, 2))
       }
 
       // Enviar correo de bienvenida

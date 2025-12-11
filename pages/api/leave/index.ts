@@ -239,10 +239,21 @@ async function handleCreateLeaveRequest(req: NextApiRequest, res: NextApiRespons
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { method } = req
 
-  // Set CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*')
+  // Set CORS headers - Restrict to allowed origins only
+  const allowedOrigins = [
+    process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net',
+    process.env.RAILWAY_PUBLIC_DOMAIN || 'https://hr-saas.railway.app',
+    'https://staging.humanosisu.net',
+    ...(process.env.NODE_ENV === 'development' ? ['http://localhost:3000', 'http://localhost:3001'] : [])
+  ]
+  
+  const origin = req.headers.origin
+  const allowedOrigin = origin && allowedOrigins.includes(origin) ? origin : allowedOrigins[0]
+  
+  res.setHeader('Access-Control-Allow-Origin', allowedOrigin)
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+  res.setHeader('Access-Control-Allow-Credentials', 'true')
 
   if (method === 'OPTIONS') {
     res.status(200).end()

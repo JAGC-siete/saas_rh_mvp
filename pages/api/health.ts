@@ -1,7 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { getHondurasTimestamp } from '../../lib/timezone'
+import { withRateLimit } from '../../lib/security/rate-limiting'
 
-export default async function handler(
+async function healthHandler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
@@ -11,12 +12,17 @@ export default async function handler(
 
   try {
     // Basic health check - can be extended with database connectivity, etc.
-    const healthStatus = {
+    // En producción, no exponer información sensible
+    const healthStatus: any = {
       status: 'healthy',
       timestamp: getHondurasTimestamp(),
-      uptime: process.uptime(),
-      environment: process.env.NODE_ENV,
-      version: process.env.npm_package_version || 'unknown'
+      uptime: process.uptime()
+    }
+
+    // Solo incluir environment y version en desarrollo
+    if (process.env.NODE_ENV !== 'production') {
+      healthStatus.environment = process.env.NODE_ENV
+      healthStatus.version = process.env.npm_package_version || 'unknown'
     }
 
     res.status(200).json(healthStatus)
@@ -29,3 +35,6 @@ export default async function handler(
     })
   }
 }
+
+// Apply rate limiting: max 10 requests per minute for health checks
+export default withRateLimit('general')(healthHandler)

@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { createClient } from '../../../../lib/supabase/server';
+import { createPagesServerClient } from '@supabase/auth-helpers-nextjs';
 import { createAdminClient } from '../../../../lib/supabase/server';
 import { HikvisionSDK } from '../../../../lib/hikvision/sdk';
 
@@ -13,10 +13,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const supabase = createClient(req, res);
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
+    const supabase = createPagesServerClient({ req, res });
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
@@ -24,7 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { data: userProfile } = await supabaseAdmin
       .from('user_profiles')
       .select('role')
-      .eq('id', user.id)
+      .eq('id', session.user.id)
       .single();
 
     if (userProfile?.role !== 'company_admin' && userProfile?.role !== 'super_admin') {

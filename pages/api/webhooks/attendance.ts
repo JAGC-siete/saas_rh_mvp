@@ -387,7 +387,7 @@ async function handleFixedEmployeeEvent(
         check_in_value: eventTimestamp.toISOString(),
         check_in_type: typeof eventTimestamp.toISOString(),
       });
-      
+
       const { data: record, error: insertError } = await supabase
         .from('attendance_records')
         .insert({
@@ -1066,6 +1066,52 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     logger.warn('[ATTENDANCE WEBHOOK] Missing company_id', { query: req.query });
     // Responder 200 incluso si falta company_id (no bloquear dispositivo)
     return res.status(200).json({ success: false, message: 'company_id is required' });
+  }
+
+  // VALIDATE: Verify that company_id exists and is active
+  const supabase = createAdminClient();
+  try {
+    const { data: company, error: companyError } = await supabase
+      .from('companies')
+      .select('id, status, name')
+      .eq('id', company_id)
+      .single();
+
+    if (companyError || !company) {
+      logger.warn('[ATTENDANCE WEBHOOK] Invalid company_id provided', {
+        company_id,
+        error: companyError?.message
+      });
+      // Still respond 200 to not block device, but log the issue
+      return res.status(200).json({
+        success: false,
+        message: 'Invalid company_id',
+        warning: 'Company not found or inactive'
+      });
+    }
+
+    if (company.status !== 'active') {
+      logger.warn('[ATTENDANCE WEBHOOK] Company not active', {
+        company_id,
+        company_name: company.name,
+        status: company.status
+      });
+      // Still respond 200 to not block device
+      return res.status(200).json({
+        success: false,
+        message: 'Company not active',
+        warning: 'Company account is not active'
+      });
+    }
+
+    logger.debug('[ATTENDANCE WEBHOOK] Valid company_id confirmed', {
+      company_id,
+      company_name: company.name
+    });
+
+  } catch (validationError) {
+    logger.error('[ATTENDANCE WEBHOOK] Error validating company_id', validationError);
+    // Continue processing even if validation fails (fail-open for device compatibility)
   }
 
   let rawEvent: any = null;

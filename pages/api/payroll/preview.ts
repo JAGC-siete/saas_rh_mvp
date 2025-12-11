@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { nowInHonduras } from '../../../lib/timezone'
 import { withGeneralRateLimit } from '../../../lib/security/rate-limiting'
+import { secureLog, secureErrorLog } from '../../../lib/security/safe-logging'
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -16,17 +17,18 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       return res.status(400).json({ error: 'Company ID is required' })
     }
 
-    console.log('Usuario autenticado para preview de nómina:', { 
+    secureLog('Usuario autenticado para preview de nómina', { 
       companyId: companyId 
     })
-    
-    // DEBUG: Verificar qué company_id está usando
-    console.log('🔍 DEBUG - Company ID del usuario:', companyId)
 
     const { year, month, quincena, tipo } = req.query
     
-    // DEBUG: Verificar parámetros recibidos
-    console.log('🔍 DEBUG - Parámetros recibidos:', { year, month, quincena, tipo })
+    secureLog('Parámetros recibidos para preview', { 
+      hasYear: !!year, 
+      hasMonth: !!month, 
+      hasQuincena: !!quincena, 
+      tipo: tipo 
+    })
     
     // Validaciones
     if (!year || !month || !quincena) {
@@ -299,17 +301,17 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     if (!employees || employees.length === 0) {
-      console.error('❌ ERROR - No hay empleados activos para company_id:', companyId)
+      secureLog('No hay empleados activos para preview', { companyId })
       return res.status(400).json({ 
         error: 'No hay empleados activos',
-        message: 'No se encontraron empleados activos para generar la nómina',
-        companyId: companyId
+        message: 'No se encontraron empleados activos para generar la nómina'
       })
     }
     
-    // DEBUG: Verificar cuántos empleados se encontraron
-    console.log('🔍 DEBUG - Empleados encontrados:', employees.length)
-    console.log('🔍 DEBUG - Company ID usado:', companyId)
+    secureLog('Empleados encontrados para preview', { 
+      employeesCount: employees.length,
+      companyId 
+    })
     console.log('🔍 DEBUG - Primeros 3 empleados:', employees.slice(0, 3))
     console.log('🔍 DEBUG - Primeros 3 empleados:', employees.slice(0, 3).map((emp: any) => ({
       name: emp.name,

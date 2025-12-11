@@ -3,9 +3,9 @@ import { createAdminClient } from '../../../lib/supabase/server'
 import { requireUser } from '../../../lib/auth/requireUser'
 import { getHondurasTimestamp } from '../../../lib/timezone'
 import { requirePlanAndQuota, incrementUsage } from '../../../lib/billing/enforce'
+import { createPagesServerClient } from '@supabase/auth-helpers-nextjs';
 import { addEmployeeSyncJob } from '../../../lib/queues/employeeSyncQueue';
 import { trace, context } from '@opentelemetry/api';
-import { normalizeEmployeeData } from '../../../lib/utils/normalize-employee-data';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -43,7 +43,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       department_id,
       work_schedule_id,
       base_salary,
-      pay_type = 'fixed', // Default: fixed (administrativo/permanente)
       hire_date,
       termination_date,
       status = 'active',
@@ -76,41 +75,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(409).json({ error: 'Employee code already exists' })
     }
 
-    // Validate pay_type
-    if (pay_type && !['fixed', 'hourly'].includes(pay_type)) {
-      return res.status(400).json({
-        error: 'Invalid pay_type. Must be "fixed" or "hourly"'
-      })
-    }
-
-    // Normalize employee data using centralized function
-    const rawEmployeeData = {
+    const employeeData: any = {
       company_id: companyId,
       employee_code,
       dni,
       name,
-      email,
-      phone,
-      role,
-      team,
-      department_id,
-      work_schedule_id,
-      base_salary,
-      pay_type: pay_type || 'fixed', // Default to 'fixed' if not provided
-      hire_date,
-      termination_date,
+      email: email || null,
+      phone: phone || null,
+      role: role || null,
+      team: team || null,
+      department_id: department_id || null,
+      work_schedule_id: work_schedule_id || null,
+      base_salary: typeof base_salary === 'string' ? parseFloat(base_salary) : base_salary,
+      hire_date: hire_date || null,
+      termination_date: termination_date || null,
       status,
-      bank_name,
-      bank_account,
-      emergency_contact_name,
-      emergency_contact_phone,
+      bank_name: bank_name || null,
+      bank_account: bank_account || null,
+      emergency_contact_name: emergency_contact_name || null,
+      emergency_contact_phone: emergency_contact_phone || null,
       address: address || null,
       metadata: metadata || null,
+      sync_status: 'pending', // Set status to pending on creation
       created_at: getHondurasTimestamp(),
       updated_at: getHondurasTimestamp()
-    };
-
-    const employeeData = normalizeEmployeeData(rawEmployeeData);
+    }
 
     const { data: newEmployee, error: insertError } = await adminSupabase
       .from('employees')

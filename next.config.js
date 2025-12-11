@@ -122,17 +122,50 @@ const nextConfig = {
       {
         source: '/(.*)',
         headers: [
+          // Frame protection
           {
             key: 'X-Frame-Options',
             value: 'DENY',
           },
+          // MIME sniffing protection
           {
             key: 'X-Content-Type-Options',
             value: 'nosniff',
           },
+          // Referrer policy
           {
             key: 'Referrer-Policy',
-            value: 'origin-when-cross-origin',
+            value: 'strict-origin-when-cross-origin',
+          },
+          // XSS protection (legacy)
+          {
+            key: 'X-XSS-Protection',
+            value: '1; mode=block',
+          },
+          // HTTPS enforcement
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=31536000; includeSubDomains; preload',
+          },
+          // Content Security Policy - Basic but effective
+          {
+            key: 'Content-Security-Policy',
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://*.supabase.co https://*.supabase.com; frame-ancestors 'none';",
+          },
+          // Permissions policy (restricts browser features)
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+          },
+        ],
+      },
+      // Additional CSP for API routes
+      {
+        source: '/api/(.*)',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: "default-src 'none'; frame-ancestors 'none';",
           },
         ],
       },
