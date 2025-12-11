@@ -23,12 +23,19 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
+  let user: any = null
+  let reportType: string | undefined
+  let format: string | undefined
+  let dateFilter: any
+
   try {
     // Autenticación usando el mismo método que payroll
-    const { supabase, companyId, role, user } = await requireCompanyAccess(req, res)
+    const authResult = await requireCompanyAccess(req, res)
+    const { supabase, companyId, role, user: authUser } = authResult
+    user = authUser
     
-    // Verificar permisos (solo admins y HR managers pueden generar reportes)
-    if (!['super_admin', 'company_admin', 'hr_manager'].includes(role)) {
+    // Verificar permisos (solo admins, HR managers y managers pueden generar reportes)
+    if (!['super_admin', 'company_admin', 'hr_manager', 'manager'].includes(role)) {
       return res.status(403).json({ 
         error: 'Permisos insuficientes',
         message: 'No tiene permisos para generar reportes'
@@ -41,7 +48,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       companyId: companyId 
     })
 
-    const { format, dateFilter, reportType } = req.body
+    const body = req.body
+    format = body.format
+    dateFilter = body.dateFilter
+    reportType = body.reportType
     
     // Validaciones
     if (!reportType || !['attendance', 'payroll', 'employees'].includes(reportType)) {
@@ -119,12 +129,20 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
   } catch (error) {
-    console.error('Error generando reporte:', error)
+    console.error('Error generando reporte:', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      user: user?.email || 'unknown',
+      reportType: reportType || 'unknown',
+      format: format || 'unknown',
+      dateFilter: dateFilter || 'none'
+    })
     // Solo enviar error JSON si no se han enviado headers aún
     if (!res.headersSent) {
       return res.status(500).json({ 
         error: 'Error interno del servidor', 
-        message: error instanceof Error ? error.message : 'Error desconocido'
+        message: error instanceof Error ? error.message : 'Error desconocido',
+        details: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : undefined) : undefined
       })
     }
   }
@@ -530,21 +548,42 @@ async function generateAttendanceReportData(supabase: any, dateFilter: any, comp
   }
 
   const { data: employees, error: empError } = await employeesQuery
-  if (empError) throw new Error('Error obteniendo empleados')
+  if (empError) {
+    console.error('Error obteniendo empleados:', empError)
+    throw new Error(`Error obteniendo empleados: ${empError.message}`)
+  }
 
-  // Obtener registros de asistencia
+  // Obtener IDs de empleados para filtrar asistencia
+  const employeeIds = (employees || []).map((e: any) => e.id)
+
+  // Obtener registros de asistencia con filtro por employee_ids de la empresa
   let attendanceQuery = supabase
     .from('attendance_records')
-    .select('*, employees!inner(id, name, employee_code, company_id)')
+    .select(`
+      *,
+      employees!attendance_records_employee_id_fkey(
+        id,
+        name,
+        employee_code,
+        company_id
+      )
+    `)
     .gte('date', dateFilter.startDate)
     .lte('date', dateFilter.endDate)
 
-  if (companyId) {
-    attendanceQuery = attendanceQuery.eq('employees.company_id', companyId)
+  // Filtrar por employee_ids de la empresa (más seguro que usar !inner join)
+  if (companyId && employeeIds.length > 0) {
+    attendanceQuery = attendanceQuery.in('employee_id', employeeIds)
+  } else if (companyId && employeeIds.length === 0) {
+    // Si no hay empleados para la empresa, devolver array vacío
+    attendanceQuery = attendanceQuery.eq('employee_id', '__none__')
   }
 
   const { data: attendance, error: attError } = await attendanceQuery
-  if (attError) throw new Error('Error obteniendo asistencia')
+  if (attError) {
+    console.error('Error obteniendo registros de asistencia:', attError)
+    throw new Error(`Error obteniendo asistencia: ${attError.message}`)
+  }
 
   return { employees: employees || [], attendance: attendance || [], dateFilter }
 }
@@ -842,20 +881,293 @@ async function generateEmployeesExcel(res: NextApiResponse, reportData: any) {
 // ===== GENERADORES DE PDF =====
 
 async function generateAttendancePDF(res: NextApiResponse, reportData: any, dateFilter: any, companyName?: string) {
-  // Por ahora usar el PDF genérico, se puede mejorar después
-  return generatePDFReport(res, { 
-    employees: reportData.employees,
-    attendance: reportData.attendance,
-    payroll: [],
-    stats: {
-      totalEmployees: reportData.employees.length,
-      totalAttendance: reportData.attendance.length,
-      totalPayroll: 0,
-      averageAttendance: 0,
-      lateEmployees: 0,
-      absentEmployees: 0
+  try {
+    const PDFDocument = require('pdfkit')
+    const doc = new PDFDocument({ 
+      size: 'A4', 
+      layout: 'portrait', 
+      margin: 30,
+      info: {
+        Title: `Reporte de Asistencia - ${dateFilter.startDate} a ${dateFilter.endDate}`,
+        Author: 'Sistema de Recursos Humanos',
+        Subject: 'Reporte de Asistencia',
+        Keywords: 'asistencia, reporte, recursos humanos',
+        Creator: 'HR SaaS System'
+      }
+    })
+    
+    const pageWidth = doc.page.width
+    const pageHeight = doc.page.height
+    
+    // Colores consistentes
+    const colors = {
+      primary: '#1e40af',
+      primaryDark: '#1e3a8a',
+      success: '#059669',
+      warning: '#d97706',
+      danger: '#dc2626',
+      muted: '#64748b',
+      lightGray: '#f1f5f9',
+      borderGray: '#e2e8f0'
     }
-  }, dateFilter, companyName)
+    
+    let buffers: Buffer[] = []
+    doc.on('data', (chunk: Buffer) => buffers.push(chunk))
+    doc.on('end', () => {
+      const pdf = Buffer.concat(buffers)
+      res.setHeader('Content-Type', 'application/pdf')
+      res.setHeader('Content-Disposition', `attachment; filename=asistencia_${dateFilter.startDate}_${dateFilter.endDate}.pdf`)
+      res.send(pdf)
+    })
+
+    // ===== PÁGINA 1: HEADER Y RESUMEN EJECUTIVO =====
+    
+    // Header mejorado con gradiente visual
+    doc.rect(0, 0, pageWidth, 100).fill(colors.primary)
+    doc.fillColor('white')
+    doc.fontSize(24).font('Helvetica-Bold').text(
+      (companyName || 'SISTEMA DE RECURSOS HUMANOS').toUpperCase(), 
+      30, 25, 
+      { align: 'center', width: pageWidth - 60 }
+    )
+    doc.fontSize(16).font('Helvetica').text(
+      'Reporte de Asistencia', 
+      30, 55, 
+      { align: 'center', width: pageWidth - 60 }
+    )
+    doc.fontSize(12).text(
+      `${dateFilter.startDate} - ${dateFilter.endDate}`, 
+      30, 80, 
+      { align: 'center', width: pageWidth - 60 }
+    )
+    
+    doc.fillColor('#0f172a')
+    
+    // Información del reporte en caja destacada
+    const infoBoxY = 120
+    doc.roundedRect(30, infoBoxY, pageWidth - 60, 50, 5).fill(colors.lightGray).stroke(colors.borderGray)
+    doc.fontSize(10).font('Helvetica-Bold').fillColor('#475569').text('INFORMACIÓN DEL REPORTE', 40, infoBoxY + 8)
+    doc.fontSize(9).font('Helvetica').fillColor('#0f172a')
+    doc.text(`Período: ${dateFilter.startDate} - ${dateFilter.endDate}`, 40, infoBoxY + 22)
+    doc.text(`Fecha de generación: ${formatDateForHonduras(nowInHonduras())}`, 40, infoBoxY + 35)
+    
+    // Calcular estadísticas mejoradas
+    const attendanceRecords = reportData.attendance || []
+    const employees = reportData.employees || []
+    const totalRecords = attendanceRecords.length
+    const presentRecords = attendanceRecords.filter((r: any) => r.status === 'present').length
+    const lateRecords = attendanceRecords.filter((r: any) => r.status === 'late').length
+    const absentRecords = attendanceRecords.filter((r: any) => r.status === 'absent').length
+    const attendanceRate = totalRecords > 0 ? ((presentRecords + lateRecords) / totalRecords * 100) : 0
+    const punctualityRate = totalRecords > 0 ? (presentRecords / totalRecords * 100) : 0
+    
+    // KPIs mejorados con diseño visual
+    const kpiY = 190
+    const kpiWidth = (pageWidth - 90) / 4
+    const kpiHeight = 80
+    
+    // KPI 1: Total Registros
+    doc.roundedRect(30, kpiY, kpiWidth, kpiHeight, 8)
+      .fill(colors.primary).stroke(colors.primaryDark)
+    doc.fillColor('white')
+    doc.fontSize(9).font('Helvetica').text('TOTAL REGISTROS', 35, kpiY + 10, { width: kpiWidth - 10, align: 'center' })
+    doc.fontSize(28).font('Helvetica-Bold').text(totalRecords.toString(), 35, kpiY + 25, { width: kpiWidth - 10, align: 'center' })
+    
+    // KPI 2: Presentes
+    doc.roundedRect(30 + kpiWidth + 10, kpiY, kpiWidth, kpiHeight, 8)
+      .fill(colors.success).stroke('#047857')
+    doc.fillColor('white')
+    doc.fontSize(9).font('Helvetica').text('PRESENTES', 35 + kpiWidth + 10, kpiY + 10, { width: kpiWidth - 10, align: 'center' })
+    doc.fontSize(28).font('Helvetica-Bold').text(presentRecords.toString(), 35 + kpiWidth + 10, kpiY + 25, { width: kpiWidth - 10, align: 'center' })
+    
+    // KPI 3: Ausentes
+    doc.roundedRect(30 + (kpiWidth + 10) * 2, kpiY, kpiWidth, kpiHeight, 8)
+      .fill(colors.danger).stroke('#b91c1c')
+    doc.fillColor('white')
+    doc.fontSize(9).font('Helvetica').text('AUSENTES', 35 + (kpiWidth + 10) * 2, kpiY + 10, { width: kpiWidth - 10, align: 'center' })
+    doc.fontSize(28).font('Helvetica-Bold').text(absentRecords.toString(), 35 + (kpiWidth + 10) * 2, kpiY + 25, { width: kpiWidth - 10, align: 'center' })
+    
+    // KPI 4: Tardes
+    doc.roundedRect(30 + (kpiWidth + 10) * 3, kpiY, kpiWidth, kpiHeight, 8)
+      .fill(colors.warning).stroke('#b45309')
+    doc.fillColor('white')
+    doc.fontSize(9).font('Helvetica').text('TARDES', 35 + (kpiWidth + 10) * 3, kpiY + 10, { width: kpiWidth - 10, align: 'center' })
+    doc.fontSize(28).font('Helvetica-Bold').text(lateRecords.toString(), 35 + (kpiWidth + 10) * 3, kpiY + 25, { width: kpiWidth - 10, align: 'center' })
+    
+    // Métricas adicionales
+    doc.fillColor('#0f172a')
+    const metricsY = kpiY + kpiHeight + 20
+    doc.roundedRect(30, metricsY, pageWidth - 60, 60, 8).fill(colors.lightGray).stroke(colors.borderGray)
+    doc.fontSize(11).font('Helvetica-Bold').fillColor('#475569').text('MÉTRICAS DE RENDIMIENTO', 40, metricsY + 8)
+    
+    const metricColWidth = (pageWidth - 100) / 2
+    doc.fontSize(9).font('Helvetica').fillColor('#0f172a')
+    doc.text(`Tasa de Asistencia:`, 40, metricsY + 25)
+    doc.font('Helvetica-Bold').fillColor(colors.success).text(`${attendanceRate.toFixed(1)}%`, 150, metricsY + 25)
+    
+    doc.font('Helvetica').fillColor('#0f172a')
+    doc.text(`Tasa de Puntualidad:`, 40, metricsY + 40)
+    doc.font('Helvetica-Bold').fillColor(colors.success).text(`${punctualityRate.toFixed(1)}%`, 150, metricsY + 40)
+    
+    doc.text(`Total Empleados:`, 40 + metricColWidth, metricsY + 25)
+    doc.font('Helvetica-Bold').fillColor(colors.primary).text(`${employees.length}`, 40 + metricColWidth + 100, metricsY + 25)
+    
+    doc.font('Helvetica').fillColor('#0f172a')
+    doc.text(`Promedio por Empleado:`, 40 + metricColWidth, metricsY + 40)
+    const avgPerEmployee = employees.length > 0 ? (totalRecords / employees.length).toFixed(1) : '0'
+    doc.font('Helvetica-Bold').fillColor(colors.primary).text(`${avgPerEmployee} días`, 40 + metricColWidth + 100, metricsY + 40)
+
+    // ===== PÁGINA 2: TABLA DE ASISTENCIA =====
+    doc.addPage()
+    
+    doc.fontSize(16).font('Helvetica-Bold').fillColor(colors.primary).text(
+      'DETALLE DE REGISTROS DE ASISTENCIA', 
+      30, 30, 
+      { align: 'center', width: pageWidth - 60 }
+    )
+    
+    // Tabla mejorada con mejor formato
+    const headers = ['Código', 'Empleado', 'Fecha', 'Estado', 'Entrada', 'Salida', 'Tardanza']
+    const colWidths = [50, 100, 65, 50, 70, 70, 50]
+    const startX = 30
+    let y = 70
+    const rowHeight = 18
+    
+    // Header de tabla mejorado
+    headers.forEach((h: string, i: number) => {
+      const x = startX + colWidths.slice(0, i).reduce((a: number, b: number) => a + b, 0)
+      doc.roundedRect(x, y, colWidths[i], rowHeight, 2)
+        .fill(colors.primary)
+        .stroke(colors.primaryDark)
+      doc.fillColor('white')
+      doc.fontSize(8).font('Helvetica-Bold').text(
+        h, 
+        x + 3, 
+        y + 6, 
+        { width: colWidths[i] - 6, align: 'center' }
+      )
+    })
+    y += rowHeight
+    
+    // Datos de asistencia con alternancia de colores
+    let rowIndex = 0
+    for (const record of attendanceRecords) {
+      if (y > pageHeight - 60) {
+        doc.addPage()
+        y = 30
+        // Re-dibujar headers en nueva página
+        headers.forEach((h: string, i: number) => {
+          const x = startX + colWidths.slice(0, i).reduce((a: number, b: number) => a + b, 0)
+          doc.roundedRect(x, y, colWidths[i], rowHeight, 2)
+            .fill(colors.primary)
+            .stroke(colors.primaryDark)
+          doc.fillColor('white')
+          doc.fontSize(8).font('Helvetica-Bold').text(
+            h, 
+            x + 3, 
+            y + 6, 
+            { width: colWidths[i] - 6, align: 'center' }
+          )
+        })
+        y += rowHeight
+      }
+      
+      const emp = record.employees || employees.find((e: any) => e.id === record.employee_id)
+      const isEven = rowIndex % 2 === 0
+      
+      const statusColors: Record<string, string> = {
+        'present': colors.success,
+        'late': colors.warning,
+        'absent': colors.danger
+      }
+      const statusLabels: Record<string, string> = {
+        'present': 'Presente',
+        'late': 'Tarde',
+        'absent': 'Ausente'
+      }
+      
+      headers.forEach((_h: string, i: number) => {
+        const x = startX + colWidths.slice(0, i).reduce((a: number, b: number) => a + b, 0)
+        
+        // Fondo alternado
+        if (isEven) {
+          doc.rect(x, y, colWidths[i], rowHeight).fill(colors.lightGray)
+        }
+        doc.rect(x, y, colWidths[i], rowHeight).stroke(colors.borderGray)
+        
+        doc.fillColor('#0f172a')
+        doc.fontSize(7).font('Helvetica')
+        
+        let value = ''
+        switch (i) {
+          case 0: // Código
+            value = emp?.employee_code || ''
+            break
+          case 1: // Empleado
+            value = emp?.name || record.employee_id || ''
+            break
+          case 2: // Fecha
+            value = new Date(record.date + 'T00:00:00').toLocaleDateString('es-HN')
+            break
+          case 3: // Estado
+            value = statusLabels[record.status] || record.status || ''
+            doc.fillColor(statusColors[record.status] || '#0f172a')
+            break
+          case 4: // Entrada
+            value = record.check_in 
+              ? new Date(record.check_in).toLocaleTimeString('es-HN', { 
+                  timeZone: 'America/Tegucigalpa',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })
+              : 'N/A'
+            break
+          case 5: // Salida
+            value = record.check_out 
+              ? new Date(record.check_out).toLocaleTimeString('es-HN', { 
+                  timeZone: 'America/Tegucigalpa',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })
+              : 'N/A'
+            break
+          case 6: // Tardanza
+            value = record.late_minutes ? `${record.late_minutes} min` : '-'
+            if (record.late_minutes && record.late_minutes > 0) {
+              doc.fillColor(colors.warning)
+            }
+            break
+        }
+        
+        doc.text(value, x + 3, y + 5, { width: colWidths[i] - 6, align: 'center' })
+        doc.fillColor('#0f172a')
+      })
+      
+      y += rowHeight
+      rowIndex++
+    }
+    
+    // Footer mejorado
+    doc.fillColor(colors.muted)
+    doc.fontSize(8).font('Helvetica')
+    doc.text(
+      'Sistema de Recursos Humanos - Documento generado automáticamente', 
+      30, 
+      pageHeight - 40, 
+      { align: 'center', width: pageWidth - 60 }
+    )
+    doc.text(
+      `Fecha de generación: ${formatDateTimeForHonduras(nowInHonduras())}`, 
+      30, 
+      pageHeight - 25, 
+      { align: 'center', width: pageWidth - 60 }
+    )
+
+    doc.end()
+  } catch (error) {
+    console.error('Error generando PDF de asistencia:', error)
+    throw error
+  }
 }
 
 async function generatePayrollPDF(res: NextApiResponse, _reportData: any, _dateFilter: any, _companyName?: string) {

@@ -6,7 +6,7 @@ import SuperAdminGuard from '../../../components/SuperAdminGuard'
 export default function SuperAdminRouteRedirect() {
   const router = useRouter()
   useEffect(() => {
-    router.replace('/app/admin/super-admin-dashboard')
+    router.replace('/app/admin')
   }, [router])
   return (
     <>

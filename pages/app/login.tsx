@@ -63,7 +63,7 @@ export default function LoginExisting() {
         router.push(redirectParam)
       } else if (data.user.role === 'super_admin') {
         // Super admin goes to the full dashboard
-        router.push('/app/admin/super-admin-dashboard')
+        router.push('/app/admin')
       } else if (!data.user.company_id) {
         // Other users without company_id go to onboarding
         router.push('/onboarding')
