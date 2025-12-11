@@ -7,7 +7,6 @@ import AWSCertificationsSection from '../components/AWSCertificationsSection'
 import LandingHero from '../components/LandingHero'
 import MainHeader from '../components/MainHeader'
 import dynamic from 'next/dynamic'
-import AffiliateProgramSection from '../components/AffiliateProgramSection'
 import MailListSection from '../components/MailListSection'
 
 const CloudBackground = dynamic(() => import('../components/CloudBackground'), { ssr: false })
@@ -84,9 +83,6 @@ export default function LandingPage() {
       <div className="mt-4">
         <ServicesSection />
       </div>
-
-      {/* Affiliate Program Section */}
-      <AffiliateProgramSection />
 
       {/* AWS Certifications Section */}
       <AWSCertificationsSection />
