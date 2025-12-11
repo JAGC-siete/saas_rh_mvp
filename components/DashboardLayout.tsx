@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useAuth } from '../lib/auth'
 import { Button } from './ui/button'
 import { SessionExpiryWarning, useSessionExpiryMonitor } from './SessionExpiryWarning'
+import { SessionStatusIndicator } from './SessionStatusIndicator'
 import { 
   UserIcon, 
   ClockIcon, 
@@ -317,6 +318,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                     <p className="text-xs text-gray-300">Usuario</p>
                   </div>
                 </div>
+                <SessionStatusIndicator />
                 <Button
                   onClick={handleSignOut}
                   className="w-full flex items-center justify-center gap-2 text-white bg-red-600 hover:bg-red-700 border-red-600"
