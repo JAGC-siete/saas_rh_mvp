@@ -7,7 +7,7 @@ export function middleware(request: NextRequest) {
   // Block /api/debug/* endpoints in production
   // También bloquear en staging si se requiere
   const isProduction = process.env.NODE_ENV === 'production'
-  const isStaging = process.env.NODE_ENV === 'staging' || process.env.RAILWAY_ENVIRONMENT === 'staging'
+  const isStaging = (process.env.NODE_ENV as string) === 'staging' || process.env.RAILWAY_ENVIRONMENT === 'staging'
   
   if (pathname.startsWith('/api/debug')) {
     // Bloquear en producción y opcionalmente en staging

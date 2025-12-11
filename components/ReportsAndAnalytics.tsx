@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useSession } from '@supabase/auth-helpers-react'
+import { useSupabaseSession } from '../lib/hooks/useSession'
 import { useCompanyContext } from '../lib/useCompanyContext'
 import { Button } from './ui/button'
 import { Card } from './ui/card'
@@ -65,7 +65,7 @@ interface AttendanceTrend {
 }
 
 export default function ReportsAndAnalytics() {
-  const session = useSession()
+  const { session } = useSupabaseSession()
   const { companyId, loading: companyLoading } = useCompanyContext()
   
   // Debug logging para verificar el companyId
