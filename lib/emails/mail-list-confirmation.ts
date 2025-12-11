@@ -57,7 +57,7 @@ El equipo de Humano SISU`,
           </p>
           
           <p style="color: #666; line-height: 1.6;">
-            Para confirmar tu suscripción y comenzar a recibir nuestras actualizaciones, 
+            Para confirmar tu suscripción y comenzar a recibir nuestras actualizaciones directamente en tu correo, 
             haz clic en el botón de abajo:
           </p>
           
@@ -86,8 +86,9 @@ El equipo de Humano SISU`,
           </div>
           
           <p style="color: #666; font-size: 14px; margin-top: 30px;">
+            Sin spam. Solo contenido valioso para tu empresa.<br>
             ¿Preguntas? Responde este email o contáctanos.<br>
-            ¡Bienvenido a la comunidad Humano SISU!
+            <strong>¡Bienvenido a la comunidad Humano SISU!</strong>
           </p>
         </div>
         

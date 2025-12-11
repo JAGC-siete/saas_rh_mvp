@@ -76,7 +76,10 @@ export default function MailListConfirmPage() {
                   ¡Suscripción Confirmada!
                 </h1>
                 <p className="text-brand-200/90 text-lg mb-6">
-                  Gracias por confirmar tu suscripción. Ahora recibirás nuestras actualizaciones y promociones exclusivas.
+                  ¡Perfecto! Tu suscripción ha sido confirmada. Ahora recibirás nuestras actualizaciones sobre nuevas funcionalidades, consejos de recursos humanos y promociones exclusivas directamente en tu correo.
+                </p>
+                <p className="text-brand-200/70 text-sm mb-6">
+                  Sin spam. Solo contenido valioso para tu empresa.
                 </p>
                 <div className="space-y-4">
                   <Link href="/">

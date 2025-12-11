@@ -52,7 +52,7 @@ export default function MailListSubscription({ source = 'landing', className = '
 
       if (response.ok && data.success) {
         setStatus('success')
-        setMessage(data.message || 'Gracias por tu interés. Revisa tu correo para confirmar tu suscripción.')
+        setMessage('¡Perfecto! Revisa tu correo para confirmar tu suscripción.')
         setEmail('')
       } else {
         setStatus('error')
@@ -117,7 +117,7 @@ export default function MailListSubscription({ source = 'landing', className = '
         {status === 'idle' && (
           <div className="text-center">
             <p className="text-xs sm:text-sm text-brand-200/60">
-              Recibe actualizaciones y promociones exclusivas
+              Sin spam. Solo contenido valioso para tu empresa.
             </p>
           </div>
         )}

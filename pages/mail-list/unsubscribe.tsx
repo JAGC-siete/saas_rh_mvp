@@ -79,10 +79,10 @@ export default function MailListUnsubscribePage() {
                   Te has dado de baja exitosamente
                 </h1>
                 <p className="text-brand-200/90 text-lg mb-6">
-                  Lamentamos verte partir. Ya no recibirás más emails de nuestra lista de correo.
+                  Tu solicitud de baja ha sido procesada exitosamente. Ya no recibirás más emails de nuestra lista de correo.
                 </p>
                 <p className="text-brand-200/70 text-sm mb-8">
-                  Si cambias de opinión, siempre puedes volver a suscribirte más adelante.
+                  Si cambias de opinión, siempre puedes volver a suscribirte cuando quieras.
                 </p>
                 <div className="space-y-4">
                   <Link href="/">
@@ -124,8 +124,11 @@ export default function MailListUnsubscribePage() {
                 <h1 className="text-2xl sm:text-3xl font-bold text-white mb-4">
                   Darse de Baja
                 </h1>
-                <p className="text-brand-200/90 text-lg mb-8">
+                <p className="text-brand-200/90 text-lg mb-4">
                   Si recibiste este enlace por error o necesitas ayuda, contáctanos directamente.
+                </p>
+                <p className="text-brand-200/70 text-sm mb-8">
+                  O simplemente ignora este mensaje si no deseas darte de baja.
                 </p>
                 <div className="space-y-6">
                   <Link href="/">
