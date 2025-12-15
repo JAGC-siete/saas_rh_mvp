@@ -1,58 +1,49 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '../../../lib/supabase/server'
 import { randomBytes } from 'crypto'
 import { withRateLimit } from '../../../lib/security/rate-limiting'
 import { sendMailListConfirmationEmail } from '../../../lib/emails/mail-list-confirmation'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-if (!supabaseUrl || !supabaseServiceRoleKey) {
-  throw new Error('Supabase URL and service role key are required.')
-}
-
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey)
+import { createSuccessResponse, createErrorResponse, createValidationErrorResponse } from '../../../lib/security/api-responses'
+import { logger } from '../../../lib/logger'
 
 export default withRateLimit('general')(handler)
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method Not Allowed' })
+    return res.status(405).json(createErrorResponse('Method Not Allowed', 'METHOD_NOT_ALLOWED'))
   }
 
   const { email, source } = req.body
 
-  // Validar email
+  // Validación estricta de email
   if (!email || typeof email !== 'string') {
-    return res.status(400).json({ error: 'El email es requerido.' })
+    return res.status(400).json(createValidationErrorResponse({ 
+      email: 'El email es requerido.' 
+    }))
   }
 
-  // Validar formato de email
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  if (!emailRegex.test(email.trim())) {
-    return res.status(400).json({ error: 'Formato de email inválido.' })
-  }
-
   const normalizedEmail = email.trim().toLowerCase()
 
+  if (!emailRegex.test(normalizedEmail)) {
+    return res.status(400).json(createValidationErrorResponse({ 
+      email: 'Formato de email inválido.' 
+    }))
+  }
+
+  // Validar longitud
+  if (normalizedEmail.length > 255 || normalizedEmail.length < 3) {
+    return res.status(400).json(createValidationErrorResponse({ 
+      email: 'El email debe tener entre 3 y 255 caracteres.' 
+    }))
+  }
+
+  // Usar cliente anónimo - RLS hará el enforcement
+  const supabase = createClient(req, res)
+
   try {
-    // Verificar si el email ya existe
-    const { data: existing } = await supabaseAdmin
-      .from('mail_list_subscriptions')
-      .select('id, status')
-      .eq('email', normalizedEmail)
-      .single()
-
-    // Si ya existe y está confirmado, retornar éxito (no exponer que existe)
-    if (existing && existing.status === 'confirmed') {
-      return res.status(200).json({ 
-        success: true, 
-        message: 'Gracias por tu interés. Revisa tu correo para confirmar tu suscripción.' 
-      })
-    }
-
-    // Si existe pero está pendiente o unsubscribed, generar nuevo token y actualizar
-    let confirmationToken
+    // Generar token único
+    let confirmationToken: string
     let attempts = 0
     const maxAttempts = 10
 
@@ -61,58 +52,78 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       attempts++
 
       // Verificar que el token no existe (muy poco probable pero por seguridad)
-      const { data: tokenExists } = await supabaseAdmin
+      const { data: tokenExists } = await supabase
         .from('mail_list_subscriptions')
         .select('id')
         .eq('confirmation_token', confirmationToken)
-        .single()
+        .maybeSingle()
 
       if (!tokenExists) break
     } while (attempts < maxAttempts)
 
     if (attempts >= maxAttempts) {
-      console.error('Error generando token único después de múltiples intentos')
-      return res.status(500).json({ error: 'Error interno del servidor.' })
+      logger.error('Failed to generate unique confirmation token after multiple attempts')
+      return res.status(500).json(createErrorResponse(
+        'Error interno del servidor.',
+        'TOKEN_GENERATION_FAILED'
+      ))
     }
 
-    // Si existe registro previo, actualizar; si no, crear nuevo
-    if (existing) {
-      const { error: updateError } = await supabaseAdmin
-        .from('mail_list_subscriptions')
-        .update({
-          confirmation_token: confirmationToken,
-          status: 'pending',
-          source: source || 'landing',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', existing.id)
+    // Intentar insertar nuevo registro
+    // RLS policy permitirá INSERT solo con email válido y token
+    const { data: newSubscription, error: insertError } = await supabase
+      .from('mail_list_subscriptions')
+      .insert({
+        email: normalizedEmail,
+        confirmation_token: confirmationToken,
+        status: 'pending',
+        source: source || 'landing',
+      })
+      .select('id, status')
+      .single()
 
-      if (updateError) {
-        console.error('Error actualizando suscripción:', updateError)
-        return res.status(500).json({ error: 'Error procesando tu solicitud.' })
-      }
-    } else {
-      // Crear nuevo registro
-      const { error: insertError } = await supabaseAdmin
-        .from('mail_list_subscriptions')
-        .insert({
-          email: normalizedEmail,
-          confirmation_token: confirmationToken,
-          status: 'pending',
-          source: source || 'landing',
-        })
+    // Si hay error de duplicado o ya existe, tratar de actualizar
+    if (insertError) {
+      if (insertError.code === '23505') {
+        // Duplicado - intentar actualizar con nuevo token
+        const { data: existing, error: updateError } = await supabase
+          .from('mail_list_subscriptions')
+          .update({
+            confirmation_token: confirmationToken,
+            status: 'pending',
+            source: source || 'landing',
+            updated_at: new Date().toISOString()
+          })
+          .eq('email', normalizedEmail)
+          .select('id, status')
+          .single()
 
-      if (insertError) {
-        // Si es error de duplicado, retornar éxito (no exponer)
-        if (insertError.code === '23505') {
-          return res.status(200).json({ 
-            success: true, 
-            message: 'Gracias por tu interés. Revisa tu correo para confirmar tu suscripción.' 
+        if (updateError) {
+          // Si ya está confirmado o hay otro error, retornar éxito (no exponer estado)
+          logger.debug('Subscription update failed, returning success for security', {
+            email: normalizedEmail,
+            error: updateError.message
+          })
+        } else if (existing && existing.status === 'confirmed') {
+          // Ya confirmado - retornar éxito sin exponer
+          logger.debug('Subscription already confirmed, returning success', {
+            email: normalizedEmail
           })
         }
-        console.error('Error creando suscripción:', insertError)
-        return res.status(500).json({ error: 'Error procesando tu solicitud.' })
+      } else {
+        logger.error('Error creating mail list subscription', {
+          email: normalizedEmail,
+          error: insertError.message,
+          code: insertError.code
+        })
+        // Retornar éxito genérico por seguridad
       }
+    } else if (newSubscription) {
+      logger.info('Mail list subscription created', {
+        subscriptionId: newSubscription.id,
+        email: normalizedEmail,
+        source: source || 'landing'
+      })
     }
 
     // Enviar email de confirmación
@@ -120,23 +131,45 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net'
       const confirmUrl = `${siteUrl}/api/mail-list/confirm?token=${confirmationToken}`
       
-      await sendMailListConfirmationEmail({
-        to: normalizedEmail,
-        confirmUrl,
+      // Verificar que RESEND_API_KEY esté configurado antes de intentar enviar
+      if (!process.env.RESEND_API_KEY) {
+        logger.warn('RESEND_API_KEY not configured - confirmation email will not be sent', {
+          email: normalizedEmail
+        })
+        // Continuar sin fallar la request
+      } else {
+        await sendMailListConfirmationEmail({
+          to: normalizedEmail,
+          confirmUrl,
+        })
+        logger.info('Confirmation email sent', {
+          email: normalizedEmail
+        })
+      }
+    } catch (emailError: any) {
+      logger.error('Error sending confirmation email', {
+        error: emailError?.message || emailError,
+        errorCode: emailError?.errorCode,
+        email: normalizedEmail
       })
-    } catch (emailError) {
-      console.warn('Error enviando email de confirmación:', emailError)
-      // No fallar la request si el email falla, pero loguear
+      // No fallar la request si el email falla, pero loguear detalladamente
     }
 
     // Retornar éxito siempre (por seguridad, no exponer si email existe)
-    return res.status(200).json({ 
-      success: true, 
-      message: 'Gracias por tu interés. Revisa tu correo para confirmar tu suscripción.' 
-    })
+    return res.status(200).json(createSuccessResponse({
+      message: 'Gracias por tu interés. Revisa tu correo para confirmar tu suscripción.'
+    }))
   } catch (error: any) {
-    console.error('Error en suscripción a lista de correo:', error)
-    return res.status(500).json({ error: 'Error procesando tu solicitud.' })
+    logger.error('Unexpected error in mail list subscription', {
+      error: error?.message || error,
+      stack: error?.stack,
+      email: email,
+      source: source
+    })
+    return res.status(500).json(createErrorResponse(
+      'Error procesando tu solicitud.',
+      'INTERNAL_ERROR'
+    ))
   }
 }
 

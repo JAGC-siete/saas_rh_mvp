@@ -10,7 +10,16 @@ export async function sendMailListConfirmationEmail(data: MailListConfirmationEm
   // Get default config since this is a public subscription
   const config = await notificationManager.getConfigForCompany('default')
   if (!config) {
-    throw new Error('Email configuration not found')
+    const errorMsg = 'Email configuration not found - RESEND_API_KEY may be missing'
+    console.error('❌', errorMsg)
+    throw new Error(errorMsg)
+  }
+
+  // Validate that email provider is configured
+  if (!config.emailProvider?.apiKey) {
+    const errorMsg = 'RESEND_API_KEY not configured in email provider'
+    console.error('❌', errorMsg)
+    throw new Error(errorMsg)
   }
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net'
