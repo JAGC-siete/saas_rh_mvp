@@ -60,12 +60,13 @@ export default function KpiBarsChart({ kpis, loading = false }: KpiBarsChartProp
             axisLine={false}
           />
           <Tooltip 
-            formatter={(value: number, _name: string, entry: any) => {
+            formatter={(value: any, _name: any, entry: any) => {
               // In Recharts, Tooltip formatter's 'name' can be the display name (e.g. 'Presentes').
               // Use the dataKey from entry to map labels reliably and avoid mismatches.
+              const numValue = typeof value === 'number' ? value : 0
               const key = entry && entry.dataKey ? String(entry.dataKey) : ''
               const label = key === 'presentes' ? 'Presentes' : key === 'tardes' ? 'Tardes' : 'Ausentes'
-              return [value, label]
+              return [numValue, label]
             }}
             labelFormatter={() => 'Distribución de asistencia'}
             contentStyle={{
