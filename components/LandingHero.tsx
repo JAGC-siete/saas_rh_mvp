@@ -30,45 +30,23 @@ export default function LandingHero() {
 
              {/* Información debajo del carrusel */}
              <div className="space-y-4 sm:space-y-6">
-               <p className="text-base sm:text-lg text-brand-200/90 px-2">
-                 Generá planilla en 5 minutos, con IHSS, RAP e ISR listos y vouchers enviados por Mail/WhatsApp.
+               <p className="text-base sm:text-lg md:text-xl text-brand-200/90 px-2 max-w-3xl mx-auto">
+                 El sistema que registra entradas y salidas, calcula IHSS, RAP e ISR, y genera tu planilla y comprobantes sin Excel, sin errores y sin perder tu domingo.
                </p>
 
-               <ul className="text-brand-200/80 space-y-2 max-w-md mx-auto">
-                 <li className="flex items-center gap-2">
-                   <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                   Cumplimiento STSS desde el día uno.
-                 </li>
-                 <li className="flex items-center gap-2">
-                   <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                   De Excel caótico a PDF impecable en minutos.
-                 </li>
-                 <li className="flex items-center gap-2">
-                   <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                   Ahorro de 6 horas por quincena.
-                 </li>
-               </ul>
-
-               {/* Email CTA Section */}
-               <div className="space-y-3 sm:space-y-4">
-                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 max-w-md mx-auto px-2">
-                   <input
-                     type="email"
-                     placeholder="Tu email"
-                     className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-brand-200/70 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent text-sm sm:text-base"
-                   />
-                   <button
-                     onClick={() => window.location.href = '/activar'}
-                     className="inline-flex items-center justify-center rounded-xl px-5 sm:px-6 py-2.5 sm:py-3 text-base sm:text-lg font-semibold shadow-sm bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all duration-300 hover:-translate-y-1 whitespace-nowrap"
-                     data-analytics="cta_hero_click"
-                   >
-                     Probalo HOY
-                   </button>
-                 </div>
+               {/* CTA único */}
+               <div className="space-y-3 sm:space-y-4 pt-4">
+                 <button
+                   onClick={() => window.location.href = '/activar'}
+                   className="inline-flex items-center justify-center rounded-xl px-8 sm:px-10 py-3 sm:py-4 text-lg sm:text-xl font-bold shadow-lg bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all duration-300 hover:-translate-y-1 whitespace-nowrap"
+                   data-analytics="cta_hero_click"
+                 >
+                   Activar ahora — Prueba gratis 30 días
+                 </button>
                  
                  {/* Features text below CTA */}
                  <div className="text-xs sm:text-sm text-brand-200/60 px-2">
-                   <p>Usalo gratis 30 días. Empleados ilimitados.</p>
+                   <p>Sin tarjeta. Sin compromiso. Empleados ilimitados.</p>
                  </div>
                </div>
              </div>

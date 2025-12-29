@@ -99,7 +99,7 @@ export default function MainHeader({ enableScrollEffect = false, fixed = true }:
                   }}
                   className="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 shadow-lg shadow-black/20 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap min-w-[160px] text-center"
                 >
-                  Activar demostración gratuita
+                  Activar ahora — Gratis 30 días
                 </button>
                 <Link
                   href="/app/login"
@@ -175,7 +175,7 @@ export default function MainHeader({ enableScrollEffect = false, fixed = true }:
                 }}
                 className="bg-green-600 hover:bg-green-700 text-white w-full text-center block py-2 px-4 rounded-lg transition-colors mb-2"
               >
-                Activar demostración gratuita
+                Activar ahora — Gratis 30 días
               </button>
               <Link
                 href="/app/login"
