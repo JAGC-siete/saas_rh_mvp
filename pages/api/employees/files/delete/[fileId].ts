@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createAdminClient } from '../../../../lib/supabase/server'
-import { requireCompanyAccess } from '../../../../lib/auth/api-auth-fixed'
-import { logger } from '../../../../lib/logger'
+import { createAdminClient } from '../../../../../lib/supabase/server'
+import { requireCompanyAccess } from '../../../../../lib/auth/api-auth-fixed'
+import { logger } from '../../../../../lib/logger'
 
 interface DeleteFileResponse {
   success: boolean
