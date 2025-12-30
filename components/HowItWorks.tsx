@@ -3,20 +3,24 @@ import { CheckCircleIcon } from '@heroicons/react/24/outline'
 export default function HowItWorks() {
   const steps = [
     { 
-      title: 'El biométrico registra asistencia a la hora exacta', 
-      desc: 'Captura entradas y salidas y genera nómina con deducciones legales y comprobantes, sin errores y sin perder tu domingo cada ciclo de pago.' 
+      title: '⏱️ Tus empleados marcan asistencia con PIN o QR', 
+      desc: 'Pulso-Loboral guarda registros, detecta patrones y pide justificación.' 
     },
     { 
-      title: 'Las deducciones se calculan automáticamente', 
-      desc: 'El sistema procesa tardanzas, ausencias y horas extra sin intervención manual. IHSS, RAP e ISR calculados al centavo.' 
+      title: '🤖 Pulso-Laboral hace la magia', 
+      desc: 'Convierte horas, ausencias y extras en planillas legales listas con IHSS, RAP e ISR.' 
     },
     { 
-      title: 'La nómina se genera sin intervención manual', 
-      desc: 'IHSS, RAP e ISR calculados al centavo. Todo exportable en Excel y PDF en segundos.' 
+      title: '📑 Nómina-PRO genera la planilla y comprobantes 24/7', 
+      desc: 'Un PDF para tu gerencia y comprobantes automáticos en email o WhatsApp para cada empleado.' 
     },
     { 
-      title: 'Los comprobantes disponibles al instante', 
-      desc: 'Un PDF para gerencia y comprobantes automáticos por email o WhatsApp para cada empleado.' 
+      title: '📊 Tenés control total en tiempo real', 
+      desc: 'Dashboard con métricas de asistencia, costos y desempeño.' 
+    },
+    { 
+      title: '✅ Cumplimiento con la ley hondureña', 
+      desc: 'Olvidate de cálculos manuales y deducciones: seguro y escalable.' 
     }
   ]
 
@@ -28,12 +32,14 @@ export default function HowItWorks() {
 
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-8">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white leading-tight mb-4 sm:mb-6 px-2">
-            Al digitalizar el control de asistencia con un biométrico.
+          <div className="inline-block bg-gray-800/50 text-gray-300 text-sm font-medium px-4 py-2 rounded-full mb-6">
+            CÓMO FUNCIONA
+          </div>
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight mb-6 sm:mb-8 px-2">
+            <span className="text-white block sm:inline">Automatizá el 80% de las tareas de tu Recursos Humanos</span>
+            <span className="hidden sm:inline"> </span>
+            <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">con tus robots de RRHH 100% hondureños</span>
           </h2>
-          <p className="text-base sm:text-lg md:text-xl text-brand-300/90 max-w-3xl mx-auto px-2 mb-8">
-            La puntualidad deja de ser un sueño y la nómina pasa a ser un proceso automático.
-          </p>
         </div>
 
         <div className="bg-gray-900/50 border border-green-500/30 rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 max-w-4xl mx-auto">

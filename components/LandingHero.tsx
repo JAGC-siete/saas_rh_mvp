@@ -24,31 +24,52 @@ export default function LandingHero() {
          <div className="glass-strong rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 lg:p-12 backdrop-blur-sm border border-white/20 shadow-2xl">
            <div className="text-center space-y-8">
              {/* Carrusel de imágenes del sistema - Centrado */}
-             {/* <div className="relative max-w-4xl mx-auto">
+             <div className="relative max-w-4xl mx-auto">
                <ImageCarousel />
-             </div> */}
+             </div>
 
              {/* Información debajo del carrusel */}
              <div className="space-y-4 sm:space-y-6">
-               {/* Subtítulo */}
-               <p className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-semibold text-brand-200/90 leading-tight px-2 max-w-4xl mx-auto">
-                 Digitaliza el registro de asistencia. Cuando la puntualidad se mide, la puntualidad aparece sola y la nómina deja de ser un problema.
+               <p className="text-base sm:text-lg text-brand-200/90 px-2">
+                 Generá planilla en 5 minutos, con IHSS, RAP e ISR listos y vouchers enviados por Mail/WhatsApp.
                </p>
 
-               {/* Apoyo - una sola línea */}
-               <p className="text-base sm:text-lg md:text-xl text-brand-300/80 px-2 max-w-3xl mx-auto">
-                 Entradas y salidas exactas + IHSS, RAP e ISR parametrizado + nómina al instante.
-               </p>
+               <ul className="text-brand-200/80 space-y-2 max-w-md mx-auto">
+                 <li className="flex items-center gap-2">
+                   <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                   Cumplimiento STSS desde el día uno.
+                 </li>
+                 <li className="flex items-center gap-2">
+                   <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                   De Excel caótico a PDF impecable en minutos.
+                 </li>
+                 <li className="flex items-center gap-2">
+                   <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                   Ahorro de 6 horas por quincena.
+                 </li>
+               </ul>
 
-               {/* CTA único */}
-               <div className="space-y-3 sm:space-y-4 pt-4">
-                 <button
-                   onClick={() => window.location.href = '/activar'}
-                   className="inline-flex items-center justify-center rounded-xl px-8 sm:px-10 py-3 sm:py-4 text-lg sm:text-xl font-bold shadow-lg bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all duration-300 hover:-translate-y-1 whitespace-nowrap"
-                   data-analytics="cta_hero_click"
-                 >
-                   Activar sistema — 30 días gratis
-                 </button>
+               {/* Email CTA Section */}
+               <div className="space-y-3 sm:space-y-4">
+                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 max-w-md mx-auto px-2">
+                   <input
+                     type="email"
+                     placeholder="Tu email"
+                     className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-brand-200/70 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent text-sm sm:text-base"
+                   />
+                   <button
+                     onClick={() => window.location.href = '/activar'}
+                     className="inline-flex items-center justify-center rounded-xl px-5 sm:px-6 py-2.5 sm:py-3 text-base sm:text-lg font-semibold shadow-sm bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all duration-300 hover:-translate-y-1 whitespace-nowrap"
+                     data-analytics="cta_hero_click"
+                   >
+                     Probalo HOY
+                   </button>
+                 </div>
+                 
+                 {/* Features text below CTA */}
+                 <div className="text-xs sm:text-sm text-brand-200/60 px-2">
+                   <p>Usalo gratis 30 días. Empleados ilimitados.</p>
+                 </div>
                </div>
              </div>
            </div>
