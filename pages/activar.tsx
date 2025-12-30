@@ -308,7 +308,7 @@ export default function ActivarPage() {
                 <CpuChipIcon className="w-16 h-16 text-cyan-400 mx-auto drop-shadow-lg" />
               </motion.div>
               <h1 className="text-4xl md:text-5xl font-bold text-white mb-3 leading-tight">
-                Deja que los robots trabajen por vos.
+                Automatizá el 80% de las tareas de tu Recursos Humanos con un dispositivo biometrico de RRHH 100% hondureño
               </h1>
               <p className="text-lg md:text-xl text-cyan-100/90 mb-6">Gratis por 30 días. Lista en segundos. Sin tarjeta. Sin compromiso.</p>
               {/* Feature pills */}
