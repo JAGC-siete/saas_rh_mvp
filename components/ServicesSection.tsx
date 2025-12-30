@@ -15,7 +15,7 @@ export default function ServicesSection() {
 
       <header className="max-w-3xl mb-8 sm:mb-10 mx-auto text-center px-2">
         <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight">
-          <span className="text-white block sm:inline">Presentamos: Tus robots de</span>
+          <span className="text-white block sm:inline">Presentamos: El sistema todo en uno de</span>
           <span className="hidden sm:inline"> </span>
           <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">Recursos Humanos</span>
         </h2>
@@ -27,9 +27,9 @@ export default function ServicesSection() {
       {/* El Libro Rojo - Asistencia */}
       <div id="libro-rojo" className="mb-12 sm:mb-16">
         <h3 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight mb-4 sm:mb-6 text-center px-2">
-          <span className="text-white block sm:inline">Pulso</span>
+          <span className="text-white block sm:inline">Dispositivo</span>
           <span className="hidden sm:inline"> </span>
-          <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">Laboral</span>
+          <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">biométrico</span>
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           {/* SOPORTE: Asistencia */}
@@ -77,9 +77,9 @@ export default function ServicesSection() {
       {/* El Planillero - Nómina */}
       <div id="planillero" className="mb-12 sm:mb-16">
         <h3 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight mb-4 sm:mb-6 text-center px-2">
-          <span className="text-white block sm:inline">Nomina</span>
+          <span className="text-white block sm:inline">Software de</span>
           <span className="hidden sm:inline"> </span>
-          <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">PRO</span>
+          <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">Recursos Humanos</span>
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           {/* SOPORTE: Nómina sin errores */}
