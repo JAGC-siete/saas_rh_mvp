@@ -101,3 +101,33 @@ scripts/
 
 # Services (separate microservices, not part of Next.js build)
 services/
+
+# Large SDK files
+WebSDK V3.3.1/
+Hikvision/
+Proxy/
+
+# Import data (not needed in production)
+import-data/
+
+# Kubernetes configs (not needed in production)
+k8s/
+
+# Large documentation files
+*.md
+!README.md
+!CHANGELOG.md
+
+# Analysis and diagnostic files
+ANALISIS_*.md
+DIAGNOSTIC_*.md
+DIAGNOSTICO_*.md
+FIX_*.md
+IMPLEMENTATION_*.md
+PASOS_*.md
+PAYROLL_*.md
+PLAN_*.md
+SOLUCION_*.md
+STAGING_*.md
+DEPLOYMENT*.md
+DOCUMENTATION.md
