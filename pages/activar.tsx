@@ -288,49 +288,52 @@ export default function ActivarPage() {
 
       {/* Header */}
       <MainHeader enableScrollEffect={false} fixed={true} />
-      <main className="flex-grow flex items-center justify-center p-4 pt-24 relative z-10">
-        <Card className="w-full max-w-md bg-slate-800/40 backdrop-blur-xl border-white/20 shadow-2xl relative overflow-hidden">
+      <main className="flex-grow flex items-center justify-center p-4 sm:p-6 lg:p-8 pt-24 relative z-10">
+        <Card className="w-full max-w-6xl bg-slate-800/40 backdrop-blur-xl border-white/20 shadow-2xl relative overflow-hidden">
           {/* Glowing border effect */}
           <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-purple-500/20 opacity-50 blur-xl"></div>
-          <CardContent className="p-8 relative z-10">
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="text-center mb-8"
-            >
-              <motion.div
-                initial={{ scale: 0.8, rotate: -10 }}
-                animate={{ scale: 1, rotate: 0 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-                className="inline-block mb-4"
+          <CardContent className="p-6 sm:p-8 lg:p-12 relative z-10">
+            <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-start">
+              {/* Left Column - Header Content */}
+              <motion.div 
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5 }}
+                className="text-center lg:text-left"
               >
-                <CpuChipIcon className="w-16 h-16 text-cyan-400 mx-auto drop-shadow-lg" />
+                <motion.div
+                  initial={{ scale: 0.8, rotate: -10 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ duration: 0.5, delay: 0.2 }}
+                  className="inline-block mb-4 lg:mb-6"
+                >
+                  <CpuChipIcon className="w-16 h-16 lg:w-20 lg:h-20 text-cyan-400 mx-auto lg:mx-0 drop-shadow-lg" />
+                </motion.div>
+                <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-white mb-4 lg:mb-6 leading-tight">
+                  Automatizá el 80% de las tareas de tu Recursos Humanos con un dispositivo biometrico de RRHH 100% hondureño
+                </h1>
+                <p className="text-lg md:text-xl text-cyan-100/90 mb-6 lg:mb-8">Gratis por 30 días. Lista en segundos. Sin tarjeta. Sin compromiso.</p>
+                {/* Feature pills */}
+                <div className="flex flex-wrap justify-center lg:justify-start gap-2 mb-6 lg:mb-8">
+                  <span className="px-3 py-1 bg-green-500/20 text-green-300 text-xs sm:text-sm rounded-full border border-green-500/30">
+                    ⚡ Setup instantáneo
+                  </span>
+                  <span className="px-3 py-1 bg-blue-500/20 text-blue-300 text-xs sm:text-sm rounded-full border border-blue-500/30">
+                    🔒 100% seguro
+                  </span>
+                  <span className="px-3 py-1 bg-purple-500/20 text-purple-300 text-xs sm:text-sm rounded-full border border-purple-500/30">
+                    🚀 Sin código
+                  </span>
+                </div>
               </motion.div>
-              <h1 className="text-4xl md:text-5xl font-bold text-white mb-3 leading-tight">
-                Automatizá el 80% de las tareas de tu Recursos Humanos con un dispositivo biometrico de RRHH 100% hondureño
-              </h1>
-              <p className="text-lg md:text-xl text-cyan-100/90 mb-6">Gratis por 30 días. Lista en segundos. Sin tarjeta. Sin compromiso.</p>
-              {/* Feature pills */}
-              <div className="flex flex-wrap justify-center gap-2 mb-6">
-                <span className="px-3 py-1 bg-green-500/20 text-green-300 text-xs rounded-full border border-green-500/30">
-                  ⚡ Setup instantáneo
-                </span>
-                <span className="px-3 py-1 bg-blue-500/20 text-blue-300 text-xs rounded-full border border-blue-500/30">
-                  🔒 100% seguro
-                </span>
-                <span className="px-3 py-1 bg-purple-500/20 text-purple-300 text-xs rounded-full border border-purple-500/30">
-                  🚀 Sin código
-                </span>
-              </div>
-            </motion.div>
 
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.3 }}
-              className="space-y-6"
-            >
+              {/* Right Column - Form */}
+              <motion.div 
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+                className="space-y-6"
+              >
               <div className="border-t border-white/10 pt-6">
                 <CardTitle className="text-xl md:text-2xl font-bold text-white mb-3 flex items-center gap-2">
                   <span className="text-cyan-400">⚡</span>
@@ -545,9 +548,10 @@ export default function ActivarPage() {
                   </p>
                 )}
               </div>
-            </motion.div>
-            </CardContent>
-          </Card>
+              </motion.div>
+            </div>
+          </CardContent>
+        </Card>
       </main>
     </div>
   )
