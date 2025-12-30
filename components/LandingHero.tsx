@@ -30,8 +30,10 @@ export default function LandingHero() {
 
              {/* Información debajo del carrusel */}
              <div className="space-y-4 sm:space-y-6">
-               <p className="text-base sm:text-lg md:text-xl text-brand-200/90 px-2 max-w-3xl mx-auto">
-                 El sistema que registra entradas y salidas, calcula IHSS, RAP e ISR, y genera tu planilla y comprobantes sin Excel, sin errores y sin perder tu domingo.
+               <p className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight px-2 max-w-5xl mx-auto">
+                 <span className="bg-gradient-to-r from-white via-brand-200 to-sky-300 bg-clip-text text-transparent drop-shadow-lg">
+                   El único sistema que registra entradas y salidas, calcula IHSS, RAP e ISR, y genera nómina con deducciones legales y comprobantes, sin errores y sin perder tu domingo cada ciclo de pago.
+                 </span>
                </p>
 
                {/* CTA único */}
