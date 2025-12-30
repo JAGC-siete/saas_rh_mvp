@@ -90,17 +90,17 @@ export default function LandingPage() {
       {/* Mail List Subscription Section */}
       <MailListSection />
 
-      {/* Social Proof Section - Comentada temporalmente */}
-      {/* <section id="servicios" className="py-16 bg-white/5">
-        <div className="max-w-6xl mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center text-white mb-12">
+      {/* Social Proof Section */}
+      <section id="prueba-social" className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 max-w-7xl mx-auto">
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center text-white mb-6 sm:mb-8 px-2">
             Empresas que ya automatizaron su RH
           </h2>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-6 sm:gap-8">
             {[
               { name: 'Felix Garcia', company: 'Tony\'s Mar Restaurant', employees: '40 empleados', quote: 'Ya no pierdo domingos haciendo planilla. 4 horas ahora son 4 minutos.' },
-              { name: 'Gustavo Argueta', company: 'Humano SISU', employees: '37 empleados', quote: 'Antes llevábamos la asistencia en un libro rojo, ahora tenemos dashboard interactivo.' },
+              { name: 'Nancy Urrutia', company: 'PROHALCA', employees: '37 empleados', quote: 'Habiamos contratado un sistema de asistencia que no hacia planilla, ahora tenemos dashboard interactivo.' },
               { name: 'Luis Diego Maradiaga', company: 'AFI & Asociados', employees: '15 empleados', quote: 'Cero errores en IHSS desde que lo uso. Mi contador está feliz.' }
             ].map((testimonial, i) => (
               <div key={`testimonial-${i}`} className="bg-white/5 border border-white/10 rounded-xl p-6">
@@ -121,7 +121,7 @@ export default function LandingPage() {
             ))}
           </div>
         </div>
-      </section> */}
+      </section>
 
       {/* Shared Cloud Background */}
       <CloudBackground />
