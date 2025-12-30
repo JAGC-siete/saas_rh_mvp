@@ -24,9 +24,9 @@ export default function LandingHero() {
          <div className="glass-strong rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 lg:p-12 backdrop-blur-sm border border-white/20 shadow-2xl">
            <div className="text-center space-y-8">
              {/* Carrusel de imágenes del sistema - Centrado */}
-             <div className="relative max-w-4xl mx-auto">
+             {/* <div className="relative max-w-4xl mx-auto">
                <ImageCarousel />
-             </div>
+             </div> */}
 
              {/* Información debajo del carrusel */}
              <div className="space-y-4 sm:space-y-6">
