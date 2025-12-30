@@ -65,7 +65,7 @@ export default function LandingPage() {
       <section className="relative py-12 sm:py-16 md:py-20 px-4 sm:px-6 max-w-7xl mx-auto">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white text-center mb-8 sm:mb-12 px-2">
-            Lo que hoy te está pasando
+            La realidad que muchos profesionales enfrentan
           </h2>
           
           <div className="bg-red-900/20 border border-red-500/30 rounded-xl sm:rounded-2xl p-6 sm:p-8 md:p-10">
@@ -73,19 +73,19 @@ export default function LandingPage() {
               <li className="flex items-start gap-3 sm:gap-4">
                 <span className="text-red-400 text-xl sm:text-2xl mt-1">•</span>
                 <p className="text-base sm:text-lg text-red-100/90 flex-1">
-                  Cada quincena repites el mismo infierno.
+                  Cada quincena enfrentando el mismo infierno, ahogado en tareas repetitivas
                 </p>
               </li>
               <li className="flex items-start gap-3 sm:gap-4">
                 <span className="text-red-400 text-xl sm:text-2xl mt-1">•</span>
                 <p className="text-base sm:text-lg text-red-100/90 flex-1">
-                  Excel roto, fórmulas dudosas, horas perdidas.
+                  Registros manuales. Copy paste infinitos. Hojas de Excel por departamento, Elaborando Fórmulas kilométricas hasta altas horas de la noche.
                 </p>
               </li>
               <li className="flex items-start gap-3 sm:gap-4">
                 <span className="text-red-400 text-xl sm:text-2xl mt-1">•</span>
                 <p className="text-base sm:text-lg text-red-100/90 flex-1">
-                  Miedo constante a errores, reclamos o multas.
+                  Miedo constante a enfermarte, a cometer errores, recibir reclamos o multas.
                 </p>
               </li>
               <li className="flex items-start gap-3 sm:gap-4">
