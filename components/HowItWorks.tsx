@@ -3,19 +3,19 @@ import { CheckCircleIcon } from '@heroicons/react/24/outline'
 export default function HowItWorks() {
   const steps = [
     { 
-      title: 'El biométrico registra asistencia', 
-      desc: 'captura entradas y salidas y genera nómina automáticamente exacta y sin errores.' 
+      title: 'El biométrico registra asistencia a la hora exacta', 
+      desc: 'Captura entradas y salidas y genera nómina con deducciones legales y comprobantes, sin errores y sin perder tu domingo cada ciclo de pago.' 
     },
     { 
-      title: 'Las horas se calculan automáticamente', 
-      desc: 'El sistema procesa tardanzas, ausencias y horas extra sin intervención manual.' 
+      title: 'Las deducciones se calculan automáticamente', 
+      desc: 'El sistema procesa tardanzas, ausencias y horas extra sin intervención manual. IHSS, RAP e ISR calculados al centavo.' 
     },
     { 
       title: 'La nómina se genera sin intervención manual', 
-      desc: 'IHSS, RAP e ISR calculados al centavo. Todo listo en segundos.' 
+      desc: 'IHSS, RAP e ISR calculados al centavo. Todo exportable en Excel y PDF en segundos.' 
     },
     { 
-      title: 'Los comprobantes salen listos en PDF', 
+      title: 'Los comprobantes disponibles al instante', 
       desc: 'Un PDF para gerencia y comprobantes automáticos por email o WhatsApp para cada empleado.' 
     }
   ]
