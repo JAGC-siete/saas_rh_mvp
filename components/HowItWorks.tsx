@@ -3,8 +3,8 @@ import { CheckCircleIcon } from '@heroicons/react/24/outline'
 export default function HowItWorks() {
   const steps = [
     { 
-      title: 'La asistencia se registra sola', 
-      desc: 'Sistema biométrico o digital que captura entradas y salidas automáticamente.' 
+      title: 'El biométrico registra asistencia', 
+      desc: 'captura entradas y salidas y genera nómina automáticamente exacta y sin errores.' 
     },
     { 
       title: 'Las horas se calculan automáticamente', 
@@ -29,10 +29,10 @@ export default function HowItWorks() {
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-8">
           <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white leading-tight mb-4 sm:mb-6 px-2">
-            Con Humano SISU
+            Al digitalizar el control de asistencia con un biométrico.
           </h2>
           <p className="text-base sm:text-lg md:text-xl text-brand-300/90 max-w-3xl mx-auto px-2 mb-8">
-            La planilla deja de ser un evento. Pasa a ser un proceso invisible.
+            La puntualidad deja de ser un sueño y la nómina pasa a ser un proceso automático.
           </p>
         </div>
 
