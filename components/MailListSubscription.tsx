@@ -117,7 +117,7 @@ export default function MailListSubscription({ source = 'landing', className = '
         {status === 'idle' && (
           <div className="text-center">
             <p className="text-xs sm:text-sm text-brand-200/60">
-              Sin spam. Solo contenido valioso para tu empresa.
+              No apto para sensibles.
             </p>
           </div>
         )}

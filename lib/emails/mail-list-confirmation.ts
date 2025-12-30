@@ -95,7 +95,7 @@ El equipo de Humano SISU`,
           </div>
           
           <p style="color: #666; font-size: 14px; margin-top: 30px;">
-            Sin spam. Solo contenido valioso para tu empresa.<br>
+            No apto para sensibles.<br>
             ¿Preguntas? Responde este email o contáctanos.<br>
             <strong>¡Bienvenido a la comunidad Humano SISU!</strong>
           </p>

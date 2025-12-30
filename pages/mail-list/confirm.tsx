@@ -79,7 +79,7 @@ export default function MailListConfirmPage() {
                   ¡Perfecto! Tu suscripción ha sido confirmada. Ahora recibirás nuestras actualizaciones sobre nuevas funcionalidades, consejos de recursos humanos y promociones exclusivas directamente en tu correo.
                 </p>
                 <p className="text-brand-200/70 text-sm mb-6">
-                  Sin spam. Solo contenido valioso para tu empresa.
+                  No apto para sensibles.
                 </p>
                 <div className="space-y-4">
                   <Link href="/">
