@@ -150,7 +150,7 @@ const nextConfig = {
           // Content Security Policy - Basic but effective
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://*.supabase.co https://*.supabase.com; frame-ancestors 'none';",
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://*.supabase.co https://*.supabase.com https://www.googletagmanager.com https://www.google-analytics.com; frame-ancestors 'none';",
           },
           // Permissions policy (restricts browser features)
           {
