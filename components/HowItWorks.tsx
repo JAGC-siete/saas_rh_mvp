@@ -3,15 +3,15 @@ import { CheckCircleIcon } from '@heroicons/react/24/outline'
 export default function HowItWorks() {
   const steps = [
     { 
-      title: '⏱️ Tus empleados marcan asistencia con PIN o QR', 
-      desc: 'Pulso-Loboral guarda registros, detecta patrones y pide justificación.' 
+      title: '⏱️ El personal registra su hora de entrada.', 
+      desc: 'El dispositivo guarda registros, detecta patrones y genera reportes.' 
     },
     { 
-      title: '🤖 Pulso-Laboral hace la magia', 
-      desc: 'Convierte horas, ausencias y extras en planillas legales listas con IHSS, RAP e ISR.' 
+      title: '🤖 El software hace la magia', 
+      desc: 'Convierte registros, en planillas con deducciones legales parametrizadas con IHSS, RAP e ISR.' 
     },
     { 
-      title: '📑 Nómina-PRO genera la planilla y comprobantes 24/7', 
+      title: '📑 El sistema genera la planilla y comprobantes instantáneos', 
       desc: 'Un PDF para tu gerencia y comprobantes automáticos en email o WhatsApp para cada empleado.' 
     },
     { 
@@ -19,8 +19,8 @@ export default function HowItWorks() {
       desc: 'Dashboard con métricas de asistencia, costos y desempeño.' 
     },
     { 
-      title: '✅ Cumplimiento con la ley hondureña', 
-      desc: 'Olvidate de cálculos manuales y deducciones: seguro y escalable.' 
+      title: '✅ Cumplimiento con la legislación local', 
+      desc: 'Olvidate de cálculos manuales y deducciones: parámetros actualizados año con año' 
     }
   ]
 
@@ -38,7 +38,7 @@ export default function HowItWorks() {
           <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight mb-6 sm:mb-8 px-2">
             <span className="text-white block sm:inline">Automatizá el 80% de las tareas de tu Recursos Humanos</span>
             <span className="hidden sm:inline"> </span>
-            <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">con tus robots de RRHH 100% hondureños</span>
+            <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">con un dispositivo biometrico de RRHH 100% hondureño</span>
           </h2>
         </div>
 
