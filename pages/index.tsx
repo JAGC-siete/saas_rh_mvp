@@ -48,9 +48,7 @@ export default function LandingPage() {
           {/* Hero Title - Centrado */}
           <div className="text-center mb-6 sm:mb-8 px-2">
             <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight sm:leading-tight">
-              <span className="text-white block sm:inline">Digitaliza el registro de asistencia</span>
-              <span className="hidden sm:inline"> </span>
-              <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">y olvídate de la nómina para siempre</span>
+              Lo que no se mide, no se mejora
             </h1>
           </div>
 

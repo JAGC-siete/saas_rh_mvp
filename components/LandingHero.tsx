@@ -30,10 +30,14 @@ export default function LandingHero() {
 
              {/* Información debajo del carrusel */}
              <div className="space-y-4 sm:space-y-6">
-               <p className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight px-2 max-w-5xl mx-auto">
-                 <span className="bg-gradient-to-r from-white via-brand-200 to-sky-300 bg-clip-text text-transparent drop-shadow-lg">
-                   El único sistema que registra entradas y salidas, calcula IHSS, RAP e ISR, y genera nómina con deducciones legales y comprobantes, sin errores y sin perder tu domingo cada ciclo de pago.
-                 </span>
+               {/* Subtítulo */}
+               <p className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-semibold text-brand-200/90 leading-tight px-2 max-w-4xl mx-auto">
+                 Digitaliza el registro de asistencia. Cuando la puntualidad se mide, la puntualidad aparece sola y la nómina deja de ser un problema.
+               </p>
+
+               {/* Apoyo - una sola línea */}
+               <p className="text-base sm:text-lg md:text-xl text-brand-300/80 px-2 max-w-3xl mx-auto">
+                 Entradas y salidas exactas + IHSS, RAP e ISR parametrizado + nómina al instante.
                </p>
 
                {/* CTA único */}
@@ -43,13 +47,8 @@ export default function LandingHero() {
                    className="inline-flex items-center justify-center rounded-xl px-8 sm:px-10 py-3 sm:py-4 text-lg sm:text-xl font-bold shadow-lg bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all duration-300 hover:-translate-y-1 whitespace-nowrap"
                    data-analytics="cta_hero_click"
                  >
-                   Activar ahora — Prueba gratis 30 días
+                   Activar sistema — 30 días gratis
                  </button>
-                 
-                 {/* Features text below CTA */}
-                 <div className="text-xs sm:text-sm text-brand-200/60 px-2">
-                   <p>Sin tarjeta. Sin compromiso. Empleados ilimitados.</p>
-                 </div>
                </div>
              </div>
            </div>
