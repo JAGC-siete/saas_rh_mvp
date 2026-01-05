@@ -7,17 +7,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import MainHeader from '../components/MainHeader'
 
 export default function AfiliadosPage() {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-  })
+  const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value })
+    setEmail(e.target.value)
   }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -27,17 +23,18 @@ export default function AfiliadosPage() {
     setSuccess(false)
 
     try {
-      const res = await fetch('/api/affiliates/register', {
+      const res = await fetch('/api/affiliates/request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ email }),
       })
+
+      const data = await res.json()
 
       if (res.ok) {
         setSuccess(true)
       } else {
-        const data = await res.json()
-        setError(data.error || 'Ocurrió un error al registrarse.')
+        setError(data.error || 'Ocurrió un error al enviar tu solicitud.')
       }
     } catch {
       setError('Ocurrió un error de red.')
@@ -61,9 +58,14 @@ export default function AfiliadosPage() {
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
             Conviértete en Afiliado de Humano SISU
           </h1>
-          <p className="text-lg text-gray-400 max-w-2xl mx-auto">
+          <p className="text-lg text-gray-400 max-w-2xl mx-auto mb-6">
             Gana comisiones recurrentes por cada cliente que refieras. Ayúdanos a llevar la mejor solución de RRHH a más empresas en Honduras.
           </p>
+          <Link href="/suscripcion">
+            <Button className="bg-brand-600 hover:bg-brand-700 text-white px-6 py-2.5 rounded-lg text-base font-medium transition-all duration-300">
+              Suscríbete
+            </Button>
+          </Link>
         </section>
 
         <section className="grid md:grid-cols-2 gap-8 items-start">
@@ -100,26 +102,37 @@ export default function AfiliadosPage() {
               </CardHeader>
               <CardContent>
                 {success ? (
-                  <div className="text-green-400">
-                    ¡Gracias por registrarte! Revisaremos tu solicitud y te contactaremos pronto.
+                  <div className="space-y-4">
+                    <div className="text-green-400 text-center">
+                      <p className="text-lg font-semibold mb-2">¡Solicitud Enviada!</p>
+                      <p className="text-sm">
+                        Hemos enviado un email a <strong>{email}</strong> con un cuestionario para completar tu solicitud de afiliación.
+                      </p>
+                      <p className="text-sm mt-4">
+                        Por favor revisa tu correo y completa el cuestionario para continuar con el proceso.
+                      </p>
+                    </div>
                   </div>
                 ) : (
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-2">
-                      <label htmlFor="name">Nombre Completo</label>
-                      <Input id="name" name="name" type="text" required onChange={handleChange} />
-                    </div>
-                    <div className="space-y-2">
                       <label htmlFor="email">Correo Electrónico</label>
-                      <Input id="email" name="email" type="email" required onChange={handleChange} />
-                    </div>
-                    <div className="space-y-2">
-                      <label htmlFor="password">Contraseña</label>
-                      <Input id="password" name="password" type="password" required onChange={handleChange} />
+                      <Input 
+                        id="email" 
+                        name="email" 
+                        type="email" 
+                        required 
+                        value={email}
+                        onChange={handleChange}
+                        placeholder="tu@email.com"
+                      />
+                      <p className="text-xs text-gray-400">
+                        Te enviaremos un cuestionario a este correo para completar tu solicitud.
+                      </p>
                     </div>
                     {error && <p className="text-red-500 text-sm">{error}</p>}
                     <Button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700">
-                      {loading ? 'Enviando...' : 'Unirse al Programa'}
+                      {loading ? 'Enviando...' : 'Solicitar Afiliación'}
                     </Button>
                   </form>
                 )}
