@@ -1,5 +1,6 @@
 import Head from 'next/head'
 import Link from 'next/link'
+import { useEffect } from 'react'
 import DemoFooter from '../components/DemoFooter'
 import ServicesSection from '../components/ServicesSection'
 import HowItWorks from '../components/HowItWorks'
@@ -12,6 +13,27 @@ import MailListSection from '../components/MailListSection'
 const CloudBackground = dynamic(() => import('../components/CloudBackground'), { ssr: false })
 
 export default function LandingPage() {
+  useEffect(() => {
+    // Manejar scroll automático cuando se navega con hash
+    const handleHashScroll = () => {
+      if (window.location.hash) {
+        const hash = window.location.hash
+        const element = document.querySelector(hash)
+        if (element) {
+          setTimeout(() => {
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          }, 100)
+        }
+      }
+    }
+
+    // Ejecutar al montar el componente
+    handleHashScroll()
+
+    // También escuchar cambios en el hash
+    window.addEventListener('hashchange', handleHashScroll)
+    return () => window.removeEventListener('hashchange', handleHashScroll)
+  }, [])
 
   return (
     <div className="min-h-screen bg-app pt-16 sm:pt-20 md:pt-24 relative">
