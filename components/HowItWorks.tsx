@@ -13,14 +13,6 @@ export default function HowItWorks() {
     { 
       title: '📑 El sistema genera la planilla y comprobantes instantáneos', 
       desc: 'Un PDF para tu gerencia y comprobantes automáticos en email o WhatsApp para cada empleado.' 
-    },
-    { 
-      title: '📊 Tenés control total en tiempo real', 
-      desc: 'Dashboard con métricas de asistencia, costos y desempeño.' 
-    },
-    { 
-      title: '✅ Cumplimiento con la legislación local', 
-      desc: 'Olvidate de cálculos manuales y deducciones: parámetros actualizados año con año' 
     }
   ]
 

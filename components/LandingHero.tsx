@@ -30,25 +30,6 @@ export default function LandingHero() {
 
              {/* Información debajo del carrusel */}
              <div className="space-y-4 sm:space-y-6">
-               <p className="text-base sm:text-lg text-brand-200/90 px-2">
-                 Generá planilla en 5 minutos, con IHSS, RAP e ISR listos y vouchers enviados por Mail/WhatsApp.
-               </p>
-
-               <ul className="text-brand-200/80 space-y-2 max-w-md mx-auto">
-                 <li className="flex items-center gap-2">
-                   <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                   Cumplimiento STSS desde el día uno.
-                 </li>
-                 <li className="flex items-center gap-2">
-                   <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                   De Excel caótico a PDF impecable en minutos.
-                 </li>
-                 <li className="flex items-center gap-2">
-                   <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500"></span>
-                   Ahorro de 6 horas por quincena.
-                 </li>
-               </ul>
-
                {/* Email CTA Section */}
                <div className="space-y-3 sm:space-y-4">
                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 max-w-md mx-auto px-2">

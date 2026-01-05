@@ -76,20 +76,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* How It Works Section */}
-      <HowItWorks />
-
-      {/* Services Section - Rediseñada */}
-      <div className="mt-4">
-        <ServicesSection />
-      </div>
-
-      {/* AWS Certifications Section */}
-      <AWSCertificationsSection />
-
-      {/* Mail List Subscription Section */}
-      <MailListSection />
-
       {/* Social Proof Section */}
       <section id="prueba-social" className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 max-w-7xl mx-auto">
         <div className="max-w-6xl mx-auto">
@@ -122,6 +108,20 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* How It Works Section */}
+      <HowItWorks />
+
+      {/* Services Section - Rediseñada */}
+      <div className="mt-4">
+        <ServicesSection />
+      </div>
+
+      {/* AWS Certifications Section */}
+      <AWSCertificationsSection />
+
+      {/* Mail List Subscription Section */}
+      <MailListSection />
 
       {/* Shared Cloud Background */}
       <CloudBackground />
