@@ -80,7 +80,7 @@ export default function LandingPage() {
       <section id="prueba-social" className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 max-w-7xl mx-auto">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center text-white mb-6 sm:mb-8 px-2">
-            Empresas que ya automatizaron su RH
+            Empresas que ya automatizaron el registro de asistencia
           </h2>
 
           <div className="grid md:grid-cols-3 gap-6 sm:gap-8">
