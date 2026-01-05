@@ -15,7 +15,7 @@ export default function ServicesSection() {
 
       <header className="max-w-3xl mb-8 sm:mb-10 mx-auto text-center px-2">
         <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight">
-          <span className="text-white block sm:inline">Presentamos: El sistema todo en uno de</span>
+          <span className="text-white block sm:inline">Presentamos: Tu nuevo sistema todo en uno de</span>
           <span className="hidden sm:inline"> </span>
           <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">Recursos Humanos</span>
         </h2>
