@@ -65,20 +65,18 @@ export default function MainHeader({ enableScrollEffect = false, fixed = true }:
             {/* Navigation Links - Desktop */}
             <div className="hidden md:flex ml-auto">
               <div className="ml-6 flex items-center space-x-4">
-                <a
-                  href="#como-funciona"
+                <Link
+                  href="/#como-funciona"
                   className="text-brand-200 hover:text-white px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap"
-                  onClick={scrollToSection}
                 >
                   Cómo funciona
-                </a>
-                <a
-                  href="#servicios"
+                </Link>
+                <Link
+                  href="/#servicios"
                   className="text-brand-200 hover:text-white px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap"
-                  onClick={scrollToSection}
                 >
                   Servicios
-                </a>
+                </Link>
                 <Link
                   href="/suscripcion"
                   className="text-brand-200 hover:text-white px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap"
@@ -136,20 +134,20 @@ export default function MainHeader({ enableScrollEffect = false, fixed = true }:
         {isMobileMenuOpen && (
           <div className="md:hidden">
             <div className="px-2 pt-2 pb-3 space-y-1 glass-strong rounded-lg shadow-lg mt-2">
-              <a
-                href="#como-funciona"
+              <Link
+                href="/#como-funciona"
                 className="block px-3 py-2 text-base font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"
-                onClick={scrollToSection}
+                onClick={() => setIsMobileMenuOpen(false)}
               >
                 Cómo funciona
-              </a>
-              <a
-                href="#servicios"
+              </Link>
+              <Link
+                href="/#servicios"
                 className="block px-3 py-2 text-base font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"
-                onClick={scrollToSection}
+                onClick={() => setIsMobileMenuOpen(false)}
               >
                 Servicios
-              </a>
+              </Link>
               <Link
                 href="/suscripcion"
                 className="block px-3 py-2 text-base font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"
