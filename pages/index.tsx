@@ -63,9 +63,9 @@ export default function LandingPage() {
           {/* Hero Title - Centrado */}
           <div className="text-center mb-6 sm:mb-8 px-2">
             <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight sm:leading-tight">
-              <span className="text-white block sm:inline">Este 2026 digitaliza el registro de asistencia</span>
+              <span className="text-white block sm:inline">Biométrico y Software</span>
               <span className="hidden sm:inline"> </span>
-              <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">y enfoca a tu equipo en lo que realmente produce resultados.</span>
+              <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">Digitalización de registro asistencia y nómina para MIPYMES</span>
             </h1>
           </div>
 
