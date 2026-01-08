@@ -181,6 +181,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       status: 'trial_pending_data'
     })
 
+    // Enviar email de resumen con vCard
+    console.log('📧 Enviando email de resumen con vCard...')
+    await enviarEmailResumenRegistro({
+      nombre: nombre || 'Contacto no especificado',
+      empresa: empresa || 'Empresa no especificada',
+      email: contactoEmail,
+      whatsapp: contactoWhatsApp || null,
+      empleados,
+      tenant_id
+    })
+
     console.log('🎉 Activación completada exitosamente')
 
     return res.status(200).json({ 
@@ -983,5 +994,189 @@ async function dispararWebhookActivaciones(data: {
   } catch (error) {
     console.error('Error disparando webhook:', error)
     // No fallar todo el proceso si el webhook falla
+  }
+}
+
+// Función para generar vCard (formato de contacto)
+function generarVCard(data: {
+  nombre: string
+  empresa: string
+  email: string
+  whatsapp: string | null
+}): string {
+  const vcard = [
+    'BEGIN:VCARD',
+    'VERSION:3.0',
+    `FN:${data.nombre}`,
+    `ORG:${data.empresa}`,
+    `EMAIL;TYPE=INTERNET:${data.email}`,
+  ]
+
+  if (data.whatsapp) {
+    // Limpiar formato del WhatsApp (quitar espacios, guiones, etc.)
+    const phone = data.whatsapp.replace(/[-\s]/g, '')
+    // Asegurar que tenga el código de país
+    const formattedPhone = phone.startsWith('+') ? phone : phone.startsWith('504') ? `+${phone}` : `+504${phone}`
+    vcard.push(`TEL;TYPE=CELL:${formattedPhone}`)
+  }
+
+  vcard.push('END:VCARD')
+  return vcard.join('\n')
+}
+
+// Función para enviar email de resumen con vCard adjunto
+async function enviarEmailResumenRegistro(data: {
+  nombre: string
+  empresa: string
+  email: string
+  whatsapp: string | null
+  empleados: number
+  tenant_id: string
+}) {
+  try {
+    const apiKey = process.env.RESEND_API_KEY
+    const emailDestino = process.env.REGISTRO_NOTIFICATION_EMAIL || 'jorge7gomez@gmail.com'
+    
+    if (!apiKey) {
+      console.log('⚠️ RESEND_API_KEY no configurado, saltando envío de email de resumen')
+      return
+    }
+
+    const { Resend } = await import('resend')
+    const resend = new Resend(apiKey)
+
+    // Generar vCard
+    const vcardContent = generarVCard({
+      nombre: data.nombre,
+      empresa: data.empresa,
+      email: data.email,
+      whatsapp: data.whatsapp
+    })
+
+    // Convertir vCard a buffer para adjuntarlo
+    const vcardBuffer = Buffer.from(vcardContent, 'utf-8')
+
+    const emailHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <title>Nuevo Registro - SISU</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 20px;
+            }
+            .header {
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: white;
+              padding: 30px;
+              text-align: center;
+              border-radius: 8px 8px 0 0;
+            }
+            .content {
+              background: #f8f9fa;
+              padding: 30px;
+              border-radius: 0 0 8px 8px;
+            }
+            .info-box {
+              background: white;
+              border-left: 4px solid #667eea;
+              padding: 20px;
+              margin: 20px 0;
+              border-radius: 4px;
+            }
+            .info-row {
+              margin: 10px 0;
+            }
+            .label {
+              font-weight: bold;
+              color: #555;
+            }
+            .value {
+              color: #333;
+            }
+            .vcard-note {
+              background: #fff3cd;
+              border-left: 4px solid #ffc107;
+              padding: 15px;
+              margin: 20px 0;
+              border-radius: 4px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>📋 Nuevo Registro en SISU</h1>
+            <p>Se ha registrado un nuevo usuario para trial</p>
+          </div>
+          <div class="content">
+            <div class="info-box">
+              <div class="info-row">
+                <span class="label">👤 Nombre:</span>
+                <span class="value">${data.nombre}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">🏢 Empresa:</span>
+                <span class="value">${data.empresa}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">📧 Email:</span>
+                <span class="value">${data.email}</span>
+              </div>
+              ${data.whatsapp ? `
+              <div class="info-row">
+                <span class="label">📱 WhatsApp:</span>
+                <span class="value">${data.whatsapp}</span>
+              </div>
+              ` : ''}
+              <div class="info-row">
+                <span class="label">👥 Empleados:</span>
+                <span class="value">${data.empleados}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">🆔 Tenant ID:</span>
+                <span class="value">${data.tenant_id}</span>
+              </div>
+            </div>
+            <div class="vcard-note">
+              <strong>📎 Archivo vCard adjunto</strong>
+              <p>Se ha adjuntado un archivo de contacto (.vcf) que puedes descargar e importar directamente a tu libreta de contactos en el celular.</p>
+              <p><strong>Para importar en iPhone:</strong> Abre el archivo adjunto y toca "Agregar a contactos"</p>
+              <p><strong>Para importar en Android:</strong> Descarga el archivo y ábrelo con la app de Contactos</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `
+
+    const result = await resend.emails.send({
+      from: process.env.RESEND_FROM || 'SISU <noreply@humanosisu.net>',
+      to: emailDestino,
+      subject: `📋 Nuevo Registro: ${data.empresa} - ${data.nombre}`,
+      html: emailHtml,
+      attachments: [
+        {
+          filename: `${data.nombre.replace(/[^a-z0-9]/gi, '_')}_${data.empresa.replace(/[^a-z0-9]/gi, '_')}.vcf`,
+          content: vcardBuffer.toString('base64'),
+        }
+      ]
+    })
+
+    if ((result as any)?.error) {
+      console.error('❌ Error enviando email de resumen:', (result as any).error)
+      return
+    }
+
+    console.log('✅ Email de resumen con vCard enviado exitosamente:', (result as any)?.id)
+
+  } catch (error) {
+    console.error('❌ Error enviando email de resumen:', error)
+    // No fallar todo el proceso si el email falla
   }
 }
