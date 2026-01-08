@@ -835,7 +835,7 @@ async function enviarCorreoBienvenida(data: {
               <div class="hero">
                 <div class="badge">Acceso Exclusivo</div>
                 <h1>¡Has sido seleccionado para explorar SISU!</h1>
-                <p>${data.nombre || 'Equipo'}, te damos la bienvenida a SISU, el nuevo sistema hondureño de recursos humanos diseñado para transformar la forma en que gestionas tu equipo. Has recibido este acceso limitado y gratuito por 30 días para descubrir cómo SISU elimina tareas repetitivas y libera tiempo valioso para lo que realmente importa.</p>
+                <p>${data.nombre || 'Equipo'}, te damos la bienvenida a SISU, el nuevo sistema hondureño de recursos humanos diseñado para transformar la forma en que gestionas tu equipo. Has recibido este acceso limitado y gratuito por 7 días para descubrir cómo SISU elimina tareas repetitivas y libera tiempo valioso para lo que realmente importa.</p>
               </div>
               <div class="content">
                 <div class="pill">
@@ -876,18 +876,18 @@ async function enviarCorreoBienvenida(data: {
                 </div>
 
                 <div class="warning">
-                  ⚠️ Este es un acceso exclusivo y limitado: tu prueba gratuita dura 30 días. Por seguridad, cambia la contraseña al ingresar. Explora cómo SISU reduce errores legales, da transparencia en tiempo real y libera a tu equipo para enfocarse en lo que mueve tu empresa.
+                  ⚠️ Este es un acceso exclusivo y limitado: tu prueba gratuita dura 7 días. Por seguridad, cambia la contraseña al ingresar. Explora cómo SISU reduce errores legales, da transparencia en tiempo real y libera a tu equipo para enfocarse en lo que mueve tu empresa.
                 </div>
 
-                <div class="section-title">Estamos atentos</div>
+                <div class="section-title">Para contratar</div>
                 <div class="grid">
                   <div>
                     <h4>📱 WhatsApp</h4>
-                    <p>+504 9470-7007 • Respuesta en horario laboral.</p>
+                    <p>+504 3222-6773 • Respuesta en horario laboral.</p>
                   </div>
                   <div>
                     <h4>📧 Email</h4>
-                    <p>Responde este mensaje y llegas directo a soporte.</p>
+                    <p>Escribe a contrataciones@humanosisu.net para contactar a ventas.</p>
                   </div>
                 </div>
               </div>
