@@ -86,8 +86,7 @@ export default function LandingPage() {
           <div className="text-center mb-6 sm:mb-8 px-2">
             <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight sm:leading-tight">
               <span className="text-white block sm:inline">Digitalización de registro asistencia y nómina para MIPYMES</span>
-              <span className="hidden sm:inline"> </span>
-              <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">Biométrico y Software</span>
+              <span className="text-brand-300 block text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl mt-2 sm:mt-1">Biométrico y Software</span>
             </h1>
           </div>
 
@@ -101,9 +100,9 @@ export default function LandingPage() {
       {/* Social Proof Section */}
       <section id="prueba-social" className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 max-w-7xl mx-auto">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-center text-white leading-relaxed sm:leading-relaxed mb-6 sm:mb-8 px-2 max-w-5xl mx-auto">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-center text-white leading-tight sm:leading-tight mb-6 sm:mb-8 px-2 max-w-5xl mx-auto">
             <span className="text-white block sm:inline">Lo dicen nuestros clientes: </span>
-            <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">la ventaja competitiva es que integra el biometrico con el software</span>
+            <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">la ventaja competitiva es que integra el biométrico con el software</span>
           </h2>
 
           <div className="grid md:grid-cols-3 gap-6 sm:gap-8">
