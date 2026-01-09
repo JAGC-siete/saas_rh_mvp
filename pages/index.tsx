@@ -102,7 +102,8 @@ export default function LandingPage() {
       <section id="prueba-social" className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 max-w-7xl mx-auto">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-center text-white leading-relaxed sm:leading-relaxed mb-6 sm:mb-8 px-2 max-w-5xl mx-auto">
-            <span className="text-white block">Lo dicen nuestros clientes: la ventaja competitiva que tienen es que integra el biometrico con el software; lo que permite datos en tiempo real, reportes de asistencia y sobre todo, nómina y vouchers de pago parametrizados.</span>
+            <span className="text-white block sm:inline">Lo dicen nuestros clientes: </span>
+            <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">la ventaja competitiva es que integra el biometrico con el software</span>
           </h2>
 
           <div className="grid md:grid-cols-3 gap-6 sm:gap-8">
