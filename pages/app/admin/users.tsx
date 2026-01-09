@@ -37,6 +37,11 @@ export default function UsersAdminPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [companies, setCompanies] = useState<Array<{ id: string; name: string }>>([])
   const [form, setForm] = useState({ email: '', password: '', role: 'company_admin', company_id: '' })
+  
+  // User detail modal state
+  const [selectedUser, setSelectedUser] = useState<UserRow | null>(null)
+  const [userDetails, setUserDetails] = useState<any>(null)
+  const [loadingDetails, setLoadingDetails] = useState(false)
 
   useEffect(() => {
     const loadUsers = async () => {
@@ -151,6 +156,27 @@ export default function UsersAdminPage() {
     } catch (err: any) {
       addNotification({ type: 'error', title: 'Error', message: err.message || 'No se pudo crear el usuario' })
     }
+  }
+
+  const openUserDetails = async (user: UserRow) => {
+    setSelectedUser(user)
+    setLoadingDetails(true)
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}`, { credentials: 'include' })
+      if (!res.ok) throw new Error('Error cargando detalles')
+      const data = await res.json()
+      setUserDetails(data.user)
+    } catch (err: any) {
+      addNotification({ type: 'error', title: 'Error', message: err.message || 'No se pudieron cargar los detalles' })
+      setUserDetails(null)
+    } finally {
+      setLoadingDetails(false)
+    }
+  }
+
+  const closeUserDetails = () => {
+    setSelectedUser(null)
+    setUserDetails(null)
   }
 
   return (
@@ -280,7 +306,12 @@ export default function UsersAdminPage() {
                 <>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {pageItems.map((u) => (
-                      <Card key={u.id} variant="glass" className="border-white/10">
+                      <Card 
+                        key={u.id} 
+                        variant="glass" 
+                        className="border-white/10 cursor-pointer hover:border-white/30 transition-colors"
+                        onClick={() => openUserDetails(u)}
+                      >
                         <CardHeader>
                           <CardTitle className="flex items-center justify-between text-base text-white">
                             <span className="truncate">{u.name || u.email}</span>
@@ -297,7 +328,7 @@ export default function UsersAdminPage() {
                             <div>Empresa: <span className="text-white/90">{u.company_name || u.company_id || '—'}</span></div>
                             <div>Último login: <span className="text-white/90">{u.last_login ? new Date(u.last_login).toLocaleString('es-HN') : '—'}</span></div>
                           </div>
-                          <div className="mt-3 flex gap-2">
+                          <div className="mt-3 flex gap-2" onClick={(e) => e.stopPropagation()}>
                             <Button 
                               variant="outline" 
                               size="sm" 
@@ -353,6 +384,153 @@ export default function UsersAdminPage() {
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
             <p className="text-white text-lg">Procesando...</p>
             <p className="text-white/70 text-sm mt-2">Por favor espera</p>
+          </div>
+        </div>
+      )}
+
+      {/* User Details Modal */}
+      {selectedUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div 
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={closeUserDetails}
+          />
+          <div className="relative z-50 w-full max-w-2xl mx-4 glass border border-white/20 rounded-lg shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-white/10">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h2 className="text-2xl font-semibold text-white mb-1">
+                    Detalles del Usuario
+                  </h2>
+                  <p className="text-sm text-white/70">
+                    Información completa del usuario
+                  </p>
+                </div>
+                <button
+                  onClick={closeUserDetails}
+                  className="p-1 text-gray-400 hover:text-white transition-colors"
+                >
+                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div className="p-6">
+              {loadingDetails ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                </div>
+              ) : userDetails ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs uppercase tracking-wider text-white/60 mb-1 block">Email</label>
+                      <p className="text-white">{userDetails.email || '—'}</p>
+                    </div>
+                    {(userDetails.name || selectedUser.name) && (
+                      <div>
+                        <label className="text-xs uppercase tracking-wider text-white/60 mb-1 block">Nombre</label>
+                        <p className="text-white">{userDetails.name || selectedUser.name}</p>
+                      </div>
+                    )}
+                    {userDetails.employee && (
+                      <>
+                        <div>
+                          <label className="text-xs uppercase tracking-wider text-white/60 mb-1 block">ID Empleado</label>
+                          <p className="text-white font-mono text-sm">{userDetails.employee.id}</p>
+                        </div>
+                        {userDetails.employee.email && (
+                          <div>
+                            <label className="text-xs uppercase tracking-wider text-white/60 mb-1 block">Email Empleado</label>
+                            <p className="text-white">{userDetails.employee.email}</p>
+                          </div>
+                        )}
+                      </>
+                    )}
+                    <div>
+                      <label className="text-xs uppercase tracking-wider text-white/60 mb-1 block">Rol</label>
+                      <p className="text-white">{userDetails.role || selectedUser.role}</p>
+                    </div>
+                    <div>
+                      <label className="text-xs uppercase tracking-wider text-white/60 mb-1 block">Estado</label>
+                      <span className={`inline-block px-2 py-1 rounded-full text-xs ${userDetails.is_active ? 'bg-emerald-500/20 text-emerald-100 border border-emerald-300/40' : 'bg-gray-500/20 text-gray-300 border border-gray-400/40'}`}>
+                        {userDetails.is_active ? 'Activo' : 'Inactivo'}
+                      </span>
+                    </div>
+                    <div>
+                      <label className="text-xs uppercase tracking-wider text-white/60 mb-1 block">Empresa</label>
+                      <p className="text-white">{userDetails.company?.name || selectedUser.company_name || '—'}</p>
+                    </div>
+                    {userDetails.company?.subdomain && (
+                      <div>
+                        <label className="text-xs uppercase tracking-wider text-white/60 mb-1 block">Subdominio</label>
+                        <p className="text-white">{userDetails.company.subdomain}</p>
+                      </div>
+                    )}
+                    <div>
+                      <label className="text-xs uppercase tracking-wider text-white/60 mb-1 block">Último Login</label>
+                      <p className="text-white">
+                        {userDetails.last_login 
+                          ? new Date(userDetails.last_login).toLocaleString('es-HN', { 
+                              dateStyle: 'medium', 
+                              timeStyle: 'short',
+                              timeZone: 'America/Tegucigalpa'
+                            })
+                          : 'Nunca'}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs uppercase tracking-wider text-white/60 mb-1 block">Fecha de Creación</label>
+                      <p className="text-white">
+                        {userDetails.created_at 
+                          ? new Date(userDetails.created_at).toLocaleString('es-HN', { 
+                              dateStyle: 'medium', 
+                              timeStyle: 'short',
+                              timeZone: 'America/Tegucigalpa'
+                            })
+                          : '—'}
+                      </p>
+                    </div>
+                    {userDetails.updated_at && (
+                      <div>
+                        <label className="text-xs uppercase tracking-wider text-white/60 mb-1 block">Última Actualización</label>
+                        <p className="text-white">
+                          {new Date(userDetails.updated_at).toLocaleString('es-HN', { 
+                            dateStyle: 'medium', 
+                            timeStyle: 'short',
+                            timeZone: 'America/Tegucigalpa'
+                          })}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  {userDetails.permissions && (
+                    <div>
+                      <label className="text-xs uppercase tracking-wider text-white/60 mb-2 block">Permisos</label>
+                      <div className="bg-white/5 rounded-md p-4 border border-white/10">
+                        <pre className="text-xs text-white/80 overflow-x-auto">
+                          {JSON.stringify(userDetails.permissions, null, 2)}
+                        </pre>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-white/70">
+                  No se pudieron cargar los detalles del usuario
+                </div>
+              )}
+            </div>
+            <div className="p-6 border-t border-white/10 flex justify-end gap-2">
+              <Button 
+                variant="outline" 
+                onClick={closeUserDetails}
+                className="border-white/30 text-white hover:bg-white/10"
+              >
+                Cerrar
+              </Button>
+            </div>
           </div>
         </div>
       )}

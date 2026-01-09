@@ -77,19 +77,43 @@ async function getUsers(req: NextApiRequest, res: NextApiResponse) {
     const userIds = allProfiles?.map((p: any) => p.id) || []
     
     // Fetch emails from auth.users using admin client
+    // Note: listUsers() has pagination, so we need to fetch all pages
     const authUsersMap = new Map<string, { email: string; last_sign_in_at: string | null }>()
     
     if (userIds.length > 0) {
       try {
-        const { data: authUsers } = await adminClient.auth.admin.listUsers()
-        authUsers?.users?.forEach((user: any) => {
-          if (userIds.includes(user.id)) {
-            authUsersMap.set(user.id, {
-              email: user.email || '',
-              last_sign_in_at: user.last_sign_in_at || null
-            })
+        let page = 1
+        let hasMore = true
+        const perPage = 1000 // Max per page for listUsers
+        
+        while (hasMore) {
+          const { data: authUsers, error: listError } = await adminClient.auth.admin.listUsers({
+            page,
+            perPage
+          })
+          
+          if (listError) {
+            logger.warn('Error fetching auth users page', { page, error: listError?.message || String(listError) })
+            break
           }
-        })
+          
+          if (authUsers?.users && authUsers.users.length > 0) {
+            authUsers.users.forEach((user: any) => {
+              if (userIds.includes(user.id)) {
+                authUsersMap.set(user.id, {
+                  email: user.email || '',
+                  last_sign_in_at: user.last_sign_in_at || null
+                })
+              }
+            })
+            
+            // Check if there are more pages
+            hasMore = authUsers.users.length === perPage
+            page++
+          } else {
+            hasMore = false
+          }
+        }
       } catch (authError: any) {
         logger.warn('Error fetching auth users, continuing without emails', { error: authError?.message || String(authError) })
       }

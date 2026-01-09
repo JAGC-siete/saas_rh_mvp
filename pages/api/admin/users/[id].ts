@@ -66,7 +66,9 @@ async function getUser(supabase: any, id: string, res: NextApiResponse) {
         created_at,
         updated_at,
         company_id,
-        companies:companies(name, subdomain)
+        employee_id,
+        companies:companies(name, subdomain),
+        employees(name, email)
       `)
       .eq('id', id)
       .single()
@@ -78,9 +80,15 @@ async function getUser(supabase: any, id: string, res: NextApiResponse) {
       throw error
     }
 
-    // Get email from auth.users
-    const { data: authUsers } = await adminClient.auth.admin.listUsers()
-    const authUser = authUsers?.users?.find((u: any) => u.id === id)
+    // Get email from auth.users - try to get specific user first
+    let authUser: any = null
+    try {
+      // Try to get user by ID directly if possible, otherwise search in list
+      const { data: authUsers } = await adminClient.auth.admin.listUsers()
+      authUser = authUsers?.users?.find((u: any) => u.id === id)
+    } catch (authError: any) {
+      logger.warn('Error fetching auth user', { userId: id, error: authError?.message || String(authError) })
+    }
 
     // Transform data
     const companies = userProfile.companies as any
@@ -90,10 +98,19 @@ async function getUser(supabase: any, id: string, res: NextApiResponse) {
     const companySubdomain = companies
       ? (Array.isArray(companies) ? companies[0]?.subdomain : companies.subdomain)
       : null
+    
+    const employee = userProfile.employees as any
+    const employeeName = employee 
+      ? (Array.isArray(employee) ? employee[0]?.name : employee.name)
+      : null
+    const employeeEmail = employee 
+      ? (Array.isArray(employee) ? employee[0]?.email : employee.email)
+      : null
 
     const userData = {
       id: userProfile.id,
-      email: authUser?.email || '',
+      email: authUser?.email || employeeEmail || '',
+      name: employeeName,
       role: userProfile.role,
       is_active: userProfile.is_active,
       permissions: userProfile.permissions,
@@ -104,7 +121,12 @@ async function getUser(supabase: any, id: string, res: NextApiResponse) {
         id: userProfile.company_id,
         name: companyName,
         subdomain: companySubdomain
-      }
+      },
+      employee: userProfile.employee_id ? {
+        id: userProfile.employee_id,
+        name: employeeName,
+        email: employeeEmail
+      } : null
     }
 
     return res.status(200).json({
