@@ -9,6 +9,7 @@ import { useNotificationContext } from '../../../components/NotificationProvider
 interface UserRow {
   id: string
   email: string
+  name?: string | null
   role: string
   company_id: string | null
   company_name?: string | null
@@ -21,6 +22,7 @@ export default function UsersAdminPage() {
   const { addNotification } = useNotificationContext()
 
   const [users, setUsers] = useState<UserRow[]>([])
+  const [totalUsers, setTotalUsers] = useState(0)
   const [loadingUsers, setLoadingUsers] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [processingUserId, setProcessingUserId] = useState<string | null>(null)
@@ -51,6 +53,7 @@ export default function UsersAdminPage() {
         if (!res.ok) throw new Error('Error cargando usuarios')
         const data = await res.json()
         setUsers(data.users || [])
+        setTotalUsers(data.metadata?.total || 0)
       } catch (err: any) {
         setError(err.message || 'Error cargando usuarios')
       } finally {
@@ -60,19 +63,9 @@ export default function UsersAdminPage() {
     loadUsers()
   }, [search, role, state, page, pageSize])
 
-  const filtered = useMemo(() => {
-    let items = users
-    if (search.trim()) {
-      const q = search.toLowerCase()
-      items = items.filter(u => u.email?.toLowerCase().includes(q))
-    }
-    if (role) items = items.filter(u => u.role === role)
-    if (state) items = items.filter(u => (state === 'active' ? u.is_active : !u.is_active))
-    return items
-  }, [users, search, role, state])
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
-  const pageItems = useMemo(() => filtered, [filtered])
+  // No need for client-side filtering - API handles it
+  const totalPages = Math.max(1, Math.ceil(totalUsers / pageSize))
+  const pageItems = users
 
   const toggleActive = async (u: UserRow) => {
     try {
@@ -181,7 +174,7 @@ export default function UsersAdminPage() {
                   type="text"
                   value={search}
                   onChange={(e) => { setPage(1); setSearch(e.target.value) }}
-                  placeholder="Buscar por email"
+                  placeholder="Buscar por email o nombre"
                   className="px-3 py-2 border border-white/20 rounded-md w-72 bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
                 />
                 <select 
@@ -211,7 +204,7 @@ export default function UsersAdminPage() {
 
             <Card variant="glass" className="border-white/10">
               <CardHeader>
-                <CardTitle className="text-base text-white">Listado ({filtered.length})</CardTitle>
+                <CardTitle className="text-base text-white">Listado ({totalUsers})</CardTitle>
               </CardHeader>
               <CardContent>
               {error && (
@@ -290,7 +283,7 @@ export default function UsersAdminPage() {
                       <Card key={u.id} variant="glass" className="border-white/10">
                         <CardHeader>
                           <CardTitle className="flex items-center justify-between text-base text-white">
-                            <span className="truncate">{u.email}</span>
+                            <span className="truncate">{u.name || u.email}</span>
                             <span className={`text-xs px-2 py-0.5 rounded-full ${u.is_active ? 'bg-emerald-500/20 text-emerald-100 border border-emerald-300/40' : 'bg-gray-500/20 text-gray-300 border border-gray-400/40'}`}>
                               {u.is_active ? 'Activo' : 'Inactivo'}
                             </span>
@@ -298,6 +291,8 @@ export default function UsersAdminPage() {
                         </CardHeader>
                         <CardContent>
                           <div className="text-sm text-white/70 space-y-1">
+                            {u.name && <div>Nombre: <span className="text-white/90">{u.name}</span></div>}
+                            <div>Email: <span className="text-white/90">{u.email || '—'}</span></div>
                             <div>Rol: <span className="text-white/90">{u.role}</span></div>
                             <div>Empresa: <span className="text-white/90">{u.company_name || u.company_id || '—'}</span></div>
                             <div>Último login: <span className="text-white/90">{u.last_login ? new Date(u.last_login).toLocaleString('es-HN') : '—'}</span></div>

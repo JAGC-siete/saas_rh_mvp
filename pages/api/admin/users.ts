@@ -42,8 +42,8 @@ async function getUsers(req: NextApiRequest, res: NextApiResponse) {
     // Use admin client for queries that need to access auth data
     const adminClient = createAdminClient()
 
-    // Base query - get profiles without trying to join users table
-    let query = adminClient
+    // Base query - get ALL profiles first (we need to fetch emails to filter)
+    let baseQuery = adminClient
       .from('user_profiles')
       .select(`
         id,
@@ -52,27 +52,29 @@ async function getUsers(req: NextApiRequest, res: NextApiResponse) {
         last_login,
         created_at,
         company_id,
-        companies(name)
-      `, { count: 'exact' })
+        employee_id,
+        companies(name),
+        employees(name)
+      `)
 
     if (role) {
-      query = query.eq('role', role)
+      baseQuery = baseQuery.eq('role', role)
     }
 
-    if (state === 'active') query = query.eq('is_active', true)
-    if (state === 'inactive') query = query.eq('is_active', false)
+    if (state === 'active') baseQuery = baseQuery.eq('is_active', true)
+    if (state === 'inactive') baseQuery = baseQuery.eq('is_active', false)
 
-    // Order + range
-    query = query.order('created_at', { ascending: false }).range(from, to)
+    // Order
+    baseQuery = baseQuery.order('created_at', { ascending: false })
 
-    const { data: profiles, error, count } = await query
+    const { data: allProfiles, error: queryError } = await baseQuery
 
-    if (error) {
-      throw error
+    if (queryError) {
+      throw queryError
     }
 
     // Get all user IDs to fetch emails from auth
-    const userIds = profiles?.map((p: any) => p.id) || []
+    const userIds = allProfiles?.map((p: any) => p.id) || []
     
     // Fetch emails from auth.users using admin client
     const authUsersMap = new Map<string, { email: string; last_sign_in_at: string | null }>()
@@ -94,11 +96,16 @@ async function getUsers(req: NextApiRequest, res: NextApiResponse) {
     }
 
     // Combine profile data with auth data
-    let usersData = profiles?.map((profile: any) => {
+    let usersData = allProfiles?.map((profile: any) => {
       const authData = authUsersMap.get(profile.id)
+      const employee = profile.employees
+      const employeeName = employee 
+        ? (Array.isArray(employee) ? employee[0]?.name : employee.name)
+        : null
       return {
         id: profile.id,
         email: authData?.email || '',
+        name: employeeName,
         role: profile.role,
         company_id: profile.company_id,
         company_name: profile.companies?.name || null,
@@ -108,20 +115,27 @@ async function getUsers(req: NextApiRequest, res: NextApiResponse) {
       }
     }) || []
 
-    // Apply text search filter if provided (after fetching emails)
+    // Apply text search filter if provided (BEFORE pagination)
     if (q) {
       const searchLower = q.toLowerCase()
       usersData = usersData.filter((user: any) => 
         user.email?.toLowerCase().includes(searchLower) ||
+        user.name?.toLowerCase().includes(searchLower) ||
         user.company_name?.toLowerCase().includes(searchLower)
       )
     }
 
+    // Calculate total after filtering
+    const total = usersData.length
+
+    // Apply pagination AFTER filtering
+    const paginatedUsers = usersData.slice(from, to + 1)
+
     return res.status(200).json({
       success: true,
-      users: usersData,
+      users: paginatedUsers,
       metadata: {
-        total: count || 0,
+        total: total,
         page,
         pageSize,
         query: q,
