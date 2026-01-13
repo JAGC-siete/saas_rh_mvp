@@ -109,7 +109,7 @@ export default function LandingPage() {
             {[
               { name: 'Felix Garcia', company: 'Tony\'s Mar Restaurant', employees: '40 empleados', quote: 'Ya no pierdo domingos haciendo planilla. 4 horas ahora son 4 minutos.' },
               { name: 'Nancy Urrutia', company: 'PROHALCA', employees: '37 empleados', quote: 'Habiamos contratado un sistema de asistencia que no hacia planilla, ahora tenemos dashboard interactivo.' },
-              { name: 'Luis Diego Maradiaga', company: 'AFI & Asociados', employees: '15 empleados', quote: 'Cero errores en IHSS desde que lo uso. Mi contador está feliz.' }
+              { name: 'Abogado Marcio Moya', company: '', employees: '15 empleados', quote: 'Cero errores en deducciones desde que lo uso. Mis clientes están felices.' }
             ].map((testimonial, i) => (
               <div key={`testimonial-${i}`} className="bg-white/5 border border-white/10 rounded-xl p-6">
                 <div className="flex items-center gap-3 mb-4">
