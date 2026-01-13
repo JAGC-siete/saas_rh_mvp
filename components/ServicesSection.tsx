@@ -15,7 +15,7 @@ export default function ServicesSection() {
 
       <header className="max-w-3xl mb-8 sm:mb-10 mx-auto text-center px-2">
         <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight">
-          <span className="text-white block sm:inline">Presentamos: Tu nuevo sistema todo en uno de</span>
+          <span className="text-white block sm:inline">Presentamos: Tu nuevo sistema todo-en-uno de</span>
           <span className="hidden sm:inline"> </span>
           <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">Recursos Humanos</span>
         </h2>
@@ -96,8 +96,8 @@ export default function ServicesSection() {
 
             <ul className="mt-3 sm:mt-4 space-y-2 sm:space-y-3">
               <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>Cálculo legal automático (Honduras)</span></li>
-              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>4 horas → 4 minutos (comprobado en Paragon)</span></li>
-              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>ZIP de vouchers + envío masivo</span></li>
+              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>4 horas → 4 minutos</span></li>
+              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>Distribución Automatizada de recibos de pago</span></li>
             </ul>
 
           </article>
