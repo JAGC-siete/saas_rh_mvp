@@ -1,5 +1,4 @@
 import Head from 'next/head'
-import Link from 'next/link'
 import { useState } from 'react'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
@@ -61,11 +60,6 @@ export default function AfiliadosPage() {
           <p className="text-lg text-gray-400 max-w-2xl mx-auto mb-6">
             Gana comisiones recurrentes por cada cliente que refieras. Ayúdanos a llevar la mejor solución de RRHH a más empresas en Honduras.
           </p>
-          <Link href="/suscripcion">
-            <Button className="bg-brand-600 hover:bg-brand-700 text-white px-6 py-2.5 rounded-lg text-base font-medium transition-all duration-300">
-              Suscríbete
-            </Button>
-          </Link>
         </section>
 
         <section className="grid md:grid-cols-2 gap-8 items-start">
