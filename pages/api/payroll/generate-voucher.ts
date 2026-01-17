@@ -2,49 +2,12 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { generateEmployeeReceiptPDF } from '../../../lib/payroll/receipt'
 import { getHondurasTimestamp } from '../../../lib/timezone'
-
-// CONSTANTES CORRECTAS HONDURAS 2025
-const HONDURAS_2025_CONSTANTS = {
-  SALARIO_MINIMO: 11903.13,
-  IHSS_TECHO: 11903.13,        // Techo IHSS 2025 (EM + IVM)
-  IHSS_PORCENTAJE_EMPLEADO: 0.05,  // 5% total (2.5% EM + 2.5% IVM)
-  RAP_PORCENTAJE: 0.015,       // 1.5% empleado
-} as const
-
-// CÁLCULO ISR CORRECTO 2025 - TABLA MENSUAL
-function calcularISR(salarioMensual: number): number {
-  const ISR_BRACKETS_MENSUAL = [
-    { limit: 21457.76, rate: 0.00, base: 0 },                    // Exento hasta L 21,457.76
-    { limit: 30969.88, rate: 0.15, base: 0 },                    // 15%
-    { limit: 67604.36, rate: 0.20, base: 1428.32 },             // 20%
-    { limit: Infinity, rate: 0.25, base: 8734.32 }              // 25%
-  ]
-  
-  for (const bracket of ISR_BRACKETS_MENSUAL) {
-    if (salarioMensual <= bracket.limit) {
-      if (bracket.rate === 0) return 0
-      
-      if (bracket.base === 0) {
-        return (salarioMensual - 21457.76) * bracket.rate
-      } else {
-        const limiteInferior = bracket.limit === 67604.36 ? 30969.88 : 67604.36
-        return bracket.base + (salarioMensual - limiteInferior) * bracket.rate
-      }
-    }
-  }
-  return 0
-}
-
-// CÁLCULO IHSS CORRECTO 2025
-function calcularIHSS(salarioBase: number): number {
-  const ihssBase = Math.min(salarioBase, HONDURAS_2025_CONSTANTS.IHSS_TECHO)
-  return ihssBase * HONDURAS_2025_CONSTANTS.IHSS_PORCENTAJE_EMPLEADO
-}
-
-// CÁLCULO RAP CORRECTO 2025
-function calcularRAP(salarioBase: number): number {
-  return Math.max(0, salarioBase - HONDURAS_2025_CONSTANTS.SALARIO_MINIMO) * HONDURAS_2025_CONSTANTS.RAP_PORCENTAJE
-}
+import { 
+  getTaxBracketsForYear, 
+  calculateISR, 
+  calculateIHSS, 
+  calculateRAP 
+} from '../../../lib/tax/honduras-tax'
 
 interface VoucherData {
   employee_id: string
@@ -167,6 +130,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const fechaInicio = quincena === 1 ? `${periodo}-01` : `${periodo}-16`
     const fechaFin = quincena === 1 ? `${periodo}-15` : `${periodo}-${ultimoDia}`
     
+    // Obtener constantes fiscales para el año del período
+    const taxConstants = await getTaxBracketsForYear(year)
+    
     // Calcular días trabajados por quincena
     const daysInQuincena = quincena === 1 ? 15 : (ultimoDia - 15)
     
@@ -177,11 +143,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let ihss = 0, rap = 0, isr = 0, totalDeductions = 0
     
     if (incluirDeducciones) {
-      // APLICAR DEDUCCIONES SOLO UNA VEZ AL MES (en Q2)
+      // APLICAR DEDUCCIONES SOLO UNA VEZ AL MES (en Q2) - Usando tabla fiscal del año correspondiente
       if (quincena === 2) {
-        ihss = calcularIHSS(employee.base_salary)  // Deducción mensual completa
-        rap = calcularRAP(employee.base_salary)    // Deducción mensual completa
-        isr = calcularISR(employee.base_salary)    // Deducción mensual completa
+        ihss = calculateIHSS(employee.base_salary, taxConstants)  // Deducción mensual completa
+        rap = calculateRAP(employee.base_salary, taxConstants)    // Deducción mensual completa
+        isr = calculateISR(employee.base_salary, taxConstants.isr_brackets)    // Deducción mensual completa
       }
       totalDeductions = ihss + rap + isr
     }
@@ -276,6 +242,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           status: 'approved',
           notes_on_ingress: voucherPreview.note || '',
           notes_on_deductions: `Voucher individual generado con ajustes: Bono +${adj_bonus}, Descuento -${adj_discount}`,
+          metadata: { tax_year: year }, // Guardar año de tabla fiscal usada
           generated_by: user.id,
           generated_at: getHondurasTimestamp(),
           approved_at: getHondurasTimestamp(),

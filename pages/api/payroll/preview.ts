@@ -3,6 +3,12 @@ import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { nowInHonduras } from '../../../lib/timezone'
 import { withGeneralRateLimit } from '../../../lib/security/rate-limiting'
 import { secureLog, secureErrorLog } from '../../../lib/security/safe-logging'
+import { 
+  getTaxBracketsForYear, 
+  calculateISR, 
+  calculateIHSS, 
+  calculateRAP 
+} from '../../../lib/tax/honduras-tax'
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -277,6 +283,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     console.log('🔍 DEBUG - Final RunId:', runId, 'Type:', typeof runId)
+
+    // Obtener constantes fiscales para el año del período
+    const taxConstants = await getTaxBracketsForYear(yearNum)
 
     // Obtener empleados activos con información de departamento y pay_type
     // Usar left join para manejar empleados sin departamento asignado
@@ -596,26 +605,17 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
         // APLICAR DEDUCCIONES SEGÚN legal_deductions (solo si tipoParam === 'CON')
         if (tipoParam === 'CON') {
-          // CÁLCULOS CORRECTOS 2025 - DEDUCCIONES MENSUALES COMPLETAS
+          // CÁLCULOS CON TABLA FISCAL DEL AÑO CORRESPONDIENTE - DEDUCCIONES MENSUALES COMPLETAS
           if (legalDeductions.ihss) {
-            IHSS = Math.min(base_salary, 11903.13) * 0.05
+            IHSS = calculateIHSS(base_salary, taxConstants)
           }
           
           if (legalDeductions.rap) {
-            RAP = Math.max(0, base_salary - 11903.13) * 0.015
+            RAP = calculateRAP(base_salary, taxConstants)
           }
           
           if (legalDeductions.isr) {
-            // ISR según tabla MENSUAL de Honduras 2025
-            if (base_salary > 21457.76) {
-              if (base_salary <= 30969.88) {
-                ISR = (base_salary - 21457.76) * 0.15
-              } else if (base_salary <= 67604.36) {
-                ISR = 1428.32 + (base_salary - 30969.88) * 0.20
-              } else {
-                ISR = 8734.32 + (base_salary - 67604.36) * 0.25
-              }
-            }
+            ISR = calculateISR(base_salary, taxConstants.isr_brackets)
           }
           
           total_deductions = IHSS + RAP + ISR
@@ -673,7 +673,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             eff_rap: RAP,
             eff_isr: ISR,
             eff_neto: total,
-            edited: false
+            edited: false,
+            tax_year: yearNum // Guardar año de tabla fiscal usada
           }, {
             onConflict: 'run_id,employee_id',
             ignoreDuplicates: false
@@ -839,7 +840,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             eff_rap: RAP,
             eff_isr: ISR,
             eff_neto: total,
-            edited: false
+            edited: false,
+            tax_year: yearNum // Guardar año de tabla fiscal usada
           }, {
             onConflict: 'run_id,employee_id',
             ignoreDuplicates: false

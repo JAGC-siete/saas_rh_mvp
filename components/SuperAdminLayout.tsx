@@ -113,6 +113,12 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
       href: '/app/admin/backup',
       icon: Database,
       description: 'Respaldo de datos'
+    },
+    {
+      name: 'Tablas de Impuestos',
+      href: '/app/admin/tax-brackets',
+      icon: FileText,
+      description: 'Gestión de tablas ISR por año'
     }
   ]
 

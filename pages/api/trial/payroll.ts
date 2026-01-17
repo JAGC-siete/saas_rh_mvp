@@ -1,30 +1,11 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient } from '../../../lib/supabase/server'
-
-// Honduras 2025 constants (monthly)
-const HND_2025 = {
-  SALARIO_MINIMO: 11903.13,
-  IHSS_TECHO: 11903.13,
-  IHSS_PORC_E: 0.05, // 5%
-  RAP_PORC: 0.015,   // 1.5%
-}
-
-function calcularISRMensual(salarioMensual: number): number {
-  const BRACKETS = [
-    { limit: 21457.76, rate: 0.0, base: 0, lower: 0 },
-    { limit: 30969.88, rate: 0.15, base: 0, lower: 21457.76 },
-    { limit: 67604.36, rate: 0.20, base: 1428.32, lower: 30969.88 },
-    { limit: Infinity, rate: 0.25, base: 8734.32, lower: 67604.36 },
-  ]
-  for (const b of BRACKETS) {
-    if (salarioMensual <= b.limit) {
-      if (b.rate === 0) return 0
-      if (b.base === 0) return Math.max(0, (salarioMensual - b.lower)) * b.rate
-      return b.base + Math.max(0, (salarioMensual - b.lower)) * b.rate
-    }
-  }
-  return 0
-}
+import { 
+  getTaxBracketsForYear, 
+  calculateISR, 
+  calculateIHSS, 
+  calculateRAP 
+} from '../../../lib/tax/honduras-tax'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -71,6 +52,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const startDate = '2025-08-01'
     const endDate = '2025-08-31'
     const daysInMonth = 31
+    const taxYear = 2025 // Año del período para obtener tabla fiscal correcta
+
+    // Obtener constantes fiscales para el año del período
+    const taxConstants = await getTaxBracketsForYear(taxYear)
 
     let attendance: any[] = []
     if (employees && employees.length > 0) {
@@ -130,9 +115,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const gross = (empSalary / 30) * daysWorked
 
       // Monthly deductions, proportionally applied to attendance fraction for demo fairness
-      const ihssMonthly = Math.min(empSalary, HND_2025.IHSS_TECHO) * HND_2025.IHSS_PORC_E
-      const rapMonthly = Math.max(0, empSalary - HND_2025.SALARIO_MINIMO) * HND_2025.RAP_PORC
-      const isrMonthly = calcularISRMensual(empSalary)
+      // Usando tabla fiscal del año correspondiente
+      const ihssMonthly = calculateIHSS(empSalary, taxConstants)
+      const rapMonthly = calculateRAP(empSalary, taxConstants)
+      const isrMonthly = calculateISR(empSalary, taxConstants.isr_brackets)
       const attendanceFactor = Math.min(1, daysWorked / 30)
       const ihss = ihssMonthly * attendanceFactor
       const rap = rapMonthly * attendanceFactor

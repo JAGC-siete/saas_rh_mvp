@@ -3,21 +3,12 @@ import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { getHondurasTimestamp, nowInHonduras } from '../../../lib/timezone'
 import { requirePlanAndQuota, incrementUsage, getBillingErrorCode } from '../../../lib/billing/enforce'
 import { auditPayrollGenerated } from '../../../lib/audit'
-
-// CONSTANTES CORRECTAS HONDURAS 2025 (VERIFICACIÓN CRUZADA)
-const HONDURAS_2025_CONSTANTS = {
-  SALARIO_MINIMO: 11903.13,
-  IHSS_TECHO: 11903.13,        // Techo IHSS 2025 (EM + IVM)
-  IHSS_PORCENTAJE_EMPLEADO: 0.05,  // 5% total (2.5% EM + 2.5% IVM)
-  
-  // ISR 2025 - TABLA MENSUAL CORRECTA (derivada de anual SAR)
-  ISR_BRACKETS_MENSUAL: [
-    { limit: 21457.76, rate: 0.00, base: 0 },                    // Exento hasta L 21,457.76
-    { limit: 30969.88, rate: 0.15, base: 0 },                    // 15%
-    { limit: 67604.36, rate: 0.20, base: 1428.32 },             // 20%
-    { limit: Infinity, rate: 0.25, base: 8734.32 }              // 25%
-  ]
-}
+import { 
+  getTaxBracketsForYear, 
+  calculateISR, 
+  calculateIHSS, 
+  calculateRAP 
+} from '../../../lib/tax/honduras-tax'
 
 interface PlanillaItem {
   id: string
@@ -37,40 +28,6 @@ interface PlanillaItem {
   total: number
   notes_on_ingress: string
   notes_on_deductions: string
-}
-
-// CÁLCULO ISR CORRECTO 2025 - TABLA MENSUAL
-function calcularISR(salarioMensual: number): number {
-  // Aplicar tabla mensual directamente
-  for (const bracket of HONDURAS_2025_CONSTANTS.ISR_BRACKETS_MENSUAL) {
-    if (salarioMensual <= bracket.limit) {
-      if (bracket.rate === 0) return 0
-      
-      // Calcular correctamente el excedente del tramo
-      if (bracket.base === 0) {
-        // Primer tramo: aplicar tasa desde el inicio
-        return (salarioMensual - 21457.76) * bracket.rate
-      } else {
-        // Tramo con base: aplicar base + tasa sobre excedente
-        const limiteInferior = bracket.limit === 67604.36 ? 30969.88 : 67604.36
-        return bracket.base + (salarioMensual - limiteInferior) * bracket.rate
-      }
-    }
-  }
-  return 0
-}
-
-// CÁLCULO IHSS CORRECTO 2025
-function calcularIHSS(salarioBase: number): number {
-  // IHSS: 5% del empleado (2.5% EM + 2.5% IVM) con techo L 11,903.13
-  const ihssBase = Math.min(salarioBase, HONDURAS_2025_CONSTANTS.IHSS_TECHO)
-  return ihssBase * HONDURAS_2025_CONSTANTS.IHSS_PORCENTAJE_EMPLEADO
-}
-
-// CÁLCULO RAP CORRECTO 2025
-function calcularRAP(salarioBase: number): number {
-  // RAP: 1.5% sobre el excedente del salario mínimo L 11,903.13
-  return Math.max(0, salarioBase - HONDURAS_2025_CONSTANTS.SALARIO_MINIMO) * 0.015
 }
 
 // Función para calcular tardanzas basada en horario de Paragon
@@ -162,6 +119,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         message: 'No se puede generar nómina para períodos futuros'
       })
     }
+
+    // Obtener constantes fiscales para el año del período
+    const taxConstants = await getTaxBracketsForYear(year)
 
     // Obtener configuración de payroll de la empresa (leer desde metadata)
     const { data: payrollConfig, error: configError } = await supabase
@@ -351,18 +311,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // APLICAR DEDUCCIONES según configuración y legal_deductions
       if (aplicarDeducciones) {
-        // CÁLCULOS CORRECTOS 2025 - DEDUCCIONES MENSUALES COMPLETAS
+        // CÁLCULOS CON TABLA FISCAL DEL AÑO CORRESPONDIENTE - DEDUCCIONES MENSUALES COMPLETAS
         // Aplicar solo si están habilitadas en legal_deductions
         if (legalDeductions.ihss) {
-          IHSS = calcularIHSS(base_salary)  // Deducción mensual completa
+          IHSS = calculateIHSS(base_salary, taxConstants)  // Deducción mensual completa
         }
         
         if (legalDeductions.rap) {
-          RAP = calcularRAP(base_salary)    // Deducción mensual completa
+          RAP = calculateRAP(base_salary, taxConstants)    // Deducción mensual completa
         }
         
         if (legalDeductions.isr) {
-          ISR = calcularISR(base_salary)    // Deducción mensual completa
+          ISR = calculateISR(base_salary, taxConstants.isr_brackets)    // Deducción mensual completa
         }
         
         total_deductions = IHSS + RAP + ISR
@@ -429,6 +389,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       status: 'draft',
       notes_on_ingress: item.notes_on_ingress,
       notes_on_deductions: item.notes_on_deductions,
+      metadata: { tax_year: year }, // Guardar año de tabla fiscal usada
       generated_by: user.id || 'system',
       generated_at: getHondurasTimestamp()
     }))
