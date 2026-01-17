@@ -16,6 +16,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Authenticate and get admin context with audit logging
     const { adminClient, user, auditLog } = await requireSuperAdminWithAudit(req, res)
 
+    // Validate user exists (should always be present after auth, but be defensive)
+    if (!user || !user.id) {
+      logger.error('User not available after authentication', {
+        hasUser: !!user,
+        userId: user?.id
+      })
+      return res.status(500).json(createErrorResponse(
+        'Authentication error',
+        'AUTH_ERROR',
+        { details: 'User information not available' }
+      ))
+    }
+
     // Validate and sanitize query params
     const status = req.query.status as string | undefined
     const source = req.query.source as string | undefined
@@ -79,15 +92,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (error) {
       logger.error('Error fetching mail list subscriptions', {
-        userId: user.id,
-        error: error.message,
+        userId: user?.id || 'unknown',
+        error: error?.message || String(error),
+        code: error?.code,
         status,
         source,
         search: sanitizedSearch,
         page,
         pageSize
       })
-      throw error
+      return res.status(500).json(createErrorResponse(
+        'Error al obtener suscripciones de la base de datos',
+        'DATABASE_ERROR',
+        { details: error?.message || String(error) }
+      ))
     }
 
     // Audit log the access (protected - don't fail endpoint if audit fails)
@@ -119,19 +137,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }))
   } catch (error: any) {
     // Handle auth errors (already sent response)
-    if (error.message === 'UNAUTHORIZED' || error.message === 'INSUFFICIENT_PERMISSIONS') {
+    if (error?.message === 'UNAUTHORIZED' || error?.message === 'INSUFFICIENT_PERMISSIONS') {
       return // Response already sent by guard
     }
 
+    // Check if response was already sent
+    if (res.headersSent) {
+      logger.error('Error after response sent in mail-list index', {
+        error: error?.message || String(error)
+      })
+      return
+    }
+
     logger.error('Unexpected error fetching mail list subscriptions', {
-      error: error.message,
-      stack: error.stack
+      error: error?.message || String(error),
+      stack: error?.stack
     })
 
     return res.status(500).json(createErrorResponse(
       'An internal server error occurred',
       'INTERNAL_ERROR',
-      { details: error.message }
+      { details: error?.message || 'Unknown error' }
     ))
   }
 }

@@ -16,6 +16,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Authenticate and get admin context with audit logging
     const { adminClient, user, auditLog } = await requireSuperAdminWithAudit(req, res)
 
+    // Validate user exists (should always be present after auth, but be defensive)
+    if (!user || !user.id) {
+      logger.error('User not available after authentication', {
+        hasUser: !!user,
+        userId: user?.id
+      })
+      return res.status(500).json(createErrorResponse(
+        'Authentication error',
+        'AUTH_ERROR',
+        { details: 'User information not available' }
+      ))
+    }
+
     // Get all subscriptions for statistics
     // Note: For large datasets, consider adding pagination or caching
     const { data: subscriptions, error: subscriptionsError } = await adminClient
@@ -24,10 +37,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (subscriptionsError) {
       logger.error('Error fetching subscriptions for stats', {
-        userId: user.id,
-        error: subscriptionsError.message
+        userId: user?.id || 'unknown',
+        error: subscriptionsError?.message || String(subscriptionsError),
+        code: subscriptionsError?.code
       })
-      throw subscriptionsError
+      return res.status(500).json(createErrorResponse(
+        'Error al obtener estadísticas de la base de datos',
+        'DATABASE_ERROR',
+        { details: subscriptionsError?.message || String(subscriptionsError) }
+      ))
     }
 
     const subscriptionsData = subscriptions || []
@@ -60,8 +78,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const month = date.getMonth()
       
       const monthSubs = subscriptionsData.filter((s: any) => {
-        const createdDate = new Date(s.created_at)
-        return createdDate.getFullYear() === year && createdDate.getMonth() === month
+        if (!s.created_at) return false
+        try {
+          const createdDate = new Date(s.created_at)
+          if (isNaN(createdDate.getTime())) return false
+          return createdDate.getFullYear() === year && createdDate.getMonth() === month
+        } catch {
+          return false
+        }
       })
 
       const confirmed = monthSubs.filter((s: any) => s.status === 'confirmed').length
@@ -93,19 +117,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }))
   } catch (error: any) {
     // Handle auth errors (already sent response)
-    if (error.message === 'UNAUTHORIZED' || error.message === 'INSUFFICIENT_PERMISSIONS') {
+    if (error?.message === 'UNAUTHORIZED' || error?.message === 'INSUFFICIENT_PERMISSIONS') {
       return // Response already sent by guard
     }
 
+    // Check if response was already sent
+    if (res.headersSent) {
+      logger.error('Error after response sent in mail-list stats', {
+        error: error?.message || String(error)
+      })
+      return
+    }
+
     logger.error('Unexpected error fetching mail list stats', {
-      error: error.message,
-      stack: error.stack
+      error: error?.message || String(error),
+      stack: error?.stack
     })
 
     return res.status(500).json(createErrorResponse(
       'An internal server error occurred',
       'INTERNAL_ERROR',
-      { details: error.message }
+      { details: error?.message || 'Unknown error' }
     ))
   }
 }
