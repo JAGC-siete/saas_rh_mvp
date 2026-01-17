@@ -245,11 +245,13 @@ export default function ManageAffiliatesPage() {
       <SuperAdminLayout>
         <div className="space-y-6 p-4">
           {/* Header */}
-          <div>
-            <h1 className="text-3xl font-bold">Programa de Afiliados</h1>
-            <p className="text-muted-foreground mt-2">
-              Gestiona afiliados, comisiones y empresas referidas
-            </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold">Programa de Afiliados</h1>
+              <p className="text-muted-foreground mt-2">
+                Gestiona afiliados, comisiones y empresas referidas
+              </p>
+            </div>
           </div>
 
           {/* Statistics */}
@@ -410,8 +412,18 @@ export default function ManageAffiliatesPage() {
                 <CardDescription>Aprobar o rechazar solicitudes de afiliados.</CardDescription>
               </CardHeader>
               <CardContent>
-                {loading && <p>Cargando...</p>}
-                {error && <p className="text-red-500">{error}</p>}
+                {loading && (
+                  <div className="text-center py-8">
+                    <p>Cargando...</p>
+                  </div>
+                )}
+                
+                {error && (
+                  <div className="text-center py-8">
+                    <p className="text-red-500">{error}</p>
+                  </div>
+                )}
+
                 {!loading && !error && (
                   <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">

@@ -180,6 +180,7 @@ export default function MailListPage() {
           <Card>
             <CardHeader>
               <CardTitle>Filtros</CardTitle>
+              <CardDescription>Filtra y busca suscriptores</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -191,7 +192,7 @@ export default function MailListPage() {
                     placeholder="Buscar por email..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border rounded-md"
+                    className="w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                   />
                 </div>
 
@@ -199,7 +200,7 @@ export default function MailListPage() {
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value as any)}
-                  className="px-4 py-2 border rounded-md"
+                  className="px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 >
                   <option value="all">Todos los estados</option>
                   <option value="pending">Pendientes</option>
@@ -211,7 +212,7 @@ export default function MailListPage() {
                 <select
                   value={sourceFilter}
                   onChange={(e) => setSourceFilter(e.target.value)}
-                  className="px-4 py-2 border rounded-md"
+                  className="px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 >
                   <option value="all">Todas las fuentes</option>
                   {uniqueSources.map(source => (
@@ -312,7 +313,7 @@ export default function MailListPage() {
 
                   {/* Pagination */}
                   {pagination.totalPages > 1 && (
-                    <div className="flex items-center justify-between mt-4">
+                    <div className="flex items-center justify-between mt-6 pt-4 border-t">
                       <div className="text-sm text-gray-500">
                         Mostrando {(pagination.page - 1) * pagination.pageSize + 1} -{' '}
                         {Math.min(pagination.page * pagination.pageSize, pagination.total)} de{' '}
