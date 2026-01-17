@@ -1,14 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-if (!supabaseUrl || !supabaseServiceRoleKey) {
-  throw new Error('Supabase URL and service role key are required.')
-}
-
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey)
+import { createClient } from '../../../lib/supabase/server'
+import { logger } from '../../../lib/logger'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -22,27 +14,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.redirect(`${siteUrl}/mail-list/unsubscribe?error=invalid_token`)
   }
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net'
+  
+  // Usar cliente anónimo - RLS permitirá SELECT/UPDATE por token
+  const supabase = createClient(req, res)
+
   try {
-    // Buscar suscripción por token
-    const { data: subscription, error: fetchError } = await supabaseAdmin
+    // Buscar suscripción por token (RLS policy permite SELECT por token)
+    const { data: subscription, error: fetchError } = await supabase
       .from('mail_list_subscriptions')
       .select('id, email, status')
       .eq('confirmation_token', token)
       .single()
 
     if (fetchError || !subscription) {
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net'
+      logger.warn('Invalid unsubscribe token used', {
+        token: token.substring(0, 8) + '...' // Log partial token for debugging
+      })
       return res.redirect(`${siteUrl}/mail-list/unsubscribe?error=invalid_token`)
     }
 
     // Si ya está unsubscribed, redirigir a confirmación
     if (subscription.status === 'unsubscribed') {
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net'
+      logger.debug('Subscription already unsubscribed', {
+        subscriptionId: subscription.id
+      })
       return res.redirect(`${siteUrl}/mail-list/unsubscribe?success=true`)
     }
 
-    // Actualizar status a unsubscribed
-    const { error: updateError } = await supabaseAdmin
+    // Actualizar status a unsubscribed (RLS policy permite UPDATE por token)
+    const { error: updateError } = await supabase
       .from('mail_list_subscriptions')
       .update({
         status: 'unsubscribed',
@@ -51,17 +52,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq('id', subscription.id)
 
     if (updateError) {
-      console.error('Error dando de baja suscripción:', updateError)
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net'
+      logger.error('Error unsubscribing from mail list', {
+        subscriptionId: subscription.id,
+        error: updateError.message
+      })
       return res.redirect(`${siteUrl}/mail-list/unsubscribe?error=update_failed`)
     }
 
+    logger.info('Mail list subscription unsubscribed', {
+      subscriptionId: subscription.id,
+      email: subscription.email
+    })
+
     // Redirigir a página de confirmación
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net'
     return res.redirect(`${siteUrl}/mail-list/unsubscribe?success=true`)
   } catch (error: any) {
-    console.error('Error en baja de suscripción:', error)
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net'
+    logger.error('Unexpected error unsubscribing from mail list', {
+      error: error?.message || error,
+      stack: error?.stack,
+      token: token.substring(0, 8) + '...'
+    })
     return res.redirect(`${siteUrl}/mail-list/unsubscribe?error=server_error`)
   }
 }

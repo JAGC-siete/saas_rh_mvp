@@ -166,6 +166,9 @@ export async function requireCompanyAccess(req: NextApiRequest, res: NextApiResp
 
 /**
  * Helper for super admin only endpoints
+ * 
+ * @deprecated Use requireSuperAdminWithAudit from api-guards.ts for new code
+ * This function is kept for backwards compatibility
  */
 export async function requireSuperAdmin(req: NextApiRequest, res: NextApiResponse): Promise<AuthenticatedUser> {
   return authenticateUser(req, res, { allowedRoles: ['super_admin'] })
