@@ -90,17 +90,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       throw error
     }
 
-    // Audit log the access
-    await auditLog('mail_list_accessed', {
-      filters: {
-        status: status || 'all',
-        source: source || 'all',
-        search: sanitizedSearch ? 'yes' : 'no',
-        page,
-        pageSize,
-        totalResults: count || 0
-      }
-    })
+    // Audit log the access (protected - don't fail endpoint if audit fails)
+    try {
+      await auditLog('mail_list_accessed', {
+        filters: {
+          status: status || 'all',
+          source: source || 'all',
+          search: sanitizedSearch ? 'yes' : 'no',
+          page,
+          pageSize,
+          totalResults: count || 0
+        }
+      })
+    } catch (auditError: any) {
+      logger.warn('Error logging audit (continuing)', {
+        error: auditError?.message || String(auditError)
+      })
+    }
 
     return res.status(200).json(createSuccessResponse({
       subscriptions: subscriptions || [],

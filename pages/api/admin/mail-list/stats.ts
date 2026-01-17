@@ -73,11 +73,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }).reverse()
 
-    // Audit log the stats access
-    await auditLog('mail_list_stats_accessed', {
-      totalSubscriptions: subscriptionsByStatus.total,
-      timestamp: new Date().toISOString()
-    })
+    // Audit log the stats access (protected - don't fail endpoint if audit fails)
+    try {
+      await auditLog('mail_list_stats_accessed', {
+        totalSubscriptions: subscriptionsByStatus.total,
+        timestamp: new Date().toISOString()
+      })
+    } catch (auditError: any) {
+      logger.warn('Error logging audit (continuing)', {
+        error: auditError?.message || String(auditError)
+      })
+    }
 
     return res.status(200).json(createSuccessResponse({
       subscriptionsByStatus,
