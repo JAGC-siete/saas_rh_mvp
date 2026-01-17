@@ -1,5 +1,4 @@
 import Head from 'next/head'
-import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import MainHeader from '../components/MainHeader'
 import MailListSubscription from '../components/MailListSubscription'
@@ -41,27 +40,6 @@ export default function SuscripcionPage() {
 
       {/* Shared Cloud Background */}
       <CloudBackground />
-
-      {/* Footer */}
-      <footer className="border-t border-white/10 mt-12 sm:mt-16 md:mt-20">
-        <div className="max-w-6xl mx-auto px-4 py-8 sm:py-10 md:py-12">
-          <div className="text-center">
-            <p className="text-sm sm:text-base text-slate-400 mb-3 sm:mb-4 px-2">
-              Protegemos tu información. <strong>Solo será utilizada para contactarte</strong>.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 justify-center items-center text-xs sm:text-sm px-2">
-              <Link 
-                href="/politicadeprivacidad" 
-                className="text-brand-300 hover:text-brand-400 transition-colors underline decoration-brand-400/30 hover:decoration-brand-400"
-              >
-                Política de Privacidad
-              </Link>
-              <span className="text-slate-500">•</span>
-              <span className="text-slate-500">© 2025 Humano SISU. Todos los derechos reservados.</span>
-            </div>
-          </div>
-        </div>
-      </footer>
 
       <DemoFooter />
     </div>

@@ -104,6 +104,25 @@ const DemoFooter: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Privacy Notice */}
+        <div className="border-t border-gray-200 mt-8 pt-8">
+          <div className="text-center">
+            <p className="text-sm text-gray-600 mb-3">
+              Protegemos tu información. <strong>Solo será utilizada para contactarte</strong>.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 justify-center items-center text-xs text-gray-500">
+              <a 
+                href="/politicadeprivacidad" 
+                className="text-gray-600 hover:text-gray-900 transition-colors underline decoration-gray-400/30 hover:decoration-gray-600"
+              >
+                Política de Privacidad
+              </a>
+              <span className="hidden sm:inline">•</span>
+              <span>© 2025 Humano SISU. Todos los derechos reservados.</span>
+            </div>
+          </div>
+        </div>
       </div>
     </footer>
   )
