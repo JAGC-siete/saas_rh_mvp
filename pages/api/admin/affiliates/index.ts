@@ -17,19 +17,60 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .from('affiliates')
       .select('id, user_id, referral_code, status, created_at')
 
-    if (affiliatesError) throw affiliatesError
+    if (affiliatesError) {
+      logger.error('Error fetching affiliates', { error: affiliatesError })
+      throw affiliatesError
+    }
 
-    // 2. Fetch all auth users and create a map
-    const { data: authUsers, error: authUsersError } = await adminClient.auth.admin.listUsers()
-    if (authUsersError) throw authUsersError
-    
+    if (!affiliates || affiliates.length === 0) {
+      // No affiliates found - return empty array
+      await auditLog('affiliates_listed', { count: 0 })
+      return res.status(200).json(createSuccessResponse({ affiliates: [] }))
+    }
+
+    // 2. Fetch all auth users and create a map (with pagination)
     const usersMap = new Map<string, { email: string, full_name: string }>()
-    authUsers.users.forEach((authUser: any) => {
-      usersMap.set(authUser.id, {
-        email: authUser.email || 'N/A',
-        full_name: authUser.user_metadata?.full_name || 'N/A'
+    
+    try {
+      let page = 1
+      let hasMore = true
+      const perPage = 1000 // Max per page for listUsers
+      
+      while (hasMore) {
+        const { data: authUsers, error: authUsersError } = await adminClient.auth.admin.listUsers({
+          page,
+          perPage
+        })
+        
+        if (authUsersError) {
+          logger.warn('Error fetching auth users page', { 
+            page, 
+            error: authUsersError?.message || String(authUsersError) 
+          })
+          break
+        }
+        
+        if (authUsers?.users && authUsers.users.length > 0) {
+          authUsers.users.forEach((authUser: any) => {
+            usersMap.set(authUser.id, {
+              email: authUser.email || 'N/A',
+              full_name: authUser.user_metadata?.full_name || 'N/A'
+            })
+          })
+          
+          // Check if there are more pages
+          hasMore = authUsers.users.length === perPage
+          page++
+        } else {
+          hasMore = false
+        }
+      }
+    } catch (authError: any) {
+      logger.error('Error fetching auth users for affiliates', {
+        error: authError?.message || String(authError)
       })
-    })
+      // Continue without user data - affiliates will show 'N/A' for email/name
+    }
 
     // 3. Fetch companies referred by each affiliate
     const { data: referredCompanies, error: companiesError } = await adminClient
@@ -37,7 +78,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .select('id, referred_by_affiliate_id, created_at')
       .not('referred_by_affiliate_id', 'is', null)
 
-    if (companiesError) throw companiesError
+    if (companiesError) {
+      logger.error('Error fetching referred companies', { error: companiesError })
+      throw companiesError
+    }
 
     // 4. Fetch commissions for each affiliate
     const { data: commissions, error: commissionsError } = await adminClient
@@ -45,7 +89,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .select('id, affiliate_id, amount, status, created_at')
       .order('created_at', { ascending: false })
 
-    if (commissionsError) throw commissionsError
+    if (commissionsError) {
+      logger.error('Error fetching commissions', { error: commissionsError })
+      throw commissionsError
+    }
 
     // 5. Calculate stats per affiliate
     const companiesByAffiliate: { [key: string]: number } = {}
@@ -58,16 +105,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     commissions?.forEach((commission: any) => {
       const affiliateId = commission.affiliate_id
+      if (!affiliateId) return // Skip commissions without affiliate_id
+      
       if (!commissionsByAffiliate[affiliateId]) {
         commissionsByAffiliate[affiliateId] = { total: 0, pending: 0, paid: 0, lastCommission: null }
       }
-      commissionsByAffiliate[affiliateId].total += parseFloat(commission.amount || 0)
-      if (commission.status === 'pending') {
-        commissionsByAffiliate[affiliateId].pending += parseFloat(commission.amount || 0)
-      } else if (commission.status === 'paid') {
-        commissionsByAffiliate[affiliateId].paid += parseFloat(commission.amount || 0)
+      
+      const amount = parseFloat(commission.amount || '0') || 0
+      if (isNaN(amount)) {
+        logger.warn('Invalid commission amount', { commissionId: commission.id, amount: commission.amount })
+        return
       }
-      if (!commissionsByAffiliate[affiliateId].lastCommission) {
+      
+      commissionsByAffiliate[affiliateId].total += amount
+      if (commission.status === 'pending') {
+        commissionsByAffiliate[affiliateId].pending += amount
+      } else if (commission.status === 'paid') {
+        commissionsByAffiliate[affiliateId].paid += amount
+      }
+      if (!commissionsByAffiliate[affiliateId].lastCommission && commission.created_at) {
         commissionsByAffiliate[affiliateId].lastCommission = commission.created_at
       }
     })

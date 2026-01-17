@@ -26,14 +26,46 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (affiliatesError) throw affiliatesError
 
-    // Fetch auth users to get affiliate names
-    const { data: authUsers, error: authUsersError } = await supabase.auth.admin.listUsers()
-    if (authUsersError) throw authUsersError
-
+    // Fetch auth users to get affiliate names (with pagination)
     const usersMap = new Map<string, string>()
-    authUsers.users.forEach(user => {
-      usersMap.set(user.id, user.user_metadata?.full_name || user.email || 'N/A')
-    })
+    
+    try {
+      let page = 1
+      let hasMore = true
+      const perPage = 1000 // Max per page for listUsers
+      
+      while (hasMore) {
+        const { data: authUsers, error: authUsersError } = await supabase.auth.admin.listUsers({
+          page,
+          perPage
+        })
+        
+        if (authUsersError) {
+          console.error('Error fetching auth users page', { 
+            page, 
+            error: authUsersError?.message || String(authUsersError) 
+          })
+          break
+        }
+        
+        if (authUsers?.users && authUsers.users.length > 0) {
+          authUsers.users.forEach((user: any) => {
+            usersMap.set(user.id, user.user_metadata?.full_name || user.email || 'N/A')
+          })
+          
+          // Check if there are more pages
+          hasMore = authUsers.users.length === perPage
+          page++
+        } else {
+          hasMore = false
+        }
+      }
+    } catch (authError: any) {
+      console.error('Error fetching auth users for commissions', {
+        error: authError?.message || String(authError)
+      })
+      // Continue without user data - commissions will show 'N/A' for affiliate name
+    }
 
     const affiliatesMap = new Map<string, string>()
     affiliates?.forEach(affiliate => {
