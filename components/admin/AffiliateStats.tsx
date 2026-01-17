@@ -65,14 +65,14 @@ export default function AffiliateStats() {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[...Array(4)].map((_, i) => (
-          <Card key={i} className="animate-pulse">
+          <Card key={i} variant="glass" className="border-white/10 animate-pulse">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <div className="h-4 bg-gray-200 rounded w-24"></div>
-              <div className="h-5 w-5 bg-gray-200 rounded"></div>
+              <div className="h-4 bg-white/20 rounded w-24"></div>
+              <div className="h-5 w-5 bg-white/20 rounded"></div>
             </CardHeader>
             <CardContent>
-              <div className="h-8 bg-gray-200 rounded w-16 mb-2"></div>
-              <div className="h-3 bg-gray-200 rounded w-20"></div>
+              <div className="h-8 bg-white/20 rounded w-16 mb-2"></div>
+              <div className="h-3 bg-white/20 rounded w-20"></div>
             </CardContent>
           </Card>
         ))}
@@ -82,9 +82,9 @@ export default function AffiliateStats() {
 
   if (error || !stats) {
     return (
-      <Card>
+      <Card variant="glass" className="border-white/10">
         <CardContent className="pt-6">
-          <p className="text-red-500">{error || 'No se pudieron cargar las estadísticas'}</p>
+          <p className="text-red-400">{error || 'No se pudieron cargar las estadísticas'}</p>
         </CardContent>
       </Card>
     )

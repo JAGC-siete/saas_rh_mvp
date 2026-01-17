@@ -293,37 +293,37 @@ export default function ManageAffiliatesPage() {
 
           {/* Requests Tab */}
           {activeTab === 'requests' && (
-            <Card>
+            <Card variant="glass" className="border-white/10">
               <CardHeader>
-                <CardTitle>Solicitudes de Afiliación</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-white">Solicitudes de Afiliación</CardTitle>
+                <CardDescription className="text-white/70">
                   {requests.filter(r => r.status === 'pending_approval').length} solicitudes pendientes de aprobación
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+                  <table className="min-w-full divide-y divide-white/10">
+                    <thead className="bg-white/5">
                       <tr>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider">
                           Email
                         </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider">
                           Nombre
                         </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider">
                           Información Profesional
                         </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider">
                           Términos Aceptados
                         </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider">
                           Estado
                         </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider">
                           Fecha
                         </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider">
                           Acciones
                         </th>
                       </tr>
@@ -397,7 +397,7 @@ export default function ManageAffiliatesPage() {
                     </tbody>
                   </table>
                   {requests.filter(r => r.status === 'pending_approval').length === 0 && (
-                    <div className="text-center py-8 text-gray-500">
+                    <div className="text-center py-8 text-white/70">
                       No hay solicitudes pendientes de aprobación
                     </div>
                   )}
@@ -408,10 +408,10 @@ export default function ManageAffiliatesPage() {
 
           {/* Affiliates Tab */}
           {activeTab === 'affiliates' && (
-            <Card>
+            <Card variant="glass" className="border-white/10">
               <CardHeader>
-                <CardTitle>Lista de Afiliados</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-white">Lista de Afiliados</CardTitle>
+                <CardDescription className="text-white/70">
                   Total: {affiliates.length} afiliados registrados
                 </CardDescription>
               </CardHeader>
@@ -430,69 +430,69 @@ export default function ManageAffiliatesPage() {
 
                 {!loading && !error && (
                   <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
+                    <table className="min-w-full divide-y divide-white/10">
+                      <thead className="bg-white/5">
                         <tr>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider">
                             Nombre
                           </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider">
                             Email
                           </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider">
                             Código
                           </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider">
                             Empresas
                           </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider">
                             Comisiones
                           </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider">
                             Última Comisión
                           </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider">
                             Estado
                           </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider">
                             Acciones
                           </th>
                         </tr>
                       </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
+                      <tbody className="bg-white/5 divide-y divide-white/10">
                         {affiliates.map(aff => (
-                          <tr key={aff.id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          <tr key={aff.id} className="hover:bg-white/10 transition-colors">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white/90">
                               {aff.user_name}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-white/70">
                               {aff.user_email}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-white/70 font-mono">
                               {aff.referral_code}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-white/70">
                               <div className="flex items-center">
                                 <Building2 className="h-4 w-4 mr-1" />
                                 {aff.companies_referred}
                               </div>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-white/70">
                               <div className="flex flex-col">
-                                <span className="font-medium">L. {aff.commissions_total.toLocaleString()}</span>
-                                <span className="text-xs text-gray-400">
+                                <span className="font-medium text-white/90">L. {aff.commissions_total.toLocaleString()}</span>
+                                <span className="text-xs text-white/50">
                                   Pendiente: L. {aff.commissions_pending.toLocaleString()}
                                 </span>
                               </div>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-white/70">
                               {aff.last_commission ? (
                                 <div className="flex items-center">
                                   <Calendar className="h-4 w-4 mr-1" />
                                   {new Date(aff.last_commission).toLocaleDateString()}
                                 </div>
                               ) : (
-                                <span className="text-gray-400">-</span>
+                                <span className="text-white/40">-</span>
                               )}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
@@ -532,7 +532,7 @@ export default function ManageAffiliatesPage() {
                       </tbody>
                     </table>
                     {affiliates.length === 0 && !loading && !error && (
-                      <div className="text-center py-8 text-gray-500">
+                      <div className="text-center py-8 text-white/70">
                         No hay afiliados registrados
                       </div>
                     )}
@@ -544,12 +544,12 @@ export default function ManageAffiliatesPage() {
 
           {/* Commissions Tab */}
           {activeTab === 'commissions' && (
-            <Card>
+            <Card variant="glass" className="border-white/10">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>Comisiones</CardTitle>
-                    <CardDescription>
+                    <CardTitle className="text-white">Comisiones</CardTitle>
+                    <CardDescription className="text-white/70">
                       Total: {commissions.length} comisiones registradas
                     </CardDescription>
                   </div>
@@ -580,39 +580,39 @@ export default function ManageAffiliatesPage() {
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+                  <table className="min-w-full divide-y divide-white/10">
+                    <thead className="bg-white/5">
                       <tr>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider">
                           Afiliado
                         </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider">
                           Empresa Referida
                         </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider">
                           Monto
                         </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider">
                           Estado
                         </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider">
                           Fecha
                         </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider">
                           Acciones
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                    <tbody className="bg-white/5 divide-y divide-white/10">
                       {filteredCommissions.map(comm => (
-                        <tr key={comm.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <tr key={comm.id} className="hover:bg-white/10 transition-colors">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-white/90">
                             {comm.affiliate_name || 'N/A'}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-white/70">
                             {comm.company_name || comm.referred_company_id}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white/90">
                             <div className="flex items-center">
                               <DollarSign className="h-4 w-4 mr-1" />
                               L. {comm.amount.toLocaleString()}
@@ -631,7 +631,7 @@ export default function ManageAffiliatesPage() {
                               {comm.status === 'paid' ? 'Pagada' : comm.status === 'cancelled' ? 'Cancelada' : 'Pendiente'}
                             </Badge>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-white/70">
                             {new Date(comm.created_at).toLocaleDateString()}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -644,7 +644,7 @@ export default function ManageAffiliatesPage() {
                               </Button>
                             )}
                             {comm.status === 'paid' && comm.paid_at && (
-                              <span className="text-xs text-gray-400">
+                              <span className="text-xs text-white/50">
                                 Pagada: {new Date(comm.paid_at).toLocaleDateString()}
                               </span>
                             )}
@@ -654,7 +654,7 @@ export default function ManageAffiliatesPage() {
                     </tbody>
                   </table>
                   {filteredCommissions.length === 0 && (
-                    <div className="text-center py-8 text-gray-500">
+                    <div className="text-center py-8 text-white/70">
                       {commissionFilter !== 'all' 
                         ? `No hay comisiones con estado ${commissionFilter === 'pending' ? 'pendiente' : commissionFilter === 'paid' ? 'pagada' : 'cancelada'}`
                         : 'No hay comisiones registradas'

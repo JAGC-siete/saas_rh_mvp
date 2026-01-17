@@ -177,10 +177,10 @@ export default function MailListPage() {
           <MailListStats />
 
           {/* Filters */}
-          <Card>
+          <Card variant="glass" className="border-white/10">
             <CardHeader>
-              <CardTitle>Filtros</CardTitle>
-              <CardDescription>Filtra y busca suscriptores</CardDescription>
+              <CardTitle className="text-white">Filtros</CardTitle>
+              <CardDescription className="text-white/70">Filtra y busca suscriptores</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -226,10 +226,10 @@ export default function MailListPage() {
           </Card>
 
           {/* Subscriptions Table */}
-          <Card>
+          <Card variant="glass" className="border-white/10">
             <CardHeader>
-              <CardTitle>Suscriptores</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-white">Suscriptores</CardTitle>
+              <CardDescription className="text-white/70">
                 Total: {pagination.total} suscriptores
               </CardDescription>
             </CardHeader>
@@ -242,39 +242,39 @@ export default function MailListPage() {
               
               {error && (
                 <div className="text-center py-8">
-                  <p className="text-red-500">{error}</p>
+                  <p className="text-red-400">{error}</p>
                 </div>
               )}
 
               {!loading && !error && (
                 <>
                   <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
+                    <table className="min-w-full divide-y divide-white/10">
+                      <thead className="bg-white/5">
                         <tr>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider">
                             Email
                           </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider">
                             Estado
                           </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider">
                             Fuente
                           </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider">
                             Fecha de Suscripción
                           </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-white/80 uppercase tracking-wider">
                             Fecha de Confirmación
                           </th>
                         </tr>
                       </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
+                      <tbody className="bg-white/5 divide-y divide-white/10">
                         {subscriptions.map(sub => (
-                          <tr key={sub.id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          <tr key={sub.id} className="hover:bg-white/10 transition-colors">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white/90">
                               <div className="flex items-center">
-                                <Mail className="h-4 w-4 mr-2 text-gray-400" />
+                                <Mail className="h-4 w-4 mr-2 text-white/60" />
                                 {sub.email}
                               </div>
                             </td>
@@ -286,17 +286,17 @@ export default function MailListPage() {
                                 </span>
                               </div>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-white/70">
                               {sub.source || '-'}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-white/70">
                               {new Date(sub.created_at).toLocaleDateString()}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-white/70">
                               {sub.confirmed_at ? (
                                 new Date(sub.confirmed_at).toLocaleDateString()
                               ) : (
-                                <span className="text-gray-400">-</span>
+                                <span className="text-white/40">-</span>
                               )}
                             </td>
                           </tr>
@@ -306,15 +306,15 @@ export default function MailListPage() {
                   </div>
 
                   {subscriptions.length === 0 && !loading && !error && (
-                    <div className="text-center py-8 text-gray-500">
+                    <div className="text-center py-8 text-white/70">
                       No hay suscriptores que coincidan con los filtros
                     </div>
                   )}
 
                   {/* Pagination */}
                   {pagination.totalPages > 1 && (
-                    <div className="flex items-center justify-between mt-6 pt-4 border-t">
-                      <div className="text-sm text-gray-500">
+                    <div className="flex items-center justify-between mt-6 pt-4 border-t border-white/10">
+                      <div className="text-sm text-white/70">
                         Mostrando {(pagination.page - 1) * pagination.pageSize + 1} -{' '}
                         {Math.min(pagination.page * pagination.pageSize, pagination.total)} de{' '}
                         {pagination.total}
