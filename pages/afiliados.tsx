@@ -4,6 +4,7 @@ import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import MainHeader from '../components/MainHeader'
+import DemoFooter from '../components/DemoFooter'
 
 export default function AfiliadosPage() {
   const [email, setEmail] = useState('')
@@ -136,15 +137,7 @@ export default function AfiliadosPage() {
         </section>
       </main>
 
-      <footer className="border-t border-white/10 mt-20">
-        <div className="max-w-6xl mx-auto px-4 py-12">
-          <div className="text-center">
-            <p className="text-slate-400 mb-4">
-              &copy; {new Date().getFullYear()} Humano SISU. Todos los derechos reservados.
-            </p>
-          </div>
-        </div>
-      </footer>
+      <DemoFooter />
     </div>
   )
 }

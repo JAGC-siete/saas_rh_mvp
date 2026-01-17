@@ -24,7 +24,7 @@ const DemoFooter: React.FC = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                 </svg>
                 <a href="https://wa.me/50432226773" target="_blank" rel="noopener noreferrer" className="hover:text-green-600">
-                  WhatsApp: (+504)32226773
+                  WhatsApp: 504 32226773
                 </a>
               </div>
             </div>
@@ -95,13 +95,12 @@ const DemoFooter: React.FC = () => {
 
           {/* About */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Humano SISU</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">SISU</h3>
             <p className="text-gray-600 text-sm mb-4">
-              Tu RH 100% digital, legal y sin complicaciones. Hecho para PYMEs como la tuya.
+              Gestión de Recursos Humanos 100% digital, legal y sin complicaciones. Hecho para PYMEs.
             </p>
             <div className="text-sm text-gray-500">
-              <p>© 2025 Humano SISU</p>
-              <p>Sistema de Recursos Humanos</p>
+              <p>© 2026 Humano SISU Sistema Hondureño de Recursos Humanos</p>
             </div>
           </div>
         </div>

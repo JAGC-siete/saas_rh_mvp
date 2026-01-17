@@ -1,5 +1,6 @@
 import Head from 'next/head'
 import Link from 'next/link'
+import DemoFooter from '../components/DemoFooter'
 
 export default function PoliticaPrivacidad() {
   return (
@@ -34,7 +35,7 @@ export default function PoliticaPrivacidad() {
               <p className="text-slate-300">
                 <strong>Humano SISU</strong> (&quot;nosotros&quot;), <strong>Honduras</strong>.
                 <br />
-                Contacto: <strong>jorgearturo@humanosisu.net</strong> | <strong>+504 9470-7007</strong>
+                Contacto: <strong>jorgearturo@humanosisu.net</strong> | <strong>504 32226773</strong>
               </p>
             </section>
 
@@ -150,17 +151,7 @@ export default function PoliticaPrivacidad() {
           </div>
         </main>
 
-        {/* Footer */}
-        <footer className="border-t border-white/10 mt-12">
-          <div className="max-w-4xl mx-auto px-4 py-6 text-center">
-            <p className="text-slate-400">
-              © 2025 Humano SISU. Todos los derechos reservados.
-            </p>
-            <p className="text-slate-500 text-sm mt-2">
-              Protegemos tu información. Solo será utilizada para contactarte.
-            </p>
-          </div>
-        </footer>
+        <DemoFooter />
       </div>
     </>
   )
