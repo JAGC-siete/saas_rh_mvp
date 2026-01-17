@@ -63,15 +63,22 @@ export default function ManageAffiliatesPage() {
   const fetchAffiliates = async () => {
     try {
       setLoading(true)
+      setError(null)
       const res = await fetch('/api/admin/affiliates', { credentials: 'include' })
       if (res.ok) {
         const data = await res.json()
-        setAffiliates(data.affiliates)
+        if (data.success && data.data && Array.isArray(data.data.affiliates)) {
+          setAffiliates(data.data.affiliates)
+        } else {
+          setError(data.error || 'Formato de respuesta inválido')
+        }
       } else {
-        setError('No se pudo cargar la lista de afiliados.')
+        const errorData = await res.json().catch(() => ({ error: 'Error desconocido' }))
+        setError(errorData.error || 'No se pudo cargar la lista de afiliados.')
       }
-    } catch {
+    } catch (err: any) {
       setError('Ocurrió un error de red.')
+      console.error('Error fetching affiliates:', err)
     } finally {
       setLoading(false)
     }
@@ -82,7 +89,12 @@ export default function ManageAffiliatesPage() {
       const res = await fetch('/api/admin/affiliates/commissions', { credentials: 'include' })
       if (res.ok) {
         const data = await res.json()
-        setCommissions(data.commissions || [])
+        if (data.success && data.data && Array.isArray(data.data.commissions)) {
+          setCommissions(data.data.commissions)
+        } else {
+          console.warn('Invalid commissions response format:', data)
+          setCommissions([])
+        }
       }
     } catch (err) {
       console.error('Error fetching commissions:', err)
@@ -94,7 +106,12 @@ export default function ManageAffiliatesPage() {
       const res = await fetch('/api/admin/affiliates/requests', { credentials: 'include' })
       if (res.ok) {
         const data = await res.json()
-        setRequests(data.requests || [])
+        if (data.success && data.data && Array.isArray(data.data.requests)) {
+          setRequests(data.data.requests)
+        } else {
+          console.warn('Invalid requests response format:', data)
+          setRequests([])
+        }
       }
     } catch (err) {
       console.error('Error fetching requests:', err)
@@ -115,11 +132,16 @@ export default function ManageAffiliatesPage() {
       })
 
       if (res.ok) {
-        alert('Solicitud aprobada exitosamente. Se han enviado las credenciales por email.')
-        fetchRequests()
-        fetchAffiliates()
-      } else {
         const data = await res.json()
+        if (data.success && data.data) {
+          alert('Solicitud aprobada exitosamente. Se han enviado las credenciales por email.')
+          fetchRequests()
+          fetchAffiliates()
+        } else {
+          alert(data.error || 'No se pudo aprobar la solicitud.')
+        }
+      } else {
+        const data = await res.json().catch(() => ({ error: 'Error desconocido' }))
         alert(data.error || 'No se pudo aprobar la solicitud.')
       }
     } catch {
@@ -144,10 +166,15 @@ export default function ManageAffiliatesPage() {
       })
 
       if (res.ok) {
-        alert('Solicitud rechazada exitosamente.')
-        fetchRequests()
-      } else {
         const data = await res.json()
+        if (data.success && data.data) {
+          alert('Solicitud rechazada exitosamente.')
+          fetchRequests()
+        } else {
+          alert(data.error || 'No se pudo rechazar la solicitud.')
+        }
+      } else {
+        const data = await res.json().catch(() => ({ error: 'Error desconocido' }))
         alert(data.error || 'No se pudo rechazar la solicitud.')
       }
     } catch {
@@ -164,11 +191,17 @@ export default function ManageAffiliatesPage() {
       })
 
       if (res.ok) {
-        setAffiliates(prev =>
-          prev.map(aff => (aff.id === affiliateId ? { ...aff, status } : aff))
-        )
+        const data = await res.json()
+        if (data.success && data.data) {
+          setAffiliates(prev =>
+            prev.map(aff => (aff.id === affiliateId ? { ...aff, status } : aff))
+          )
+        } else {
+          alert(data.error || 'No se pudo actualizar el estado del afiliado.')
+        }
       } else {
-        alert('No se pudo actualizar el estado del afiliado.')
+        const data = await res.json().catch(() => ({ error: 'Error desconocido' }))
+        alert(data.error || 'No se pudo actualizar el estado del afiliado.')
       }
     } catch {
       alert('Ocurrió un error de red.')
@@ -184,13 +217,19 @@ export default function ManageAffiliatesPage() {
       })
 
       if (res.ok) {
-        setCommissions(prev =>
-          prev.map(comm => (comm.id === commissionId ? { ...comm, status: 'paid' as const, paid_at: new Date().toISOString() } : comm))
-        )
-        // Refresh affiliates to update commission totals
-        fetchAffiliates()
+        const data = await res.json()
+        if (data.success && data.data) {
+          setCommissions(prev =>
+            prev.map(comm => (comm.id === commissionId ? { ...comm, status: 'paid' as const, paid_at: new Date().toISOString() } : comm))
+          )
+          // Refresh affiliates to update commission totals
+          fetchAffiliates()
+        } else {
+          alert(data.error || 'No se pudo marcar la comisión como pagada.')
+        }
       } else {
-        alert('No se pudo marcar la comisión como pagada.')
+        const data = await res.json().catch(() => ({ error: 'Error desconocido' }))
+        alert(data.error || 'No se pudo marcar la comisión como pagada.')
       }
     } catch {
       alert('Ocurrió un error de red.')

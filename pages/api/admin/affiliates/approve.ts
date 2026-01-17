@@ -1,17 +1,10 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '@supabase/supabase-js'
+import { requireSuperAdminWithAudit } from '../../../../lib/auth/api-guards'
+import { createSuccessResponse, createErrorResponse, createValidationErrorResponse } from '../../../../lib/security/api-responses'
+import { createAdminClient } from '../../../../lib/supabase/server'
+import { logger } from '../../../../lib/logger'
 import { randomBytes, randomInt } from 'crypto'
-import { requireSuperAdmin } from '../../../../lib/auth/api-auth-fixed'
 import { sendAffiliateCredentialsEmail } from '../../../../lib/emails/affiliate-credentials'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-if (!supabaseUrl || !supabaseServiceRoleKey) {
-  throw new Error('Supabase URL and service role key are required.')
-}
-
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey)
 
 // Función para generar contraseña segura
 function generateSecurePassword(): string {
@@ -24,49 +17,86 @@ function generateSecurePassword(): string {
   }).join('')
 }
 
+/**
+ * Approve an affiliate request
+ * Creates user account, profile, and affiliate record
+ * Requires super admin authentication
+ */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method Not Allowed' })
+    return res.status(405).json(createErrorResponse('Method Not Allowed', 'METHOD_NOT_ALLOWED'))
   }
 
   try {
-    // Verificar que es super admin
-    await requireSuperAdmin(req, res)
+    // Authenticate and get admin context with audit logging
+    const { adminClient, auditLog } = await requireSuperAdminWithAudit(req, res)
 
     const { request_id } = req.body
 
-    if (!request_id) {
-      return res.status(400).json({ error: 'ID de solicitud requerido.' })
+    // Validate request_id
+    if (!request_id || typeof request_id !== 'string') {
+      return res.status(400).json(createValidationErrorResponse({
+        request_id: 'ID de solicitud requerido y debe ser un string válido'
+      }))
     }
 
-    // Buscar solicitud
-    const { data: request, error: fetchError } = await supabaseAdmin
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    if (!uuidRegex.test(request_id)) {
+      return res.status(400).json(createValidationErrorResponse({
+        request_id: 'ID de solicitud debe ser un UUID válido'
+      }))
+    }
+
+    // Fetch request
+    const { data: request, error: fetchError } = await adminClient
       .from('affiliate_requests')
       .select('*')
       .eq('id', request_id)
       .single()
 
     if (fetchError || !request) {
-      return res.status(404).json({ error: 'Solicitud no encontrada.' })
-    }
-
-    // Validar que está en estado correcto
-    if (request.status !== 'pending_approval') {
-      return res.status(400).json({ 
-        error: `La solicitud no puede ser aprobada. Estado actual: ${request.status}` 
+      logger.warn('Affiliate request not found for approval', {
+        request_id,
+        error: fetchError?.message
       })
+      return res.status(404).json(createErrorResponse(
+        'Solicitud no encontrada',
+        'NOT_FOUND',
+        { request_id }
+      ))
     }
 
-    // Validar que términos fueron aceptados
+    // Validate request status
+    if (request.status !== 'pending_approval') {
+      return res.status(400).json(createErrorResponse(
+        `La solicitud no puede ser aprobada. Estado actual: ${request.status}`,
+        'INVALID_STATUS',
+        { currentStatus: request.status, requiredStatus: 'pending_approval' }
+      ))
+    }
+
+    // Validate terms accepted
     if (!request.terms_accepted) {
-      return res.status(400).json({ error: 'La solicitud no tiene términos aceptados.' })
+      return res.status(400).json(createErrorResponse(
+        'La solicitud no tiene términos aceptados',
+        'TERMS_NOT_ACCEPTED'
+      ))
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!request.email || !emailRegex.test(request.email)) {
+      return res.status(400).json(createValidationErrorResponse({
+        email: 'Email inválido en la solicitud'
+      }))
     }
 
     // Generar contraseña automática
     const generatedPassword = generateSecurePassword()
 
-    // Crear usuario en Supabase Auth
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+    // Create user in Supabase Auth
+    const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
       email: request.email,
       password: generatedPassword,
       email_confirm: true,
@@ -77,14 +107,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
 
     if (authError || !authData.user) {
-      console.error('Error creando usuario:', authError)
-      return res.status(500).json({ error: 'Error creando usuario de autenticación.' })
+      logger.error('Error creating auth user for affiliate approval', {
+        request_id,
+        email: request.email,
+        error: authError?.message || String(authError)
+      })
+      return res.status(500).json(createErrorResponse(
+        'Error creando usuario de autenticación',
+        'AUTH_USER_CREATION_FAILED',
+        { details: authError?.message }
+      ))
     }
 
     const userId = authData.user.id
 
-    // Crear perfil de usuario
-    const { error: profileError } = await supabaseAdmin
+    // Create user profile
+    const { error: profileError } = await adminClient
       .from('user_profiles')
       .insert({
         id: userId,
@@ -94,21 +132,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
 
     if (profileError) {
-      // Rollback: eliminar usuario de auth
-      await supabaseAdmin.auth.admin.deleteUser(userId)
-      console.error('Error creando perfil:', profileError)
-      return res.status(500).json({ error: 'Error creando perfil de usuario.' })
+      // Rollback: delete auth user
+      try {
+        await adminClient.auth.admin.deleteUser(userId)
+      } catch (deleteError) {
+        logger.error('Error deleting auth user during rollback', {
+          userId,
+          error: deleteError
+        })
+      }
+      logger.error('Error creating user profile for affiliate approval', {
+        request_id,
+        userId,
+        error: profileError?.message || String(profileError)
+      })
+      return res.status(500).json(createErrorResponse(
+        'Error creando perfil de usuario',
+        'PROFILE_CREATION_FAILED',
+        { details: profileError?.message }
+      ))
     }
 
-    // Generar código de referido único
-    let referralCode
-    let affiliateError
+    // Generate unique referral code
+    let referralCode: string | null = null
+    let affiliateError: any = null
     let attempts = 0
     const maxAttempts = 10
 
     do {
       referralCode = randomBytes(4).toString('hex')
-      const { error } = await supabaseAdmin
+      const { error } = await adminClient
         .from('affiliates')
         .insert({
           user_id: userId,
@@ -123,29 +176,65 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (!affiliateError) break
 
       if (affiliateError.code !== '23505') { // Not unique violation
-        // Rollback: eliminar perfil y usuario
-        await supabaseAdmin.from('user_profiles').delete().eq('id', userId)
-        await supabaseAdmin.auth.admin.deleteUser(userId)
+        // Rollback: delete profile and user
+        try {
+          await adminClient.from('user_profiles').delete().eq('id', userId)
+          await adminClient.auth.admin.deleteUser(userId)
+        } catch (rollbackError) {
+          logger.error('Error during rollback after affiliate creation failure', {
+            userId,
+            error: rollbackError
+          })
+        }
+        logger.error('Error creating affiliate (non-unique error)', {
+          request_id,
+          userId,
+          error: affiliateError?.message || String(affiliateError)
+        })
         throw affiliateError
       }
     } while (attempts < maxAttempts)
 
-    if (affiliateError) {
-      // Rollback: eliminar perfil y usuario
-      await supabaseAdmin.from('user_profiles').delete().eq('id', userId)
-      await supabaseAdmin.auth.admin.deleteUser(userId)
-      return res.status(500).json({ error: 'Error creando registro de afiliado.' })
+    if (affiliateError || !referralCode) {
+      // Rollback: delete profile and user
+      try {
+        await adminClient.from('user_profiles').delete().eq('id', userId)
+        await adminClient.auth.admin.deleteUser(userId)
+      } catch (rollbackError) {
+        logger.error('Error during rollback after max attempts', {
+          userId,
+          error: rollbackError
+        })
+      }
+      logger.error('Failed to generate unique referral code after max attempts', {
+        request_id,
+        userId,
+        attempts
+      })
+      return res.status(500).json(createErrorResponse(
+        'Error creando registro de afiliado: no se pudo generar código único',
+        'REFERRAL_CODE_GENERATION_FAILED'
+      ))
     }
 
-    // Obtener el affiliate_id recién creado
-    const { data: affiliate } = await supabaseAdmin
+    // Get the newly created affiliate_id
+    const { data: affiliate, error: affiliateFetchError } = await adminClient
       .from('affiliates')
       .select('id')
       .eq('user_id', userId)
       .single()
 
-    // Actualizar affiliate_request con user_id y affiliate_id
-    const { error: updateError } = await supabaseAdmin
+    if (affiliateFetchError || !affiliate) {
+      logger.error('Error fetching created affiliate', {
+        request_id,
+        userId,
+        error: affiliateFetchError?.message
+      })
+      // Continue - affiliate was created, just couldn't fetch it
+    }
+
+    // Update affiliate_request with user_id and affiliate_id
+    const { error: updateError } = await adminClient
       .from('affiliate_requests')
       .update({
         user_id: userId,
@@ -156,11 +245,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq('id', request.id)
 
     if (updateError) {
-      console.error('Error actualizando affiliate_request:', updateError)
-      // No fallar aquí, ya se creó el usuario y afiliado
+      logger.warn('Error updating affiliate_request (non-critical)', {
+        request_id,
+        error: updateError?.message
+      })
+      // Don't fail here - user and affiliate were created successfully
     }
 
-    // Enviar email con credenciales
+    // Send email with credentials (don't fail if this errors)
     try {
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net'
       await sendAffiliateCredentialsEmail({
@@ -170,20 +262,57 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         referralCode: referralCode,
         loginUrl: `${siteUrl}/auth/login`
       })
-    } catch (emailError) {
-      console.warn('Error enviando email de credenciales:', emailError)
-      // No fallar la request si el email falla, pero loguear
+      logger.info('Affiliate credentials email sent', {
+        request_id,
+        email: request.email
+      })
+    } catch (emailError: any) {
+      logger.warn('Error sending affiliate credentials email (non-critical)', {
+        request_id,
+        email: request.email,
+        error: emailError?.message || String(emailError)
+      })
+      // Don't fail the request if email fails
     }
 
-    return res.status(200).json({ 
-      success: true, 
+    // Audit log
+    try {
+      await auditLog('affiliate_request_approved', {
+        request_id,
+        affiliate_id: affiliate?.id,
+        user_id: userId,
+        email: request.email,
+        referral_code: referralCode
+      })
+    } catch (auditError: any) {
+      logger.warn('Error logging audit (continuing)', {
+        error: auditError?.message || String(auditError)
+      })
+    }
+
+    return res.status(200).json(createSuccessResponse({
       message: 'Solicitud aprobada exitosamente. Se ha enviado un email con las credenciales.',
       affiliate_id: affiliate?.id,
-      user_id: userId
-    })
+      user_id: userId,
+      referral_code: referralCode
+    }))
   } catch (error: any) {
-    console.error('Error aprobando solicitud de afiliado:', error)
-    return res.status(500).json({ error: error.message || 'Error procesando la aprobación.' })
+    // Handle auth errors (already sent response)
+    if (error.message === 'UNAUTHORIZED' || error.message === 'INSUFFICIENT_PERMISSIONS') {
+      return // Response already sent by guard
+    }
+
+    logger.error('Unexpected error approving affiliate request', {
+      error: error.message,
+      stack: error.stack,
+      request_id: req.body?.request_id
+    })
+
+    return res.status(500).json(createErrorResponse(
+      'An internal server error occurred',
+      'INTERNAL_ERROR',
+      { details: error.message }
+    ))
   }
 }
 

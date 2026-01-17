@@ -44,9 +44,14 @@ export default function AffiliateStats() {
       
       if (response.ok) {
         const data = await response.json()
-        setStats(data)
+        if (data.success && data.data) {
+          setStats(data.data)
+        } else {
+          setError(data.error || 'Error al cargar estadísticas')
+        }
       } else {
-        setError('Error al cargar estadísticas')
+        const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }))
+        setError(errorData.error || 'Error al cargar estadísticas')
       }
     } catch (err) {
       console.error('Error loading affiliate stats:', err)

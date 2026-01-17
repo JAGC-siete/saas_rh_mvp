@@ -1,52 +1,69 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createAdminClient } from '../../../../lib/supabase/server'
-import { requireSuperAdmin } from '../../../../lib/auth/api-auth-fixed'
+import { requireSuperAdminWithAudit } from '../../../../lib/auth/api-guards'
+import { createSuccessResponse, createErrorResponse } from '../../../../lib/security/api-responses'
+import { logger } from '../../../../lib/logger'
 
+/**
+ * Get affiliate program statistics
+ * Requires super admin authentication
+ */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method Not Allowed' })
+    return res.status(405).json(createErrorResponse('Method Not Allowed', 'METHOD_NOT_ALLOWED'))
   }
 
   try {
-    await requireSuperAdmin(req, res)
-    const supabase = createAdminClient()
+    // Authenticate and get admin context with audit logging
+    const { adminClient, auditLog } = await requireSuperAdminWithAudit(req, res)
 
-    // Obtener todas las estadísticas en paralelo
-    const [
-      affiliatesResult,
-      commissionsResult,
-      companiesResult,
-      monthlyGrowthResult
-    ] = await Promise.all([
-      // Total de afiliados por status
-      supabase
-        .from('affiliates')
-        .select('id, status, created_at'),
-      
-      // Comisiones por status
-      supabase
-        .from('commissions')
-        .select('id, status, amount, created_at'),
-      
-      // Empresas referidas (con conteo por afiliado)
-      supabase
-        .from('companies')
-        .select('id, referred_by_affiliate_id, created_at')
-        .not('referred_by_affiliate_id', 'is', null),
-      
-      // Crecimiento mensual (afiliados creados por mes)
-      supabase
-        .from('affiliates')
-        .select('created_at')
-        .order('created_at', { ascending: false })
-    ])
+    // Fetch all statistics in parallel (with error handling)
+    let affiliates: any[] = []
+    let commissions: any[] = []
+    let referredCompanies: any[] = []
+    let monthlyData: any[] = []
 
-    const affiliates = affiliatesResult.data || []
-    const commissions = commissionsResult.data || []
-    const referredCompanies = companiesResult.data || []
-    const monthlyData = monthlyGrowthResult.data || []
+    try {
+      const [
+        affiliatesResult,
+        commissionsResult,
+        companiesResult,
+        monthlyGrowthResult
+      ] = await Promise.all([
+        // Total affiliates by status
+        adminClient
+          .from('affiliates')
+          .select('id, status, created_at'),
+        
+        // Commissions by status
+        adminClient
+          .from('commissions')
+          .select('id, status, amount, created_at'),
+        
+        // Referred companies
+        adminClient
+          .from('companies')
+          .select('id, referred_by_affiliate_id, created_at')
+          .not('referred_by_affiliate_id', 'is', null),
+        
+        // Monthly growth (affiliates created per month)
+        adminClient
+          .from('affiliates')
+          .select('created_at')
+          .order('created_at', { ascending: false })
+      ])
 
-    // Calcular estadísticas de afiliados por status
+      affiliates = affiliatesResult.data || []
+      commissions = commissionsResult.data || []
+      referredCompanies = companiesResult.data || []
+      monthlyData = monthlyGrowthResult.data || []
+    } catch (queryError: any) {
+      logger.error('Error fetching affiliate stats data', {
+        error: queryError?.message || String(queryError)
+      })
+      // Continue with empty arrays - return partial stats
+    }
+
+    // Calculate affiliate statistics by status
     const affiliatesByStatus = {
       pending: affiliates.filter((a: any) => a.status === 'pending').length,
       approved: affiliates.filter((a: any) => a.status === 'approved').length,
@@ -54,7 +71,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       total: affiliates.length
     }
 
-    // Calcular estadísticas de comisiones
+    // Calculate commission statistics
     const commissionsByStatus = {
       pending: commissions.filter((c: any) => c.status === 'pending').length,
       paid: commissions.filter((c: any) => c.status === 'paid').length,
@@ -62,28 +79,42 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       total: commissions.length
     }
 
-    // Calcular totales de comisiones por status
+    // Calculate commission amounts by status
     const commissionsAmountByStatus = {
       pending: commissions
         .filter((c: any) => c.status === 'pending')
-        .reduce((sum: number, c: any) => sum + parseFloat(c.amount || 0), 0),
+        .reduce((sum: number, c: any) => {
+          const amount = parseFloat(c.amount || '0') || 0
+          return sum + (isNaN(amount) ? 0 : amount)
+        }, 0),
       paid: commissions
         .filter((c: any) => c.status === 'paid')
-        .reduce((sum: number, c: any) => sum + parseFloat(c.amount || 0), 0),
+        .reduce((sum: number, c: any) => {
+          const amount = parseFloat(c.amount || '0') || 0
+          return sum + (isNaN(amount) ? 0 : amount)
+        }, 0),
       cancelled: commissions
         .filter((c: any) => c.status === 'cancelled')
-        .reduce((sum: number, c: any) => sum + parseFloat(c.amount || 0), 0),
-      total: commissions.reduce((sum: number, c: any) => sum + parseFloat(c.amount || 0), 0)
+        .reduce((sum: number, c: any) => {
+          const amount = parseFloat(c.amount || '0') || 0
+          return sum + (isNaN(amount) ? 0 : amount)
+        }, 0),
+      total: commissions.reduce((sum: number, c: any) => {
+        const amount = parseFloat(c.amount || '0') || 0
+        return sum + (isNaN(amount) ? 0 : amount)
+      }, 0)
     }
 
-    // Contar empresas referidas por afiliado
-    const companiesByAffiliate = referredCompanies.reduce((acc: any, company: any) => {
+    // Count referred companies by affiliate
+    const affiliateCompaniesMap: { [key: string]: number } = {}
+    referredCompanies.forEach((company: any) => {
       const affiliateId = company.referred_by_affiliate_id
-      acc[affiliateId] = (acc[affiliateId] || 0) + 1
-      return acc
-    }, {})
+      if (affiliateId) {
+        affiliateCompaniesMap[affiliateId] = (affiliateCompaniesMap[affiliateId] || 0) + 1
+      }
+    })
 
-    // Calcular crecimiento mensual (últimos 12 meses)
+    // Calculate monthly growth (last 12 months)
     const monthlyGrowth = Array.from({ length: 12 }, (_, i) => {
       const date = new Date()
       date.setMonth(date.getMonth() - i)
@@ -91,6 +122,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const month = date.getMonth()
       
       const count = monthlyData.filter((a: any) => {
+        if (!a.created_at) return false
         const createdDate = new Date(a.created_at)
         return createdDate.getFullYear() === year && createdDate.getMonth() === month
       }).length
@@ -101,26 +133,44 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }).reverse()
 
-    // Obtener empresas referidas por afiliado (para la tabla)
-    const affiliateCompaniesMap: { [key: string]: number } = {}
-    referredCompanies.forEach((company: any) => {
-      const affiliateId = company.referred_by_affiliate_id
-      affiliateCompaniesMap[affiliateId] = (affiliateCompaniesMap[affiliateId] || 0) + 1
-    })
+    // Audit log
+    try {
+      await auditLog('affiliate_stats_accessed', {
+        totalAffiliates: affiliatesByStatus.total,
+        totalCommissions: commissionsByStatus.total,
+        totalReferredCompanies: referredCompanies.length,
+        timestamp: new Date().toISOString()
+      })
+    } catch (auditError: any) {
+      logger.warn('Error logging audit (continuing)', {
+        error: auditError?.message || String(auditError)
+      })
+    }
 
-    res.status(200).json({
+    return res.status(200).json(createSuccessResponse({
       affiliatesByStatus,
       commissionsByStatus,
       commissionsAmountByStatus,
       totalReferredCompanies: referredCompanies.length,
       companiesByAffiliate: affiliateCompaniesMap,
       monthlyGrowth
-    })
+    }))
   } catch (error: any) {
-    console.error('Error fetching affiliate stats:', error)
-    if (error.message !== 'UNAUTHORIZED' && error.message !== 'INSUFFICIENT_PERMISSIONS') {
-      res.status(500).json({ error: error.message || 'Ocurrió un error en el servidor.' })
+    // Handle auth errors (already sent response)
+    if (error.message === 'UNAUTHORIZED' || error.message === 'INSUFFICIENT_PERMISSIONS') {
+      return // Response already sent by guard
     }
+
+    logger.error('Unexpected error fetching affiliate stats', {
+      error: error.message,
+      stack: error.stack
+    })
+
+    return res.status(500).json(createErrorResponse(
+      'An internal server error occurred',
+      'INTERNAL_ERROR',
+      { details: error.message }
+    ))
   }
 }
 
