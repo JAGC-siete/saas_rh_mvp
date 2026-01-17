@@ -121,33 +121,6 @@ export default function PoliticaPrivacidad() {
               </p>
             </section>
 
-            <hr className="border-white/20 my-8" />
-
-            <section className="mb-8">
-              <h2 className="text-2xl font-semibold text-white mb-4">Aviso corto (para el formulario)</h2>
-              <blockquote className="border-l-4 border-brand-500 pl-4 py-2 bg-slate-800/50 rounded-r">
-                <p className="text-slate-300">
-                  Al enviar aceptás nuestra <strong>Política de Privacidad</strong>. Usaremos tus datos <strong>solo para contactarte</strong> y dar seguimiento a tu solicitud. Podés retirar tu consentimiento y ejercer tus derechos en <strong>jorgearturo@humanosisu.net</strong>.
-                </p>
-              </blockquote>
-              
-              <div className="mt-4 p-4 bg-slate-800/50 rounded-lg">
-                <p className="text-slate-300 font-medium">Texto de checkbox:</p>
-                <p className="text-slate-300 mt-2">
-                  ☐ Doy mi consentimiento para que <strong>Humano SISU</strong> use mis datos <strong>solo para contactarme</strong> y dar seguimiento a mi solicitud.
-                </p>
-              </div>
-            </section>
-
-            <section className="mb-8">
-              <h2 className="text-2xl font-semibold text-white mb-4">Footer ultra breve (para landing)</h2>
-              <div className="p-4 bg-slate-800/50 rounded-lg">
-                <p className="text-slate-300">
-                  &quot;Protegemos tu información. Solo la utilizamos <strong> para contactarte</strong>. Más info en la <strong>Política de Privacidad</strong>.&quot;
-                </p>
-              </div>
-            </section>
-
           </div>
         </main>
 
