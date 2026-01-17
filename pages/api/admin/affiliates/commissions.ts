@@ -27,12 +27,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (affiliatesError) throw affiliatesError
 
     // Fetch auth users to get affiliate names (with pagination)
+    // Note: If this fails, we continue without affiliate name data
     const usersMap = new Map<string, string>()
     
     try {
       let page = 1
       let hasMore = true
       const perPage = 1000 // Max per page for listUsers
+      let fetchedCount = 0
       
       while (hasMore) {
         const { data: authUsers, error: authUsersError } = await supabase.auth.admin.listUsers({
@@ -41,9 +43,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         })
         
         if (authUsersError) {
-          console.error('Error fetching auth users page', { 
+          // Log once at info level - this is expected to fail sometimes in production
+          console.log('Unable to fetch auth users for commissions (continuing without affiliate names)', { 
             page, 
-            error: authUsersError?.message || String(authUsersError) 
+            error: authUsersError?.message || String(authUsersError),
+            fetchedSoFar: fetchedCount
           })
           break
         }
@@ -53,6 +57,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             usersMap.set(user.id, user.user_metadata?.full_name || user.email || 'N/A')
           })
           
+          fetchedCount += authUsers.users.length
+          
           // Check if there are more pages
           hasMore = authUsers.users.length === perPage
           page++
@@ -60,8 +66,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           hasMore = false
         }
       }
+      
+      if (fetchedCount > 0) {
+        console.log('Successfully fetched auth users for commissions', { count: fetchedCount })
+      }
     } catch (authError: any) {
-      console.error('Error fetching auth users for commissions', {
+      // This catch is for unexpected errors (not the expected listUsers errors)
+      console.warn('Unexpected error fetching auth users for commissions (continuing without affiliate names)', {
         error: authError?.message || String(authError)
       })
       // Continue without user data - commissions will show 'N/A' for affiliate name

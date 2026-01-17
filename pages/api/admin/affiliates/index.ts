@@ -10,7 +10,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // Super Admin check with audit logging
-    const { adminClient, user, auditLog } = await requireSuperAdminWithAudit(req, res)
+    const { adminClient, auditLog } = await requireSuperAdminWithAudit(req, res)
 
     // 1. Fetch all affiliates
     const { data: affiliates, error: affiliatesError } = await adminClient
@@ -18,23 +18,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .select('id, user_id, referral_code, status, created_at')
 
     if (affiliatesError) {
-      logger.error('Error fetching affiliates', { error: affiliatesError })
-      throw affiliatesError
+      logger.error('Error fetching affiliates', { 
+        error: affiliatesError?.message || String(affiliatesError),
+        code: affiliatesError?.code
+      })
+      // Return error response instead of throwing
+      return res.status(500).json(createErrorResponse(
+        'Error al obtener afiliados de la base de datos',
+        'DATABASE_ERROR',
+        { details: affiliatesError?.message }
+      ))
     }
 
     if (!affiliates || affiliates.length === 0) {
       // No affiliates found - return empty array
-      await auditLog('affiliates_listed', { count: 0 })
+      try {
+        await auditLog('affiliates_listed', { count: 0 })
+      } catch (auditError: any) {
+        logger.warn('Error logging audit (continuing)', {
+          error: auditError?.message || String(auditError)
+        })
+      }
       return res.status(200).json(createSuccessResponse({ affiliates: [] }))
     }
 
     // 2. Fetch all auth users and create a map (with pagination)
+    // Note: If this fails, we continue without user email/name data
     const usersMap = new Map<string, { email: string, full_name: string }>()
     
     try {
       let page = 1
       let hasMore = true
       const perPage = 1000 // Max per page for listUsers
+      let fetchedCount = 0
       
       while (hasMore) {
         const { data: authUsers, error: authUsersError } = await adminClient.auth.admin.listUsers({
@@ -43,9 +59,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         })
         
         if (authUsersError) {
-          logger.warn('Error fetching auth users page', { 
+          // Log once at info level - this is expected to fail sometimes in production
+          logger.info('Unable to fetch auth users for affiliates (continuing without email/name data)', { 
             page, 
-            error: authUsersError?.message || String(authUsersError) 
+            error: authUsersError?.message || String(authUsersError),
+            fetchedSoFar: fetchedCount
           })
           break
         }
@@ -58,6 +76,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             })
           })
           
+          fetchedCount += authUsers.users.length
+          
           // Check if there are more pages
           hasMore = authUsers.users.length === perPage
           page++
@@ -65,33 +85,60 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           hasMore = false
         }
       }
+      
+      if (fetchedCount > 0) {
+        logger.debug('Successfully fetched auth users for affiliates', { count: fetchedCount })
+      }
     } catch (authError: any) {
-      logger.error('Error fetching auth users for affiliates', {
+      // This catch is for unexpected errors (not the expected listUsers errors)
+      logger.warn('Unexpected error fetching auth users for affiliates (continuing without email/name data)', {
         error: authError?.message || String(authError)
       })
       // Continue without user data - affiliates will show 'N/A' for email/name
     }
 
-    // 3. Fetch companies referred by each affiliate
-    const { data: referredCompanies, error: companiesError } = await adminClient
-      .from('companies')
-      .select('id, referred_by_affiliate_id, created_at')
-      .not('referred_by_affiliate_id', 'is', null)
+    // 3. Fetch companies referred by each affiliate (continue if fails)
+    let referredCompanies: any[] = []
+    try {
+      const { data, error: companiesError } = await adminClient
+        .from('companies')
+        .select('id, referred_by_affiliate_id, created_at')
+        .not('referred_by_affiliate_id', 'is', null)
 
-    if (companiesError) {
-      logger.error('Error fetching referred companies', { error: companiesError })
-      throw companiesError
+      if (companiesError) {
+        logger.warn('Error fetching referred companies (continuing without company data)', { 
+          error: companiesError?.message || String(companiesError) 
+        })
+      } else {
+        referredCompanies = data || []
+      }
+    } catch (companiesError: any) {
+      logger.warn('Unexpected error fetching referred companies (continuing without company data)', {
+        error: companiesError?.message || String(companiesError)
+      })
+      // Continue without company data
     }
 
-    // 4. Fetch commissions for each affiliate
-    const { data: commissions, error: commissionsError } = await adminClient
-      .from('commissions')
-      .select('id, affiliate_id, amount, status, created_at')
-      .order('created_at', { ascending: false })
+    // 4. Fetch commissions for each affiliate (continue if fails)
+    let commissions: any[] = []
+    try {
+      const { data, error: commissionsError } = await adminClient
+        .from('commissions')
+        .select('id, affiliate_id, amount, status, created_at')
+        .order('created_at', { ascending: false })
 
-    if (commissionsError) {
-      logger.error('Error fetching commissions', { error: commissionsError })
-      throw commissionsError
+      if (commissionsError) {
+        logger.warn('Error fetching commissions (continuing without commission data)', { 
+          error: commissionsError?.message || String(commissionsError) 
+        })
+      } else {
+        commissions = data || []
+      }
+    } catch (commissionsError: any) {
+      logger.warn('Unexpected error fetching commissions (continuing without commission data)', {
+        error: commissionsError?.message || String(commissionsError)
+      })
+      // Continue without commission data
     }
 
     // 5. Calculate stats per affiliate
@@ -143,10 +190,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     })
 
-    // Audit log
-    await auditLog('affiliates_listed', {
-      count: formattedAffiliates.length
-    })
+    // Audit log (don't fail if this errors)
+    try {
+      await auditLog('affiliates_listed', {
+        count: formattedAffiliates.length
+      })
+    } catch (auditError: any) {
+      logger.warn('Error logging audit (continuing)', {
+        error: auditError?.message || String(auditError)
+      })
+      // Continue - audit logging failure shouldn't break the response
+    }
 
     return res.status(200).json(createSuccessResponse({ affiliates: formattedAffiliates }))
   } catch (error: any) {
