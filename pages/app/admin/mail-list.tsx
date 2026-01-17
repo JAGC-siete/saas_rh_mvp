@@ -305,7 +305,7 @@ export default function MailListPage() {
                     </table>
                   </div>
 
-                  {subscriptions.length === 0 && (
+                  {subscriptions.length === 0 && !loading && !error && (
                     <div className="text-center py-8 text-gray-500">
                       No hay suscriptores que coincidan con los filtros
                     </div>

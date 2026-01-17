@@ -296,7 +296,9 @@ export default function ManageAffiliatesPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Solicitudes de Afiliación</CardTitle>
-                <CardDescription>Revisa y aprueba las solicitudes de nuevos afiliados.</CardDescription>
+                <CardDescription>
+                  {requests.filter(r => r.status === 'pending_approval').length} solicitudes pendientes de aprobación
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
@@ -409,7 +411,9 @@ export default function ManageAffiliatesPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Lista de Afiliados</CardTitle>
-                <CardDescription>Aprobar o rechazar solicitudes de afiliados.</CardDescription>
+                <CardDescription>
+                  Total: {affiliates.length} afiliados registrados
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 {loading && (
@@ -527,7 +531,7 @@ export default function ManageAffiliatesPage() {
                         ))}
                       </tbody>
                     </table>
-                    {affiliates.length === 0 && (
+                    {affiliates.length === 0 && !loading && !error && (
                       <div className="text-center py-8 text-gray-500">
                         No hay afiliados registrados
                       </div>
@@ -545,7 +549,9 @@ export default function ManageAffiliatesPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle>Comisiones</CardTitle>
-                    <CardDescription>Gestiona las comisiones de afiliados</CardDescription>
+                    <CardDescription>
+                      Total: {commissions.length} comisiones registradas
+                    </CardDescription>
                   </div>
                   <div className="flex space-x-2">
                     <Button
@@ -649,7 +655,10 @@ export default function ManageAffiliatesPage() {
                   </table>
                   {filteredCommissions.length === 0 && (
                     <div className="text-center py-8 text-gray-500">
-                      No hay comisiones {commissionFilter !== 'all' ? `con estado ${commissionFilter}` : ''}
+                      {commissionFilter !== 'all' 
+                        ? `No hay comisiones con estado ${commissionFilter === 'pending' ? 'pendiente' : commissionFilter === 'paid' ? 'pagada' : 'cancelada'}`
+                        : 'No hay comisiones registradas'
+                      }
                     </div>
                   )}
                 </div>
