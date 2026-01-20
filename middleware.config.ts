@@ -69,7 +69,8 @@ export const MIDDLEWARE_CONFIG = {
       '/features',
       '/about',
       '/trial-dashboard',
-      '/politicadeprivacidad'
+      '/politicadeprivacidad',
+      '/calculadora-deducciones'
     ],
     
     // Demo routes (PIN required)
@@ -146,7 +147,9 @@ export function getAllPublicRoutes(): string[] {
     '/api/demo/verify-pin',
     '/api/health',
     '/api/env',
-    '/api/cron/*'
+    '/api/cron/*',
+    '/api/public/calculate-deductions',
+    '/api/public/send-deduction-report'
   ]
 }
 

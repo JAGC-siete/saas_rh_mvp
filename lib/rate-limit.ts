@@ -3,7 +3,7 @@ import { nowInHonduras } from './timezone'
 
 
 
-interface RateLimitConfig {
+export interface RateLimitConfig {
   windowMs: number // Ventana de tiempo en milisegundos
   max: number // Máximo número de requests por ventana
   message?: string
@@ -123,6 +123,22 @@ export const RATE_LIMITS = {
     windowMs: 10 * 60 * 1000, // 10 minutos
     max: 5, // 5 exportaciones por 10 minutos
     message: 'Demasiadas exportaciones. Intente de nuevo en 10 minutos.'
+  },
+  
+  // Rate limit para calculadora pública de deducciones
+  PUBLIC_CALCULATOR: {
+    windowMs: 5 * 60 * 1000, // 5 minutos
+    max: 20, // 20 cálculos por 5 minutos
+    message: 'Demasiados cálculos. Intente de nuevo en 5 minutos.',
+    statusCode: 429
+  },
+  
+  // Rate limit para envío de emails de reportes (más restrictivo)
+  PUBLIC_EMAIL: {
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 3, // 3 emails por 15 minutos (prevenir spam)
+    message: 'Demasiados envíos de reportes. Intente de nuevo en 15 minutos.',
+    statusCode: 429
   }
 }
 

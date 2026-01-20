@@ -89,6 +89,12 @@ export default function MainHeader({ enableScrollEffect = false, fixed = true }:
                 >
                   Programa de Afiliados
                 </Link>
+                <Link
+                  href="/calculadora-deducciones"
+                  className="text-brand-200 hover:text-white px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap"
+                >
+                  Calculadora
+                </Link>
                 <button
                   onClick={() => {
                     window.location.href = '/activar'
@@ -161,6 +167,13 @@ export default function MainHeader({ enableScrollEffect = false, fixed = true }:
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Programa de Afiliados
+              </Link>
+              <Link
+                href="/calculadora-deducciones"
+                className="block px-3 py-2 text-base font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Calculadora
               </Link>
               <button
                 onClick={() => {
