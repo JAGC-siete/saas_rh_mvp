@@ -5,6 +5,10 @@ import { Input } from '../components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import MainHeader from '../components/MainHeader'
 import DemoFooter from '../components/DemoFooter'
+import { getPageTitle } from '../lib/seo/title'
+import { getPageDescription } from '../lib/seo/description'
+import SchemaMarkup from '../components/SEO/SchemaMarkup'
+import { generateWebPageSchema } from '../lib/seo/schema'
 
 export default function AfiliadosPage() {
   const [email, setEmail] = useState('')
@@ -43,12 +47,25 @@ export default function AfiliadosPage() {
     }
   }
 
+  const pageTitle = getPageTitle('affiliates')
+  const pageDescription = getPageDescription('affiliates')
+  const webPageSchema = generateWebPageSchema({
+    url: '/afiliados',
+    title: pageTitle,
+    description: pageDescription
+  })
+
   return (
     <div className="min-h-screen bg-app text-white flex flex-col pt-24 relative">
       <Head>
-        <title>Programa de Afiliados - Humano SISU</title>
-        <meta name="description" content="Únete a nuestro programa de afiliados y gana comisiones." />
+        <title>{pageTitle}</title>
+        <meta name="description" content={pageDescription} />
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={pageDescription} />
+        <meta property="og:url" content="https://humano-sisu.com/afiliados" />
+        <link rel="canonical" href="https://humano-sisu.com/afiliados" />
       </Head>
+      <SchemaMarkup schema={webPageSchema} />
 
       {/* Header */}
       <MainHeader enableScrollEffect={false} fixed={true} />

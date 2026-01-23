@@ -8,6 +8,10 @@ import LandingHero from '../components/LandingHero'
 import MainHeader from '../components/MainHeader'
 import dynamic from 'next/dynamic'
 import MailListSection from '../components/MailListSection'
+import SchemaMarkup from '../components/SEO/SchemaMarkup'
+import { getPageTitle } from '../lib/seo/title'
+import { getPageDescription } from '../lib/seo/description'
+import { generateOrganizationSchema, generateWebSiteSchema, generateWebPageSchema } from '../lib/seo/schema'
 
 const CloudBackground = dynamic(() => import('../components/CloudBackground'), { ssr: false })
 
@@ -34,30 +38,48 @@ export default function LandingPage() {
     return () => window.removeEventListener('hashchange', handleHashScroll)
   }, [])
 
+  const pageTitle = getPageTitle('home')
+  const pageDescription = getPageDescription('home')
+  // TODO: Replace with optimized 1200x630px image when available
+  const ogImage = '/og-image.png' // Fallback to logo if og-image.png doesn't exist yet
+
+  // Generate Schema.org JSON-LD
+  const organizationSchema = generateOrganizationSchema()
+  const webSiteSchema = generateWebSiteSchema()
+  const webPageSchema = generateWebPageSchema({
+    url: '/',
+    title: pageTitle,
+    description: pageDescription,
+    image: ogImage
+  })
+
   return (
     <div className="min-h-screen bg-app pt-16 sm:pt-20 md:pt-24 relative">
       <Head>
-        <title>Servicio Hondureño de Recursos Humanos | Digital & Automatizado</title>
+        <title>{pageTitle}</title>
         <link rel="icon" href="/logo-humano-sisu.png" />
-        <meta
-          name="description"
-          content="RH en automático y digital: asistencia, nómina con deducciones IHSS, RAP, ISR exactas, comprobantes de pago enviados directo a tus empleados."
-        />
-        <meta name="keywords" content="planilla Honduras, IHSS, RAP, ISR, automatización RH, STSS, Humano SISU, innovación" />
+        <meta name="description" content={pageDescription} />
+        <meta name="keywords" content="planilla Honduras, IHSS, RAP, ISR, automatización RH, STSS, Humano SISU, innovación, nómina automatizada" />
         <meta name="author" content="Humano SISU" />
         <meta name="robots" content="index, follow" />
-        <meta property="og:title" content="Servicio Hondureño de Recursos Humanos | Digital & Automatizado" />
-        <meta property="og:description" content="RH en automático y digital: asistencia, nómina con deducciones IHSS, RAP, ISR exactas, comprobantes de pago enviados directo a tus empleados." />
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={pageDescription} />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://humano-sisu.com" />
-        <meta property="og:image" content="/logo-humano-sisu.png" />
+        <meta property="og:image" content={`https://humano-sisu.com${ogImage}`} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Servicio Hondureño de Recursos Humanos | Digital & Automatizado" />
-        <meta name="twitter:description" content="RH en automático y digital: asistencia, nómina con deducciones IHSS, RAP, ISR exactas, comprobantes de pago enviados directo a tus empleados." />
+        <meta name="twitter:title" content={pageTitle} />
+        <meta name="twitter:description" content={pageDescription} />
+        <meta name="twitter:image" content={`https://humano-sisu.com${ogImage}`} />
         <link rel="canonical" href="https://humano-sisu.com" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
       </Head>
+      
+      {/* Schema.org JSON-LD */}
+      <SchemaMarkup schema={[organizationSchema, webSiteSchema, webPageSchema]} />
 
       {/* Header */}
       <MainHeader enableScrollEffect={true} fixed={true} />

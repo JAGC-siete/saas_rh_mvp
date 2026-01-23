@@ -5,6 +5,10 @@ import MainHeader from '../components/MainHeader'
 import DemoFooter from '../components/DemoFooter'
 import dynamic from 'next/dynamic'
 import { validateFormInputs, getAvailableYears } from '../lib/deduction-validator/client-validation'
+import { getPageTitle } from '../lib/seo/title'
+import { getPageDescription } from '../lib/seo/description'
+import SchemaMarkup from '../components/SEO/SchemaMarkup'
+import { generateWebPageSchema } from '../lib/seo/schema'
 
 const CloudBackground = dynamic(() => import('../components/CloudBackground'), { ssr: false })
 
@@ -205,17 +209,26 @@ export default function CalculadoraDeduccionesPage() {
     }
   }
 
+  const pageTitle = getPageTitle('calculator')
+  const pageDescription = getPageDescription('calculator')
+  const webPageSchema = generateWebPageSchema({
+    url: '/calculadora-deducciones',
+    title: pageTitle,
+    description: pageDescription
+  })
+
   return (
     <div className="min-h-screen bg-app pt-16 sm:pt-20 md:pt-24 relative">
       <Head>
-        <title>Calculadora de Deducciones de Nómina | Humano SISU</title>
-        <meta
-          name="description"
-          content="Valida tus deducciones de nómina (IHSS, RAP, ISR) en Honduras. Calcula automáticamente tus deducciones legales basadas en las leyes vigentes."
-        />
+        <title>{pageTitle}</title>
+        <meta name="description" content={pageDescription} />
         <meta name="keywords" content="calculadora nómina Honduras, IHSS, RAP, ISR, deducciones, planilla Honduras" />
-        <link rel="canonical" href="https://humanosisu.net/calculadora-deducciones" />
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={pageDescription} />
+        <meta property="og:url" content="https://humano-sisu.com/calculadora-deducciones" />
+        <link rel="canonical" href="https://humano-sisu.com/calculadora-deducciones" />
       </Head>
+      <SchemaMarkup schema={webPageSchema} />
 
       <MainHeader enableScrollEffect={true} fixed={true} />
 
