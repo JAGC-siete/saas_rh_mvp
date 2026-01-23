@@ -70,7 +70,14 @@ export const MIDDLEWARE_CONFIG = {
       '/about',
       '/trial-dashboard',
       '/politicadeprivacidad',
-      '/calculadora-deducciones'
+      '/calculadora-deducciones',
+      '/alternativa-odoo-honduras',
+      '/sistema-biometrico-nomina',
+      '/implementacion-48-horas',
+      '/deducciones-honduras-ihss-rap-isr',
+      '/afiliados',
+      '/suscripcion',
+      '/sitemap.xml'
     ],
     
     // Demo routes (PIN required)
@@ -149,7 +156,13 @@ export function getAllPublicRoutes(): string[] {
     '/api/env',
     '/api/cron/*',
     '/api/public/calculate-deductions',
-    '/api/public/send-deduction-report'
+    '/api/public/send-deduction-report',
+    // SEO pages
+    '/alternativa-odoo-honduras',
+    '/sistema-biometrico-nomina',
+    '/implementacion-48-horas',
+    '/deducciones-honduras-ihss-rap-isr',
+    '/sitemap.xml'
   ]
 }
 

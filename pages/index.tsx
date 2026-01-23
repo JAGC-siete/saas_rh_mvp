@@ -11,7 +11,7 @@ import MailListSection from '../components/MailListSection'
 import SchemaMarkup from '../components/SEO/SchemaMarkup'
 import { getPageTitle } from '../lib/seo/title'
 import { getPageDescription } from '../lib/seo/description'
-import { generateOrganizationSchema, generateWebSiteSchema, generateWebPageSchema } from '../lib/seo/schema'
+import { generateOrganizationSchema, generateWebSiteSchema, generateWebPageSchema, generateReviewSchema } from '../lib/seo/schema'
 
 const CloudBackground = dynamic(() => import('../components/CloudBackground'), { ssr: false })
 
@@ -128,26 +128,47 @@ export default function LandingPage() {
 
           <div className="grid md:grid-cols-3 gap-6 sm:gap-8">
             {[
-              { name: 'Felix Garcia', company: 'Tony\'s Mar Restaurant', employees: '40 empleados', quote: 'Ya no pierdo domingos haciendo planilla. 4 horas ahora son 4 minutos.' },
-              { name: 'Nancy Urrutia', company: 'PROHALCA', employees: '37 empleados', quote: 'Habiamos contratado un sistema de asistencia que no hacia planilla, ahora tenemos dashboard interactivo.' },
-              { name: 'Abogado Marcio Moya', company: '', employees: '15 empleados', quote: 'Cero errores en deducciones desde que lo uso. Mis clientes están felices.' }
-            ].map((testimonial, i) => (
-              <div key={`testimonial-${i}`} className="bg-white/5 border border-white/10 rounded-xl p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 bg-brand-500 rounded-full flex items-center justify-center text-white font-bold">
-                    {testimonial.name[0]}
-                  </div>
-                  <div>
-                    <p className="text-white font-medium">{testimonial.name}</p>
-                    <p className="text-brand-200/80 text-sm">{testimonial.company}</p>
+              { name: 'Felix Garcia', company: 'Tony\'s Mar Restaurant', employees: '40 empleados', quote: 'Ya no pierdo domingos haciendo planilla. 4 horas ahora son 4 minutos.', rating: 5 },
+              { name: 'Nancy Urrutia', company: 'PROHALCA', employees: '37 empleados', quote: 'Habiamos contratado un sistema de asistencia que no hacia planilla, ahora tenemos dashboard interactivo.', rating: 5 },
+              { name: 'Abogado Marcio Moya', company: '', employees: '15 empleados', quote: 'Cero errores en deducciones desde que lo uso. Mis clientes están felices.', rating: 5 }
+            ].map((testimonial, i) => {
+              const reviewSchema = generateReviewSchema({
+                productName: 'Humano SISU',
+                authorName: testimonial.name,
+                rating: testimonial.rating,
+                reviewText: testimonial.quote
+              })
+              return (
+                <div key={`testimonial-${i}`}>
+                  <SchemaMarkup schema={reviewSchema} />
+                  <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-12 h-12 bg-brand-500 rounded-full flex items-center justify-center text-white font-bold">
+                        {testimonial.name[0]}
+                      </div>
+                      <div>
+                        <p className="text-white font-medium">{testimonial.name}</p>
+                        <p className="text-brand-200/80 text-sm">{testimonial.company}</p>
+                      </div>
+                    </div>
+                    <div className="mb-2">
+                      {[...Array(5)].map((_, idx) => (
+                        <span
+                          key={idx}
+                          className={`text-lg ${idx < testimonial.rating ? 'text-yellow-400' : 'text-gray-600'}`}
+                        >
+                          ★
+                        </span>
+                      ))}
+                    </div>
+                    <blockquote className="text-brand-200/90 italic mb-4">&ldquo;{testimonial.quote}&rdquo;</blockquote>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-brand-400">{testimonial.employees}</span>
+                    </div>
                   </div>
                 </div>
-                <blockquote className="text-brand-200/90 italic mb-4">&ldquo;{testimonial.quote}&rdquo;</blockquote>
-                <div className="flex justify-between text-sm">
-                  <span className="text-brand-400">{testimonial.employees}</span>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       </section>

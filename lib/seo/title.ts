@@ -2,7 +2,7 @@
  * Helper functions for generating consistent SEO titles
  */
 
-const DEFAULT_TITLE = 'Nómina Automatizada Honduras | IHSS, RAP, ISR | Humano SISU'
+const DEFAULT_TITLE = 'Sistema Nómina Honduras | Biométrico + Software | Implementación 48h | Humano SISU'
 const BRAND = 'Humano SISU'
 
 export interface TitleOptions {
@@ -47,7 +47,7 @@ export function generateTitle(options: TitleOptions = {}): string {
  */
 export const pageTitles = {
   home: DEFAULT_TITLE,
-  activate: 'Activar Cuenta | Nómina Automatizada Honduras | Humano SISU',
+  activate: 'Activar Cuenta | Sistema Nómina Honduras | Implementación 48h | Humano SISU',
   affiliates: 'Programa de Afiliados | Humano SISU',
   calculator: 'Calculadora de Deducciones | IHSS, RAP, ISR | Humano SISU',
   privacy: 'Política de Privacidad | Humano SISU',
@@ -58,6 +58,11 @@ export const pageTitles = {
   payroll: 'Nómina | Gestión de Planilla | Humano SISU',
   attendance: 'Asistencia | Control de Asistencia | Humano SISU',
   reports: 'Reportes y Análisis | Humano SISU',
+  // New strategic pages
+  alternativaOdoo: 'Alternativa a Odoo Honduras | Nómina Localizada | Biométrico + Software | Humano SISU',
+  biometricoNomina: 'Control Asistencia Biométrico + Nómina | Todo en Uno | Honduras | Humano SISU',
+  implementacion48h: 'Implementación Nómina 48 Horas | Sistema RH Honduras | Humano SISU',
+  deduccionesHonduras: 'Cálculo IHSS RAP ISR Automático | Nómina Honduras | Humano SISU',
 }
 
 /**

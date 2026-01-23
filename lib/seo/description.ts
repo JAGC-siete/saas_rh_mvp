@@ -2,7 +2,7 @@
  * Helper functions for generating consistent SEO meta descriptions with CTAs
  */
 
-const DEFAULT_DESCRIPTION = 'RH en automático y digital: asistencia, nómina con deducciones IHSS, RAP, ISR exactas, comprobantes de pago enviados directo a tus empleados. Prueba gratis 30 días.'
+const DEFAULT_DESCRIPTION = 'Biométrico integrado + Software nómina. 100% hondureño (IHSS, RAP, ISR). Implementación en 48h. Prueba gratis 30 días.'
 
 export interface DescriptionOptions {
   valueProposition?: string
@@ -50,6 +50,11 @@ export const pageDescriptions = {
   payroll: 'Gestiona tu nómina de forma automatizada. Calcula IHSS, RAP, ISR y genera comprobantes automáticamente.',
   attendance: 'Control de asistencia biométrico y digital. Registra checadas, gestiona horarios y genera reportes.',
   reports: 'Reportes y análisis detallados de tu empresa. Visualiza estadísticas de asistencia, nómina y más.',
+  // New strategic pages
+  alternativaOdoo: 'Alternativa a Odoo para MIPYMES en Honduras. Biométrico integrado + Nómina localizada. Implementación 48h vs semanas de Odoo. Compara gratis.',
+  biometricoNomina: 'Sistema biométrico con nómina integrada. Todo en uno: control asistencia + cálculo IHSS, RAP, ISR. 100% hondureño. Prueba gratis.',
+  implementacion48h: 'Implementación de nómina en 48 horas garantizada. Biométrico + Software configurado y funcionando. Más rápido que Odoo. Solicita demo.',
+  deduccionesHonduras: 'Cálculo automático de IHSS, RAP e ISR según ley hondureña. Más preciso que Excel. Genera comprobantes automáticos. Prueba gratis.',
 }
 
 /**

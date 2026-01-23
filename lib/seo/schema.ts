@@ -34,7 +34,7 @@ export function generateOrganizationSchema(): OrganizationSchema {
     description: 'Sistema automatizado de recursos humanos para MIPYMES en Honduras. Gestión de asistencia, nómina con deducciones IHSS, RAP, ISR y más.',
     contactPoint: {
       '@type': 'ContactPoint',
-      telephone: '+504-XXXX-XXXX',
+      telephone: '+504 32226773',
       contactType: 'customer service',
       areaServed: 'HN',
       availableLanguage: 'Spanish'
@@ -198,6 +198,144 @@ export function generateBreadcrumbListSchema(items: BreadcrumbItem[]): Breadcrum
       name: item.name,
       item: item.url.startsWith('http') ? item.url : `${BASE_URL}${item.url}`
     }))
+  }
+}
+
+export interface LocalBusinessSchema {
+  '@context': string
+  '@type': string
+  name: string
+  url: string
+  telephone?: string
+  address?: {
+    '@type': string
+    addressCountry: string
+    addressRegion?: string
+    addressLocality?: string
+  }
+  areaServed: {
+    '@type': string
+    name: string
+  }
+  priceRange?: string
+}
+
+/**
+ * Generates LocalBusiness schema for local SEO
+ */
+export function generateLocalBusinessSchema(options: {
+  address?: {
+    country: string
+    region?: string
+    locality?: string
+  }
+} = {}): LocalBusinessSchema {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'LocalBusiness',
+    name: 'Humano SISU',
+    url: BASE_URL,
+    telephone: '+504 32226773',
+    address: options.address ? {
+      '@type': 'PostalAddress',
+      addressCountry: options.address.country,
+      addressRegion: options.address.region,
+      addressLocality: options.address.locality
+    } : undefined,
+    areaServed: {
+      '@type': 'Country',
+      name: 'Honduras'
+    },
+    priceRange: '$$'
+  }
+}
+
+export interface FAQItem {
+  question: string
+  answer: string
+}
+
+export interface FAQPageSchema {
+  '@context': string
+  '@type': string
+  mainEntity: Array<{
+    '@type': string
+    name: string
+    acceptedAnswer: {
+      '@type': string
+      text: string
+    }
+  }>
+}
+
+/**
+ * Generates FAQPage schema for featured snippets
+ */
+export function generateFAQPageSchema(faqs: FAQItem[]): FAQPageSchema {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map(faq => ({
+      '@type': 'Question',
+      name: faq.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: faq.answer
+      }
+    }))
+  }
+}
+
+export interface ReviewSchema {
+  '@context': string
+  '@type': string
+  itemReviewed: {
+    '@type': string
+    name: string
+  }
+  author: {
+    '@type': string
+    name: string
+  }
+  reviewRating: {
+    '@type': string
+    ratingValue: string
+    bestRating: string
+    worstRating: string
+  }
+  reviewBody: string
+  datePublished?: string
+}
+
+/**
+ * Generates Review schema for testimonials
+ */
+export function generateReviewSchema(options: {
+  productName: string
+  authorName: string
+  rating: number
+  reviewText: string
+  datePublished?: string
+}): ReviewSchema {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Review',
+    itemReviewed: {
+      '@type': 'SoftwareApplication',
+      name: options.productName
+    },
+    author: {
+      '@type': 'Person',
+      name: options.authorName
+    },
+    reviewRating: {
+      '@type': 'Rating',
+      ratingValue: options.rating.toString(),
+      bestRating: '5',
+      worstRating: '1'
+    },
+    reviewBody: options.reviewText,
+    datePublished: options.datePublished
   }
 }
 

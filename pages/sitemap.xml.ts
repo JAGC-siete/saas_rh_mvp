@@ -20,6 +20,26 @@ const publicPages: SitemapUrl[] = [
   {
     loc: '/activar',
     changefreq: 'monthly',
+    priority: 0.9
+  },
+  {
+    loc: '/alternativa-odoo-honduras',
+    changefreq: 'monthly',
+    priority: 0.9
+  },
+  {
+    loc: '/sistema-biometrico-nomina',
+    changefreq: 'monthly',
+    priority: 0.8
+  },
+  {
+    loc: '/implementacion-48-horas',
+    changefreq: 'monthly',
+    priority: 0.8
+  },
+  {
+    loc: '/deducciones-honduras-ihss-rap-isr',
+    changefreq: 'monthly',
     priority: 0.8
   },
   {
