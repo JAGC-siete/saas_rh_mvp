@@ -61,7 +61,7 @@
     "exceljs": "^4.4.0",
     "formidable": "^3.5.4",
     "jsonwebtoken": "^9.0.2",
-    "lodash": "^4.17.21",
+    "lodash": "^4.17.23",
     "lucide-react": "^0.526.0",
     "luxon": "^3.6.1",
     "multiparty": "^4.2.3",
