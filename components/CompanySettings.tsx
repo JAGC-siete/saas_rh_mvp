@@ -146,13 +146,35 @@ export default function CompanySettings() {
 
         if (error) throw error
       } else {
+        // Normalizar campos TIME: convertir strings vacíos a null
+        const insertData = {
+          name: scheduleForm.name,
+          company_id: company?.id,
+          monday_start: scheduleForm.monday_start || null,
+          monday_end: scheduleForm.monday_end || null,
+          tuesday_start: scheduleForm.tuesday_start || null,
+          tuesday_end: scheduleForm.tuesday_end || null,
+          wednesday_start: scheduleForm.wednesday_start || null,
+          wednesday_end: scheduleForm.wednesday_end || null,
+          thursday_start: scheduleForm.thursday_start || null,
+          thursday_end: scheduleForm.thursday_end || null,
+          friday_start: scheduleForm.friday_start || null,
+          friday_end: scheduleForm.friday_end || null,
+          saturday_start: scheduleForm.saturday_start || null,
+          saturday_end: scheduleForm.saturday_end || null,
+          sunday_start: scheduleForm.sunday_start || null,
+          sunday_end: scheduleForm.sunday_end || null,
+          break_duration: scheduleForm.break_duration,
+          timezone: scheduleForm.timezone,
+        }
         const { error } = await (supabaseClient as any)
           .from('work_schedules')
-          .insert([{ ...scheduleForm, company_id: company?.id }])
+          .insert([insertData])
 
         if (error) throw error
       }
 
+      setError(null)
       setShowScheduleForm(false)
       setEditingSchedule(null)
       setScheduleForm({
@@ -175,8 +197,12 @@ export default function CompanySettings() {
         timezone: 'America/Tegucigalpa'
       })
       fetchWorkSchedules()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving work schedule:', error)
+      const errorMessage = error?.message || 'Error al guardar el horario. Por favor, intenta nuevamente.'
+      setError(errorMessage)
+      // Auto-clear error after 5 seconds
+      setTimeout(() => setError(null), 5000)
     } finally {
       setLoading(false)
     }
@@ -314,6 +340,12 @@ export default function CompanySettings() {
             </Button>
           </div>
 
+          {error && (
+            <Card variant="glass" className="p-4 border border-red-500/30 bg-red-500/10">
+              <p className="text-red-400 text-sm">{error}</p>
+            </Card>
+          )}
+
           {showScheduleForm && (
             <Card variant="glass" className="p-6">
               <h4 className="text-md font-medium text-white mb-4">
@@ -398,6 +430,7 @@ export default function CompanySettings() {
                     onClick={() => {
                       setShowScheduleForm(false)
                       setEditingSchedule(null)
+                      setError(null)
                     }}
                     className="border-white/20 hover:bg-white/10 hover:border-white/30"
                   >
