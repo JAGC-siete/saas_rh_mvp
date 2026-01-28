@@ -371,6 +371,56 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
         }
         sanitizedFormData.base_salary = parsed
       }
+      // UUIDs opcionales: enviar null en vez de string vacío
+      for (const key of ['department_id', 'work_schedule_id'] as const) {
+        if (sanitizedFormData[key] === '') sanitizedFormData[key] = null
+      }
+      // Fechas opcionales: enviar null en vez de string vacío
+      for (const key of ['hire_date', 'termination_date'] as const) {
+        if (sanitizedFormData[key] === '') sanitizedFormData[key] = null
+      }
+      // Status: la tabla solo permite 'active' | 'inactive'
+      if (typeof sanitizedFormData.status === 'string') {
+        const rawStatus = sanitizedFormData.status.trim()
+        if (rawStatus === '') {
+          sanitizedFormData.status = null
+        } else if (rawStatus !== 'active' && rawStatus !== 'inactive') {
+          // Valores legacy del UI: 'terminated', 'on_leave' → mapear a 'inactive'
+          sanitizedFormData.status = 'inactive'
+        }
+      }
+      // pay_type: constraint permite 'fixed' | 'hourly'
+      if (typeof sanitizedFormData.pay_type === 'string') {
+        const rawPayType = sanitizedFormData.pay_type.trim()
+        if (rawPayType === '') {
+          sanitizedFormData.pay_type = null
+        } else if (rawPayType !== 'fixed' && rawPayType !== 'hourly') {
+          sanitizedFormData.pay_type = 'fixed'
+        }
+      }
+      // Campos JSONB: normalizar a objeto o null
+      for (const key of ['address', 'metadata'] as const) {
+        const value = sanitizedFormData[key]
+        if (value === '' || value === null || value === undefined) {
+          sanitizedFormData[key] = null
+          continue
+        }
+        if (typeof value === 'string') {
+          const trimmed = value.trim()
+          if (!trimmed) {
+            sanitizedFormData[key] = null
+            continue
+          }
+          try {
+            sanitizedFormData[key] = JSON.parse(trimmed)
+          } catch {
+            throw new Error(`El campo ${key === 'address' ? 'Dirección' : 'Metadatos'} debe ser JSON válido.`)
+          }
+        }
+      }
+      // Seguridad: no enviar campos que no existen en la tabla `employees`
+      // (p.ej. profile_image_path aún no está en el schema base).
+      delete sanitizedFormData.profile_image_path
       // profile_image_path is already set by handleProfileImageUploaded if uploaded
       // If editing and no new upload, keep existing path or null
 
