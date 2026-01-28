@@ -362,6 +362,15 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       setIsSubmitting(true)
 
       const sanitizedFormData: any = { ...formData }
+      // Normalizar tipos para evitar fallos silenciosos en la API/DB
+      if (typeof sanitizedFormData.base_salary === 'string') {
+        const trimmed = sanitizedFormData.base_salary.trim()
+        const parsed = trimmed === '' ? NaN : Number.parseFloat(trimmed)
+        if (Number.isNaN(parsed)) {
+          throw new Error('Salario base inválido. Por favor ingresa un número.')
+        }
+        sanitizedFormData.base_salary = parsed
+      }
       // profile_image_path is already set by handleProfileImageUploaded if uploaded
       // If editing and no new upload, keep existing path or null
 
