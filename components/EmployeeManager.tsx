@@ -9,6 +9,7 @@ import { useCompanyContext } from '../lib/useCompanyContext'
 import { Employee } from '../lib/types/employee'
 import AddEmployeeForm from './AddEmployeeForm'
 import WorkCertificateModal from './WorkCertificateModal'
+import EmployeeFileUpload from './EmployeeFileUpload'
 import { PlusIcon, PencilIcon, TrashIcon, EyeIcon, MagnifyingGlassIcon, FunnelIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, ChevronDownIcon, DocumentTextIcon, UserCircleIcon, ChatBubbleBottomCenterTextIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline'
 import { getHondurasTimestamp, formatTimeDisplay } from '../lib/timezone'
 
@@ -160,12 +161,8 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
   const [searchTerm, setSearchTerm] = useState('')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [currentPage, setCurrentPage] = useState(1)
-  const [profileImageFile, setProfileImageFile] = useState<File | null>(null)
-  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null)
-  const [profileImageUploading, setProfileImageUploading] = useState(false)
+  const [uploadedProfileImagePath, setUploadedProfileImagePath] = useState<string | null>(null)
   const [profileImageError, setProfileImageError] = useState<string | null>(null)
-  const [existingProfileImagePath, setExistingProfileImagePath] = useState<string | null>(null)
-  const [removeExistingProfileImage, setRemoveExistingProfileImage] = useState(false)
   const [selectedEmployeeImageUrl, setSelectedEmployeeImageUrl] = useState<string | null>(null)
   const [selectedEmployeeImageLoading, setSelectedEmployeeImageLoading] = useState(false)
   const [selectedEmployeeImageError, setSelectedEmployeeImageError] = useState<string | null>(null)
@@ -194,13 +191,6 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
     return `https://wa.me/${digits}?text=${message}`
   }, [userProfile?.name])
 
-  useEffect(() => {
-    return () => {
-      if (profileImagePreview && profileImagePreview.startsWith('blob:')) {
-        URL.revokeObjectURL(profileImagePreview)
-      }
-    }
-  }, [profileImagePreview])
   const itemsPerPage = 25
 
   const getErrorMessage = useCallback((error: unknown) => {
@@ -236,125 +226,16 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
     }
   }, [])
 
-  const handleProfileImageSelected = useCallback((file: File | null) => {
-    if (profileImagePreview && profileImagePreview.startsWith('blob:')) {
-      URL.revokeObjectURL(profileImagePreview)
-    }
-
-    if (!file) {
-      setProfileImageFile(null)
-      setProfileImagePreview(null)
-      setProfileImageError(null)
-      return
-    }
-
-    if (!file.type.startsWith('image/')) {
-      setProfileImageError('Por favor selecciona un archivo de imagen válido.')
-      setProfileImageFile(null)
-      setProfileImagePreview(null)
-      return
-    }
-
-    const maxSizeBytes = 5 * 1024 * 1024 // 5 MB
-    if (file.size > maxSizeBytes) {
-      setProfileImageError('La imagen debe pesar menos de 5 MB.')
-      setProfileImageFile(null)
-      setProfileImagePreview(null)
-      return
-    }
-
+  const handleProfileImageUploaded = useCallback((fileId: string, storagePath: string) => {
+    setUploadedProfileImagePath(storagePath)
     setProfileImageError(null)
-    setProfileImageFile(file)
-    setRemoveExistingProfileImage(false)
-    setProfileImagePreview(URL.createObjectURL(file))
-  }, [profileImagePreview])
+    // Update form data with the storage path
+    setFormData(prev => ({ ...prev, profile_image_path: storagePath }))
+  }, [])
 
-  const handleProfileImageToggle = useCallback(() => {
-    if (removeExistingProfileImage) {
-      setRemoveExistingProfileImage(false)
-      if (!profileImagePreview && existingProfileImagePath) {
-        getSignedProfileImageUrl(existingProfileImagePath)
-          .then((url) => setProfileImagePreview(url))
-          .catch((err) => {
-            console.error('Error restoring profile image preview:', err)
-            setProfileImagePreview(null)
-          })
-      }
-      return
-    }
-
-    if (profileImagePreview && profileImagePreview.startsWith('blob:')) {
-      URL.revokeObjectURL(profileImagePreview)
-    }
-
-    setProfileImageFile(null)
-    setProfileImagePreview(null)
-    setProfileImageError(null)
-
-    if (editingEmployee?.profile_image_path) {
-      setRemoveExistingProfileImage(true)
-    } else {
-      setExistingProfileImagePath(null)
-    }
-  }, [
-    removeExistingProfileImage,
-    profileImagePreview,
-    existingProfileImagePath,
-    editingEmployee,
-    getSignedProfileImageUrl
-  ])
-
-  const uploadProfileImageIfNeeded = useCallback(async () => {
-    if (!profileImageFile) return null
-
-    setProfileImageUploading(true)
-    setProfileImageError(null)
-
-    try {
-      const supabaseClient = createClient()
-      const safeFileName = profileImageFile.name.trim().replace(/\s+/g, '-').toLowerCase()
-      const uniqueId =
-        typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-          ? crypto.randomUUID()
-          : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-      const baseSegments = [
-        companyId || 'company',
-        editingEmployee?.id || 'new-employee',
-        uniqueId
-      ]
-      const objectPath = `${baseSegments.join('/')}-${safeFileName}`
-
-      const { error: uploadError } = await supabaseClient.storage
-        .from(PROFILE_PHOTO_BUCKET)
-        .upload(objectPath, profileImageFile, {
-          cacheControl: '3600',
-          upsert: true,
-          contentType: profileImageFile.type || undefined
-        })
-
-      if (uploadError) {
-        console.error('Supabase storage upload error:', uploadError)
-        throw uploadError
-      }
-
-      const meta = {
-        bucket: PROFILE_PHOTO_BUCKET,
-        path: objectPath,
-        size: profileImageFile.size,
-        mime_type: profileImageFile.type,
-        original_name: profileImageFile.name,
-        uploaded_at: new Date().toISOString()
-      }
-
-      return { path: objectPath, meta }
-    } catch (err) {
-      console.error('Error uploading profile image:', err)
-      setProfileImageError('No se pudo subir la foto de perfil. Intenta nuevamente.')
-      return null
-    } finally {
-      setProfileImageUploading(false)
-    }
-  }, [profileImageFile, companyId, editingEmployee])
+  const handleProfileImageError = useCallback((error: string) => {
+    setProfileImageError(error)
+  }, [])
 
   const fetchEmployees = useCallback(async () => {
     if (!user?.id) return
@@ -466,15 +347,9 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
     setEmployeesError(null)
     setDepartmentsError(null)
     setSchedulesError(null)
-    if (profileImagePreview && profileImagePreview.startsWith('blob:')) {
-      URL.revokeObjectURL(profileImagePreview)
-    }
-    setProfileImageFile(null)
-    setProfileImagePreview(null)
+    setUploadedProfileImagePath(null)
     setProfileImageError(null)
-    setExistingProfileImagePath(null)
-    setRemoveExistingProfileImage(false)
-  }, [profileImagePreview])
+  }, [])
 
   const handleFormChange = useCallback((field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -486,19 +361,9 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
     try {
       setIsSubmitting(true)
 
-      const uploadedImage = await uploadProfileImageIfNeeded()
-      if (profileImageFile && !uploadedImage) {
-        // Error uploading image; abort submit
-        return
-      }
-
-      const shouldRemoveExisting =
-        !profileImageFile &&
-        removeExistingProfileImage &&
-        !!editingEmployee?.profile_image_path
-
       const sanitizedFormData: any = { ...formData }
-      delete sanitizedFormData.profile_image_path
+      // profile_image_path is already set by handleProfileImageUploaded if uploaded
+      // If editing and no new upload, keep existing path or null
 
       const url = editingEmployee 
         ? '/api/employees/update'
@@ -509,51 +374,18 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       const payload = editingEmployee 
         ? { id: editingEmployee.id, ...sanitizedFormData }
         : sanitizedFormData
-
-      const requestBody = {
-        ...payload,
-        ...(uploadedImage
-          ? {
-              profile_image_path: uploadedImage.path,
-              profile_image_meta: uploadedImage.meta
-            }
-          : {}),
-        ...(shouldRemoveExisting
-          ? {
-              profile_image_path: null,
-              profile_image_meta: null
-            }
-          : {})
-      }
       
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify(payload),
       })
 
       if (!response.ok) {
         const errorText = await response.text()
         throw new Error(`Error ${editingEmployee ? 'updating' : 'creating'} employee: ${response.status} - ${errorText}`)
-      }
-
-      const previousPath = editingEmployee?.profile_image_path
-      const newPath = uploadedImage?.path ?? null
-
-      if (
-        previousPath &&
-        (shouldRemoveExisting || (newPath && previousPath !== newPath))
-      ) {
-        try {
-          const supabaseClient = createClient()
-          await supabaseClient.storage
-            .from(PROFILE_PHOTO_BUCKET)
-            .remove([previousPath])
-        } catch (storageError) {
-          console.warn('No se pudo eliminar la foto anterior:', storageError)
-        }
       }
 
       // Reset form and refresh employees
@@ -569,10 +401,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
     formData,
     editingEmployee,
     resetForm,
-    fetchEmployees,
-    uploadProfileImageIfNeeded,
-    profileImageFile,
-    removeExistingProfileImage
+    fetchEmployees
   ])
 
   const handleCancel = useCallback(() => {
@@ -580,9 +409,9 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
   }, [resetForm])
 
   const handleEdit = useCallback((employee: Employee) => {
-    // Mostrar estado de carga
-    setEmployeesLoading(true)
-    
+    // IMPORTANTE: no activar el loading global de empleados aquí.
+    // `employeesLoading` se usa para fetchEmployees() y controla el "Cargando empleados...".
+    // Si lo ponemos en true en modo edición y no lo apagamos, la UI queda bloqueada.
     setEditingEmployee(employee)
     setFormData({
       employee_code: employee.employee_code || '',
@@ -608,33 +437,8 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       profile_image_path: employee.profile_image_path || ''
     })
     setShowForm(true)
-    setProfileImageFile(null)
-    if (profileImagePreview && profileImagePreview.startsWith('blob:')) {
-      URL.revokeObjectURL(profileImagePreview)
-    }
+    setUploadedProfileImagePath(null)
     setProfileImageError(null)
-    setRemoveExistingProfileImage(false)
-    setExistingProfileImagePath(employee.profile_image_path || null)
-    
-    // Cargar imagen de perfil si existe
-    const loadImage = async () => {
-      if (employee.profile_image_path) {
-        try {
-          const url = await getSignedProfileImageUrl(employee.profile_image_path)
-          setProfileImagePreview(url)
-        } catch (err) {
-          console.error('Error loading profile image preview for edit:', err)
-          setProfileImagePreview(null)
-        } finally {
-          setEmployeesLoading(false)
-        }
-      } else {
-        setProfileImagePreview(null)
-        setEmployeesLoading(false)
-      }
-    }
-    
-    loadImage()
     
     // Scroll suave al formulario después de un pequeño delay para permitir que el DOM se actualice
     setTimeout(() => {
@@ -647,7 +451,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
         })
       }
     }, 100)
-  }, [profileImagePreview, getSignedProfileImageUrl])
+  }, [])
 
   const handleDeactivate = useCallback((employee: Employee) => {
     setEmployeeToDeactivate(employee)
@@ -726,10 +530,10 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
     if (employee.profile_image_path) {
       setSelectedEmployeeImageLoading(true)
       getSignedProfileImageUrl(employee.profile_image_path)
-        .then((url) => {
+        .then((url: string | null) => {
           setSelectedEmployeeImageUrl(url)
         })
-        .catch((err) => {
+        .catch((err: any) => {
           console.error('Error loading employee profile image:', err)
           setSelectedEmployeeImageError('No se pudo cargar la foto de perfil.')
         })
@@ -1033,15 +837,13 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
             onCancel={handleCancel}
             departments={departments}
             workSchedules={workSchedules}
-            loading={isSubmitting || employeesLoading}
+            // El formulario solo debe bloquearse al enviar (crear/actualizar),
+            // no cuando el listado está recargando empleados.
+            loading={isSubmitting}
             isEditing={!!editingEmployee}
-            profileImagePreview={profileImagePreview}
-            profileImageUploading={profileImageUploading}
-            profileImageError={profileImageError}
-            onProfileImageChange={handleProfileImageSelected}
-            onToggleProfileImage={handleProfileImageToggle}
-            canRemoveProfileImage={Boolean(profileImagePreview || editingEmployee?.profile_image_path)}
-            isProfileImageMarkedForRemoval={removeExistingProfileImage}
+            employeeId={editingEmployee?.id}
+            onProfileImageUploaded={handleProfileImageUploaded}
+            onProfileImageError={handleProfileImageError}
           />
         </div>
       ) : (
