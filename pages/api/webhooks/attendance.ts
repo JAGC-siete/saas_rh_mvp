@@ -405,11 +405,27 @@ async function handleFixedEmployeeEvent(
         .select()
         .single();
 
-      if (insertError && insertError.code !== '23505') {
-        logger.error('[FIXED EMPLOYEE] Error creating check_in record', insertError, {
-          companyId,
-          employeeId: employee.id,
-        });
+      if (insertError) {
+        if (insertError.code === '23505') {
+          logger.info('[FIXED EMPLOYEE] Duplicate check_in record (idempotency)', {
+            companyId,
+            employeeId: employee.id,
+            eventUid,
+            errorCode: insertError.code,
+          });
+        } else {
+          logger.error('[FIXED EMPLOYEE] Error creating check_in record', insertError, {
+            companyId,
+            employeeId: employee.id,
+            eventUid,
+            recordDate,
+            checkIn: eventTimestamp.toISOString(),
+            errorCode: insertError.code,
+            errorMessage: insertError.message,
+            errorDetails: insertError.details,
+            errorHint: insertError.hint,
+          });
+        }
       } else {
         logger.info('[FIXED EMPLOYEE] Check_in recorded', {
           companyId,
@@ -777,6 +793,16 @@ async function processAccessEvent(
   acs: any,
   companyId: string
 ) {
+  logger.info('[ACCESS EVENT] Starting processAccessEvent', {
+    companyId,
+    hasRoot: !!root,
+    hasAcs: !!acs,
+    rootKeys: root ? Object.keys(root) : [],
+    acsKeys: acs ? Object.keys(acs) : [],
+    eventType: root?.eventType,
+    eventState: root?.eventState,
+  });
+  
   const supabase = createAdminClient();
 
   // Extraer campos del AccessControllerEvent/AcsEvent según manual Hikvision
@@ -995,6 +1021,12 @@ async function processAccessEvent(
       employeeNoString
     );
   }
+  
+  logger.info('[ACCESS EVENT] processAccessEvent completed', {
+    companyId,
+    normalizedId,
+    eventUid,
+  });
 }
 
 /**
@@ -1022,14 +1054,26 @@ async function processEvent(rawEvent: any, companyId: string) {
       root.EventNotificationAlert?.AcsEvent ??
       null;
 
+    logger.info('[WEBHOOK] Event classification', {
+      companyId,
+      eventType,
+      eventState,
+      hasAcsEvent,
+      hasAcs: !!acs,
+      rootKeys: Object.keys(root),
+      acsKeys: acs ? Object.keys(acs) : [],
+    });
+
     // Heartbeat: actualizar device health
     if (eventType === 'heartBeat') {
+      logger.info('[WEBHOOK] Processing as heartbeat', { companyId });
       await processHeartbeat(root, companyId);
       return;
     }
 
     // Access event: crear registro de asistencia
     if (hasAcsEvent && acs) {
+      logger.info('[WEBHOOK] Processing as access event', { companyId });
       await processAccessEvent(root, acs, companyId);
       return;
     }
@@ -1073,7 +1117,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   try {
     const { data: company, error: companyError } = await supabase
       .from('companies')
-      .select('id, status, name')
+      .select('id, is_active, name')
       .eq('id', company_id)
       .single();
 
@@ -1090,11 +1134,11 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       });
     }
 
-    if (company.status !== 'active') {
+    if (!company.is_active) {
       logger.warn('[ATTENDANCE WEBHOOK] Company not active', {
         company_id,
         company_name: company.name,
-        status: company.status
+        is_active: company.is_active
       });
       // Still respond 200 to not block device
       return res.status(200).json({
@@ -1118,14 +1162,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
   try {
     // Log incoming request metadata
-    logger.info('[ATTENDANCE WEBHOOK] Request received', {
-      companyId: company_id,
-      method: req.method,
-      contentType: req.headers['content-type'],
-      userAgent: req.headers['user-agent'],
-      ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
-      contentLength: req.headers['content-length'],
-    });
+
+    
 
     // Configure formidable
     const form = formidable({
