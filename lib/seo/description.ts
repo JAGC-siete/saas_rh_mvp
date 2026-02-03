@@ -2,7 +2,7 @@
  * Helper functions for generating consistent SEO meta descriptions with CTAs
  */
 
-const DEFAULT_DESCRIPTION = 'Biométrico integrado + Software nómina. 100% hondureño (IHSS, RAP, ISR). Implementación en 48h. Prueba gratis 30 días.'
+const DEFAULT_DESCRIPTION = 'Control de asistencia + Cálculo de nómina 100% Honduras. Cálculo IHSS, RAP, ISR y comprobantes en un solo sistema. Implementación en 48h o menos.'
 
 export interface DescriptionOptions {
   valueProposition?: string
