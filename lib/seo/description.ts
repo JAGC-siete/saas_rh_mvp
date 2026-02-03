@@ -2,7 +2,7 @@
  * Helper functions for generating consistent SEO meta descriptions with CTAs
  */
 
-const DEFAULT_DESCRIPTION = 'Control de asistencia + Cálculo de nómina 100% Honduras. Cálculo IHSS, RAP, ISR y comprobantes en un solo sistema. Implementación en 48h o menos.'
+const DEFAULT_DESCRIPTION = 'Deja de perder tiempo en planilla. Asistencia + nómina Honduras: IHSS, RAP, ISR, comprobantes en un solo lugar. Prueba gratis.'
 
 export interface DescriptionOptions {
   valueProposition?: string
