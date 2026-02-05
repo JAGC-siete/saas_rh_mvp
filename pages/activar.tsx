@@ -1,11 +1,12 @@
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ArrowLeftIcon, CheckCircleIcon, RocketLaunchIcon, CpuChipIcon } from '@heroicons/react/24/outline'
 import dynamic from 'next/dynamic'
 import { Card, CardContent, CardTitle } from '../components/ui/card'
 import { TRIAL_CONFIG } from '../lib/config/trial'
 import { motion } from 'framer-motion'
 import MainHeader from '../components/MainHeader'
+import { trackActivationFormSubmit, initGoogleAdsTracking } from '../lib/analytics/googleAds'
 
 interface FormData {
   empleados: number
@@ -39,6 +40,11 @@ export default function ActivarPage() {
     departamentos: 1,
     aceptaTrial: true
   })
+
+  // Initialize Google Ads tracking on mount
+  useEffect(() => {
+    initGoogleAdsTracking()
+  }, [])
 
   const handleEmpleadosChange = (value: number) => {
     const newValue = Math.max(TRIAL_CONFIG.MIN_EMPLOYEES, Math.min(TRIAL_CONFIG.MAX_EMPLOYEES, value))
@@ -187,6 +193,12 @@ export default function ActivarPage() {
       }
 
       if (response.ok) {
+        // Track Google Ads conversion
+        trackActivationFormSubmit(
+          submitData.contactoEmail,
+          submitData.empresa,
+          submitData.empleados
+        )
         setIsSuccess(true)
       } else {
         // Manejar errores del servidor
@@ -255,7 +267,7 @@ export default function ActivarPage() {
                 <div className="grid md:grid-cols-2 gap-4 max-w-md mx-auto">
                   <div className="text-center">
                     <p className="text-sm text-brand-300">WhatsApp</p>
-                    <p className="text-xs text-brand-400">+504 9470-7007</p>
+                    <p className="text-xs text-brand-400">504 32226773</p>
                   </div>
                   <div className="text-center">
                     <p className="text-sm text-brand-300">Email</p>
@@ -310,19 +322,21 @@ export default function ActivarPage() {
                   <CpuChipIcon className="w-16 h-16 lg:w-20 lg:h-20 text-cyan-400 mx-auto lg:mx-0 drop-shadow-lg" />
                 </motion.div>
                 <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-white mb-4 lg:mb-6 leading-tight">
-                  Automatizá el 80% de las tareas de tu Recursos Humanos con un dispositivo biometrico de RRHH 100% hondureño
+                  Control de asistencia y nómina en un solo lugar: Sin cálculos manuales, sin errores.
                 </h1>
-                <p className="text-lg md:text-xl text-cyan-100/90 mb-6 lg:mb-8">Gratis por 30 días. Lista en segundos. Sin tarjeta. Sin compromiso.</p>
-                {/* Feature pills */}
+                <p className="text-lg md:text-xl text-cyan-100/90 mb-6 lg:mb-8">
+                  Integra tus biométricos con nuestro software 100% hondureño. Automatiza el cálculo de IHSS, RAP e ISR mientras tu equipo se enfoca en crecer. Activa en segundos, sin tarjeta.
+                </p>
+                {/* Feature pills - alineados con mensajes ganadores de Google Ads */}
                 <div className="flex flex-wrap justify-center lg:justify-start gap-2 mb-6 lg:mb-8">
                   <span className="px-3 py-1 bg-green-500/20 text-green-300 text-xs sm:text-sm rounded-full border border-green-500/30">
-                    ⚡ Setup instantáneo
+                    IHSS, RAP e ISR automático
                   </span>
                   <span className="px-3 py-1 bg-blue-500/20 text-blue-300 text-xs sm:text-sm rounded-full border border-blue-500/30">
-                    🔒 100% seguro
+                    100% hondureño · Soporte local
                   </span>
                   <span className="px-3 py-1 bg-purple-500/20 text-purple-300 text-xs sm:text-sm rounded-full border border-purple-500/30">
-                    🚀 Sin código
+                    Del biométrico al comprobante en segundos
                   </span>
                 </div>
               </motion.div>
@@ -339,7 +353,7 @@ export default function ActivarPage() {
                   <span className="text-cyan-400">⚡</span>
                   Información mínima necesaria
                 </CardTitle>
-                <p className="text-cyan-100/80 text-sm leading-relaxed mb-6">Con esta información SISU creará automáticamente tu empresa, departamentos, horarios de trabajo y empleados con nombres bíblicos y salarios aleatorios.</p>
+                <p className="text-cyan-100/80 text-sm leading-relaxed mb-6">Olvida las hojas de cálculo. Con esta información crearemos tu empresa, departamentos, horarios y empleados de prueba. Tu entorno con deducciones de ley (IHSS, RAP, INFOP) listo en minutos.</p>
               </div>
 
               <div className="space-y-6">
@@ -528,7 +542,7 @@ export default function ActivarPage() {
                     </>
                   ) : (
                     <>
-                      <RocketLaunchIcon className="h-5 w-5 mr-2" /> Crear mi entorno de prueba ahora
+                      <RocketLaunchIcon className="h-5 w-5 mr-2" /> Activar gratis hoy — Sin tarjeta de crédito
                     </>
                   )}
                 </button>
@@ -544,7 +558,7 @@ export default function ActivarPage() {
                 
                 {!errors.submit && (
                   <p className="text-brand-400 text-xs text-center">
-                    Recibirás acceso inmediato por email con credenciales. Tu entorno vendrá con empleados de prueba, departamentos y horarios ya configurados. Sin tarjeta. Puedes cancelar cuando quieras.
+                    Activación inmediata. Recibirás credenciales por email. Tu entorno incluye empleados de prueba, departamentos y nómina con IHSS, RAP e ISR ya calculados. Sin compromiso. Soporte en Honduras.
                   </p>
                 )}
               </div>
