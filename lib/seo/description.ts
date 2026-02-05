@@ -41,7 +41,7 @@ export const pageDescriptions = {
   home: 'Control de asistencia y nómina en un solo lugar. Integra biométricos con software 100% hondureño. Automatiza IHSS, RAP, ISR. Activar gratis hoy, sin tarjeta.',
   activate: 'Activa tu cuenta en Humano SISU y comienza a automatizar tu nómina. Configuración en minutos, sin complicaciones.',
   affiliates: 'Únete al programa de afiliados de Humano SISU. Gana comisiones recomendando la mejor solución de nómina para MIPYMES en Honduras.',
-  calculator: 'Calcula automáticamente las deducciones de IHSS, RAP e ISR para tus empleados. Herramienta gratuita y precisa.',
+  calculator: 'Valida IHSS, RAP e ISR sin cálculos manuales. Herramienta gratuita según leyes de Honduras. ¿Automatizamos tu nómina? Activar gratis hoy.',
   privacy: 'Política de privacidad de Humano SISU. Conoce cómo protegemos y manejamos tus datos personales y de tus empleados.',
   subscription: 'Elige el plan perfecto para tu empresa. Desde startups hasta empresas establecidas, tenemos el plan ideal para ti.',
   login: 'Inicia sesión en tu cuenta de Humano SISU. Accede a tu dashboard, gestiona empleados, nómina y más.',

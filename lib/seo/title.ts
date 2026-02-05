@@ -49,7 +49,7 @@ export const pageTitles = {
   home: 'Asistencia y nómina en un lugar | Sin cálculos manuales | Humano SISU',
   activate: 'Activar Cuenta | Sistema Nómina Honduras | Implementación 48h | Humano SISU',
   affiliates: 'Programa de Afiliados | Humano SISU',
-  calculator: 'Calculadora de Deducciones | IHSS, RAP, ISR | Humano SISU',
+  calculator: 'Calculadora IHSS, RAP, ISR Honduras | Sin cálculos manuales | Humano SISU',
   privacy: 'Política de Privacidad | Humano SISU',
   subscription: 'Suscripción | Planes y Precios | Humano SISU',
   login: 'Iniciar Sesión | Humano SISU',
