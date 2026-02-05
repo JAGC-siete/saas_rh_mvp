@@ -1,6 +1,7 @@
 import React from "react";
 import ImageCarousel from "./ImageCarousel";
 import { nowInHonduras } from '../lib/timezone'
+import { trackCTAClick } from '../lib/analytics/googleAds'
 
 export default function LandingHero() {
   // Función simple para obtener la próxima quincena
@@ -38,18 +39,21 @@ export default function LandingHero() {
                      placeholder="Tu email"
                      className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-brand-200/70 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent text-sm sm:text-base"
                    />
-                   <button
-                     onClick={() => window.location.href = '/activar'}
-                     className="inline-flex items-center justify-center rounded-xl px-5 sm:px-6 py-2.5 sm:py-3 text-base sm:text-lg font-semibold shadow-sm bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all duration-300 hover:-translate-y-1 whitespace-nowrap"
-                     data-analytics="cta_hero_click"
-                   >
-                     Probalo HOY
-                   </button>
+                  <button
+                    onClick={() => {
+                      trackCTAClick('hero_cta', 'landing_hero')
+                      window.location.href = '/activar'
+                    }}
+                    className="inline-flex items-center justify-center rounded-xl px-5 sm:px-6 py-2.5 sm:py-3 text-base sm:text-lg font-semibold shadow-sm bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all duration-300 hover:-translate-y-1 whitespace-nowrap"
+                    data-analytics="cta_hero_click"
+                  >
+                    Activar gratis hoy - Sin tarjeta de crédito
+                  </button>
                  </div>
                  
                  {/* Features text below CTA */}
                  <div className="text-xs sm:text-sm text-brand-200/60 px-2">
-                   <p>Usalo gratis 30 días. Empleados ilimitados.</p>
+                   <p>Sin tarjeta de crédito. Empleados ilimitados.</p>
                  </div>
                </div>
              </div>

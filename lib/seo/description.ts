@@ -38,7 +38,7 @@ export function generateDescription(options: DescriptionOptions = {}): string {
  * Predefined descriptions for common pages
  */
 export const pageDescriptions = {
-  home: DEFAULT_DESCRIPTION,
+  home: 'Control de asistencia y nómina en un solo lugar. Integra biométricos con software 100% hondureño. Automatiza IHSS, RAP, ISR. Activar gratis hoy, sin tarjeta.',
   activate: 'Activa tu cuenta en Humano SISU y comienza a automatizar tu nómina. Configuración en minutos, sin complicaciones.',
   affiliates: 'Únete al programa de afiliados de Humano SISU. Gana comisiones recomendando la mejor solución de nómina para MIPYMES en Honduras.',
   calculator: 'Calcula automáticamente las deducciones de IHSS, RAP e ISR para tus empleados. Herramienta gratuita y precisa.',
@@ -50,11 +50,12 @@ export const pageDescriptions = {
   payroll: 'Gestiona tu nómina de forma automatizada. Calcula IHSS, RAP, ISR y genera comprobantes automáticamente.',
   attendance: 'Control de asistencia biométrico y digital. Registra checadas, gestiona horarios y genera reportes.',
   reports: 'Reportes y análisis detallados de tu empresa. Visualiza estadísticas de asistencia, nómina y más.',
-  // New strategic pages
-  alternativaOdoo: 'Alternativa a Odoo para MIPYMES en Honduras. Biométrico integrado + Nómina localizada. Implementación 48h vs semanas de Odoo. Compara gratis.',
-  biometricoNomina: 'Sistema biométrico con nómina integrada. Todo en uno: control asistencia + cálculo IHSS, RAP, ISR. 100% hondureño. Prueba gratis.',
-  implementacion48h: 'Implementación de nómina en 48 horas garantizada. Biométrico + Software configurado y funcionando. Más rápido que Odoo. Solicita demo.',
-  deduccionesHonduras: 'Cálculo automático de IHSS, RAP e ISR según ley hondureña. Más preciso que Excel. Genera comprobantes automáticos. Prueba gratis.',
+  // New strategic pages (aligned with Google Ads hero messaging)
+  alternativaOdoo: 'Olvida las hojas de cálculo. Deducciones de ley (IHSS, RAP, INFOP) con activación inmediata y soporte en tu país. Prueba gratis ahora.',
+  biometricoNomina: 'Integra tus biométricos con software 100% hondureño. Automatiza IHSS, RAP, ISR. Sin cálculos manuales, sin errores. Activar gratis hoy.',
+  implementacion48h: 'Del biométrico al comprobante en segundos. Ahorra horas administrativas. Plataforma intuitiva. Solicitar cotización.',
+  deduccionesHonduras: 'Integra biométricos con software 100% hondureño. Automatiza IHSS, RAP, ISR. Sin cálculos manuales. Activar gratis hoy, sin tarjeta.',
+  recursos: 'Artículos sobre automatización de RH y nómina en Honduras. Guías, mejores prácticas y tendencias para MIPYMES.',
 }
 
 /**

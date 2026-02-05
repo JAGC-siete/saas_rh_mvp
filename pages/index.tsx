@@ -12,11 +12,15 @@ import SchemaMarkup from '../components/SEO/SchemaMarkup'
 import { getPageTitle } from '../lib/seo/title'
 import { getPageDescription } from '../lib/seo/description'
 import { generateOrganizationSchema, generateWebSiteSchema, generateWebPageSchema, generateReviewSchema } from '../lib/seo/schema'
+import { initGoogleAdsTracking } from '../lib/analytics/googleAds'
 
 const CloudBackground = dynamic(() => import('../components/CloudBackground'), { ssr: false })
 
 export default function LandingPage() {
   useEffect(() => {
+    // Initialize Google Ads tracking (UTM parameters)
+    initGoogleAdsTracking()
+
     // Manejar scroll automático cuando se navega con hash
     const handleHashScroll = () => {
       if (window.location.hash) {
@@ -90,25 +94,28 @@ export default function LandingPage() {
           {/* Trust badges */}
           <div className="flex flex-wrap justify-center gap-2 sm:gap-3 md:gap-6 mb-6 sm:mb-8 animate-fade-up-subtle">
             <span className="px-3 py-1 bg-green-500/20 text-green-300 text-xs rounded-full border border-green-500/30">
-              Cumplí STSS Honduras
+              Cumple STSS Honduras
             </span>
             <span className="px-3 py-1 bg-blue-500/20 text-blue-300 text-xs rounded-full border border-blue-500/30">
-              Setup inicial en instantaneo
+              Setup inicial en instantáneo
             </span>
             <span className="px-3 py-1 bg-purple-500/20 text-purple-300 text-xs rounded-full border border-purple-500/30">
-              30 días gratis
+              100% Hondureño
             </span>
             <span className="px-3 py-1 bg-orange-500/20 text-orange-300 text-xs rounded-full border border-orange-500/30">
-              Licencia anual
+              Soporte local
             </span>
           </div>
 
-          {/* Hero Title - Centrado */}
+          {/* Hero Title - Opción A (Paz Mental) */}
           <div className="text-center mb-6 sm:mb-8 px-2">
             <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight sm:leading-tight">
-              <span className="text-white block sm:inline">Digitalización de registro asistencia y nómina para MIPYMES</span>
-              <span className="text-brand-300 block text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl mt-2 sm:mt-1">Biométrico y Software</span>
+              <span className="text-white block sm:inline">Control de asistencia y nómina en un solo lugar:</span>
+              <span className="text-brand-300 block text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl mt-2 sm:mt-1">Sin cálculos manuales, sin errores.</span>
             </h1>
+            <p className="text-lg sm:text-xl text-brand-200/90 max-w-3xl mx-auto mt-4 sm:mt-6">
+              Integra tus biométricos con nuestro software 100% hondureño. Automatiza el cálculo de IHSS, RAP e ISR mientras tu equipo se enfoca en crecer.
+            </p>
           </div>
 
           {/* LandingHero Section - Reemplaza completamente al carrusel */}

@@ -46,7 +46,7 @@ export function generateTitle(options: TitleOptions = {}): string {
  * Predefined titles for common pages
  */
 export const pageTitles = {
-  home: DEFAULT_TITLE,
+  home: 'Asistencia y nómina en un lugar | Sin cálculos manuales | Humano SISU',
   activate: 'Activar Cuenta | Sistema Nómina Honduras | Implementación 48h | Humano SISU',
   affiliates: 'Programa de Afiliados | Humano SISU',
   calculator: 'Calculadora de Deducciones | IHSS, RAP, ISR | Humano SISU',
@@ -58,11 +58,12 @@ export const pageTitles = {
   payroll: 'Nómina | Gestión de Planilla | Humano SISU',
   attendance: 'Asistencia | Control de Asistencia | Humano SISU',
   reports: 'Reportes y Análisis | Humano SISU',
-  // New strategic pages
-  alternativaOdoo: 'Alternativa a Odoo Honduras | Nómina Localizada | Biométrico + Software | Humano SISU',
-  biometricoNomina: 'Control Asistencia Biométrico + Nómina | Todo en Uno | Honduras | Humano SISU',
-  implementacion48h: 'Implementación Nómina 48 Horas | Sistema RH Honduras | Humano SISU',
-  deduccionesHonduras: 'Cálculo IHSS RAP ISR Automático | Nómina Honduras | Humano SISU',
+  // New strategic pages (aligned with Google Ads hero messaging)
+  alternativaOdoo: 'Software RH Honduras | Biométrico, Nómina y Ley | Humano SISU',
+  biometricoNomina: 'Asistencia y nómina en un lugar | Sin cálculos manuales | Humano SISU',
+  implementacion48h: 'Automatiza asistencia y payroll | Ahorra horas | Humano SISU',
+  deduccionesHonduras: 'IHSS, RAP, ISR automático | Sin cálculos manuales | Humano SISU',
+  recursos: 'Recursos | Automatización RH y Nómina Honduras | Humano SISU',
 }
 
 /**

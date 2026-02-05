@@ -123,23 +123,24 @@ export default function Implementacion48HorasPage() {
           {/* Hero Title */}
           <div className="text-center mb-6 sm:mb-8 px-2">
             <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight sm:leading-tight">
-              <span className="text-white block sm:inline">Tu Sistema de Nómina</span>
-              <span className="text-brand-300 block text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl mt-2 sm:mt-1">Funcionando en 48 Horas</span>
+              <span className="text-white block sm:inline">Multiplica el valor de tu equipo:</span>
+              <span className="text-brand-300 block text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl mt-2 sm:mt-1">Automatiza la asistencia y el payroll hoy.</span>
             </h1>
             <p className="text-lg sm:text-xl text-brand-200/90 max-w-3xl mx-auto mt-4 sm:mt-6">
-              Mientras otros sistemas tardan semanas o meses, Humano SISU está funcionando 
-              en menos de 48 horas. Garantizado.
+              Del biométrico al comprobante de pago en segundos. Ahorra horas de trabajo administrativo y elimina la resistencia al cambio con una plataforma intuitiva.
             </p>
           </div>
 
           {/* CTA Button */}
           <div className="flex justify-center mb-6">
-            <Link
-              href="/activar"
+            <a
+              href="https://wa.me/50432226773?text=Hola,%20quiero%20solicitar%20cotización%20de%20Humano%20SISU"
+              target="_blank"
+              rel="noopener noreferrer"
               className="px-6 sm:px-8 py-3 sm:py-4 bg-sky-600 text-white rounded-xl font-semibold text-base sm:text-lg hover:bg-sky-700 transition-colors shadow-sm"
             >
-              Solicitar Implementación
-            </Link>
+              Solicitar cotización
+            </a>
           </div>
         </div>
       </section>

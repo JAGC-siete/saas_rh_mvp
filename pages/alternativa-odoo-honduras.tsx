@@ -102,12 +102,11 @@ export default function AlternativaOdooPage() {
           {/* Hero Title */}
           <div className="text-center mb-6 sm:mb-8 px-2">
             <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight sm:leading-tight">
-              <span className="text-white block sm:inline">Alternativa a Odoo para</span>
-              <span className="text-brand-300 block text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl mt-2 sm:mt-1">MIPYMES en Honduras</span>
+              <span className="text-white block sm:inline">El software de RH para Honduras que integra todo:</span>
+              <span className="text-brand-300 block text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl mt-2 sm:mt-1">Biométrico, Nómina y Ley.</span>
             </h1>
             <p className="text-lg sm:text-xl text-brand-200/90 max-w-3xl mx-auto mt-4 sm:mt-6">
-              Humano SISU: Sistema de nómina 100% hondureño con biométrico integrado. 
-              Implementación en 48h vs semanas de Odoo.
+              Olvida las hojas de cálculo. Automatizamos tus deducciones de ley (IHSS, RAP, INFOP) con activación inmediata y soporte en tu país.
             </p>
           </div>
 
@@ -117,7 +116,7 @@ export default function AlternativaOdooPage() {
               href="/activar"
               className="px-5 sm:px-6 py-2.5 sm:py-3 bg-sky-600 text-white rounded-xl font-semibold text-sm sm:text-base hover:bg-sky-700 transition-colors shadow-sm"
             >
-              Prueba Gratis 30 Días
+              Prueba gratis ahora
             </Link>
             <a
               href="https://wa.me/50432226773?text=Hola,%20quiero%20comparar%20Humano%20SISU%20con%20Odoo"

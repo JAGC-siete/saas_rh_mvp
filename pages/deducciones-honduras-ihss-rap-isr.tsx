@@ -115,28 +115,27 @@ export default function DeduccionesHondurasPage() {
           {/* Hero Title */}
           <div className="text-center mb-6 sm:mb-8 px-2">
             <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight sm:leading-tight">
-              <span className="text-white block sm:inline">Cálculo Automático de Deducciones:</span>
-              <span className="text-brand-300 block text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl mt-2 sm:mt-1">IHSS, RAP, ISR</span>
+              <span className="text-white block sm:inline">Control de asistencia y nómina en un solo lugar:</span>
+              <span className="text-brand-300 block text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl mt-2 sm:mt-1">Sin cálculos manuales, sin errores.</span>
             </h1>
             <p className="text-lg sm:text-xl text-brand-200/90 max-w-3xl mx-auto mt-4 sm:mt-6">
-              Olvídate de calcular manualmente. Humano SISU calcula IHSS, RAP e ISR 
-              automáticamente según la ley hondureña vigente. 100% preciso. 100% actualizado.
+              Integra tus biométricos con nuestro software 100% hondureño. Automatiza el cálculo de IHSS, RAP e ISR mientras tu equipo se enfoca en crecer.
             </p>
           </div>
 
           {/* CTA Buttons */}
           <div className="flex flex-wrap justify-center gap-3 sm:gap-4 mb-6">
             <Link
-              href="/calculadora-deducciones"
+              href="/activar"
               className="px-5 sm:px-6 py-2.5 sm:py-3 bg-sky-600 text-white rounded-xl font-semibold text-sm sm:text-base hover:bg-sky-700 transition-colors shadow-sm"
             >
-              Probar Calculadora Gratis
+              Activar gratis hoy - Sin tarjeta de crédito
             </Link>
             <Link
-              href="/activar"
+              href="/calculadora-deducciones"
               className="px-5 sm:px-6 py-2.5 sm:py-3 bg-green-600 text-white rounded-xl font-semibold text-sm sm:text-base hover:bg-green-700 transition-colors shadow-sm"
             >
-              Prueba Gratis 30 Días
+              Probar Calculadora Gratis
             </Link>
           </div>
         </div>
