@@ -3,6 +3,7 @@ import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Textarea } from './ui/textarea'
+import EmployeeFileUpload from './EmployeeFileUpload'
 
 interface Department {
   id: string
@@ -23,15 +24,9 @@ interface AddEmployeeFormProps {
   workSchedules: WorkSchedule[]
   loading: boolean
   isEditing?: boolean
-  profileImagePreview?: string | null
-  profileImageUploading?: boolean
-  profileImageError?: string | null
-  onProfileImageChange?: (file: File | null) => void
-  onProfileImageRemove?: () => void
-  onToggleProfileImage?: () => void
-  canRemoveProfileImage?: boolean
-  existingProfileImageUrl?: string | null
-  isProfileImageMarkedForRemoval?: boolean
+  employeeId?: string // Required for file upload
+  onProfileImageUploaded?: (fileId: string, storagePath: string) => void
+  onProfileImageError?: (error: string) => void
 }
 
 function AddEmployeeForm({
@@ -43,15 +38,9 @@ function AddEmployeeForm({
   workSchedules,
   loading,
   isEditing = false,
-  profileImagePreview,
-  profileImageUploading,
-  profileImageError,
-  onProfileImageChange,
-  onProfileImageRemove,
-  onToggleProfileImage,
-  canRemoveProfileImage,
-  existingProfileImageUrl,
-  isProfileImageMarkedForRemoval,
+  employeeId,
+  onProfileImageUploaded,
+  onProfileImageError,
 }: AddEmployeeFormProps) {
   // Helper to keep inputs controlled and avoid React warnings
   const v = (value: any) => (value ?? '')
@@ -304,6 +293,27 @@ function AddEmployeeForm({
               </div>
 
               <div>
+                <label className="block text-sm font-medium text-white mb-1" htmlFor="payment_frequency">
+                  Frecuencia de Pago
+                </label>
+                <select
+                  id="payment_frequency"
+                  name="payment_frequency"
+                  disabled={loading}
+                  value={v(formData?.payment_frequency)}
+                  onChange={(e) => onFormChange('payment_frequency', e.target.value)}
+                  className="w-full p-2 border border-white/20 rounded-md focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white/10 text-white"
+                >
+                  <option value="" className="bg-brand-900 text-white">Default empresa</option>
+                  <option value="quincenal" className="bg-brand-900 text-white">Quincenal</option>
+                  <option value="mensual" className="bg-brand-900 text-white">Mensual</option>
+                </select>
+                <p className="text-xs text-gray-400 mt-1">
+                  Si está vacío, usa la configuración de la empresa (Capa 2).
+                </p>
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium text-white mb-1" htmlFor="hire_date">
                   Fecha de Contratación
                 </label>
@@ -452,6 +462,32 @@ function AddEmployeeForm({
               </div>
             </div>
           </div>
+
+          {/* Foto de Perfil - Solo disponible cuando se edita un empleado existente */}
+          {employeeId && employeeId !== 'new' && (
+            <div>
+              <h3 className="text-lg font-medium text-white mb-4">Foto de Perfil</h3>
+              <p className="text-sm text-gray-400 mb-3">
+                {isEditing 
+                  ? 'Sube una nueva foto de perfil para reemplazar la actual'
+                  : 'La foto de perfil se puede agregar después de crear el empleado'}
+              </p>
+              <EmployeeFileUpload
+                employeeId={employeeId}
+                fileType="profile_photo"
+                onUploadComplete={(fileId, storagePath) => {
+                  // Update form data with the storage path
+                  onFormChange('profile_image_path', storagePath)
+                  onProfileImageUploaded?.(fileId, storagePath)
+                }}
+                onUploadError={(error) => {
+                  onProfileImageError?.(error)
+                }}
+                variant="full"
+                label="Subir foto de perfil"
+              />
+            </div>
+          )}
 
           {/* Información Adicional */}
           <div>

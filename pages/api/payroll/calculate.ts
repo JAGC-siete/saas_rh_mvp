@@ -123,25 +123,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Obtener constantes fiscales para el año del período
     const taxConstants = await getTaxBracketsForYear(year)
 
-    // Obtener configuración de payroll de la empresa (leer desde metadata)
-    const { data: payrollConfig, error: configError } = await supabase
+    // Configuración 3 capas: company_payroll_configs (Capa 2) > labor_laws (Capa 1)
+    const { data: payrollConfig } = await supabase
       .from('company_payroll_configs')
-      .select('metadata')
+      .select('metadata, payment_frequency, quincena_config')
       .eq('company_id', companyId)
       .eq('is_active', true)
       .single()
     
-    // Extraer parámetros desde metadata
     const payrollMetadata = payrollConfig?.metadata || {}
+    const quincenaConfig = payrollConfig?.quincena_config || {}
     
-    // Usar valores por defecto si no hay configuración
-    const paymentFrequency = payrollMetadata.payment_frequency || 'biweekly'
-    const paymentCutDates = payrollMetadata.payment_cut_dates || {
+    // payment_frequency: nueva columna (Capa 2) o metadata legacy o default mensual
+    const paymentFrequency = (payrollConfig?.payment_frequency || payrollMetadata.payment_frequency || 'mensual') === 'quincenal' ? 'biweekly' : 'monthly'
+    const paymentCutDates = {
       biweekly_type: 'standard',
-      biweekly_first_start: 1,
-      biweekly_first_end: 15,
-      biweekly_second_start: 16,
-      biweekly_second_end: 30,
+      biweekly_first_start: quincenaConfig.first_start ?? 1,
+      biweekly_first_end: quincenaConfig.first_end ?? 15,
+      biweekly_second_start: quincenaConfig.second_start ?? 16,
+      biweekly_second_end: quincenaConfig.second_end ?? 30,
       monthly_type: 'standard',
       monthly_start: 1,
       monthly_end: 30
@@ -243,13 +243,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Obtener registros de asistencia del período
     const { data: attendanceRecords, error: attError } = await supabase
       .from('attendance_records')
-      .select('employee_id, date, check_in, check_out, status')
+      .select('id, employee_id, date, check_in, check_out, status')
       .gte('date', fechaInicio)
       .lte('date', fechaFin)
 
     if (attError) {
       console.error('Error obteniendo registros de asistencia:', attError)
       return res.status(500).json({ error: 'Error obteniendo registros de asistencia' })
+    }
+
+    // Obtener cálculos de horas (overtime por tipo: 25%, 50%, 75%) si existen
+    const recordIds = (attendanceRecords || []).map((r: any) => r.id).filter(Boolean)
+    let hoursCalculations: Record<string, { overtime_diurno: number; overtime_nocturno: number; overtime_feriado: number }> = {}
+    if (recordIds.length > 0) {
+      const { data: ahcResults } = await supabase
+        .from('attendance_hours_calculation')
+        .select('attendance_record_id, overtime_diurno_hours, overtime_nocturno_hours, overtime_feriado_hours')
+        .in('attendance_record_id', recordIds)
+      if (ahcResults) {
+        const recordToEmp = Object.fromEntries((attendanceRecords || []).map((r: any) => [r.id, r.employee_id]))
+        for (const ahc of ahcResults) {
+          const empId = recordToEmp[ahc.attendance_record_id]
+          if (empId) {
+            if (!hoursCalculations[empId]) hoursCalculations[empId] = { overtime_diurno: 0, overtime_nocturno: 0, overtime_feriado: 0 }
+            hoursCalculations[empId].overtime_diurno += Number(ahc.overtime_diurno_hours || 0)
+            hoursCalculations[empId].overtime_nocturno += Number(ahc.overtime_nocturno_hours || 0)
+            hoursCalculations[empId].overtime_feriado += Number(ahc.overtime_feriado_hours || 0)
+          }
+        }
+      }
     }
 
     // Filtrar empleados según criterio de asistencia
@@ -281,7 +303,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log(`Procesando nómina para ${empleadosParaNomina.length} empleados`)
 
-    // Calcular planilla con CÁLCULOS CORRECTOS 2025
+    // Calcular planilla con CÁLCULOS 3 CAPAS
     const planilla: PlanillaItem[] = empleadosParaNomina.map((emp: any) => {
       const registros = attendanceRecords.filter((record: any) => 
         record.employee_id === emp.id && 
@@ -293,17 +315,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const late_days = calcularTardanzas(registros)
       
       const base_salary = Number(emp.base_salary) || 0
+      const hourlyRate = base_salary / 220
       
-      // CALCULAR SALARIO SEGÚN payment_frequency
+      // Horas extras desde attendance_hours_calculation (Capa 3) si existen
+      const overtime = hoursCalculations[emp.id] || { overtime_diurno: 0, overtime_nocturno: 0, overtime_feriado: 0 }
+      const overtimePay = 
+        overtime.overtime_diurno * hourlyRate * 1.25 +   // +25%
+        overtime.overtime_nocturno * hourlyRate * 1.50 + // +50%
+        overtime.overtime_feriado * hourlyRate * 1.75   // +75%
+      
+      // CALCULAR SALARIO SEGÚN payment_frequency (Capa 2)
       let total_earnings = 0
       if (paymentFrequency === 'monthly') {
-        // Nómina mensual: usar salario completo proporcional a días trabajados
         total_earnings = (base_salary / ultimoDia) * days_worked
       } else {
-        // Nómina quincenal (biweekly): dividir salario mensual / 2 y ajustar por días trabajados
         const salarioQuincenal = base_salary / 2
         total_earnings = salarioQuincenal * (days_worked / diasPeriodo)
       }
+      total_earnings += overtimePay
       
       let IHSS = 0, RAP = 0, ISR = 0, total_deductions = 0, total = 0
       let notes_on_ingress = ''

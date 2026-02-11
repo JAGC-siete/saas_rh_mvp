@@ -35,6 +35,7 @@ const INITIAL_FORM_DATA = {
   work_schedule_id: '',
   base_salary: '',
   pay_type: 'fixed', // Default: fixed (administrativo/permanente)
+  payment_frequency: '', // vacío = usa default de empresa (Capa 2)
   hire_date: '',
   termination_date: '',
   status: 'active',
@@ -43,8 +44,7 @@ const INITIAL_FORM_DATA = {
   emergency_contact_name: '',
   emergency_contact_phone: '',
   address: '',
-  metadata: '',
-  profile_image_path: ''
+  metadata: ''
 }
 
 const PROFILE_PHOTO_BUCKET = 'HR_BUCKET'
@@ -229,8 +229,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
   const handleProfileImageUploaded = useCallback((fileId: string, storagePath: string) => {
     setUploadedProfileImagePath(storagePath)
     setProfileImageError(null)
-    // Update form data with the storage path
-    setFormData(prev => ({ ...prev, profile_image_path: storagePath }))
+    // Profile images are now managed through employee_files table, not formData
   }, [])
 
   const handleProfileImageError = useCallback((error: string) => {
@@ -398,6 +397,15 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
           sanitizedFormData.pay_type = 'fixed'
         }
       }
+      // payment_frequency: vacío = usa default de empresa (Capa 2)
+      if (typeof sanitizedFormData.payment_frequency === 'string') {
+        const pf = sanitizedFormData.payment_frequency.trim()
+        if (pf === '') {
+          sanitizedFormData.payment_frequency = null
+        } else if (pf !== 'quincenal' && pf !== 'mensual') {
+          sanitizedFormData.payment_frequency = null
+        }
+      }
       // Campos JSONB: normalizar a objeto o null
       for (const key of ['address', 'metadata'] as const) {
         const value = sanitizedFormData[key]
@@ -419,10 +427,8 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
         }
       }
       // Seguridad: no enviar campos que no existen en la tabla `employees`
-      // (p.ej. profile_image_path aún no está en el schema base).
+      // Profile images are managed through employee_files table, not employees table
       delete sanitizedFormData.profile_image_path
-      // profile_image_path is already set by handleProfileImageUploaded if uploaded
-      // If editing and no new upload, keep existing path or null
 
       const url = editingEmployee 
         ? '/api/employees/update'
@@ -483,7 +489,8 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       department_id: employee.department_id || '',
       work_schedule_id: employee.work_schedule_id || '',
       base_salary: employee.base_salary?.toString() || '',
-      pay_type: (employee as any).pay_type || 'fixed', // Include pay_type from employee
+      pay_type: (employee as any).pay_type || 'fixed',
+      payment_frequency: (employee as any).payment_frequency || '',
       hire_date: employee.hire_date || '',
       termination_date: employee.termination_date || '',
       status: employee.status || 'active',
@@ -492,8 +499,8 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       emergency_contact_name: employee.emergency_contact_name || '',
       emergency_contact_phone: employee.emergency_contact_phone || '',
       address: typeof employee.address === 'string' ? employee.address : JSON.stringify(employee.address || {}),
-      metadata: typeof employee.metadata === 'object' ? JSON.stringify(employee.metadata || {}) : (employee.metadata || ''),
-      profile_image_path: employee.profile_image_path || ''
+      metadata: typeof employee.metadata === 'object' ? JSON.stringify(employee.metadata || {}) : (employee.metadata || '')
+      // profile_image_path no está en INITIAL_FORM_DATA ni en el schema de DB, se maneja separadamente
     })
     setShowForm(true)
     setUploadedProfileImagePath(null)
@@ -586,9 +593,10 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
     setDetailsActiveTab('personal')
     setSelectedEmployeeImageUrl(null)
     setSelectedEmployeeImageError(null)
-    if (employee.profile_image_path) {
+    const profileImagePath = (employee as any).profile_image_path
+    if (profileImagePath) {
       setSelectedEmployeeImageLoading(true)
-      getSignedProfileImageUrl(employee.profile_image_path)
+      getSignedProfileImageUrl(profileImagePath)
         .then((url: string | null) => {
           setSelectedEmployeeImageUrl(url)
         })

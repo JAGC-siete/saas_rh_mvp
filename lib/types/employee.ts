@@ -20,9 +20,8 @@ export interface Employee {
   metadata: Record<string, any> | null
   department_id: string | null
   work_schedule_id: string | null
+  payment_frequency: 'quincenal' | 'mensual' | null
   employee_pin_hash: string | null
-  profile_image_path: string | null
-  profile_image_meta: Record<string, any> | null
   created_at: string
   updated_at: string
   

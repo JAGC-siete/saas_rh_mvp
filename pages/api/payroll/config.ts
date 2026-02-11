@@ -109,12 +109,37 @@ async function getPayrollConfig(
       throw error
     }
 
-    // Extraer parámetros de configuración desde metadata y exponerlos en el nivel superior
+    // Exponer configuración: columnas nuevas (Capa 2) > metadata legacy
     const metadata = data.metadata || {}
+    const pfCol = data.payment_frequency
+    const qcCol = data.quincena_config
+    const paymentFrequency = pfCol ?? metadata.payment_frequency ?? 'biweekly'
+    const mapFreqToFrontend = (v: string) =>
+      v === 'mensual' ? 'monthly' : v === 'quincenal' ? 'biweekly' : v
+    const paymentCutDates = qcCol
+      ? {
+          biweekly_type: 'custom' as const,
+          biweekly_first_start: (qcCol as any).first_start ?? 1,
+          biweekly_first_end: (qcCol as any).first_end ?? 15,
+          biweekly_second_start: (qcCol as any).second_start ?? 16,
+          biweekly_second_end: (qcCol as any).second_end ?? 30,
+          monthly_type: metadata.payment_cut_dates?.monthly_type || 'standard',
+          monthly_start: metadata.payment_cut_dates?.monthly_start ?? 1,
+          monthly_end: metadata.payment_cut_dates?.monthly_end ?? 30
+        }
+      : metadata.payment_cut_dates || {
+          biweekly_type: 'standard',
+          biweekly_first_start: 1,
+          biweekly_first_end: 15,
+          biweekly_second_start: 16,
+          biweekly_second_end: 30,
+          monthly_type: 'standard',
+          monthly_start: 1,
+          monthly_end: 30
+        }
     const configResponse = {
       ...data,
-      // Exponer parámetros de configuración desde metadata
-      payment_frequency: metadata.payment_frequency || 'biweekly',
+      payment_frequency: mapFreqToFrontend(paymentFrequency),
       currency: metadata.currency || 'HNL',
       legal_deductions: metadata.legal_deductions || {
         ihss: true,
@@ -122,16 +147,7 @@ async function getPayrollConfig(
         isr: true,
         infop: false
       },
-      payment_cut_dates: metadata.payment_cut_dates || {
-        biweekly_type: 'standard',
-        biweekly_first_start: 1,
-        biweekly_first_end: 15,
-        biweekly_second_start: 16,
-        biweekly_second_end: 30,
-        monthly_type: 'standard',
-        monthly_start: 1,
-        monthly_end: 30
-      }
+      payment_cut_dates: paymentCutDates
     }
 
     return res.status(200).json({
@@ -219,8 +235,24 @@ async function upsertPayrollConfig(
       }
     }
 
-    // Construir metadata con los parámetros de configuración de payroll
-    // Mantener metadata existente y agregar/actualizar parámetros de configuración
+    const cutDates = payment_cut_dates || {
+      biweekly_type: 'standard',
+      biweekly_first_start: 1,
+      biweekly_first_end: 15,
+      biweekly_second_start: 16,
+      biweekly_second_end: 30,
+      monthly_type: 'standard',
+      monthly_start: 1,
+      monthly_end: 30
+    }
+    const mapFreqToDb = (v: string) =>
+      v === 'monthly' ? 'mensual' : v === 'biweekly' ? 'quincenal' : (v || 'quincenal')
+    const quincenaConfig = {
+      first_start: cutDates.biweekly_first_start ?? 1,
+      first_end: cutDates.biweekly_first_end ?? 15,
+      second_start: cutDates.biweekly_second_start ?? 16,
+      second_end: cutDates.biweekly_second_end ?? 30
+    }
     const payrollMetadata = {
       ...metadata,
       payment_frequency: payment_frequency || 'biweekly',
@@ -231,19 +263,10 @@ async function upsertPayrollConfig(
         isr: true,
         infop: false
       },
-      payment_cut_dates: payment_cut_dates || {
-        biweekly_type: 'standard',
-        biweekly_first_start: 1,
-        biweekly_first_end: 15,
-        biweekly_second_start: 16,
-        biweekly_second_end: 30,
-        monthly_type: 'standard',
-        monthly_start: 1,
-        monthly_end: 30
-      }
+      payment_cut_dates: cutDates
     }
 
-    // Upsert configuración
+    // Upsert: columnas nuevas (Capa 2) + metadata legacy
     const { data, error } = await supabase
       .from('company_payroll_configs')
       .upsert({
@@ -253,6 +276,8 @@ async function upsertPayrollConfig(
         calculation_config: calculation_config || {},
         calculation_script: calculation_script || null,
         metadata: payrollMetadata,
+        payment_frequency: mapFreqToDb(payment_frequency || 'biweekly'),
+        quincena_config: quincenaConfig,
         is_active: true,
         updated_at: new Date().toISOString()
       }, {
@@ -266,29 +291,39 @@ async function upsertPayrollConfig(
       throw error
     }
 
-    // Extraer parámetros de configuración desde metadata y exponerlos en el nivel superior
-    // (igual que en getPayrollConfig para mantener consistencia)
+    // Exponer con misma lógica que getPayrollConfig
+    const meta = data.metadata || {}
+    const pfCol = data.payment_frequency
+    const qcCol = data.quincena_config
+    const pfRes = pfCol ?? meta.payment_frequency ?? 'biweekly'
+    const mapFreq = (v: string) => (v === 'mensual' ? 'monthly' : v === 'quincenal' ? 'biweekly' : v)
+    const cutDatesRes = qcCol
+      ? {
+          biweekly_type: 'custom' as const,
+          biweekly_first_start: (qcCol as any).first_start ?? 1,
+          biweekly_first_end: (qcCol as any).first_end ?? 15,
+          biweekly_second_start: (qcCol as any).second_start ?? 16,
+          biweekly_second_end: (qcCol as any).second_end ?? 30,
+          monthly_type: meta.payment_cut_dates?.monthly_type || 'standard',
+          monthly_start: meta.payment_cut_dates?.monthly_start ?? 1,
+          monthly_end: meta.payment_cut_dates?.monthly_end ?? 30
+        }
+      : meta.payment_cut_dates || {
+          biweekly_type: 'standard',
+          biweekly_first_start: 1,
+          biweekly_first_end: 15,
+          biweekly_second_start: 16,
+          biweekly_second_end: 30,
+          monthly_type: 'standard',
+          monthly_start: 1,
+          monthly_end: 30
+        }
     const configResponse = {
       ...data,
-      // Exponer parámetros de configuración desde metadata
-      payment_frequency: data.metadata?.payment_frequency || 'biweekly',
-      currency: data.metadata?.currency || 'HNL',
-      legal_deductions: data.metadata?.legal_deductions || {
-        ihss: true,
-        rap: true,
-        isr: true,
-        infop: false
-      },
-      payment_cut_dates: data.metadata?.payment_cut_dates || {
-        biweekly_type: 'standard',
-        biweekly_first_start: 1,
-        biweekly_first_end: 15,
-        biweekly_second_start: 16,
-        biweekly_second_end: 30,
-        monthly_type: 'standard',
-        monthly_start: 1,
-        monthly_end: 30
-      }
+      payment_frequency: mapFreq(pfRes),
+      currency: meta.currency || 'HNL',
+      legal_deductions: meta.legal_deductions || { ihss: true, rap: true, isr: true, infop: false },
+      payment_cut_dates: cutDatesRes
     }
 
     return res.status(200).json({
