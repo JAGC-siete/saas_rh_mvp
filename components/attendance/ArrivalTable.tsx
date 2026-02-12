@@ -2,13 +2,18 @@ import { useState, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { formatTimeDisplay } from '../../lib/timezone'
 import { getSeverityFromDelta } from '../../lib/hooks/useAttendanceData'
-import { UserCircleIcon } from '@heroicons/react/24/outline'
+import { UserCircleIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
 
 interface ArrivalRow {
   id: string
   name: string
   team?: string
   check_in_time?: string
+  check_in?: string
+  check_out?: string
+  lunch_start?: string | null
+  lunch_end?: string | null
+  date?: string
   delta_min?: number
   late_minutes?: number
 }
@@ -23,9 +28,15 @@ interface ArrivalTableProps {
 
 type SeverityFilter = 'all' | 'early' | 'on_time' | 'warn' | 'alert' | 'danger'
 
+function timeOrDash(value: string | null | undefined): string {
+  if (value == null || value === '') return '—'
+  return formatTimeDisplay(value)
+}
+
 export default function ArrivalTable({ earlyData, lateData, title, onSelect, pageSize = 10 }: ArrivalTableProps) {
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('all')
   const [page, setPage] = useState(1)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
   // Unificar y procesar datos con severidad
   const unifiedRows = useMemo(() => {
@@ -118,55 +129,84 @@ export default function ArrivalTable({ earlyData, lateData, title, onSelect, pag
           </div>
         ) : (
           <div className="space-y-2">
-            {paged.map((row) => (
-              <button
-                key={row.id}
-                onClick={() => onSelect && onSelect(row.id, row.name)}
-                className={`w-full p-3 rounded-lg hover:scale-[1.01] transition-all text-left group border ${
-                  row.tone === 'info' ? 'bg-blue-500/10 border-blue-500/30 hover:border-blue-500/50' :
-                  row.tone === 'ok' ? 'bg-emerald-500/10 border-emerald-500/30 hover:border-emerald-500/50' :
-                  row.tone === 'warn' ? 'bg-yellow-500/10 border-yellow-500/30 hover:border-yellow-500/50' :
-                  row.tone === 'alert' ? 'bg-orange-500/10 border-orange-500/30 hover:border-orange-500/50' :
-                  'bg-red-500/10 border-red-500/30 hover:border-red-500/50'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${row.bgColor}`}>
-                      <span className="text-lg">{row.tone === 'info' ? '✅' : row.tone === 'ok' ? '🕐' : row.tone === 'warn' ? '⚠️' : '🔴'}</span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-white truncate">{row.name}</div>
-                      {row.team && (
-                        <div className="text-xs text-gray-400 truncate">{row.team}</div>
-                      )}
+            {paged.map((row) => {
+              const rowKey = `${row.id}-${row.date ?? 'single'}`
+              const isExpanded = expandedId === rowKey
+              return (
+                <div key={rowKey} className="space-y-0">
+                  <div
+                    className={`w-full p-3 rounded-lg hover:scale-[1.01] transition-all text-left group border ${
+                      row.tone === 'info' ? 'bg-blue-500/10 border-blue-500/30 hover:border-blue-500/50' :
+                      row.tone === 'ok' ? 'bg-emerald-500/10 border-emerald-500/30 hover:border-emerald-500/50' :
+                      row.tone === 'warn' ? 'bg-yellow-500/10 border-yellow-500/30 hover:border-yellow-500/50' :
+                      row.tone === 'alert' ? 'bg-orange-500/10 border-orange-500/30 hover:border-orange-500/50' :
+                      'bg-red-500/10 border-red-500/30 hover:border-red-500/50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onSelect && onSelect(row.id, row.name)}
+                        className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                      >
+                        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${row.bgColor}`}>
+                          <span className="text-lg">{row.tone === 'info' ? '✅' : row.tone === 'ok' ? '🕐' : row.tone === 'warn' ? '⚠️' : '🔴'}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-white truncate">{row.name}</div>
+                          {row.team && (
+                            <div className="text-xs text-gray-400 truncate">{row.team}</div>
+                          )}
+                        </div>
+                      </button>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className={`text-sm font-medium ${row.color}`}>
+                          {row.delta > 0 ? `+${row.delta}m` : row.delta < 0 ? `${row.delta}m` : '0m'}
+                        </span>
+                        <span className="text-sm text-gray-400">
+                          {formatTimeDisplay(row.check_in_time ?? row.check_in ?? null)}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setExpandedId((id) => (id === rowKey ? null : rowKey))
+                          }}
+                          className="p-1.5 rounded hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                          title={isExpanded ? 'Ocultar detalle' : 'Ver detalle'}
+                        >
+                          {isExpanded ? (
+                            <ChevronUpIcon className="h-4 w-4" />
+                          ) : (
+                            <ChevronDownIcon className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-                    <span className={`text-sm font-medium ${row.color}`}>
-                      {row.delta > 0 ? `+${row.delta}m` : row.delta < 0 ? `${row.delta}m` : '0m'}
-                    </span>
-                    <span className="text-sm text-gray-400">
-                      {(() => {
-                        // 🔍 PASO 3: Instrumentar el frontend - Log de lo que llega al cliente
-                        if (process.env.NODE_ENV === 'development' && row.check_in_time) {
-                          const jsDate = new Date(row.check_in_time);
-                          console.log('[ArrivalTable] check-in data:', {
-                            employee: row.name || row.id,
-                            raw: row.check_in_time,
-                            typeofRaw: typeof row.check_in_time,
-                            jsDateISO: jsDate.toISOString(),
-                            jsDateValid: !isNaN(jsDate.getTime()),
-                            formatted: formatTimeDisplay(row.check_in_time || null),
-                          });
-                        }
-                        return formatTimeDisplay(row.check_in_time || null);
-                      })()}
-                    </span>
-                  </div>
+                  {isExpanded && (
+                    <div className="ml-4 pl-6 py-3 border-l-2 border-white/20 space-y-1.5 text-sm">
+                      <div className="flex justify-between gap-4">
+                        <span className="text-gray-400">Entrada</span>
+                        <span className="text-gray-200">{timeOrDash(row.check_in_time ?? row.check_in)}</span>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span className="text-gray-400">Inicio almuerzo</span>
+                        <span className="text-gray-200">{timeOrDash(row.lunch_start)}</span>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span className="text-gray-400">Fin almuerzo</span>
+                        <span className="text-gray-200">{timeOrDash(row.lunch_end)}</span>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <span className="text-gray-400">Salida</span>
+                        <span className="text-gray-200">{timeOrDash(row.check_out)}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </button>
-            ))}
+              )
+            })}
             {/* Pagination */}
             <div className="flex items-center justify-between pt-3">
               <span className="text-xs text-gray-400">Página {page} de {totalPages}</span>

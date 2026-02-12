@@ -36,7 +36,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: error.message })
   }
   
-    // Map RPC field team_out -> team and check_in -> check_in_time to match UI expectation
+    // Map RPC fields for UI. Response includes lunch_start, lunch_end, check_out, date for "Ver detalle" (4-marks).
     const mapped = Array.isArray(data)
       ? data.map((row: any) => ({ 
           ...row, 
