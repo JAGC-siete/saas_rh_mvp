@@ -2,6 +2,7 @@
 -- Date: 2026-02-13
 -- Description: So the "Llegadas" list can show Ver detalle with Entrada, Inicio almuerzo, Fin almuerzo, Salida.
 -- Clients without 4-marks get null for lunch_start/lunch_end.
+-- Requires: 20260212000001_add_lunch_to_attendance_records.sql (attendance_records must have lunch_start, lunch_end columns).
 
 DROP FUNCTION IF EXISTS attendance_lists_filtered(UUID, TEXT, TEXT, TEXT, TEXT, UUID);
 

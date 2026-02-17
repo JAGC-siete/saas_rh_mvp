@@ -32,23 +32,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Transform timeline to match component expectations
     // Component expects: { ts_local: string, event_type: string, source?: string, justification?: string }
-    // RPC returns: { date, check_in, check_out, late_minutes, status, expected_check_in, expected_check_out }
+    // RPC returns: { date, check_in, check_out, lunch_start?, lunch_end?, late_minutes, status, ... }
     const timeline = (timelineRaw || []).flatMap((record: any) => {
       const events: any[] = []
-      
-      // Add check-in event if exists
+
       if (record.check_in) {
         events.push({
           ts_local: record.check_in,
-          event_type: record.late_minutes > 5 ? 'Check-in Tarde' : 
-                     record.late_minutes < -5 ? 'Check-in Temprano' : 
+          event_type: record.late_minutes > 5 ? 'Check-in Tarde' :
+                     record.late_minutes < -5 ? 'Check-in Temprano' :
                      'Check-in',
           source: 'attendance_system',
           justification: record.late_minutes > 5 ? `Llegó ${record.late_minutes} minutos tarde` : null
         })
       }
-      
-      // Add check-out event if exists
+      if (record.lunch_start) {
+        events.push({
+          ts_local: record.lunch_start,
+          event_type: 'Inicio almuerzo',
+          source: 'attendance_system',
+          justification: null
+        })
+      }
+      if (record.lunch_end) {
+        events.push({
+          ts_local: record.lunch_end,
+          event_type: 'Fin almuerzo',
+          source: 'attendance_system',
+          justification: null
+        })
+      }
       if (record.check_out) {
         events.push({
           ts_local: record.check_out,
@@ -57,9 +70,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           justification: null
         })
       }
-      
+
       return events
-    }).sort((a: any, b: any) => new Date(b.ts_local).getTime() - new Date(a.ts_local).getTime()) // Sort by date descending
+    }).sort((a: any, b: any) => {
+      const dayA = new Date(a.ts_local).toISOString().slice(0, 10)
+      const dayB = new Date(b.ts_local).toISOString().slice(0, 10)
+      if (dayB !== dayA) return dayB.localeCompare(dayA)
+      return new Date(a.ts_local).getTime() - new Date(b.ts_local).getTime()
+    })
 
     // Get employee details
     const { data: employee, error: employeeError } = await supabase

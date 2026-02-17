@@ -175,6 +175,11 @@ export default function AttendanceDashboardApp() {
     <ProtectedRoute>
       <DashboardLayout>
         <div className="space-y-6">
+          {error && (
+            <div className="rounded-lg bg-red-500/10 border border-red-500/30 text-red-200 px-4 py-3 text-sm">
+              {error}
+            </div>
+          )}
           {/* Header con filtros, export y timestamp */}
           <HeaderBar
             preset={preset}

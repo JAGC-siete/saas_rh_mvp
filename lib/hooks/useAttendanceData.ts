@@ -61,24 +61,35 @@ export function useAttendanceData(preset: string, employeeId?: string, role?: st
       setLoading(true)
       setError(null)
 
+      const fetchOpts = { signal: ac.signal, credentials: 'include' as RequestCredentials }
       // Promise.all para cargar todo atómicamente
       // Incluir type=present para mostrar todos los presentes en "Llegadas"
       const [kRes, aRes, eRes, lRes, pRes] = await Promise.all([
-        fetch(`/api/attendance/kpis${q}`, { signal: ac.signal }),
-        fetch(`/api/attendance/lists${q}&type=absent`, { signal: ac.signal }),
-        fetch(`/api/attendance/lists${q}&type=early`, { signal: ac.signal }),
-        fetch(`/api/attendance/lists${q}&type=late`, { signal: ac.signal }),
-        fetch(`/api/attendance/lists${q}&type=present`, { signal: ac.signal }),
+        fetch(`/api/attendance/kpis${q}`, fetchOpts),
+        fetch(`/api/attendance/lists${q}&type=absent`, fetchOpts),
+        fetch(`/api/attendance/lists${q}&type=early`, fetchOpts),
+        fetch(`/api/attendance/lists${q}&type=late`, fetchOpts),
+        fetch(`/api/attendance/lists${q}&type=present`, fetchOpts),
       ])
 
-      // Procesar respuestas
-      const [kpiJson, absentJson, earlyJson, lateJson, presentJson] = await Promise.all([
-        kRes.ok ? kRes.json() : DEFAULT_KPIS,
-        aRes.ok ? aRes.json() : [],
-        eRes.ok ? eRes.json() : [],
-        lRes.ok ? lRes.json() : [],
-        pRes.ok ? pRes.json() : [],
-      ])
+      // Procesar respuestas; si alguna list falla, capturar mensaje para no mostrar solo "No hay registros"
+      const listResponses = [aRes, eRes, lRes, pRes] as const
+      const listBodies = await Promise.all(listResponses.map((r) => r.json().catch(() => ({}))))
+      const absentJson = aRes.ok && Array.isArray(listBodies[0]) ? listBodies[0] : []
+      const earlyJson = eRes.ok && Array.isArray(listBodies[1]) ? listBodies[1] : []
+      const lateJson = lRes.ok && Array.isArray(listBodies[2]) ? listBodies[2] : []
+      const presentJson = pRes.ok && Array.isArray(listBodies[3]) ? listBodies[3] : []
+
+      const kpiJson = kRes.ok ? await kRes.json() : DEFAULT_KPIS
+
+      const failedList = listResponses.find((r) => !r.ok)
+      if (failedList) {
+        const idx = listResponses.indexOf(failedList)
+        const body = listBodies[idx] as { error?: string; message?: string }
+        setError(
+          typeof body?.error === 'string' ? body.error : typeof body?.message === 'string' ? body.message : `Error listas (${failedList.status})`
+        )
+      }
 
       // Combinar early, late y present para "Llegadas"
       // Filtrar present para excluir los que ya están en early o late

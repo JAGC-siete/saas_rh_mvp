@@ -77,6 +77,7 @@ export const MIDDLEWARE_CONFIG = {
       '/deducciones-honduras-ihss-rap-isr',
       '/afiliados',
       '/suscripcion',
+      '/recursos',
       '/sitemap.xml'
     ],
     
@@ -89,6 +90,7 @@ export const MIDDLEWARE_CONFIG = {
     // Authenticated routes (login required)
     authenticated: [
       '/app/dashboard',
+      '/app/attendance',
       '/app/employees',
       '/app/payroll',
       '/app/reports',
@@ -162,6 +164,8 @@ export function getAllPublicRoutes(): string[] {
     '/sistema-biometrico-nomina',
     '/implementacion-48-horas',
     '/deducciones-honduras-ihss-rap-isr',
+    '/recursos',
+    '/recursos/*',
     '/sitemap.xml'
   ]
 }
