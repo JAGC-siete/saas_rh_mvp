@@ -85,8 +85,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           }
           
           const normalizedRole = (userProfile.role || '').toString().trim().toLowerCase()
-          const isAdmin = ['super_admin', 'company_admin', 'hr_manager'].includes(normalizedRole)
-          const canAccessSettings = ['super_admin', 'company_admin'].includes(normalizedRole)
+          const isAdmin = ['super_admin', 'company_admin', 'hr_manager', 'admin'].includes(normalizedRole)
+          const canAccessSettings = ['super_admin', 'company_admin', 'admin'].includes(normalizedRole)
           
           const permissions: UserPermissions = {
             dashboard: true,
@@ -152,8 +152,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         console.log('🔍 Normalized role:', normalizedRole)
         
         // CRÍTICO: Determinar permisos basados en el rol PRIMERO (antes del merge)
-        const isAdmin = ['super_admin', 'company_admin', 'hr_manager'].includes(normalizedRole)
-        const canAccessSettings = ['super_admin', 'company_admin'].includes(normalizedRole)
+        const isAdmin = ['super_admin', 'company_admin', 'hr_manager', 'admin'].includes(normalizedRole)
+        const canAccessSettings = ['super_admin', 'company_admin', 'admin'].includes(normalizedRole)
         
         console.log('🔐 Permission checks:', { isAdmin, canAccessSettings, normalizedRole })
         

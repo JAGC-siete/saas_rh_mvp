@@ -26,7 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!targetCompanyId) {
       return res.status(400).json({
         error: 'Perfil de usuario incompleto',
-        message: 'No se pudo obtener la información de la empresa'
+        message: 'No se pudo obtener la informaci?n de la empresa'
       })
     }
 
@@ -40,17 +40,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       case 'POST':
       case 'PUT':
         // Solo admins pueden modificar configuraciones
-        if (!['super_admin', 'company_admin'].includes(role)) {
+        if (!['super_admin', 'company_admin', 'admin'].includes(role)) {
           return res.status(403).json({
             error: 'Permisos insuficientes',
             message: 'Solo administradores pueden modificar configuraciones de payroll'
           })
         }
         // Verificar que company_admin solo puede modificar su propia empresa
-        if (role === 'company_admin' && companyId && companyId !== targetCompanyId) {
+        if (['company_admin', 'admin'].includes(role) && companyId && companyId !== targetCompanyId) {
           return res.status(403).json({
             error: 'Permisos insuficientes',
-            message: 'Solo puede modificar la configuración de su propia empresa'
+            message: 'Solo puede modificar la configuraci?n de su propia empresa'
           })
         }
         return await upsertPayrollConfig(dbClient, targetCompanyId, req.body, res)
@@ -82,7 +82,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 /**
- * Obtener configuración de payroll de una empresa
+ * Obtener configuraci?n de payroll de una empresa
  */
 async function getPayrollConfig(
   supabase: any,
@@ -98,18 +98,18 @@ async function getPayrollConfig(
       .single()
 
     if (error) {
-      // Si no existe configuración, retornar null (no es error)
+      // Si no existe configuraci?n, retornar null (no es error)
       if (error.code === 'PGRST116') {
         return res.status(200).json({
           config: null,
-          message: 'No hay configuración personalizada para esta empresa'
+          message: 'No hay configuraci?n personalizada para esta empresa'
         })
       }
 
       throw error
     }
 
-    // Exponer configuración: columnas nuevas (Capa 2) > metadata legacy
+    // Exponer configuraci?n: columnas nuevas (Capa 2) > metadata legacy
     const metadata = data.metadata || {}
     const pfCol = data.payment_frequency
     const qcCol = data.quincena_config
@@ -152,19 +152,19 @@ async function getPayrollConfig(
 
     return res.status(200).json({
       config: configResponse,
-      message: 'Configuración obtenida exitosamente'
+      message: 'Configuraci?n obtenida exitosamente'
     })
   } catch (error: any) {
     console.error('Error getting payroll config:', error)
     return res.status(500).json({
-      error: 'Error obteniendo configuración',
+      error: 'Error obteniendo configuraci?n',
       details: error.message
     })
   }
 }
 
 /**
- * Crear o actualizar configuración de payroll
+ * Crear o actualizar configuraci?n de payroll
  */
 async function upsertPayrollConfig(
   supabase: any,
@@ -179,7 +179,7 @@ async function upsertPayrollConfig(
       calculation_config = {},
       calculation_script = null,
       metadata = {},
-      // Extraer parámetros de configuración de payroll
+      // Extraer par?metros de configuraci?n de payroll
       payment_frequency,
       currency,
       legal_deductions,
@@ -190,7 +190,7 @@ async function upsertPayrollConfig(
     const validTypes = ['standard', 'formula_based', 'custom']
     if (!validTypes.includes(calculation_type)) {
       return res.status(400).json({
-        error: 'Tipo de cálculo inválido',
+        error: 'Tipo de c?lculo inv?lido',
         message: `calculation_type debe ser uno de: ${validTypes.join(', ')}`
       })
     }
@@ -198,7 +198,7 @@ async function upsertPayrollConfig(
     // Validar que si es 'custom', debe tener calculation_script
     if (calculation_type === 'custom' && !calculation_script) {
       return res.status(400).json({
-        error: 'Script de cálculo requerido',
+        error: 'Script de c?lculo requerido',
         message: 'calculation_script es requerido cuando calculation_type es "custom"'
       })
     }
@@ -211,7 +211,7 @@ async function upsertPayrollConfig(
           // Validar estructura del campo
           if (!def.label || !def.type || !def.category) {
             return res.status(400).json({
-              error: 'Estructura de campo inválida',
+              error: 'Estructura de campo inv?lida',
               message: `El campo "${fieldName}" debe tener: label, type, category`
             })
           }
@@ -219,7 +219,7 @@ async function upsertPayrollConfig(
           const validTypes = ['number', 'string', 'boolean']
           if (!validTypes.includes(def.type)) {
             return res.status(400).json({
-              error: 'Tipo de campo inválido',
+              error: 'Tipo de campo inv?lido',
               message: `El tipo del campo "${fieldName}" debe ser uno de: ${validTypes.join(', ')}`
             })
           }
@@ -227,8 +227,8 @@ async function upsertPayrollConfig(
           const validCategories = ['earnings', 'deductions', 'calculation_helper']
           if (!validCategories.includes(def.category)) {
             return res.status(400).json({
-              error: 'Categoría de campo inválida',
-              message: `La categoría del campo "${fieldName}" debe ser una de: ${validCategories.join(', ')}`
+              error: 'Categor?a de campo inv?lida',
+              message: `La categor?a del campo "${fieldName}" debe ser una de: ${validCategories.join(', ')}`
             })
           }
         }
@@ -291,7 +291,7 @@ async function upsertPayrollConfig(
       throw error
     }
 
-    // Exponer con misma lógica que getPayrollConfig
+    // Exponer con misma l?gica que getPayrollConfig
     const meta = data.metadata || {}
     const pfCol = data.payment_frequency
     const qcCol = data.quincena_config
@@ -328,19 +328,19 @@ async function upsertPayrollConfig(
 
     return res.status(200).json({
       config: configResponse,
-      message: 'Configuración guardada exitosamente'
+      message: 'Configuraci?n guardada exitosamente'
     })
   } catch (error: any) {
     console.error('Error upserting payroll config:', error)
     return res.status(500).json({
-      error: 'Error guardando configuración',
+      error: 'Error guardando configuraci?n',
       details: error.message
     })
   }
 }
 
 /**
- * Desactivar configuración de payroll (soft delete)
+ * Desactivar configuraci?n de payroll (soft delete)
  */
 async function deactivatePayrollConfig(
   supabase: any,
@@ -362,7 +362,7 @@ async function deactivatePayrollConfig(
       // Si no existe, no es error
       if (error.code === 'PGRST116') {
         return res.status(200).json({
-          message: 'No existe configuración para desactivar'
+          message: 'No existe configuraci?n para desactivar'
         })
       }
       throw error
@@ -370,12 +370,12 @@ async function deactivatePayrollConfig(
 
     return res.status(200).json({
       config: data,
-      message: 'Configuración desactivada exitosamente'
+      message: 'Configuraci?n desactivada exitosamente'
     })
   } catch (error: any) {
     console.error('Error deactivating payroll config:', error)
     return res.status(500).json({
-      error: 'Error desactivando configuración',
+      error: 'Error desactivando configuraci?n',
       details: error.message
     })
   }
