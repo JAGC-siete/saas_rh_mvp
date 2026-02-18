@@ -3,6 +3,7 @@ import formidable from 'formidable';
 import { createAdminClient } from '../../../lib/supabase/server';
 import { logError, logger } from '../../../lib/logger';
 import { getTodayInHonduras, nowInHonduras, toHN, convertToHondurasTime } from '../../../lib/timezone';
+import { findBestFitSchedule } from '../../../lib/attendance/best-fit-schedule';
 import { createHash } from 'crypto';
 import fs from 'fs';
 
@@ -251,8 +252,160 @@ async function processHeartbeat(root: any, companyId: string) {
         }
 
 /**
+ * Maneja eventos de empleados fixed SIN horario asignado (Capa Base).
+ * Primera marca = check_in, segunda marca = check_out. Sin validación de ventanas.
+ * Si flags.horario_no_detectado, se emite el flag pero se procede con Capa 1.
+ */
+async function handleFixedEmployeeNoSchedule(
+  employee: any,
+  eventTimestamp: Date,
+  recordDate: string,
+  eventUid: string,
+  companyId: string,
+  doorNo: any,
+  readerNo: any,
+  verifyMode: any,
+  cardNo: any,
+  employeeNoString: any,
+  flags?: { horario_no_detectado?: boolean; razon?: string; gap_minutos?: number }
+) {
+  const supabase = createAdminClient();
+
+  const MAX_SHIFT_HOURS = 30;
+  const MAX_SHIFT_MS = MAX_SHIFT_HOURS * 60 * 60 * 1000;
+
+  const { data: openRecord } = await supabase
+    .from('attendance_records')
+    .select('id, check_in, check_out, date')
+    .eq('employee_id', employee.id)
+    .is('check_out', null)
+    .order('check_in', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const deviceMetadata: Record<string, any> = {};
+  if (doorNo != null) deviceMetadata.doorNo = doorNo;
+  if (readerNo != null) deviceMetadata.readerNo = readerNo;
+  if (verifyMode != null) deviceMetadata.verifyMode = verifyMode;
+  if (cardNo != null) deviceMetadata.cardNo = cardNo;
+  if (employeeNoString != null) deviceMetadata.employeeNoString = employeeNoString;
+  if (Object.keys(deviceMetadata).length > 0) deviceMetadata.source = 'hikvision_webhook';
+
+  const insertPayload: Record<string, unknown> = {
+    employee_id: employee.id,
+    date: recordDate,
+    check_in: eventTimestamp.toISOString(),
+    event_uid: eventUid,
+    tz: 'America/Tegucigalpa',
+    tz_offset_minutes: -360,
+    status: 'present',
+    metadata: Object.keys(deviceMetadata).length > 0 ? deviceMetadata : null,
+  };
+  if (flags?.horario_no_detectado) {
+    insertPayload.flags = {
+      horario_no_detectado: true,
+      razon: flags.razon || 'distancia_horario_excedida',
+      gap_minutos: flags.gap_minutos,
+    };
+  }
+
+  const DUPLICATE_WINDOW_MS = 15 * 60 * 1000; // 15 minutos
+
+  if (!openRecord) {
+    const { data: recentCheckIn } = await supabase
+      .from('attendance_records')
+      .select('id, check_in')
+      .eq('employee_id', employee.id)
+      .eq('date', recordDate)
+      .not('check_in', 'is', null)
+      .order('check_in', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (recentCheckIn) {
+      const recentTime = new Date(recentCheckIn.check_in).getTime();
+      if (Math.abs(eventTimestamp.getTime() - recentTime) <= DUPLICATE_WINDOW_MS) {
+        logger.info('[FIXED NO SCHEDULE] Duplicado ignorado: marca dentro de 15 min', {
+          companyId,
+          employeeId: employee.id,
+          eventUid,
+          diffMs: Math.abs(eventTimestamp.getTime() - recentTime),
+        });
+        return;
+      }
+    }
+    const { error: insertError } = await supabase
+      .from('attendance_records')
+      .insert(insertPayload);
+    if (insertError && insertError.code !== '23505') {
+      logger.error('[FIXED NO SCHEDULE] Error creating check_in', insertError, { companyId, employeeId: employee.id });
+    } else {
+      logger.info('[FIXED NO SCHEDULE] Check_in recorded (Capa Base)', { companyId, employeeId: employee.id, eventUid });
+    }
+    return;
+  }
+
+  const openCheckIn = new Date(openRecord.check_in);
+  const diffMs = eventTimestamp.getTime() - openCheckIn.getTime();
+
+  if (diffMs > 0 && diffMs <= MAX_SHIFT_MS) {
+    const updatePayload: Record<string, unknown> = {
+      check_out: eventTimestamp.toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    if (flags?.horario_no_detectado) {
+      updatePayload.flags = {
+        horario_no_detectado: true,
+        razon: flags.razon || 'distancia_horario_excedida',
+        gap_minutos: flags.gap_minutos,
+      };
+    }
+    const { error: updateError } = await supabase
+      .from('attendance_records')
+      .update(updatePayload)
+      .eq('id', openRecord.id);
+    if (updateError) {
+      logger.error('[FIXED NO SCHEDULE] Error updating check_out', updateError, { companyId, employeeId: employee.id });
+    } else {
+      logger.info('[FIXED NO SCHEDULE] Check_out recorded (Capa Base, cruce medianoche)', {
+        companyId,
+        employeeId: employee.id,
+        eventUid,
+        recordDate: openRecord.date,
+      });
+    }
+    return;
+  }
+
+  if (diffMs > MAX_SHIFT_MS) {
+    logger.warn('[FIXED NO SCHEDULE] Open record exceeded 30h, creating new check_in', {
+      companyId,
+      employeeId: employee.id,
+      openRecordId: openRecord.id,
+    });
+    const { error: insertError } = await supabase
+      .from('attendance_records')
+      .insert(insertPayload);
+    if (insertError && insertError.code !== '23505') {
+      logger.error('[FIXED NO SCHEDULE] Error creating check_in after orphan', insertError, {
+        companyId,
+        employeeId: employee.id,
+      });
+    }
+    return;
+  }
+
+  logger.debug('[FIXED NO SCHEDULE] Event out of order, ignoring', {
+    companyId,
+    employeeId: employee.id,
+    eventUid,
+  });
+}
+
+/**
  * Maneja eventos de empleados administrativos/permanentes (pay_type = 'fixed')
- * Infiere entrada vs salida usando el horario asignado y ventanas de tiempo
+ * Infiere entrada vs salida usando el horario asignado y ventanas de tiempo.
+ * Si no hay horario, delega a handleFixedEmployeeNoSchedule (Capa Base).
  */
 async function handleFixedEmployeeEvent(
   employee: any,
@@ -270,18 +423,20 @@ async function handleFixedEmployeeEvent(
 ) {
   const supabase = createAdminClient();
 
-  // Constantes de ventanas de decisión (en minutos)
-  const WINDOW_IN_BEFORE = 120; // 2 horas antes de expected_check_in
-  const WINDOW_IN_AFTER = 120;  // 2 horas después de expected_check_in
-  const WINDOW_OUT_BEFORE = 120; // 2 horas antes de expected_check_out
-  const WINDOW_OUT_AFTER = 120;  // 2 horas después de expected_check_out
-
-  // Obtener horario del empleado
+  // Capa Base: empleados sin horario — primera marca = check_in, segunda = check_out
   if (!employee.work_schedule_id) {
-    logger.warn('[FIXED EMPLOYEE] No work_schedule_id, cannot infer check_in/check_out', {
+    await handleFixedEmployeeNoSchedule(
+      employee,
+      eventTimestamp,
+      recordDate,
+      eventUid,
       companyId,
-      employeeId: employee.id,
-    });
+      doorNo,
+      readerNo,
+      verifyMode,
+      cardNo,
+      employeeNoString
+    );
     return;
   }
 
@@ -292,78 +447,145 @@ async function handleFixedEmployeeEvent(
     .single();
 
   if (scheduleError || !schedule) {
-    logger.warn('[FIXED EMPLOYEE] Error fetching schedule', {
+    logger.warn('[FIXED EMPLOYEE] Error fetching schedule, fallback Capa Base', {
       companyId,
       employeeId: employee.id,
       error: scheduleError,
     });
+    await handleFixedEmployeeNoSchedule(
+      employee,
+      eventTimestamp,
+      recordDate,
+      eventUid,
+      companyId,
+      doorNo,
+      readerNo,
+      verifyMode,
+      cardNo,
+      employeeNoString,
+      { horario_no_detectado: true, razon: 'error_fetch_horario' }
+    );
     return;
   }
 
-  // Obtener día de la semana
-  const hondurasTime = toHN(eventTimestamp);
-  const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-  const dayName = dayNames[hondurasTime.dow];
+  const MAX_SHIFT_HOURS = 30;
+  const MAX_SHIFT_MS = MAX_SHIFT_HOURS * 60 * 60 * 1000;
 
-  // Obtener horarios esperados para ese día
-  const expectedCheckInStr = (schedule as Record<string, any>)?.[`${dayName}_start`] 
-    || (schedule as Record<string, any>)?.monday_start 
-    || '08:00';
-  
-  const expectedCheckOutStr = (schedule as Record<string, any>)?.[`${dayName}_end`] 
-    || (schedule as Record<string, any>)?.monday_end 
-    || '17:00';
+  const { data: openRecord } = await supabase
+    .from('attendance_records')
+    .select('id, check_in, check_out, date')
+    .eq('employee_id', employee.id)
+    .is('check_out', null)
+    .order('check_in', { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-  // Convertir horarios esperados a Date para comparación
+  const mode: 'check_in' | 'check_out' = openRecord ? 'check_out' : 'check_in';
+  const bestFit = findBestFitSchedule(
+    schedule as Record<string, unknown>,
+    eventTimestamp,
+    recordDate,
+    mode
+  );
+
+  if (bestFit.horarioNoDetectado) {
+    logger.info('[FIXED EMPLOYEE] Best Fit: horario_no_detectado, procediendo Capa 1', {
+      companyId,
+      employeeId: employee.id,
+      eventUid,
+      razon: bestFit.capa1Razon,
+      gapMinutos: bestFit.gapMinutos,
+    });
+    await handleFixedEmployeeNoSchedule(
+      employee,
+      eventTimestamp,
+      recordDate,
+      eventUid,
+      companyId,
+      doorNo,
+      readerNo,
+      verifyMode,
+      cardNo,
+      employeeNoString,
+      {
+        horario_no_detectado: true,
+        razon: bestFit.capa1Razon || 'distancia_horario_excedida',
+        gap_minutos: bestFit.gapMinutos,
+      }
+    );
+    return;
+  }
+
+  const expectedCheckInStr = bestFit.expectedCheckIn || '08:00';
+  const expectedCheckOutStr = bestFit.expectedCheckOut || '17:00';
+
   const [expectedInHour, expectedInMin] = expectedCheckInStr.split(':').map(Number);
   const [expectedOutHour, expectedOutMin] = expectedCheckOutStr.split(':').map(Number);
-  
-  // Crear Date objects para el día del evento
   const eventDateObj = new Date(eventTimestamp);
   const expectedCheckIn = new Date(Date.UTC(
     eventDateObj.getUTCFullYear(),
     eventDateObj.getUTCMonth(),
     eventDateObj.getUTCDate(),
-    expectedInHour + 6, // Convertir hora Honduras a UTC
+    expectedInHour + 6,
     expectedInMin,
     0
   ));
-  
   const expectedCheckOut = new Date(Date.UTC(
     eventDateObj.getUTCFullYear(),
     eventDateObj.getUTCMonth(),
     eventDateObj.getUTCDate(),
-    expectedOutHour + 6, // Convertir hora Honduras a UTC
+    expectedOutHour + 6,
     expectedOutMin,
     0
   ));
 
-  // Calcular diferencias en minutos
   const diffToInMinutes = (eventTimestamp.getTime() - expectedCheckIn.getTime()) / 60000;
   const diffToOutMinutes = (eventTimestamp.getTime() - expectedCheckOut.getTime()) / 60000;
 
-  // Buscar registro abierto del día (sin check_out)
-  const { data: openRecord } = await supabase
-    .from('attendance_records')
-    .select('id, check_in, check_out')
-    .eq('employee_id', employee.id)
-    .eq('date', recordDate)
-    .is('check_out', null)
-    .maybeSingle();
+  const WINDOW_IN_BEFORE = 120;
+  const WINDOW_IN_AFTER = 120;
+  const WINDOW_OUT_BEFORE = 120;
+  const WINDOW_OUT_AFTER = 120;
 
-  logger.debug('[FIXED EMPLOYEE] Event classification', {
+  logger.debug('[FIXED EMPLOYEE] Event classification (Best Fit)', {
     companyId,
     employeeId: employee.id,
     recordDate,
     hasOpenRecord: !!openRecord,
+    openRecordDate: openRecord?.date,
     diffToInMinutes,
     diffToOutMinutes,
     expectedCheckIn: expectedCheckInStr,
     expectedCheckOut: expectedCheckOutStr,
   });
 
+  const DUPLICATE_WINDOW_MS = 15 * 60 * 1000;
+
   // REGLA 1: No hay registro abierto
   if (!openRecord) {
+    const { data: recentCheckIn } = await supabase
+      .from('attendance_records')
+      .select('id, check_in')
+      .eq('employee_id', employee.id)
+      .eq('date', recordDate)
+      .not('check_in', 'is', null)
+      .order('check_in', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (recentCheckIn) {
+      const recentTime = new Date(recentCheckIn.check_in).getTime();
+      if (Math.abs(eventTimestamp.getTime() - recentTime) <= DUPLICATE_WINDOW_MS) {
+        logger.info('[FIXED EMPLOYEE] Duplicado ignorado: check_in dentro de 15 min', {
+          companyId,
+          employeeId: employee.id,
+          eventUid,
+          diffMs: Math.abs(eventTimestamp.getTime() - recentTime),
+        });
+        return;
+      }
+    }
+
     // Verificar si está en ventana de entrada
     if (diffToInMinutes >= -WINDOW_IN_BEFORE && diffToInMinutes <= WINDOW_IN_AFTER) {
       // Crear registro con check_in
@@ -500,30 +722,28 @@ async function handleFixedEmployeeEvent(
   }
 
   // REGLA 2: Hay registro abierto (con check_in pero sin check_out)
+  // Cierre de jornada: soporta check-out al día siguiente (cruce medianoche)
   if (openRecord) {
-    // Verificar si está en ventana de salida
-    if (diffToOutMinutes >= -WINDOW_OUT_BEFORE && diffToOutMinutes <= WINDOW_OUT_AFTER) {
-      // Construir metadata con información del dispositivo Hikvision
-      const deviceMetadata: Record<string, any> = {};
-      if (doorNo !== null && doorNo !== undefined) deviceMetadata.doorNo = doorNo;
-      if (readerNo !== null && readerNo !== undefined) deviceMetadata.readerNo = readerNo;
-      if (verifyMode !== null && verifyMode !== undefined) deviceMetadata.verifyMode = verifyMode;
-      if (cardNo !== null && cardNo !== undefined) deviceMetadata.cardNo = cardNo;
-      if (employeeNoString !== null && employeeNoString !== undefined) deviceMetadata.employeeNoString = employeeNoString;
-      if (Object.keys(deviceMetadata).length > 0) {
-        deviceMetadata.source = 'hikvision_webhook';
-        // Preservar metadata existente si existe
-        const existingMetadata = (openRecord as any).metadata || {};
-        Object.assign(deviceMetadata, existingMetadata);
-      }
+    const openCheckIn = new Date(openRecord.check_in);
+    const diffMs = eventTimestamp.getTime() - openCheckIn.getTime();
 
-      // Actualizar registro con check_out
+    if (diffMs > 0 && diffMs <= MAX_SHIFT_MS) {
       const updateData: any = {
         check_out: eventTimestamp.toISOString(),
         expected_check_out: expectedCheckOutStr,
+        early_departure_minutes: bestFit.earlyDepartureMinutes ?? 0,
         updated_at: new Date().toISOString(),
       };
+      const deviceMetadata: Record<string, any> = {};
+      if (doorNo != null) deviceMetadata.doorNo = doorNo;
+      if (readerNo != null) deviceMetadata.readerNo = readerNo;
+      if (verifyMode != null) deviceMetadata.verifyMode = verifyMode;
+      if (cardNo != null) deviceMetadata.cardNo = cardNo;
+      if (employeeNoString != null) deviceMetadata.employeeNoString = employeeNoString;
       if (Object.keys(deviceMetadata).length > 0) {
+        deviceMetadata.source = 'hikvision_webhook';
+        const existingMetadata = (openRecord as any).metadata || {};
+        Object.assign(deviceMetadata, existingMetadata);
         updateData.metadata = deviceMetadata;
       }
 
@@ -539,35 +759,48 @@ async function handleFixedEmployeeEvent(
           recordId: openRecord.id,
         });
       } else {
-        logger.info('[FIXED EMPLOYEE] Check_out recorded', {
+        logger.info('[FIXED EMPLOYEE] Check_out recorded (cruce medianoche)', {
           companyId,
           employeeId: employee.id,
           recordId: openRecord.id,
           eventUid,
+          recordDate: openRecord.date,
         });
       }
       return;
     }
 
-    // Si el evento cae otra vez en ventana de entrada (doble entrada)
-    if (diffToInMinutes >= -WINDOW_IN_BEFORE && diffToInMinutes <= WINDOW_IN_AFTER) {
-      logger.warn('[FIXED EMPLOYEE] Double entry detected, ignoring', {
+    if (diffMs > MAX_SHIFT_MS) {
+      logger.warn('[FIXED EMPLOYEE] Open record exceeded 30h, fallback Capa Base', {
         companyId,
         employeeId: employee.id,
-        existingRecordId: openRecord.id,
+        openRecordId: openRecord.id,
+      });
+      await handleFixedEmployeeNoSchedule(
+        employee,
+        eventTimestamp,
+        recordDate,
+        eventUid,
+        companyId,
+        doorNo,
+        readerNo,
+        verifyMode,
+        cardNo,
+        employeeNoString,
+        { horario_no_detectado: true, razon: 'distancia_horario_excedida' }
+      );
+      return;
+    }
+
+    if (diffMs <= 0) {
+      logger.warn('[FIXED EMPLOYEE] Event out of order (before check_in), ignoring', {
+        companyId,
+        employeeId: employee.id,
+        openRecordId: openRecord.id,
         eventUid,
       });
       return;
     }
-
-    // Evento fuera de ventanas con registro abierto
-    logger.warn('[FIXED EMPLOYEE] Event outside time windows with open record', {
-      companyId,
-      employeeId: employee.id,
-      recordId: openRecord.id,
-      diffToInMinutes,
-      diffToOutMinutes,
-    });
   }
 }
 
@@ -614,8 +847,33 @@ async function handleHourlyEmployeeEvent(
     eventTimestamp: eventTimestamp.toISOString(),
   });
 
+  const DUPLICATE_WINDOW_MS = 15 * 60 * 1000;
+
   // REGLA 1: No hay registro abierto → crear nuevo check_in
   if (!openRecord) {
+    const { data: recentCheckIn } = await supabase
+      .from('attendance_records')
+      .select('id, check_in')
+      .eq('employee_id', employee.id)
+      .eq('date', recordDate)
+      .not('check_in', 'is', null)
+      .order('check_in', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (recentCheckIn) {
+      const recentTime = new Date(recentCheckIn.check_in).getTime();
+      if (Math.abs(eventTimestamp.getTime() - recentTime) <= DUPLICATE_WINDOW_MS) {
+        logger.info('[HOURLY EMPLOYEE] Duplicado ignorado: check_in dentro de 15 min', {
+          companyId,
+          employeeId: employee.id,
+          eventUid,
+          diffMs: Math.abs(eventTimestamp.getTime() - recentTime),
+        });
+        return;
+      }
+    }
+
     // Construir metadata con información del dispositivo Hikvision
     const deviceMetadata: Record<string, any> = {};
     if (doorNo !== null && doorNo !== undefined) deviceMetadata.doorNo = doorNo;
@@ -785,6 +1043,167 @@ async function handleHourlyEmployeeEvent(
   }
 }
 
+/** Company ID que usa flujo de 4 marcas: entrada, inicio almuerzo, fin almuerzo, salida. */
+const FOUR_MARKS_COMPANY_ID = 'c4692355-9b0c-4a2c-8283-7c0b872b6831';
+
+/**
+ * Maneja eventos para cliente con 4 marcas biométricas por día:
+ * 1ª = entrada, 2ª = inicio almuerzo, 3ª = fin almuerzo, 4ª = salida.
+ * El orden del evento define el slot; el almuerzo no es hora fija.
+ */
+async function handleFourMarksEmployeeEvent(
+  employee: any,
+  root: any,
+  acs: any,
+  eventTimestamp: Date,
+  recordDate: string,
+  eventUid: string,
+  companyId: string,
+  doorNo: any,
+  readerNo: any,
+  verifyMode: any,
+  cardNo: any,
+  employeeNoString: any
+) {
+  const supabase = createAdminClient();
+
+  const deviceMetadata: Record<string, any> = {};
+  if (doorNo != null) deviceMetadata.doorNo = doorNo;
+  if (readerNo != null) deviceMetadata.readerNo = readerNo;
+  if (verifyMode != null) deviceMetadata.verifyMode = verifyMode;
+  if (cardNo != null) deviceMetadata.cardNo = cardNo;
+  if (employeeNoString != null) deviceMetadata.employeeNoString = employeeNoString;
+  if (Object.keys(deviceMetadata).length > 0) deviceMetadata.source = 'hikvision_webhook';
+
+  const { data: existing } = await supabase
+    .from('attendance_records')
+    .select('id, check_in, lunch_start, lunch_end, check_out, metadata')
+    .eq('employee_id', employee.id)
+    .eq('date', recordDate)
+    .maybeSingle();
+
+  if (!existing) {
+    const { data: record, error: insertError } = await supabase
+      .from('attendance_records')
+      .insert({
+        employee_id: employee.id,
+        date: recordDate,
+        check_in: eventTimestamp.toISOString(),
+        event_uid: eventUid,
+        tz: 'America/Tegucigalpa',
+        tz_offset_minutes: -360,
+        status: 'present',
+        metadata: Object.keys(deviceMetadata).length > 0 ? deviceMetadata : null,
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      if (insertError.code === '23505') {
+        logger.info('[FOUR_MARKS] Duplicate first event (idempotency), ignoring', {
+          companyId,
+          employeeId: employee.id,
+          recordDate,
+          eventUid,
+        });
+      } else {
+        logger.error('[FOUR_MARKS] Error creating check_in record', insertError, {
+          companyId,
+          employeeId: employee.id,
+          recordDate,
+        });
+      }
+    } else {
+      logger.info('[FOUR_MARKS] 1ª marca: entrada registrada', {
+        companyId,
+        employeeId: employee.id,
+        recordId: record?.id,
+        eventUid,
+      });
+    }
+    return;
+  }
+
+  const meta = { ...((existing.metadata as Record<string, unknown>) || {}), ...deviceMetadata };
+  const updateBase: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+    metadata: Object.keys(meta).length > 0 ? meta : null,
+  };
+
+  if (existing.lunch_start == null) {
+    const { error: updateError } = await supabase
+      .from('attendance_records')
+      .update({ ...updateBase, lunch_start: eventTimestamp.toISOString() })
+      .eq('id', existing.id);
+    if (updateError) {
+      logger.error('[FOUR_MARKS] Error updating lunch_start', updateError, {
+        companyId,
+        employeeId: employee.id,
+        recordId: existing.id,
+      });
+    } else {
+      logger.info('[FOUR_MARKS] 2ª marca: inicio almuerzo registrado', {
+        companyId,
+        employeeId: employee.id,
+        recordId: existing.id,
+        eventUid,
+      });
+    }
+    return;
+  }
+
+  if (existing.lunch_end == null) {
+    const { error: updateError } = await supabase
+      .from('attendance_records')
+      .update({ ...updateBase, lunch_end: eventTimestamp.toISOString() })
+      .eq('id', existing.id);
+    if (updateError) {
+      logger.error('[FOUR_MARKS] Error updating lunch_end', updateError, {
+        companyId,
+        employeeId: employee.id,
+        recordId: existing.id,
+      });
+    } else {
+      logger.info('[FOUR_MARKS] 3ª marca: fin almuerzo registrado', {
+        companyId,
+        employeeId: employee.id,
+        recordId: existing.id,
+        eventUid,
+      });
+    }
+    return;
+  }
+
+  if (existing.check_out == null) {
+    const { error: updateError } = await supabase
+      .from('attendance_records')
+      .update({ ...updateBase, check_out: eventTimestamp.toISOString() })
+      .eq('id', existing.id);
+    if (updateError) {
+      logger.error('[FOUR_MARKS] Error updating check_out', updateError, {
+        companyId,
+        employeeId: employee.id,
+        recordId: existing.id,
+      });
+    } else {
+      logger.info('[FOUR_MARKS] 4ª marca: salida registrada', {
+        companyId,
+        employeeId: employee.id,
+        recordId: existing.id,
+        eventUid,
+      });
+    }
+    return;
+  }
+
+  logger.warn('[FOUR_MARKS] Todas las marcas ya registradas, ignorando evento', {
+    companyId,
+    employeeId: employee.id,
+    recordId: existing.id,
+    eventUid,
+  });
+}
+
 /**
  * Procesa evento de acceso: crea registro de asistencia
  */
@@ -801,6 +1220,8 @@ async function processAccessEvent(
     acsKeys: acs ? Object.keys(acs) : [],
     eventType: root?.eventType,
     eventState: root?.eventState,
+    rootFull: JSON.stringify(root, null, 2),
+    acsFull: acs ? JSON.stringify(acs, null, 2) : null,
   });
   
   const supabase = createAdminClient();
@@ -819,6 +1240,18 @@ async function processAccessEvent(
     root?.cardNo ??
     null;
 
+  logger.info('[ACCESS EVENT] Employee ID extraction attempt', {
+    companyId,
+    'acs.employeeNoString': acs?.employeeNoString,
+    'acs.employeeNo': acs?.employeeNo,
+    'acs.cardNo': acs?.cardNo,
+    'root.employeeNoString': root?.employeeNoString,
+    'root.employeeNo': root?.employeeNo,
+    'root.cardNo': root?.cardNo,
+    rawId,
+    rawIdType: typeof rawId,
+  });
+
   // Campos adicionales del Access Control Event (según manual)
   const doorNo = acs?.doorNo ?? root?.doorNo ?? null;
   const readerNo = acs?.readerNo ?? root?.readerNo ?? null;
@@ -827,16 +1260,19 @@ async function processAccessEvent(
   const employeeNoString = acs?.employeeNoString ?? root?.employeeNoString ?? null;
 
   // Log campos extraídos para debugging
-  logger.debug('[ACCESS EVENT] Extracted Access Control fields', {
+  logger.info('[ACCESS EVENT] Extracted Access Control fields', {
     companyId,
     doorNo,
     readerNo,
     verifyMode,
     cardNo,
     employeeNoString,
+    rawId,
     hasAcs: !!acs,
     acsKeys: acs ? Object.keys(acs) : [],
     rootKeys: Object.keys(root),
+    acsFull: acs ? JSON.stringify(acs) : null,
+    rootFull: JSON.stringify(root),
   });
 
   const normalizedId = normalizeIdentifier(rawId);
@@ -844,11 +1280,20 @@ async function processAccessEvent(
   if (!normalizedId) {
     logger.warn('[ACCESS EVENT] No employee identifier found', {
       companyId,
-      acsKeys: Object.keys(acs),
+      rawId,
+      acsKeys: acs ? Object.keys(acs) : [],
       rootKeys: Object.keys(root),
+      acsFull: acs ? JSON.stringify(acs) : null,
+      rootFull: JSON.stringify(root),
     });
     return;
   }
+
+  logger.info('[ACCESS EVENT] Employee identifier normalized', {
+    companyId,
+    rawId,
+    normalizedId,
+  });
 
   // Generar event_uid para idempotencia
   const eventUid = generateEventUid(root, acs, normalizedId);
@@ -879,8 +1324,22 @@ async function processAccessEvent(
         .eq('status', 'active')
         .single();
 
+  logger.info('[ACCESS EVENT] Employee search - exact match', {
+    companyId,
+    normalizedId,
+    found: !!employee,
+    error: employeeError?.message,
+    employeeId: employee?.id,
+  });
+
   // Si no hay match exacto, intentar búsqueda flexible
       if (employeeError || !employee) {
+    logger.info('[ACCESS EVENT] Trying flexible search', {
+      companyId,
+      normalizedId,
+      exactMatchError: employeeError?.message,
+    });
+
     const { data: allEmployees } = await supabase
           .from('employees')
       .select('id, company_id, work_schedule_id, dni, pay_type')
@@ -888,10 +1347,31 @@ async function processAccessEvent(
           .eq('status', 'active');
 
     if (allEmployees) {
+      logger.info('[ACCESS EVENT] Flexible search - checking employees', {
+        companyId,
+        normalizedId,
+        totalEmployees: allEmployees.length,
+        employeeDnis: allEmployees.map(emp => ({
+          id: emp.id,
+          dni: emp.dni,
+          normalized: normalizeIdentifier(emp.dni),
+          matches: normalizeIdentifier(emp.dni) === normalizedId,
+        })),
+      });
+
       employee = allEmployees.find(emp => {
         const empNormalized = normalizeIdentifier(emp.dni);
         return empNormalized === normalizedId;
       }) || null;
+
+      if (employee) {
+        logger.info('[ACCESS EVENT] Employee found via flexible search', {
+          companyId,
+          employeeId: employee.id,
+          dni: employee.dni,
+          normalizedId,
+        });
+      }
     }
   }
 
@@ -901,9 +1381,19 @@ async function processAccessEvent(
       normalizedId,
       originalId: rawId,
       eventUid,
+      searchAttempted: true,
     });
     return;
   }
+
+  logger.info('[ACCESS EVENT] Employee found successfully', {
+    companyId,
+    employeeId: employee.id,
+    dni: employee.dni,
+    normalizedId,
+    payType: (employee as any).pay_type,
+    workScheduleId: employee.work_schedule_id,
+  });
 
   // Extraer timestamp del evento usando función que garantiza hora de Honduras
   let eventTimestamp: Date;
@@ -958,6 +1448,25 @@ async function processAccessEvent(
     recordDate,
     eventTimestamp: eventTimestamp.toISOString(),
   });
+
+  // Cliente específico: 4 marcas por día (entrada, inicio almuerzo, fin almuerzo, salida)
+  if (companyId === FOUR_MARKS_COMPANY_ID) {
+    await handleFourMarksEmployeeEvent(
+      employee,
+      root,
+      acs,
+      eventTimestamp,
+      recordDate,
+      eventUid,
+      companyId,
+      doorNo,
+      readerNo,
+      verifyMode,
+      cardNo,
+      employeeNoString
+    );
+    return;
+  }
 
   // Ramificar según tipo de pago del empleado
   const payType = (employee as any).pay_type || 'fixed'; // Default a 'fixed' si no existe

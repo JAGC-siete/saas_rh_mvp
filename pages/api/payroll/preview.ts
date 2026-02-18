@@ -9,6 +9,8 @@ import {
   calculateIHSS, 
   calculateRAP 
 } from '../../../lib/tax/honduras-tax'
+import { getHolidayDatesInRange } from '../../../lib/attendance/holiday-check'
+import { getBiweeklyPeriodDates, getMonthlyPeriodDates } from '../../../lib/payroll/period-dates'
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -86,34 +88,45 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       })
     }
 
-    // Obtener configuración de payroll de la empresa (leer desde metadata)
+    // Obtener configuración de payroll (Capa 2: quincena_config + metadata)
     const { data: payrollConfig, error: configError } = await supabase
       .from('company_payroll_configs')
-      .select('metadata')
+      .select('metadata, payment_frequency, quincena_config')
       .eq('company_id', companyId)
       .eq('is_active', true)
       .maybeSingle()
     
     if (configError) {
       console.error('Error obteniendo configuración de payroll:', configError)
-      // Continuar con valores por defecto en lugar de fallar
     }
     
-    // Extraer parámetros desde metadata
     const payrollMetadata = payrollConfig?.metadata || {}
-    
-    // Usar valores por defecto si no hay configuración
-    const paymentFrequency = payrollMetadata.payment_frequency || 'biweekly'
-    const paymentCutDates = payrollMetadata.payment_cut_dates || {
-      biweekly_type: 'standard',
-      biweekly_first_start: 1,
-      biweekly_first_end: 15,
-      biweekly_second_start: 16,
-      biweekly_second_end: 30,
-      monthly_type: 'standard',
-      monthly_start: 1,
-      monthly_end: 30
-    }
+    const qcCol = payrollConfig?.quincena_config as { first_start?: number; first_end?: number; second_start?: number; second_end?: number } | null
+    const metaCutDates = payrollMetadata?.payment_cut_dates || {}
+    const mapFreq = (v: string) => (v === 'mensual' ? 'monthly' : v === 'quincenal' ? 'biweekly' : v || 'biweekly')
+    const paymentFrequency = mapFreq(payrollConfig?.payment_frequency || payrollMetadata.payment_frequency || 'quincenal')
+    const hasCustomQuincena = !!(qcCol && (qcCol.first_start != null || qcCol.first_end != null || qcCol.second_start != null || qcCol.second_end != null))
+    const paymentCutDates = qcCol
+      ? {
+          biweekly_type: (metaCutDates.biweekly_type === 'custom' || hasCustomQuincena) ? 'custom' as const : 'standard' as const,
+          biweekly_first_start: qcCol.first_start ?? metaCutDates.biweekly_first_start ?? 1,
+          biweekly_first_end: qcCol.first_end ?? metaCutDates.biweekly_first_end ?? 15,
+          biweekly_second_start: qcCol.second_start ?? metaCutDates.biweekly_second_start ?? 16,
+          biweekly_second_end: qcCol.second_end ?? metaCutDates.biweekly_second_end ?? 30,
+          monthly_type: metaCutDates.monthly_type || 'standard',
+          monthly_start: metaCutDates.monthly_start ?? 1,
+          monthly_end: metaCutDates.monthly_end ?? 30
+        }
+      : {
+          biweekly_type: metaCutDates.biweekly_type || 'standard',
+          biweekly_first_start: metaCutDates.biweekly_first_start ?? 1,
+          biweekly_first_end: metaCutDates.biweekly_first_end ?? 15,
+          biweekly_second_start: metaCutDates.biweekly_second_start ?? 16,
+          biweekly_second_end: metaCutDates.biweekly_second_end ?? 30,
+          monthly_type: metaCutDates.monthly_type || 'standard',
+          monthly_start: metaCutDates.monthly_start ?? 1,
+          monthly_end: metaCutDates.monthly_end ?? 30
+        }
     const legalDeductions = payrollMetadata.legal_deductions || {
       ihss: true,
       rap: true,
@@ -138,12 +151,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     let diasPeriodo: number
     
     if (paymentFrequency === 'monthly') {
-      // Nómina mensual
+      // Nómina mensual (soporta offset: 28-27)
       const monthlyType = paymentCutDates?.monthly_type || 'standard'
-      if (monthlyType === 'custom' && paymentCutDates?.monthly_start && paymentCutDates?.monthly_end) {
-        fechaInicio = `${yearNum}-${monthNum.toString().padStart(2, '0')}-${paymentCutDates.monthly_start.toString().padStart(2, '0')}`
-        fechaFin = `${yearNum}-${monthNum.toString().padStart(2, '0')}-${Math.min(paymentCutDates.monthly_end, ultimoDia).toString().padStart(2, '0')}`
-        diasPeriodo = paymentCutDates.monthly_end - paymentCutDates.monthly_start + 1
+      const ms = paymentCutDates?.monthly_start ?? 1
+      const me = paymentCutDates?.monthly_end ?? 30
+      if (monthlyType === 'custom' && ms && me) {
+        const result = getMonthlyPeriodDates(yearNum, monthNum, ms, me)
+        fechaInicio = result.fechaInicio
+        fechaFin = result.fechaFin
+        diasPeriodo = result.diasPeriodo
       } else {
         // Standard: del 1 al último día del mes
         fechaInicio = `${yearNum}-${monthNum.toString().padStart(2, '0')}-01`
@@ -153,17 +169,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     } else {
       // Nómina quincenal (biweekly)
       const biweeklyType = paymentCutDates?.biweekly_type || 'standard'
-      if (biweeklyType === 'custom' && paymentCutDates?.biweekly_first_start && paymentCutDates?.biweekly_first_end && 
-          paymentCutDates?.biweekly_second_start && paymentCutDates?.biweekly_second_end) {
-        if (quincenaNum === 1) {
-          fechaInicio = `${yearNum}-${monthNum.toString().padStart(2, '0')}-${paymentCutDates.biweekly_first_start.toString().padStart(2, '0')}`
-          fechaFin = `${yearNum}-${monthNum.toString().padStart(2, '0')}-${Math.min(paymentCutDates.biweekly_first_end, ultimoDia).toString().padStart(2, '0')}`
-          diasPeriodo = paymentCutDates.biweekly_first_end - paymentCutDates.biweekly_first_start + 1
-        } else {
-          fechaInicio = `${yearNum}-${monthNum.toString().padStart(2, '0')}-${paymentCutDates.biweekly_second_start.toString().padStart(2, '0')}`
-          fechaFin = `${yearNum}-${monthNum.toString().padStart(2, '0')}-${Math.min(paymentCutDates.biweekly_second_end, ultimoDia).toString().padStart(2, '0')}`
-          diasPeriodo = paymentCutDates.biweekly_second_end - paymentCutDates.biweekly_second_start + 1
-        }
+      if (biweeklyType === 'custom' && paymentCutDates?.biweekly_first_start != null && paymentCutDates?.biweekly_first_end != null && 
+          paymentCutDates?.biweekly_second_start != null && paymentCutDates?.biweekly_second_end != null) {
+        const result = getBiweeklyPeriodDates(yearNum, monthNum, quincenaNum as 1 | 2, paymentCutDates)
+        fechaInicio = result.fechaInicio
+        fechaFin = result.fechaFin
+        diasPeriodo = result.diasPeriodo
       } else {
         // Standard: 1-15 y 16-último día
         if (quincenaNum === 1) {
@@ -287,13 +298,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // Obtener constantes fiscales para el año del período
     const taxConstants = await getTaxBracketsForYear(yearNum)
 
-    // Obtener empleados activos con información de departamento y pay_type
-    // Usar left join para manejar empleados sin departamento asignado
+    // Obtener empleados activos con información de departamento, pay_type y horario (Capa 3: días Extra/Especial)
     const { data: employees, error: empError } = await supabase
       .from('employees')
       .select(`
-        id, name, dni, base_salary, bank_name, bank_account, status, department_id, pay_type,
-        departments:department_id(name)
+        id, name, dni, base_salary, bank_name, bank_account, status, department_id, pay_type, work_schedule_id,
+        departments:department_id(name),
+        work_schedules:work_schedule_id(monday_start, tuesday_start, wednesday_start, thursday_start, friday_start, saturday_start, sunday_start)
       `)
       .eq('status', 'active')
       .eq('company_id', companyId)
@@ -327,7 +338,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       status: emp.status
     })))
 
-    // Obtener registros de asistencia del período
+    // Capa 3: Fechas festivas en el período (para días Extra/Especial)
+    const holidayDates = await getHolidayDatesInRange(fechaInicio, fechaFin, companyId, supabase)
+
+    // Obtener registros de asistencia del período (incluir flags para horario_no_detectado)
     // Filtrar solo por empleados de esta empresa usando los IDs ya obtenidos
     const employeeIds = employees.map((emp: any) => emp.id);
     
@@ -342,7 +356,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (employeeIds.length > 0) {
       const { data: attData, error: attError } = await supabase
         .from('attendance_records')
-        .select('employee_id, date, check_in, check_out, status')
+        .select('employee_id, date, check_in, check_out, status, flags')
         .in('employee_id', employeeIds)
         .gte('date', fechaInicio)
         .lte('date', fechaFin)
@@ -567,12 +581,24 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
       if (payType === 'fixed') {
         // ========== EMPLEADOS FIJOS (FIXED) ==========
-        // Si hay registros de asistencia, usar la cantidad real
-        // Si no hay registros, asumir que trabajó todos los días del período
-        const days_worked = registros.length > 0 
-          ? registros.length 
-          : diasPeriodo
+        const days_worked = registros.length > 0 ? registros.length : diasPeriodo
         const days_absent = diasPeriodo - days_worked
+
+        // Capa 3: Días Extra/Especial (festivo o descanso con asistencia)
+        const schedule = emp.work_schedules as Record<string, string | null> | null
+        const dayCols: Record<number, string> = {
+          0: 'sunday_start', 1: 'monday_start', 2: 'tuesday_start', 3: 'wednesday_start',
+          4: 'thursday_start', 5: 'friday_start', 6: 'saturday_start',
+        }
+        let days_extra = 0
+        for (const r of registros) {
+          const isHoliday = holidayDates.has(r.date)
+          const d = new Date(r.date + 'T12:00:00')
+          const dow = d.getDay()
+          const col = dayCols[dow]
+          const isRestDay = schedule && col && !schedule[col]
+          if (isHoliday || isRestDay) days_extra++
+        }
         
         // CALCULAR SALARIO SEGÚN payment_frequency
         let total_earnings = 0
@@ -654,6 +680,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           }
         }
 
+        const lineMetadata: Record<string, unknown> = { tax_year: yearNum }
+        if (days_extra > 0) {
+          lineMetadata.days_extra = days_extra
+          lineMetadata.notes_extra = `${days_extra} día(s) Extra/Especial (festivo/descanso)`
+        }
+
         // Insertar línea en payroll_run_lines
         const { data: insertedLine, error: lineError } = await supabase
           .from('payroll_run_lines')
@@ -674,7 +706,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             eff_isr: ISR,
             eff_neto: total,
             edited: false,
-            tax_year: yearNum // Guardar año de tabla fiscal usada
+            tax_year: yearNum,
+            metadata: lineMetadata,
           }, {
             onConflict: 'run_id,employee_id',
             ignoreDuplicates: false
@@ -711,6 +744,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           monthly_salary: base_salary,
           days_worked,
           days_absent,
+          days_extra: days_extra > 0 ? days_extra : undefined,
+          notes_extra: days_extra > 0 ? `${days_extra} día(s) Extra/Especial (festivo/descanso)` : undefined,
           total_earnings: Math.round(total_earnings * 100) / 100,
           IHSS: Math.round(IHSS * 100) / 100,
           RAP: Math.round(RAP * 100) / 100,
