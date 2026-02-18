@@ -13,9 +13,12 @@ import { Pagination } from './ui/pagination'
 import PayrollFixedTable from './PayrollFixedTable'
 import PayrollHourlyTable from './PayrollHourlyTable'
 
+export type IncompleteRecordAlert = { employee_id: string; employee_name: string; dates: string[] }
+
 interface UnifiedPayrollTableProps {
   rows: UnifiedRow[]
   resumen: UnifiedResumen
+  incompleteRecordsAlert?: IncompleteRecordAlert[]
   // eslint-disable-next-line no-unused-vars
   onGenerateVoucher: (_lineId: string) => void
   onPreAuthorize?: () => void
@@ -40,6 +43,7 @@ interface UnifiedPayrollTableProps {
 export default function UnifiedPayrollTable({
   rows,
   resumen,
+  incompleteRecordsAlert = [],
   onGenerateVoucher,
   onPreAuthorize,
   onAuthorize,
@@ -322,6 +326,28 @@ export default function UnifiedPayrollTable({
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {/* Alerta de marcas incompletas (check-in sin check-out) */}
+        {incompleteRecordsAlert.length > 0 && (
+          <div className="mb-4 p-4 bg-amber-500/20 border border-amber-500/50 rounded-lg">
+            <div className="flex items-start gap-2">
+              <Icon name="alert" className="h-5 w-5 text-amber-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="font-semibold text-amber-200">Marcas huérfanas (sin check-out)</h4>
+                <p className="text-sm text-amber-100/90 mt-1">
+                  Los siguientes empleados tienen registros con entrada pero sin salida. Las horas de esos registros no se incluyeron en el cálculo (o se usó el valor por defecto configurado).
+                </p>
+                <ul className="mt-2 space-y-1 text-sm text-amber-100/90">
+                  {incompleteRecordsAlert.map((a) => (
+                    <li key={a.employee_id}>
+                      <strong>{a.employee_name}</strong>: {a.dates.join(', ')}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Summary Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div className="text-center p-4 bg-blue-500/30 rounded-lg border border-blue-500/20">

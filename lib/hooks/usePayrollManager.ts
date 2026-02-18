@@ -13,7 +13,7 @@ import { PayrollFilters, UIRunStatus } from '../../types/payroll'
 // Unified State Interface
 export interface PayrollManagerState {
   // Data
-  unifiedData: { rows: UnifiedRow[]; resumen: UnifiedResumen; runId?: string; status?: string } | null
+  unifiedData: { rows: UnifiedRow[]; resumen: UnifiedResumen; runId?: string; status?: string; incompleteRecordsAlert?: { employee_id: string; employee_name: string; dates: string[] }[] } | null
   currentPeriod: { year: number; month: number; quincena: 1 | 2 }
   
   // UI State
@@ -32,7 +32,7 @@ export interface PayrollManagerState {
 // Action Types
 export type PayrollManagerAction =
   | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_DATA'; payload: { rows: UnifiedRow[]; resumen: UnifiedResumen } }
+  | { type: 'SET_DATA'; payload: { rows: UnifiedRow[]; resumen: UnifiedResumen; runId?: string; status?: string; incompleteRecordsAlert?: { employee_id: string; employee_name: string; dates: string[] }[] } }
   | { type: 'SET_ERROR'; payload: string | null }
   | { type: 'SET_STATUS'; payload: UIRunStatus }
   | { type: 'SET_FILTERS'; payload: Partial<PayrollFilters> }
@@ -77,7 +77,13 @@ const payrollManagerReducer = (
     case 'SET_DATA':
       return { 
         ...state, 
-        unifiedData: action.payload, 
+        unifiedData: {
+          rows: action.payload.rows,
+          resumen: action.payload.resumen,
+          runId: (action.payload as any).runId ?? state.unifiedData?.runId,
+          status: (action.payload as any).status ?? state.unifiedData?.status,
+          incompleteRecordsAlert: (action.payload as any).incompleteRecordsAlert
+        },
         loading: false,
         error: null
       }
@@ -355,7 +361,16 @@ export const usePayrollManager = () => {
         })
         
         // Actualizar estado inmediatamente
-        dispatch({ type: 'SET_DATA', payload: { rows, resumen } })
+        dispatch({
+          type: 'SET_DATA',
+          payload: {
+            rows,
+            resumen,
+            runId: response.run_id,
+            status: response.status ?? 'draft',
+            incompleteRecordsAlert: response.incompleteRecordsAlert
+          }
+        })
         console.log('✅ Tabla actualizada inmediatamente con datos del preview')
       } else {
         console.error('❌ No se encontraron datos de planilla en la respuesta')
@@ -373,6 +388,12 @@ export const usePayrollManager = () => {
           'Sin Registros de Asistencia',
           `${response.noAttendanceWarning.message} ${response.noAttendanceWarning.detail}`,
           10000
+        )
+      } else if (response?.incompleteRecordsAlert?.length) {
+        toast.warning(
+          'Marcas incompletas detectadas',
+          `${response.incompleteRecordsAlert.length} empleado(s) con registros sin check-out. Revise la alerta en la tabla.`,
+          8000
         )
       } else {
         toast.success(

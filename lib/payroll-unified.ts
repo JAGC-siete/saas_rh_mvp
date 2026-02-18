@@ -55,7 +55,7 @@ export async function fetchUnifiedPayroll(
   month: number, 
   quincena: number,
   tipo: string = 'CON'
-): Promise<{ rows: UnifiedRow[]; resumen: UnifiedResumen; runId?: string; status?: string }> {
+): Promise<{ rows: UnifiedRow[]; resumen: UnifiedResumen; runId?: string; status?: string; incompleteRecordsAlert?: { employee_id: string; employee_name: string; dates: string[] }[] }> {
   // Validate input parameters
   if (!companyId || !year || !month || !quincena) {
     throw new Error('Parámetros requeridos faltantes')
@@ -174,7 +174,7 @@ export async function fetchUnifiedPayroll(
     } as UnifiedResumen);
 
     // Incluir run_id y status si están disponibles en la respuesta
-    const result: { rows: UnifiedRow[]; resumen: UnifiedResumen; runId?: string; status?: string } = { rows, resumen };
+    const result: { rows: UnifiedRow[]; resumen: UnifiedResumen; runId?: string; status?: string; incompleteRecordsAlert?: { employee_id: string; employee_name: string; dates: string[] }[] } = { rows, resumen };
     
     if (planillaData.run_id) {
       result.runId = planillaData.run_id;
@@ -184,6 +184,10 @@ export async function fetchUnifiedPayroll(
     if (planillaData.status) {
       result.status = planillaData.status;
       console.log('🔍 DEBUG - Status included in result:', planillaData.status);
+    }
+
+    if (planillaData.incompleteRecordsAlert && planillaData.incompleteRecordsAlert.length > 0) {
+      result.incompleteRecordsAlert = planillaData.incompleteRecordsAlert;
     }
 
     return result;

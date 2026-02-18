@@ -514,6 +514,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
         <UnifiedPayrollTable
           rows={payroll.unifiedData.rows}
           resumen={payroll.unifiedData.resumen}
+          incompleteRecordsAlert={payroll.unifiedData.incompleteRecordsAlert}
           onGenerateVoucher={payroll.generateVoucher}
           onPreAuthorize={handlePreAuthorize}
           onAuthorize={payroll.authorizeRun}

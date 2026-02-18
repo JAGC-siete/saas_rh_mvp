@@ -88,10 +88,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       })
     }
 
-    // Obtener configuración de payroll (Capa 2: quincena_config + metadata)
+    // Obtener configuración de payroll (Capa 2: quincena_config + metadata + calculation_mode)
     const { data: payrollConfig, error: configError } = await supabase
       .from('company_payroll_configs')
-      .select('metadata, payment_frequency, quincena_config')
+      .select('metadata, payment_frequency, quincena_config, calculation_mode, incomplete_record_default_hours')
       .eq('company_id', companyId)
       .eq('is_active', true)
       .maybeSingle()
@@ -133,6 +133,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       isr: true,
       infop: false
     }
+    const calculationMode = (payrollConfig as any)?.calculation_mode ?? payrollMetadata?.calculation_mode ?? 'daily'
+    const incompleteRecordDefaultHours = (payrollConfig as any)?.incomplete_record_default_hours ?? payrollMetadata?.incomplete_record_default_hours ?? null
     
     // Calcular fechas del período según configuración
     const ultimoDia = new Date(yearNum, monthNum, 0).getDate()
@@ -343,7 +345,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     // Obtener registros de asistencia del período (incluir flags para horario_no_detectado)
     // Filtrar solo por empleados de esta empresa usando los IDs ya obtenidos
-    const employeeIds = employees.map((emp: any) => emp.id);
+    const employeeIds = employees.map((emp: any) => emp.id)
     
     console.log('🔍 DEBUG - Buscando registros de asistencia:', {
       totalEmployees: employeeIds.length,
@@ -371,21 +373,18 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         })
       }
       
-      attendanceRecords = attData || [];
-      
+      attendanceRecords = attData || []
+
       // DEBUG: Verificar si hay registros pero no coinciden con employee_ids
       if (attendanceRecords.length === 0) {
         console.warn('⚠️ WARNING - No se encontraron registros de asistencia en el rango de fechas')
         console.log('🔍 DEBUG - Verificando si hay registros fuera del rango...')
-        
-        // Consulta adicional para ver si hay registros de estos empleados en otras fechas
         const { data: attDataAnyDate, error: attErrorAnyDate } = await supabase
           .from('attendance_records')
           .select('employee_id, date, check_in, check_out, status')
-          .in('employee_id', employeeIds.slice(0, 5)) // Solo primeros 5 para no sobrecargar
+          .in('employee_id', employeeIds.slice(0, 5))
           .order('date', { ascending: false })
           .limit(10)
-        
         if (!attErrorAnyDate && attDataAnyDate && attDataAnyDate.length > 0) {
           console.log('🔍 DEBUG - Se encontraron registros de asistencia fuera del rango:', {
             totalRegistrosFueraRango: attDataAnyDate.length,
@@ -395,7 +394,39 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         }
       }
     }
-    
+
+    // Obtener attendance_hours_calculation para modo hourly (Capa 3: horas efectivas)
+    let ahcByEmployee: Record<string, { total_hours: number; by_record: Record<string, number> }> = {}
+    if (employeeIds.length > 0 && calculationMode === 'hourly') {
+      const { data: ahcData } = await supabase
+        .from('attendance_hours_calculation')
+        .select(`
+          employee_id,
+          attendance_record_id,
+          total_hours
+        `)
+        .in('employee_id', employeeIds)
+      if (ahcData && ahcData.length > 0) {
+        const arIds = [...new Set(ahcData.map((r: any) => r.attendance_record_id))]
+        const { data: arDates } = await supabase
+          .from('attendance_records')
+          .select('id, date')
+          .in('id', arIds)
+          .gte('date', fechaInicio)
+          .lte('date', fechaFin)
+        const validArIds = new Set((arDates || []).map((r: any) => r.id))
+        for (const row of ahcData) {
+          if (!validArIds.has(row.attendance_record_id)) continue
+          if (!ahcByEmployee[row.employee_id]) {
+            ahcByEmployee[row.employee_id] = { total_hours: 0, by_record: {} }
+          }
+          const h = Number(row.total_hours) || 0
+          ahcByEmployee[row.employee_id].total_hours += h
+          ahcByEmployee[row.employee_id].by_record[row.attendance_record_id] = h
+        }
+      }
+    }
+
     // DEBUG: Log información de asistencia antes del filtro
     console.log('🔍 DEBUG - Total registros de asistencia encontrados:', attendanceRecords.length)
     console.log('🔍 DEBUG - Rango de fechas buscado:', { fechaInicio, fechaFin })
@@ -445,19 +476,18 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           return false;
         }
 
-        const payType = emp.pay_type || 'fixed'; // Default a 'fixed'
+        // Resolución: employees.pay_type > company calculation_mode
+        const effectivePayType = emp.pay_type ?? (calculationMode === 'hourly' ? 'hourly' : 'fixed')
 
-        if (payType === 'fixed') {
+        if (effectivePayType === 'fixed') {
           // Administrativos: requieren check_in (check_out opcional para MVP)
           // Aceptar si tiene al menos check_in
           const hasValidRecord = empRecords.some((record: any) => record.check_in);
           console.log(`✅ DEBUG - Empleado ${emp.name} (fixed): ${hasValidRecord ? 'ACEPTADO' : 'RECHAZADO'}`)
           return hasValidRecord;
-        } else if (payType === 'hourly') {
-          // Por hora: requieren check_in Y check_out para contar horas trabajadas
-          const hasValidRecord = empRecords.some((record: any) => 
-            record.check_in && record.check_out
-          );
+        } else if (effectivePayType === 'hourly') {
+          // Por hora: aceptar si tiene check_in (completo o incompleto; los incompletos se alertan)
+          const hasValidRecord = empRecords.some((record: any) => record.check_in);
           console.log(`✅ DEBUG - Empleado ${emp.name} (hourly): ${hasValidRecord ? 'ACEPTADO' : 'RECHAZADO'}`)
           return hasValidRecord;
         }
@@ -511,6 +541,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         warning: attendanceRecords.length === 0 
           ? 'No se encontraron registros de asistencia para el período seleccionado'
           : 'No se encontraron empleados con asistencia válida para el período seleccionado',
+        incompleteRecordsAlert: undefined,
         noAttendanceWarning: attendanceRecords.length === 0 ? {
           message: 'No se encontraron registros de asistencia para el período seleccionado.',
           detail: 'Se incluirán todos los empleados activos en la nómina.',
@@ -547,9 +578,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       return totalHours
     }
     
+    const incompleteRecordsAlert: { employee_id: string; employee_name: string; dates: string[] }[] = []
+
     for (const emp of empleadosParaNomina) {
-      const payType = emp.pay_type || 'fixed'; // Default a 'fixed'
-      
+      const payType = emp.pay_type ?? (calculationMode === 'hourly' ? 'hourly' : 'fixed')
+
       // Filtrar registros según tipo de pago
       let registros: any[];
       if (payType === 'fixed') {
@@ -559,12 +592,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           record.check_in
         );
       } else {
-        // Por hora: solo contar registros completos (check_in y check_out)
+        // Por hora: registros con check_in (completos o incompletos)
         registros = attendanceRecords.filter((record: any) => 
-          record.employee_id === emp.id && 
-          record.check_in && 
-          record.check_out
-        );
+          record.employee_id === emp.id && record.check_in
+        )
       }
       
       const base_salary = Number(emp.base_salary) || 0
@@ -758,11 +789,33 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         
       } else {
         // ========== EMPLEADOS POR HORA (HOURLY) ==========
+        const completeRegistros = registros.filter((r: any) => r.check_in && r.check_out)
+        const incompleteRegistros = registros.filter((r: any) => r.check_in && !r.check_out)
+
+        if (incompleteRegistros.length > 0) {
+          incompleteRecordsAlert.push({
+            employee_id: emp.id,
+            employee_name: emp.name || 'Sin nombre',
+            dates: incompleteRegistros.map((r: any) => r.date)
+          })
+        }
+
+        let total_hours_worked: number
+        const ahcEmp = ahcByEmployee[emp.id]
+        if (ahcEmp && ahcEmp.total_hours > 0) {
+          total_hours_worked = ahcEmp.total_hours
+          if (incompleteRecordDefaultHours != null && incompleteRecordDefaultHours > 0 && incompleteRegistros.length > 0) {
+            total_hours_worked += incompleteRecordDefaultHours * incompleteRegistros.length
+          }
+        } else {
+          total_hours_worked = calculateHoursWorked(completeRegistros)
+          if (incompleteRecordDefaultHours != null && incompleteRecordDefaultHours > 0 && incompleteRegistros.length > 0) {
+            total_hours_worked += incompleteRecordDefaultHours * incompleteRegistros.length
+          }
+        }
+
         const days_worked = registros.length
         const days_absent = diasPeriodo - days_worked
-        
-        // Calcular horas totales trabajadas
-        const total_hours_worked = calculateHoursWorked(registros)
         
         // Calcular tarifa por hora desde el salario base mensual
         // Asumir 8 horas por día y 30 días al mes = 240 horas mensuales
@@ -988,7 +1041,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       // Compatibilidad hacia atrás: mantener planilla combinada
       planilla: [...planilla_fixed, ...planilla_hourly],
       warning: isRegeneration ? 'Ya existía un registro generado para el período seleccionado. Esta acción actualizó el registro.' : null,
-      noAttendanceWarning
+      noAttendanceWarning,
+      incompleteRecordsAlert: incompleteRecordsAlert.length > 0 ? incompleteRecordsAlert : undefined
     })
 
   } catch (error: any) {

@@ -146,6 +146,8 @@ async function getPayrollConfig(
       ...data,
       payment_frequency: mapFreqToFrontend(paymentFrequency),
       currency: metadata.currency || 'HNL',
+      calculation_mode: data.calculation_mode ?? metadata.calculation_mode ?? 'daily',
+      incomplete_record_default_hours: data.incomplete_record_default_hours ?? metadata.incomplete_record_default_hours ?? null,
       legal_deductions: metadata.legal_deductions || {
         ihss: true,
         rap: true,
@@ -187,6 +189,8 @@ async function upsertPayrollConfig(
       // Extraer par?metros de configuraci?n de payroll
       payment_frequency,
       currency,
+      calculation_mode = 'daily',
+      incomplete_record_default_hours = null,
       legal_deductions,
       payment_cut_dates
     } = body
@@ -271,6 +275,15 @@ async function upsertPayrollConfig(
       payment_cut_dates: cutDates
     }
 
+    // Validar calculation_mode
+    const validCalcModes = ['daily', 'hourly']
+    if (calculation_mode && !validCalcModes.includes(calculation_mode)) {
+      return res.status(400).json({
+        error: 'Modo de c?lculo inv?lido',
+        message: `calculation_mode debe ser uno de: ${validCalcModes.join(', ')}`
+      })
+    }
+
     // Upsert: columnas nuevas (Capa 2) + metadata legacy
     const { data, error } = await supabase
       .from('company_payroll_configs')
@@ -283,6 +296,8 @@ async function upsertPayrollConfig(
         metadata: payrollMetadata,
         payment_frequency: mapFreqToDb(payment_frequency || 'biweekly'),
         quincena_config: quincenaConfig,
+        calculation_mode: calculation_mode || 'daily',
+        incomplete_record_default_hours: incomplete_record_default_hours ?? null,
         is_active: true,
         updated_at: new Date().toISOString()
       }, {
@@ -327,6 +342,8 @@ async function upsertPayrollConfig(
       ...data,
       payment_frequency: mapFreq(pfRes),
       currency: meta.currency || 'HNL',
+      calculation_mode: data.calculation_mode ?? meta.calculation_mode ?? 'daily',
+      incomplete_record_default_hours: data.incomplete_record_default_hours ?? meta.incomplete_record_default_hours ?? null,
       legal_deductions: meta.legal_deductions || { ihss: true, rap: true, isr: true, infop: false },
       payment_cut_dates: cutDatesRes
     }

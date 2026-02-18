@@ -27,6 +27,8 @@ export interface PreviewResponse {
   totalNeto: number;
   planilla: PayrollLine[];
   warning?: string | null;
+  status?: string;
+  incompleteRecordsAlert?: { employee_id: string; employee_name: string; dates: string[] }[];
   noAttendanceWarning?: {
     message: string;
     detail: string;

@@ -45,6 +45,8 @@ interface PayrollConfig {
   // Configuración básica de payroll
   payment_frequency: 'monthly' | 'biweekly' // mensual o quincenal
   currency: 'HNL' | 'USD' // Lempiras o Dólares
+  calculation_mode?: 'daily' | 'hourly' // Por día (asistencia) o por hora exacta
+  incomplete_record_default_hours?: number | null // Horas por defecto si falta check_out (solo hourly)
   legal_deductions: {
     ihss: boolean
     rap: boolean
@@ -89,6 +91,8 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
   const [config, setConfig] = useState<PayrollConfig>({
     payment_frequency: 'biweekly',
     currency: 'HNL',
+    calculation_mode: 'daily',
+    incomplete_record_default_hours: null,
     legal_deductions: {
       ihss: true,
       rap: true,
@@ -126,17 +130,51 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     earnings: false, // Retraída por defecto
     deductions: false, // Retraída por defecto
     paymentFrequency: false, // Retraída por defecto
+    calculationMode: false, // Método de cálculo (Por Día / Por Hora Exacta)
     currency: false, // Retraída por defecto
     legalDeductions: false, // Retraída por defecto
     paymentCutDates: false // Retraída por defecto
   })
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   const [confirmAction, setConfirmAction] = useState('')
+  const [periodPreview, setPeriodPreview] = useState<Array<{ label: string; fechaInicio: string; fechaFin: string }>>([])
+  const [periodPreviewLoading, setPeriodPreviewLoading] = useState(false)
 
   // Load current configuration
   useEffect(() => {
     loadConfig()
   }, [companyId])
+
+  // Vista previa de próximos periodos (con debounce)
+  useEffect(() => {
+    if (!companyId || !expandedSections.paymentCutDates) return
+    const t = setTimeout(async () => {
+      setPeriodPreviewLoading(true)
+      try {
+        const pf = config.payment_frequency === 'monthly' ? 'mensual' : 'quincenal'
+        const res = await fetch('/api/payroll/upcoming-periods', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            payment_frequency: pf,
+            payment_cut_dates: config.payment_cut_dates,
+            count: 3
+          })
+        })
+        if (res.ok) {
+          const { periods } = await res.json()
+          setPeriodPreview(periods || [])
+        } else {
+          setPeriodPreview([])
+        }
+      } catch {
+        setPeriodPreview([])
+      } finally {
+        setPeriodPreviewLoading(false)
+      }
+    }, 400)
+    return () => clearTimeout(t)
+  }, [companyId, expandedSections.paymentCutDates, config.payment_frequency, config.payment_cut_dates])
 
   // Función para detectar si hay cambios (debe estar antes de useMemo)
   const hasChanges = (): boolean => {
@@ -147,6 +185,10 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     
     // Comparar currency
     if (config.currency !== initialConfig.currency) return true
+    
+    // Comparar calculation_mode
+    if ((config.calculation_mode ?? 'daily') !== (initialConfig.calculation_mode ?? 'daily')) return true
+    if ((config.incomplete_record_default_hours ?? null) !== (initialConfig.incomplete_record_default_hours ?? null)) return true
     
     // Comparar legal_deductions (deep comparison)
     const deductionsStr = JSON.stringify(config.legal_deductions)
@@ -189,6 +231,8 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     return {
       payment_frequency: apiConfig.payment_frequency || 'biweekly',
       currency: apiConfig.currency || 'HNL',
+      calculation_mode: apiConfig.calculation_mode || 'daily',
+      incomplete_record_default_hours: apiConfig.incomplete_record_default_hours ?? null,
       legal_deductions: {
         ihss: apiConfig.legal_deductions?.ihss ?? true,
         rap: apiConfig.legal_deductions?.rap ?? true,
@@ -238,6 +282,8 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
           const defaultConfig: PayrollConfig = {
             payment_frequency: 'biweekly',
             currency: 'HNL',
+            calculation_mode: 'daily',
+            incomplete_record_default_hours: null,
             legal_deductions: {
               ihss: true,
               rap: true,
@@ -268,6 +314,8 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
         const defaultConfig: PayrollConfig = {
           payment_frequency: 'biweekly',
           currency: 'HNL',
+          calculation_mode: 'daily',
+          incomplete_record_default_hours: null,
           legal_deductions: {
             ihss: true,
             rap: true,
@@ -335,6 +383,8 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
           company_id: companyId, // Include companyId for super_admin support
           payment_frequency: config.payment_frequency,
           currency: config.currency,
+          calculation_mode: config.calculation_mode ?? 'daily',
+          incomplete_record_default_hours: config.incomplete_record_default_hours ?? null,
           legal_deductions: config.legal_deductions,
           payment_cut_dates: config.payment_cut_dates,
           custom_fields: config.custom_fields,
@@ -452,6 +502,15 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
       const oldCurr = initialConfig.currency === 'HNL' ? 'Lempiras' : 'Dólares'
       const newCurr = config.currency === 'HNL' ? 'Lempiras' : 'Dólares'
       changes.push(`moneda de ${oldCurr} a ${newCurr}`)
+    }
+    
+    if ((config.calculation_mode ?? 'daily') !== (initialConfig.calculation_mode ?? 'daily')) {
+      const oldMode = (initialConfig.calculation_mode ?? 'daily') === 'daily' ? 'Por Día' : 'Por Hora Exacta'
+      const newMode = (config.calculation_mode ?? 'daily') === 'daily' ? 'Por Día' : 'Por Hora Exacta'
+      changes.push(`método de cálculo de ${oldMode} a ${newMode}`)
+    }
+    if ((config.incomplete_record_default_hours ?? null) !== (initialConfig.incomplete_record_default_hours ?? null)) {
+      changes.push('horas por defecto para marcas incompletas')
     }
     
     const deductionsStr = JSON.stringify(config.legal_deductions)
@@ -682,6 +741,96 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                   />
                   <span className="text-white">Mensual</span>
                 </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Método de Cálculo de Salario */}
+            <div className="glass border border-white/20 rounded-lg p-4">
+              <button
+                onClick={() => setExpandedSections(prev => ({ ...prev, calculationMode: !prev.calculationMode }))}
+                className="w-full flex items-center justify-between p-3 hover:bg-white/5 rounded-lg transition-all duration-200 cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <Calculator className="h-4 w-4 text-emerald-300" />
+                  <label className="text-sm font-medium text-white">
+                    Método de Cálculo de Salario
+                  </label>
+                </div>
+                <div className="flex items-center gap-2">
+                  {expandedSections.calculationMode ? (
+                    <ChevronUp className="h-5 w-5 text-emerald-300 transition-transform duration-200" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-emerald-300 transition-transform duration-200" />
+                  )}
+                </div>
+              </button>
+              <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                expandedSections.calculationMode ? 'max-h-[280px] opacity-100 mt-4' : 'max-h-0 opacity-0'
+              }`}>
+                <div className="flex flex-col gap-4">
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer p-3 glass border border-white/20 rounded-lg hover:border-emerald-400/50 transition-colors flex-1">
+                      <input
+                        type="radio"
+                        name="calculation_mode"
+                        value="daily"
+                        checked={(config.calculation_mode ?? 'daily') === 'daily'}
+                        onChange={() => setConfig(prev => ({
+                          ...prev,
+                          calculation_mode: 'daily',
+                          incomplete_record_default_hours: null
+                        }))}
+                        className="w-4 h-4 text-emerald-600"
+                      />
+                      <div>
+                        <span className="text-white font-medium">Por Día (Asistencia)</span>
+                        <p className="text-xs text-gray-400 mt-0.5">Paga el día completo si hay registro de asistencia</p>
+                      </div>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer p-3 glass border border-white/20 rounded-lg hover:border-emerald-400/50 transition-colors flex-1">
+                      <input
+                        type="radio"
+                        name="calculation_mode"
+                        value="hourly"
+                        checked={(config.calculation_mode ?? 'daily') === 'hourly'}
+                        onChange={() => setConfig(prev => ({
+                          ...prev,
+                          calculation_mode: 'hourly'
+                        }))}
+                        className="w-4 h-4 text-emerald-600"
+                      />
+                      <div>
+                        <span className="text-white font-medium">Por Hora Exacta</span>
+                        <p className="text-xs text-gray-400 mt-0.5">Calcula según sumatoria de horas efectivas</p>
+                      </div>
+                    </label>
+                  </div>
+                  {(config.calculation_mode ?? 'daily') === 'hourly' && (
+                    <div className="p-3 glass border border-amber-500/30 rounded-lg">
+                      <label className="flex items-center gap-2 text-sm text-amber-200">
+                        <Info className="h-4 w-4" />
+                        En caso de falta de salida (check-out), asignar horas por defecto:
+                      </label>
+                      <div className="flex items-center gap-2 mt-2">
+                        <select
+                          value={config.incomplete_record_default_hours ?? ''}
+                          onChange={(e) => {
+                            const v = e.target.value
+                            setConfig(prev => ({
+                              ...prev,
+                              incomplete_record_default_hours: v === '' ? null : Number(v)
+                            }))
+                          }}
+                          className="bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm"
+                        >
+                          <option value="">No asignar (alertar para corrección manual)</option>
+                          <option value="4">4 horas</option>
+                          <option value="8">8 horas</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1088,6 +1237,30 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                   )}
                 </div>
               )}
+              {/* Vista previa próximos 3 periodos */}
+              <div className="mt-4 p-3 glass border border-green-400/20 rounded-lg">
+                <p className="text-xs font-medium text-green-300 mb-2 flex items-center gap-2">
+                  <Calendar className="h-3.5 w-3.5" />
+                  Próximos 3 periodos de pago
+                </p>
+                {periodPreviewLoading ? (
+                  <div className="flex items-center gap-2 text-gray-400 text-sm">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Calculando…
+                  </div>
+                ) : periodPreview.length > 0 ? (
+                  <ul className="space-y-1.5 text-sm text-gray-300">
+                    {periodPreview.map((p, i) => (
+                      <li key={i} className="flex justify-between gap-2">
+                        <span className="font-medium text-white">{p.label}</span>
+                        <span className="text-gray-400">{p.fechaInicio} – {p.fechaFin}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-gray-500">No se pudo calcular la vista previa</p>
+                )}
+              </div>
               </div>
             </div>
           </div>
