@@ -87,28 +87,44 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log(`Generando PDF desde draft: ${planilla.length} empleados para ${periodo} Q${quincena}`)
 
-    // Obtener configuración de payroll (metadata con parámetros)
+    // Obtener configuración de payroll (quincena_config como fuente primaria, metadata legacy)
     const { data: payrollConfig } = await supabase
       .from('company_payroll_configs')
-      .select('metadata')
+      .select('metadata, payment_frequency, quincena_config')
       .eq('company_id', companyId)
       .eq('is_active', true)
       .single()
     
-    // Extraer parámetros desde metadata
     const payrollMetadata = payrollConfig?.metadata || {}
+    const qcCol = payrollConfig?.quincena_config as { first_start?: number; first_end?: number; second_start?: number; second_end?: number } | null
+    const metaCutDates = payrollMetadata?.payment_cut_dates || {}
+    const hasCustomQuincena = !!(qcCol && (qcCol.first_start != null || qcCol.first_end != null || qcCol.second_start != null || qcCol.second_end != null))
+    const paymentCutDates = hasCustomQuincena
+      ? {
+          biweekly_type: 'custom' as const,
+          biweekly_first_start: qcCol?.first_start ?? metaCutDates?.biweekly_first_start ?? 1,
+          biweekly_first_end: qcCol?.first_end ?? metaCutDates?.biweekly_first_end ?? 15,
+          biweekly_second_start: qcCol?.second_start ?? metaCutDates?.biweekly_second_start ?? 16,
+          biweekly_second_end: qcCol?.second_end ?? metaCutDates?.biweekly_second_end ?? 30,
+          monthly_type: metaCutDates?.monthly_type || 'standard',
+          monthly_start: metaCutDates?.monthly_start ?? 1,
+          monthly_end: metaCutDates?.monthly_end ?? 30
+        }
+      : metaCutDates?.biweekly_first_start != null
+        ? metaCutDates
+        : {
+            biweekly_type: 'standard' as const,
+            biweekly_first_start: 1,
+            biweekly_first_end: 15,
+            biweekly_second_start: 16,
+            biweekly_second_end: 30,
+            monthly_type: 'standard' as const,
+            monthly_start: 1,
+            monthly_end: 30
+          }
     const currency = payrollMetadata.currency || 'HNL'
-    const paymentFrequency = payrollMetadata.payment_frequency || 'biweekly'
-    const paymentCutDates = payrollMetadata.payment_cut_dates || {
-      biweekly_type: 'standard',
-      biweekly_first_start: 1,
-      biweekly_first_end: 15,
-      biweekly_second_start: 16,
-      biweekly_second_end: 30,
-      monthly_type: 'standard',
-      monthly_start: 1,
-      monthly_end: 30
-    }
+    const pfRaw = payrollConfig?.payment_frequency ?? payrollMetadata.payment_frequency ?? 'biweekly'
+    const paymentFrequency = pfRaw === 'mensual' ? 'monthly' : pfRaw === 'quincenal' ? 'biweekly' : pfRaw
 
     // Preparar configuración de payroll para el PDF
     const pdfPayrollConfig = {

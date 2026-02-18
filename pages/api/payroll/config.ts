@@ -116,13 +116,18 @@ async function getPayrollConfig(
     const paymentFrequency = pfCol ?? metadata.payment_frequency ?? 'biweekly'
     const mapFreqToFrontend = (v: string) =>
       v === 'mensual' ? 'monthly' : v === 'quincenal' ? 'biweekly' : v
+    const fs = (qcCol as any)?.first_start ?? 1
+    const fe = (qcCol as any)?.first_end ?? 15
+    const ss = (qcCol as any)?.second_start ?? 16
+    const se = (qcCol as any)?.second_end ?? 30
+    const isStandardQuincena = fs === 1 && fe === 15 && ss === 16 && se === 30
     const paymentCutDates = qcCol
       ? {
-          biweekly_type: 'custom' as const,
-          biweekly_first_start: (qcCol as any).first_start ?? 1,
-          biweekly_first_end: (qcCol as any).first_end ?? 15,
-          biweekly_second_start: (qcCol as any).second_start ?? 16,
-          biweekly_second_end: (qcCol as any).second_end ?? 30,
+          biweekly_type: (isStandardQuincena ? 'standard' : 'custom') as 'standard' | 'custom',
+          biweekly_first_start: fs,
+          biweekly_first_end: fe,
+          biweekly_second_start: ss,
+          biweekly_second_end: se,
           monthly_type: metadata.payment_cut_dates?.monthly_type || 'standard',
           monthly_start: metadata.payment_cut_dates?.monthly_start ?? 1,
           monthly_end: metadata.payment_cut_dates?.monthly_end ?? 30
