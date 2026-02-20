@@ -15,8 +15,8 @@ const DAY_COLUMNS = [
   'saturday_start',
 ] as const;
 
-/** Umbral en minutos: 2.5 horas = 150 min */
-export const BEST_FIT_THRESHOLD_MINUTES = 150;
+/** Umbral en minutos: 1.5 horas = 90 min */
+export const BEST_FIT_THRESHOLD_MINUTES = 90;
 
 /**
  * Convierte "HH:MM" o "HH:MM:SS" a minutos desde medianoche

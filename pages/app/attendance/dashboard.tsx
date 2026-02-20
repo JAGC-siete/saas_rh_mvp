@@ -5,6 +5,7 @@ import HeaderBar from '../../../components/attendance/HeaderBar'
 import KpiCards from '../../../components/attendance/KpiCards'
 import AbsenceTable from '../../../components/attendance/AbsenceTable'
 import ArrivalTable from '../../../components/attendance/ArrivalTable'
+import OutsideScheduleTable from '../../../components/attendance/OutsideScheduleTable'
 import TrendsChart from '../../../components/attendance/TrendsChart'
 import KpiBarsChart from '../../../components/attendance/KpiBarsChart'
 import { Card } from '../../../components/ui/card'
@@ -24,15 +25,16 @@ export default function AttendanceDashboardApp() {
     open: boolean
     name: string
     events: any[]
+    periodLabel?: string
     employeeData?: any
     stats?: any
     schedule?: any
-  }>({open:false, name:'', events:[], employeeData: undefined, stats: undefined, schedule: undefined})
+  }>({open:false, name:'', events:[], periodLabel: undefined, employeeData: undefined, stats: undefined, schedule: undefined})
   const { companyId } = useCompanyContext()
   const [trends, setTrends] = useState<{ date: string; present: number; absent: number; late: number; checkInTimes: Array<{time: string, employee: string}> }[]>([])
 
   // Hook unificado para datos de asistencia
-  const { kpis, absent, early, late, lastUpdated, loading, error } = useAttendanceData(preset, selectedEmployeeId, selectedRole, from, to)
+  const { kpis, absent, early, late, outsideSchedule, lastUpdated, loading, error } = useAttendanceData(preset, selectedEmployeeId, selectedRole, from, to)
 
   // Calcular tasas derivadas
   const { total, asistenciaPct, puntualidadPct } = calculateAttendanceRates(kpis)
@@ -137,20 +139,21 @@ export default function AttendanceDashboardApp() {
   const handleEmployeeClick = async (id: string, name: string) => {
     try {
       const employeeUrl = `/api/attendance/employee/${id}?preset=${preset}`
-      const res = await fetch(employeeUrl)
+      const res = await fetch(employeeUrl, { credentials: 'include' })
       const data = await res.json()
       
       setDrawer({
         open: true,
         name: data.employee?.name || name,
         events: data.timeline || [],
+        periodLabel: getPresetLabel(preset),
         employeeData: data.employee,
         stats: data.stats,
         schedule: data.schedule
       })
     } catch (error) {
       console.error('Error loading employee details:', error)
-      setDrawer({open: false, name: '', events: [], employeeData: undefined})
+      setDrawer({open: false, name: '', events: [], periodLabel: undefined, employeeData: undefined})
     }
   }
 
@@ -221,7 +224,7 @@ export default function AttendanceDashboardApp() {
           </Card>
 
           {/* Tablas de datos */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <AbsenceTable 
               data={absent} 
               title={`Ausentes ${getPresetLabel(preset)}`} 
@@ -232,6 +235,11 @@ export default function AttendanceDashboardApp() {
               lateData={late} 
               title={`Llegadas ${getPresetLabel(preset)}`} 
               onSelect={handleEmployeeClick} 
+            />
+            <OutsideScheduleTable
+              data={outsideSchedule}
+              title={`Marcaron fuera de horario ${getPresetLabel(preset)}`}
+              onSelect={handleEmployeeClick}
             />
           </div>
           {/* Gráfico de tendencias de asistencia */}
@@ -276,9 +284,10 @@ export default function AttendanceDashboardApp() {
         </div>
         <EmployeeDrawer 
           open={drawer.open} 
-          onClose={() => setDrawer({open:false, name:'', events:[], employeeData: undefined, stats: undefined, schedule: undefined})} 
+          onClose={() => setDrawer({open:false, name:'', events:[], periodLabel: undefined, employeeData: undefined, stats: undefined, schedule: undefined})} 
           name={drawer.name} 
           events={drawer.events}
+          periodLabel={drawer.periodLabel}
           employeeData={drawer.employeeData}
           stats={drawer.stats}
           schedule={drawer.schedule}

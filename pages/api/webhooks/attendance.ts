@@ -542,10 +542,10 @@ async function handleFixedEmployeeEvent(
   const diffToInMinutes = (eventTimestamp.getTime() - expectedCheckIn.getTime()) / 60000;
   const diffToOutMinutes = (eventTimestamp.getTime() - expectedCheckOut.getTime()) / 60000;
 
-  const WINDOW_IN_BEFORE = 120;
-  const WINDOW_IN_AFTER = 120;
-  const WINDOW_OUT_BEFORE = 120;
-  const WINDOW_OUT_AFTER = 120;
+  const WINDOW_IN_BEFORE = 60;
+  const WINDOW_IN_AFTER = 60;
+  const WINDOW_OUT_BEFORE = 60;
+  const WINDOW_OUT_AFTER = 60;
 
   logger.debug('[FIXED EMPLOYEE] Event classification (Best Fit)', {
     companyId,

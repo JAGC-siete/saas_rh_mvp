@@ -21,6 +21,7 @@ interface AttendanceRow {
   status?: string
   date?: string
   team?: string
+  flags?: { horario_no_detectado?: boolean; razon?: string; gap_minutos?: number }
 }
 
 interface AttendanceData {
@@ -28,6 +29,7 @@ interface AttendanceData {
   absent: AttendanceRow[]
   early: AttendanceRow[]
   late: AttendanceRow[]
+  outsideSchedule: AttendanceRow[]
   lastUpdated: Date | null
   loading: boolean
   error: string | null
@@ -46,6 +48,7 @@ export function useAttendanceData(preset: string, employeeId?: string, role?: st
   const [absent, setAbsent] = useState<AttendanceRow[]>([])
   const [early, setEarly] = useState<AttendanceRow[]>([])
   const [late, setLate] = useState<AttendanceRow[]>([])
+  const [outsideSchedule, setOutsideSchedule] = useState<AttendanceRow[]>([])
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -64,21 +67,24 @@ export function useAttendanceData(preset: string, employeeId?: string, role?: st
       const fetchOpts = { signal: ac.signal, credentials: 'include' as RequestCredentials }
       // Promise.all para cargar todo atómicamente
       // Incluir type=present para mostrar todos los presentes en "Llegadas"
-      const [kRes, aRes, eRes, lRes, pRes] = await Promise.all([
+      // Incluir type=outside_schedule para empleados que marcaron fuera de horario (Capa Base)
+      const [kRes, aRes, eRes, lRes, pRes, oRes] = await Promise.all([
         fetch(`/api/attendance/kpis${q}`, fetchOpts),
         fetch(`/api/attendance/lists${q}&type=absent`, fetchOpts),
         fetch(`/api/attendance/lists${q}&type=early`, fetchOpts),
         fetch(`/api/attendance/lists${q}&type=late`, fetchOpts),
         fetch(`/api/attendance/lists${q}&type=present`, fetchOpts),
+        fetch(`/api/attendance/lists${q}&type=outside_schedule`, fetchOpts),
       ])
 
       // Procesar respuestas; si alguna list falla, capturar mensaje para no mostrar solo "No hay registros"
-      const listResponses = [aRes, eRes, lRes, pRes] as const
+      const listResponses = [aRes, eRes, lRes, pRes, oRes] as const
       const listBodies = await Promise.all(listResponses.map((r) => r.json().catch(() => ({}))))
       const absentJson = aRes.ok && Array.isArray(listBodies[0]) ? listBodies[0] : []
       const earlyJson = eRes.ok && Array.isArray(listBodies[1]) ? listBodies[1] : []
       const lateJson = lRes.ok && Array.isArray(listBodies[2]) ? listBodies[2] : []
       const presentJson = pRes.ok && Array.isArray(listBodies[3]) ? listBodies[3] : []
+      const outsideScheduleJson = oRes.ok && Array.isArray(listBodies[4]) ? listBodies[4] : []
 
       const kpiJson = kRes.ok ? await kRes.json() : DEFAULT_KPIS
 
@@ -111,6 +117,7 @@ export function useAttendanceData(preset: string, employeeId?: string, role?: st
         ...(Array.isArray(lateJson) ? lateJson : []),
         ...presentOnly, // Agregar presentes que no son early ni late (a tiempo)
       ])
+      setOutsideSchedule(Array.isArray(outsideScheduleJson) ? outsideScheduleJson : [])
       setLastUpdated(new Date())
 
     } catch (err) {
@@ -122,6 +129,7 @@ export function useAttendanceData(preset: string, employeeId?: string, role?: st
         setAbsent([])
         setEarly([])
         setLate([])
+        setOutsideSchedule([])
       }
     } finally {
       setLoading(false)
@@ -139,6 +147,7 @@ export function useAttendanceData(preset: string, employeeId?: string, role?: st
     absent,
     early,
     late,
+    outsideSchedule,
     lastUpdated,
     loading,
     error
