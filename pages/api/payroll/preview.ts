@@ -11,6 +11,7 @@ import {
 } from '../../../lib/tax/honduras-tax'
 import { getHolidayDatesInRange } from '../../../lib/attendance/holiday-check'
 import { getBiweeklyPeriodDates, getMonthlyPeriodDates } from '../../../lib/payroll/period-dates'
+import { calculateSeptimoDia } from '../../../lib/payroll/septimo-dia'
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -103,7 +104,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const payrollMetadata = payrollConfig?.metadata || {}
     const qcCol = payrollConfig?.quincena_config as { first_start?: number; first_end?: number; second_start?: number; second_end?: number } | null
     const metaCutDates = payrollMetadata?.payment_cut_dates || {}
-    const mapFreq = (v: string) => (v === 'mensual' ? 'monthly' : v === 'quincenal' ? 'biweekly' : v || 'biweekly')
+    const mapFreq = (v: string) => (v === 'mensual' ? 'monthly' : v === 'quincenal' ? 'biweekly' : v === 'semanal' ? 'weekly' : v || 'biweekly')
     const paymentFrequency = mapFreq(payrollConfig?.payment_frequency || payrollMetadata.payment_frequency || 'quincenal')
     const hasCustomQuincena = !!(qcCol && (qcCol.first_start != null || qcCol.first_end != null || qcCol.second_start != null || qcCol.second_end != null))
     const paymentCutDates = qcCol
@@ -135,6 +136,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
     const calculationMode = (payrollConfig as any)?.calculation_mode ?? payrollMetadata?.calculation_mode ?? 'daily'
     const incompleteRecordDefaultHours = (payrollConfig as any)?.incomplete_record_default_hours ?? payrollMetadata?.incomplete_record_default_hours ?? null
+    const semanalProration = (payrollMetadata?.semanal_proration || 'proportional') as 'proportional' | 'fixed'
     
     // Calcular fechas del período según configuración
     const ultimoDia = new Date(yearNum, monthNum, 0).getDate()
@@ -395,15 +397,19 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       }
     }
 
-    // Obtener attendance_hours_calculation para modo hourly (Capa 3: horas efectivas)
-    let ahcByEmployee: Record<string, { total_hours: number; by_record: Record<string, number> }> = {}
+    // Obtener attendance_hours_calculation para modo hourly (Capa 3: horas efectivas + normal_hours para Séptimo Día)
+    let ahcByEmployee: Record<string, { total_hours: number; normal_hours: number; by_record: Record<string, number> }> = {}
     if (employeeIds.length > 0 && calculationMode === 'hourly') {
       const { data: ahcData } = await supabase
         .from('attendance_hours_calculation')
         .select(`
           employee_id,
           attendance_record_id,
-          total_hours
+          total_hours,
+          normal_hours,
+          overtime_diurno_hours,
+          overtime_nocturno_hours,
+          overtime_feriado_hours
         `)
         .in('employee_id', employeeIds)
       if (ahcData && ahcData.length > 0) {
@@ -418,10 +424,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         for (const row of ahcData) {
           if (!validArIds.has(row.attendance_record_id)) continue
           if (!ahcByEmployee[row.employee_id]) {
-            ahcByEmployee[row.employee_id] = { total_hours: 0, by_record: {} }
+            ahcByEmployee[row.employee_id] = { total_hours: 0, normal_hours: 0, by_record: {} }
           }
           const h = Number(row.total_hours) || 0
+          const ot = Number(row.overtime_diurno_hours || 0) + Number(row.overtime_nocturno_hours || 0) + Number(row.overtime_feriado_hours || 0)
+          const normalH = Number(row.normal_hours) ?? Math.max(0, h - ot)
           ahcByEmployee[row.employee_id].total_hours += h
+          ahcByEmployee[row.employee_id].normal_hours += normalH
           ahcByEmployee[row.employee_id].by_record[row.attendance_record_id] = h
         }
       }
@@ -816,19 +825,30 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
         const days_worked = registros.length
         const days_absent = diasPeriodo - days_worked
-        
-        // Calcular tarifa por hora desde el salario base mensual
-        // Asumir 8 horas por día y 30 días al mes = 240 horas mensuales
-        // O usar días del período si es quincenal
-        const horasMensualesEstimadas = paymentFrequency === 'monthly' 
-          ? 240 // 8 horas * 30 días
-          : 120 // 8 horas * 15 días (quincena)
-        const hourly_rate = horasMensualesEstimadas > 0 
-          ? base_salary / horasMensualesEstimadas 
-          : 0
-        
+
+        // Para pay_type hourly: base_salary = tarifa por hora. Para legacy: base_salary mensual → derivar tarifa.
+        const horasMensualesEstimadas = paymentFrequency === 'monthly' ? 240 : 120
+        const hourly_rate = emp.pay_type === 'hourly'
+          ? base_salary
+          : (horasMensualesEstimadas > 0 ? base_salary / horasMensualesEstimadas : 0)
+
         // Calcular salario bruto del período basado en horas trabajadas
         let total_earnings = total_hours_worked * hourly_rate
+
+        // Séptimo Día (Art. 338-340): solo para pay_type === 'hourly'
+        let septimoDia = 0
+        if (emp.pay_type === 'hourly' && hourly_rate > 0) {
+          const ahcEmp = ahcByEmployee[emp.id]
+          const ordinaryHours = ahcEmp?.normal_hours ?? Math.max(0, total_hours_worked)
+          septimoDia = calculateSeptimoDia({
+            hourlyRate: hourly_rate,
+            ordinaryHours,
+            daysWorked: days_worked,
+            totalHours: total_hours_worked,
+            semanalProration
+          })
+          total_earnings += septimoDia
+        }
         
         // Validar que total_earnings sea un número válido
         if (!isFinite(total_earnings) || isNaN(total_earnings)) {
@@ -839,37 +859,37 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         let IHSS = 0, RAP = 0, ISR = 0, total_deductions = 0, total = 0
 
         // APLICAR DEDUCCIONES SEGÚN legal_deductions (solo si tipoParam === 'CON')
-        // Para hourly, las deducciones se calculan sobre el salario base mensual (no proporcional)
+        // Para hourly: base_salary = tarifa → equivalente mensual = rate * 176 para deducciones
         if (tipoParam === 'CON') {
+          const baseParaDeducciones = emp.pay_type === 'hourly' ? hourly_rate * 176 : base_salary
+
           if (legalDeductions.ihss) {
-            IHSS = Math.min(base_salary, 11903.13) * 0.05
+            IHSS = Math.min(baseParaDeducciones, 11903.13) * 0.05
           }
-          
+
           if (legalDeductions.rap) {
-            RAP = Math.max(0, base_salary - 11903.13) * 0.015
+            RAP = Math.max(0, baseParaDeducciones - 11903.13) * 0.015
           }
-          
+
           if (legalDeductions.isr) {
-            // ISR según tabla MENSUAL de Honduras 2025
-            if (base_salary > 21457.76) {
-              if (base_salary <= 30969.88) {
-                ISR = (base_salary - 21457.76) * 0.15
-              } else if (base_salary <= 67604.36) {
-                ISR = 1428.32 + (base_salary - 30969.88) * 0.20
+            if (baseParaDeducciones > 21457.76) {
+              if (baseParaDeducciones <= 30969.88) {
+                ISR = (baseParaDeducciones - 21457.76) * 0.15
+              } else if (baseParaDeducciones <= 67604.36) {
+                ISR = 1428.32 + (baseParaDeducciones - 30969.88) * 0.20
               } else {
-                ISR = 8734.32 + (base_salary - 67604.36) * 0.25
+                ISR = 8734.32 + (baseParaDeducciones - 67604.36) * 0.25
               }
             }
           }
-          
-          // Proporcionar deducciones según horas trabajadas vs horas estimadas
-          const deductionFactor = horasMensualesEstimadas > 0 
-            ? total_hours_worked / horasMensualesEstimadas 
-            : 0
+
+          // Proporcionar deducciones según horas trabajadas vs horas del período
+          const horasPeriodo = paymentFrequency === 'monthly' ? 176 : 88
+          const deductionFactor = horasPeriodo > 0 ? total_hours_worked / horasPeriodo : 0
           IHSS = IHSS * deductionFactor
           RAP = RAP * deductionFactor
           ISR = ISR * deductionFactor
-          
+
           total_deductions = IHSS + RAP + ISR
           total = total_earnings - total_deductions
         } else {
@@ -909,7 +929,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         }
 
         // Insertar línea en payroll_run_lines
-        // Para hourly, guardamos horas en calc_hours
+        // Para hourly, guardamos horas en calc_hours. Metadata incluye septimo_dia si aplica.
+        const lineMetadata: Record<string, unknown> = { tax_year: yearNum }
+        if (septimoDia > 0) lineMetadata.septimo_dia = septimoDia
+        if (total_hours_worked > 0) lineMetadata.total_hours_worked = total_hours_worked
+
         const { data: insertedLine, error: lineError } = await supabase
           .from('payroll_run_lines')
           .upsert({
@@ -929,7 +953,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             eff_isr: ISR,
             eff_neto: total,
             edited: false,
-            tax_year: yearNum // Guardar año de tabla fiscal usada
+            tax_year: yearNum,
+            seventh_day_pay: septimoDia,
+            metadata: lineMetadata
           }, {
             onConflict: 'run_id,employee_id',
             ignoreDuplicates: false

@@ -3,6 +3,7 @@ import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { generateConsolidatedPayrollPDF, type PlanillaItem } from '../../../lib/payroll/report'
 import { withExportRateLimit } from '../../../lib/security/rate-limiting'
 import { calculatePayroll, getCustomFields } from '../../../lib/payroll-client-specific'
+import { getBiweeklyPeriodDates, getMonthlyPeriodDates, getWeeklyPeriodDates } from '../../../lib/payroll/period-dates'
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -146,7 +147,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         metadata: line.metadata || {}, // Include metadata for custom fields display
         pay_type: payType, // Include pay_type for separation
         total_hours_worked: payType === 'hourly' ? totalHours : undefined,
-        hourly_rate: payType === 'hourly' ? hourlyRate : undefined
+        hourly_rate: payType === 'hourly' ? hourlyRate : undefined,
+        septimo_dia: Number(line.seventh_day_pay) || Number((line.metadata as Record<string, unknown>)?.septimo_dia) || undefined
       }
       })
     )
@@ -196,7 +198,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           }
     const currency = payrollMetadata.currency || 'HNL'
     const pfRaw = payrollConfig?.payment_frequency ?? payrollMetadata.payment_frequency ?? 'biweekly'
-    const paymentFrequency = pfRaw === 'mensual' ? 'monthly' : pfRaw === 'quincenal' ? 'biweekly' : pfRaw
+    const paymentFrequency = pfRaw === 'mensual' ? 'monthly' : pfRaw === 'quincenal' ? 'biweekly' : pfRaw === 'semanal' ? 'weekly' : pfRaw
 
     // Get custom fields configuration for PDF columns
     const customFieldsConfig = await getCustomFields(companyId, supabase)
@@ -234,15 +236,39 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const planillaFixed = planilla.filter(p => (p as any).pay_type !== 'hourly')
     const planillaHourly = planilla.filter(p => (p as any).pay_type === 'hourly')
 
+    // Calcular rango de fechas del período para el header dinámico
+    const [year, month] = periodo.split('-').map(Number)
+    let periodDates: { period_start: string; period_end: string } | undefined
+    if (paymentFrequency === 'monthly') {
+      const cut = paymentCutDates
+      const start = cut?.monthly_start ?? 1
+      const end = cut?.monthly_end ?? new Date(year, month, 0).getDate()
+      const r = getMonthlyPeriodDates(year, month, start, end)
+      periodDates = { period_start: r.fechaInicio, period_end: r.fechaFin }
+    } else if (paymentFrequency === 'weekly') {
+      const semana = (payrollRun.quincena as 1 | 2 | 3 | 4) || 1
+      const r = getWeeklyPeriodDates(year, month, semana <= 4 ? semana as 1 | 2 | 3 | 4 : 1)
+      periodDates = { period_start: r.fechaInicio, period_end: r.fechaFin }
+    } else {
+      const r = getBiweeklyPeriodDates(year, month, payrollRun.quincena as 1 | 2, {
+        biweekly_first_start: paymentCutDates?.biweekly_first_start ?? 1,
+        biweekly_first_end: paymentCutDates?.biweekly_first_end ?? 15,
+        biweekly_second_start: paymentCutDates?.biweekly_second_start ?? 16,
+        biweekly_second_end: paymentCutDates?.biweekly_second_end ?? 30
+      })
+      periodDates = { period_start: r.fechaInicio, period_end: r.fechaFin }
+    }
+
     const pdf = await generateConsolidatedPayrollPDF(
       planillaFixed,
       planillaHourly,
-      periodo, 
-      payrollRun.quincena, 
-      user.email, 
+      periodo,
+      payrollRun.quincena,
+      user.email,
       company?.name,
       pdfCustomFieldsConfig,
-      pdfPayrollConfig
+      pdfPayrollConfig,
+      periodDates
     )
     
     res.setHeader('Content-Type', 'application/pdf')

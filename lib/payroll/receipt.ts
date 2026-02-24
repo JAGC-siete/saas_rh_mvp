@@ -1,5 +1,6 @@
 import { Buffer } from 'buffer'
 import { formatDateTimeForHonduras, nowInHonduras } from '../timezone'
+import { formatPeriodRangeForDisplay } from './period-dates'
 
 
 
@@ -20,6 +21,8 @@ export interface EmployeeReceiptInput {
   bank_name?: string
   bank_account?: string
   custom_deductions?: Array<{ name: string; amount: number }>
+  /** Séptimo Día (Art. 338-340) - solo para hourly */
+  septimo_dia?: number
 }
 
 export async function generateEmployeeReceiptPDF(
@@ -27,18 +30,22 @@ export async function generateEmployeeReceiptPDF(
   periodo: string,
   quincena: number,
   companyId?: string,
-  companyName?: string
+  companyName?: string,
+  periodLabel?: string
 ): Promise<Buffer> {
   return new Promise<Buffer>((resolve, reject) => {
     try {
       const PDFDocument = require('pdfkit')
       const formatHNL = (n: number) => `L. ${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+      const periodRangeText = formatPeriodRangeForDisplay(record.period_start, record.period_end)
+      const periodDisplay = periodLabel ? `${periodLabel}: ${periodRangeText}` : periodRangeText
+
       const doc = new PDFDocument({
         size: 'A4',
         layout: 'portrait',
         margin: 30,
         info: {
-          Title: `Recibo de Nómina - ${record.employee_name || 'Empleado'} - ${periodo} Q${quincena}`,
+          Title: `Recibo de Nómina - ${record.employee_name || 'Empleado'} - ${periodDisplay}`,
           Author: 'Sistema Hondureño de Recursos Humanos',
           Subject: 'Recibo de Nómina Individual',
           Keywords: 'recibo, nómina, empleado, Paragon, Honduras',
@@ -57,14 +64,14 @@ export async function generateEmployeeReceiptPDF(
         }
       })
 
-      // Header - compacto
+      // Header - compacto (rango de fechas dinámico)
       const pageWidth = doc.page.width
       const pageHeight = doc.page.height
       doc.rect(0, 0, pageWidth, 60).fill('#0b4fa1')
       doc.fillColor('white')
       doc.fontSize(16).text(companyName || 'SISTEMA HONDUREÑO DE RECURSOS HUMANOS', 30, 12, { align: 'center', width: 535 })
-      doc.fontSize(11).text('Recibo de Nómina Quincenal', 30, 32, { align: 'center', width: 535 })
-      doc.fontSize(10).text(`${periodo} • Quincena ${quincena}`, 30, 48, { align: 'center', width: 535 })
+      doc.fontSize(11).text('Recibo de Nómina', 30, 32, { align: 'center', width: 535 })
+      doc.fontSize(10).text(periodDisplay, 30, 48, { align: 'center', width: 535 })
       doc.fillColor('#000000') // Texto negro
 
       // Footer SISU
@@ -89,15 +96,21 @@ export async function generateEmployeeReceiptPDF(
       doc.fontSize(9).fillColor('#000000').text('Días Trabajados:', 300, yPos + 36)
       doc.fontSize(9).fillColor('#000000').text(record.days_worked.toString(), 380, yPos + 36)
 
-      // Earnings - compacto
+      // Earnings - compacto (Salario Base + Séptimo Día si aplica)
       yPos += 60
       doc.fontSize(11).fillColor('#000000').text('DETALLE DE INGRESOS:', 30, yPos)
       yPos += 15
-      doc.rect(30, yPos, pageWidth - 60, 30).stroke('#000000')
+      const hasSeptimoDia = (record.septimo_dia ?? 0) > 0
+      const earningsHeight = hasSeptimoDia ? 42 : 30
+      doc.rect(30, yPos, pageWidth - 60, earningsHeight).stroke('#000000')
       doc.fontSize(9).fillColor('#000000').text('Concepto:', 40, yPos + 8)
       doc.fontSize(9).fillColor('#000000').text('Monto:', 450, yPos + 8)
-      doc.fontSize(9).fillColor('#000000').text('Salario Base (Quincenal):', 40, yPos + 20)
+      doc.fontSize(9).fillColor('#000000').text('Salario Base:', 40, yPos + 20)
       doc.fontSize(9).fillColor('#000000').text(formatHNL(record.base_salary), 450, yPos + 20, { align: 'right' })
+      if (hasSeptimoDia) {
+        doc.fontSize(9).fillColor('#000000').text('Séptimo Día:', 40, yPos + 32)
+        doc.fontSize(9).fillColor('#000000').text(formatHNL(record.septimo_dia!), 450, yPos + 32, { align: 'right' })
+      }
 
       // Deductions - incluir personalizadas
       yPos += 40

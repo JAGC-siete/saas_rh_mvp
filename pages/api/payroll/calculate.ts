@@ -9,6 +9,9 @@ import {
   calculateIHSS, 
   calculateRAP 
 } from '../../../lib/tax/honduras-tax'
+import { getBiweeklyPeriodDates, getMonthlyPeriodDates } from '../../../lib/payroll/period-dates'
+import { calculatePeriodBaseSalary, normalizeFrequency } from '../../../lib/payroll/calculate-period-base-salary'
+import { calculateSeptimoDia } from '../../../lib/payroll/septimo-dia'
 
 interface PlanillaItem {
   id: string
@@ -28,6 +31,9 @@ interface PlanillaItem {
   total: number
   notes_on_ingress: string
   notes_on_deductions: string
+  total_hours_worked?: number
+  pay_type?: 'fixed' | 'hourly'
+  septimo_dia?: number
 }
 
 // Función para calcular tardanzas basada en horario de Paragon
@@ -133,18 +139,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     const payrollMetadata = payrollConfig?.metadata || {}
     const quincenaConfig = payrollConfig?.quincena_config || {}
+    const metaCutDates = payrollMetadata?.payment_cut_dates || {}
     
     // payment_frequency: nueva columna (Capa 2) o metadata legacy o default mensual
-    const paymentFrequency = (payrollConfig?.payment_frequency || payrollMetadata.payment_frequency || 'mensual') === 'quincenal' ? 'biweekly' : 'monthly'
+    const pfRaw = payrollConfig?.payment_frequency || payrollMetadata.payment_frequency || 'mensual'
+    const paymentFrequency = pfRaw === 'quincenal' ? 'biweekly' : pfRaw === 'semanal' ? 'weekly' : 'monthly'
+    const frequencyForCalc = normalizeFrequency(pfRaw)
+    const hasCustomQuincena = !!(quincenaConfig.first_start != null || quincenaConfig.first_end != null || 
+      quincenaConfig.second_start != null || quincenaConfig.second_end != null)
+    const biweeklyType = metaCutDates.biweekly_type === 'custom' || hasCustomQuincena ? 'custom' : 'standard'
     const paymentCutDates = {
-      biweekly_type: 'standard',
-      biweekly_first_start: quincenaConfig.first_start ?? 1,
-      biweekly_first_end: quincenaConfig.first_end ?? 15,
-      biweekly_second_start: quincenaConfig.second_start ?? 16,
-      biweekly_second_end: quincenaConfig.second_end ?? 30,
-      monthly_type: 'standard',
-      monthly_start: 1,
-      monthly_end: 30
+      biweekly_type: biweeklyType,
+      biweekly_first_start: quincenaConfig.first_start ?? metaCutDates.biweekly_first_start ?? 1,
+      biweekly_first_end: quincenaConfig.first_end ?? metaCutDates.biweekly_first_end ?? 15,
+      biweekly_second_start: quincenaConfig.second_start ?? metaCutDates.biweekly_second_start ?? 16,
+      biweekly_second_end: quincenaConfig.second_end ?? metaCutDates.biweekly_second_end ?? 30,
+      monthly_type: metaCutDates.monthly_type || 'standard',
+      monthly_start: metaCutDates.monthly_start ?? 1,
+      monthly_end: metaCutDates.monthly_end ?? 30
     }
     const legalDeductions = payrollMetadata.legal_deductions || {
       ihss: true,
@@ -153,6 +165,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       infop: false
     }
     const currency = payrollMetadata.currency || 'HNL'
+    // Semanal: 'proportional' = por días reales (days_worked/diasPeriodo); 'fixed' = monto fijo (mensual/4)
+    const semanalProration = payrollMetadata.semanal_proration || 'proportional'
     
     // Calcular fechas del período según configuración
     const ultimoDia = new Date(year, month, 0).getDate()
@@ -161,12 +175,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let diasPeriodo: number
     
     if (paymentFrequency === 'monthly') {
-      // Nómina mensual
+      // Nómina mensual (soporta offset: 28-27)
       const monthlyType = paymentCutDates?.monthly_type || 'standard'
-      if (monthlyType === 'custom' && paymentCutDates?.monthly_start && paymentCutDates?.monthly_end) {
-        fechaInicio = `${periodo}-${paymentCutDates.monthly_start.toString().padStart(2, '0')}`
-        fechaFin = `${periodo}-${Math.min(paymentCutDates.monthly_end, ultimoDia).toString().padStart(2, '0')}`
-        diasPeriodo = paymentCutDates.monthly_end - paymentCutDates.monthly_start + 1
+      const ms = paymentCutDates?.monthly_start ?? 1
+      const me = paymentCutDates?.monthly_end ?? 30
+      if (monthlyType === 'custom' && ms && me) {
+        const result = getMonthlyPeriodDates(year, month, ms, me)
+        fechaInicio = result.fechaInicio
+        fechaFin = result.fechaFin
+        diasPeriodo = result.diasPeriodo
       } else {
         // Standard: del 1 al último día del mes
         fechaInicio = `${periodo}-01`
@@ -175,18 +192,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     } else {
       // Nómina quincenal (biweekly)
-      const biweeklyType = paymentCutDates?.biweekly_type || 'standard'
-      if (biweeklyType === 'custom' && paymentCutDates?.biweekly_first_start && paymentCutDates?.biweekly_first_end && 
-          paymentCutDates?.biweekly_second_start && paymentCutDates?.biweekly_second_end) {
-        if (quincena === 1) {
-          fechaInicio = `${periodo}-${paymentCutDates.biweekly_first_start.toString().padStart(2, '0')}`
-          fechaFin = `${periodo}-${Math.min(paymentCutDates.biweekly_first_end, ultimoDia).toString().padStart(2, '0')}`
-          diasPeriodo = paymentCutDates.biweekly_first_end - paymentCutDates.biweekly_first_start + 1
-        } else {
-          fechaInicio = `${periodo}-${paymentCutDates.biweekly_second_start.toString().padStart(2, '0')}`
-          fechaFin = `${periodo}-${Math.min(paymentCutDates.biweekly_second_end, ultimoDia).toString().padStart(2, '0')}`
-          diasPeriodo = paymentCutDates.biweekly_second_end - paymentCutDates.biweekly_second_start + 1
-        }
+      const biweeklyTypeVal = paymentCutDates?.biweekly_type || 'standard'
+      if (biweeklyTypeVal === 'custom' && paymentCutDates?.biweekly_first_start != null && paymentCutDates?.biweekly_first_end != null && 
+          paymentCutDates?.biweekly_second_start != null && paymentCutDates?.biweekly_second_end != null) {
+        const result = getBiweeklyPeriodDates(year, month, quincena as 1 | 2, paymentCutDates)
+        fechaInicio = result.fechaInicio
+        fechaFin = result.fechaFin
+        diasPeriodo = result.diasPeriodo
       } else {
         // Standard: 1-15 y 16-último día
         if (quincena === 1) {
@@ -215,10 +227,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       tipoCalculo
     })
 
-    // Obtener empleados activos
+    // Obtener empleados activos (incluir pay_type para cálculo hourly)
     let employeesQuery = supabase
       .from('employees')
-      .select('id, name, dni, base_salary, bank_name, bank_account, status, department_id')
+      .select('id, name, dni, base_salary, bank_name, bank_account, status, department_id, pay_type')
       .eq('status', 'active')
       .order('name')
 
@@ -252,20 +264,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: 'Error obteniendo registros de asistencia' })
     }
 
-    // Obtener cálculos de horas (overtime por tipo: 25%, 50%, 75%) si existen
+    // Obtener cálculos de horas (total_hours, normal_hours, overtime por tipo)
     const recordIds = (attendanceRecords || []).map((r: any) => r.id).filter(Boolean)
-    let hoursCalculations: Record<string, { overtime_diurno: number; overtime_nocturno: number; overtime_feriado: number }> = {}
+    let hoursCalculations: Record<string, { total_hours: number; normal_hours: number; overtime_diurno: number; overtime_nocturno: number; overtime_feriado: number }> = {}
     if (recordIds.length > 0) {
       const { data: ahcResults } = await supabase
         .from('attendance_hours_calculation')
-        .select('attendance_record_id, overtime_diurno_hours, overtime_nocturno_hours, overtime_feriado_hours')
+        .select('attendance_record_id, total_hours, normal_hours, overtime_diurno_hours, overtime_nocturno_hours, overtime_feriado_hours')
         .in('attendance_record_id', recordIds)
       if (ahcResults) {
         const recordToEmp = Object.fromEntries((attendanceRecords || []).map((r: any) => [r.id, r.employee_id]))
         for (const ahc of ahcResults) {
           const empId = recordToEmp[ahc.attendance_record_id]
           if (empId) {
-            if (!hoursCalculations[empId]) hoursCalculations[empId] = { overtime_diurno: 0, overtime_nocturno: 0, overtime_feriado: 0 }
+            if (!hoursCalculations[empId]) hoursCalculations[empId] = { total_hours: 0, normal_hours: 0, overtime_diurno: 0, overtime_nocturno: 0, overtime_feriado: 0 }
+            hoursCalculations[empId].total_hours += Number(ahc.total_hours || 0)
+            const total = Number(ahc.total_hours || 0)
+            const ot = Number(ahc.overtime_diurno_hours || 0) + Number(ahc.overtime_nocturno_hours || 0) + Number(ahc.overtime_feriado_hours || 0)
+            hoursCalculations[empId].normal_hours += Number(ahc.normal_hours ?? Math.max(0, total - ot))
             hoursCalculations[empId].overtime_diurno += Number(ahc.overtime_diurno_hours || 0)
             hoursCalculations[empId].overtime_nocturno += Number(ahc.overtime_nocturno_hours || 0)
             hoursCalculations[empId].overtime_feriado += Number(ahc.overtime_feriado_hours || 0)
@@ -315,22 +331,50 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const late_days = calcularTardanzas(registros)
       
       const base_salary = Number(emp.base_salary) || 0
-      const hourlyRate = base_salary / 220
-      
+      const payType = emp.pay_type ?? 'fixed'
+      // Hourly: base_salary = tarifa/hora. Fixed: base_salary = mensual → hourlyRate = base/220
+      const hourlyRate = payType === 'hourly' ? base_salary : base_salary / 220
+
       // Horas extras desde attendance_hours_calculation (Capa 3) si existen
-      const overtime = hoursCalculations[emp.id] || { overtime_diurno: 0, overtime_nocturno: 0, overtime_feriado: 0 }
-      const overtimePay = 
+      const overtime = hoursCalculations[emp.id] || { total_hours: 0, normal_hours: 0, overtime_diurno: 0, overtime_nocturno: 0, overtime_feriado: 0 }
+      const overtimePay =
         overtime.overtime_diurno * hourlyRate * 1.25 +   // +25%
         overtime.overtime_nocturno * hourlyRate * 1.50 + // +50%
         overtime.overtime_feriado * hourlyRate * 1.75   // +75%
-      
-      // CALCULAR SALARIO SEGÚN payment_frequency (Capa 2)
+
+      // CALCULAR SALARIO SEGÚN payment_frequency y pay_type (helper unificado)
+      // Hourly: salario_bruto = base_salary (tarifa/hora) * hours_worked
+      // Fixed: periodBase (mensual/2 o /4) * (days_worked/diasPeriodo)
       let total_earnings = 0
-      if (paymentFrequency === 'monthly') {
-        total_earnings = (base_salary / ultimoDia) * days_worked
+      let septimoDia = 0
+      if (payType === 'hourly') {
+        const hoursWorked = overtime.total_hours || 0
+        total_earnings = calculatePeriodBaseSalary(
+          { base_salary, pay_type: 'hourly' },
+          frequencyForCalc,
+          { hoursWorked }
+        )
+        // Séptimo Día (Art. 338-340): 1 día descanso por cada 6 trabajados. Solo horas ordinarias.
+        const otSum = (overtime.overtime_diurno || 0) + (overtime.overtime_nocturno || 0) + (overtime.overtime_feriado || 0)
+        const ordinaryHours = overtime.normal_hours ?? Math.max(0, (overtime.total_hours || 0) - otSum)
+        septimoDia = calculateSeptimoDia({
+          hourlyRate: base_salary,
+          ordinaryHours,
+          daysWorked: days_worked,
+          totalHours: overtime.total_hours || 0,
+          semanalProration: semanalProration
+        })
+        total_earnings += septimoDia
       } else {
-        const salarioQuincenal = base_salary / 2
-        total_earnings = salarioQuincenal * (days_worked / diasPeriodo)
+        const periodBase = calculatePeriodBaseSalary(
+          { base_salary, pay_type: 'fixed' },
+          frequencyForCalc
+        )
+        // Semanal: validar si monto fijo (fixed) o días reales (proportional)
+        const useProportional = frequencyForCalc !== 'semanal' || semanalProration === 'proportional'
+        total_earnings = useProportional && diasPeriodo > 0
+          ? periodBase * (days_worked / diasPeriodo)
+          : periodBase
       }
       total_earnings += overtimePay
       
@@ -340,18 +384,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // APLICAR DEDUCCIONES según configuración y legal_deductions
       if (aplicarDeducciones) {
+        // Base para deducciones: fixed = base_salary mensual; hourly = total_earnings extrapolado a mensual
+        const periodosPorMes = paymentFrequency === 'monthly' ? 1 : paymentFrequency === 'weekly' ? 4 : 2
+        const baseParaDeducciones = payType === 'hourly'
+          ? total_earnings * periodosPorMes  // Equivalente mensual por ingresos reales del período
+          : base_salary
+
         // CÁLCULOS CON TABLA FISCAL DEL AÑO CORRESPONDIENTE - DEDUCCIONES MENSUALES COMPLETAS
         // Aplicar solo si están habilitadas en legal_deductions
         if (legalDeductions.ihss) {
-          IHSS = calculateIHSS(base_salary, taxConstants)  // Deducción mensual completa
+          IHSS = calculateIHSS(baseParaDeducciones, taxConstants)  // Deducción mensual completa
         }
-        
+
         if (legalDeductions.rap) {
-          RAP = calculateRAP(base_salary, taxConstants)    // Deducción mensual completa
+          RAP = calculateRAP(baseParaDeducciones, taxConstants)    // Deducción mensual completa
         }
-        
+
         if (legalDeductions.isr) {
-          ISR = calculateISR(base_salary, taxConstants.isr_brackets)    // Deducción mensual completa
+          ISR = calculateISR(baseParaDeducciones, taxConstants.isr_brackets)    // Deducción mensual completa
         }
         
         total_deductions = IHSS + RAP + ISR
@@ -395,7 +445,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         total_deductions: Math.round(total_deductions * 100) / 100,
         total: Math.round(total * 100) / 100,
         notes_on_ingress,
-        notes_on_deductions
+        notes_on_deductions,
+        total_hours_worked: payType === 'hourly' ? overtime.total_hours : undefined,
+        pay_type: payType,
+        septimo_dia: septimoDia > 0 ? septimoDia : undefined
       }
     })
 
@@ -404,7 +457,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       employee_id: empleadosParaNomina.find((e: any) => e.dni === item.id)?.id,
       period_start: fechaInicio,
       period_end: fechaFin,
-      period_type: 'biweekly',
+      period_type: frequencyForCalc === 'mensual' ? 'monthly' : frequencyForCalc === 'semanal' ? 'weekly' : 'biweekly',
       base_salary: item.monthly_salary,
       gross_salary: item.total_earnings,
       income_tax: item.ISR,
@@ -418,7 +471,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       status: 'draft',
       notes_on_ingress: item.notes_on_ingress,
       notes_on_deductions: item.notes_on_deductions,
-      metadata: { tax_year: year }, // Guardar año de tabla fiscal usada
+      seventh_day_pay: item.septimo_dia ?? 0,
+      metadata: {
+        tax_year: year,
+        ...(item.pay_type === 'hourly' && item.total_hours_worked != null && { total_hours_worked: item.total_hours_worked }),
+        ...(item.septimo_dia != null && item.septimo_dia > 0 && { septimo_dia: item.septimo_dia })
+      },
       generated_by: user.id || 'system',
       generated_at: getHondurasTimestamp()
     }))

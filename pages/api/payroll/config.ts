@@ -115,7 +115,7 @@ async function getPayrollConfig(
     const qcCol = data.quincena_config
     const paymentFrequency = pfCol ?? metadata.payment_frequency ?? 'biweekly'
     const mapFreqToFrontend = (v: string) =>
-      v === 'mensual' ? 'monthly' : v === 'quincenal' ? 'biweekly' : v
+      v === 'mensual' ? 'monthly' : v === 'quincenal' ? 'biweekly' : v === 'semanal' ? 'weekly' : v
     const fs = (qcCol as any)?.first_start ?? 1
     const fe = (qcCol as any)?.first_end ?? 15
     const ss = (qcCol as any)?.second_start ?? 16
@@ -148,6 +148,7 @@ async function getPayrollConfig(
       currency: metadata.currency || 'HNL',
       calculation_mode: data.calculation_mode ?? metadata.calculation_mode ?? 'daily',
       incomplete_record_default_hours: data.incomplete_record_default_hours ?? metadata.incomplete_record_default_hours ?? null,
+      semanal_proration: metadata.semanal_proration || 'proportional',
       legal_deductions: metadata.legal_deductions || {
         ihss: true,
         rap: true,
@@ -192,7 +193,8 @@ async function upsertPayrollConfig(
       calculation_mode = 'daily',
       incomplete_record_default_hours = null,
       legal_deductions,
-      payment_cut_dates
+      payment_cut_dates,
+      semanal_proration = 'proportional'
     } = body
 
     // Validar calculation_type
@@ -255,7 +257,7 @@ async function upsertPayrollConfig(
       monthly_end: 30
     }
     const mapFreqToDb = (v: string) =>
-      v === 'monthly' ? 'mensual' : v === 'biweekly' ? 'quincenal' : (v || 'quincenal')
+      v === 'monthly' ? 'mensual' : v === 'biweekly' ? 'quincenal' : v === 'weekly' ? 'semanal' : (v || 'quincenal')
     const quincenaConfig = {
       first_start: cutDates.biweekly_first_start ?? 1,
       first_end: cutDates.biweekly_first_end ?? 15,
@@ -272,7 +274,8 @@ async function upsertPayrollConfig(
         isr: true,
         infop: false
       },
-      payment_cut_dates: cutDates
+      payment_cut_dates: cutDates,
+      semanal_proration: semanal_proration || 'proportional'
     }
 
     // Validar calculation_mode
@@ -316,7 +319,7 @@ async function upsertPayrollConfig(
     const pfCol = data.payment_frequency
     const qcCol = data.quincena_config
     const pfRes = pfCol ?? meta.payment_frequency ?? 'biweekly'
-    const mapFreq = (v: string) => (v === 'mensual' ? 'monthly' : v === 'quincenal' ? 'biweekly' : v)
+    const mapFreq = (v: string) => (v === 'mensual' ? 'monthly' : v === 'quincenal' ? 'biweekly' : v === 'semanal' ? 'weekly' : v)
     const cutDatesRes = qcCol
       ? {
           biweekly_type: 'custom' as const,
@@ -345,7 +348,8 @@ async function upsertPayrollConfig(
       calculation_mode: data.calculation_mode ?? meta.calculation_mode ?? 'daily',
       incomplete_record_default_hours: data.incomplete_record_default_hours ?? meta.incomplete_record_default_hours ?? null,
       legal_deductions: meta.legal_deductions || { ihss: true, rap: true, isr: true, infop: false },
-      payment_cut_dates: cutDatesRes
+      payment_cut_dates: cutDatesRes,
+      semanal_proration: meta.semanal_proration || 'proportional'
     }
 
     return res.status(200).json({

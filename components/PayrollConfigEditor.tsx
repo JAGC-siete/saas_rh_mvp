@@ -43,9 +43,10 @@ interface CustomField {
 
 interface PayrollConfig {
   // Configuración básica de payroll
-  payment_frequency: 'monthly' | 'biweekly' // mensual o quincenal
+  payment_frequency: 'monthly' | 'biweekly' | 'weekly' // mensual, quincenal o semanal
   currency: 'HNL' | 'USD' // Lempiras o Dólares
   calculation_mode?: 'daily' | 'hourly' // Por día (asistencia) o por hora exacta
+  semanal_proration?: 'proportional' | 'fixed' // Semanal: proporcional a días o monto fijo (mensual/4)
   incomplete_record_default_hours?: number | null // Horas por defecto si falta check_out (solo hourly)
   legal_deductions: {
     ihss: boolean
@@ -56,6 +57,8 @@ interface PayrollConfig {
   payment_cut_dates: {
     // Para quincenal
     biweekly_type?: 'standard' | 'custom' // standard: 1-15, 16-30 | custom: personalizado
+    // Para semanal (estándar: semanas 1-7, 8-14, 15-21, 22-fin)
+    weekly_type?: 'standard' | 'custom'
     biweekly_first_start?: number // día inicio primera quincena (default: 1)
     biweekly_first_end?: number // día fin primera quincena (default: 15)
     biweekly_second_start?: number // día inicio segunda quincena (default: 16)
@@ -151,7 +154,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     const t = setTimeout(async () => {
       setPeriodPreviewLoading(true)
       try {
-        const pf = config.payment_frequency === 'monthly' ? 'mensual' : 'quincenal'
+        const pf = config.payment_frequency === 'monthly' ? 'mensual' : config.payment_frequency === 'weekly' ? 'semanal' : 'quincenal'
         const res = await fetch('/api/payroll/upcoming-periods', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -189,6 +192,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     // Comparar calculation_mode
     if ((config.calculation_mode ?? 'daily') !== (initialConfig.calculation_mode ?? 'daily')) return true
     if ((config.incomplete_record_default_hours ?? null) !== (initialConfig.incomplete_record_default_hours ?? null)) return true
+    if ((config.semanal_proration ?? 'proportional') !== (initialConfig.semanal_proration ?? 'proportional')) return true
     
     // Comparar legal_deductions (deep comparison)
     const deductionsStr = JSON.stringify(config.legal_deductions)
@@ -239,6 +243,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
         isr: apiConfig.legal_deductions?.isr ?? true,
         infop: apiConfig.legal_deductions?.infop ?? false
       },
+      semanal_proration: apiConfig.semanal_proration ?? 'proportional',
       payment_cut_dates: {
         biweekly_type: apiConfig.payment_cut_dates?.biweekly_type || 'standard',
         biweekly_first_start: apiConfig.payment_cut_dates?.biweekly_first_start ?? 1,
@@ -247,7 +252,8 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
         biweekly_second_end: apiConfig.payment_cut_dates?.biweekly_second_end ?? 30,
         monthly_type: apiConfig.payment_cut_dates?.monthly_type || 'standard',
         monthly_start: apiConfig.payment_cut_dates?.monthly_start ?? 1,
-        monthly_end: apiConfig.payment_cut_dates?.monthly_end ?? 30
+        monthly_end: apiConfig.payment_cut_dates?.monthly_end ?? 30,
+        weekly_type: apiConfig.payment_cut_dates?.weekly_type || 'standard'
       },
       custom_fields: apiConfig.custom_fields || {},
       calculation_config: apiConfig.calculation_config || {},
@@ -361,6 +367,8 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
         setError('Las fechas de corte para pago mensual son requeridas')
         return
       }
+    } else if (config.payment_frequency === 'weekly') {
+      // Semanal: no requiere fechas de corte (usa estándar 1-7, 8-14, 15-21, 22-fin)
     }
 
     // Obtener descripción de cambios y mostrar dialog de confirmación
@@ -387,6 +395,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
           incomplete_record_default_hours: config.incomplete_record_default_hours ?? null,
           legal_deductions: config.legal_deductions,
           payment_cut_dates: config.payment_cut_dates,
+          semanal_proration: config.semanal_proration ?? 'proportional',
           custom_fields: config.custom_fields,
           calculation_config: config.calculation_config,
           calculation_script: config.calculation_script || null
@@ -493,9 +502,8 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     
     // Detectar cambios específicos
     if (config.payment_frequency !== initialConfig.payment_frequency) {
-      const oldFreq = initialConfig.payment_frequency === 'biweekly' ? 'quincenal' : 'mensual'
-      const newFreq = config.payment_frequency === 'biweekly' ? 'quincenal' : 'mensual'
-      changes.push(`frecuencia de pago de ${oldFreq} a ${newFreq}`)
+      const freqLabel = (f: string) => f === 'biweekly' ? 'quincenal' : f === 'weekly' ? 'semanal' : 'mensual'
+      changes.push(`frecuencia de pago de ${freqLabel(initialConfig.payment_frequency)} a ${freqLabel(config.payment_frequency)}`)
     }
     
     if (config.currency !== initialConfig.currency) {
@@ -690,9 +698,9 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                 </div>
               </button>
               <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                expandedSections.paymentFrequency ? 'max-h-[200px] opacity-100 mt-4' : 'max-h-0 opacity-0'
+                expandedSections.paymentFrequency ? 'max-h-[280px] opacity-100 mt-4' : 'max-h-0 opacity-0'
               }`}>
-                <div className="flex gap-4">
+                <div className="flex flex-wrap gap-4">
                 <label className="flex items-center gap-2 cursor-pointer p-3 glass border border-white/20 rounded-lg hover:border-blue-400/50 transition-colors">
                   <input
                     type="radio"
@@ -703,7 +711,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                       // Al cambiar a quincenal, resetear fechas a estándar quincenal
                       setConfig(prev => ({
                         ...prev,
-                        payment_frequency: 'biweekly' as 'biweekly' | 'monthly',
+                        payment_frequency: 'biweekly' as 'biweekly' | 'monthly' | 'weekly',
                         payment_cut_dates: {
                           ...prev.payment_cut_dates,
                           biweekly_type: 'standard',
@@ -728,7 +736,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                       // Al cambiar a mensual, resetear fechas a estándar mensual
                       setConfig(prev => ({
                         ...prev,
-                        payment_frequency: 'monthly' as 'biweekly' | 'monthly',
+                        payment_frequency: 'monthly' as 'biweekly' | 'monthly' | 'weekly',
                         payment_cut_dates: {
                           ...prev.payment_cut_dates,
                           monthly_type: 'standard',
@@ -740,6 +748,26 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                     className="w-4 h-4 text-blue-600"
                   />
                   <span className="text-white">Mensual</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer p-3 glass border border-white/20 rounded-lg hover:border-blue-400/50 transition-colors">
+                  <input
+                    type="radio"
+                    name="payment_frequency"
+                    value="weekly"
+                    checked={config.payment_frequency === 'weekly'}
+                    onChange={(e) => {
+                      setConfig(prev => ({
+                        ...prev,
+                        payment_frequency: 'weekly' as 'biweekly' | 'monthly' | 'weekly',
+                        payment_cut_dates: {
+                          ...prev.payment_cut_dates,
+                          weekly_type: 'standard'
+                        }
+                      }))
+                    }}
+                    className="w-4 h-4 text-blue-600"
+                  />
+                  <span className="text-white">Semanal</span>
                 </label>
                 </div>
               </div>
@@ -973,6 +1001,9 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                   <Calendar className="h-4 w-4 text-green-300" />
                   <label className="text-sm font-medium text-white">
                     Fechas de Corte de Pago
+                    {config.payment_frequency === 'biweekly' && ' (Quincenal)'}
+                    {config.payment_frequency === 'monthly' && ' (Mensual)'}
+                    {config.payment_frequency === 'weekly' && ' (Semanal)'}
                   </label>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1133,6 +1164,49 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                       </p>
                     </div>
                   )}
+                </div>
+              ) : config.payment_frequency === 'weekly' ? (
+                <div className="space-y-4">
+                  {/* Períodos semanales estándar */}
+                  <div className="p-3 glass border border-green-400/20 rounded-lg">
+                    <p className="text-sm font-semibold text-green-300 mb-2">Períodos semanales (estándar)</p>
+                    <p className="text-sm text-gray-300">
+                      Semana 1: Días 1-7 | Semana 2: Días 8-14 | Semana 3: Días 15-21 | Semana 4: Días 22-fin de mes
+                    </p>
+                    <p className="text-xs text-gray-400 mt-2">
+                      El salario mensual se divide entre 4 para cada período semanal.
+                    </p>
+                  </div>
+                  {/* Opción: monto fijo vs proporcional a días trabajados */}
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer p-2 glass border border-white/20 rounded-lg hover:border-green-400/50 transition-colors">
+                      <input
+                        type="radio"
+                        name="semanal_proration"
+                        value="proportional"
+                        checked={(config.semanal_proration ?? 'proportional') === 'proportional'}
+                        onChange={() => setConfig(prev => ({ ...prev, semanal_proration: 'proportional' }))}
+                        className="w-4 h-4 text-green-600"
+                      />
+                      <span className="text-white text-sm">Proporcional a días trabajados</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer p-2 glass border border-white/20 rounded-lg hover:border-green-400/50 transition-colors">
+                      <input
+                        type="radio"
+                        name="semanal_proration"
+                        value="fixed"
+                        checked={(config.semanal_proration ?? 'proportional') === 'fixed'}
+                        onChange={() => setConfig(prev => ({ ...prev, semanal_proration: 'fixed' }))}
+                        className="w-4 h-4 text-green-600"
+                      />
+                      <span className="text-white text-sm">Monto fijo (mensual/4)</span>
+                    </label>
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    {(config.semanal_proration ?? 'proportional') === 'proportional'
+                      ? 'Si falta un día, se descuenta proporcionalmente.'
+                      : 'Pago fijo por semana sin importar días trabajados.'}
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-4">

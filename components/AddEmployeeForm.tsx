@@ -247,7 +247,7 @@ function AddEmployeeForm({
 
               <div>
                 <label className="block text-sm font-medium text-white mb-1" htmlFor="base_salary">
-                  Salario Base (HNL) *
+                  {(v(formData?.pay_type) || 'fixed') === 'hourly' ? 'Tarifa por hora (HNL) *' : 'Salario Base (HNL) *'}
                 </label>
                 <Input
                   id="base_salary"
@@ -259,7 +259,7 @@ function AddEmployeeForm({
                   disabled={loading}
                   value={v(formData?.base_salary)}
                   onChange={(e) => onFormChange('base_salary', e.target.value)}
-                  placeholder="25000.00"
+                  placeholder={(v(formData?.pay_type) || 'fixed') === 'hourly' ? '50.00' : '25000.00'}
                   required
                   className="bg-white/10 border-white/20 text-white placeholder-gray-400"
                 />
@@ -282,13 +282,13 @@ function AddEmployeeForm({
                     Administrativo/Permanente (Horario fijo)
                   </option>
                   <option value="hourly" className="bg-brand-900 text-white">
-                    Por Hora (Eventos consecutivos)
+                    Por Hora
                   </option>
                 </select>
                 <p className="text-xs text-gray-400 mt-1">
-                  <strong>Administrativo:</strong> Usa horario fijo para inferir entrada/salida.
+                  <strong>Administrativo:</strong> Salario mensual. Usa horario fijo para inferir entrada/salida.
                   <br />
-                  <strong>Por Hora:</strong> Primera marca = entrada, siguiente = salida (máx. 30h).
+                  <strong>Por Hora:</strong> Tarifa por hora. Salario = tarifa × horas trabajadas (de asistencia).
                 </p>
               </div>
 
@@ -307,6 +307,7 @@ function AddEmployeeForm({
                   <option value="" className="bg-brand-900 text-white">Default empresa</option>
                   <option value="quincenal" className="bg-brand-900 text-white">Quincenal</option>
                   <option value="mensual" className="bg-brand-900 text-white">Mensual</option>
+                  <option value="semanal" className="bg-brand-900 text-white">Semanal</option>
                 </select>
                 <p className="text-xs text-gray-400 mt-1">
                   Si está vacío, usa la configuración de la empresa (Capa 2).

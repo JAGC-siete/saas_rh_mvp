@@ -1,5 +1,6 @@
 import { Buffer } from 'buffer'
 import { formatDateForHonduras, nowInHonduras, formatDateTimeForHonduras } from '../timezone'
+import { formatPeriodRangeForDisplay } from './period-dates'
 
 
 
@@ -25,6 +26,7 @@ export interface PlanillaItem {
   pay_type?: 'fixed' | 'hourly'
   total_hours_worked?: number
   hourly_rate?: number
+  septimo_dia?: number
 }
 
 /**
@@ -66,7 +68,8 @@ export async function generateConsolidatedPayrollPDF(
       monthly_start?: number
       monthly_end?: number
     }
-  }
+  },
+  periodDates?: { period_start: string; period_end: string }
 ): Promise<Buffer> {
   return new Promise<Buffer>((resolve, reject) => {
     try {
@@ -96,10 +99,15 @@ export async function generateConsolidatedPayrollPDF(
       }
       
       // Título dinámico según payment_frequency
-      const payrollTitle = paymentFrequency === 'monthly' ? 'Planilla Mensual' : 'Planilla Quincenal'
-      const payrollSubject = paymentFrequency === 'monthly' ? 'Nómina Mensual' : 'Nómina Quincenal'
-      
-      // Calcular texto de quincena/período según configuración
+      const payrollTitle = paymentFrequency === 'monthly' ? 'Planilla Mensual' : paymentFrequency === 'weekly' ? 'Planilla Semanal' : 'Planilla Quincenal'
+      const payrollSubject = paymentFrequency === 'monthly' ? 'Nómina Mensual' : paymentFrequency === 'weekly' ? 'Nómina Semanal' : 'Nómina Quincenal'
+
+      // Rango de fechas dinámico para header (ej: "15 de Oct al 21 de Oct")
+      const periodRangeDisplay = periodDates
+        ? formatPeriodRangeForDisplay(periodDates.period_start, periodDates.period_end)
+        : null
+
+      // Calcular texto de quincena/período según configuración (para sección info)
       let quincenaText = ''
       if (paymentFrequency === 'monthly') {
         const monthlyType = paymentCutDates?.monthly_type || 'standard'
@@ -108,9 +116,11 @@ export async function generateConsolidatedPayrollPDF(
         } else {
           quincenaText = 'Mensual (1-fin de mes)'
         }
+      } else if (paymentFrequency === 'weekly') {
+        quincenaText = periodRangeDisplay || `Semana ${quincena}`
       } else {
         const biweeklyType = paymentCutDates?.biweekly_type || 'standard'
-        if (biweeklyType === 'custom' && paymentCutDates?.biweekly_first_start && paymentCutDates?.biweekly_first_end && 
+        if (biweeklyType === 'custom' && paymentCutDates?.biweekly_first_start && paymentCutDates?.biweekly_first_end &&
             paymentCutDates?.biweekly_second_start && paymentCutDates?.biweekly_second_end) {
           if (quincena === 1) {
             quincenaText = `Primera (${paymentCutDates.biweekly_first_start}-${paymentCutDates.biweekly_first_end})`
@@ -122,12 +132,13 @@ export async function generateConsolidatedPayrollPDF(
         }
       }
       
+      const headerSubtitle = periodRangeDisplay ?? (paymentFrequency === 'monthly' ? periodo : `${periodo} • Quincena ${quincena}`)
       const doc = new PDFDocument({
         size: 'A4',
         layout: 'landscape',
         margin: 30,
         info: {
-          Title: `${payrollTitle} - ${periodo}${paymentFrequency === 'monthly' ? '' : ` Q${quincena}`}`,
+          Title: `${payrollTitle} - ${headerSubtitle}`,
           Author: 'Sistema Hondureño de Recursos Humanos',
           Subject: payrollSubject,
           Keywords: 'nómina, planilla, Paragon, Honduras',
@@ -152,13 +163,13 @@ export async function generateConsolidatedPayrollPDF(
       doc.fillColor('white')
       doc.fontSize(22).text(companyName || 'SISTEMA HONDUREÑO DE RECURSOS HUMANOS', 30, 20, { align: 'center', width: pageWidth - 60 })
       doc.fontSize(13).text(payrollTitle, 30, 46, { align: 'center', width: pageWidth - 60 })
-      doc.fontSize(12).text(`${periodo}${paymentFrequency === 'monthly' ? '' : ` • Quincena ${quincena}`}`, 30, 66, { align: 'center', width: pageWidth - 60 })
+      doc.fontSize(12).text(headerSubtitle, 30, 66, { align: 'center', width: pageWidth - 60 })
 
       // Body base styles
       doc.fillColor('#0f172a')
       doc.fontSize(11).text('INFORMACIÓN DEL PERÍODO:', 30, 110)
       doc.fontSize(10).text(`Período: ${periodo}`, 30, 126)
-      doc.fontSize(10).text(`${paymentFrequency === 'monthly' ? 'Período' : 'Quincena'}: ${quincenaText}`, 30, 142)
+      doc.fontSize(10).text(`Rango: ${periodRangeDisplay ?? quincenaText}`, 30, 142)
       doc.fontSize(10).text(`Fecha de generación: ${formatDateForHonduras(nowInHonduras())}`, 30, 158)
       if (generatedByEmail) {
         doc.fontSize(10).text(`Generado por: ${generatedByEmail}`, 30, 174)
@@ -230,9 +241,12 @@ export async function generateConsolidatedPayrollPDF(
         doc.fontSize(11).fillColor('#0f172a').text(title, 30, 24, { align: 'center', width: tablePageWidth - 60 })
 
         // Build headers based on table type
+        const hasSeptimoDia = isHourly && planillaData.some((r) => (r.septimo_dia ?? 0) > 0)
         let baseHeaders: string[]
         if (isHourly) {
-          baseHeaders = ['Código', 'Nombre', 'Departamento', 'Días', 'Horas', 'Tarifa/Hora', 'Salario Base']
+          baseHeaders = hasSeptimoDia
+            ? ['Código', 'Nombre', 'Departamento', 'Días', 'Horas', 'Tarifa/Hora', 'Salario Base', 'Séptimo Día']
+            : ['Código', 'Nombre', 'Departamento', 'Días', 'Horas', 'Tarifa/Hora', 'Salario Base']
         } else {
           baseHeaders = ['Código', 'Nombre', 'Departamento', 'Días Trab.', 'Salario Base Mensual']
         }
@@ -269,7 +283,7 @@ export async function generateConsolidatedPayrollPDF(
         
         // Calculate column widths dynamically (smaller for better fit)
         const baseColWidths = isHourly 
-          ? [60, 100, 75, 40, 50, 60, 70] // Hourly: smaller widths
+          ? (hasSeptimoDia ? [55, 95, 70, 35, 45, 55, 65, 55] : [60, 100, 75, 40, 50, 60, 70]) // Hourly
           : [60, 100, 75, 50, 80] // Fixed: smaller widths
         const customFieldWidth = 50 // Reduced from 60
         const earningsColWidths = earningsHeaders.map(() => customFieldWidth)
@@ -343,6 +357,9 @@ export async function generateConsolidatedPayrollPDF(
               formatCurrency(row.hourly_rate || 0),
               formatCurrency(row.monthly_salary)
             )
+            if (hasSeptimoDia) {
+              values.push(formatCurrency(row.septimo_dia ?? 0))
+            }
           } else {
             values.push(
               row.id || '',

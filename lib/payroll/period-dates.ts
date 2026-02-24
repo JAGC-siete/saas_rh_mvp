@@ -3,6 +3,29 @@
  * Soporta rangos personalizados que cruzan fin de mes (ej: 29-12, 28-27).
  */
 
+const MESES_ES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+
+/**
+ * Formatea un rango de fechas para mostrar en voucher/reporte.
+ * Ej: "15 de Oct al 21 de Oct"
+ */
+export function formatPeriodRangeForDisplay(periodStart: string, periodEnd: string): string {
+  const parse = (s: string) => {
+    const [y, m, d] = s.split('-').map(Number)
+    return { year: y, month: m, day: d }
+  }
+  const start = parse(periodStart)
+  const end = parse(periodEnd)
+  const mesStart = MESES_ES[(start.month || 1) - 1] || ''
+  const mesEnd = MESES_ES[(end.month || 1) - 1] || ''
+  const dayStart = start.day ?? 1
+  const dayEnd = end.day ?? 1
+  if (start.month === end.month && start.year === end.year) {
+    return `${dayStart} de ${mesStart} al ${dayEnd} de ${mesEnd}`
+  }
+  return `${dayStart} de ${mesStart} al ${dayEnd} de ${mesEnd}`
+}
+
 export interface BiweeklyCutDates {
   biweekly_first_start: number
   biweekly_first_end: number
@@ -26,6 +49,7 @@ export interface CurrentPeriodInfo {
   year: number
   month: number
   quincena?: 1 | 2
+  semana?: 1 | 2 | 3 | 4
   fechaInicio: string
   fechaFin: string
   diasPeriodo: number
@@ -33,7 +57,7 @@ export interface CurrentPeriodInfo {
 }
 
 export interface PayrollPeriodConfig {
-  payment_frequency: 'mensual' | 'quincenal'
+  payment_frequency: 'mensual' | 'quincenal' | 'semanal'
   monthly_start?: number
   monthly_end?: number
   monthly_type?: 'standard' | 'custom'
@@ -42,6 +66,26 @@ export interface PayrollPeriodConfig {
   biweekly_second_start?: number
   biweekly_second_end?: number
   biweekly_type?: 'standard' | 'custom'
+  weekly_type?: 'standard' | 'custom'
+}
+
+/** Semana del mes: 1 (1-7), 2 (8-14), 3 (15-21), 4 (22-fin) */
+export function getWeeklyPeriodDates(
+  year: number,
+  month: number,
+  semana: 1 | 2 | 3 | 4
+): PeriodDatesResult {
+  const periodo = `${year}-${String(month).padStart(2, '0')}`
+  const ultimoDia = new Date(year, month, 0).getDate()
+  const startDay = (semana - 1) * 7 + 1
+  const endDay = semana === 4 ? ultimoDia : Math.min(semana * 7, ultimoDia)
+  const actualStart = Math.min(startDay, ultimoDia)
+  const diasPeriodo = endDay - actualStart + 1
+  return {
+    fechaInicio: `${periodo}-${String(actualStart).padStart(2, '0')}`,
+    fechaFin: `${periodo}-${String(endDay).padStart(2, '0')}`,
+    diasPeriodo
+  }
 }
 
 /**
@@ -195,6 +239,21 @@ export function getCurrentPeriod(
     }
   }
 
+  if (config.payment_frequency === 'semanal') {
+    const semana: 1 | 2 | 3 | 4 = day <= 7 ? 1 : day <= 14 ? 2 : day <= 21 ? 3 : 4
+    const result = getWeeklyPeriodDates(year, month, semana)
+    return {
+      periodKey: `${year}-${String(month).padStart(2, '0')}-S${semana}`,
+      year,
+      month,
+      semana,
+      fechaInicio: result.fechaInicio,
+      fechaFin: result.fechaFin,
+      diasPeriodo: result.diasPeriodo,
+      label: `Semana ${semana}: ${result.fechaInicio} - ${result.fechaFin}`
+    }
+  }
+
   // Quincenal
   const qc = config as BiweeklyCutDates
   const fs = qc.biweekly_first_start ?? 1
@@ -268,6 +327,31 @@ export function getUpcomingPeriods(
       })
       m = m === 12 ? 1 : m + 1
       y = m === 1 ? y + 1 : y
+    }
+  } else if (config.payment_frequency === 'semanal') {
+    const current = getCurrentPeriod(config, now)
+    let y = current.year
+    let m = current.month
+    let s: 1 | 2 | 3 | 4 = (current.semana ?? 1) as 1 | 2 | 3 | 4
+    for (let i = 0; i < count; i++) {
+      const result = getWeeklyPeriodDates(y, m, s)
+      periods.push({
+        periodKey: `${y}-${String(m).padStart(2, '0')}-S${s}`,
+        year: y,
+        month: m,
+        semana: s,
+        fechaInicio: result.fechaInicio,
+        fechaFin: result.fechaFin,
+        diasPeriodo: result.diasPeriodo,
+        label: `S${s}: ${result.fechaInicio} al ${result.fechaFin}`
+      })
+      if (s === 4) {
+        m = m === 12 ? 1 : m + 1
+        y = m === 1 ? y + 1 : y
+        s = 1
+      } else {
+        s = (s + 1) as 1 | 2 | 3 | 4
+      }
     }
   } else {
     const cutDates = {
