@@ -120,10 +120,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     delete updateData.id; // Remove id from body to prevent trying to update it
     delete updateData.profile_image_path; // Remove profile_image_path - use employee_files instead
     delete updateData.profile_image_meta; // Remove profile_image_meta - use employee_files instead
-    // payment_frequency: solo 'quincenal' | 'mensual' | null
+    // payment_frequency: solo 'quincenal' | 'mensual' | 'semanal' | null
     if ('payment_frequency' in updateData) {
       const pf = updateData.payment_frequency
-      updateData.payment_frequency = (pf === 'quincenal' || pf === 'mensual') ? pf : null
+      updateData.payment_frequency = (pf === 'quincenal' || pf === 'mensual' || pf === 'semanal') ? pf : null
     }
     updateData.sync_status = 'pending'; // Mark for sync on any update
     updateData.updated_at = getHondurasTimestamp();

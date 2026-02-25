@@ -13,6 +13,8 @@ interface EmployeeDrawerProps {
   onClose: () => void
   name: string
   events: TimelineEvent[]
+  /** Período del filtro del dashboard (ej. "de Hoy", "de esta Semana") — no está hardcodeado, viene del preset. */
+  periodLabel?: string
   employeeData?: any
   stats?: {
     attendanceAverage: string
@@ -25,7 +27,7 @@ interface EmployeeDrawerProps {
   }
 }
 
-export default function EmployeeDrawer({ open, onClose, name, events, employeeData, stats, schedule }: EmployeeDrawerProps) {
+export default function EmployeeDrawer({ open, onClose, name, events, periodLabel, employeeData, stats, schedule }: EmployeeDrawerProps) {
   if (!open) return null
 
   const department = employeeData?.departments
@@ -161,12 +163,15 @@ export default function EmployeeDrawer({ open, onClose, name, events, employeeDa
             </div>
           )}
 
-          {/* Timeline */}
+          {/* Timeline: período viene del filtro del dashboard (preset), no está hardcodeado */}
           <div>
-            <h3 className="text-lg font-semibold text-white mb-4">📅 Historial Reciente</h3>
+            <h3 className="text-lg font-semibold text-white mb-4">
+              📅 Historial Reciente{periodLabel ? ` ${periodLabel}` : ''}
+            </h3>
             {events.length === 0 ? (
-              <div className="bg-white/5 rounded-xl p-8 text-center border border-white/10">
-                <p className="text-gray-400">Sin eventos registrados en este período</p>
+              <div className="rounded-xl p-8 text-center border-2 border-dashed border-white/20 bg-white/5">
+                <p className="text-gray-400 font-medium">No hay registros en este período</p>
+                <p className="text-sm text-gray-500 mt-1">Casilla vacía — sin eventos de asistencia</p>
               </div>
             ) : (
               <div className="space-y-2">

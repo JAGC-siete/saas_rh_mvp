@@ -38,21 +38,26 @@ const DEFAULT_2025_CONSTANTS: TaxConstants = {
 
 /**
  * Get tax brackets and constants for a specific year
- * Falls back to most recent year or default if not found
+ * Falls back to most recent active year or default if not found
+ * 
+ * IMPORTANT: is_active controls whether a table can be used:
+ * - If is_active = false, the table won't be used even for its specific year
+ * - This allows disabling tables with errors without deleting them
  */
 export async function getTaxBracketsForYear(year: number): Promise<TaxConstants> {
   try {
     const supabase = createAdminClient()
     
-    // Try to get the specific year
+    // Try to get the specific year (only if active)
     let { data, error } = await supabase
       .from('tax_brackets')
       .select('*')
       .eq('year', year)
       .eq('country_code', 'HND')
+      .eq('is_active', true)  // Solo usar tablas activas, incluso para año específico
       .single()
     
-    // If not found, get the most recent active year
+    // If not found (year doesn't exist or is inactive), get the most recent active year
     if (error || !data) {
       const { data: recentData, error: recentError } = await supabase
         .from('tax_brackets')
@@ -65,6 +70,7 @@ export async function getTaxBracketsForYear(year: number): Promise<TaxConstants>
       
       if (!recentError && recentData) {
         data = recentData
+        console.warn(`Tax bracket for year ${year} not found or inactive, using year ${recentData.year} as fallback`)
       }
     }
     

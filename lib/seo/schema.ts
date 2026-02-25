@@ -286,6 +286,51 @@ export function generateFAQPageSchema(faqs: FAQItem[]): FAQPageSchema {
   }
 }
 
+export interface ArticleSchema {
+  '@context': string
+  '@type': string
+  headline: string
+  description?: string
+  datePublished: string
+  dateModified?: string
+  image?: string
+  author?: { '@type': string; name: string }
+  publisher: { '@type': string; name: string; logo: { '@type': string; url: string } }
+  url: string
+}
+
+/**
+ * Generates BlogPosting/Article schema for article pages (SEO)
+ */
+export function generateArticleSchema(options: {
+  url: string
+  headline: string
+  description?: string
+  datePublished: string
+  dateModified?: string
+  image?: string
+  author?: string
+}): ArticleSchema {
+  const { url, headline, description, datePublished, dateModified, image, author } = options
+  const fullUrl = url.startsWith('http') ? url : `${BASE_URL}${url}`
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline,
+    description,
+    datePublished,
+    dateModified,
+    image: image ? (image.startsWith('http') ? image : `${BASE_URL}${image}`) : undefined,
+    author: author ? { '@type': 'Person', name: author } : undefined,
+    publisher: {
+      '@type': 'Organization',
+      name: 'Humano SISU',
+      logo: { '@type': 'ImageObject', url: `${BASE_URL}/logo-humano-sisu.png` }
+    },
+    url: fullUrl
+  }
+}
+
 export interface ReviewSchema {
   '@context': string
   '@type': string

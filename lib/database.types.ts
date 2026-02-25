@@ -895,6 +895,79 @@ export type Database = {
           },
         ]
       }
+      employee_files: {
+        Row: {
+          id: string
+          employee_id: string
+          company_id: string
+          file_type: string
+          document_category: string | null
+          storage_path: string
+          file_name: string
+          file_size_bytes: number
+          mime_type: string
+          uploaded_by: string
+          is_active: boolean
+          metadata: Json | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          employee_id: string
+          company_id: string
+          file_type: string
+          document_category?: string | null
+          storage_path: string
+          file_name: string
+          file_size_bytes: number
+          mime_type: string
+          uploaded_by: string
+          is_active?: boolean
+          metadata?: Json | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          employee_id?: string
+          company_id?: string
+          file_type?: string
+          document_category?: string | null
+          storage_path?: string
+          file_name?: string
+          file_size_bytes?: number
+          mime_type?: string
+          uploaded_by?: string
+          is_active?: boolean
+          metadata?: Json | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_files_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_files_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_files_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_achievements: {
         Row: {
           achievement_type_id: number
@@ -2360,6 +2433,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      recursos: {
+        Row: {
+          id: string
+          slug: string
+          title: string
+          description: string
+          content: string
+          date_published: string
+          date_modified: string | null
+          image: string | null
+          author: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          slug: string
+          title: string
+          description?: string
+          content?: string
+          date_published?: string
+          date_modified?: string | null
+          image?: string | null
+          author?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          slug?: string
+          title?: string
+          description?: string
+          content?: string
+          date_published?: string
+          date_modified?: string | null
+          image?: string | null
+          author?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       supervisor_teams: {
         Row: {

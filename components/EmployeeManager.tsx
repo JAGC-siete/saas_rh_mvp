@@ -402,7 +402,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
         const pf = sanitizedFormData.payment_frequency.trim()
         if (pf === '') {
           sanitizedFormData.payment_frequency = null
-        } else if (pf !== 'quincenal' && pf !== 'mensual') {
+        } else if (pf !== 'quincenal' && pf !== 'mensual' && pf !== 'semanal') {
           sanitizedFormData.payment_frequency = null
         }
       }
@@ -1485,6 +1485,22 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                                   {record.check_in ? formatDateTimeDisplay(record.check_in) : 'Sin registro'}
                                 </span>
                               </div>
+                              {(record as any).lunch_start != null && (
+                                <div>
+                                  <span className="text-gray-400 block text-xs uppercase tracking-wider">Inicio almuerzo</span>
+                                  <span className="text-white">
+                                    {formatDateTimeDisplay((record as any).lunch_start)}
+                                  </span>
+                                </div>
+                              )}
+                              {(record as any).lunch_end != null && (
+                                <div>
+                                  <span className="text-gray-400 block text-xs uppercase tracking-wider">Fin almuerzo</span>
+                                  <span className="text-white">
+                                    {formatDateTimeDisplay((record as any).lunch_end)}
+                                  </span>
+                                </div>
+                              )}
                               <div>
                                 <span className="text-gray-400 block text-xs uppercase tracking-wider">Salida</span>
                                 <span className="text-white">

@@ -5,7 +5,7 @@
 
 import { createAdminClient } from '../supabase/server'
 
-export type PaymentFrequency = 'quincenal' | 'mensual'
+export type PaymentFrequency = 'quincenal' | 'mensual' | 'semanal'
 
 export interface ResolvedPayrollConfig {
   paymentFrequency: PaymentFrequency

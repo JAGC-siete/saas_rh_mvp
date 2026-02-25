@@ -58,10 +58,10 @@ export function validatePaymentModalityClient(value: string): ValidationError | 
   }
 
   const normalized = value.toLowerCase().trim()
-  if (normalized !== 'quincenal' && normalized !== 'mensual') {
+  if (normalized !== 'quincenal' && normalized !== 'mensual' && normalized !== 'semanal') {
     return {
       field: 'paymentModality',
-      message: 'La modalidad de pago debe ser "quincenal" o "mensual"'
+      message: 'La modalidad de pago debe ser "quincenal", "mensual" o "semanal"'
     }
   }
 

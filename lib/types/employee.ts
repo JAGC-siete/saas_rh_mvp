@@ -20,7 +20,8 @@ export interface Employee {
   metadata: Record<string, any> | null
   department_id: string | null
   work_schedule_id: string | null
-  payment_frequency: 'quincenal' | 'mensual' | null
+  payment_frequency: 'quincenal' | 'mensual' | 'semanal' | null
+  pay_type?: 'fixed' | 'hourly'
   employee_pin_hash: string | null
   created_at: string
   updated_at: string
@@ -45,6 +46,8 @@ export interface Employee {
   attendance_records?: Array<{
     check_in?: string
     check_out?: string
+    lunch_start?: string
+    lunch_end?: string
     status?: string
   }>
 } 

@@ -8,6 +8,7 @@ import {
   calculateIHSS, 
   calculateRAP 
 } from '../../../lib/tax/honduras-tax'
+import { getBiweeklyPeriodDates } from '../../../lib/payroll/period-dates'
 
 interface VoucherData {
   employee_id: string
@@ -124,17 +125,42 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (dept) departmentName = dept.name
     }
 
-    // Calcular fechas del período
+    // Calcular fechas del período (usar config si existe)
     const [year, month] = periodo.split('-').map(Number)
     const ultimoDia = new Date(year, month, 0).getDate()
-    const fechaInicio = quincena === 1 ? `${periodo}-01` : `${periodo}-16`
-    const fechaFin = quincena === 1 ? `${periodo}-15` : `${periodo}-${ultimoDia}`
+    let fechaInicio: string
+    let fechaFin: string
+    let daysInQuincena: number
+    const { data: payrollConfig } = await supabase
+      .from('company_payroll_configs')
+      .select('metadata, quincena_config')
+      .eq('company_id', companyId)
+      .eq('is_active', true)
+      .maybeSingle()
+    const qcCol = payrollConfig?.quincena_config as { first_start?: number; first_end?: number; second_start?: number; second_end?: number } | null
+    const metaCutDates = payrollConfig?.metadata?.payment_cut_dates || {}
+    const hasCustom = qcCol && (qcCol.first_start != null || qcCol.first_end != null || qcCol.second_start != null || qcCol.second_end != null)
+    const cutDates = hasCustom || metaCutDates.biweekly_type === 'custom'
+      ? {
+          biweekly_first_start: qcCol?.first_start ?? metaCutDates.biweekly_first_start ?? 1,
+          biweekly_first_end: qcCol?.first_end ?? metaCutDates.biweekly_first_end ?? 15,
+          biweekly_second_start: qcCol?.second_start ?? metaCutDates.biweekly_second_start ?? 16,
+          biweekly_second_end: qcCol?.second_end ?? metaCutDates.biweekly_second_end ?? 30
+        }
+      : null
+    if (cutDates && cutDates.biweekly_first_start != null && cutDates.biweekly_first_end != null && cutDates.biweekly_second_start != null && cutDates.biweekly_second_end != null) {
+      const result = getBiweeklyPeriodDates(year, month, quincena as 1 | 2, cutDates)
+      fechaInicio = result.fechaInicio
+      fechaFin = result.fechaFin
+      daysInQuincena = result.diasPeriodo
+    } else {
+      fechaInicio = quincena === 1 ? `${periodo}-01` : `${periodo}-16`
+      fechaFin = quincena === 1 ? `${periodo}-15` : `${periodo}-${ultimoDia}`
+      daysInQuincena = quincena === 1 ? 15 : (ultimoDia - 15)
+    }
     
     // Obtener constantes fiscales para el año del período
     const taxConstants = await getTaxBracketsForYear(year)
-    
-    // Calcular días trabajados por quincena
-    const daysInQuincena = quincena === 1 ? 15 : (ultimoDia - 15)
     
     // Calcular salario bruto QUINCENAL (salario mensual ÷ 2)
     const grossSalary = employee.base_salary / 2

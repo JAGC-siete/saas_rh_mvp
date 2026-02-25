@@ -103,34 +103,8 @@ export default async function handler(
       })
     }
 
-    // If it's a profile photo, update employees.profile_image_path
-    if (file.file_type === 'profile_photo' && file.is_active) {
-      // Check if there's another active profile photo
-      const { data: otherPhotos } = await adminSupabase
-        .from('employee_files')
-        .select('storage_path')
-        .eq('employee_id', file.employee_id)
-        .eq('file_type', 'profile_photo')
-        .eq('is_active', true)
-        .limit(1)
-        .maybeSingle()
-
-      const newProfilePath = otherPhotos?.storage_path || null
-
-      // Update employee's profile_image_path
-      const { error: empUpdateError } = await adminSupabase
-        .from('employees')
-        .update({ profile_image_path: newProfilePath })
-        .eq('id', file.employee_id)
-
-      if (empUpdateError) {
-        logger.warn('Failed to update employee profile_image_path', {
-          error: empUpdateError,
-          employee_id: file.employee_id
-        })
-        // Don't fail the request, just log the warning
-      }
-    }
+    // Note: Profile photos are now managed entirely through employee_files table
+    // No need to update employees.profile_image_path since that column doesn't exist
 
     // Optionally delete from Storage (hard delete)
     // For now, we'll keep the file in Storage but mark it as inactive in DB

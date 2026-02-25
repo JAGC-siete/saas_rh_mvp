@@ -82,8 +82,14 @@ describe('Validación de Modalidad de Pago', () => {
     expect(result.sanitized).toBe('quincenal')
   })
 
-  it('debe rechazar modalidad inválida', () => {
+  it('debe validar modalidad "semanal"', () => {
     const result = validatePaymentModality('semanal')
+    expect(result.valid).toBe(true)
+    expect(result.sanitized).toBe('semanal')
+  })
+
+  it('debe rechazar modalidad inválida', () => {
+    const result = validatePaymentModality('diario')
     expect(result.valid).toBe(false)
     expect(result.error).toContain('quincenal')
   })

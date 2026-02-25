@@ -52,6 +52,7 @@ $$ LANGUAGE plpgsql STABLE;
 
 -- Function: Resolve payment frequency for employee (Capa 2 -> Capa 1)
 -- Order: employees.payment_frequency > company_payroll_configs.payment_frequency > 'mensual'
+-- Supported values: 'quincenal', 'mensual', 'semanal'
 CREATE OR REPLACE FUNCTION resolve_payment_frequency(
   p_employee_id UUID,
   p_company_id UUID

@@ -32,11 +32,20 @@ export const config = {
 
 /**
  * Normaliza identificador de empleado (DNI)
- * Política: remover caracteres no numéricos, mantener tal cual
+ * Política: remover caracteres no numéricos, mantener tal cual.
+ * Si el valor es hex (0x... o contiene a-f), convertir a decimal para matching.
  */
 function normalizeIdentifier(raw: string | number | undefined): string | undefined {
   if (!raw) return undefined;
-  const digits = String(raw).replace(/\D/g, '');
+  const str = String(raw).trim();
+  // Si es hex explícito (0x...) o contiene letras hex (a-f), convertir a decimal
+  if ((/^0[xX][0-9a-fA-F]+$/.test(str) || /[a-fA-F]/.test(str)) && /^0?[xX]?[0-9a-fA-F]+$/.test(str)) {
+    const parsed = parseInt(str.replace(/^0[xX]/, ''), 16);
+    if (!isNaN(parsed) && parsed > 0 && String(parsed).length >= 10) {
+      return String(parsed);
+    }
+  }
+  const digits = str.replace(/\D/g, '');
   return digits || undefined;
 }
 
@@ -1230,14 +1239,21 @@ async function processAccessEvent(
   // Los campos pueden estar en acs o en root (según versión de firmware)
   // Campos requeridos: cardNo, employeeNoString, doorNo, readerNo, currentVerifyMode
   
-  // Identificador del empleado (prioridad según manual)
-  const rawId = 
-    acs?.employeeNoString ?? 
-    acs?.employeeNo ?? 
+  // Identificador del empleado (prioridad según manual Hikvision + variantes fingerprint)
+  // Algunos dispositivos con fingerprint-only envían employeeNoHex o credentialNo en lugar de employeeNoString
+  const rawId =
+    acs?.employeeNoString ??
+    acs?.employeeNo ??
     acs?.cardNo ??
-    root?.employeeNoString ??  // También puede estar en root
+    acs?.employeeNoHex ?? // Hexadecimal (algunos firmwares con fingerprint)
+    acs?.credentialNo ?? // Alternativa en dispositivos biométricos
+    acs?.personNo ??
+    root?.employeeNoString ??
     root?.employeeNo ??
     root?.cardNo ??
+    root?.employeeNoHex ??
+    root?.credentialNo ??
+    root?.personNo ??
     null;
 
   logger.info('[ACCESS EVENT] Employee ID extraction attempt', {
@@ -1245,6 +1261,9 @@ async function processAccessEvent(
     'acs.employeeNoString': acs?.employeeNoString,
     'acs.employeeNo': acs?.employeeNo,
     'acs.cardNo': acs?.cardNo,
+    'acs.employeeNoHex': acs?.employeeNoHex,
+    'acs.credentialNo': acs?.credentialNo,
+    'acs.personNo': acs?.personNo,
     'root.employeeNoString': root?.employeeNoString,
     'root.employeeNo': root?.employeeNo,
     'root.cardNo': root?.cardNo,
@@ -1278,13 +1297,15 @@ async function processAccessEvent(
   const normalizedId = normalizeIdentifier(rawId);
 
   if (!normalizedId) {
-    logger.warn('[ACCESS EVENT] No employee identifier found', {
+    // Log FULL payload para diagnóstico: dispositivos fingerprint-only pueden enviar campos distintos
+    logger.warn('[ACCESS EVENT] No employee identifier found - full payload for debugging', {
       companyId,
       rawId,
       acsKeys: acs ? Object.keys(acs) : [],
-      rootKeys: Object.keys(root),
+      rootKeys: root ? Object.keys(root) : [],
       acsFull: acs ? JSON.stringify(acs) : null,
-      rootFull: JSON.stringify(root),
+      rootFull: root ? JSON.stringify(root) : null,
+      hint: 'Verificar que el dispositivo tiene Employee No configurado para cada usuario. Campos soportados: employeeNoString, employeeNo, cardNo, employeeNoHex, credentialNo, personNo',
     });
     return;
   }
@@ -1573,17 +1594,17 @@ async function processEvent(rawEvent: any, companyId: string) {
       acsKeys: acs ? Object.keys(acs) : [],
     });
 
-    // Heartbeat: actualizar device health
-    if (eventType === 'heartBeat') {
-      logger.info('[WEBHOOK] Processing as heartbeat', { companyId });
-      await processHeartbeat(root, companyId);
-      return;
-    }
-
-    // Access event: crear registro de asistencia
+    // Access event: prioridad sobre heartbeat (algunos dispositivos envían eventType: heartBeat con AccessControllerEvent)
     if (hasAcsEvent && acs) {
       logger.info('[WEBHOOK] Processing as access event', { companyId });
       await processAccessEvent(root, acs, companyId);
+      return;
+    }
+
+    // Heartbeat: actualizar device health (solo si no es evento de acceso)
+    if (eventType === 'heartBeat') {
+      logger.info('[WEBHOOK] Processing as heartbeat', { companyId });
+      await processHeartbeat(root, companyId);
       return;
     }
 
