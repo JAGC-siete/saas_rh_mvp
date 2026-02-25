@@ -12,7 +12,8 @@ import {
   ChartBarIcon,
   Cog6ToothIcon,
   ArrowLeftOnRectangleIcon,
-  UsersIcon
+  UsersIcon,
+  GiftIcon
 } from '@heroicons/react/24/outline'
 import { TrophyIcon } from '@heroicons/react/24/solid'
 
@@ -211,6 +212,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Asistencia', href: '/app/attendance/dashboard', icon: ClockIcon, permission: 'attendance' },
     { name: 'Permisos', href: '/app/leave', icon: UserIcon, permission: 'leave' },
     { name: 'Nómina', href: '/app/payroll', icon: CurrencyDollarIcon, permission: 'payroll' },
+    { name: '13 & 14 Salario', href: '/app/13-14-salario', icon: GiftIcon, permission: 'payroll' },
     // { name: 'Reportes', href: '/app/reports', icon: ChartBarIcon, permission: 'reports' },
     // { name: 'Gamificación', href: '/app/gamification', icon: TrophyIcon, permission: 'gamification' },
     // { name: 'Programa de Afiliados', href: '/app/affiliates', icon: CurrencyDollarIcon, permission: 'affiliates' },

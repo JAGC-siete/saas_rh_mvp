@@ -3,6 +3,27 @@
 
 export type Quincena = 1 | 2;
 export type TipoCalculo = 'CON' | 'SIN';
+
+/**
+ * Tipo extendido para payroll_runs.
+ * La columna tipo aceptará '13AVO' y '14AVO' además de 'CON' y 'SIN'
+ * cuando se extienda la tabla (requiere migración para alterar CHECK).
+ */
+export type PayrollRunTipo = TipoCalculo | '13AVO' | '14AVO';
+
+/**
+ * Metadata específica para payroll_run_lines cuando el run es 13AVO o 14AVO.
+ * Se almacena en payroll_run_lines.metadata (JSONB).
+ * 13avo y 14avo no llevan deducciones IHSS/RAP/ISR → is_tax_exempt: true.
+ */
+export interface PayrollRunLineMetadata1314 {
+  is_tax_exempt?: boolean;
+  avg_salary?: number;
+  days_worked?: number;
+  months_worked?: number;
+  [key: string]: unknown;
+}
+
 export type RunStatus = 'draft' | 'edited' | 'authorized' | 'distributed';
 export type EditField = 'days_worked' | 'total_earnings' | 'IHSS' | 'RAP' | 'ISR' | 'total';
 
@@ -136,7 +157,8 @@ export interface PayrollRun {
   year: number;
   month: number;
   quincena: Quincena;
-  tipo: TipoCalculo;
+  /** Extendido para soportar 13AVO y 14AVO además de CON y SIN */
+  tipo: PayrollRunTipo;
   status: RunStatus;
   created_by: string;
   created_at: string;
@@ -163,6 +185,8 @@ export interface PayrollRunLine {
   edited: boolean;
   created_at: string;
   updated_at: string;
+  /** Para runs 13AVO/14AVO: is_tax_exempt, avg_salary, days_worked, etc. */
+  metadata?: PayrollRunLineMetadata1314 | null;
 }
 
 export interface PayrollAdjustment {
