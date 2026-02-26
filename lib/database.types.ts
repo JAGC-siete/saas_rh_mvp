@@ -843,6 +843,7 @@ export type Database = {
           name: string
           password_encrypted: string
           port: number | null
+          serial_number: string | null
           settings: Json | null
           status: string | null
           updated_at: string | null
@@ -861,6 +862,7 @@ export type Database = {
           name: string
           password_encrypted: string
           port?: number | null
+          serial_number?: string | null
           settings?: Json | null
           status?: string | null
           updated_at?: string | null
@@ -879,6 +881,7 @@ export type Database = {
           name?: string
           password_encrypted?: string
           port?: number | null
+          serial_number?: string | null
           settings?: Json | null
           status?: string | null
           updated_at?: string | null

@@ -1560,6 +1560,99 @@ async function processAccessEvent(
 }
 
 /**
+ * Procesa marca de asistencia (usado por webhook ZKTeco y otros integradores).
+ * Encapsula la ramificación por pay_type y FOUR_MARKS.
+ */
+export async function processAttendanceMark(params: {
+  employee: { id: string; company_id: string; work_schedule_id: string | null; dni: string; pay_type: string | null };
+  eventTimestamp: Date;
+  recordDate: string;
+  eventUid: string;
+  companyId: string;
+  identifier: string;
+}): Promise<void> {
+  const { employee, eventTimestamp, recordDate, eventUid, companyId, identifier } = params;
+  const root = { dateTime: eventTimestamp.toISOString() };
+  const acs = {
+    doorNo: null,
+    readerNo: null,
+    currentVerifyMode: 'fingerprint',
+    employeeNoString: identifier,
+  };
+  const doorNo = null;
+  const readerNo = null;
+  const verifyMode = 'fingerprint';
+  const cardNo = null;
+  const employeeNoString = identifier;
+
+  if (companyId === FOUR_MARKS_COMPANY_ID) {
+    await handleFourMarksEmployeeEvent(
+      employee,
+      root,
+      acs,
+      eventTimestamp,
+      recordDate,
+      eventUid,
+      companyId,
+      doorNo,
+      readerNo,
+      verifyMode,
+      cardNo,
+      employeeNoString
+    );
+    return;
+  }
+
+  const payType = (employee as { pay_type?: string }).pay_type || 'fixed';
+  if (payType === 'fixed') {
+    await handleFixedEmployeeEvent(
+      employee,
+      root,
+      acs,
+      eventTimestamp,
+      recordDate,
+      eventUid,
+      companyId,
+      doorNo,
+      readerNo,
+      verifyMode,
+      cardNo,
+      employeeNoString
+    );
+  } else if (payType === 'hourly') {
+    await handleHourlyEmployeeEvent(
+      employee,
+      root,
+      acs,
+      eventTimestamp,
+      recordDate,
+      eventUid,
+      companyId,
+      doorNo,
+      readerNo,
+      verifyMode,
+      cardNo,
+      employeeNoString
+    );
+  } else {
+    await handleFixedEmployeeEvent(
+      employee,
+      root,
+      acs,
+      eventTimestamp,
+      recordDate,
+      eventUid,
+      companyId,
+      doorNo,
+      readerNo,
+      verifyMode,
+      cardNo,
+      employeeNoString
+    );
+  }
+}
+
+/**
  * Procesa evento de forma asíncrona
  */
 async function processEvent(rawEvent: any, companyId: string) {

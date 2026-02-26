@@ -159,6 +159,31 @@ export function getCurrentDayOfWeek(): string {
 // =====================================================
 
 /**
+ * Parse ZKTeco ATTLOG datetime "YYYY-MM-DD HH:MM:SS" as Honduras local time.
+ * Returns Date (stored as UTC internally; frontend converts for display).
+ */
+export function parseZktecoDateTime(dateTimeStr: string | undefined | null): Date {
+  if (!dateTimeStr || typeof dateTimeStr !== 'string') {
+    return getHondurasTime();
+  }
+  const dateMatch = dateTimeStr.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2}):(\d{2})/);
+  if (!dateMatch) {
+    const parsed = new Date(dateTimeStr);
+    return isNaN(parsed.getTime()) ? getHondurasTime() : parsed;
+  }
+  const [, yearStr, monthStr, dayStr, hourStr, minuteStr, secondStr] = dateMatch;
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthStr, 10) - 1;
+  const day = parseInt(dayStr, 10);
+  const hours = parseInt(hourStr, 10);
+  const minutes = parseInt(minuteStr, 10);
+  const seconds = parseInt(secondStr, 10);
+  const hondurasOffsetHours = 6;
+  const utcHours = hours + hondurasOffsetHours;
+  return new Date(Date.UTC(year, month, day, utcHours, minutes, seconds));
+}
+
+/**
  * Convert UTC time to Honduras time (UTC-6, sin DST)
  */
 export function toHN(utcDate: Date): { time: string; date: string; dow: number; isWeekend: boolean } {
