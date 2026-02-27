@@ -4,6 +4,7 @@ import { Input } from './ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Textarea } from './ui/textarea'
 import EmployeeFileUpload from './EmployeeFileUpload'
+import { HONDURAS_LABOR_FACTOR } from '../lib/payroll/constants'
 
 interface Department {
   id: string
@@ -45,6 +46,16 @@ function AddEmployeeForm({
   // Helper to keep inputs controlled and avoid React warnings
   const v = (value: any) => (value ?? '')
 
+  const handleSubmit = (e: React.FormEvent) => {
+    const payType = v(formData?.pay_type) || 'fixed'
+    const baseSalary = Number(formData?.base_salary) || 0
+    if (payType === 'hourly' && baseSalary > 0 && baseSalary < 2000) {
+      e.preventDefault()
+      return
+    }
+    onSubmit(e)
+  }
+
   // Metadata can be string or object from upstream; normalize to string
   const metadataValue =
     typeof formData?.metadata === 'string'
@@ -70,7 +81,7 @@ function AddEmployeeForm({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={onSubmit} className="space-y-6" aria-busy={loading}>
+        <form onSubmit={handleSubmit} className="space-y-6" aria-busy={loading}>
           {/* Información Básica */}
           <div>
             <h3 className="text-lg font-medium text-white mb-4">Información Básica</h3>
@@ -246,26 +257,6 @@ function AddEmployeeForm({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-white mb-1" htmlFor="base_salary">
-                  {(v(formData?.pay_type) || 'fixed') === 'hourly' ? 'Tarifa por hora (HNL) *' : 'Salario Base (HNL) *'}
-                </label>
-                <Input
-                  id="base_salary"
-                  name="base_salary"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  inputMode="decimal"
-                  disabled={loading}
-                  value={v(formData?.base_salary)}
-                  onChange={(e) => onFormChange('base_salary', e.target.value)}
-                  placeholder={(v(formData?.pay_type) || 'fixed') === 'hourly' ? '50.00' : '25000.00'}
-                  required
-                  className="bg-white/10 border-white/20 text-white placeholder-gray-400"
-                />
-              </div>
-
-              <div>
                 <label className="block text-sm font-medium text-white mb-1" htmlFor="pay_type">
                   Tipo de Pago *
                 </label>
@@ -288,8 +279,38 @@ function AddEmployeeForm({
                 <p className="text-xs text-gray-400 mt-1">
                   <strong>Administrativo:</strong> Salario mensual. Usa horario fijo para inferir entrada/salida.
                   <br />
-                  <strong>Por Hora:</strong> Tarifa por hora. Salario = tarifa × horas trabajadas (de asistencia).
+                  <strong>Por Hora:</strong> Ingresa el salario mensual equivalente. La tarifa por hora se calcula automáticamente (base ÷ 240).
                 </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-white mb-1" htmlFor="base_salary">
+                  Salario Base Mensual (HNL) *
+                </label>
+                <Input
+                  id="base_salary"
+                  name="base_salary"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  inputMode="decimal"
+                  disabled={loading}
+                  value={v(formData?.base_salary)}
+                  onChange={(e) => onFormChange('base_salary', e.target.value)}
+                  placeholder="25000.00"
+                  required
+                  className="bg-white/10 border-white/20 text-white placeholder-gray-400"
+                />
+                {(v(formData?.pay_type) || 'fixed') === 'hourly' && Number(formData?.base_salary) > 0 && (
+                  <p className="text-sm text-blue-400 mt-1">
+                    Tarifa por hora: L. {(Number(formData?.base_salary) / HONDURAS_LABOR_FACTOR).toFixed(2)} (basado en 240h/mes)
+                  </p>
+                )}
+                {(v(formData?.pay_type) || 'fixed') === 'hourly' && Number(formData?.base_salary) > 0 && Number(formData?.base_salary) < 2000 && (
+                  <p className="text-sm text-amber-400 mt-1">
+                    Por favor ingresa el salario mensual equivalente. El sistema calculará la tarifa por hora automáticamente.
+                  </p>
+                )}
               </div>
 
               <div>

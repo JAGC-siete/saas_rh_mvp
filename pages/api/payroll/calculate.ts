@@ -12,6 +12,7 @@ import {
 import { getBiweeklyPeriodDates, getMonthlyPeriodDates } from '../../../lib/payroll/period-dates'
 import { calculatePeriodBaseSalary, normalizeFrequency } from '../../../lib/payroll/calculate-period-base-salary'
 import { calculateSeptimoDia } from '../../../lib/payroll/septimo-dia'
+import { HONDURAS_LABOR_FACTOR } from '../../../lib/payroll/constants'
 
 interface PlanillaItem {
   id: string
@@ -332,8 +333,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       const base_salary = Number(emp.base_salary) || 0
       const payType = emp.pay_type ?? 'fixed'
-      // Hourly: base_salary = tarifa/hora. Fixed: base_salary = mensual → hourlyRate = base/220
-      const hourlyRate = payType === 'hourly' ? base_salary : base_salary / 220
+      // base_salary siempre mensual. Tarifa horaria = base_salary / 240.
+      const hourlyRate = base_salary / HONDURAS_LABOR_FACTOR
 
       // Horas extras desde attendance_hours_calculation (Capa 3) si existen
       const overtime = hoursCalculations[emp.id] || { total_hours: 0, normal_hours: 0, overtime_diurno: 0, overtime_nocturno: 0, overtime_feriado: 0 }
@@ -358,7 +359,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const otSum = (overtime.overtime_diurno || 0) + (overtime.overtime_nocturno || 0) + (overtime.overtime_feriado || 0)
         const ordinaryHours = overtime.normal_hours ?? Math.max(0, (overtime.total_hours || 0) - otSum)
         septimoDia = calculateSeptimoDia({
-          hourlyRate: base_salary,
+          hourlyRate: base_salary / HONDURAS_LABOR_FACTOR,
           ordinaryHours,
           daysWorked: days_worked,
           totalHours: overtime.total_hours || 0,
@@ -384,11 +385,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // APLICAR DEDUCCIONES según configuración y legal_deductions
       if (aplicarDeducciones) {
-        // Base para deducciones: fixed = base_salary mensual; hourly = total_earnings extrapolado a mensual
-        const periodosPorMes = paymentFrequency === 'monthly' ? 1 : paymentFrequency === 'weekly' ? 4 : 2
-        const baseParaDeducciones = payType === 'hourly'
-          ? total_earnings * periodosPorMes  // Equivalente mensual por ingresos reales del período
-          : base_salary
+        // base_salary siempre mensual; usarlo directo como base para deducciones.
+        const baseParaDeducciones = base_salary
 
         // CÁLCULOS CON TABLA FISCAL DEL AÑO CORRESPONDIENTE - DEDUCCIONES MENSUALES COMPLETAS
         // Aplicar solo si están habilitadas en legal_deductions

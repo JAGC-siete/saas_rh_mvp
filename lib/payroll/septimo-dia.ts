@@ -7,7 +7,7 @@
  */
 
 export interface SeptimoDiaInput {
-  /** Tarifa por hora (base_salary para hourly) */
+  /** Tarifa por hora = base_salary / 240 (tarifa derivada del salario mensual) */
   hourlyRate: number
   /** Horas ordinarias trabajadas en el período (excluye overtime) */
   ordinaryHours: number

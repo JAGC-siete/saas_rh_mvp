@@ -3,6 +3,7 @@ import { Button } from './ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { buildPayrollMetadata } from '../lib/payroll-client-specific'
 import { formatCurrency } from '../lib/utils/currency'
+import { HONDURAS_LABOR_FACTOR } from '../lib/payroll/constants'
 
 interface CustomPayrollFieldsFormProps {
   companyId: string
@@ -96,8 +97,8 @@ export default function CustomPayrollFieldsForm({
         }
       }
 
-      // Convert units to Lempiras where applicable
-      const hourlyRate = (Number(baseSalary) || 0) / 30 / 8
+      // Convert units to Lempiras where applicable (baseSalary = mensual, tarifa = base/240)
+      const hourlyRate = (Number(baseSalary) || 0) / HONDURAS_LABOR_FACTOR
       if (converted.horas_extras !== undefined && converted.horas_extras !== null) {
         const hours = Number(converted.horas_extras) || 0
         converted.horas_extras = Math.round(hours * hourlyRate * 100) / 100
@@ -150,8 +151,8 @@ export default function CustomPayrollFieldsForm({
     return typeof fieldDef === 'object' && fieldDef.category === 'deductions'
   })
 
-  // Calculate totals (convert hours/days to Lempiras for display)
-  const hourlyRate = (Number(baseSalary) || 0) / 30 / 8
+  // Calculate totals (convert hours/days to Lempiras for display; baseSalary = mensual)
+  const hourlyRate = (Number(baseSalary) || 0) / HONDURAS_LABOR_FACTOR
   const totalIngresos = earningsFields.reduce((sum, key) => {
     const val = typeof formData[key] === 'string' ? parseFloat(formData[key]) || 0 : (formData[key] || 0)
     if (key.includes('horas_extras')) return sum + val * hourlyRate

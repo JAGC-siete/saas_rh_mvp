@@ -12,6 +12,7 @@ import {
 import { getHolidayDatesInRange } from '../../../lib/attendance/holiday-check'
 import { getBiweeklyPeriodDates, getMonthlyPeriodDates } from '../../../lib/payroll/period-dates'
 import { calculateSeptimoDia } from '../../../lib/payroll/septimo-dia'
+import { HONDURAS_LABOR_FACTOR, HORAS_PERIODO_MENSUAL, HORAS_PERIODO_QUINCENAL } from '../../../lib/payroll/constants'
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -826,11 +827,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         const days_worked = registros.length
         const days_absent = diasPeriodo - days_worked
 
-        // Para pay_type hourly: base_salary = tarifa por hora. Para legacy: base_salary mensual → derivar tarifa.
-        const horasMensualesEstimadas = paymentFrequency === 'monthly' ? 240 : 120
-        const hourly_rate = emp.pay_type === 'hourly'
-          ? base_salary
-          : (horasMensualesEstimadas > 0 ? base_salary / horasMensualesEstimadas : 0)
+        // base_salary siempre mensual (post-migración). Tarifa horaria = base_salary / 240.
+        const hourly_rate = base_salary / HONDURAS_LABOR_FACTOR
 
         // Calcular salario bruto del período basado en horas trabajadas
         let total_earnings = total_hours_worked * hourly_rate
@@ -859,9 +857,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         let IHSS = 0, RAP = 0, ISR = 0, total_deductions = 0, total = 0
 
         // APLICAR DEDUCCIONES SEGÚN legal_deductions (solo si tipoParam === 'CON')
-        // Para hourly: base_salary = tarifa → equivalente mensual = rate * 176 para deducciones
+        // base_salary siempre mensual; usarlo directo como base para deducciones.
         if (tipoParam === 'CON') {
-          const baseParaDeducciones = emp.pay_type === 'hourly' ? hourly_rate * 176 : base_salary
+          const baseParaDeducciones = base_salary
 
           if (legalDeductions.ihss) {
             IHSS = Math.min(baseParaDeducciones, 11903.13) * 0.05
@@ -884,7 +882,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           }
 
           // Proporcionar deducciones según horas trabajadas vs horas del período
-          const horasPeriodo = paymentFrequency === 'monthly' ? 176 : 88
+          const horasPeriodo = paymentFrequency === 'monthly' ? HORAS_PERIODO_MENSUAL : HORAS_PERIODO_QUINCENAL
           const deductionFactor = horasPeriodo > 0 ? total_hours_worked / horasPeriodo : 0
           IHSS = IHSS * deductionFactor
           RAP = RAP * deductionFactor

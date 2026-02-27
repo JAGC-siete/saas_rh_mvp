@@ -1396,6 +1396,8 @@ export type Database = {
           bank_account: string | null
           bank_name: string | null
           base_salary: number
+          /** GENERATED: base_salary / 240. Tarifa horaria de referencia. */
+          hourly_rate_reference?: number
           company_id: string | null
           created_at: string | null
           department_id: string | null

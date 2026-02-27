@@ -1,9 +1,11 @@
 /**
  * Calcula el salario base del período según frecuencia de pago y tipo de empleado.
  * Sustituye divisiones fijas (base_salary / 2) por lógica parametrizada.
+ * base_salary siempre es salario mensual (fixed y hourly).
  */
 
 import type { PaymentFrequency } from './resolve-config'
+import { HONDURAS_LABOR_FACTOR } from './constants'
 
 export interface EmployeeForPeriodSalary {
   base_salary: number
@@ -23,8 +25,8 @@ export interface CalculatePeriodBaseSalaryOptions {
  * - Fixed + mensual: base_salary íntegro
  * - Fixed + quincenal: base_salary / 2
  * - Fixed + semanal: base_salary / 4
- * - Hourly: base_salary (precio por hora) * hours_worked
- *   - base_salary NO se divide; es la tarifa horaria.
+ * - Hourly: (base_salary / 240) * hours_worked
+ *   - base_salary es salario mensual; tarifa = base_salary / HONDURAS_LABOR_FACTOR.
  *   - Busca horas en options.hoursWorked o options.metadata?.hours_worked o metadata?.total_hours_worked
  */
 export function calculatePeriodBaseSalary(
@@ -44,8 +46,9 @@ export function calculatePeriodBaseSalary(
 
     if (hoursWorked <= 0) return 0
 
-    // salario_bruto = base_salary (tarifa/hora) * hours_worked
-    return baseSalary * hoursWorked
+    // salario_bruto = (base_salary / 240) * hours_worked; base_salary siempre mensual
+    const hourlyRate = baseSalary / HONDURAS_LABOR_FACTOR
+    return hourlyRate * hoursWorked
   }
 
   // Fixed: división según frecuencia
