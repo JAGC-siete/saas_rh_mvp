@@ -1568,6 +1568,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                       />
                     </div>
                   </div>
+                  {/* Cálculo y fórmula - oculto por ahora
                   <div className="mt-3 pt-3 border-t border-white/10 space-y-2">
                     <div>
                       <label className="block text-xs text-white mb-1">Cálculo (opcional)</label>
@@ -1590,6 +1591,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                       </div>
                     )}
                   </div>
+                  */}
                 </div>
                       ))}
                   </div>
@@ -1729,6 +1731,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                               />
                             </div>
                           </div>
+                          {/* Cálculo y fórmula - oculto por ahora
                           <div className="mt-3 pt-3 border-t border-white/10 space-y-2">
                             <div>
                               <label className="block text-xs text-white mb-1">Cálculo (opcional)</label>
@@ -1751,6 +1754,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                               </div>
                             )}
                           </div>
+                          */}
                         </div>
                       ))}
                   </div>
@@ -1859,7 +1863,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                     />
                   </div>
                 </div>
-                {/* Fórmula y parámetros */}
+                {/* Fórmula y parámetros - oculto por ahora
                 <div className="space-y-3 pt-3 border-t border-white/10">
                   <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
                     <div className="flex gap-2 mb-1">
@@ -2001,6 +2005,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                     </>
                   )}
                 </div>
+                */}
                 <div className="flex gap-3 pt-2">
                   <Button
                     onClick={handleAddField}
