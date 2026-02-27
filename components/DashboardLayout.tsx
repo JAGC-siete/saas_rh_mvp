@@ -10,6 +10,7 @@ import {
   ClockIcon, 
   CurrencyDollarIcon, 
   ChartBarIcon,
+  DocumentChartBarIcon,
   Cog6ToothIcon,
   ArrowLeftOnRectangleIcon,
   UsersIcon,
@@ -88,7 +89,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           const normalizedRole = (userProfile.role || '').toString().trim().toLowerCase()
           const isAdmin = ['super_admin', 'company_admin', 'hr_manager', 'admin'].includes(normalizedRole)
           const canAccessSettings = ['super_admin', 'company_admin', 'admin'].includes(normalizedRole)
-          
+          const canAccessReports =
+            ['super_admin', 'company_admin', 'hr_manager', 'manager', 'admin'].includes(normalizedRole) ||
+            rawPermissions.can_view_reports === true ||
+            rawPermissions.can_export_reports === true
+
           const permissions: UserPermissions = {
             dashboard: true,
             employees: true,
@@ -96,7 +101,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             attendance: true,
             leave: true,
             payroll: true,
-            reports: true,
+            reports: canAccessReports,
             gamification: true,
             settings: canAccessSettings,
             admin: isAdmin,
@@ -155,9 +160,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         // CRÍTICO: Determinar permisos basados en el rol PRIMERO (antes del merge)
         const isAdmin = ['super_admin', 'company_admin', 'hr_manager', 'admin'].includes(normalizedRole)
         const canAccessSettings = ['super_admin', 'company_admin', 'admin'].includes(normalizedRole)
-        
-        console.log('🔐 Permission checks:', { isAdmin, canAccessSettings, normalizedRole })
-        
+        const canAccessReports =
+          ['super_admin', 'company_admin', 'hr_manager', 'manager', 'admin'].includes(normalizedRole) ||
+          rawPermissions.can_view_reports === true ||
+          rawPermissions.can_export_reports === true
+
+        console.log('🔐 Permission checks:', { isAdmin, canAccessSettings, canAccessReports, normalizedRole })
+
         // Construir objeto de permisos final - FORZAR settings y admin basado en rol
         const permissions: UserPermissions = {
           dashboard: true,
@@ -166,7 +175,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           attendance: true,
           leave: true,
           payroll: true,
-          reports: true,
+          reports: canAccessReports,
           gamification: true,
           // CRÍTICO: Forzar estos valores basado en rol, ignorar lo que venga de la DB
           settings: canAccessSettings,
@@ -213,7 +222,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Permisos', href: '/app/leave', icon: UserIcon, permission: 'leave' },
     { name: 'Nómina', href: '/app/payroll', icon: CurrencyDollarIcon, permission: 'payroll' },
     { name: '13 & 14 Salario', href: '/app/13-14-salario', icon: GiftIcon, permission: 'payroll' },
-    // { name: 'Reportes', href: '/app/reports', icon: ChartBarIcon, permission: 'reports' },
+    { name: 'Reportes', href: '/app/reports', icon: DocumentChartBarIcon, permission: 'reports' },
     // { name: 'Gamificación', href: '/app/gamification', icon: TrophyIcon, permission: 'gamification' },
     // { name: 'Programa de Afiliados', href: '/app/affiliates', icon: CurrencyDollarIcon, permission: 'affiliates' },
     { name: 'Parametros', href: '/app/settings', icon: Cog6ToothIcon, permission: 'settings' },

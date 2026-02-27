@@ -31,12 +31,18 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     // Autenticación usando el mismo método que payroll
     const authResult = await requireCompanyAccess(req, res)
-    const { supabase, companyId, role, user: authUser } = authResult
+    const { supabase, companyId, role, user: authUser, userProfile } = authResult
     user = authUser
-    
-    // Verificar permisos (solo admins, HR managers y managers pueden generar reportes)
-    if (!['super_admin', 'company_admin', 'hr_manager', 'manager'].includes(role)) {
-      return res.status(403).json({ 
+
+    // Verificar permisos: rol permitido O permiso can_export_reports en JSON
+    const allowedRoles = ['super_admin', 'company_admin', 'hr_manager', 'manager']
+    const rawPerms = typeof userProfile?.permissions === 'string'
+      ? (() => { try { return JSON.parse(userProfile.permissions) } catch { return {} } })()
+      : (userProfile?.permissions || {})
+    const hasExportPermission = rawPerms.can_export_reports === true
+
+    if (!allowedRoles.includes(role) && !hasExportPermission) {
+      return res.status(403).json({
         error: 'Permisos insuficientes',
         message: 'No tiene permisos para generar reportes'
       })
