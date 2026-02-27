@@ -708,9 +708,18 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           total_deductions = IHSS + RAP + ISR
           total = total_earnings - total_deductions
         } else {
-          // Tipo 'SIN': solo salario proporcional, sin deducciones
+          // Tipo 'SIN': solo salario proporcional, sin deducciones de ley
           total = total_earnings
         }
+
+        // Sincronizar con módulo Deducciones: planes activos se aplican siempre (CON o SIN)
+        const empPlans = plansByEmployee[emp.id] || []
+        let customDeductionsFromPlans = 0
+        for (const plan of empPlans) {
+          customDeductionsFromPlans += Number(plan.monto_por_plazo) || 0
+        }
+        total_deductions += customDeductionsFromPlans
+        total = total_earnings - total_deductions
 
         // Validar que runId existe antes de insertar
         if (!runId) {
@@ -919,9 +928,18 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           total_deductions = IHSS + RAP + ISR
           total = total_earnings - total_deductions
         } else {
-          // Tipo 'SIN': solo salario por horas, sin deducciones
+          // Tipo 'SIN': solo salario por horas, sin deducciones de ley
           total = total_earnings
         }
+
+        // Sincronizar con módulo Deducciones: planes activos se aplican siempre (CON o SIN)
+        const empPlansHourly = plansByEmployee[emp.id] || []
+        let customDeductionsHourly = 0
+        for (const plan of empPlansHourly) {
+          customDeductionsHourly += Number(plan.monto_por_plazo) || 0
+        }
+        total_deductions += customDeductionsHourly
+        total = total_earnings - total_deductions
 
         // Validar que runId existe antes de insertar
         if (!runId) {
@@ -959,7 +977,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         const lineMetadata: Record<string, unknown> = { tax_year: yearNum }
         if (septimoDia > 0) lineMetadata.septimo_dia = septimoDia
         if (total_hours_worked > 0) lineMetadata.total_hours_worked = total_hours_worked
-        const empPlansHourly = plansByEmployee[emp.id] || []
         const planIdsHourly: string[] = []
         for (const plan of empPlansHourly) {
           lineMetadata[plan.field_key] = plan.monto_por_plazo

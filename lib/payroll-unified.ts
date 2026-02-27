@@ -125,7 +125,10 @@ export async function fetchUnifiedPayroll(
           rows = rows.map((r) => {
             const line = (r as any).line_id ? byLineId[(r as any).line_id as string] : byEmployee[r.employee_id]
             if (line) {
-              // Use effective values from database if available (they override preview values)
+              const effBruto = Number(line.eff_bruto) || Number(r.total_earnings) || 0
+              const effNeto = Number(line.eff_neto) ?? r.total
+              // total_deducciones = bruto - neto (incluye IHSS, RAP, ISR + deducciones de planes)
+              const totalDeducciones = effBruto - (effNeto ?? 0)
               return { 
                 ...r, 
                 ...(line.metadata ? { metadata: line.metadata } : {}),
@@ -136,10 +139,7 @@ export async function fetchUnifiedPayroll(
                 ...(line.eff_isr !== undefined ? { ISR: Number(line.eff_isr) } : {}),
                 ...(line.eff_hours !== undefined ? { days_worked: Number(line.eff_hours) } : {}),
                 ...(line.edited !== undefined ? { edited: line.edited } : {}),
-                // Recalculate total_deducciones with effective values
-                total_deducciones: (Number(line.eff_ihss) || r.IHSS || 0) + 
-                                  (Number(line.eff_rap) || r.RAP || 0) + 
-                                  (Number(line.eff_isr) || r.ISR || 0)
+                total_deducciones: Math.round(Math.max(0, totalDeducciones) * 100) / 100
               } as any
             }
             return r
