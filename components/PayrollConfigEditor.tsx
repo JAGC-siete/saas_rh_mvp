@@ -33,12 +33,22 @@ import {
   Square
 } from 'lucide-react'
 
+interface CustomFieldParameter {
+  key: string
+  label: string
+  type: 'number' | 'string'
+  default: number | string
+}
+
 interface CustomField {
   label: string
   type: 'number' | 'string' | 'boolean'
   category: 'earnings' | 'deductions' | 'calculation_helper'
   required: boolean
   default: any
+  formula?: string
+  parameters?: CustomFieldParameter[]
+  track_plazos?: boolean
 }
 
 interface PayrollConfig {
@@ -449,11 +459,28 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
       return
     }
 
+    if (newField.formula && newField.parameters?.length) {
+      const paramKeys = newField.parameters.map(p => p.key).filter(Boolean)
+      const formulaVars = (newField.formula.match(/\b([a-z_][a-z0-9_]*)\b/gi) ?? []).filter(
+        v => !['baseSalary', 'base_salary'].includes(v)
+      )
+      const missing = formulaVars.filter(v => !paramKeys.includes(v))
+      if (missing.length > 0) {
+        setError(`La fórmula usa variables no definidas en parámetros: ${missing.join(', ')}`)
+        return
+      }
+    }
+
     setConfig(prev => ({
       ...prev,
       custom_fields: {
         ...prev.custom_fields,
-        [newFieldName]: { ...newField }
+        [newFieldName]: {
+          ...newField,
+          formula: newField.formula || undefined,
+          parameters: (newField.parameters ?? []).filter(p => p.key.trim()).length > 0 ? newField.parameters : undefined,
+          track_plazos: newField.track_plazos || undefined
+        }
       }
     }))
 
@@ -462,9 +489,12 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     setNewField({
       label: '',
       type: 'number',
-      category: 'earnings', // Solo earnings o deductions
+      category: 'earnings',
       required: false,
-      default: 0
+      default: 0,
+      formula: undefined,
+      parameters: undefined,
+      track_plazos: undefined
     })
     setShowAddField(false)
     setError(null)
@@ -1538,6 +1568,28 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                       />
                     </div>
                   </div>
+                  <div className="mt-3 pt-3 border-t border-white/10 space-y-2">
+                    <div>
+                      <label className="block text-xs text-white mb-1">Fórmula (opcional)</label>
+                      <Input
+                        value={(field as CustomField).formula ?? ''}
+                        onChange={(e) => handleUpdateField(fieldName, { formula: e.target.value || undefined })}
+                        placeholder="ej: monto_factura / plazos"
+                        className="text-sm input-glass text-white font-mono"
+                      />
+                    </div>
+                    {(field as CustomField).formula && field.category === 'deductions' && (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={(field as CustomField).track_plazos ?? false}
+                          onChange={(e) => handleUpdateField(fieldName, { track_plazos: e.target.checked })}
+                          className="rounded border-white/30"
+                        />
+                        <span className="text-xs text-gray-300">Seguir plazos</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
                       ))}
                   </div>
@@ -1677,6 +1729,28 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                               />
                             </div>
                           </div>
+                          <div className="mt-3 pt-3 border-t border-white/10 space-y-2">
+                            <div>
+                              <label className="block text-xs text-white mb-1">Fórmula (opcional)</label>
+                              <Input
+                                value={(field as CustomField).formula ?? ''}
+                                onChange={(e) => handleUpdateField(fieldName, { formula: e.target.value || undefined })}
+                                placeholder="ej: monto_factura / plazos"
+                                className="text-sm input-glass text-white font-mono"
+                              />
+                            </div>
+                            {(field as CustomField).formula && (
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  checked={(field as CustomField).track_plazos ?? false}
+                                  onChange={(e) => handleUpdateField(fieldName, { track_plazos: e.target.checked })}
+                                  className="rounded border-white/30"
+                                />
+                                <span className="text-xs text-gray-300">Seguir plazos</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       ))}
                   </div>
@@ -1785,6 +1859,112 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                     />
                   </div>
                 </div>
+                {/* Fórmula y parámetros */}
+                <div className="space-y-3 pt-3 border-t border-white/10">
+                  <div>
+                    <label className="block text-sm font-medium text-white mb-2">Fórmula (opcional)</label>
+                    <Input
+                      value={newField.formula ?? ''}
+                      onChange={(e) => setNewField(prev => ({ ...prev, formula: e.target.value || undefined }))}
+                      placeholder="ej: monto_factura / plazos"
+                      className="input-glass text-white placeholder:text-white/70 font-mono text-sm"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">Usa nombres de parámetros (snake_case). Ej: monto_total / plazos_optica</p>
+                  </div>
+                  {newField.formula && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-white mb-2">Parámetros de la fórmula</label>
+                        <p className="text-xs text-gray-400 mb-2">Define los parámetros que el usuario ingresará por empleado. Las keys deben coincidir con las variables en la fórmula.</p>
+                        {(newField.parameters ?? []).map((p, i) => (
+                          <div key={i} className="flex gap-2 mb-2 items-center">
+                            <Input
+                              value={p.key}
+                              onChange={(e) => {
+                                const params = [...(newField.parameters ?? [])]
+                                params[i] = { ...params[i], key: e.target.value.toLowerCase().replace(/\s+/g, '_') }
+                                setNewField(prev => ({ ...prev, parameters: params }))
+                              }}
+                              placeholder="key (snake_case)"
+                              className="input-glass text-white text-sm flex-1"
+                            />
+                            <Input
+                              value={p.label}
+                              onChange={(e) => {
+                                const params = [...(newField.parameters ?? [])]
+                                params[i] = { ...params[i], label: e.target.value }
+                                setNewField(prev => ({ ...prev, parameters: params }))
+                              }}
+                              placeholder="Etiqueta"
+                              className="input-glass text-white text-sm flex-1"
+                            />
+                            <select
+                              value={p.type}
+                              onChange={(e) => {
+                                const params = [...(newField.parameters ?? [])]
+                                params[i] = { ...params[i], type: e.target.value as 'number' | 'string' }
+                                setNewField(prev => ({ ...prev, parameters: params }))
+                              }}
+                              className="px-2 py-1.5 input-glass text-white text-sm w-24"
+                            >
+                              <option value="number">Número</option>
+                              <option value="string">Texto</option>
+                            </select>
+                            <Input
+                              type={p.type === 'number' ? 'number' : 'text'}
+                              value={p.default}
+                              onChange={(e) => {
+                                const params = [...(newField.parameters ?? [])]
+                                params[i] = { ...params[i], default: p.type === 'number' ? (parseFloat(e.target.value) || 0) : e.target.value }
+                                setNewField(prev => ({ ...prev, parameters: params }))
+                              }}
+                              placeholder="Default"
+                              className="input-glass text-white text-sm w-20"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                const params = (newField.parameters ?? []).filter((_, j) => j !== i)
+                                setNewField(prev => ({ ...prev, parameters: params }))
+                              }}
+                              className="text-red-400 hover:text-red-300 p-1"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setNewField(prev => ({
+                            ...prev,
+                            parameters: [...(prev.parameters ?? []), { key: '', label: '', type: 'number', default: 0 }]
+                          }))}
+                          className="border-white/20 hover:bg-white/10 mt-1"
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Agregar parámetro
+                        </Button>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-white mb-2">Seguir plazos (solo deducciones)</label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={newField.track_plazos ?? false}
+                            onChange={(e) => setNewField(prev => ({ ...prev, track_plazos: e.target.checked }))}
+                            disabled={newField.category !== 'deductions'}
+                            className="rounded border-white/30"
+                          />
+                          <span className="text-sm text-gray-300">Permitir crear planes a plazos para este campo</span>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
                 <div className="flex gap-3 pt-2">
                   <Button
                     onClick={handleAddField}
@@ -1802,7 +1982,10 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                         type: 'number',
                         category: 'earnings',
                         required: false,
-                        default: 0
+                        default: 0,
+                        formula: undefined,
+                        parameters: undefined,
+                        track_plazos: undefined
                       })
                     }}
                     variant="outline"

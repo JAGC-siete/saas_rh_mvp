@@ -64,10 +64,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       })
     }
 
-    // Obtener líneas de la corrida para verificar que estén completas
+    // Obtener líneas de la corrida para verificar que estén completas (incluir metadata para deduction plans)
     const { data: lines, error: linesError } = await supabase
       .from('payroll_run_lines')
-      .select('id, employee_id, eff_hours, eff_bruto, eff_ihss, eff_rap, eff_isr, eff_neto, edited')
+      .select('id, employee_id, eff_hours, eff_bruto, eff_ihss, eff_rap, eff_isr, eff_neto, edited, metadata')
       .eq('run_id', run_id)
       .eq('company_id', companyId)
 
@@ -104,6 +104,47 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (updateError) {
       console.error('Error actualizando estado de corrida:', updateError)
       return res.status(500).json({ error: 'Error actualizando estado de corrida' })
+    }
+
+    // Incrementar plazos_aplicados en employee_deduction_plans (solo si NO estaba ya autorizada)
+    if (run.status !== 'authorized') {
+      const planIdsToIncrement: { planId: string; employeeId: string }[] = []
+      for (const line of lines || []) {
+        const meta = (line as any).metadata as Record<string, unknown> | null
+        const ids = meta?._deduction_plan_ids as string[] | undefined
+        if (Array.isArray(ids) && ids.length > 0 && line.employee_id) {
+          for (const planId of ids) {
+            if (planId && typeof planId === 'string') {
+              planIdsToIncrement.push({ planId, employeeId: line.employee_id })
+            }
+          }
+        }
+      }
+      for (const { planId, employeeId: empId } of planIdsToIncrement) {
+        const { data: plan, error: planErr } = await supabase
+          .from('employee_deduction_plans')
+          .select('id, employee_id, company_id, plazos_aplicados, plazos_totales')
+          .eq('id', planId)
+          .eq('company_id', companyId)
+          .eq('employee_id', empId)
+          .single()
+        if (planErr || !plan) continue
+        const newApplied = (plan.plazos_aplicados || 0) + 1
+        const updatePayload: Record<string, unknown> = {
+          plazos_aplicados: newApplied,
+          updated_at: getHondurasTimestamp()
+        }
+        if (newApplied >= (plan.plazos_totales || 0)) {
+          updatePayload.activo = false
+          updatePayload.fecha_fin = new Date().toISOString().split('T')[0]
+        }
+        await supabase
+          .from('employee_deduction_plans')
+          .update(updatePayload)
+          .eq('id', planId)
+          .eq('company_id', companyId)
+          .eq('employee_id', empId)
+      }
     }
 
     // Registrar en audit_logs

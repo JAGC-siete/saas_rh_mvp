@@ -561,6 +561,26 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     console.log(`Procesando preview de nómina para ${empleadosParaNomina.length} empleados`)
+
+    // Auto-aplicar planes de deducción activos (employee_deduction_plans)
+    const empIdsForPlans = empleadosParaNomina.map((e: any) => e.id)
+    let plansByEmployee: Record<string, any[]> = {}
+    if (empIdsForPlans.length > 0) {
+      const { data: plansData } = await supabase
+        .from('employee_deduction_plans')
+        .select('id, employee_id, field_key, monto_por_plazo, plazos_aplicados, plazos_totales')
+        .in('employee_id', empIdsForPlans)
+        .eq('company_id', companyId)
+        .eq('activo', true)
+      if (plansData && plansData.length > 0) {
+        for (const p of plansData) {
+          if (p.plazos_aplicados < p.plazos_totales) {
+            if (!plansByEmployee[p.employee_id]) plansByEmployee[p.employee_id] = []
+            plansByEmployee[p.employee_id].push(p)
+          }
+        }
+      }
+    }
     
           // DEBUG: Verificar el filtro de asistencia
       console.log('🔍 DEBUG - Tipo de nómina:', tipoParam)
@@ -726,6 +746,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           lineMetadata.days_extra = days_extra
           lineMetadata.notes_extra = `${days_extra} día(s) Extra/Especial (festivo/descanso)`
         }
+        const empPlans = plansByEmployee[emp.id] || []
+        const planIds: string[] = []
+        for (const plan of empPlans) {
+          lineMetadata[plan.field_key] = plan.monto_por_plazo
+          planIds.push(plan.id)
+        }
+        if (planIds.length > 0) lineMetadata._deduction_plan_ids = planIds
 
         // Insertar línea en payroll_run_lines
         const { data: insertedLine, error: lineError } = await supabase
@@ -794,7 +821,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           total_deducciones: Math.round(total_deductions * 100) / 100,
           total: Math.round(total * 100) / 100,
           line_id: insertedLine.id,
-          pay_type: 'fixed'
+          pay_type: 'fixed',
+          metadata: lineMetadata
         })
         
       } else {
@@ -931,6 +959,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         const lineMetadata: Record<string, unknown> = { tax_year: yearNum }
         if (septimoDia > 0) lineMetadata.septimo_dia = septimoDia
         if (total_hours_worked > 0) lineMetadata.total_hours_worked = total_hours_worked
+        const empPlansHourly = plansByEmployee[emp.id] || []
+        const planIdsHourly: string[] = []
+        for (const plan of empPlansHourly) {
+          lineMetadata[plan.field_key] = plan.monto_por_plazo
+          planIdsHourly.push(plan.id)
+        }
+        if (planIdsHourly.length > 0) lineMetadata._deduction_plan_ids = planIdsHourly
 
         const { data: insertedLine, error: lineError } = await supabase
           .from('payroll_run_lines')
@@ -999,7 +1034,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           total_deducciones: Math.round(total_deductions * 100) / 100,
           total: Math.round(total * 100) / 100,
           line_id: insertedLine.id,
-          pay_type: 'hourly'
+          pay_type: 'hourly',
+          metadata: lineMetadata
         })
       }
     }

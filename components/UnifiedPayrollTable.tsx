@@ -26,7 +26,7 @@ interface UnifiedPayrollTableProps {
   onGeneratePDF: () => void
   onSendEmail: () => void
   // eslint-disable-next-line no-unused-vars
-  onEditCustomFields?: (_lineId: string, _metadata: any, _baseSalary: number) => void
+  onEditCustomFields?: (_lineId: string, _metadata: any, _baseSalary: number, _employeeId?: string) => void
   loading?: boolean
   canAuthorize?: boolean
   canSend?: boolean

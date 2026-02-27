@@ -10,7 +10,7 @@ interface PayrollHourlyTableProps {
   // eslint-disable-next-line no-unused-vars
   onGenerateVoucher: (_lineId: string) => void
   // eslint-disable-next-line no-unused-vars
-  onEditCustomFields?: (_lineId: string, _metadata: any, _baseSalary: number) => void
+  onEditCustomFields?: (_lineId: string, _metadata: any, _baseSalary: number, _employeeId?: string) => void
   loading?: boolean
   hasCustom?: boolean
 }
@@ -120,7 +120,7 @@ export default function PayrollHourlyTable({
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => onEditCustomFields?.(row.line_id || row.employee_id, (row as any).metadata, row.base_salary || 0)}
+                            onClick={() => onEditCustomFields?.(row.line_id || row.employee_id, (row as any).metadata, row.base_salary || 0, row.employee_id)}
                             disabled={loading}
                             className="bg-white/10 border-white/30 text-white hover:bg-white/20"
                             title="Editar campos personalizados"

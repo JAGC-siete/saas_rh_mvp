@@ -18,6 +18,7 @@ interface CustomFieldData {
 
 interface ModalState {
   lineId: string
+  employeeId?: string
   metadata: Record<string, unknown> | null
   baseSalary: number
 }
@@ -179,9 +180,10 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
   }, [payroll, previewCustomFields])
 
   // Handle edit custom fields (memoized)
-  const handleEditCustomFields = useCallback((lineId: string, metadata: Record<string, unknown> | null, baseSalary: number) => {
+  const handleEditCustomFields = useCallback((lineId: string, metadata: Record<string, unknown> | null, baseSalary: number, employeeId?: string) => {
     setModalState({
       lineId,
+      employeeId,
       metadata,
       baseSalary: baseSalary || 0
     })
@@ -568,6 +570,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
               <CustomPayrollFieldsForm
                 companyId={payroll.companyId || ''}
                 runLineId={modalState?.lineId || ''}
+                employeeId={modalState?.employeeId}
                 currentMetadata={modalState?.metadata || null}
                 baseSalary={modalState?.baseSalary || 0}
                 onSave={handleSaveCustomFields}
