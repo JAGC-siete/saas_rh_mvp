@@ -19,7 +19,8 @@ async function attendanceExportHandler(req: NextApiRequest, res: NextApiResponse
     const { supabase, companyId, role, user } = await requireCompanyAccess(req, res)
     
     // Verificar roles específicos para exportar asistencia (como payroll)
-    if (!['super_admin', 'company_admin', 'hr_manager', 'manager'].includes(role)) {
+    // admin es alias usado en producción (equivalente a company_admin)
+    if (!['super_admin', 'company_admin', 'hr_manager', 'manager', 'admin'].includes(role)) {
       return res.status(403).json({ 
         error: 'Permisos insuficientes',
         message: 'No tiene permisos para exportar datos de asistencia'
