@@ -3,7 +3,8 @@ import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
 
 /**
  * GET /api/payroll/deduction-types
- * Returns deduction fields with track_plazos from company payroll config.
+ * Returns ALL deduction fields from company payroll config (category === 'deductions').
+ * Sincronizado con las deducciones creadas para la empresa en Configuración de Nómina.
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -40,7 +41,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const customFields = config.custom_fields as Record<string, { label?: string; category?: string; track_plazos?: boolean }>
     const deductionTypes = Object.entries(customFields)
-      .filter(([, def]) => def?.category === 'deductions' && def?.track_plazos === true)
+      .filter(([, def]) => def?.category === 'deductions')
       .map(([key, def]) => ({
         key,
         label: def?.label || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())

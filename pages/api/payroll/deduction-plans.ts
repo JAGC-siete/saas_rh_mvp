@@ -100,18 +100,22 @@ async function handlePost(
     })
   }
 
-  const fieldDef = (config.custom_fields as Record<string, any>)[field_key]
+  const customFields = config.custom_fields as Record<string, any>
+  const fieldDef = customFields[field_key]
   if (!fieldDef) {
     return res.status(400).json({
       error: 'Campo no configurado',
       message: `El campo "${field_key}" no existe en la configuración`
     })
   }
+  // Si el campo no tiene track_plazos, lo habilitamos automáticamente al crear el plan
   if (!fieldDef.track_plazos) {
-    return res.status(400).json({
-      error: 'Campo sin seguimiento de plazos',
-      message: `El campo "${field_key}" no tiene track_plazos habilitado`
-    })
+    const updatedFields = { ...customFields, [field_key]: { ...fieldDef, track_plazos: true } }
+    await supabase
+      .from('company_payroll_configs')
+      .update({ custom_fields: updatedFields, updated_at: new Date().toISOString() })
+      .eq('company_id', companyId)
+      .eq('is_active', true)
   }
 
   // Validar que no exista plan activo para ese empleado+campo
