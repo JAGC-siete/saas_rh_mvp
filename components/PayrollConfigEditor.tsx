@@ -1570,11 +1570,11 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                   </div>
                   <div className="mt-3 pt-3 border-t border-white/10 space-y-2">
                     <div>
-                      <label className="block text-xs text-white mb-1">Fórmula (opcional)</label>
+                      <label className="block text-xs text-white mb-1">Cálculo (opcional)</label>
                       <Input
                         value={(field as CustomField).formula ?? ''}
                         onChange={(e) => handleUpdateField(fieldName, { formula: e.target.value || undefined })}
-                        placeholder="ej: monto_factura / plazos"
+                        placeholder="Ej: monto_factura / plazos"
                         className="text-sm input-glass text-white font-mono"
                       />
                     </div>
@@ -1586,7 +1586,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                           onChange={(e) => handleUpdateField(fieldName, { track_plazos: e.target.checked })}
                           className="rounded border-white/30"
                         />
-                        <span className="text-xs text-gray-300">Seguir plazos</span>
+                        <span className="text-xs text-gray-300">Contar plazos aplicados</span>
                       </div>
                     )}
                   </div>
@@ -1731,11 +1731,11 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                           </div>
                           <div className="mt-3 pt-3 border-t border-white/10 space-y-2">
                             <div>
-                              <label className="block text-xs text-white mb-1">Fórmula (opcional)</label>
+                              <label className="block text-xs text-white mb-1">Cálculo (opcional)</label>
                               <Input
                                 value={(field as CustomField).formula ?? ''}
                                 onChange={(e) => handleUpdateField(fieldName, { formula: e.target.value || undefined })}
-                                placeholder="ej: monto_factura / plazos"
+                                placeholder="Ej: monto_factura / plazos"
                                 className="text-sm input-glass text-white font-mono"
                               />
                             </div>
@@ -1747,7 +1747,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                                   onChange={(e) => handleUpdateField(fieldName, { track_plazos: e.target.checked })}
                                   className="rounded border-white/30"
                                 />
-                                <span className="text-xs text-gray-300">Seguir plazos</span>
+                                <span className="text-xs text-gray-300">Contar plazos aplicados</span>
                               </div>
                             )}
                           </div>
@@ -1800,12 +1800,12 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-white mb-2">
-                    Nombre del Campo (snake_case) *
+                    Nombre interno del campo *
                   </label>
                   <Input
                     value={newFieldName}
                     onChange={(e) => setNewFieldName(e.target.value.toLowerCase().replace(/\s+/g, '_'))}
-                    placeholder="ej: horas_extras"
+                    placeholder="Ej: cxc_optica o horas_extras (sin espacios)"
                     className="input-glass text-white placeholder:text-white/70"
                   />
                 </div>
@@ -1861,23 +1861,54 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                 </div>
                 {/* Fórmula y parámetros */}
                 <div className="space-y-3 pt-3 border-t border-white/10">
+                  <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                    <div className="flex gap-2 mb-1">
+                      <Info className="h-4 w-4 text-blue-300 shrink-0 mt-0.5" />
+                      <div className="text-xs text-blue-200">
+                        <p className="font-medium mb-1">¿Cuándo usar fórmula?</p>
+                        <p>Si el monto se calcula (ej: factura ÷ 12 quincenas), defina la fórmula. Cada empleado ingresará sus propios valores al editar la planilla.</p>
+                        <p className="mt-1 text-blue-300/90">Ejemplo CXC Óptica: <code className="bg-white/10 px-1 rounded">monto_factura / plazos</code> → si factura = 2,400 y plazos = 12, se deduce 200 por quincena.</p>
+                      </div>
+                    </div>
+                  </div>
                   <div>
-                    <label className="block text-sm font-medium text-white mb-2">Fórmula (opcional)</label>
-                    <Input
-                      value={newField.formula ?? ''}
-                      onChange={(e) => setNewField(prev => ({ ...prev, formula: e.target.value || undefined }))}
-                      placeholder="ej: monto_factura / plazos"
-                      className="input-glass text-white placeholder:text-white/70 font-mono text-sm"
-                    />
-                    <p className="text-xs text-gray-400 mt-1">Usa nombres de parámetros (snake_case). Ej: monto_total / plazos_optica</p>
+                    <label className="block text-sm font-medium text-white mb-2">¿Cómo se calcula el monto? (opcional)</label>
+                    <div className="flex gap-2">
+                      <Input
+                        value={newField.formula ?? ''}
+                        onChange={(e) => setNewField(prev => ({ ...prev, formula: e.target.value || undefined }))}
+                        placeholder="Ej: monto_factura / plazos  (use + - * / entre nombres)"
+                        className="input-glass text-white placeholder:text-white/70 font-mono text-sm flex-1"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setNewField(prev => ({
+                            ...prev,
+                            formula: 'monto_factura / plazos',
+                            parameters: [
+                              { key: 'monto_factura', label: 'Monto total de la factura (L.)', type: 'number' as const, default: 0 },
+                              { key: 'plazos', label: 'Número de plazos (quincenas)', type: 'number' as const, default: 12 }
+                            ]
+                          }))
+                        }}
+                        className="border-white/20 hover:bg-white/10 shrink-0 text-xs"
+                        title="Ejemplo: factura dividida en plazos"
+                      >
+                        Usar ejemplo
+                      </Button>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">Escriba la operación usando los nombres que definirá abajo. Operadores permitidos: + - * /</p>
                   </div>
                   {newField.formula && (
                     <>
                       <div>
-                        <label className="block text-sm font-medium text-white mb-2">Parámetros de la fórmula</label>
-                        <p className="text-xs text-gray-400 mb-2">Define los parámetros que el usuario ingresará por empleado. Las keys deben coincidir con las variables en la fórmula.</p>
+                        <label className="block text-sm font-medium text-white mb-2">Datos que pedirá a cada empleado</label>
+                        <p className="text-xs text-gray-400 mb-2">Cada dato que usó en la fórmula debe aparecer aquí. El usuario verá la etiqueta al editar la planilla.</p>
                         {(newField.parameters ?? []).map((p, i) => (
-                          <div key={i} className="flex gap-2 mb-2 items-center">
+                          <div key={i} className="flex flex-wrap gap-2 mb-2 items-center">
                             <Input
                               value={p.key}
                               onChange={(e) => {
@@ -1885,8 +1916,9 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                                 params[i] = { ...params[i], key: e.target.value.toLowerCase().replace(/\s+/g, '_') }
                                 setNewField(prev => ({ ...prev, parameters: params }))
                               }}
-                              placeholder="key (snake_case)"
-                              className="input-glass text-white text-sm flex-1"
+                              placeholder="Nombre (ej: monto_factura)"
+                              className="input-glass text-white text-sm flex-1 min-w-[120px]"
+                              title="Debe coincidir con lo escrito en la fórmula"
                             />
                             <Input
                               value={p.label}
@@ -1895,8 +1927,8 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                                 params[i] = { ...params[i], label: e.target.value }
                                 setNewField(prev => ({ ...prev, parameters: params }))
                               }}
-                              placeholder="Etiqueta"
-                              className="input-glass text-white text-sm flex-1"
+                              placeholder="Texto visible (ej: Monto total factura)"
+                              className="input-glass text-white text-sm flex-1 min-w-[140px]"
                             />
                             <select
                               value={p.type}
@@ -1918,7 +1950,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                                 params[i] = { ...params[i], default: p.type === 'number' ? (parseFloat(e.target.value) || 0) : e.target.value }
                                 setNewField(prev => ({ ...prev, parameters: params }))
                               }}
-                              placeholder="Default"
+                              placeholder="Por defecto"
                               className="input-glass text-white text-sm w-20"
                             />
                             <Button
@@ -1930,6 +1962,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                                 setNewField(prev => ({ ...prev, parameters: params }))
                               }}
                               className="text-red-400 hover:text-red-300 p-1"
+                              title="Quitar"
                             >
                               <X className="h-4 w-4" />
                             </Button>
@@ -1946,20 +1979,23 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                           className="border-white/20 hover:bg-white/10 mt-1"
                         >
                           <Plus className="h-3 w-3 mr-1" />
-                          Agregar parámetro
+                          Agregar dato
                         </Button>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-white mb-2">Seguir plazos (solo deducciones)</label>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-start gap-2">
                           <input
                             type="checkbox"
                             checked={newField.track_plazos ?? false}
                             onChange={(e) => setNewField(prev => ({ ...prev, track_plazos: e.target.checked }))}
                             disabled={newField.category !== 'deductions'}
-                            className="rounded border-white/30"
+                            className="rounded border-white/30 mt-1"
                           />
-                          <span className="text-sm text-gray-300">Permitir crear planes a plazos para este campo</span>
+                          <div>
+                            <span className="text-sm text-gray-300">Contar cuántas deducciones se han aplicado y cuántas faltan</span>
+                            <p className="text-xs text-gray-400 mt-0.5">Ej: CXC Óptica a 12 quincenas → el sistema mostrará &quot;3/12 aplicadas, 9 restantes&quot;</p>
+                          </div>
                         </div>
                       </div>
                     </>
