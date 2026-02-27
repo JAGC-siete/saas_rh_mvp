@@ -48,7 +48,7 @@ async function handlePost(
   supabase: any,
   companyId: string
 ) {
-  const { employee_id, field_key, monto_total, plazos_totales } = req.body || {}
+  const { employee_id, field_key, monto_total, plazos_totales, fecha_inicio, fecha_fin } = req.body || {}
 
   if (!employee_id || !field_key || monto_total == null || !plazos_totales) {
     return res.status(400).json({
@@ -65,6 +65,9 @@ async function handlePost(
       message: 'monto_total y plazos_totales deben ser números positivos'
     })
   }
+
+  const startDate = fecha_inicio ? new Date(fecha_inicio).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+  const endDate = fecha_fin ? new Date(fecha_fin).toISOString().split('T')[0] : null
 
   // Validar que el empleado pertenece a la empresa
   const { data: emp, error: empError } = await supabase
@@ -128,16 +131,20 @@ async function handlePost(
     })
   }
 
+  const insertPayload: Record<string, unknown> = {
+    employee_id,
+    company_id: companyId,
+    field_key,
+    monto_total: monto,
+    plazos_totales: plazos,
+    fecha_inicio: startDate,
+    activo: true
+  }
+  if (endDate) insertPayload.fecha_fin = endDate
+
   const { data: plan, error } = await supabase
     .from('employee_deduction_plans')
-    .insert({
-      employee_id,
-      company_id: companyId,
-      field_key,
-      monto_total: monto,
-      plazos_totales: plazos,
-      activo: true
-    })
+    .insert(insertPayload)
     .select()
     .single()
 
@@ -197,20 +204,21 @@ async function handleGetByEmployee(
 }
 
 async function handleGetByCompany(
-  _req: NextApiRequest,
+  req: NextApiRequest,
   res: NextApiResponse,
   supabase: any,
   companyId: string
 ) {
-  const { data: plans, error } = await supabase
+  const includeInactive = req.query.include_inactive === 'true'
+  let query = supabase
     .from('employee_deduction_plans')
     .select(`
       *,
       employees!employee_deduction_plans_employee_id_fkey(name, dni, employee_code)
     `)
     .eq('company_id', companyId)
-    .eq('activo', true)
-    .order('created_at', { ascending: false })
+  if (!includeInactive) query = query.eq('activo', true)
+  const { data: plans, error } = await query.order('created_at', { ascending: false })
 
   if (error) {
     return res.status(500).json({ error: 'Error obteniendo planes' })

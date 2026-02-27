@@ -93,6 +93,7 @@ export const MIDDLEWARE_CONFIG = {
       '/app/attendance',
       '/app/employees',
       '/app/payroll',
+      '/app/deducciones',
       '/app/13-14-salario',
       '/app/reports',
       '/app/settings',
