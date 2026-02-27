@@ -121,9 +121,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         }
       }
       for (const { planId, employeeId: empId } of planIdsToIncrement) {
+        const line = lines.find((l: any) => l.employee_id === empId)
+        if (!line) continue
         const { data: plan, error: planErr } = await supabase
           .from('employee_deduction_plans')
-          .select('id, employee_id, company_id, plazos_aplicados, plazos_totales')
+          .select('id, employee_id, company_id, plazos_aplicados, plazos_totales, monto_por_plazo')
           .eq('id', planId)
           .eq('company_id', companyId)
           .eq('employee_id', empId)
@@ -144,6 +146,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           .eq('id', planId)
           .eq('company_id', companyId)
           .eq('employee_id', empId)
+        const montoPorPlazo = Number(plan.monto_por_plazo) || 0
+        await supabase.from('deduction_plan_applications').insert({
+          deduction_plan_id: planId,
+          run_line_id: line.id,
+          company_id: companyId,
+          plazo_numero: newApplied,
+          monto_aplicado: montoPorPlazo,
+          run_id
+        })
       }
     }
 

@@ -156,15 +156,25 @@ async function handleGet(
   companyId: string
 ) {
   const { employee_id } = req.query
-  if (!employee_id || typeof employee_id !== 'string') {
-    return res.status(400).json({ error: 'employee_id es requerido' })
+
+  if (employee_id && typeof employee_id === 'string') {
+    return handleGetByEmployee(req, res, supabase, companyId, employee_id)
   }
 
-  // Validar que el empleado pertenece a la empresa
+  return handleGetByCompany(req, res, supabase, companyId)
+}
+
+async function handleGetByEmployee(
+  _req: NextApiRequest,
+  res: NextApiResponse,
+  supabase: any,
+  companyId: string,
+  employeeId: string
+) {
   const { data: emp } = await supabase
     .from('employees')
     .select('id, company_id')
-    .eq('id', employee_id)
+    .eq('id', employeeId)
     .single()
 
   if (!emp || emp.company_id !== companyId) {
@@ -174,7 +184,7 @@ async function handleGet(
   const { data: plans, error } = await supabase
     .from('employee_deduction_plans')
     .select('*')
-    .eq('employee_id', employee_id)
+    .eq('employee_id', employeeId)
     .eq('company_id', companyId)
     .eq('activo', true)
     .order('created_at', { ascending: false })
@@ -184,6 +194,41 @@ async function handleGet(
   }
 
   return res.status(200).json({ plans: plans || [] })
+}
+
+async function handleGetByCompany(
+  _req: NextApiRequest,
+  res: NextApiResponse,
+  supabase: any,
+  companyId: string
+) {
+  const { data: plans, error } = await supabase
+    .from('employee_deduction_plans')
+    .select(`
+      *,
+      employees!employee_deduction_plans_employee_id_fkey(name, dni, employee_code)
+    `)
+    .eq('company_id', companyId)
+    .eq('activo', true)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    return res.status(500).json({ error: 'Error obteniendo planes' })
+  }
+
+  const enriched = (plans || []).map((p: any) => {
+    const { employees, ...rest } = p
+    return {
+      ...rest,
+      plazos_restantes: (p.plazos_totales || 0) - (p.plazos_aplicados || 0),
+      monto_pendiente: Math.round(((p.plazos_totales || 0) - (p.plazos_aplicados || 0)) * Number(p.monto_por_plazo || 0) * 100) / 100,
+      employee_name: employees?.name,
+      employee_dni: employees?.dni,
+      employee_code: employees?.employee_code
+    }
+  })
+
+  return res.status(200).json({ plans: enriched })
 }
 
 async function handlePatch(

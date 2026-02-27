@@ -6,6 +6,7 @@ import { usePayrollManager } from '../lib/hooks/usePayrollManager'
 import UnifiedPayrollTable from './UnifiedPayrollTable'
 import ConfigNomina from './ConfigNomina'
 import CustomPayrollFieldsForm from './CustomPayrollFieldsForm'
+import DeductionPlansDashboard from './DeductionPlansDashboard'
 import { calculatePayroll } from '../lib/payroll-client-specific'
 import { createClient } from '../lib/supabase/client'
 
@@ -494,6 +495,11 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
           </CardContent>
         </Card>
       </div>
+
+      {/* Planes de deducción activos */}
+      {payroll.companyId && (
+        <DeductionPlansDashboard companyId={payroll.companyId} />
+      )}
 
       {/* Configuración de Nómina */}
       <ConfigNomina

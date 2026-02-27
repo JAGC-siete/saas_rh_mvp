@@ -39,7 +39,7 @@ export default function ConfigNomina({
   const monthName = new Date(year, month - 1).toLocaleDateString('es-HN', { month: 'long' })
 
   return (
-    <Card className="backdrop-blur-md bg-white/10 border border-white/20">
+    <Card variant="glass" className="backdrop-blur-md bg-white/10 border border-white/20">
       <CardHeader>
         <CardTitle className="text-white text-xl font-semibold">Configuración de Nómina</CardTitle>
         <CardDescription className="text-gray-200 text-base">
