@@ -1675,6 +1675,17 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                 {detailsActiveTab === 'files' && selectedEmployee && (
                   <div className="space-y-6">
                     {['super_admin', 'company_admin', 'hr_manager'].includes(userProfile?.role || '') && (
+                      <>
+                      <div>
+                        <h6 className="text-sm font-medium text-gray-300 mb-3">Foto de perfil</h6>
+                        <EmployeeFileUpload
+                          employeeId={selectedEmployee.id}
+                          fileType="profile_photo"
+                          variant="dark"
+                          onUploadComplete={() => selectedEmployee?.id && fetchEmployeeFiles(selectedEmployee.id)}
+                          onUploadError={(err) => setFilesError(err)}
+                        />
+                      </div>
                       <div>
                         <h6 className="text-sm font-medium text-gray-300 mb-3">Subir documento</h6>
                         <div className="mb-4">
@@ -1700,6 +1711,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                           onUploadError={(err) => setFilesError(err)}
                         />
                       </div>
+                      </>
                     )}
                     <div>
                       <h6 className="text-sm font-medium text-gray-300 mb-3">Archivos del empleado</h6>
