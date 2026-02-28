@@ -2,12 +2,11 @@
 // These types define the minimal contracts between frontend and backend
 
 export type Quincena = 1 | 2;
-export type TipoCalculo = 'CON' | 'SIN';
+export type TipoCalculo = 'CON' | 'SIN' | '2PAGOS';
 
 /**
  * Tipo extendido para payroll_runs.
- * La columna tipo aceptará '13AVO' y '14AVO' además de 'CON' y 'SIN'
- * cuando se extienda la tabla (requiere migración para alterar CHECK).
+ * La columna tipo aceptará '13AVO', '14AVO' y '2PAGOS' además de 'CON' y 'SIN'.
  */
 export type PayrollRunTipo = TipoCalculo | '13AVO' | '14AVO';
 

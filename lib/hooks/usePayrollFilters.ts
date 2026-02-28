@@ -74,7 +74,7 @@ const validateFilters = (filters: PayrollFilters): boolean => {
     filters.year &&
     filters.month >= 1 && filters.month <= 12 &&
     (filters.quincena === 1 || filters.quincena === 2) &&
-    (filters.tipo === 'CON' || filters.tipo === 'SIN')
+    (filters.tipo === 'CON' || filters.tipo === 'SIN' || filters.tipo === '2PAGOS')
   )
 }
 

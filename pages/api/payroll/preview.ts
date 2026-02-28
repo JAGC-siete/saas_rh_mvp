@@ -71,10 +71,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       })
     }
 
-    if (!['CON', 'SIN'].includes(tipoParam)) {
+    if (!['CON', 'SIN', '2PAGOS'].includes(tipoParam)) {
       console.error('❌ ERROR - Tipo inválido:', tipoParam)
       return res.status(400).json({ 
-        error: 'Tipo inválido (debe ser CON o SIN)',
+        error: 'Tipo inválido (debe ser CON, SIN o 2PAGOS)',
         received: tipoParam
       })
     }
@@ -586,7 +586,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       console.log('🔍 DEBUG - Tipo de nómina:', tipoParam)
       console.log('🔍 DEBUG - Total registros de asistencia:', attendanceRecords.length)
       console.log('🔍 DEBUG - Empleados después del filtro de asistencia:', empleadosParaNomina.length)
-      console.log('🔍 DEBUG - Lógica de deducciones: tipo=' + tipoParam + ' → deducciones=' + (tipoParam === 'CON' ? 'SÍ' : 'NO'))
+      console.log('🔍 DEBUG - Lógica de deducciones: tipo=' + tipoParam + ' → deducciones=' + (tipoParam === 'CON' || tipoParam === '2PAGOS' ? 'SÍ' : 'NO'))
 
     // Calcular planilla con CÁLCULOS CORRECTOS 2025
     // Separar en dos arrays: fixed y hourly
@@ -690,21 +690,31 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         
         let IHSS = 0, RAP = 0, ISR = 0, total_deductions = 0, total = 0
 
-        // APLICAR DEDUCCIONES SEGÚN legal_deductions (solo si tipoParam === 'CON')
+        // APLICAR DEDUCCIONES SEGÚN legal_deductions
         if (tipoParam === 'CON') {
-          // CÁLCULOS CON TABLA FISCAL DEL AÑO CORRESPONDIENTE - DEDUCCIONES MENSUALES COMPLETAS
+          // CÁLCULOS CON TABLA FISCAL - DEDUCCIONES MENSUALES COMPLETAS
           if (legalDeductions.ihss) {
             IHSS = calculateIHSS(base_salary, taxConstants)
           }
-          
           if (legalDeductions.rap) {
             RAP = calculateRAP(base_salary, taxConstants)
           }
-          
           if (legalDeductions.isr) {
             ISR = calculateISR(base_salary, taxConstants.isr_brackets)
           }
-          
+          total_deductions = IHSS + RAP + ISR
+          total = total_earnings - total_deductions
+        } else if (tipoParam === '2PAGOS') {
+          // Deducción en dos pagos: salario mensual, mitad de deducciones (sin deductionFactor)
+          if (legalDeductions.ihss) {
+            IHSS = calculateIHSS(base_salary, taxConstants) * 0.5
+          }
+          if (legalDeductions.rap) {
+            RAP = calculateRAP(base_salary, taxConstants) * 0.5
+          }
+          if (legalDeductions.isr) {
+            ISR = calculateISR(base_salary, taxConstants.isr_brackets) * 0.5
+          }
           total_deductions = IHSS + RAP + ISR
           total = total_earnings - total_deductions
         } else {
@@ -712,7 +722,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           total = total_earnings
         }
 
-        // Sincronizar con módulo Deducciones: planes activos se aplican siempre (CON o SIN)
+        // Sincronizar con módulo Deducciones: planes activos se aplican siempre (CON, SIN o 2PAGOS)
         const empPlans = plansByEmployee[emp.id] || []
         let customDeductionsFromPlans = 0
         for (const plan of empPlans) {
@@ -755,7 +765,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           lineMetadata.days_extra = days_extra
           lineMetadata.notes_extra = `${days_extra} día(s) Extra/Especial (festivo/descanso)`
         }
-        const empPlans = plansByEmployee[emp.id] || []
         const planIds: string[] = []
         for (const plan of empPlans) {
           lineMetadata[plan.field_key] = plan.monto_por_plazo
@@ -893,7 +902,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         
         let IHSS = 0, RAP = 0, ISR = 0, total_deductions = 0, total = 0
 
-        // APLICAR DEDUCCIONES SEGÚN legal_deductions (solo si tipoParam === 'CON')
+        // APLICAR DEDUCCIONES SEGÚN legal_deductions
         // base_salary siempre mensual; usarlo directo como base para deducciones.
         if (tipoParam === 'CON') {
           const baseParaDeducciones = base_salary
@@ -901,11 +910,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           if (legalDeductions.ihss) {
             IHSS = Math.min(baseParaDeducciones, 11903.13) * 0.05
           }
-
           if (legalDeductions.rap) {
             RAP = Math.max(0, baseParaDeducciones - 11903.13) * 0.015
           }
-
           if (legalDeductions.isr) {
             if (baseParaDeducciones > 21457.76) {
               if (baseParaDeducciones <= 30969.88) {
@@ -927,12 +934,25 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
           total_deductions = IHSS + RAP + ISR
           total = total_earnings - total_deductions
+        } else if (tipoParam === '2PAGOS') {
+          // Deducción en dos pagos: salario mensual, mitad de deducciones (sin deductionFactor)
+          if (legalDeductions.ihss) {
+            IHSS = calculateIHSS(base_salary, taxConstants) * 0.5
+          }
+          if (legalDeductions.rap) {
+            RAP = calculateRAP(base_salary, taxConstants) * 0.5
+          }
+          if (legalDeductions.isr) {
+            ISR = calculateISR(base_salary, taxConstants.isr_brackets) * 0.5
+          }
+          total_deductions = IHSS + RAP + ISR
+          total = total_earnings - total_deductions
         } else {
           // Tipo 'SIN': solo salario por horas, sin deducciones de ley
           total = total_earnings
         }
 
-        // Sincronizar con módulo Deducciones: planes activos se aplican siempre (CON o SIN)
+        // Sincronizar con módulo Deducciones: planes activos se aplican siempre (CON, SIN o 2PAGOS)
         const empPlansHourly = plansByEmployee[emp.id] || []
         let customDeductionsHourly = 0
         for (const plan of empPlansHourly) {

@@ -35,12 +35,36 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
   // Local state for preview-only custom fields changes (not persisted until authorization)
   const [previewCustomFields, setPreviewCustomFields] = useState<Record<string, CustomFieldData>>({})
   
+  // Payment frequency from company config (para mostrar "Deducción en dos pagos" solo cuando es quincenal)
+  const [paymentFrequency, setPaymentFrequency] = useState<string | null>(null)
+  
   // Debug logging para verificar el companyId (only in development)
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
       console.log('🔍 PayrollManagerNew - companyId from context:', payroll.companyId, 'loading:', payroll.companyLoading)
     }
   }, [payroll.companyId, payroll.companyLoading])
+
+  // Fetch payment frequency for conditional 2PAGOS visibility
+  useEffect(() => {
+    if (!payroll.companyId) return
+    fetch('/api/payroll/config')
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        const pf = data?.config?.payment_frequency
+        setPaymentFrequency(pf ?? null)
+      })
+      .catch(() => setPaymentFrequency(null))
+  }, [payroll.companyId])
+
+  // Si frecuencia es mensual/semanal (no quincenal) y tipo es 2PAGOS, resetear a CON
+  useEffect(() => {
+    const notQuincenal = paymentFrequency === 'mensual' || paymentFrequency === 'monthly' ||
+      paymentFrequency === 'semanal' || paymentFrequency === 'weekly'
+    if (notQuincenal && payroll.filters.tipo === '2PAGOS') {
+      payroll.updateFilter('tipo', 'CON')
+    }
+  }, [paymentFrequency, payroll.filters.tipo, payroll.updateFilter])
 
   // Memoize total deducciones calculation to avoid recalculating on every render
   const totalDeducciones = useMemo(() => {
@@ -515,6 +539,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
         onReset={payroll.resetFilters}
         loading={payroll.loading}
         canPreview={payroll.canPreview}
+        paymentFrequency={paymentFrequency as 'quincenal' | 'mensual' | 'semanal' | null}
       />
 
       {/* Unified Payroll Table */}

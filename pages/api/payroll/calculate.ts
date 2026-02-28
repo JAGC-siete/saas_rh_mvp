@@ -100,7 +100,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    const { periodo, quincena, tipoCalculo } = req.body || {}
+    const { periodo, quincena, tipoCalculo, tipo } = req.body || {}
     
     // Validaciones
     if (!periodo || !quincena) {
@@ -217,7 +217,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // IMPORTANTE: Las deducciones se aplican SOLO UNA VEZ al mes (en Q2) o siempre en mensual
     // Q1 (biweekly): solo salario bruto proporcional por días trabajados
     // Q2 (biweekly) o mensual: salario bruto proporcional + deducciones mensuales completas
-    const aplicarDeducciones = paymentFrequency === 'monthly' || quincena === 2
+    // tipo: CON=completas, 2PAGOS=mitad (repartidas en 2 pagos), SIN=ninguna
+    const aplicarDeducciones = (paymentFrequency === 'monthly' || quincena === 2) && tipo !== 'SIN'
+    const tipoDeduccion = (tipo === '2PAGOS' ? '2PAGOS' : tipo === 'SIN' ? 'SIN' : 'CON') as 'CON' | 'SIN' | '2PAGOS'
 
     console.log('Generando nómina:', {
       periodo,
@@ -225,7 +227,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       fechaInicio,
       fechaFin,
       aplicarDeducciones,
-      tipoCalculo
+      tipoCalculo,
+      tipoDeduccion
     })
 
     // Obtener empleados activos (incluir pay_type para cálculo hourly)
@@ -387,19 +390,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (aplicarDeducciones) {
         // base_salary siempre mensual; usarlo directo como base para deducciones.
         const baseParaDeducciones = base_salary
+        const factor2Pagos = tipoDeduccion === '2PAGOS' ? 0.5 : 1
 
-        // CÁLCULOS CON TABLA FISCAL DEL AÑO CORRESPONDIENTE - DEDUCCIONES MENSUALES COMPLETAS
-        // Aplicar solo si están habilitadas en legal_deductions
+        // CÁLCULOS CON TABLA FISCAL DEL AÑO CORRESPONDIENTE
         if (legalDeductions.ihss) {
-          IHSS = calculateIHSS(baseParaDeducciones, taxConstants)  // Deducción mensual completa
+          IHSS = calculateIHSS(baseParaDeducciones, taxConstants) * factor2Pagos
         }
-
         if (legalDeductions.rap) {
-          RAP = calculateRAP(baseParaDeducciones, taxConstants)    // Deducción mensual completa
+          RAP = calculateRAP(baseParaDeducciones, taxConstants) * factor2Pagos
         }
-
         if (legalDeductions.isr) {
-          ISR = calculateISR(baseParaDeducciones, taxConstants.isr_brackets)    // Deducción mensual completa
+          ISR = calculateISR(baseParaDeducciones, taxConstants.isr_brackets) * factor2Pagos
         }
         
         total_deductions = IHSS + RAP + ISR
@@ -410,7 +411,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (legalDeductions.rap) deduccionesAplicadas.push(`RAP L.${RAP.toFixed(2)}`)
         if (legalDeductions.isr) deduccionesAplicadas.push(`ISR L.${ISR.toFixed(2)}`)
         
-        notes_on_deductions = `Deducciones mensuales completas: ${deduccionesAplicadas.join(', ')}`
+        notes_on_deductions = tipoDeduccion === '2PAGOS'
+          ? `Deducciones en dos pagos (mitad): ${deduccionesAplicadas.join(', ')}`
+          : `Deducciones mensuales completas: ${deduccionesAplicadas.join(', ')}`
       } else {
         // Q1 (biweekly): solo salario proporcional, sin deducciones
         total = total_earnings

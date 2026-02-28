@@ -20,6 +20,8 @@ interface ConfigNominaProps {
   onReset: () => void
   loading?: boolean
   canPreview?: boolean
+  /** Frecuencia de pago de la empresa. "Deducción en dos pagos" solo visible cuando es quincenal/biweekly */
+  paymentFrequency?: 'quincenal' | 'biweekly' | 'mensual' | 'monthly' | 'semanal' | 'weekly' | null
 }
 
 export default function ConfigNomina({
@@ -34,8 +36,11 @@ export default function ConfigNomina({
   onPreview,
   onReset,
   loading = false,
-  canPreview = false
+  canPreview = false,
+  paymentFrequency = null
 }: ConfigNominaProps) {
+  // 2PAGOS solo aplica a nómina quincenal (biweekly)
+  const isQuincenal = paymentFrequency === 'quincenal' || paymentFrequency === 'biweekly'
   const monthName = new Date(year, month - 1).toLocaleDateString('es-HN', { month: 'long' })
 
   return (
@@ -166,6 +171,14 @@ export default function ConfigNomina({
                 >
                   Sin deducciones
                 </SelectItem>
+                {isQuincenal && (
+                  <SelectItem 
+                    value="2PAGOS" 
+                    className="text-white hover:bg-white/20 focus:bg-white/20"
+                  >
+                    Deducción en dos pagos
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -195,7 +208,7 @@ export default function ConfigNomina({
         {/* Current Selection Display */}
         <div className="mt-4 p-3 bg-white/5 rounded-lg border border-white/10">
           <div className="text-sm text-gray-200">
-            <span className="font-semibold">Período seleccionado:</span> {monthName} {year} - Quincena {quincena} - {tipo === 'CON' ? 'Con deducciones' : 'Sin deducciones'}
+            <span className="font-semibold">Período seleccionado:</span> {monthName} {year} - Quincena {quincena} - {tipo === 'CON' ? 'Con deducciones' : tipo === '2PAGOS' ? 'Deducción en dos pagos' : 'Sin deducciones'}
           </div>
         </div>
       </CardContent>
