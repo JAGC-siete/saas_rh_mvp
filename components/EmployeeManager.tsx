@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import Image from 'next/image'
 import { createClient } from '../lib/supabase/client'
 import { Button } from './ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
@@ -1289,11 +1288,9 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                   {selectedEmployeeImageLoading ? (
                     <div className="h-8 w-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
                   ) : selectedEmployeeImageUrl ? (
-                    <Image
+                    <img
                       src={selectedEmployeeImageUrl}
                       alt={`Foto de ${selectedEmployee.name}`}
-                      width={112}
-                      height={112}
                       className="h-28 w-28 object-cover"
                     />
                   ) : (
