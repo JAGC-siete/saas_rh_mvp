@@ -58,8 +58,16 @@ const EMPLOYEE_DETAIL_TABS = [
   { id: 'contract', label: 'Información Contractual' },
   { id: 'attendance', label: 'Asistencia' },
   { id: 'discipline', label: 'Medidas Disciplinarias' },
-  { id: 'emergency', label: 'Contacto de Emergencia' }
+  { id: 'emergency', label: 'Contacto de Emergencia' },
+  { id: 'files', label: 'Archivos del Empleado' }
 ] as const
+const DOCUMENT_CATEGORY_LABELS: Record<string, string> = {
+  contrato: 'Contrato',
+  identidad: 'Identidad',
+  certificado: 'Certificado',
+  diploma: 'Diploma',
+  otro: 'Otro'
+}
 const ATTENDANCE_STATUS_LABEL: Record<'present' | 'absent' | 'late' | 'not_registered' | 'unknown', string> = {
   present: 'Presente',
   absent: 'Ausente',
@@ -167,6 +175,10 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
   const [selectedEmployeeImageLoading, setSelectedEmployeeImageLoading] = useState(false)
   const [selectedEmployeeImageError, setSelectedEmployeeImageError] = useState<string | null>(null)
   const [detailsActiveTab, setDetailsActiveTab] = useState<(typeof EMPLOYEE_DETAIL_TABS)[number]['id']>('personal')
+  const [employeeFiles, setEmployeeFiles] = useState<Array<{ id: string; file_name: string; file_type: string; document_category?: string; file_size_bytes: number; signed_url?: string }>>([])
+  const [filesLoading, setFilesLoading] = useState(false)
+  const [filesError, setFilesError] = useState<string | null>(null)
+  const [documentCategoryForUpload, setDocumentCategoryForUpload] = useState<'contrato' | 'identidad' | 'certificado' | 'diploma' | 'otro'>('contrato')
   const [showExportModal, setShowExportModal] = useState(false)
   const [exportFormat, setExportFormat] = useState<'pdf' | 'excel' | 'csv' | null>(null)
   const [exportFilters, setExportFilters] = useState({
@@ -300,6 +312,22 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       setDepartmentsError('Error loading departments')
     } finally {
       setDepartmentsLoading(false)
+    }
+  }, [])
+
+  const fetchEmployeeFiles = useCallback(async (employeeId: string) => {
+    setFilesLoading(true)
+    setFilesError(null)
+    try {
+      const res = await fetch(`/api/employees/files/${employeeId}`, { credentials: 'include' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Error al cargar archivos')
+      setEmployeeFiles(data.files || [])
+    } catch (err) {
+      setFilesError(err instanceof Error ? err.message : 'Error al cargar archivos')
+      setEmployeeFiles([])
+    } finally {
+      setFilesLoading(false)
     }
   }, [])
 
@@ -786,6 +814,12 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       fetchWorkSchedules()
     }
   }, [shouldFetch, fetchEmployees, fetchDepartments, fetchWorkSchedules])
+
+  useEffect(() => {
+    if (detailsActiveTab === 'files' && selectedEmployee?.id) {
+      fetchEmployeeFiles(selectedEmployee.id)
+    }
+  }, [detailsActiveTab, selectedEmployee?.id, fetchEmployeeFiles])
 
   const isLoading = sessionLoading || employeesLoading || departmentsLoading || schedulesLoading
   const hasErrors = employeesError || departmentsError || schedulesError
@@ -1635,6 +1669,104 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                         </ul>
                       </div>
                     )}
+                  </div>
+                )}
+
+                {detailsActiveTab === 'files' && selectedEmployee && (
+                  <div className="space-y-6">
+                    {['super_admin', 'company_admin', 'hr_manager'].includes(userProfile?.role || '') && (
+                      <div>
+                        <h6 className="text-sm font-medium text-gray-300 mb-3">Subir documento</h6>
+                        <div className="mb-4">
+                          <label className="block text-xs text-gray-400 mb-1">Categoría</label>
+                          <select
+                            value={documentCategoryForUpload}
+                            onChange={(e) => setDocumentCategoryForUpload(e.target.value as typeof documentCategoryForUpload)}
+                            className="w-full max-w-xs px-3 py-2 bg-white/5 border border-white/10 rounded-md text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            {(['contrato', 'identidad', 'certificado', 'diploma', 'otro'] as const).map((cat) => (
+                              <option key={cat} value={cat} className="bg-gray-800 text-white">
+                                {DOCUMENT_CATEGORY_LABELS[cat]}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <EmployeeFileUpload
+                          employeeId={selectedEmployee.id}
+                          fileType="document"
+                          documentCategory={documentCategoryForUpload}
+                          variant="dark"
+                          onUploadComplete={() => selectedEmployee?.id && fetchEmployeeFiles(selectedEmployee.id)}
+                          onUploadError={(err) => setFilesError(err)}
+                        />
+                      </div>
+                    )}
+                    <div>
+                      <h6 className="text-sm font-medium text-gray-300 mb-3">Archivos del empleado</h6>
+                      {filesLoading ? (
+                        <p className="text-sm text-gray-400">Cargando archivos...</p>
+                      ) : filesError ? (
+                        <p className="text-sm text-red-400">{filesError}</p>
+                      ) : employeeFiles.length === 0 ? (
+                        <p className="text-sm text-gray-400">No hay archivos cargados.</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {employeeFiles.map((file) => (
+                            <div
+                              key={file.id}
+                              className="flex items-center justify-between gap-4 border border-white/10 rounded-lg p-3 bg-white/5"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-white truncate">{file.file_name}</p>
+                                <p className="text-xs text-gray-400">
+                                  {file.file_type === 'document' && file.document_category
+                                    ? DOCUMENT_CATEGORY_LABELS[file.document_category] || file.document_category
+                                    : 'Foto de perfil'}
+                                  {' · '}
+                                  {(file.file_size_bytes / 1024).toFixed(1)} KB
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                {file.signed_url && (
+                                  <a
+                                    href={file.signed_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="p-2 rounded-md bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white transition"
+                                    title="Descargar"
+                                  >
+                                    <ArrowDownTrayIcon className="h-4 w-4" />
+                                  </a>
+                                )}
+                                {['super_admin', 'company_admin', 'hr_manager'].includes(userProfile?.role || '') && (
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      if (!confirm('¿Eliminar este archivo?')) return
+                                      try {
+                                        const res = await fetch(`/api/employees/files/delete/${file.id}`, {
+                                          method: 'DELETE',
+                                          credentials: 'include'
+                                        })
+                                        const data = await res.json()
+                                        if (!res.ok) throw new Error(data.error || 'Error al eliminar')
+                                        selectedEmployee?.id && fetchEmployeeFiles(selectedEmployee.id)
+                                      } catch (err) {
+                                        setFilesError(err instanceof Error ? err.message : 'Error al eliminar')
+                                      }
+                                    }}
+                                    className="p-2 rounded-md bg-white/5 text-gray-300 hover:bg-red-500/20 hover:text-red-400 transition"
+                                    title="Eliminar"
+                                  >
+                                    <TrashIcon className="h-4 w-4" />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
