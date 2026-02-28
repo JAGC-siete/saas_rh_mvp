@@ -47,8 +47,6 @@ const INITIAL_FORM_DATA = {
   metadata: ''
 }
 
-const PROFILE_PHOTO_BUCKET = 'HR_BUCKET'
-const PROFILE_PHOTO_SIGNED_URL_EXPIRATION = 60 * 60 // 1 hour
 const HNL_CURRENCY_FORMATTER = new Intl.NumberFormat('es-HN', {
   style: 'currency',
   currency: 'HNL'
@@ -218,24 +216,6 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       return error.message
     }
     return 'Error inesperado. Por favor, verifica tu conexión e intenta nuevamente.'
-  }, [])
-
-  const getSignedProfileImageUrl = useCallback(async (path: string | null) => {
-    if (!path) return null
-    try {
-      const supabaseClient = createClient()
-      const { data, error } = await supabaseClient.storage
-        .from(PROFILE_PHOTO_BUCKET)
-        .createSignedUrl(path, PROFILE_PHOTO_SIGNED_URL_EXPIRATION)
-      if (error) {
-        console.error('Error creating signed URL for profile image:', error)
-        return null
-      }
-      return data?.signedUrl ?? null
-    } catch (err) {
-      console.error('Unexpected error generating signed URL for profile image:', err)
-      return null
-    }
   }, [])
 
   const handleProfileImageUploaded = useCallback((fileId: string, storagePath: string) => {
@@ -615,28 +595,31 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
     }
   }, [exportFormat, exportFilters])
 
-  const handleViewDetails = useCallback((employee: Employee) => {
+  const loadProfileImageForHeader = useCallback(async (employeeId: string) => {
+    try {
+      const res = await fetch(`/api/employees/files/${employeeId}?file_type=profile_photo`, { credentials: 'include' })
+      const data = await res.json()
+      const profileFile = data.files?.[0]
+      if (profileFile?.signed_url) {
+        setSelectedEmployeeImageUrl(profileFile.signed_url)
+      }
+      setSelectedEmployeeImageError(null)
+    } catch (err) {
+      console.error('Error loading employee profile image:', err)
+      setSelectedEmployeeImageError('No se pudo cargar la foto de perfil.')
+    }
+  }, [])
+
+  const handleViewDetails = useCallback(async (employee: Employee) => {
     setSelectedEmployee(employee)
     setShowDetailsModal(true)
     setDetailsActiveTab('personal')
     setSelectedEmployeeImageUrl(null)
     setSelectedEmployeeImageError(null)
-    const profileImagePath = (employee as any).profile_image_path
-    if (profileImagePath) {
-      setSelectedEmployeeImageLoading(true)
-      getSignedProfileImageUrl(profileImagePath)
-        .then((url: string | null) => {
-          setSelectedEmployeeImageUrl(url)
-        })
-        .catch((err: any) => {
-          console.error('Error loading employee profile image:', err)
-          setSelectedEmployeeImageError('No se pudo cargar la foto de perfil.')
-        })
-        .finally(() => setSelectedEmployeeImageLoading(false))
-    } else {
-      setSelectedEmployeeImageLoading(false)
-    }
-  }, [getSignedProfileImageUrl])
+    setSelectedEmployeeImageLoading(true)
+    await loadProfileImageForHeader(employee.id)
+    setSelectedEmployeeImageLoading(false)
+  }, [loadProfileImageForHeader])
 
   const handleOpenCertificateModal = useCallback((employee: Employee) => {
     setEmployeeForCertificate(employee)
@@ -1682,7 +1665,12 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                           employeeId={selectedEmployee.id}
                           fileType="profile_photo"
                           variant="dark"
-                          onUploadComplete={() => selectedEmployee?.id && fetchEmployeeFiles(selectedEmployee.id)}
+                          onUploadComplete={() => {
+                            if (selectedEmployee?.id) {
+                              fetchEmployeeFiles(selectedEmployee.id)
+                              loadProfileImageForHeader(selectedEmployee.id)
+                            }
+                          }}
                           onUploadError={(err) => setFilesError(err)}
                         />
                       </div>
