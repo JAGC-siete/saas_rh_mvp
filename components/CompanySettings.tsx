@@ -6,9 +6,11 @@ import { Input } from './ui/input'
 import { Card, CardContent } from './ui/card'
 import { 
   ClockIcon,
-  CalculatorIcon
+  CalculatorIcon,
+  DocumentChartBarIcon
 } from '@heroicons/react/24/outline'
 import PayrollConfigEditor from './PayrollConfigEditor'
+import ReportParamsEditor from './reports/ReportParamsEditor'
 
 interface Company {
   id: string
@@ -257,6 +259,7 @@ export default function CompanySettings() {
   const tabs = [
     { id: 'schedules', name: 'Horarios', icon: ClockIcon },
     { id: 'payroll', name: 'Configuración Payroll', icon: CalculatorIcon },
+    { id: 'reports', name: 'Parámetros de Reportes', icon: DocumentChartBarIcon },
   ]
 
   const days = [
@@ -519,6 +522,24 @@ export default function CompanySettings() {
               // Optionally refresh data or show success message
               console.log('Payroll configuration saved')
             }}
+          />
+        ) : (
+          <Card variant="glass" className="p-6">
+            <CardContent className="text-center">
+              <p className="text-red-400 mb-4">{error || companyError || 'No se pudo cargar la información de la empresa'}</p>
+              {!companyId && (
+                <p className="text-sm text-gray-300">Verifica que tu perfil de usuario tenga una empresa asignada.</p>
+              )}
+            </CardContent>
+          </Card>
+        )
+      )}
+
+      {activeTab === 'reports' && (
+        companyId && company ? (
+          <ReportParamsEditor
+            companyId={companyId}
+            onSave={() => console.log('Report params saved')}
           />
         ) : (
           <Card variant="glass" className="p-6">

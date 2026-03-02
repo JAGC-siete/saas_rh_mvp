@@ -3,6 +3,9 @@ import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
 import { formatDateForHonduras, nowInHonduras, formatDateTimeForHonduras } from '../../../lib/timezone'
 import { withExportRateLimit } from '../../../lib/security/rate-limiting'
 import ExcelJS from 'exceljs'
+import { resolveReportConfig } from '../../../lib/reports/column-resolver'
+import type { ResolvedReportConfig } from '../../../lib/reports/column-resolver'
+import { getHeaders, renderAttendanceRows, renderPayrollRows, renderEmployeesRows } from '../../../lib/reports/report-engine'
 
 interface ReportData {
   employees: any[]
@@ -107,14 +110,22 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       reportData.companyName = company.name
     }
 
+    // Resolve metadata-driven report config (columns, branding)
+    const resolvedConfig = await resolveReportConfig(
+      companyId!,
+      reportType as 'attendance' | 'payroll' | 'employees',
+      supabase,
+      body.config_id
+    )
+
     // Route to appropriate exporter
     if (format === 'excel') {
       if (reportType === 'attendance') {
-        return generateAttendanceExcel(res, reportData, dateFilter)
+        return generateAttendanceExcel(res, reportData, dateFilter, resolvedConfig)
       } else if (reportType === 'payroll') {
-        return generatePayrollExcel(res, reportData, dateFilter)
+        return generatePayrollExcel(res, reportData, dateFilter, resolvedConfig)
       } else if (reportType === 'employees') {
-        return generateEmployeesExcel(res, reportData)
+        return generateEmployeesExcel(res, reportData, resolvedConfig)
       } else {
         return res.status(400).json({ error: 'Excel no disponible para este tipo de reporte' })
       }
@@ -122,7 +133,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     if (format === 'pdf') {
       if (reportType === 'attendance') {
-        return generateAttendancePDF(res, reportData, dateFilter, company?.name)
+        return generateAttendancePDF(res, reportData, dateFilter, company?.name, resolvedConfig)
       } else if (reportType === 'payroll') {
         return generatePayrollPDF(res, reportData, dateFilter, company?.name)
       } else if (reportType === 'employees') {
@@ -131,7 +142,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         return generatePDFReport(res, reportData, dateFilter, company?.name)
       }
     } else {
-      return generateCSVReport(res, reportData, dateFilter, reportType)
+      return generateCSVReport(res, reportData, dateFilter, reportType, resolvedConfig)
     }
 
   } catch (error) {
@@ -464,7 +475,13 @@ function generatePDFReport(res: NextApiResponse, reportData: ReportData, dateFil
   }
 }
 
-function generateCSVReport(res: NextApiResponse, reportData: ReportData, dateFilter: any, _reportType?: string) {
+function generateCSVReport(
+  res: NextApiResponse,
+  reportData: ReportData,
+  dateFilter: any,
+  _reportType?: string,
+  _resolvedConfig?: ResolvedReportConfig
+) {
   try {
     // Generar CSV con múltiples secciones
     let csvContent = ''
@@ -658,40 +675,42 @@ async function generateEmployeesReportData(supabase: any, companyId: string | nu
 
 // ===== GENERADORES DE EXCEL =====
 
-async function generateAttendanceExcel(res: NextApiResponse, reportData: any, dateFilter: any) {
+async function generateAttendanceExcel(
+  res: NextApiResponse,
+  reportData: any,
+  dateFilter: any,
+  resolvedConfig?: ResolvedReportConfig
+) {
   try {
     const workbook = new ExcelJS.Workbook()
-    
-    // Hoja 1: Registros de Asistencia
     const sheet = workbook.addWorksheet('Asistencia')
-    sheet.columns = [
-      { header: 'Código', key: 'code', width: 12 },
-      { header: 'Empleado', key: 'employee', width: 25 },
-      { header: 'Fecha', key: 'date', width: 14 },
-      { header: 'Estado', key: 'status', width: 12 },
-      { header: 'Entrada', key: 'check_in', width: 18 },
-      { header: 'Salida', key: 'check_out', width: 18 },
-      { header: 'Min Tardanza', key: 'late_minutes', width: 14 },
-      { header: 'Justificación', key: 'justification', width: 30 }
+
+    const columns = resolvedConfig?.columns ?? [
+      { id: 'emp_code', label: 'Código', sourceField: 'employee_code', source: 'standard' as const },
+      { id: 'emp_name', label: 'Empleado', sourceField: 'employee_name', source: 'standard' as const },
+      { id: 'date', label: 'Fecha', sourceField: 'date', source: 'standard' as const },
+      { id: 'status', label: 'Estado', sourceField: 'status', source: 'standard' as const },
+      { id: 'check_in', label: 'Entrada', sourceField: 'check_in', source: 'standard' as const },
+      { id: 'check_out', label: 'Salida', sourceField: 'check_out', source: 'standard' as const },
+      { id: 'late_minutes', label: 'Min Tardanza', sourceField: 'late_minutes', source: 'standard' as const },
+      { id: 'justification', label: 'Justificación', sourceField: 'justification', source: 'standard' as const }
     ]
 
-    const employeeById = new Map<string, any>()
-    for (const emp of reportData.employees) {
-      employeeById.set(emp.id, emp)
-    }
+    sheet.columns = columns.map((c, i) => ({
+      header: c.label,
+      key: `col_${i}`,
+      width: Math.max(12, Math.min(c.label.length + 2, 30))
+    }))
 
-    for (const r of reportData.attendance) {
-      const emp = r.employees || employeeById.get(r.employee_id)
-      sheet.addRow({
-        code: emp?.employee_code || '',
-        employee: emp?.name || r.employee_id,
-        date: new Date(r.date + 'T00:00:00').toLocaleDateString('es-HN'),
-        status: r.status || '',
-        check_in: r.check_in ? new Date(r.check_in).toLocaleString('es-HN', { timeZone: 'America/Tegucigalpa' }) : '',
-        check_out: r.check_out ? new Date(r.check_out).toLocaleString('es-HN', { timeZone: 'America/Tegucigalpa' }) : '',
-        late_minutes: r.late_minutes || 0,
-        justification: r.justification || ''
-      })
+    const rows = renderAttendanceRows(
+      reportData.attendance || [],
+      reportData.employees || [],
+      columns
+    )
+    for (const row of rows) {
+      const rowObj: Record<string, unknown> = {}
+      row.forEach((val, i) => { rowObj[`col_${i}`] = val })
+      sheet.addRow(rowObj)
     }
 
     // Estilo del encabezado
@@ -703,6 +722,10 @@ async function generateAttendanceExcel(res: NextApiResponse, reportData: any, da
     }
 
     // Hoja 2: Resumen
+    const employeeById = new Map<string, any>()
+    for (const emp of reportData.employees || []) {
+      employeeById.set(emp.id, emp)
+    }
     const summarySheet = workbook.addWorksheet('Resumen')
     summarySheet.columns = [
       { header: 'Empleado', key: 'employee', width: 25 },
@@ -713,7 +736,7 @@ async function generateAttendanceExcel(res: NextApiResponse, reportData: any, da
     ]
 
     const summary = new Map<string, any>()
-    for (const r of reportData.attendance) {
+    for (const r of reportData.attendance || []) {
       const emp = r.employees || employeeById.get(r.employee_id)
       const empName = emp?.name || r.employee_id
       
@@ -747,47 +770,42 @@ async function generateAttendanceExcel(res: NextApiResponse, reportData: any, da
   }
 }
 
-async function generatePayrollExcel(res: NextApiResponse, reportData: any, dateFilter: any) {
+async function generatePayrollExcel(
+  res: NextApiResponse,
+  reportData: any,
+  dateFilter: any,
+  resolvedConfig?: ResolvedReportConfig
+) {
   try {
     const workbook = new ExcelJS.Workbook()
-    
-    // Hoja 1: Nómina Detallada
     const sheet = workbook.addWorksheet('Nómina')
-    sheet.columns = [
-      { header: 'Código', key: 'code', width: 12 },
-      { header: 'Empleado', key: 'employee', width: 25 },
-      { header: 'Departamento', key: 'department', width: 20 },
-      { header: 'Período Inicio', key: 'period_start', width: 14 },
-      { header: 'Período Fin', key: 'period_end', width: 14 },
-      { header: 'Salario Base', key: 'base_salary', width: 15 },
-      { header: 'Días Trabajados', key: 'days_worked', width: 15 },
-      { header: 'Salario Bruto', key: 'gross_salary', width: 15 },
-      { header: 'ISR', key: 'income_tax', width: 12 },
-      { header: 'IHSS', key: 'social_security', width: 12 },
-      { header: 'RAP', key: 'professional_tax', width: 12 },
-      { header: 'Total Deducciones', key: 'total_deductions', width: 15 },
-      { header: 'Salario Neto', key: 'net_salary', width: 15 },
-      { header: 'Estado', key: 'status', width: 12 }
+
+    const columns = resolvedConfig?.columns ?? [
+      { id: 'emp_code', label: 'Código', sourceField: 'employee_code', source: 'standard' as const },
+      { id: 'emp_name', label: 'Empleado', sourceField: 'employee_name', source: 'standard' as const },
+      { id: 'period', label: 'Período', sourceField: 'period', source: 'standard' as const },
+      { id: 'gross_salary', label: 'Salario Bruto', sourceField: 'gross_salary', source: 'standard' as const },
+      { id: 'total_deductions', label: 'Total Deducciones', sourceField: 'total_deductions', source: 'standard' as const },
+      { id: 'net_salary', label: 'Salario Neto', sourceField: 'net_salary', source: 'standard' as const },
+      { id: 'status', label: 'Estado', sourceField: 'status', source: 'standard' as const }
     ]
 
-    for (const record of reportData.payroll) {
-      const emp = record.employees || {}
-      sheet.addRow({
-        code: emp.employee_code || '',
-        employee: emp.name || '',
-        department: emp.departments?.name || 'Sin Departamento',
-        period_start: new Date(record.period_start).toLocaleDateString('es-HN'),
-        period_end: new Date(record.period_end).toLocaleDateString('es-HN'),
-        base_salary: record.base_salary || 0,
-        days_worked: record.days_worked || 0,
-        gross_salary: record.gross_salary || 0,
-        income_tax: record.income_tax || 0,
-        social_security: record.social_security || 0,
-        professional_tax: record.professional_tax || 0,
-        total_deductions: record.total_deductions || 0,
-        net_salary: record.net_salary || 0,
-        status: record.status || ''
-      })
+    const employees = (reportData.payroll || []).map((r: any) => r.employees).filter(Boolean)
+    sheet.columns = columns.map((c, i) => ({
+      header: c.label,
+      key: `col_${i}`,
+      width: Math.max(12, Math.min(c.label.length + 2, 25))
+    }))
+
+    const rows = renderPayrollRows(
+      reportData.payroll || [],
+      employees,
+      columns
+    )
+    for (const row of rows) {
+      const rowObj: Record<string, unknown> = {}
+      row.forEach((val, i) => { rowObj[`col_${i}`] = val })
+      sheet.addRow(rowObj)
     }
 
     sheet.getRow(1).font = { bold: true }
@@ -833,38 +851,35 @@ async function generatePayrollExcel(res: NextApiResponse, reportData: any, dateF
   }
 }
 
-async function generateEmployeesExcel(res: NextApiResponse, reportData: any) {
+async function generateEmployeesExcel(
+  res: NextApiResponse,
+  reportData: any,
+  resolvedConfig?: ResolvedReportConfig
+) {
   try {
     const workbook = new ExcelJS.Workbook()
     const sheet = workbook.addWorksheet('Empleados')
 
-    sheet.columns = [
-      { header: 'Código', key: 'code', width: 12 },
-      { header: 'DNI', key: 'dni', width: 15 },
-      { header: 'Nombre', key: 'name', width: 25 },
-      { header: 'Email', key: 'email', width: 25 },
-      { header: 'Teléfono', key: 'phone', width: 15 },
-      { header: 'Departamento', key: 'department', width: 20 },
-      { header: 'Rol', key: 'role', width: 15 },
-      { header: 'Salario Base', key: 'salary', width: 15 },
-      { header: 'Fecha Ingreso', key: 'hire_date', width: 14 },
-      { header: 'Estado', key: 'status', width: 12 }
+    const columns = resolvedConfig?.columns ?? [
+      { id: 'emp_code', label: 'Código', sourceField: 'employee_code', source: 'standard' as const },
+      { id: 'name', label: 'Nombre', sourceField: 'name', source: 'standard' as const },
+      { id: 'position', label: 'Cargo', sourceField: 'position', source: 'standard' as const },
+      { id: 'department', label: 'Departamento', sourceField: 'department_name', source: 'standard' as const },
+      { id: 'status', label: 'Estado', sourceField: 'status', source: 'standard' as const },
+      { id: 'hire_date', label: 'Fecha Ingreso', sourceField: 'hire_date', source: 'standard' as const }
     ]
 
-    const formatHNL = (n: number) => `L. ${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-    for (const emp of reportData.employees) {
-      sheet.addRow({
-        code: emp.employee_code || '',
-        dni: emp.dni || '',
-        name: emp.name || '',
-        email: emp.email || '',
-        phone: emp.phone || '',
-        department: emp.departments?.name || 'Sin Departamento',
-        role: emp.role || '',
-        salary: formatHNL(emp.base_salary || 0),
-        hire_date: emp.hire_date ? new Date(emp.hire_date).toLocaleDateString('es-HN') : '',
-        status: emp.status || ''
-      })
+    sheet.columns = columns.map((c, i) => ({
+      header: c.label,
+      key: `col_${i}`,
+      width: Math.max(12, Math.min(c.label.length + 2, 25))
+    }))
+
+    const rows = renderEmployeesRows(reportData.employees || [], columns)
+    for (const row of rows) {
+      const rowObj: Record<string, unknown> = {}
+      row.forEach((val, i) => { rowObj[`col_${i}`] = val })
+      sheet.addRow(rowObj)
     }
 
     sheet.getRow(1).font = { bold: true }
@@ -886,7 +901,13 @@ async function generateEmployeesExcel(res: NextApiResponse, reportData: any) {
 
 // ===== GENERADORES DE PDF =====
 
-async function generateAttendancePDF(res: NextApiResponse, reportData: any, dateFilter: any, companyName?: string) {
+async function generateAttendancePDF(
+  res: NextApiResponse,
+  reportData: any,
+  dateFilter: any,
+  companyName?: string,
+  resolvedConfig?: ResolvedReportConfig
+) {
   try {
     const PDFDocument = require('pdfkit')
     const doc = new PDFDocument({ 
@@ -904,11 +925,12 @@ async function generateAttendancePDF(res: NextApiResponse, reportData: any, date
     
     const pageWidth = doc.page.width
     const pageHeight = doc.page.height
+    const primaryColor = resolvedConfig?.branding?.primaryColor ?? '#1e40af'
     
-    // Colores consistentes
+    // Colores consistentes (branding from config)
     const colors = {
-      primary: '#1e40af',
-      primaryDark: '#1e3a8a',
+      primary: primaryColor,
+      primaryDark: primaryColor,
       success: '#059669',
       warning: '#d97706',
       danger: '#dc2626',
@@ -1032,9 +1054,19 @@ async function generateAttendancePDF(res: NextApiResponse, reportData: any, date
       { align: 'center', width: pageWidth - 60 }
     )
     
-    // Tabla mejorada con mejor formato
-    const headers = ['Código', 'Empleado', 'Fecha', 'Estado', 'Entrada', 'Salida', 'Tardanza']
-    const colWidths = [50, 100, 65, 50, 70, 70, 50]
+    // Tabla: usar columnas resueltas o defaults
+    const tableColumns = resolvedConfig?.columns ?? [
+      { id: 'emp_code', label: 'Código', sourceField: 'employee_code', source: 'standard' as const },
+      { id: 'emp_name', label: 'Empleado', sourceField: 'employee_name', source: 'standard' as const },
+      { id: 'date', label: 'Fecha', sourceField: 'date', source: 'standard' as const },
+      { id: 'status', label: 'Estado', sourceField: 'status', source: 'standard' as const },
+      { id: 'check_in', label: 'Entrada', sourceField: 'check_in', source: 'standard' as const },
+      { id: 'check_out', label: 'Salida', sourceField: 'check_out', source: 'standard' as const },
+      { id: 'late_minutes', label: 'Tardanza', sourceField: 'late_minutes', source: 'standard' as const }
+    ]
+    const headers = tableColumns.map((c) => c.label)
+    const baseWidth = 50
+    const colWidths = headers.map(() => baseWidth)
     const startX = 30
     let y = 70
     const rowHeight = 18
@@ -1055,13 +1087,13 @@ async function generateAttendancePDF(res: NextApiResponse, reportData: any, date
     })
     y += rowHeight
     
-    // Datos de asistencia con alternancia de colores
+    // Datos de asistencia usando columnas resueltas
+    const attRows = renderAttendanceRows(attendanceRecords, employees, tableColumns)
     let rowIndex = 0
-    for (const record of attendanceRecords) {
+    for (const rowValues of attRows) {
       if (y > pageHeight - 60) {
         doc.addPage()
         y = 30
-        // Re-dibujar headers en nueva página
         headers.forEach((h: string, i: number) => {
           const x = startX + colWidths.slice(0, i).reduce((a: number, b: number) => a + b, 0)
           doc.roundedRect(x, y, colWidths[i], rowHeight, 2)
@@ -1069,86 +1101,19 @@ async function generateAttendancePDF(res: NextApiResponse, reportData: any, date
             .stroke(colors.primaryDark)
           doc.fillColor('white')
           doc.fontSize(8).font('Helvetica-Bold').text(
-            h, 
-            x + 3, 
-            y + 6, 
-            { width: colWidths[i] - 6, align: 'center' }
+            h, x + 3, y + 6, { width: colWidths[i] - 6, align: 'center' }
           )
         })
         y += rowHeight
       }
-      
-      const emp = record.employees || employees.find((e: any) => e.id === record.employee_id)
       const isEven = rowIndex % 2 === 0
-      
-      const statusColors: Record<string, string> = {
-        'present': colors.success,
-        'late': colors.warning,
-        'absent': colors.danger
-      }
-      const statusLabels: Record<string, string> = {
-        'present': 'Presente',
-        'late': 'Tarde',
-        'absent': 'Ausente'
-      }
-      
-      headers.forEach((_h: string, i: number) => {
+      rowValues.forEach((val, i) => {
         const x = startX + colWidths.slice(0, i).reduce((a: number, b: number) => a + b, 0)
-        
-        // Fondo alternado
-        if (isEven) {
-          doc.rect(x, y, colWidths[i], rowHeight).fill(colors.lightGray)
-        }
+        if (isEven) doc.rect(x, y, colWidths[i], rowHeight).fill(colors.lightGray)
         doc.rect(x, y, colWidths[i], rowHeight).stroke(colors.borderGray)
-        
-        doc.fillColor('#0f172a')
-        doc.fontSize(7).font('Helvetica')
-        
-        let value = ''
-        switch (i) {
-          case 0: // Código
-            value = emp?.employee_code || ''
-            break
-          case 1: // Empleado
-            value = emp?.name || record.employee_id || ''
-            break
-          case 2: // Fecha
-            value = new Date(record.date + 'T00:00:00').toLocaleDateString('es-HN')
-            break
-          case 3: // Estado
-            value = statusLabels[record.status] || record.status || ''
-            doc.fillColor(statusColors[record.status] || '#0f172a')
-            break
-          case 4: // Entrada
-            value = record.check_in 
-              ? new Date(record.check_in).toLocaleTimeString('es-HN', { 
-                  timeZone: 'America/Tegucigalpa',
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })
-              : 'N/A'
-            break
-          case 5: // Salida
-            value = record.check_out 
-              ? new Date(record.check_out).toLocaleTimeString('es-HN', { 
-                  timeZone: 'America/Tegucigalpa',
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })
-              : 'N/A'
-            break
-          case 6: // Tardanza
-            value = record.late_minutes ? `${record.late_minutes} min` : '-'
-            if (record.late_minutes && record.late_minutes > 0) {
-              doc.fillColor(colors.warning)
-            }
-            break
-        }
-        
-        doc.text(value, x + 3, y + 5, { width: colWidths[i] - 6, align: 'center' })
-        doc.fillColor('#0f172a')
+        doc.fillColor('#0f172a').fontSize(7).font('Helvetica')
+        doc.text(String(val ?? ''), x + 3, y + 5, { width: colWidths[i] - 6, align: 'center' })
       })
-      
       y += rowHeight
       rowIndex++
     }
