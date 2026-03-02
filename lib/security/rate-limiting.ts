@@ -28,6 +28,13 @@ const RATE_LIMITS = {
     message: 'Demasiadas solicitudes. Intente más tarde.'
   },
 
+  // Nómina: flujo intensivo (preview, draft, refresh tras autorizar)
+  payroll: {
+    windowMs: 5 * 60 * 1000, // 5 minutos
+    max: 50, // máximo 50 requests por ventana (carga + cambios de período + refresh)
+    message: 'Demasiadas solicitudes de nómina. Espere unos minutos.'
+  },
+
   // Operaciones de setup (seed, inicialización) - bucket separado, más permisivo
   setup: {
     windowMs: 5 * 60 * 1000, // 5 minutos
@@ -103,7 +110,7 @@ const checkRateLimit = (key: string, limit: { windowMs: number; max: number }): 
 }
 
 // Middleware de rate limiting
-export const withRateLimit = (endpointType: 'export' | 'reports' | 'general' | 'setup' = 'general', allowedMethods: string[] = ['GET', 'POST', 'PUT', 'DELETE']) => {
+export const withRateLimit = (endpointType: 'export' | 'reports' | 'general' | 'payroll' | 'setup' = 'general', allowedMethods: string[] = ['GET', 'POST', 'PUT', 'DELETE']) => {
   return (handler: any) => {
     return async (req: NextApiRequest, res: NextApiResponse) => {
       // Validar método HTTP permitido ANTES de verificar rate limit
@@ -174,11 +181,14 @@ export const withReportsRateLimit = (methods?: string[]) => withRateLimit('repor
 // Rate limiting general
 export const withGeneralRateLimit = (methods?: string[]) => withRateLimit('general', methods)
 
+// Rate limiting para nómina (límite más alto por flujo intensivo)
+export const withPayrollRateLimit = (methods?: string[]) => withRateLimit('payroll', methods)
+
 // Rate limiting para operaciones de setup (seed, inicialización) - bucket independiente
 export const withSetupRateLimit = (methods?: string[]) => withRateLimit('setup', methods)
 
 // Función para verificar rate limit sin middleware
-export const checkRateLimitStatus = (req: NextApiRequest, endpointType: 'export' | 'reports' | 'general' | 'setup' = 'general') => {
+export const checkRateLimitStatus = (req: NextApiRequest, endpointType: 'export' | 'reports' | 'general' | 'payroll' | 'setup' = 'general') => {
   const clientIP = getClientIP(req)
   const userAgent = req.headers['user-agent'] || 'unknown'
   const rateLimitKey = `${clientIP}:${endpointType}:${userAgent.substring(0, 50)}`

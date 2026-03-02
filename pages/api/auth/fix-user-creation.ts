@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '@supabase/supabase-js'
+import { createClient as createServerClient } from '../../../lib/supabase/server'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -9,11 +10,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const { userId } = req.body
 
-    if (!userId) {
+    if (!userId || typeof userId !== 'string') {
       return res.status(400).json({ error: 'User ID is required' })
     }
 
-    // Use service role key to bypass RLS completely
+    // SECURITY: Only allow the authenticated user to create their own profile
+    // (e.g. after magic link verification - session cookies are set by Supabase)
+    const supabaseServer = createServerClient(req, res)
+    const { data: { user }, error: authError } = await supabaseServer.auth.getUser()
+
+    if (authError || !user) {
+      return res.status(401).json({ error: 'Unauthorized' })
+    }
+
+    if (user.id !== userId) {
+      return res.status(403).json({ error: 'Forbidden: userId must match authenticated user' })
+    }
+
+    // Use service role key to bypass RLS for profile creation
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -36,16 +50,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json({ success: true, message: 'Profile already exists' })
     }
 
-    // First, make company_id nullable if it isn't already
-    try {
-      await supabase.rpc('exec', {
-        sql: 'ALTER TABLE user_profiles ALTER COLUMN company_id DROP NOT NULL;'
-      })
-    } catch (error) {
-      console.warn('Could not alter table (might already be nullable):', error)
-    }
-
-    // Create user profile
+    // Create user profile (company_id nullable for super_admin onboarding flow)
     const { error } = await supabase
       .from('user_profiles')
       .insert({

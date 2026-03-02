@@ -27,7 +27,7 @@ export default function EnvironmentError() {
   const checkEnvironment = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/debug/production-env')
+      const response = await fetch('/api/env-check')
       const data = await response.json()
       setEnvStatus(data.environment)
     } catch (error) {

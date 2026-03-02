@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { nowInHonduras } from '../../../lib/timezone'
-import { withGeneralRateLimit } from '../../../lib/security/rate-limiting'
+import { withPayrollRateLimit } from '../../../lib/security/rate-limiting'
 import { secureLog, secureErrorLog } from '../../../lib/security/safe-logging'
 import { 
   getTaxBracketsForYear, 
@@ -1201,4 +1201,4 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 }
 
-export default withGeneralRateLimit(['GET'])(handler)
+export default withPayrollRateLimit(['GET'])(handler)
