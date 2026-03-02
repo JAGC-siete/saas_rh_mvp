@@ -77,7 +77,10 @@ export function AccountingMappingTable({
         await fetchMappings()
         onSeedSuccess?.()
       } else {
-        alert(data.error || 'Error inicializando catálogo')
+        const msg = res.status === 429
+          ? `${data.message || data.error}. ${data.retryAfter ? `Reintente en ${data.retryAfter} segundos.` : ''}`
+          : (data.error || 'Error inicializando catálogo')
+        alert(msg)
       }
     } catch (e) {
       alert('Error de conexión')

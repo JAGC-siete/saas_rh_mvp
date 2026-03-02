@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
-import { withGeneralRateLimit } from '../../../lib/security/rate-limiting'
+import { withSetupRateLimit } from '../../../lib/security/rate-limiting'
 import { createAdminClient } from '../../../lib/supabase/server'
 
 /**
@@ -64,4 +64,4 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 }
 
-export default withGeneralRateLimit(['POST'])(handler)
+export default withSetupRateLimit(['POST'])(handler)
