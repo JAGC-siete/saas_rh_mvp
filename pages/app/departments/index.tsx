@@ -140,7 +140,7 @@ export default function DepartmentsPage() {
           {/* Header */}
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold text-white">🏢 Gestión de Departamentos</h1>
+              <h1 className="text-3xl font-bold text-white">Gestión de Departamentos</h1>
               <p className="text-gray-300">Administración y análisis de departamentos</p>
             </div>
             <div className="flex gap-2">
