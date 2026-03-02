@@ -9,6 +9,8 @@ interface HeaderBarProps {
   onEmployeeChange: (employeeId: string) => void
   selectedRole?: string
   onRoleChange?: (role: string) => void
+  selectedDepartmentId?: string
+  onDepartmentChange?: (departmentId: string) => void
   lastUpdated: Date | null
   onExport: (format: string) => Promise<void>
   loading?: boolean
@@ -24,6 +26,8 @@ export default function HeaderBar({
   onEmployeeChange,
   selectedRole,
   onRoleChange,
+  selectedDepartmentId,
+  onDepartmentChange,
   lastUpdated,
   onExport,
   loading = false,
@@ -68,6 +72,8 @@ export default function HeaderBar({
         onEmployeeChange={onEmployeeChange}
         selectedRole={selectedRole}
         onRoleChange={onRoleChange}
+        selectedDepartmentId={selectedDepartmentId}
+        onDepartmentChange={onDepartmentChange}
         loading={loading}
         from={from}
         to={to}

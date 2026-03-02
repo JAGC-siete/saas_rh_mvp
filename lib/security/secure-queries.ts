@@ -79,9 +79,9 @@ export class SecureQueryBuilder {
       query = query.eq('employee_id', params.employee_id)
     }
 
-    // Filtrar por role/equipo si se proporciona
+    // Filtrar por role y/o departamento (intersectar si ambos)
+    let filteredIds: string[] | null = null
     if (params.role) {
-      // Obtener empleados con el role específico en la empresa del usuario
       const { data: roleEmployees, error: roleError } = await this.supabase
         .from('employees')
         .select('id')
@@ -89,18 +89,26 @@ export class SecureQueryBuilder {
         .eq('role', params.role)
         .eq('status', 'active')
 
-      if (roleError) {
-        throw new Error(`Error obteniendo empleados del role: ${roleError.message}`)
-      }
+      if (roleError) throw new Error(`Error obteniendo empleados del role: ${roleError.message}`)
+      const ids = (roleEmployees || []).map((emp: any) => emp.id)
+      filteredIds = filteredIds ? ids.filter((id: string) => filteredIds!.includes(id)) : ids
+      if ((filteredIds?.length ?? 0) === 0) return []
+    }
+    if (params.department_id) {
+      const { data: deptEmployees, error: deptError } = await this.supabase
+        .from('employees')
+        .select('id')
+        .eq('company_id', this.userProfile.company_id)
+        .eq('department_id', params.department_id)
+        .eq('status', 'active')
 
-      const roleEmployeeIds = (roleEmployees || []).map((emp: any) => emp.id)
-      
-      if (roleEmployeeIds.length > 0) {
-        query = query.in('employee_id', roleEmployeeIds)
-      } else {
-        // Si no hay empleados con ese role, devolver array vacío
-        return []
-      }
+      if (deptError) throw new Error(`Error obteniendo empleados del departamento: ${deptError.message}`)
+      const ids = (deptEmployees || []).map((emp: any) => emp.id)
+      filteredIds = filteredIds ? ids.filter((id: string) => filteredIds!.includes(id)) : ids
+      if ((filteredIds?.length ?? 0) === 0) return []
+    }
+    if (filteredIds && filteredIds.length > 0) {
+      query = query.in('employee_id', filteredIds)
     }
 
     const { data, error } = await query

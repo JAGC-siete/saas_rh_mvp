@@ -27,8 +27,12 @@ async function attendanceExportHandler(req: NextApiRequest, res: NextApiResponse
       })
     }
 
-    // VALIDACIÓN DE PARÁMETROS DE QUERY (como payroll)
-    const { preset, formato, role: roleFilter, employee_id } = req.query
+    const normalizeParam = (p: string | string[] | undefined) => (Array.isArray(p) ? p[0] : p)
+    const preset = normalizeParam(req.query.preset)
+    const formato = normalizeParam(req.query.formato)
+    const roleFilter = normalizeParam(req.query.role)
+    const employee_id = normalizeParam(req.query.employee_id)
+    const department_id = normalizeParam(req.query.department_id)
     
     // Validar formato requerido
     if (!formato || typeof formato !== 'string') {
@@ -57,7 +61,8 @@ async function attendanceExportHandler(req: NextApiRequest, res: NextApiResponse
           endDate: req.query.endDate,
           formato: formato || 'excel',
           role: roleFilter || null,
-          employee_id: employee_id || null
+          employee_id: employee_id || null,
+          department_id: department_id || null
         }
       } else {
         const range = getDateRange(preset)
@@ -66,7 +71,8 @@ async function attendanceExportHandler(req: NextApiRequest, res: NextApiResponse
           endDate: range.to.split('T')[0],
           formato: formato || 'excel',
           role: roleFilter || null,
-          employee_id: employee_id || null
+          employee_id: employee_id || null,
+          department_id: department_id || null
         }
       }
     } else {
@@ -83,7 +89,8 @@ async function attendanceExportHandler(req: NextApiRequest, res: NextApiResponse
       exportData = {
         ...validation.data!,
         role: roleFilter || null,
-        employee_id: employee_id || null
+        employee_id: employee_id || null,
+        department_id: department_id || null
       }
     }
 

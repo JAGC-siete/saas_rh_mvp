@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
+import { useRouter } from 'next/router'
 import ProtectedRoute from '../../../components/ProtectedRoute'
 import DashboardLayout from '../../../components/DashboardLayout'
 import HeaderBar from '../../../components/attendance/HeaderBar'
@@ -14,13 +15,17 @@ import { formatTimeDisplay } from '../../../lib/timezone'
 import EmployeeDrawer from '../../../components/attendance/EmployeeDrawer'
 import { useAttendanceData, calculateAttendanceRates, getSeverityFromDelta } from '../../../lib/hooks/useAttendanceData'
 import { attendanceApi, mapAttendanceError } from '../../../lib/attendance-api'
+import { getDateRange } from '../../../lib/attendance'
 
 export default function AttendanceDashboardApp() {
+  const router = useRouter()
   const [preset, setPreset] = useState('today')
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('')
   const [selectedRole, setSelectedRole] = useState('')
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState('')
   const [from, setFrom] = useState<string | undefined>(undefined)
   const [to, setTo] = useState<string | undefined>(undefined)
+  const [urlSynced, setUrlSynced] = useState(false)
   const [drawer, setDrawer] = useState<{
     open: boolean
     name: string
@@ -33,8 +38,37 @@ export default function AttendanceDashboardApp() {
   const { companyId } = useCompanyContext()
   const [trends, setTrends] = useState<{ date: string; present: number; absent: number; late: number; checkInTimes: Array<{time: string, employee: string}> }[]>([])
 
+  // Sincronizar estado desde URL al montar
+  useEffect(() => {
+    if (!router.isReady || urlSynced) return
+    const q = router.query as Record<string, string | undefined>
+    if (q.preset) setPreset(q.preset)
+    if (q.employee_id) setSelectedEmployeeId(q.employee_id)
+    if (q.role) setSelectedRole(q.role)
+    if (q.department_id) setSelectedDepartmentId(q.department_id)
+    if (q.preset === 'custom' && q.from && q.to) {
+      setFrom(q.from.includes('T') ? q.from : `${q.from}T00:00:00.000Z`)
+      setTo(q.to.includes('T') ? q.to : `${q.to}T23:59:59.999Z`)
+    }
+    setUrlSynced(true)
+  }, [router.isReady, router.query, urlSynced])
+
+  // Persistir filtros en URL cuando cambien
+  useEffect(() => {
+    if (!urlSynced) return
+    const query: Record<string, string> = { preset }
+    if (selectedEmployeeId) query.employee_id = selectedEmployeeId
+    if (selectedRole) query.role = selectedRole
+    if (selectedDepartmentId) query.department_id = selectedDepartmentId
+    if (preset === 'custom' && from && to) {
+      query.from = from.slice(0, 10)
+      query.to = to.slice(0, 10)
+    }
+    router.replace({ pathname: router.pathname, query }, undefined, { shallow: true })
+  }, [preset, selectedEmployeeId, selectedRole, selectedDepartmentId, from, to, urlSynced])
+
   // Hook unificado para datos de asistencia
-  const { kpis, absent, early, late, outsideSchedule, lastUpdated, loading, error } = useAttendanceData(preset, selectedEmployeeId, selectedRole, from, to)
+  const { kpis, absent, early, late, outsideSchedule, lastUpdated, loading, error } = useAttendanceData(preset, selectedEmployeeId, selectedRole, from, to, selectedDepartmentId)
 
   // Calcular tasas derivadas
   const { total, asistenciaPct, puntualidadPct } = calculateAttendanceRates(kpis)
@@ -46,7 +80,7 @@ export default function AttendanceDashboardApp() {
         if (!companyId) return
         // Permitir rango personalizado si preset === 'custom'
         const range = preset === 'custom' && from && to ? `&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}` : ''
-        const trendsUrl = `/api/reports/attendance-trends?preset=${preset}${selectedEmployeeId ? `&employee_id=${selectedEmployeeId}` : ''}${selectedRole ? `&role=${encodeURIComponent(selectedRole)}` : ''}${range}`
+        const trendsUrl = `/api/reports/attendance-trends?preset=${preset}${selectedEmployeeId ? `&employee_id=${selectedEmployeeId}` : ''}${selectedRole ? `&role=${encodeURIComponent(selectedRole)}` : ''}${selectedDepartmentId ? `&department_id=${selectedDepartmentId}` : ''}${range}`
         console.log('🔍 Frontend - Loading trends from:', trendsUrl)
         const res = await fetch(trendsUrl)
         const json = await res.json()
@@ -61,9 +95,16 @@ export default function AttendanceDashboardApp() {
       }
     }
     loadTrends()
-  }, [companyId, selectedEmployeeId, selectedRole, preset, from, to]) // Agregar preset y rango como dependencias
+  }, [companyId, selectedEmployeeId, selectedRole, selectedDepartmentId, preset, from, to])
 
-  const handlePresetChange = (p: string) => setPreset(p)
+  const handlePresetChange = (p: string) => {
+    setPreset(p)
+    if (p === 'custom' && !from && !to) {
+      const { from: weekFrom, to: weekTo } = getDateRange('week')
+      setFrom(weekFrom)
+      setTo(weekTo)
+    }
+  }
   const handleRangeChange = (f: string, t: string) => {
     setFrom(f ? `${f}T00:00:00.000Z` : undefined)
     setTo(t ? `${t}T23:59:59.999Z` : undefined)
@@ -83,6 +124,7 @@ export default function AttendanceDashboardApp() {
       searchParams.set('formato', format === 'xlsx' ? 'excel' : format)
       if (selectedEmployeeId) searchParams.set('employee_id', selectedEmployeeId)
       if (selectedRole) searchParams.set('role', selectedRole)
+      if (selectedDepartmentId) searchParams.set('department_id', selectedDepartmentId)
       
       // Si hay rango personalizado, agregarlo
       if (preset === 'custom' && from && to) {
@@ -191,6 +233,8 @@ export default function AttendanceDashboardApp() {
             onEmployeeChange={handleEmployeeChange}
             selectedRole={selectedRole}
             onRoleChange={setSelectedRole}
+            selectedDepartmentId={selectedDepartmentId}
+            onDepartmentChange={setSelectedDepartmentId}
             lastUpdated={lastUpdated}
             onExport={handleExport}
             loading={loading}
@@ -256,6 +300,11 @@ export default function AttendanceDashboardApp() {
                 {selectedRole && (
                   <span className="text-sm text-gray-400 ml-2 font-normal">
                     • {selectedRole}
+                  </span>
+                )}
+                {selectedDepartmentId && (
+                  <span className="text-sm text-gray-400 ml-2 font-normal">
+                    • Departamento filtrado
                   </span>
                 )}
               </h3>

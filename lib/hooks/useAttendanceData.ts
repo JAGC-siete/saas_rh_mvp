@@ -43,7 +43,20 @@ const DEFAULT_KPIS: AttendanceKPIs = {
   total_empleados: 0
 }
 
-export function useAttendanceData(preset: string, employeeId?: string, role?: string, from?: string, to?: string): AttendanceData {
+const MAX_RANGE_DAYS = 366
+
+function isRangeValid(from?: string, to?: string): boolean {
+  if (!from || !to) return false
+  const fromDate = from.slice(0, 10)
+  const toDate = to.slice(0, 10)
+  if (fromDate > toDate) return false
+  const fromMs = new Date(fromDate).getTime()
+  const toMs = new Date(toDate).getTime()
+  const diffDays = Math.ceil((toMs - fromMs) / (24 * 60 * 60 * 1000))
+  return diffDays <= MAX_RANGE_DAYS
+}
+
+export function useAttendanceData(preset: string, employeeId?: string, role?: string, from?: string, to?: string, departmentId?: string): AttendanceData {
   const [kpis, setKpis] = useState<AttendanceKPIs>(DEFAULT_KPIS)
   const [absent, setAbsent] = useState<AttendanceRow[]>([])
   const [early, setEarly] = useState<AttendanceRow[]>([])
@@ -54,11 +67,16 @@ export function useAttendanceData(preset: string, employeeId?: string, role?: st
   const [error, setError] = useState<string | null>(null)
 
   const fetchData = useCallback(async () => {
+    if (preset === 'custom' && !isRangeValid(from, to)) {
+      setLoading(false)
+      return
+    }
     const ac = new AbortController()
     const qEmp = employeeId ? `&employee_id=${employeeId}` : ''
     const qRole = role ? `&role=${encodeURIComponent(role)}` : ''
+    const qDept = departmentId ? `&department_id=${encodeURIComponent(departmentId)}` : ''
     const qRange = preset === 'custom' && from && to ? `&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}` : ''
-    const q = `?preset=${preset}${qEmp}${qRole}${qRange}`
+    const q = `?preset=${preset}${qEmp}${qRole}${qDept}${qRange}`
 
     try {
       setLoading(true)
@@ -136,7 +154,7 @@ export function useAttendanceData(preset: string, employeeId?: string, role?: st
     }
 
     return () => ac.abort()
-  }, [preset, employeeId, role, from, to])
+  }, [preset, employeeId, role, from, to, departmentId])
 
   useEffect(() => {
     fetchData()
