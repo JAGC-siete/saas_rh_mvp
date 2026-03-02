@@ -8,6 +8,9 @@ interface PermissionRecord {
   days_requested: number
   reason: string
   status: string
+  rejection_reason?: string
+  attachment_url?: string
+  attachment_name?: string
   created_at: string
   leave_type: {
     id: string
@@ -29,10 +32,8 @@ export default function EmployeePermissionHistory({ employeeId }: EmployeePermis
   const [totalRecords, setTotalRecords] = useState(0)
 
   useEffect(() => {
-    if (employeeId) {
-      fetchPermissions()
-    }
-  }, [employeeId, currentPage])
+    fetchPermissions()
+  }, [])
 
   const fetchPermissions = async () => {
     try {
@@ -44,7 +45,7 @@ export default function EmployeePermissionHistory({ employeeId }: EmployeePermis
       if (response.ok) {
         const data = await response.json()
         setPermissions(data)
-        setTotalRecords(data.length) // For now, we'll use the length as total
+        setTotalRecords(data.length)
       } else {
         setError('Error al cargar el historial de permisos')
       }
@@ -184,6 +185,24 @@ export default function EmployeePermissionHistory({ employeeId }: EmployeePermis
               <div className="mt-3 p-3 bg-white/5 rounded-lg">
                 <p className="text-sm text-gray-400 mb-1">Motivo:</p>
                 <p className="text-white text-sm">{record.reason}</p>
+              </div>
+            )}
+            {record.status === 'rejected' && record.rejection_reason && (
+              <div className="mt-3 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                <p className="text-sm text-red-400 mb-1">Motivo del rechazo:</p>
+                <p className="text-white text-sm">{record.rejection_reason}</p>
+              </div>
+            )}
+            {record.attachment_url && (
+              <div className="mt-3">
+                <a
+                  href={record.attachment_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-brand-400 hover:text-brand-300 underline"
+                >
+                  Ver adjunto
+                </a>
               </div>
             )}
           </div>

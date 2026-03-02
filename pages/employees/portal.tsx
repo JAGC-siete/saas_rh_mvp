@@ -109,10 +109,20 @@ function AttendanceRecordsList({ employeeId }: { employeeId?: string }) {
                       day: 'numeric'
                     })}
                   </p>
-                  <div className="flex items-center space-x-4 mt-1">
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
                     {record.check_in && (
                       <span className="text-sm text-gray-400">
                         Entrada: <span className="text-green-400">{formatTime(record.check_in)}</span>
+                      </span>
+                    )}
+                    {(record as any).lunch_start && (
+                      <span className="text-sm text-gray-400">
+                        Inicio almuerzo: <span className="text-amber-400">{formatTime((record as any).lunch_start)}</span>
+                      </span>
+                    )}
+                    {(record as any).lunch_end && (
+                      <span className="text-sm text-gray-400">
+                        Fin almuerzo: <span className="text-amber-400">{formatTime((record as any).lunch_end)}</span>
                       </span>
                     )}
                     {record.check_out && (
@@ -632,26 +642,45 @@ export default function EmployeePortal() {
   const handlePermissionSubmit = async (formData: any) => {
     try {
       setIsSubmittingPermission(true)
-      
+
+      let body: string | FormData
+      const headers: Record<string, string> = {}
+      if (formData.attachment) {
+        const fd = new FormData()
+        fd.append('leave_type_id', formData.leave_type_id)
+        fd.append('start_date', formData.start_date)
+        fd.append('end_date', formData.end_date)
+        fd.append('reason', formData.reason)
+        if (formData.duration_hours) {
+          fd.append('duration_hours', formData.duration_hours.toString())
+        }
+        fd.append('attachment', formData.attachment)
+        body = fd
+      } else {
+        headers['Content-Type'] = 'application/json'
+        body = JSON.stringify({
+          leave_type_id: formData.leave_type_id,
+          start_date: formData.start_date,
+          end_date: formData.end_date,
+          reason: formData.reason,
+          duration_hours: formData.duration_hours
+        })
+      }
+
       const response = await fetch('/api/employees/me/permissions', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         credentials: 'include',
-        body: JSON.stringify(formData)
+        body
       })
 
       if (response.ok) {
-        // Refresh dashboard data to update permissions summary
         await fetchEmployeeData()
         setShowPermissionForm(false)
-        
-        // Show success message (you could add a toast notification here)
-        alert('✅ Permiso registrado exitosamente')
+        alert('✅ Solicitud enviada. Se notificará cuando sea aprobada o rechazada.')
       } else {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Error al registrar el permiso')
+        throw new Error(errorData.error || 'Error al enviar la solicitud')
       }
     } catch (error) {
       console.error('Error submitting permission:', error)

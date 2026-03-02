@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import formidable from 'formidable'
 import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { logger } from '../../../lib/logger'
-import { nowInHonduras } from '../../../lib/timezone'
+import { createAdminClient } from '../../../lib/supabase/server'
 
 export const config = {
   api: {
@@ -43,12 +43,29 @@ async function handleGetLeaveRequests(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: 'Error fetching leave requests' })
     }
 
-    logger.info('Leave requests fetched successfully', { 
-      count: data?.length || 0, 
+    // Generate signed URLs for attachments stored in Supabase Storage
+    const adminSupabase = createAdminClient()
+    const BUCKET = 'HR_BUCKET'
+    const result = await Promise.all((data || []).map(async (req: any) => {
+      if (req.attachment_url && req.attachment_url.startsWith('leave-attachments/')) {
+        try {
+          const { data: signed } = await adminSupabase.storage
+            .from(BUCKET)
+            .createSignedUrl(req.attachment_url, 3600)
+          return { ...req, attachment_url: signed?.signedUrl ?? req.attachment_url }
+        } catch {
+          return req
+        }
+      }
+      return req
+    }))
+
+    logger.info('Leave requests fetched successfully', {
+      count: result?.length || 0,
       companyId
     })
 
-    res.status(200).json(data || [])
+    res.status(200).json(result)
   } catch (error: any) {
     logger.error('Leave requests API error:', { error: error.message })
     return res.status(error.message === 'UNAUTHORIZED' ? 401 : 500).json({
@@ -154,34 +171,41 @@ async function handleCreateLeaveRequest(req: NextApiRequest, res: NextApiRespons
       days_requested = Math.ceil(timeDiff / (1000 * 60 * 60 * 24)) + 1
     }
 
-    // Handle file upload
+    // Handle file upload to Supabase Storage
     let attachment_url: string | undefined
     let attachment_type: 'pdf' | 'jpg' | undefined
     let attachment_name: string | undefined
 
     if (attachment) {
-      const fileExtension = attachment.originalFilename?.toLowerCase().split('.').pop()
-      const fileName = `${nowInHonduras().getTime()}-${Math.random().toString(36).substring(7)}.${fileExtension}`
+      const ext = attachment.originalFilename?.toLowerCase().split('.').pop()
+      const safeExt = ext === 'pdf' || ext === 'jpg' || ext === 'jpeg' ? ext : 'pdf'
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${safeExt}`
+      const storagePath = `leave-attachments/${companyId}/${employee.id}/${fileName}`
 
-      // Move file to uploads directory
-      const fs = require('fs')
-      const path = require('path')
-      const uploadsDir = path.join(process.cwd(), 'public', 'uploads')
-      
-      // Ensure uploads directory exists
-      if (!fs.existsSync(uploadsDir)) {
-        fs.mkdirSync(uploadsDir, { recursive: true })
+      const fs = await import('fs')
+      const fileBuffer = fs.readFileSync(attachment.filepath)
+      const adminSupabase = createAdminClient()
+
+      const { error: uploadError } = await adminSupabase.storage
+        .from('HR_BUCKET')
+        .upload(storagePath, fileBuffer, {
+          contentType: attachment.mimetype || (safeExt === 'pdf' ? 'application/pdf' : 'image/jpeg'),
+          upsert: false
+        })
+
+      fs.unlinkSync(attachment.filepath)
+
+      if (uploadError) {
+        logger.error('Failed to upload leave attachment', { error: uploadError, storagePath })
+        return res.status(500).json({ error: 'Error al subir el archivo adjunto' })
       }
 
-      fs.copyFileSync(attachment.filepath, path.join(uploadsDir, fileName))
-      fs.unlinkSync(attachment.filepath) // Clean up temp file
-
-      attachment_url = `/uploads/${fileName}`
-      attachment_type = fileExtension === 'pdf' ? 'pdf' : 'jpg'
+      attachment_url = storagePath
+      attachment_type = safeExt === 'pdf' ? 'pdf' : 'jpg'
       attachment_name = attachment.originalFilename || undefined
 
-      logger.info('File uploaded successfully', {
-        fileName,
+      logger.info('File uploaded to Storage successfully', {
+        storagePath,
         originalName: attachment.originalFilename,
         size: attachment.size,
         companyId

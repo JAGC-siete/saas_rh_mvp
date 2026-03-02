@@ -17,6 +17,7 @@ interface FormData {
   end_date: string
   duration_hours?: number // For hourly permissions (2, 4, 6, 8 hours)
   reason: string
+  attachment?: File
 }
 
 interface EmployeePermissionFormProps {
@@ -26,7 +27,7 @@ interface EmployeePermissionFormProps {
 }
 
 export default function EmployeePermissionForm({ onSubmit, onCancel, isLoading }: EmployeePermissionFormProps) {
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState<Omit<FormData, 'attachment'>>({
     leave_type_id: '',
     start_date: '',
     end_date: '',
@@ -35,6 +36,8 @@ export default function EmployeePermissionForm({ onSubmit, onCancel, isLoading }
   })
   const [permissionTypes, setPermissionTypes] = useState<PermissionType[]>([])
   const [error, setError] = useState('')
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [filePreview, setFilePreview] = useState<string | null>(null)
 
   useEffect(() => {
     fetchPermissionTypes()
@@ -70,8 +73,39 @@ export default function EmployeePermissionForm({ onSubmit, onCancel, isLoading }
     
     // Handle duration hours selection
     if (name === 'duration_hours') {
-      setFormData(prev => ({ ...prev, duration_hours: parseInt(value) }))
+      const parsed = value ? parseInt(value, 10) : undefined
+      setFormData(prev => ({ ...prev, duration_hours: parsed }))
     }
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      if (!['application/pdf', 'image/jpeg', 'image/jpg'].includes(file.type)) {
+        setError('Solo se permiten archivos PDF o JPG')
+        return
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        setError('El archivo debe ser menor a 5MB')
+        return
+      }
+      setSelectedFile(file)
+      setError('')
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader()
+        reader.onload = (ev) => setFilePreview(ev.target?.result as string)
+        reader.readAsDataURL(file)
+      } else {
+        setFilePreview(null)
+      }
+    }
+  }
+
+  const removeFile = () => {
+    setSelectedFile(null)
+    setFilePreview(null)
+    const fileInput = document.getElementById('permission-file-input') as HTMLInputElement
+    if (fileInput) fileInput.value = ''
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -105,7 +139,10 @@ export default function EmployeePermissionForm({ onSubmit, onCancel, isLoading }
     }
 
     try {
-      await onSubmit(formData)
+      await onSubmit({
+        ...formData,
+        attachment: selectedFile || undefined
+      })
     } catch (error) {
       setError('Error al registrar el permiso')
       console.error('Error submitting permission:', error)
@@ -123,10 +160,10 @@ export default function EmployeePermissionForm({ onSubmit, onCancel, isLoading }
           <span className="w-8 h-8 bg-blue-500/20 rounded-full flex items-center justify-center">
             📝
           </span>
-          Registro de Permiso Pre-autorizado
+          Solicitud de Permiso
         </CardTitle>
         <p className="text-gray-300 text-sm">
-          Registre un permiso que ya tiene autorización previa
+          Envíe su solicitud para aprobación del administrador
         </p>
       </CardHeader>
       
@@ -231,6 +268,42 @@ export default function EmployeePermissionForm({ onSubmit, onCancel, isLoading }
               className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent resize-none"
               required
             />
+          </div>
+
+          {/* Archivo de Respaldo (PDF o JPG) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Archivo de Respaldo (PDF o JPG, opcional)
+            </label>
+            <div className="border-2 border-dashed border-white/30 rounded-xl p-6 text-center bg-white/5 hover:border-white/50 transition-all">
+              <input
+                id="permission-file-input"
+                type="file"
+                accept=".pdf,.jpg,.jpeg"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              <label htmlFor="permission-file-input" className="cursor-pointer block">
+                <div className="space-y-2">
+                  <div className="mx-auto w-12 h-12 bg-white/10 rounded-full flex items-center justify-center">
+                    <svg className="w-6 h-6 text-white/70" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                      <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                  <span className="text-white">{selectedFile ? selectedFile.name : 'Clic para subir'}</span>
+                  <p className="text-xs text-gray-400">PDF o JPG hasta 5MB</p>
+                </div>
+              </label>
+              {selectedFile && (
+                <button
+                  type="button"
+                  onClick={removeFile}
+                  className="mt-2 text-red-400 hover:text-red-300 text-sm"
+                >
+                  Quitar archivo
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Botones */}
