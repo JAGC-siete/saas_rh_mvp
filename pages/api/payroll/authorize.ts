@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { getHondurasTimestamp } from '../../../lib/timezone'
 import { withExportRateLimit } from '../../../lib/security/rate-limiting'
+import { updateEmployeeIsrYtdOnAuthorize } from '../../../lib/payroll/isr-ytd'
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -104,6 +105,27 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (updateError) {
       console.error('Error actualizando estado de corrida:', updateError)
       return res.status(500).json({ error: 'Error actualizando estado de corrida' })
+    }
+
+    // Actualizar employee_isr_ytd para proyección ISR (solo si NO estaba ya autorizada)
+    if (run.status !== 'authorized') {
+      try {
+        const runCompanyId = run.company_id ?? companyId
+        if (runCompanyId) {
+          await updateEmployeeIsrYtdOnAuthorize(
+            supabase,
+            runCompanyId,
+          run.year,
+            (lines || []).map((l: any) => ({
+              employee_id: l.employee_id,
+              eff_bruto: Number(l.eff_bruto) || 0,
+              eff_isr: Number(l.eff_isr) || 0
+            }))
+          )
+        }
+      } catch (ytdErr) {
+        console.warn('Error actualizando employee_isr_ytd (no crítico):', ytdErr)
+      }
     }
 
     // Incrementar plazos_aplicados en employee_deduction_plans (solo si NO estaba ya autorizada)

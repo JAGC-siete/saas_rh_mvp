@@ -9,6 +9,7 @@ import {
   calculateIHSS, 
   calculateRAP 
 } from '../../../lib/tax/honduras-tax'
+import { getIsrForPeriod } from '../../../lib/payroll/isr-ytd'
 import { getHolidayDatesInRange } from '../../../lib/attendance/holiday-check'
 import { getBiweeklyPeriodDates, getMonthlyPeriodDates } from '../../../lib/payroll/period-dates'
 import { calculateSeptimoDia } from '../../../lib/payroll/septimo-dia'
@@ -138,6 +139,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const calculationMode = (payrollConfig as any)?.calculation_mode ?? payrollMetadata?.calculation_mode ?? 'daily'
     const incompleteRecordDefaultHours = (payrollConfig as any)?.incomplete_record_default_hours ?? payrollMetadata?.incomplete_record_default_hours ?? null
     const semanalProration = (payrollMetadata?.semanal_proration || 'proportional') as 'proportional' | 'fixed'
+
+    const { data: companyRow } = await supabase
+      .from('companies')
+      .select('settings')
+      .eq('id', companyId)
+      .single()
+    const useIsrProjection = (companyRow?.settings as Record<string, unknown>)?.use_isr_projection === true
     
     // Calcular fechas del período según configuración
     const ultimoDia = new Date(yearNum, monthNum, 0).getDate()
@@ -700,7 +708,20 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             RAP = calculateRAP(base_salary, taxConstants)
           }
           if (legalDeductions.isr) {
-            ISR = calculateISR(base_salary, taxConstants.isr_brackets)
+            ISR = useIsrProjection
+              ? await getIsrForPeriod({
+                  supabase,
+                  employeeId: emp.id,
+                  companyId,
+                  year: yearNum,
+                  month: monthNum,
+                  quincena: quincenaNum,
+                  periodIncome: base_salary,
+                  taxConstants,
+                  factor2Pagos: 1,
+                  useProjection: true
+                })
+              : calculateISR(base_salary, taxConstants.isr_brackets)
           }
           total_deductions = IHSS + RAP + ISR
           total = total_earnings - total_deductions
@@ -713,7 +734,20 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             RAP = calculateRAP(base_salary, taxConstants) * 0.5
           }
           if (legalDeductions.isr) {
-            ISR = calculateISR(base_salary, taxConstants.isr_brackets) * 0.5
+            ISR = useIsrProjection
+              ? await getIsrForPeriod({
+                  supabase,
+                  employeeId: emp.id,
+                  companyId,
+                  year: yearNum,
+                  month: monthNum,
+                  quincena: quincenaNum,
+                  periodIncome: base_salary,
+                  taxConstants,
+                  factor2Pagos: 0.5,
+                  useProjection: true
+                })
+              : calculateISR(base_salary, taxConstants.isr_brackets) * 0.5
           }
           total_deductions = IHSS + RAP + ISR
           total = total_earnings - total_deductions
@@ -943,7 +977,20 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             RAP = calculateRAP(base_salary, taxConstants) * 0.5
           }
           if (legalDeductions.isr) {
-            ISR = calculateISR(base_salary, taxConstants.isr_brackets) * 0.5
+            ISR = useIsrProjection
+              ? await getIsrForPeriod({
+                  supabase,
+                  employeeId: emp.id,
+                  companyId,
+                  year: yearNum,
+                  month: monthNum,
+                  quincena: quincenaNum,
+                  periodIncome: base_salary,
+                  taxConstants,
+                  factor2Pagos: 0.5,
+                  useProjection: true
+                })
+              : calculateISR(base_salary, taxConstants.isr_brackets) * 0.5
           }
           total_deductions = IHSS + RAP + ISR
           total = total_earnings - total_deductions

@@ -7,6 +7,7 @@ import UnifiedPayrollTable from './UnifiedPayrollTable'
 import ConfigNomina from './ConfigNomina'
 import CustomPayrollFieldsForm from './CustomPayrollFieldsForm'
 import DeductionPlansDashboard from './DeductionPlansDashboard'
+import { PayrollAccountingTab } from './accounting/PayrollAccountingTab'
 import { calculatePayroll } from '../lib/payroll-client-specific'
 import { createClient } from '../lib/supabase/client'
 
@@ -37,6 +38,9 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
   
   // Payment frequency from company config (para mostrar "Deducción en dos pagos" solo cuando es quincenal)
   const [paymentFrequency, setPaymentFrequency] = useState<string | null>(null)
+
+  // Tab: Planilla | Partida Contable
+  const [activeTab, setActiveTab] = useState<'planilla' | 'contabilidad'>('planilla')
   
   // Debug logging para verificar el companyId (only in development)
   useEffect(() => {
@@ -76,6 +80,20 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
   const handleFilterChange = useCallback(async (key: string, value: unknown) => {
     await payroll.updateFilter(key as keyof typeof payroll.filters, value)
   }, [payroll])
+
+  const handleGenerateJournalEntries = useCallback(async () => {
+    if (!payroll.runId || !payroll.companyId) return
+    const res = await fetch('/api/accounting/generate-journal-entries', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ run_id: payroll.runId }),
+      credentials: 'include'
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      throw new Error(data.error || 'Error generando asientos')
+    }
+  }, [payroll.runId, payroll.companyId])
 
   // Handle unified preview - now single handler (memoized)
   const handlePreview = useCallback(async () => {
@@ -542,6 +560,39 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
         paymentFrequency={paymentFrequency as 'quincenal' | 'mensual' | 'semanal' | null}
       />
 
+      {/* Tabs: Planilla | Partida Contable */}
+      {payroll.unifiedData && payroll.runId && (
+        <div className="flex gap-2 border-b border-white/20 pb-2">
+          <Button
+            variant={activeTab === 'planilla' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setActiveTab('planilla')}
+            className={
+              activeTab === 'planilla'
+                ? 'bg-brand-600 text-white'
+                : 'text-white/70 hover:text-white hover:bg-white/10'
+            }
+          >
+            Planilla
+          </Button>
+          <Button
+            variant={activeTab === 'contabilidad' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setActiveTab('contabilidad')}
+            className={
+              activeTab === 'contabilidad'
+                ? 'bg-brand-600 text-white'
+                : 'text-white/70 hover:text-white hover:bg-white/10'
+            }
+          >
+            Partida Contable
+          </Button>
+        </div>
+      )}
+
+      {/* Tab content: Planilla */}
+      {activeTab === 'planilla' && (
+      <>
       {/* Unified Payroll Table */}
       {payroll.unifiedData && (
         <UnifiedPayrollTable
@@ -561,6 +612,18 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
           status={payroll.status}
           period={payroll.currentPeriod}
           companyId={payroll.companyId}
+        />
+      )}
+      </>
+      )}
+
+      {/* Tab content: Partida Contable */}
+      {activeTab === 'contabilidad' && (
+        <PayrollAccountingTab
+          runId={payroll.runId}
+          status={payroll.status}
+          companyId={payroll.companyId}
+          onGenerate={handleGenerateJournalEntries}
         />
       )}
 

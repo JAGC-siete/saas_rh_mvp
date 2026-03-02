@@ -20,6 +20,7 @@ export interface TaxConstants {
   ihss_employee_rate: number
   rap_rate: number
   isr_brackets: TaxBracket[]
+  medical_deduction_limit?: number
 }
 
 // Default constants for 2025 (fallback if DB doesn't have data)
@@ -85,7 +86,8 @@ export async function getTaxBracketsForYear(year: number): Promise<TaxConstants>
           rate: Number(b.rate),
           base: Number(b.base),
           lower: Number(b.lower)
-        }))
+        })),
+        medical_deduction_limit: Number((data as any).medical_deduction_limit) || 40000
       }
     }
   } catch (error) {
@@ -95,6 +97,46 @@ export async function getTaxBracketsForYear(year: number): Promise<TaxConstants>
   // Fallback to default 2025 constants
   console.warn(`Tax brackets for year ${year} not found, using default 2025 constants`)
   return DEFAULT_2025_CONSTANTS
+}
+
+export interface ISRProjectedParams {
+  monthlyIncome: number
+  /** Calendar month (1-12) or months elapsed (e.g. 2.5 for mid-March) */
+  month: number
+  ytdIncome: number
+  ytdWithheld: number
+  medicalExpensesUsed?: number
+  brackets: TaxBracket[]
+  medicalDeductionLimit?: number
+}
+
+/**
+ * Calculate ISR with annual projection (PAYE)
+ * Projects annual income from YTD + current period, applies brackets to annual taxable,
+ * then prorates to get withholding for current period.
+ */
+export function calculateISRProjected(params: ISRProjectedParams): number {
+  const {
+    monthlyIncome,
+    month,
+    ytdIncome,
+    ytdWithheld,
+    medicalExpensesUsed = 0,
+    brackets,
+    medicalDeductionLimit = 40000
+  } = params
+
+  if (month < 0.5 || month > 12) return 0
+  const totalIncomeToDate = ytdIncome + monthlyIncome
+  if (totalIncomeToDate <= 0) return 0
+
+  const projectedAnnual = (totalIncomeToDate / month) * 12
+  const taxableAnnual = Math.max(0, projectedAnnual - Math.min(medicalDeductionLimit, medicalExpensesUsed))
+  const annualTax = calculateISR(taxableAnnual, brackets)
+  const targetYtdWithheld = (annualTax / 12) * month
+  const withheldThisPeriod = Math.max(0, targetYtdWithheld - ytdWithheld)
+
+  return Math.round(withheldThisPeriod * 100) / 100
 }
 
 /**

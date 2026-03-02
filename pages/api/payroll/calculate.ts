@@ -9,6 +9,7 @@ import {
   calculateIHSS, 
   calculateRAP 
 } from '../../../lib/tax/honduras-tax'
+import { getIsrForPeriod } from '../../../lib/payroll/isr-ytd'
 import { getBiweeklyPeriodDates, getMonthlyPeriodDates } from '../../../lib/payroll/period-dates'
 import { calculatePeriodBaseSalary, normalizeFrequency } from '../../../lib/payroll/calculate-period-base-salary'
 import { calculateSeptimoDia } from '../../../lib/payroll/septimo-dia'
@@ -168,6 +169,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const currency = payrollMetadata.currency || 'HNL'
     // Semanal: 'proportional' = por días reales (days_worked/diasPeriodo); 'fixed' = monto fijo (mensual/4)
     const semanalProration = payrollMetadata.semanal_proration || 'proportional'
+
+    const { data: companyRow } = await supabase
+      .from('companies')
+      .select('settings')
+      .eq('id', companyId)
+      .single()
+    const useIsrProjection = (companyRow?.settings as Record<string, unknown>)?.use_isr_projection === true
     
     // Calcular fechas del período según configuración
     const ultimoDia = new Date(year, month, 0).getDate()
@@ -324,7 +332,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log(`Procesando nómina para ${empleadosParaNomina.length} empleados`)
 
     // Calcular planilla con CÁLCULOS 3 CAPAS
-    const planilla: PlanillaItem[] = empleadosParaNomina.map((emp: any) => {
+    const planilla: PlanillaItem[] = await Promise.all(empleadosParaNomina.map(async (emp: any) => {
       const registros = attendanceRecords.filter((record: any) => 
         record.employee_id === emp.id && 
         record.check_in && 
@@ -400,7 +408,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           RAP = calculateRAP(baseParaDeducciones, taxConstants) * factor2Pagos
         }
         if (legalDeductions.isr) {
-          ISR = calculateISR(baseParaDeducciones, taxConstants.isr_brackets) * factor2Pagos
+          const periodIncomeForIsr = payType === 'hourly' ? total_earnings : baseParaDeducciones
+          ISR = useIsrProjection
+            ? await getIsrForPeriod({
+                supabase,
+                employeeId: emp.id,
+                companyId,
+                year,
+                month,
+                quincena,
+                periodIncome: periodIncomeForIsr,
+                taxConstants,
+                factor2Pagos,
+                useProjection: true
+              })
+            : calculateISR(baseParaDeducciones, taxConstants.isr_brackets) * factor2Pagos
         }
         
         total_deductions = IHSS + RAP + ISR
@@ -451,7 +473,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         pay_type: payType,
         septimo_dia: septimoDia > 0 ? septimoDia : undefined
       }
-    })
+    }))
 
     // Guardar en payroll_records
     const payrollRecords = planilla.map((item: PlanillaItem) => ({
