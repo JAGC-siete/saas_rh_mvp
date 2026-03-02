@@ -9,7 +9,9 @@ import { Employee } from '../lib/types/employee'
 import AddEmployeeForm from './AddEmployeeForm'
 import WorkCertificateModal from './WorkCertificateModal'
 import EmployeeFileUpload from './EmployeeFileUpload'
-import { PlusIcon, PencilIcon, TrashIcon, EyeIcon, MagnifyingGlassIcon, FunnelIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, ChevronDownIcon, DocumentTextIcon, UserCircleIcon, ChatBubbleBottomCenterTextIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, PencilIcon, TrashIcon, EyeIcon, MagnifyingGlassIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, ChevronDownIcon, DocumentTextIcon, UserCircleIcon, ChatBubbleBottomCenterTextIcon } from '@heroicons/react/24/outline'
+import { Download } from 'lucide-react'
+import { ExportFormatButtons } from './ui/ExportFormatButtons'
 import { getHondurasTimestamp, formatTimeDisplay } from '../lib/timezone'
 
 interface Department {
@@ -1010,41 +1012,12 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                 Empleados registrados en el sistema {totalPages > 1 && `- Página ${currentPage} de ${totalPages}`}
               </CardDescription>
             </div>
-            <div className="flex gap-2">
-              <Button
-                onClick={() => handleExportClick('pdf')}
-                variant="outline"
-                size="sm"
-                className="bg-white/5 border-white/20 text-white hover:bg-white/10"
-                title="Exportar a PDF"
-                disabled={isExporting}
-              >
-                <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
-                PDF
-              </Button>
-              <Button
-                onClick={() => handleExportClick('excel')}
-                variant="outline"
-                size="sm"
-                className="bg-white/5 border-white/20 text-white hover:bg-white/10"
-                title="Exportar a Excel"
-                disabled={isExporting}
-              >
-                <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
-                Excel
-              </Button>
-              <Button
-                onClick={() => handleExportClick('csv')}
-                variant="outline"
-                size="sm"
-                className="bg-white/5 border-white/20 text-white hover:bg-white/10"
-                title="Exportar a CSV"
-                disabled={isExporting}
-              >
-                <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
-                CSV
-              </Button>
-            </div>
+            <ExportFormatButtons
+              formats={['pdf', 'excel', 'csv']}
+              onExport={(format) => handleExportClick(format)}
+              disabled={isExporting}
+              variant="outline"
+            />
           </div>
         </CardHeader>
         <CardContent>
@@ -1732,7 +1705,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                                     className="p-2 rounded-md bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white transition"
                                     title="Descargar"
                                   >
-                                    <ArrowDownTrayIcon className="h-4 w-4" />
+                                    <Download className="h-4 w-4" />
                                   </a>
                                 )}
                                 {['super_admin', 'company_admin', 'hr_manager'].includes(userProfile?.role || '') && (
@@ -2057,7 +2030,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                   </>
                 ) : (
                   <>
-                    <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
+                    <Download className="h-4 w-4 mr-2" />
                     Exportar
                   </>
                 )}

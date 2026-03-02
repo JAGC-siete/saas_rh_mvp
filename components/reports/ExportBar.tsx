@@ -2,8 +2,6 @@ import { useState } from 'react'
 import { Button } from '../ui/button'
 import { PreviewData } from './ReportBuilder'
 import { 
-  FileSpreadsheet, 
-  FileText, 
   Download,
   Loader2,
   CheckCircle 
@@ -57,7 +55,7 @@ export default function ExportBar({ data, onExport, disabled }: ExportBarProps) 
           onClick={() => handleExport('excel')}
           disabled={isDisabled}
           variant="outline"
-          className="bg-green-600 hover:bg-green-700 text-white border-green-500 hover:border-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="bg-blue-600 hover:bg-blue-700 text-white border-blue-500 hover:border-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {exporting === 'excel' ? (
             <>
@@ -71,7 +69,7 @@ export default function ExportBar({ data, onExport, disabled }: ExportBarProps) 
             </>
           ) : (
             <>
-              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              <Download className="h-4 w-4 mr-2" />
               Excel
             </>
           )}
@@ -81,7 +79,7 @@ export default function ExportBar({ data, onExport, disabled }: ExportBarProps) 
           onClick={() => handleExport('pdf')}
           disabled={isDisabled}
           variant="outline"
-          className="bg-red-600 hover:bg-red-700 text-white border-red-500 hover:border-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="bg-blue-600 hover:bg-blue-700 text-white border-blue-500 hover:border-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {exporting === 'pdf' ? (
             <>
@@ -95,7 +93,7 @@ export default function ExportBar({ data, onExport, disabled }: ExportBarProps) 
             </>
           ) : (
             <>
-              <FileText className="h-4 w-4 mr-2" />
+              <Download className="h-4 w-4 mr-2" />
               PDF
             </>
           )}

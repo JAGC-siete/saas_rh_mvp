@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import FiltersBar from './FiltersBar'
-import { Button } from '../ui/button'
+import { ExportFormatButtons } from '../ui/ExportFormatButtons'
 
 interface HeaderBarProps {
   preset: string
@@ -31,14 +31,14 @@ export default function HeaderBar({
   to,
   onRangeChange
 }: HeaderBarProps) {
-  const [exporting, setExporting] = useState(false)
+  const [exportingFormat, setExportingFormat] = useState<string | null>(null)
 
   const handleExport = async (format: string) => {
     try {
-      setExporting(true)
+      setExportingFormat(format)
       await onExport(format)
     } finally {
-      setExporting(false)
+      setExportingFormat(null)
     }
   }
 
@@ -84,32 +84,15 @@ export default function HeaderBar({
         )}
 
         {/* Export Buttons */}
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            className="bg-brand-600 hover:bg-brand-700 text-white border-brand-500"
-            disabled={exporting}
-            onClick={() => handleExport('xlsx')}
-          >
-            {exporting ? 'Exportando...' : '📊 Excel'}
-          </Button>
-          <Button 
-            variant="outline" 
-            className="bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
-            disabled={exporting}
-            onClick={() => handleExport('csv')}
-          >
-            📄 CSV
-          </Button>
-          <Button 
-            variant="outline" 
-            className="bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
-            disabled={exporting}
-            onClick={() => handleExport('pdf')}
-          >
-            📋 PDF
-          </Button>
-        </div>
+        <ExportFormatButtons
+          formats={['excel', 'csv', 'pdf']}
+          onExport={async (format) => {
+            await handleExport(format === 'excel' ? 'xlsx' : format)
+          }}
+          disabled={!!exportingFormat}
+          loadingFormat={exportingFormat === 'xlsx' ? 'excel' : (exportingFormat as 'pdf' | 'csv' | null)}
+          variant="primary"
+        />
       </div>
     </div>
   )
