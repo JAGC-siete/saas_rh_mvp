@@ -15,7 +15,7 @@ const AccountingMappingTable = dynamic(
     ssr: false,
     loading: () => (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400" />
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-400" />
       </div>
     )
   }
@@ -30,8 +30,8 @@ export default function AccountingPage() {
       <DashboardLayout>
         <div className="p-6 space-y-6">
           <div className="flex items-start gap-3">
-            <div className="rounded-xl bg-indigo-500/20 p-2.5">
-              <CalculatorIcon className="h-7 w-7 text-indigo-300" />
+            <div className="rounded-xl bg-brand-500/20 p-2.5">
+              <CalculatorIcon className="h-7 w-7 text-brand-300" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-white">
@@ -46,7 +46,7 @@ export default function AccountingPage() {
 
           {companyLoading && (
             <div className="flex items-center justify-center min-h-[300px]">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400" />
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-400" />
             </div>
           )}
 
@@ -60,7 +60,7 @@ export default function AccountingPage() {
             <Suspense
               fallback={
                 <div className="flex items-center justify-center min-h-[400px]">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400" />
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-400" />
                 </div>
               }
             >

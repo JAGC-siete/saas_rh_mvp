@@ -123,7 +123,7 @@ export function AccountSelector({
         className="bg-white/10 border-white/20 text-white placeholder:text-white/50"
       />
       {open && (
-        <div className="absolute z-50 mt-1 w-full rounded-md border border-white/20 bg-slate-900/95 py-1 shadow-lg max-h-48 overflow-auto">
+        <div className="absolute z-50 mt-1 w-full rounded-md border border-white/20 bg-slate-900/95 backdrop-blur-md py-1 shadow-lg max-h-48 overflow-auto">
           {loading ? (
             <div className="px-3 py-2 text-sm text-white/60">Cargando...</div>
           ) : options.length === 0 ? (

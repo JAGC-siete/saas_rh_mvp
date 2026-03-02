@@ -110,7 +110,7 @@ export function PayrollAccountingTab({
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-white/60" />
+        <Loader2 className="h-8 w-8 animate-spin text-brand-400/80" />
       </div>
     )
   }
@@ -119,7 +119,7 @@ export function PayrollAccountingTab({
     return (
       <Card className="backdrop-blur-md bg-white/10 border border-white/20">
         <CardContent className="p-8 text-center">
-          <CalculatorIcon className="h-12 w-12 text-blue-400/80 mx-auto mb-4" />
+          <CalculatorIcon className="h-12 w-12 text-brand-400/80 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-white mb-2">
             Generar Asientos Contables
           </h3>
