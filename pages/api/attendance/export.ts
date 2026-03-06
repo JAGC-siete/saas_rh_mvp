@@ -6,7 +6,7 @@ import { withExportRateLimit } from '../../../lib/security/rate-limiting'
 import { getDateRange } from '../../../lib/attendance'
 import ExcelJS from 'exceljs'
 import { generateAttendancePDF } from '../../../lib/pdf/attendance-pdf-generator'
-import { formatTimeDisplay } from '../../../lib/timezone'
+import { formatTimeDisplay, formatDateOnlyForHonduras, getWeekdayForDateOnly } from '../../../lib/timezone'
 
 // Aplicar rate limiting
 const handlerWithSecurity = withExportRateLimit()(attendanceExportHandler)
@@ -213,8 +213,8 @@ async function exportToExcel(attendanceRecords: any[], startDate: string, endDat
         'Nombre': record.employees?.name || '',
         'Departamento': record.employees?.role || '',
         'Posición': record.employees?.role || '',
-        'Fecha': new Date(record.date).toLocaleDateString('es-HN'),
-        'Día de la Semana': new Date(record.date).toLocaleDateString('es-HN', { weekday: 'long' }),
+        'Fecha': formatDateOnlyForHonduras(record.date),
+        'Día de la Semana': getWeekdayForDateOnly(record.date),
         'Hora de Entrada': checkIn ? formatTimeDisplay(checkIn.toISOString()) : 'N/A',
         'Hora de Salida': checkOut ? formatTimeDisplay(checkOut.toISOString()) : 'N/A',
         'Horas Trabajadas': hoursWorked.toFixed(2),
@@ -370,8 +370,8 @@ async function exportToCSV(attendanceRecords: any[], startDate: string, endDate:
       record.employees?.name || '',
       record.employees?.role || '',
       record.employees?.role || '',
-      new Date(record.date).toLocaleDateString('es-HN'),
-      new Date(record.date).toLocaleDateString('es-HN', { weekday: 'long' }),
+      formatDateOnlyForHonduras(record.date),
+      getWeekdayForDateOnly(record.date),
       checkIn ? formatTimeDisplay(checkIn.toISOString()) : 'N/A',
       checkOut ? formatTimeDisplay(checkOut.toISOString()) : 'N/A',
       hoursWorked.toFixed(2),

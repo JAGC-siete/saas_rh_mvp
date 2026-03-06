@@ -1,5 +1,5 @@
 import type { ResolvedColumn } from './column-resolver'
-import { formatTimeDisplay } from '../timezone'
+import { formatTimeDisplay, formatDateOnlyForHonduras } from '../timezone'
 
 /**
  * Report engine - Strategy-style helpers for metadata-driven report generation.
@@ -25,17 +25,26 @@ function getAttendanceRowValue(
     case 'employee_name':
       return empName
     case 'date':
-      return record.date ? new Date(record.date + 'T00:00:00').toLocaleDateString('es-HN') : ''
+      return record.date ? formatDateOnlyForHonduras(record.date) : ''
     case 'check_in':
       return record.check_in ? formatTimeDisplay(record.check_in) : ''
     case 'check_out':
       return record.check_out ? formatTimeDisplay(record.check_out) : ''
+    case 'lunch_start':
+      return record.lunch_start ? formatTimeDisplay(record.lunch_start) : ''
+    case 'lunch_end':
+      return record.lunch_end ? formatTimeDisplay(record.lunch_end) : ''
     case 'status':
       return record.status ?? ''
     case 'hours_worked': {
       if (record.check_in && record.check_out) {
-        const diff = (new Date(record.check_out).getTime() - new Date(record.check_in).getTime()) / (1000 * 60 * 60)
-        return Number(diff.toFixed(1))
+        let totalMs = new Date(record.check_out).getTime() - new Date(record.check_in).getTime()
+        if (record.lunch_start && record.lunch_end) {
+          const lunchMs = new Date(record.lunch_end).getTime() - new Date(record.lunch_start).getTime()
+          totalMs -= lunchMs
+        }
+        const hours = totalMs / (1000 * 60 * 60)
+        return Number(hours.toFixed(1))
       }
       return 0
     }

@@ -17,7 +17,7 @@ import {
 import { clientLogger } from '../../lib/logger-client'
 import EmployeePermissionForm from '../../components/employee-portal/EmployeePermissionForm'
 import EmployeePermissionHistory from '../../components/employee-portal/EmployeePermissionHistory'
-import { formatTimeDisplay } from '../../lib/timezone'
+import { formatTimeDisplay, parseDateOnlyAsHonduras, HONDURAS_TIMEZONE } from '../../lib/timezone'
 
 // Component for attendance records list
 function AttendanceRecordsList({ employeeId }: { employeeId?: string }) {
@@ -102,12 +102,16 @@ function AttendanceRecordsList({ employeeId }: { employeeId?: string }) {
               <div className="flex justify-between items-start mb-2">
                 <div>
                   <p className="text-white font-medium">
-                    {new Date(record.date).toLocaleDateString('es-HN', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
+                    {(() => {
+                      const d = parseDateOnlyAsHonduras(record.date)
+                      return isNaN(d.getTime()) ? record.date : d.toLocaleDateString('es-HN', {
+                        timeZone: HONDURAS_TIMEZONE,
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })
+                    })()}
                   </p>
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
                     {record.check_in && (

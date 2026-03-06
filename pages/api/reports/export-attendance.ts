@@ -13,7 +13,7 @@ import {
   secureLog,
   sanitizeFilename
 } from '../../../lib/security/export-security'
-import { formatTimeDisplay } from '../../../lib/timezone'
+import { formatTimeDisplay, formatDateOnlyForHonduras, getWeekdayForDateOnly } from '../../../lib/timezone'
 
 // Aplicar rate limiting, validación de entrada y seguridad de exportación
 const handlerWithSecurity = withExportRateLimit()(
@@ -94,15 +94,23 @@ async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse
 
     // 5. PROCESAR EXPORTACIÓN SEGURA
     if (formato === 'csv') {
-      const headers = ['employee_id','date','status','check_in','check_out','late_minutes']
+      const headers = ['employee_id','date','status','check_in','check_out','lunch_start','lunch_end','hours_worked','late_minutes']
       const csvRows = [headers.join(',')]
       for (const r of (records || [])) {
-        // Formatear fechas correctamente para Honduras
-        const formattedDate = new Date(r.date + 'T00:00:00').toLocaleDateString('es-HN')
+        const formattedDate = formatDateOnlyForHonduras(r.date)
         const formattedCheckIn = r.check_in ? new Date(r.check_in).toLocaleString('es-HN', { timeZone: 'America/Tegucigalpa' }) : ''
         const formattedCheckOut = r.check_out ? new Date(r.check_out).toLocaleString('es-HN', { timeZone: 'America/Tegucigalpa' }) : ''
-        
-        const row = [r.employee_id, formattedDate, r.status, formattedCheckIn, formattedCheckOut, r.late_minutes || 0]
+        const formattedLunchStart = r.lunch_start ? new Date(r.lunch_start).toLocaleString('es-HN', { timeZone: 'America/Tegucigalpa' }) : ''
+        const formattedLunchEnd = r.lunch_end ? new Date(r.lunch_end).toLocaleString('es-HN', { timeZone: 'America/Tegucigalpa' }) : ''
+        let hoursWorked = 0
+        if (r.check_in && r.check_out) {
+          let totalMs = new Date(r.check_out).getTime() - new Date(r.check_in).getTime()
+          if (r.lunch_start && r.lunch_end) {
+            totalMs -= new Date(r.lunch_end).getTime() - new Date(r.lunch_start).getTime()
+          }
+          hoursWorked = totalMs / (1000 * 60 * 60)
+        }
+        const row = [r.employee_id, formattedDate, r.status, formattedCheckIn, formattedCheckOut, formattedLunchStart, formattedLunchEnd, hoursWorked.toFixed(2), r.late_minutes ?? 0]
         csvRows.push(row.join(','))
       }
       const csv = csvRows.join('\n')
@@ -143,23 +151,20 @@ async function exportToExcel(attendanceRecords: any[], startDate: string, endDat
     const excelData = attendanceRecords.map(record => {
       const checkIn = record.check_in ? new Date(record.check_in) : null
       const checkOut = record.check_out ? new Date(record.check_out) : null
-      
-      // Calcular horas trabajadas
+      const lunchStart = record.lunch_start ? new Date(record.lunch_start) : null
+      const lunchEnd = record.lunch_end ? new Date(record.lunch_end) : null
+
       let hoursWorked = 0
       if (checkIn && checkOut) {
-        const diffMs = checkOut.getTime() - checkIn.getTime()
-        hoursWorked = diffMs / (1000 * 60 * 60) // Convertir a horas
+        let totalMs = checkOut.getTime() - checkIn.getTime()
+        if (lunchStart && lunchEnd) {
+          totalMs -= lunchEnd.getTime() - lunchStart.getTime()
+        }
+        hoursWorked = totalMs / (1000 * 60 * 60)
       }
 
-      // Calcular tardanza (asumiendo horario de 8:00 AM)
-      let lateMinutes = 0
-      if (checkIn) {
-        const expectedTime = new Date(checkIn)
-        expectedTime.setHours(8, 0, 0, 0) // 8:00 AM
-        if (checkIn > expectedTime) {
-          lateMinutes = Math.floor((checkIn.getTime() - expectedTime.getTime()) / (1000 * 60))
-        }
-      }
+      // Usar late_minutes de attendance_records (calculado con work_schedule en webhook/register)
+      const lateMinutes = record.late_minutes ?? 0
 
       // Calcular horas extra (asumiendo 8 horas por día)
       const overtimeHours = Math.max(0, hoursWorked - 8)
@@ -169,10 +174,12 @@ async function exportToExcel(attendanceRecords: any[], startDate: string, endDat
         'Nombre': record.employees?.name || '',
         'Departamento': record.employees?.department || '',
         'Posición': record.employees?.role || '',
-        'Fecha': new Date(record.date).toLocaleDateString('es-HN'),
-        'Día de la Semana': new Date(record.date).toLocaleDateString('es-HN', { weekday: 'long' }),
+        'Fecha': formatDateOnlyForHonduras(record.date),
+        'Día de la Semana': getWeekdayForDateOnly(record.date),
         'Hora de Entrada': checkIn ? formatTimeDisplay(checkIn.toISOString()) : 'N/A',
         'Hora de Salida': checkOut ? formatTimeDisplay(checkOut.toISOString()) : 'N/A',
+        'Inicio Almuerzo': lunchStart ? formatTimeDisplay(lunchStart.toISOString()) : '',
+        'Fin Almuerzo': lunchEnd ? formatTimeDisplay(lunchEnd.toISOString()) : '',
         'Horas Trabajadas': hoursWorked.toFixed(2),
         'Estado': record.status === 'present' ? 'Presente' : record.status === 'late' ? 'Tardanza' : 'Ausente',
         'Minutos de Tardanza': lateMinutes,
@@ -221,6 +228,8 @@ async function exportToExcel(attendanceRecords: any[], startDate: string, endDat
       { header: 'Día de la Semana', key: 'Día de la Semana', width: 15 },
       { header: 'Hora de Entrada', key: 'Hora de Entrada', width: 12 },
       { header: 'Hora de Salida', key: 'Hora de Salida', width: 12 },
+      { header: 'Inicio Almuerzo', key: 'Inicio Almuerzo', width: 12 },
+      { header: 'Fin Almuerzo', key: 'Fin Almuerzo', width: 12 },
       { header: 'Horas Trabajadas', key: 'Horas Trabajadas', width: 12 },
       { header: 'Estado', key: 'Estado', width: 10 },
       { header: 'Minutos de Tardanza', key: 'Minutos de Tardanza', width: 15 },
@@ -282,23 +291,20 @@ async function exportToPDF(attendanceRecords: any[], startDate: string, endDate:
     const attendanceData: AttendanceItem[] = attendanceRecords.map(record => {
       const checkIn = record.check_in ? new Date(record.check_in) : null
       const checkOut = record.check_out ? new Date(record.check_out) : null
-      
-      // Calcular horas trabajadas
+      const lunchStart = record.lunch_start ? new Date(record.lunch_start) : null
+      const lunchEnd = record.lunch_end ? new Date(record.lunch_end) : null
+
       let hoursWorked = 0
       if (checkIn && checkOut) {
-        const diffMs = checkOut.getTime() - checkIn.getTime()
-        hoursWorked = diffMs / (1000 * 60 * 60)
+        let totalMs = checkOut.getTime() - checkIn.getTime()
+        if (lunchStart && lunchEnd) {
+          totalMs -= lunchEnd.getTime() - lunchStart.getTime()
+        }
+        hoursWorked = totalMs / (1000 * 60 * 60)
       }
 
-      // Calcular tardanza
-      let lateMinutes = 0
-      if (checkIn) {
-        const expectedTime = new Date(checkIn)
-        expectedTime.setHours(8, 0, 0, 0)
-        if (checkIn > expectedTime) {
-          lateMinutes = Math.floor((checkIn.getTime() - expectedTime.getTime()) / (1000 * 60))
-        }
-      }
+      // Usar late_minutes de attendance_records (calculado con work_schedule en webhook/register)
+      const lateMinutes = record.late_minutes ?? 0
 
       // Calcular horas extra
       const overtimeHours = Math.max(0, hoursWorked - 8)

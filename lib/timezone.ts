@@ -452,3 +452,44 @@ export function validateHondurasTimezone(date: Date): void {
     });
   }
 }
+
+// =====================================================
+// DATE-ONLY (YYYY-MM-DD) - AVOID UTC MIDNIGHT BUG
+// =====================================================
+
+/**
+ * Parsea una fecha YYYY-MM-DD como fecha calendario en Honduras.
+ * Evita el bug de new Date("YYYY-MM-DD") que interpreta como medianoche UTC.
+ */
+export function parseDateOnlyAsHonduras(dateStr: string): Date {
+  if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return new Date(NaN);
+  }
+  return new Date(dateStr + 'T12:00:00-06:00');
+}
+
+/**
+ * Formatea una fecha YYYY-MM-DD para mostrar en reportes (Honduras).
+ */
+export function formatDateOnlyForHonduras(dateStr: string): string {
+  const d = parseDateOnlyAsHonduras(dateStr);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('es-HN', {
+    timeZone: HONDURAS_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+}
+
+/**
+ * Obtiene el día de la semana en español para una fecha YYYY-MM-DD (Honduras).
+ */
+export function getWeekdayForDateOnly(dateStr: string): string {
+  const d = parseDateOnlyAsHonduras(dateStr);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('es-HN', {
+    timeZone: HONDURAS_TIMEZONE,
+    weekday: 'long'
+  });
+}

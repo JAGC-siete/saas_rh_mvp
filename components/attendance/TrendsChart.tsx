@@ -1,4 +1,5 @@
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts'
+import { parseDateOnlyAsHonduras, HONDURAS_TIMEZONE } from '../../lib/timezone'
 
 interface TrendData {
   date: string
@@ -18,9 +19,10 @@ export default function TrendsChart({ trends, loading = false }: TrendsChartProp
   const chartData = trends.map(t => {
     const total = t.present + t.late + t.absent
     return {
-      date: new Date(t.date + 'T00:00:00').toLocaleDateString('es-HN', { 
-        month: 'short', 
-        day: 'numeric' 
+      date: parseDateOnlyAsHonduras(t.date).toLocaleDateString('es-HN', {
+        timeZone: HONDURAS_TIMEZONE,
+        month: 'short',
+        day: 'numeric'
       }),
       attendanceRate: total ? ((t.present + t.late) / total) * 100 : 0,
       punctualityRate: total ? (t.present / total) * 100 : 0,
