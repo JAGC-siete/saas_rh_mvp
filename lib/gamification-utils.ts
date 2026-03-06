@@ -1,5 +1,6 @@
 // Gamification utility functions for consistent data handling
 import { createAdminClient } from './supabase/server'
+import { parseDateOnlyAsHonduras } from './timezone'
 
 export interface AchievementType {
   id: number
@@ -104,8 +105,9 @@ function validateStreakAchievement(requirements: any, records: any[]): boolean {
     return false
   }
 
-  // Sort records by date to check consecutive days
-  const sortedRecords = records.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+  // Sort records by date to check consecutive days (parseDateOnlyAsHonduras for YYYY-MM-DD)
+  const toDate = (d: string) => /^\d{4}-\d{2}-\d{2}$/.test(d) ? parseDateOnlyAsHonduras(d) : new Date(d)
+  const sortedRecords = records.sort((a, b) => toDate(a.date).getTime() - toDate(b.date).getTime())
   
   let currentStreak = 0
   let maxStreak = 0
@@ -146,8 +148,9 @@ function validateImprovementAchievement(requirements: any, records: any[]): bool
 
   // Group by ISO week
   const byWeek: Record<string, number[]> = {}
+  const toDate = (d: string) => /^\d{4}-\d{2}-\d{2}$/.test(d) ? parseDateOnlyAsHonduras(d) : new Date(d)
   for (const r of records) {
-    const d = new Date(r.date)
+    const d = toDate(r.date)
     const year = d.getUTCFullYear()
     const firstJan = new Date(Date.UTC(year, 0, 1))
     const days = Math.floor((d.getTime() - firstJan.getTime()) / 86400000)
@@ -180,9 +183,10 @@ function validateConsistencyAchievement(requirements: any, records: any[]): bool
   // Compute variance of (check_in vs expected_check_in) minutes per week
   type WeekAgg = { diffs: number[] }
   const byWeek: Record<string, WeekAgg> = {}
+  const toDate = (d: string) => /^\d{4}-\d{2}-\d{2}$/.test(d) ? parseDateOnlyAsHonduras(d) : new Date(d)
   for (const r of records) {
     if (!r.check_in || !r.expected_check_in) continue
-    const d = new Date(r.date)
+    const d = toDate(r.date)
     const year = d.getUTCFullYear()
     const firstJan = new Date(Date.UTC(year, 0, 1))
     const days = Math.floor((d.getTime() - firstJan.getTime()) / 86400000)
@@ -258,7 +262,8 @@ export async function evaluateAndAwardAchievements(
     let relevant = attendance || []
     if (type.requirements?.type === 'monthly' || type.name === 'Zero Tardiness') {
       const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
-      relevant = (attendance || []).filter(r => new Date(r.date) >= monthStart)
+      const toDate = (d: string) => /^\d{4}-\d{2}-\d{2}$/.test(d) ? parseDateOnlyAsHonduras(d) : new Date(d)
+      relevant = (attendance || []).filter(r => toDate(r.date) >= monthStart)
     }
 
     const ok = validateAchievementRequirements(type, relevant)

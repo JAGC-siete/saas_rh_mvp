@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
-import { getHondurasTimestamp, formatDateForHonduras, nowInHonduras } from '../../../lib/timezone'
+import { getHondurasTimestamp, formatDateForHonduras, nowInHonduras, parseDateOnlyAsHonduras } from '../../../lib/timezone'
 import { createAdminClient } from '../../../lib/supabase/server'
 
 interface WorkCertificateData {
@@ -340,16 +340,20 @@ function generateWorkCertificatePDF(res: NextApiResponse, certificateData: WorkC
        .font('Helvetica')
     
     // Construir el texto principal según el formato exacto
-    const hireDate = new Date(certificateData.employee.hire_date)
+    const hireDate = /^\d{4}-\d{2}-\d{2}$/.test(certificateData.employee.hire_date)
+      ? parseDateOnlyAsHonduras(certificateData.employee.hire_date)
+      : new Date(certificateData.employee.hire_date)
     const hireDateFormatted = formatDateInWords(hireDate)
-    
+
     // Determinar período: si está activo "hasta la fecha", si no está activo mostrar fecha fin
     const isActive = certificateData.employee.status === 'active'
     let periodText = ''
     if (isActive) {
       periodText = `desde el ${hireDateFormatted} de ${hireDate.getFullYear()} hasta la fecha`
     } else if (certificateData.employee.termination_date) {
-      const terminationDate = new Date(certificateData.employee.termination_date)
+      const terminationDate = /^\d{4}-\d{2}-\d{2}$/.test(certificateData.employee.termination_date)
+        ? parseDateOnlyAsHonduras(certificateData.employee.termination_date)
+        : new Date(certificateData.employee.termination_date)
       const terminationDateFormatted = formatDateInWords(terminationDate)
       periodText = `desde el ${hireDateFormatted} de ${hireDate.getFullYear()} hasta el ${terminationDateFormatted} de ${terminationDate.getFullYear()}`
     } else {
@@ -511,13 +515,17 @@ function generateWorkCertificateCSV(res: NextApiResponse, certificateData: WorkC
     csvContent += `Modalidad de contrato,contrato permanente\n`
     
     // Período de empleo
-    const hireDate = new Date(certificateData.employee.hire_date)
+    const hireDate = /^\d{4}-\d{2}-\d{2}$/.test(certificateData.employee.hire_date)
+      ? parseDateOnlyAsHonduras(certificateData.employee.hire_date)
+      : new Date(certificateData.employee.hire_date)
     const isActive = certificateData.employee.status === 'active'
     let periodText = ''
     if (isActive) {
       periodText = `desde el ${formatDateInWords(hireDate)} de ${hireDate.getFullYear()} hasta la fecha`
     } else if (certificateData.employee.termination_date) {
-      const terminationDate = new Date(certificateData.employee.termination_date)
+      const terminationDate = /^\d{4}-\d{2}-\d{2}$/.test(certificateData.employee.termination_date)
+        ? parseDateOnlyAsHonduras(certificateData.employee.termination_date)
+        : new Date(certificateData.employee.termination_date)
       periodText = `desde el ${formatDateInWords(hireDate)} de ${hireDate.getFullYear()} hasta el ${formatDateInWords(terminationDate)} de ${terminationDate.getFullYear()}`
     } else {
       periodText = `desde el ${formatDateInWords(hireDate)} de ${hireDate.getFullYear()} hasta la fecha`

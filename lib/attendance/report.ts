@@ -1,5 +1,5 @@
 import { Buffer } from 'buffer'
-import { formatDateForHonduras, nowInHonduras, formatDateTimeForHonduras, formatTimeDisplay } from '../timezone'
+import { formatDateForHonduras, nowInHonduras, formatDateTimeForHonduras, formatTimeDisplay, formatDateOnlyForHonduras } from '../timezone'
 
 export interface AttendanceItem {
   id: string
@@ -154,7 +154,7 @@ export async function generateConsolidatedAttendancePDF(
           row.employee_code || '',
           row.name,
           row.department,
-          new Date(row.date).toLocaleDateString('es-HN'),
+          formatDateOnlyForHonduras(row.date),
           row.check_in ? formatTimeDisplay(row.check_in) : 'N/A',
           row.check_out ? formatTimeDisplay(row.check_out) : 'N/A',
           `${row.hours_worked.toFixed(1)}h`,

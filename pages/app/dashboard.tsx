@@ -5,6 +5,7 @@ import DashboardLayout from '../../components/DashboardLayout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { useCompanyContext } from '../../lib/useCompanyContext'
+import { formatDateOnlyForHonduras } from '../../lib/timezone'
 
 interface DashboardStats {
   totalEmployees: number
@@ -283,7 +284,7 @@ export default function Dashboard() {
                     <div key={(payroll as any)?.id ?? index} className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-lg">
                       <div>
                         <div className="font-medium text-white">
-                          Nómina {payroll.period_start} - {payroll.period_end}
+                          Nómina {payroll.period_start && payroll.period_end ? `${formatDateOnlyForHonduras(payroll.period_start)} - ${formatDateOnlyForHonduras(payroll.period_end)}` : `${payroll.period_start || ''} - ${payroll.period_end || ''}`}
                         </div>
                         <div className="text-sm text-gray-300">
                           {payroll.employees?.name} • {payroll.employees?.department}

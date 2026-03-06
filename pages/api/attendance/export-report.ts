@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../lib/supabase/server'
 import { authenticateUser } from '../../../lib/auth-helpers'
-import { getHondurasTime } from '../../../lib/timezone'
+import { getHondurasTime, formatDateOnlyForHonduras } from '../../../lib/timezone'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -351,7 +351,7 @@ function generateAttendancePDFReport(res: NextApiResponse, reportData: any, date
       }
       
       const values = [
-        new Date(stat.date).toLocaleDateString('es-HN'),
+        formatDateOnlyForHonduras(stat.date),
         stat.attendanceCount.toString(),
         stat.totalCount.toString(),
         `${stat.attendanceRate.toFixed(1)}%`
@@ -406,7 +406,7 @@ function generateAttendanceCSVReport(res: NextApiResponse, reportData: any, date
     csvContent += 'ESTADÍSTICAS DIARIAS\n'
     csvContent += 'Fecha,Presentes,Total,Tasa %\n'
     reportData.dailyStats.forEach((stat: any) => {
-      csvContent += `${new Date(stat.date).toLocaleDateString('es-HN')},${stat.attendanceCount},${stat.totalCount},${stat.attendanceRate.toFixed(1)}%\n`
+      csvContent += `${formatDateOnlyForHonduras(stat.date)},${stat.attendanceCount},${stat.totalCount},${stat.attendanceRate.toFixed(1)}%\n`
     })
     
     // Configurar respuesta CSV

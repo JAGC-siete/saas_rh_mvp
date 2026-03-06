@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { getCompanyData } from '../../../lib/helpers/company-filter'
-import { getHondurasTimestamp, formatDateForHonduras, nowInHonduras, formatDateTimeForHonduras } from '../../../lib/timezone'
+import { getHondurasTimestamp, formatDateForHonduras, nowInHonduras, formatDateTimeForHonduras, formatDateOnlyForHonduras } from '../../../lib/timezone'
 import { 
   validateCompanyAccess, 
   buildSecureQuery, 
@@ -586,7 +586,7 @@ async function generateEmployeeExcelReport(res: NextApiResponse, reportData: any
         role: emp.role || '',
         department: emp.departments?.name || 'Sin Departamento',
         salary: formatHNL(emp.base_salary || 0),
-        hire_date: emp.hire_date ? new Date(emp.hire_date).toLocaleDateString('es-HN') : '',
+        hire_date: emp.hire_date ? formatDateOnlyForHonduras(emp.hire_date) : '',
         status: emp.status === 'active' ? 'Activo' : emp.status === 'inactive' ? 'Inactivo' : 'Terminado'
       })
     }
@@ -689,7 +689,7 @@ function generateEmployeeCSVReport(res: NextApiResponse, reportData: any) {
       csvContent += `${emp.departments?.name || 'N/A'},`
       csvContent += `${emp.base_salary ? `L. ${emp.base_salary.toLocaleString('es-HN')}` : 'N/A'},`
       csvContent += `${emp.status === 'active' ? 'Activo' : emp.status === 'inactive' ? 'Inactivo' : 'Terminado'},`
-      csvContent += `${emp.hire_date ? new Date(emp.hire_date + 'T00:00:00').toLocaleDateString('es-HN') : 'N/A'}\n`
+      csvContent += `${emp.hire_date ? formatDateOnlyForHonduras(emp.hire_date) : 'N/A'}\n`
     })
     
     // Estadísticas por departamento

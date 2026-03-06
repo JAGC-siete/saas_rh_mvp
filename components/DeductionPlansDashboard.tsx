@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
+import { formatDateOnlyForHonduras } from '../lib/timezone'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Icon } from './Icon'
 
@@ -51,7 +52,7 @@ export default function DeductionPlansDashboard({ companyId, className = '' }: D
   }, [companyId])
 
   const formatCurrency = (n: number) => `L. ${Number(n).toLocaleString('es-HN', { minimumFractionDigits: 2 })}`
-  const formatDate = (d: string | null) => d ? new Date(d).toLocaleDateString('es-HN') : '-'
+  const formatDate = (d: string | null) => d ? (/^\d{4}-\d{2}-\d{2}$/.test(d) ? formatDateOnlyForHonduras(d) : new Date(d).toLocaleDateString('es-HN')) : '-'
 
   const formatFieldKey = (key: string) => {
     return key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())

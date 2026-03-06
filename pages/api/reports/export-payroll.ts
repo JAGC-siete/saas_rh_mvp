@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { getCompanyData } from '../../../lib/helpers/company-filter'
-import { formatDateForHonduras, nowInHonduras, formatDateTimeForHonduras } from '../../../lib/timezone'
+import { formatDateForHonduras, nowInHonduras, formatDateTimeForHonduras, formatDateOnlyForHonduras } from '../../../lib/timezone'
 import { 
   withExportSecurity, 
   validateCompanyAccess, 
@@ -303,7 +303,7 @@ function generatePayrollPDFReport(res: NextApiResponse, reportData: any, reportT
       
       const values = [
         record.employees?.name || 'N/A',
-        `${new Date(record.period_start + 'T00:00:00').toLocaleDateString('es-HN')} - ${new Date(record.period_end + 'T00:00:00').toLocaleDateString('es-HN')}`,
+        `${formatDateOnlyForHonduras(record.period_start)} - ${formatDateOnlyForHonduras(record.period_end)}`,
         `L. ${(record.gross_salary || 0).toFixed(2)}`,
         `L. ${(record.total_deductions || 0).toFixed(2)}`,
         `L. ${(record.net_salary || 0).toFixed(2)}`,

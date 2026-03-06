@@ -17,7 +17,7 @@ import {
 import { clientLogger } from '../../lib/logger-client'
 import EmployeePermissionForm from '../../components/employee-portal/EmployeePermissionForm'
 import EmployeePermissionHistory from '../../components/employee-portal/EmployeePermissionHistory'
-import { formatTimeDisplay, parseDateOnlyAsHonduras, HONDURAS_TIMEZONE } from '../../lib/timezone'
+import { formatTimeDisplay, parseDateOnlyAsHonduras, formatDateOnlyForHonduras, HONDURAS_TIMEZONE } from '../../lib/timezone'
 
 // Component for attendance records list
 function AttendanceRecordsList({ employeeId }: { employeeId?: string }) {
@@ -297,9 +297,9 @@ function PayrollSection({ employeeId }: { employeeId?: string }) {
           <h4 className="text-white font-medium">Registros de Nómina</h4>
           <div className="space-y-2">
             {payrollData.records.map((record: any, index: number) => {
-              // Calcular período y quincena para el PDF
-              const periodStart = new Date(record.period_start)
-              const periodo = `${periodStart.getFullYear()}-${String(periodStart.getMonth() + 1).padStart(2, '0')}`                                            
+              // Calcular período y quincena para el PDF (usar parseDateOnlyAsHonduras para evitar bug UTC)
+              const periodStart = parseDateOnlyAsHonduras(record.period_start)
+              const periodo = `${periodStart.getFullYear()}-${String(periodStart.getMonth() + 1).padStart(2, '0')}`
               const quincena = periodStart.getDate() <= 15 ? 1 : 2
               
               return (
@@ -307,8 +307,7 @@ function PayrollSection({ employeeId }: { employeeId?: string }) {
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <div className="text-white font-medium">
-                        {new Date(record.period_start).toLocaleDateString('es-HN')} - 
-                        {new Date(record.period_end).toLocaleDateString('es-HN')}
+                        {formatDateOnlyForHonduras(record.period_start)} - {formatDateOnlyForHonduras(record.period_end)}
                       </div>
                       <div className="text-sm text-gray-400">
                         {record.days_worked} días trabajados
@@ -367,8 +366,8 @@ function PayrollSection({ employeeId }: { employeeId?: string }) {
                 <div className="mt-4 flex justify-end">
                   <button
                     onClick={() => generatePDF(
-                      `${new Date(record.period_start).getFullYear()}-${String(new Date(record.period_start).getMonth() + 1).padStart(2, '0')}`,
-                      new Date(record.period_start).getDate() <= 15 ? 1 : 2
+                      `${periodStart.getFullYear()}-${String(periodStart.getMonth() + 1).padStart(2, '0')}`,
+                      periodStart.getDate() <= 15 ? 1 : 2
                     )}
                     className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded"
                   >
@@ -631,6 +630,15 @@ export default function EmployeePortal() {
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'No especificado'
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+      const d = parseDateOnlyAsHonduras(dateString)
+      return isNaN(d.getTime()) ? dateString : d.toLocaleDateString('es-HN', {
+        timeZone: HONDURAS_TIMEZONE,
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })
+    }
     return new Date(dateString).toLocaleDateString('es-HN', {
       year: 'numeric',
       month: 'long',

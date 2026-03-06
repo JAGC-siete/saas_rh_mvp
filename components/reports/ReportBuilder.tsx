@@ -5,7 +5,7 @@ import ReportFilters from './ReportFilters'
 import ReportPreview from './ReportPreview'
 import ReportKPIs from './ReportKPIs'
 import ExportBar from './ExportBar'
-import { nowInHonduras, formatTimeDisplay } from '../../lib/timezone'
+import { nowInHonduras, formatTimeDisplay, parseDateOnlyAsHonduras, HONDURAS_TIMEZONE } from '../../lib/timezone'
 import { useCompanyContext } from '../../lib/useCompanyContext'
 import { useReportsExport } from '../../lib/hooks/useReportsExport'
 import { 
@@ -142,7 +142,7 @@ export default function ReportBuilder() {
           
           const payrollRows = (payrollData.data || []).map((row: any) => [
             row.employee_name,
-            `${new Date(row.period_start).toLocaleDateString('es-HN', { month: 'short', day: 'numeric' })} - ${new Date(row.period_end).toLocaleDateString('es-HN', { month: 'short', day: 'numeric' })}`,
+            `${parseDateOnlyAsHonduras(row.period_start).toLocaleDateString('es-HN', { timeZone: HONDURAS_TIMEZONE, month: 'short', day: 'numeric' })} - ${parseDateOnlyAsHonduras(row.period_end).toLocaleDateString('es-HN', { timeZone: HONDURAS_TIMEZONE, month: 'short', day: 'numeric' })}`,
             `L ${row.gross_salary.toFixed(2)}`,
             `L ${row.total_deductions.toFixed(2)}`,
             `L ${row.net_salary.toFixed(2)}`,

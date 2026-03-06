@@ -1,5 +1,5 @@
 import { Buffer } from 'buffer'
-import { formatDateForHonduras, nowInHonduras } from '../timezone'
+import { formatDateForHonduras, nowInHonduras, formatDateOnlyForHonduras } from '../timezone'
 
 export interface DeductionPlanPDFItem {
   field_key: string
@@ -30,7 +30,7 @@ export async function generateDeductionPlansReportPDF(
       const formatCurrency = (n: number) =>
         `L. ${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
       const formatDate = (d: string | null) =>
-        d ? formatDateForHonduras(d) : '-'
+        d ? (/^\d{4}-\d{2}-\d{2}$/.test(d) ? formatDateOnlyForHonduras(d) : formatDateForHonduras(d)) : '-'
 
       const doc = new PDFDocument({
         size: 'A4',

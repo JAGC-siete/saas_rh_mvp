@@ -12,7 +12,7 @@ import EmployeeFileUpload from './EmployeeFileUpload'
 import { PlusIcon, PencilIcon, TrashIcon, EyeIcon, MagnifyingGlassIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, ChevronDownIcon, DocumentTextIcon, UserCircleIcon, ChatBubbleBottomCenterTextIcon } from '@heroicons/react/24/outline'
 import { Download } from 'lucide-react'
 import { ExportFormatButtons } from './ui/ExportFormatButtons'
-import { getHondurasTimestamp, formatTimeDisplay } from '../lib/timezone'
+import { getHondurasTimestamp, formatTimeDisplay, formatDateOnlyForHonduras, parseDateOnlyAsHonduras, HONDURAS_TIMEZONE } from '../lib/timezone'
 
 interface Department {
   id: string
@@ -82,6 +82,15 @@ const formatCurrency = (value?: number | null) => {
 
 const formatDateDisplay = (value?: string | null) => {
   if (!value) return 'No especificada'
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const d = parseDateOnlyAsHonduras(value)
+    return isNaN(d.getTime()) ? value : d.toLocaleDateString('es-HN', {
+      timeZone: HONDURAS_TIMEZONE,
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
+  }
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) {
     return value

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { formatDateOnlyForHonduras } from '../lib/timezone'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { EyeIcon, BuildingOfficeIcon, UserIcon, CurrencyDollarIcon, TrophyIcon } from '@heroicons/react/24/outline'
@@ -63,6 +64,9 @@ export default function TrialEmployeeManager({ tenant }: TrialEmployeeManagerPro
 
   const formatDate = (dateString: string) => {
     if (!dateString) return 'N/A'
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+      return formatDateOnlyForHonduras(dateString) || dateString
+    }
     return new Date(dateString).toLocaleDateString('es-HN')
   }
 

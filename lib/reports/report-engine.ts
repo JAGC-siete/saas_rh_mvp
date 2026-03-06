@@ -1,5 +1,5 @@
 import type { ResolvedColumn } from './column-resolver'
-import { formatTimeDisplay, formatDateOnlyForHonduras } from '../timezone'
+import { formatTimeDisplay, formatDateOnlyForHonduras, parseDateOnlyAsHonduras, HONDURAS_TIMEZONE } from '../timezone'
 
 /**
  * Report engine - Strategy-style helpers for metadata-driven report generation.
@@ -93,12 +93,12 @@ function getPayrollRowValue(record: any, col: ResolvedColumn, employeeById: Map<
       return empName
     case 'period':
       return record.period_start && record.period_end
-        ? `${new Date(record.period_start).toLocaleDateString('es-HN', { month: 'short', day: 'numeric' })} - ${new Date(record.period_end).toLocaleDateString('es-HN', { month: 'short', day: 'numeric' })}`
+        ? `${parseDateOnlyAsHonduras(record.period_start).toLocaleDateString('es-HN', { timeZone: HONDURAS_TIMEZONE, month: 'short', day: 'numeric' })} - ${parseDateOnlyAsHonduras(record.period_end).toLocaleDateString('es-HN', { timeZone: HONDURAS_TIMEZONE, month: 'short', day: 'numeric' })}`
         : ''
     case 'period_start':
-      return record.period_start ? new Date(record.period_start).toLocaleDateString('es-HN') : ''
+      return record.period_start ? formatDateOnlyForHonduras(record.period_start) : ''
     case 'period_end':
-      return record.period_end ? new Date(record.period_end).toLocaleDateString('es-HN') : ''
+      return record.period_end ? formatDateOnlyForHonduras(record.period_end) : ''
     case 'gross_salary':
       return record.gross_salary ?? 0
     case 'total_deductions':
@@ -139,7 +139,7 @@ function getEmployeeRowValue(record: any, col: ResolvedColumn): string | number 
     case 'status':
       return record.status === 'active' ? 'Activo' : record.status === 'inactive' ? 'Inactivo' : record.status ?? ''
     case 'hire_date':
-      return record.hire_date ? new Date(record.hire_date).toLocaleDateString('es-HN') : ''
+      return record.hire_date ? formatDateOnlyForHonduras(record.hire_date) : ''
     default:
       return ''
   }

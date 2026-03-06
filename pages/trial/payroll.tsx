@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
+import { parseDateOnlyAsHonduras, HONDURAS_TIMEZONE } from '../../lib/timezone'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 
@@ -101,7 +102,9 @@ export default function TrialPayrollPage() {
   }
 
   const empresa = data.company.name
-  const periodo = `${new Date(data.period.startDate).toLocaleDateString('es-HN', { month: 'long', year: 'numeric' })}`
+  const periodo = /^\d{4}-\d{2}-\d{2}$/.test(data.period.startDate)
+    ? `${parseDateOnlyAsHonduras(data.period.startDate).toLocaleDateString('es-HN', { timeZone: HONDURAS_TIMEZONE, month: 'long', year: 'numeric' })}`
+    : `${new Date(data.period.startDate).toLocaleDateString('es-HN', { month: 'long', year: 'numeric' })}`
 
   return (
     <>

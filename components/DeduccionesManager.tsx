@@ -7,6 +7,7 @@ import { Input } from './ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { useCompanyContext } from '../lib/useCompanyContext'
 import { useToast } from '../lib/toast'
+import { formatDateOnlyForHonduras } from '../lib/timezone'
 import { Loader2, Download } from 'lucide-react'
 
 interface DeductionType {
@@ -42,7 +43,7 @@ interface DeductionPlan {
 const formatCurrency = (n: number) =>
   `L. ${Number(n).toLocaleString('es-HN', { minimumFractionDigits: 2 })}`
 const formatDate = (d: string | null) =>
-  d ? new Date(d).toLocaleDateString('es-HN') : '-'
+  d ? (/^\d{4}-\d{2}-\d{2}$/.test(d) ? formatDateOnlyForHonduras(d) : new Date(d).toLocaleDateString('es-HN')) : '-'
 const formatFieldKey = (key: string) =>
   key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 
