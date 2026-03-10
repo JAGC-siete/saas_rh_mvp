@@ -16,7 +16,8 @@ import {
   UsersIcon,
   GiftIcon,
   BanknotesIcon,
-  CalculatorIcon
+  CalculatorIcon,
+  ScaleIcon
 } from '@heroicons/react/24/outline'
 import { TrophyIcon } from '@heroicons/react/24/solid'
 
@@ -223,6 +224,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Asistencia', href: '/app/attendance/dashboard', icon: ClockIcon, permission: 'attendance' },
     { name: 'Permisos', href: '/app/leave', icon: UserIcon, permission: 'leave' },
     { name: 'Nómina', href: '/app/payroll', icon: CurrencyDollarIcon, permission: 'payroll' },
+    { name: 'Cesantías', href: '/app/cesantias', icon: ScaleIcon, permission: 'payroll' },
     { name: 'Deducciones', href: '/app/deducciones', icon: BanknotesIcon, permission: 'payroll' },
     { name: '13 & 14 Salario', href: '/app/13-14-salario', icon: GiftIcon, permission: 'payroll' },
     { name: 'Reportes', href: '/app/reports', icon: DocumentChartBarIcon, permission: 'reports' },
