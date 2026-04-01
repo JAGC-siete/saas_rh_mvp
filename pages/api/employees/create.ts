@@ -3,7 +3,6 @@ import { createAdminClient } from '../../../lib/supabase/server'
 import { requireUser } from '../../../lib/auth/requireUser'
 import { getHondurasTimestamp } from '../../../lib/timezone'
 import { requirePlanAndQuota, incrementUsage } from '../../../lib/billing/enforce'
-import { createPagesServerClient } from '@supabase/auth-helpers-nextjs';
 import { addEmployeeSyncJob } from '../../../lib/queues/employeeSyncQueue';
 import { trace, context } from '@opentelemetry/api';
 
