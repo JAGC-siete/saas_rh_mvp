@@ -6,23 +6,13 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { RATE_LIMITS, RateLimitConfig } from '../rate-limit'
 import { logger } from '../logger'
 import { nowInHonduras } from '../timezone'
+import { getTrustedClientIp } from '../security/trusted-client-ip'
 
 // Store en memoria para rate limiting (en producción usar Redis)
 const rateLimitStore: { [key: string]: { count: number; resetTime: number } } = {}
 
-/**
- * Obtener IP del cliente
- */
 function getClientIP(req: NextApiRequest): string {
-  const forwarded = req.headers['x-forwarded-for']
-  const ip = forwarded 
-    ? (Array.isArray(forwarded) ? forwarded[0] : forwarded.split(',')[0])
-    : req.headers['x-real-ip'] || 
-      req.connection.remoteAddress || 
-      req.socket.remoteAddress || 
-      'unknown'
-  
-  return (ip as string).trim()
+  return getTrustedClientIp(req)
 }
 
 /**

@@ -1,4 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
+import { getTrustedClientIp } from './trusted-client-ip'
 
 /**
  * SISTEMA DE RATE LIMITING PARA PROTEGER CONTRA ATAQUES DE FUERZA BRUTA
@@ -46,15 +47,7 @@ const RATE_LIMITS = {
 // Almacén en memoria para rate limiting (en producción usar Redis)
 const requestCounts = new Map<string, { count: number; resetTime: number }>()
 
-// Obtener IP del cliente
-const getClientIP = (req: NextApiRequest): string => {
-  const forwarded = req.headers['x-forwarded-for']
-  const ip = forwarded 
-    ? (Array.isArray(forwarded) ? forwarded[0] : forwarded.split(',')[0])
-    : req.connection.remoteAddress || 'unknown'
-  
-  return ip.trim()
-}
+const getClientIP = (req: NextApiRequest): string => getTrustedClientIp(req)
 
 // Limpiar entradas expiradas del almacén
 const cleanupExpiredEntries = () => {

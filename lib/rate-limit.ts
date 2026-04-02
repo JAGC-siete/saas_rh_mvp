@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { nowInHonduras } from './timezone'
+import { getTrustedClientIp } from './security/trusted-client-ip'
 
 
 
@@ -72,12 +73,7 @@ export function rateLimit(config: RateLimitConfig) {
  * Obtiene la clave única del cliente
  */
 function getClientKey(req: NextApiRequest): string {
-  // Usar IP del cliente
-  const ip = req.headers['x-forwarded-for'] || 
-             req.headers['x-real-ip'] || 
-             req.connection.remoteAddress || 
-             req.socket.remoteAddress || 
-             'unknown'
+  const ip = getTrustedClientIp(req)
   
   // Si hay usuario autenticado, incluir su ID
   const userId = (req as any).user?.id || 'anonymous'
