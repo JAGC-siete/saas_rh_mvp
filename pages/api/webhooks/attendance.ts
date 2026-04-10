@@ -1221,23 +1221,6 @@ async function processAccessEvent(
   acs: any,
   companyId: string
 ) {
-  // ─── STEP 1: Log the full parsed payload as received from the terminal ───────
-  // Captures the complete structure so we can compare working vs non-working
-  // terminals side-by-side. root = EventNotificationAlert wrapper; acs = the
-  // AccessControllerEvent / AcsEvent block extracted from it.
-  logger.info('[ACCESS EVENT] STEP 1 — Full payload from terminal', {
-    companyId,
-    eventType: root?.eventType,
-    eventState: root?.eventState,
-    deviceIpAddress: root?.ipAddress ?? null,
-    deviceMacAddress: root?.macAddress ?? null,
-    deviceSerialNo: root?.serialNumber ?? root?.serialNo ?? null,
-    rootKeys: root ? Object.keys(root) : [],
-    acsKeys: acs ? Object.keys(acs) : [],
-    rootFull: JSON.stringify(root, null, 2),
-    acsFull: acs ? JSON.stringify(acs, null, 2) : null,
-  });
-
   const supabase = createAdminClient();
 
   // Extraer campos del AccessControllerEvent/AcsEvent según manual Hikvision
@@ -1261,31 +1244,6 @@ async function processAccessEvent(
     root?.personNo ??
     null;
 
-  // ─── STEP 2: Log each candidate identifier field individually ────────────────
-  // Shows exactly which fields are present/absent in this terminal's payload.
-  // Compare these values across working vs non-working terminals to spot the diff.
-  logger.info('[ACCESS EVENT] STEP 2 — Identifier field extraction (cardNo / employeeNoString)', {
-    companyId,
-    // Fields from the ACS/AccessControllerEvent block
-    'acs.employeeNoString': acs?.employeeNoString ?? '(absent)',
-    'acs.employeeNo': acs?.employeeNo ?? '(absent)',
-    'acs.cardNo': acs?.cardNo ?? '(absent)',
-    'acs.employeeNoHex': acs?.employeeNoHex ?? '(absent)',
-    'acs.credentialNo': acs?.credentialNo ?? '(absent)',
-    'acs.personNo': acs?.personNo ?? '(absent)',
-    // Fields from the root EventNotificationAlert block
-    'root.employeeNoString': root?.employeeNoString ?? '(absent)',
-    'root.employeeNo': root?.employeeNo ?? '(absent)',
-    'root.cardNo': root?.cardNo ?? '(absent)',
-    'root.employeeNoHex': root?.employeeNoHex ?? '(absent)',
-    'root.credentialNo': root?.credentialNo ?? '(absent)',
-    'root.personNo': root?.personNo ?? '(absent)',
-    // Resolved winner
-    rawId,
-    rawIdType: typeof rawId,
-    rawIdIsNull: rawId === null,
-  });
-
   // Campos adicionales del Access Control Event (según manual)
   const doorNo = acs?.doorNo ?? root?.doorNo ?? null;
   const readerNo = acs?.readerNo ?? root?.readerNo ?? null;
@@ -1293,52 +1251,23 @@ async function processAccessEvent(
   const cardNo = acs?.cardNo ?? root?.cardNo ?? null;
   const employeeNoString = acs?.employeeNoString ?? root?.employeeNoString ?? null;
 
-  // ─── STEP 3: Log the resolved/extracted values ───────────────────────────────
-  logger.info('[ACCESS EVENT] STEP 3 — Resolved Access Control field values', {
-    companyId,
-    cardNo,
-    employeeNoString,
-    doorNo,
-    readerNo,
-    verifyMode,
-    rawId,
-    rawIdSource: rawId === acs?.employeeNoString ? 'acs.employeeNoString'
-      : rawId === acs?.employeeNo ? 'acs.employeeNo'
-      : rawId === acs?.cardNo ? 'acs.cardNo'
-      : rawId === acs?.employeeNoHex ? 'acs.employeeNoHex'
-      : rawId === acs?.credentialNo ? 'acs.credentialNo'
-      : rawId === acs?.personNo ? 'acs.personNo'
-      : rawId === root?.employeeNoString ? 'root.employeeNoString'
-      : rawId === root?.employeeNo ? 'root.employeeNo'
-      : rawId === root?.cardNo ? 'root.cardNo'
-      : rawId === root?.employeeNoHex ? 'root.employeeNoHex'
-      : rawId === root?.credentialNo ? 'root.credentialNo'
-      : rawId === root?.personNo ? 'root.personNo'
-      : 'none',
-  });
-
-  // ─── STEP 4: Normalize the identifier ────────────────────────────────────────
   const normalizedId = normalizeIdentifier(rawId);
 
-  logger.info('[ACCESS EVENT] STEP 4 — Normalized identifier result', {
+  // Log 1: identifier extraction result
+  logger.info('[ACCESS EVENT] Identifier extracted', {
     companyId,
     rawId,
-    rawIdType: typeof rawId,
     normalizedId,
     normalizedIdIsUndefined: normalizedId === undefined,
   });
 
   if (!normalizedId) {
-    // Log FULL payload para diagnóstico: dispositivos fingerprint-only pueden enviar campos distintos
-    logger.warn('[ACCESS EVENT] No employee identifier found — full payload dump for terminal diagnosis', {
+    // Log 2: full payload dump so we can see what the non-working terminal is sending
+    logger.info('[ACCESS EVENT] No employee identifier found — full payload', {
       companyId,
-      rawId,
-      acsKeys: acs ? Object.keys(acs) : [],
-      rootKeys: root ? Object.keys(root) : [],
-      acsFull: acs ? JSON.stringify(acs) : null,
-      rootFull: root ? JSON.stringify(root) : null,
-      hint: 'Check that each user on this terminal has an Employee No configured. Supported fields: employeeNoString, employeeNo, cardNo, employeeNoHex, credentialNo, personNo. Compare this payload with a working terminal to identify the structural difference.',
+      fullPayload: JSON.stringify({ root, acs }),
     });
+    logger.warn('[ACCESS EVENT] No employee identifier found', { companyId });
     return;
   }
 
@@ -1362,16 +1291,6 @@ async function processAccessEvent(
     return;
   }
 
-  // ─── STEP 5: Employee lookup ─────────────────────────────────────────────────
-  // Query: employees WHERE company_id = companyId AND dni = normalizedId AND status = 'active'
-  logger.info('[ACCESS EVENT] STEP 5 — Employee search query', {
-    companyId,
-    query: {
-      table: 'employees',
-      filters: { company_id: companyId, dni: normalizedId, status: 'active' },
-    },
-  });
-
   let { data: employee, error: employeeError } = await supabase
     .from('employees')
     .select('id, company_id, work_schedule_id, dni, pay_type')
@@ -1380,25 +1299,8 @@ async function processAccessEvent(
     .eq('status', 'active')
     .single();
 
-  logger.info('[ACCESS EVENT] STEP 5 — Employee search result (exact match)', {
-    companyId,
-    normalizedId,
-    found: !!employee,
-    employeeId: employee?.id ?? null,
-    employeeDni: employee?.dni ?? null,
-    employeePayType: employee?.pay_type ?? null,
-    dbError: employeeError?.message ?? null,
-    dbErrorCode: employeeError?.code ?? null,
-  });
-
   // Si no hay match exacto, intentar búsqueda flexible (normalización de DNI)
   if (employeeError || !employee) {
-    logger.info('[ACCESS EVENT] STEP 5 — Exact match failed, trying flexible DNI search', {
-      companyId,
-      normalizedId,
-      exactMatchError: employeeError?.message ?? null,
-    });
-
     const { data: allEmployees } = await supabase
       .from('employees')
       .select('id, company_id, work_schedule_id, dni, pay_type')
@@ -1406,39 +1308,20 @@ async function processAccessEvent(
       .eq('status', 'active');
 
     if (allEmployees) {
-      logger.info('[ACCESS EVENT] STEP 5 — Flexible search: comparing against all active employees', {
-        companyId,
-        normalizedId,
-        totalActiveEmployees: allEmployees.length,
-        employeeDniComparison: allEmployees.map(emp => ({
-          id: emp.id,
-          rawDni: emp.dni,
-          normalizedDni: normalizeIdentifier(emp.dni),
-          isMatch: normalizeIdentifier(emp.dni) === normalizedId,
-        })),
-      });
-
       employee = allEmployees.find(emp => {
         const empNormalized = normalizeIdentifier(emp.dni);
         return empNormalized === normalizedId;
       }) || null;
-
-      if (employee) {
-        logger.info('[ACCESS EVENT] STEP 5 — Employee found via flexible DNI search', {
-          companyId,
-          employeeId: employee.id,
-          rawDni: employee.dni,
-          normalizedId,
-        });
-      } else {
-        logger.warn('[ACCESS EVENT] STEP 5 — Employee not found in flexible search either', {
-          companyId,
-          normalizedId,
-          totalActiveEmployees: allEmployees.length,
-        });
-      }
     }
   }
+
+  // Log 3: employee search result
+  logger.info('[ACCESS EVENT] Employee search result', {
+    companyId,
+    normalizedId,
+    found: !!employee,
+    employeeDni: employee?.dni ?? null,
+  });
 
   if (!employee) {
     logger.warn('[ACCESS EVENT] Employee not found', {
