@@ -13,6 +13,10 @@ import { PlusIcon, PencilIcon, TrashIcon, EyeIcon, MagnifyingGlassIcon, ChevronL
 import { Download } from 'lucide-react'
 import { ExportFormatButtons } from './ui/ExportFormatButtons'
 import { getHondurasTimestamp, formatTimeDisplay, formatDateOnlyForHonduras, parseDateOnlyAsHonduras, HONDURAS_TIMEZONE } from '../lib/timezone'
+import {
+  TERMINATION_REASON_OPTIONS,
+  getTerminationReasonLabel
+} from '../lib/employees/termination-reasons'
 
 interface Department {
   id: string
@@ -45,7 +49,9 @@ const INITIAL_FORM_DATA = {
   emergency_contact_name: '',
   emergency_contact_phone: '',
   address: '',
-  metadata: ''
+  metadata: '',
+  termination_reason_code: '',
+  termination_reason_detail: ''
 }
 
 const HNL_CURRENCY_FORMATTER = new Intl.NumberFormat('es-HN', {
@@ -170,6 +176,8 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
   const [showDeactivateModal, setShowDeactivateModal] = useState(false)
   const [employeeToDeactivate, setEmployeeToDeactivate] = useState<Employee | null>(null)
   const [terminationDate, setTerminationDate] = useState('')
+  const [terminationReasonCode, setTerminationReasonCode] = useState('')
+  const [terminationReasonDetail, setTerminationReasonDetail] = useState('')
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
   const [showCertificateModal, setShowCertificateModal] = useState(false)
@@ -406,6 +414,19 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
           sanitizedFormData.status = 'inactive'
         }
       }
+      if (sanitizedFormData.status === 'active') {
+        sanitizedFormData.termination_date = null
+        sanitizedFormData.termination_reason_code = null
+        sanitizedFormData.termination_reason_detail = null
+      } else if (sanitizedFormData.status === 'inactive') {
+        const trc = String(sanitizedFormData.termination_reason_code || '').trim()
+        if (!trc) {
+          throw new Error('Seleccione el motivo de baja para empleados inactivos.')
+        }
+        sanitizedFormData.termination_reason_code = trc
+        const trd = String(sanitizedFormData.termination_reason_detail || '').trim()
+        sanitizedFormData.termination_reason_detail = trd || null
+      }
       // pay_type: constraint permite 'fixed' | 'hourly'
       if (typeof sanitizedFormData.pay_type === 'string') {
         const rawPayType = sanitizedFormData.pay_type.trim()
@@ -517,7 +538,9 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       emergency_contact_name: employee.emergency_contact_name || '',
       emergency_contact_phone: employee.emergency_contact_phone || '',
       address: typeof employee.address === 'string' ? employee.address : JSON.stringify(employee.address || {}),
-      metadata: typeof employee.metadata === 'object' ? JSON.stringify(employee.metadata || {}) : (employee.metadata || '')
+      metadata: typeof employee.metadata === 'object' ? JSON.stringify(employee.metadata || {}) : (employee.metadata || ''),
+      termination_reason_code: employee.termination_reason_code || '',
+      termination_reason_detail: employee.termination_reason_detail || ''
       // profile_image_path no está en INITIAL_FORM_DATA ni en el schema de DB, se maneja separadamente
     })
     setShowForm(true)
@@ -539,6 +562,9 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
 
   const handleDeactivate = useCallback((employee: Employee) => {
     setEmployeeToDeactivate(employee)
+    setTerminationDate('')
+    setTerminationReasonCode('')
+    setTerminationReasonDetail('')
     setShowDeactivateModal(true)
   }, [])
 
@@ -647,8 +673,15 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
   const confirmDeactivate = useCallback(async () => {
     if (!employeeToDeactivate) return
 
+    const reason = terminationReasonCode.trim()
+    if (!reason) {
+      setEmployeesError('Seleccione el motivo de baja.')
+      return
+    }
+
     try {
       setIsSubmitting(true)
+      setEmployeesError(null)
       
       // Usar fecha seleccionada o fecha actual
       const finalTerminationDate = terminationDate || getHondurasTimestamp().split('T')[0]
@@ -661,7 +694,9 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
         body: JSON.stringify({ 
           id: employeeToDeactivate.id,
           status: 'inactive',
-          termination_date: finalTerminationDate
+          termination_date: finalTerminationDate,
+          termination_reason_code: terminationReasonCode.trim(),
+          termination_reason_detail: terminationReasonDetail.trim() || null
         }),
         credentials: 'include'
       })
@@ -673,7 +708,9 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
 
       setShowDeactivateModal(false)
       setEmployeeToDeactivate(null)
-      setTerminationDate('') // Resetear fecha
+      setTerminationDate('')
+      setTerminationReasonCode('')
+      setTerminationReasonDetail('')
       fetchEmployees()
     } catch (error) {
       console.error('Error deactivating employee:', error)
@@ -681,7 +718,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
     } finally {
       setIsSubmitting(false)
     }
-  }, [employeeToDeactivate, fetchEmployees, terminationDate])
+  }, [employeeToDeactivate, fetchEmployees, terminationDate, terminationReasonCode, terminationReasonDetail])
 
   const shouldFetch = useMemo(() => !!user?.id && !sessionLoading, [user?.id, sessionLoading])
   const selectedEmployeeMetadata = useMemo(() => {
@@ -1411,6 +1448,24 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                             : 'Contrato vigente'}
                         </div>
                       </div>
+                      {selectedEmployee.status === 'inactive' && (
+                        <>
+                          <div>
+                            <label className="text-sm font-medium text-gray-400">Motivo de baja</label>
+                            <div className="text-white font-medium">
+                              {getTerminationReasonLabel(selectedEmployee.termination_reason_code)}
+                            </div>
+                          </div>
+                          {(selectedEmployee.termination_reason_detail || '').trim() ? (
+                            <div className="md:col-span-2">
+                              <label className="text-sm font-medium text-gray-400">Detalle del motivo</label>
+                              <div className="text-white text-sm leading-relaxed whitespace-pre-wrap">
+                                {selectedEmployee.termination_reason_detail}
+                              </div>
+                            </div>
+                          ) : null}
+                        </>
+                      )}
                       <div>
                         <label className="text-sm font-medium text-gray-400">Salario Base</label>
                         <div className="text-green-400 font-medium">{formatCurrency(selectedEmployee.base_salary)}</div>
@@ -1815,11 +1870,46 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                 Deja vacío para usar la fecha actual
               </p>
             </div>
+
+            <div className="mb-4">
+              <label htmlFor="termination-reason" className="block text-sm font-medium text-gray-300 mb-2">
+                Motivo de baja <span className="text-red-400">*</span>
+              </label>
+              <select
+                id="termination-reason"
+                value={terminationReasonCode}
+                onChange={(e) => setTerminationReasonCode(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-800 border border-white/20 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent"
+              >
+                <option value="">Seleccione un motivo…</option>
+                {TERMINATION_REASON_OPTIONS.map((opt) => (
+                  <option key={opt.code} value={opt.code}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="mb-6">
+              <label htmlFor="termination-reason-detail" className="block text-sm font-medium text-gray-300 mb-2">
+                Detalle (opcional)
+              </label>
+              <textarea
+                id="termination-reason-detail"
+                value={terminationReasonDetail}
+                onChange={(e) => setTerminationReasonDetail(e.target.value)}
+                rows={3}
+                maxLength={2000}
+                placeholder="Referencias, acuerdos, número de acta…"
+                className="w-full px-3 py-2 bg-gray-800 border border-white/20 rounded-md text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent resize-y min-h-[4.5rem]"
+              />
+              <p className="text-xs text-gray-400 mt-1">Máximo 2000 caracteres</p>
+            </div>
             
             <div className="flex gap-3">
               <Button
                 onClick={confirmDeactivate}
-                disabled={isSubmitting}
+                disabled={isSubmitting || !terminationReasonCode.trim()}
                 variant="destructive"
                 className="flex-1 bg-red-500/20 border-red-500/30 text-red-400 hover:bg-red-500/30"
               >
@@ -1829,7 +1919,10 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                 onClick={() => {
                   setShowDeactivateModal(false)
                   setEmployeeToDeactivate(null)
-                  setTerminationDate('') // Resetear fecha
+                  setTerminationDate('')
+                  setTerminationReasonCode('')
+                  setTerminationReasonDetail('')
+                  setEmployeesError(null)
                 }}
                 variant="outline"
                 className="flex-1 bg-white/5 border-white/20 text-white hover:bg-white/10"

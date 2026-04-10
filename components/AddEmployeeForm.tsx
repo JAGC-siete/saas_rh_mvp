@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Textarea } from './ui/textarea'
 import EmployeeFileUpload from './EmployeeFileUpload'
 import { HONDURAS_LABOR_FACTOR } from '../lib/payroll/constants'
+import { TERMINATION_REASON_OPTIONS } from '../lib/employees/termination-reasons'
 
 interface Department {
   id: string
@@ -383,6 +384,50 @@ function AddEmployeeForm({
                   <option value="on_leave" className="bg-brand-900 text-white">En Permiso</option>
                 </select>
               </div>
+
+              {v(formData?.status) !== 'active' && v(formData?.status) !== '' && (
+                <>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-white mb-1" htmlFor="termination_reason_code">
+                      Motivo de baja <span className="text-red-400">*</span>
+                    </label>
+                    <select
+                      id="termination_reason_code"
+                      name="termination_reason_code"
+                      disabled={loading}
+                      value={v(formData?.termination_reason_code)}
+                      onChange={(e) => onFormChange('termination_reason_code', e.target.value)}
+                      className="w-full p-2 border border-white/20 rounded-md focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white/10 text-white"
+                    >
+                      <option value="" className="bg-brand-900 text-white">
+                        Seleccione un motivo…
+                      </option>
+                      {TERMINATION_REASON_OPTIONS.map((opt) => (
+                        <option key={opt.code} value={opt.code} className="bg-brand-900 text-white">
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-400 mt-1">Requerido si el estado no es Activo.</p>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-white mb-1" htmlFor="termination_reason_detail">
+                      Detalle del motivo (opcional)
+                    </label>
+                    <Textarea
+                      id="termination_reason_detail"
+                      name="termination_reason_detail"
+                      disabled={loading}
+                      value={v(formData?.termination_reason_detail)}
+                      onChange={(e) => onFormChange('termination_reason_detail', e.target.value)}
+                      maxLength={2000}
+                      rows={3}
+                      placeholder="Referencias, acuerdos…"
+                      className="bg-white/10 border-white/20 text-white placeholder-gray-400"
+                    />
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
