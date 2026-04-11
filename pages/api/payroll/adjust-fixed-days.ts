@@ -15,6 +15,74 @@ function round2(n: number): number {
   return Math.round(n * 100) / 100
 }
 
+/** PostgREST cuando la función RPC aún no existe o no está en caché */
+function isPayrollRecalcRpcMissing(err: { message?: string; code?: string } | null): boolean {
+  if (!err) return false
+  const msg = (err.message || '').toLowerCase()
+  if (err.code === 'PGRST202') return true
+  if (msg.includes('could not find the function')) return true
+  if (msg.includes('schema cache')) return true
+  return false
+}
+
+/**
+ * Misma semántica que payroll_recalc_fixed_days_apply sin RPC (no atómico).
+ * Usar solo si la migración no está aplicada en Supabase; conviene aplicar la migración.
+ */
+async function persistFixedDaysRecalcViaTables(
+  supabase: any,
+  params: {
+    run_line_id: string
+    company_id: string
+    calc_hours: number
+    calc_bruto: number
+    calc_ihss: number
+    calc_rap: number
+    calc_isr: number
+    calc_neto: number
+    metadata: Record<string, unknown>
+    tax_year: number
+  }
+): Promise<{ error: { message: string } | null }> {
+  const p = params
+  const standardFields = ['hours', 'bruto', 'ihss', 'rap', 'isr', 'neto']
+
+  const { error: delError } = await supabase
+    .from('payroll_adjustments')
+    .delete()
+    .eq('run_line_id', p.run_line_id)
+    .eq('company_id', p.company_id)
+    .in('field', standardFields)
+
+  if (delError) {
+    return { error: delError }
+  }
+
+  const { error: updError } = await supabase
+    .from('payroll_run_lines')
+    .update({
+      calc_hours: p.calc_hours,
+      calc_bruto: p.calc_bruto,
+      calc_ihss: p.calc_ihss,
+      calc_rap: p.calc_rap,
+      calc_isr: p.calc_isr,
+      calc_neto: p.calc_neto,
+      eff_hours: p.calc_hours,
+      eff_bruto: p.calc_bruto,
+      eff_ihss: p.calc_ihss,
+      eff_rap: p.calc_rap,
+      eff_isr: p.calc_isr,
+      eff_neto: p.calc_neto,
+      metadata: p.metadata,
+      tax_year: p.tax_year,
+      edited: true
+    })
+    .eq('id', p.run_line_id)
+    .eq('company_id', p.company_id)
+
+  return { error: updError }
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
@@ -295,7 +363,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       p_user_id: user.id
     })
 
-    if (rpcError) {
+    let rpcPayload = rpcData as { success?: boolean; error?: string } | null
+
+    if (rpcError && isPayrollRecalcRpcMissing(rpcError)) {
+      console.warn(
+        'adjust-fixed-days: RPC payroll_recalc_fixed_days_apply no disponible; usando DELETE+UPDATE vía tablas. Aplique supabase/migrations/20260403000002_payroll_recalc_fixed_days_apply.sql y recargue el schema de PostgREST si hace falta.'
+      )
+      const { error: fbErr } = await persistFixedDaysRecalcViaTables(supabase, {
+        run_line_id,
+        company_id: companyId,
+        calc_hours: daysWorked,
+        calc_bruto: gross,
+        calc_ihss: IHSS,
+        calc_rap: RAP,
+        calc_isr: ISR,
+        calc_neto: netTotal,
+        metadata: mergedMetadata,
+        tax_year: yearNum
+      })
+      if (fbErr) {
+        console.error('adjust-fixed-days fallback', fbErr)
+        return res.status(500).json({
+          error: 'Error persistiendo recálculo',
+          message:
+            fbErr.message ||
+            'Aplique la migración payroll_recalc_fixed_days_apply en Supabase (SQL Editor o supabase db push).'
+        })
+      }
+      rpcPayload = { success: true }
+    } else if (rpcError) {
       console.error('payroll_recalc_fixed_days_apply', rpcError)
       return res.status(500).json({
         error: 'Error persistiendo recálculo',
@@ -303,9 +399,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    const payload = rpcData as { success?: boolean; error?: string } | null
-    if (payload && payload.success === false) {
-      return res.status(400).json({ error: payload.error || 'No se pudo aplicar el recálculo' })
+    if (rpcPayload && rpcPayload.success === false) {
+      return res.status(400).json({ error: rpcPayload.error || 'No se pudo aplicar el recálculo' })
     }
 
     const { data: updatedLine, error: fetchErr } = await supabase

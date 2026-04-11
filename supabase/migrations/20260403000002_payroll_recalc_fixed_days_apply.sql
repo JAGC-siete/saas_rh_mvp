@@ -67,3 +67,7 @@ COMMENT ON FUNCTION public.payroll_recalc_fixed_days_apply IS
 REVOKE ALL ON FUNCTION public.payroll_recalc_fixed_days_apply(uuid, uuid, numeric, numeric, numeric, numeric, numeric, numeric, jsonb, integer, uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.payroll_recalc_fixed_days_apply(uuid, uuid, numeric, numeric, numeric, numeric, numeric, numeric, jsonb, integer, uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.payroll_recalc_fixed_days_apply(uuid, uuid, numeric, numeric, numeric, numeric, numeric, numeric, jsonb, integer, uuid) TO service_role;
+
+-- Si PostgREST sigue respondiendo "Could not find the function ... schema cache", en SQL Editor:
+--   NOTIFY pgrst, 'reload schema';
+-- (o reiniciar el proyecto / esperar al refresco automático del caché).
