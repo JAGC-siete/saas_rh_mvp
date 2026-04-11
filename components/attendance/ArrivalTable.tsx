@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { formatTimeDisplay } from '../../lib/timezone'
 import { getSeverityFromDelta } from '../../lib/hooks/useAttendanceData'
 import { UserCircleIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
+import { AttendanceRecordFlagsBadges, type AttendanceListFlags } from './AttendanceRecordFlagsBadges'
 
 interface ArrivalRow {
   id: string
@@ -16,6 +17,7 @@ interface ArrivalRow {
   date?: string
   delta_min?: number
   late_minutes?: number
+  flags?: AttendanceListFlags
 }
 
 interface ArrivalTableProps {
@@ -157,6 +159,7 @@ export default function ArrivalTable({ earlyData, lateData, title, onSelect, pag
                           {row.team && (
                             <div className="text-xs text-gray-400 truncate">{row.team}</div>
                           )}
+                          <AttendanceRecordFlagsBadges flags={row.flags} />
                         </div>
                       </button>
                       <div className="flex items-center gap-2 flex-shrink-0">

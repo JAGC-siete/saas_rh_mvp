@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { formatTimeDisplay } from '../../lib/timezone'
 import { ClockIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import { AttendanceRecordFlagsBadges, type AttendanceListFlags } from './AttendanceRecordFlagsBadges'
 
 interface OutsideScheduleRow {
   id: string
@@ -11,7 +12,7 @@ interface OutsideScheduleRow {
   check_in?: string
   check_out?: string
   date?: string
-  flags?: { horario_no_detectado?: boolean; razon?: string; gap_minutos?: number }
+  flags?: AttendanceListFlags
 }
 
 interface OutsideScheduleTableProps {
@@ -76,6 +77,7 @@ export default function OutsideScheduleTable({
                         {row.team && (
                           <div className="text-xs text-gray-400 truncate">{row.team}</div>
                         )}
+                        <AttendanceRecordFlagsBadges flags={row.flags} />
                         <span
                           className="inline-block mt-1 px-2 py-0.5 text-xs rounded bg-amber-500/20 text-amber-300"
                           title={flagInfo}

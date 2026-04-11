@@ -21,7 +21,16 @@ interface AttendanceRow {
   status?: string
   date?: string
   team?: string
-  flags?: { horario_no_detectado?: boolean; razon?: string; gap_minutos?: number }
+  flags?: {
+    horario_no_detectado?: boolean
+    razon?: string
+    gap_minutos?: number
+    has_anomaly?: boolean
+    anomaly_types?: string[]
+    close_state?: 'draft' | 'finalized' | string
+    punch_count?: number
+    biometric_mode?: string
+  }
 }
 
 interface AttendanceData {

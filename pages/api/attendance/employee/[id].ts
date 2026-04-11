@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient } from '../../../../lib/supabase/server'
 import { getDateRange } from '../../../../lib/attendance'
 import { requireCompanyAccess } from '../../../../lib/auth/api-auth-fixed'
+import { RAW_PUNCH_EVENT_TYPE } from '../../../../lib/attendance/daily-close'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query
@@ -123,6 +124,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(404).json({ error: 'Employee not found' })
     }
 
+    const admin = createAdminClient()
+    const rangeFromIso = new Date(range.from).toISOString()
+    const rangeToIso = new Date(range.to).toISOString()
+    const { data: rawPunchRows, error: rawErr } = await admin
+      .from('attendance_events')
+      .select('id, ts_utc, device_id, event_uid, local_date')
+      .eq('employee_id', id as string)
+      .eq('event_type', RAW_PUNCH_EVENT_TYPE)
+      .gte('ts_utc', rangeFromIso)
+      .lt('ts_utc', rangeToIso)
+      .order('ts_utc', { ascending: true })
+
+    if (rawErr) {
+      console.error('attendance_events raw_punch:', rawErr)
+    }
+
     // Get today's day of week for expected check-in
     const today = new Date()
     const dayOfWeek = today.getDay() // 0 = Sunday, 1 = Monday, etc.
@@ -171,7 +188,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     res.status(200).json({
       employee,
-    timeline: timeline || [],
+      timeline: timeline || [],
+      raw_punches: rawPunchRows || [],
       stats: {
         attendanceAverage: `${attendanceAverage}%`,
         presentDays: presentDays || 0,

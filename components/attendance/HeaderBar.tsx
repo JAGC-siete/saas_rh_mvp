@@ -81,24 +81,27 @@ export default function HeaderBar({
       />
 
       {/* Acciones del header */}
-      <div className="flex items-center gap-3">
-        {/* Timestamp */}
-        {lastUpdated && (
-          <span className="text-xs text-gray-400">
-            {formatLastUpdated()}
-          </span>
-        )}
+      <div className="flex flex-col items-end gap-1">
+        <div className="flex items-center gap-3">
+          {lastUpdated && (
+            <span className="text-xs text-gray-400">
+              {formatLastUpdated()}
+            </span>
+          )}
 
-        {/* Export Buttons */}
-        <ExportFormatButtons
-          formats={['excel', 'csv', 'pdf']}
-          onExport={async (format) => {
-            await handleExport(format === 'excel' ? 'xlsx' : format)
-          }}
-          disabled={!!exportingFormat}
-          loadingFormat={exportingFormat === 'xlsx' ? 'excel' : (exportingFormat as 'pdf' | 'csv' | null)}
-          variant="primary"
-        />
+          <ExportFormatButtons
+            formats={['excel', 'csv', 'pdf']}
+            onExport={async (format) => {
+              await handleExport(format === 'excel' ? 'xlsx' : format)
+            }}
+            disabled={!!exportingFormat}
+            loadingFormat={exportingFormat === 'xlsx' ? 'excel' : (exportingFormat as 'pdf' | 'csv' | null)}
+            variant="primary"
+          />
+        </div>
+        <p className="text-[11px] text-gray-500 max-w-sm text-right leading-snug">
+          Las exportaciones reflejan registros consolidados (post-cierre). Las marcas crudas del reloj se revisan en Cierre de día.
+        </p>
       </div>
     </div>
   )

@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { formatDateTimeForHonduras } from '../../lib/timezone'
 import { XMarkIcon, ClockIcon, ChartBarIcon, IdentificationIcon, BriefcaseIcon } from '@heroicons/react/24/outline'
 
@@ -8,6 +9,14 @@ interface TimelineEvent {
   justification?: string | null
 }
 
+export interface EmployeeDrawerRawPunch {
+  id: string
+  ts_utc: string
+  device_id?: string | null
+  event_uid?: string | null
+  local_date?: string | null
+}
+
 interface EmployeeDrawerProps {
   open: boolean
   onClose: () => void
@@ -15,6 +24,7 @@ interface EmployeeDrawerProps {
   events: TimelineEvent[]
   /** Período del filtro del dashboard (ej. "de Hoy", "de esta Semana") — no está hardcodeado, viene del preset. */
   periodLabel?: string
+  rawPunches?: EmployeeDrawerRawPunch[]
   employeeData?: any
   stats?: {
     attendanceAverage: string
@@ -27,7 +37,23 @@ interface EmployeeDrawerProps {
   }
 }
 
-export default function EmployeeDrawer({ open, onClose, name, events, periodLabel, employeeData, stats, schedule }: EmployeeDrawerProps) {
+export default function EmployeeDrawer({
+  open,
+  onClose,
+  name,
+  events,
+  periodLabel,
+  rawPunches = [],
+  employeeData,
+  stats,
+  schedule,
+}: EmployeeDrawerProps) {
+  const [historyTab, setHistoryTab] = useState<'consolidated' | 'device'>('consolidated')
+
+  useEffect(() => {
+    if (rawPunches.length === 0) setHistoryTab('consolidated')
+  }, [rawPunches.length, name])
+
   if (!open) return null
 
   const department = employeeData?.departments
@@ -165,13 +191,52 @@ export default function EmployeeDrawer({ open, onClose, name, events, periodLabe
 
           {/* Timeline: período viene del filtro del dashboard (preset), no está hardcodeado */}
           <div>
-            <h3 className="text-lg font-semibold text-white mb-4">
-              📅 Historial Reciente{periodLabel ? ` ${periodLabel}` : ''}
-            </h3>
-            {events.length === 0 ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <h3 className="text-lg font-semibold text-white">
+                📅 Historial{periodLabel ? ` ${periodLabel}` : ''}
+              </h3>
+              {rawPunches.length > 0 && (
+                <div className="flex rounded-lg border border-white/15 overflow-hidden text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setHistoryTab('consolidated')}
+                    className={`px-3 py-1.5 font-medium ${
+                      historyTab === 'consolidated' ? 'bg-brand-600 text-white' : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                    }`}
+                  >
+                    Consolidado
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setHistoryTab('device')}
+                    className={`px-3 py-1.5 font-medium ${
+                      historyTab === 'device' ? 'bg-brand-600 text-white' : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                    }`}
+                  >
+                    Marcas reloj ({rawPunches.length})
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {historyTab === 'device' && rawPunches.length > 0 ? (
+              <div className="space-y-2">
+                {rawPunches.map((p) => (
+                  <div
+                    key={p.id}
+                    className="bg-white/5 rounded-lg p-4 border border-white/10 hover:border-cyan-500/30 transition-colors"
+                  >
+                    <p className="text-white font-medium">Marca biométrica</p>
+                    <p className="text-sm text-gray-400">{formatDateTimeForHonduras(p.ts_utc)}</p>
+                    {p.local_date && <p className="text-xs text-gray-500 mt-1">Día local: {p.local_date}</p>}
+                    {p.device_id && <p className="text-xs text-gray-500">Dispositivo: {p.device_id}</p>}
+                  </div>
+                ))}
+              </div>
+            ) : events.length === 0 ? (
               <div className="rounded-xl p-8 text-center border-2 border-dashed border-white/20 bg-white/5">
-                <p className="text-gray-400 font-medium">No hay registros en este período</p>
-                <p className="text-sm text-gray-500 mt-1">Casilla vacía — sin eventos de asistencia</p>
+                <p className="text-gray-400 font-medium">No hay registros consolidados en este período</p>
+                <p className="text-sm text-gray-500 mt-1">Usa la pestaña de marcas del reloj si hay eventos crudos.</p>
               </div>
             ) : (
               <div className="space-y-2">

@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/router'
 import ProtectedRoute from '../../../components/ProtectedRoute'
 import DashboardLayout from '../../../components/DashboardLayout'
@@ -11,8 +12,8 @@ import TrendsChart from '../../../components/attendance/TrendsChart'
 import KpiBarsChart from '../../../components/attendance/KpiBarsChart'
 import { Card } from '../../../components/ui/card'
 import { useCompanyContext } from '../../../lib/useCompanyContext'
-import { formatTimeDisplay } from '../../../lib/timezone'
-import EmployeeDrawer from '../../../components/attendance/EmployeeDrawer'
+import { getTodayInHonduras } from '../../../lib/timezone'
+import EmployeeDrawer, { type EmployeeDrawerRawPunch } from '../../../components/attendance/EmployeeDrawer'
 import { useAttendanceData, calculateAttendanceRates, getSeverityFromDelta } from '../../../lib/hooks/useAttendanceData'
 import { attendanceApi, mapAttendanceError } from '../../../lib/attendance-api'
 import { getDateRange } from '../../../lib/attendance'
@@ -30,13 +31,28 @@ export default function AttendanceDashboardApp() {
     open: boolean
     name: string
     events: any[]
+    rawPunches?: EmployeeDrawerRawPunch[]
     periodLabel?: string
     employeeData?: any
     stats?: any
     schedule?: any
-  }>({open:false, name:'', events:[], periodLabel: undefined, employeeData: undefined, stats: undefined, schedule: undefined})
+  }>({
+    open: false,
+    name: '',
+    events: [],
+    rawPunches: [],
+    periodLabel: undefined,
+    employeeData: undefined,
+    stats: undefined,
+    schedule: undefined,
+  })
   const { companyId } = useCompanyContext()
   const [trends, setTrends] = useState<{ date: string; present: number; absent: number; late: number; checkInTimes: Array<{time: string, employee: string}> }[]>([])
+  const [dailyCloseHint, setDailyCloseHint] = useState<{
+    withEvents: number
+    anomalies: number
+    finalized: number
+  } | null>(null)
 
   // Sincronizar estado desde URL al montar
   useEffect(() => {
@@ -96,6 +112,33 @@ export default function AttendanceDashboardApp() {
     }
     loadTrends()
   }, [companyId, selectedEmployeeId, selectedRole, selectedDepartmentId, preset, from, to])
+
+  useEffect(() => {
+    if (preset !== 'today' || !companyId) {
+      setDailyCloseHint(null)
+      return
+    }
+    const ac = new AbortController()
+    const day = getTodayInHonduras()
+    fetch(`/api/attendance/daily-close?date=${encodeURIComponent(day)}`, {
+      credentials: 'include',
+      signal: ac.signal,
+    })
+      .then((r) => r.json())
+      .then((j) => {
+        if (j?.summary) {
+          setDailyCloseHint({
+            withEvents: j.summary.total_with_events,
+            anomalies: j.summary.total_anomalies,
+            finalized: j.summary.total_finalized,
+          })
+        } else {
+          setDailyCloseHint(null)
+        }
+      })
+      .catch(() => setDailyCloseHint(null))
+    return () => ac.abort()
+  }, [preset, companyId])
 
   const handlePresetChange = (p: string) => {
     setPreset(p)
@@ -188,14 +231,24 @@ export default function AttendanceDashboardApp() {
         open: true,
         name: data.employee?.name || name,
         events: data.timeline || [],
+        rawPunches: Array.isArray(data.raw_punches) ? data.raw_punches : [],
         periodLabel: getPresetLabel(preset),
         employeeData: data.employee,
         stats: data.stats,
-        schedule: data.schedule
+        schedule: data.schedule,
       })
     } catch (error) {
       console.error('Error loading employee details:', error)
-      setDrawer({open: false, name: '', events: [], periodLabel: undefined, employeeData: undefined})
+      setDrawer({
+        open: false,
+        name: '',
+        events: [],
+        rawPunches: [],
+        periodLabel: undefined,
+        employeeData: undefined,
+        stats: undefined,
+        schedule: undefined,
+      })
     }
   }
 
@@ -225,6 +278,28 @@ export default function AttendanceDashboardApp() {
               {error}
             </div>
           )}
+
+          {preset === 'today' && dailyCloseHint && dailyCloseHint.withEvents > 0 && (
+            <div
+              className={`rounded-lg border px-4 py-3 text-sm ${
+                dailyCloseHint.anomalies > 0
+                  ? 'bg-amber-500/10 border-amber-500/35 text-amber-100'
+                  : 'bg-blue-500/10 border-blue-500/30 text-blue-100'
+              }`}
+            >
+              <span className="font-medium">Cierre de día (hoy, {getTodayInHonduras()}): </span>
+              {dailyCloseHint.withEvents} empleado(s) con marcas biométricas
+              {dailyCloseHint.anomalies > 0 && (
+                <> · {dailyCloseHint.anomalies} con anomalías pendientes de revisión</>
+              )}
+              {dailyCloseHint.finalized > 0 && <> · {dailyCloseHint.finalized} registro(s) ya finalizado(s)</>}
+              <span className="text-gray-300"> · </span>
+              <Link href="/app/attendance/daily-close" className="underline font-medium hover:text-white">
+                Ir a cierre de día
+              </Link>
+            </div>
+          )}
+
           {/* Header con filtros, export y timestamp */}
           <HeaderBar
             preset={preset}
@@ -331,12 +406,24 @@ export default function AttendanceDashboardApp() {
             </div>
           </Card>
         </div>
-        <EmployeeDrawer 
-          open={drawer.open} 
-          onClose={() => setDrawer({open:false, name:'', events:[], periodLabel: undefined, employeeData: undefined, stats: undefined, schedule: undefined})} 
-          name={drawer.name} 
+        <EmployeeDrawer
+          open={drawer.open}
+          onClose={() =>
+            setDrawer({
+              open: false,
+              name: '',
+              events: [],
+              rawPunches: [],
+              periodLabel: undefined,
+              employeeData: undefined,
+              stats: undefined,
+              schedule: undefined,
+            })
+          }
+          name={drawer.name}
           events={drawer.events}
           periodLabel={drawer.periodLabel}
+          rawPunches={drawer.rawPunches}
           employeeData={drawer.employeeData}
           stats={drawer.stats}
           schedule={drawer.schedule}

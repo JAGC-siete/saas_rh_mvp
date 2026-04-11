@@ -11,6 +11,7 @@ import {
 } from '@heroicons/react/24/outline'
 import PayrollConfigEditor from './PayrollConfigEditor'
 import ReportParamsEditor from './reports/ReportParamsEditor'
+import { BIOMETRIC_MODES, type BiometricMode } from '../lib/attendance/attendance-metadata'
 
 interface Company {
   id: string
@@ -83,6 +84,10 @@ export default function CompanySettings() {
   const [showScheduleForm, setShowScheduleForm] = useState(false)
   const [editingSchedule, setEditingSchedule] = useState<WorkSchedule | null>(null)
 
+  const [biometricMode, setBiometricMode] = useState<BiometricMode>('STRICT_2')
+  const [biometricSaving, setBiometricSaving] = useState(false)
+  const [biometricMsg, setBiometricMsg] = useState<string | null>(null)
+
   // Sync error from company context
   useEffect(() => {
     if (companyError) {
@@ -111,6 +116,57 @@ export default function CompanySettings() {
       fetchWorkSchedules()
     }
   }, [companyId, fetchWorkSchedules])
+
+  useEffect(() => {
+    if (!companyId) return
+    ;(async () => {
+      try {
+        const supabaseClient = createClient() as any
+        const { data, error } = await supabaseClient
+          .from('company_metadata')
+          .select('attendance_metadata')
+          .eq('company_id', companyId)
+          .maybeSingle()
+        if (error) throw error
+        const meta = (data?.attendance_metadata || {}) as { biometric_mode?: string }
+        const m = meta.biometric_mode
+        if (typeof m === 'string' && (BIOMETRIC_MODES as readonly string[]).includes(m)) {
+          setBiometricMode(m as BiometricMode)
+        } else {
+          setBiometricMode('STRICT_2')
+        }
+      } catch (e) {
+        console.error('Error loading attendance_metadata:', e)
+      }
+    })()
+  }, [companyId])
+
+  const saveBiometricMetadata = async () => {
+    if (!companyId) return
+    setBiometricSaving(true)
+    setBiometricMsg(null)
+    try {
+      const supabaseClient = createClient() as any
+      const { data: existing, error: readErr } = await supabaseClient
+        .from('company_metadata')
+        .select('attendance_metadata')
+        .eq('company_id', companyId)
+        .maybeSingle()
+      if (readErr) throw readErr
+      const prev = (existing?.attendance_metadata || {}) as Record<string, unknown>
+      const merged = { ...prev, biometric_mode: biometricMode }
+      const { error } = await supabaseClient.from('company_metadata').upsert(
+        { company_id: companyId, attendance_metadata: merged },
+        { onConflict: 'company_id' }
+      )
+      if (error) throw error
+      setBiometricMsg('Modalidad biométrica guardada.')
+    } catch (e) {
+      setBiometricMsg(e instanceof Error ? e.message : 'Error al guardar')
+    } finally {
+      setBiometricSaving(false)
+    }
+  }
 
   const handleScheduleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -348,6 +404,39 @@ export default function CompanySettings() {
               <p className="text-red-400 text-sm">{error}</p>
             </Card>
           )}
+
+          <Card variant="glass" className="p-5 border border-white/15">
+            <h4 className="text-md font-medium text-white mb-1">Modalidad de marcas biométricas</h4>
+            <p className="text-xs text-gray-400 mb-3">
+              Define cómo se interpretan las marcas del reloj al consolidar el día (cierre diario). STRICT_2: entrada y
+              salida; STRICT_4: entrada, almuerzo y salida; FLEXIBLE: acepta 2 o 4 marcas según cantidad recibida.
+            </p>
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="min-w-[200px]">
+                <label className="block text-xs text-gray-400 mb-1">Modalidad</label>
+                <select
+                  value={biometricMode}
+                  onChange={(e) => setBiometricMode(e.target.value as BiometricMode)}
+                  className="w-full rounded-md bg-white/5 border border-white/20 text-white text-sm px-3 py-2"
+                >
+                  {BIOMETRIC_MODES.map((m) => (
+                    <option key={m} value={m} className="bg-gray-900">
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Button
+                type="button"
+                onClick={() => void saveBiometricMetadata()}
+                disabled={biometricSaving || !companyId}
+                className="bg-brand-600 hover:bg-brand-700 text-white"
+              >
+                {biometricSaving ? 'Guardando…' : 'Guardar modalidad'}
+              </Button>
+            </div>
+            {biometricMsg && <p className="text-xs mt-2 text-gray-300">{biometricMsg}</p>}
+          </Card>
 
           {showScheduleForm && (
             <Card variant="glass" className="p-6">
