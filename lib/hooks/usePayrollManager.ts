@@ -574,7 +574,25 @@ export const usePayrollManager = () => {
           const errBody = await res.json().catch(() => ({} as { message?: string; error?: string }))
           throw new Error(errBody.message || errBody.error || `Error ${res.status}`)
         }
+
+        const contentType = res.headers.get('Content-Type') || ''
+        if (!contentType.toLowerCase().includes('application/pdf')) {
+          const text = await res.text()
+          let parsed: { message?: string; error?: string } | null = null
+          try {
+            parsed = JSON.parse(text) as { message?: string; error?: string }
+          } catch {
+            parsed = null
+          }
+          const fromJson = parsed?.message || parsed?.error
+          throw new Error(fromJson || 'El servidor no devolvió un PDF (respuesta no es application/pdf)')
+        }
+
         const blob = await res.blob()
+        if (blob.size === 0) {
+          throw new Error('El PDF recibido está vacío')
+        }
+
         const cd = res.headers.get('Content-Disposition')
         const m =
           cd?.match(/filename\*=UTF-8''([^;]+)/i)?.[1] ||
@@ -591,7 +609,8 @@ export const usePayrollManager = () => {
         document.body.appendChild(link)
         link.click()
         document.body.removeChild(link)
-        URL.revokeObjectURL(blobUrl)
+        // Revocar en el siguiente tick: revoke inmediato puede cancelar la descarga en varios navegadores.
+        window.setTimeout(() => URL.revokeObjectURL(blobUrl), 120_000)
 
         toast.success('PDF Generado', 'El PDF se ha descargado correctamente', 4000)
       } catch (error: unknown) {
