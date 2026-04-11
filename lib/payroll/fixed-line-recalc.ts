@@ -4,8 +4,9 @@
  */
 
 import type { TaxConstants } from '../tax/honduras-tax'
-import { calculateISR, calculateIHSS, calculateRAP } from '../tax/honduras-tax'
 import { getIsrForPeriod } from './isr-ytd'
+import type { CountryCode } from '../country/supported'
+import { computePayrollEmployeeStatutoryDeductions } from './statutory-deductions-compute'
 import {
   getBiweeklyPeriodDates,
   getMonthlyPeriodDates,
@@ -195,7 +196,9 @@ export async function computeFixedLineDeductionsAndNet(input: {
   tipoParam: 'CON' | 'SIN' | '2PAGOS'
   legalDeductions: LegalDeductionsFlags
   useIsrProjection: boolean
-  taxConstants: TaxConstants
+  /** Honduras: required when countryCode is HND. */
+  taxConstants?: TaxConstants
+  countryCode: CountryCode
   totalEarnings: number
   baseSalary: number
   empPlans: EmployeeDeductionPlanRow[]
@@ -220,6 +223,7 @@ export async function computeFixedLineDeductionsAndNet(input: {
     legalDeductions,
     useIsrProjection,
     taxConstants,
+    countryCode,
     totalEarnings,
     baseSalary,
     empPlans
@@ -232,55 +236,47 @@ export async function computeFixedLineDeductionsAndNet(input: {
 
   const fractionOpt = isrFractionForPeriod(paymentFrequency, quincena)
 
-  if (tipoParam === 'CON') {
-    if (legalDeductions.ihss) {
-      IHSS = calculateIHSS(baseSalary, taxConstants)
-    }
-    if (legalDeductions.rap) {
-      RAP = calculateRAP(baseSalary, taxConstants)
-    }
-    if (legalDeductions.isr) {
-      ISR = useIsrProjection
-        ? await getIsrForPeriod({
-            supabase,
-            employeeId,
-            companyId,
-            year,
-            month,
-            quincena,
-            periodIncome: baseSalary,
-            taxConstants,
-            factor2Pagos: 1,
-            useProjection: true,
-            ...(fractionOpt != null ? { fractionOfMonthElapsed: fractionOpt } : {})
-          })
-        : calculateISR(baseSalary, taxConstants.isr_brackets)
-    }
-    totalDeductionsLegal = IHSS + RAP + ISR
-  } else if (tipoParam === '2PAGOS') {
-    if (legalDeductions.ihss) {
-      IHSS = calculateIHSS(baseSalary, taxConstants) * 0.5
-    }
-    if (legalDeductions.rap) {
-      RAP = calculateRAP(baseSalary, taxConstants) * 0.5
-    }
-    if (legalDeductions.isr) {
-      ISR = useIsrProjection
-        ? await getIsrForPeriod({
-            supabase,
-            employeeId,
-            companyId,
-            year,
-            month,
-            quincena,
-            periodIncome: baseSalary,
-            taxConstants,
-            factor2Pagos: 0.5,
-            useProjection: true,
-            ...(fractionOpt != null ? { fractionOfMonthElapsed: fractionOpt } : {})
-          })
-        : calculateISR(baseSalary, taxConstants.isr_brackets) * 0.5
-    }
+  if (countryCode === 'HND' && !taxConstants) {
+    throw new Error('computeFixedLineDeductionsAndNet: taxConstants required for HND')
+  }
+
+  if (tipoParam === 'SIN') {
+    totalDeductionsLegal = 0
+  } else {
+    const factor2Pagos = tipoParam === '2PAGOS' ? 0.5 : 1
+    const hndTaxConstants = countryCode === 'HND' ? taxConstants : undefined
+
+    const statutory = await computePayrollEmployeeStatutoryDeductions({
+      countryCode,
+      year,
+      baseMonthlySalary: baseSalary,
+      factor2Pagos,
+      legalDeductions,
+      simpleIsrMonthlyBase: baseSalary,
+      useIsrProjection: countryCode === 'HND' && useIsrProjection,
+      hndTaxConstants,
+      runIsrProjection:
+        countryCode === 'HND' && useIsrProjection && legalDeductions.isr && hndTaxConstants
+          ? () =>
+              getIsrForPeriod({
+                supabase,
+                employeeId,
+                companyId,
+                year,
+                month,
+                quincena,
+                periodIncome: baseSalary,
+                taxConstants: hndTaxConstants,
+                factor2Pagos,
+                useProjection: true,
+                ...(fractionOpt != null ? { fractionOfMonthElapsed: fractionOpt } : {})
+              })
+          : undefined,
+      supabase
+    })
+    IHSS = statutory.ihss
+    RAP = statutory.rap
+    ISR = statutory.isr
     totalDeductionsLegal = IHSS + RAP + ISR
   }
 

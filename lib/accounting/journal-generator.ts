@@ -6,6 +6,7 @@
  */
 
 import { createAdminClient } from '../supabase/server'
+import { normalizeCountryCode } from '../country/supported'
 import { getTaxBracketsForYear } from '../tax/honduras-tax'
 import {
   calculateEmployerContributions,
@@ -397,8 +398,22 @@ export async function generateJournalEntriesFromPayrollRun(
     return undefined
   }
 
-  // 5. Tax constants and factor for 2PAGOS
-  const taxConstants = await getTaxBracketsForYear(run.year)
+  const { data: coRow } = await supabase
+    .from('companies')
+    .select('country_code')
+    .eq('id', companyId)
+    .maybeSingle()
+  const runCountry = normalizeCountryCode(coRow?.country_code)
+
+  // 5. Tax constants and factor for 2PAGOS (Honduras employer formulas)
+  if (runCountry !== 'HND') {
+    return {
+      success: false,
+      error:
+        'La generación de asientos contables desde nómina solo está implementada para empresas en Honduras (HND).'
+    }
+  }
+  const taxConstants = await getTaxBracketsForYear(run.year, 'HND')
   const factor2Pagos = run.tipo === '2PAGOS' ? 0.5 : 1
 
   // 6. Aggregate by cost center

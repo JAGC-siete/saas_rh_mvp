@@ -1,6 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
-import { getTaxBracketsForYear } from '../../../lib/tax/honduras-tax'
+import { normalizeCountryCode } from '../../../lib/country/supported'
+import { isPayrollCountryEngineEnabled } from '../../../lib/features/payroll-country-flags'
+import { getTaxEngine } from '../../../lib/tax/registry'
 import {
   resolvePayrollPeriodContext,
   computeFixedGrossFromDays,
@@ -10,6 +12,11 @@ import {
   type PreviewPaymentFrequency,
   type PaymentCutDatesInput
 } from '../../../lib/payroll/fixed-line-recalc'
+import {
+  assertNonHndStatutoryConfigParses,
+  payrollStatutoryErrorResponse,
+  payrollStatutoryYearUnavailable
+} from '../../../lib/payroll/statutory-api-guard'
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100
@@ -89,10 +96,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { supabase, companyId, role, user } = await requireCompanyAccess(req, res)
+    const { supabase, companyId, role, user, companyCountryCode } = await requireCompanyAccess(req, res)
 
     if (!companyId) {
       return res.status(400).json({ error: 'Company ID is required' })
+    }
+
+    const countryCode = normalizeCountryCode(companyCountryCode)
+    if (!isPayrollCountryEngineEnabled(countryCode)) {
+      return res.status(403).json({
+        error: 'Nómina no habilitada para este país',
+        code: 'PAYROLL_COUNTRY_DISABLED'
+      })
     }
 
     if (!['super_admin', 'company_admin', 'hr_manager'].includes(role)) {
@@ -279,7 +294,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const baseSalary = Number(employee.base_salary) || 0
-    const taxConstants = await getTaxBracketsForYear(yearNum)
+    const yearCtx = await getTaxEngine(countryCode).loadYearContext(yearNum)
+    const blocked = payrollStatutoryYearUnavailable(yearCtx, countryCode, yearNum)
+    if (!blocked.ok) return res.status(blocked.status).json(blocked.body)
+    await assertNonHndStatutoryConfigParses(countryCode, yearNum, supabase)
+    const taxConstants = yearCtx.hndTaxConstants ?? undefined
 
     let totalEarnings = computeFixedGrossFromDays({
       baseSalary,
@@ -318,6 +337,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       legalDeductions,
       useIsrProjection,
       taxConstants,
+      countryCode,
       totalEarnings,
       baseSalary,
       empPlans
@@ -430,6 +450,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       total_deductions: totalDeductions
     })
   } catch (e: unknown) {
+    const stat = payrollStatutoryErrorResponse(e)
+    if (stat) return res.status(stat.status).json(stat.body)
     const err = e as { message?: string }
     if (err.message === 'UNAUTHORIZED') {
       return res.status(401).json({ error: 'Unauthorized' })

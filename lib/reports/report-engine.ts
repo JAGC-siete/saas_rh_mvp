@@ -1,5 +1,14 @@
 import type { ResolvedColumn } from './column-resolver'
-import { formatTimeDisplay, formatDateOnlyForHonduras, parseDateOnlyAsHonduras, HONDURAS_TIMEZONE } from '../timezone'
+import {
+  formatTimeDisplayInZone,
+  formatDateOnlyForLocale,
+  parseDateOnlyAsHonduras
+} from '../timezone'
+import { reportFormatForCountry, type ReportFormatContext } from '../country/payroll-labels'
+
+const DEFAULT_REPORT_FMT: ReportFormatContext = reportFormatForCountry('HND')
+
+export type { ReportFormatContext }
 
 /**
  * Report engine - Strategy-style helpers for metadata-driven report generation.
@@ -13,7 +22,8 @@ export function getHeaders(columns: ResolvedColumn[]): string[] {
 function getAttendanceRowValue(
   record: any,
   col: ResolvedColumn,
-  employeeById: Map<string, any>
+  employeeById: Map<string, any>,
+  ctx: ReportFormatContext
 ): string | number {
   const emp = record.employees || employeeById.get(record.employee_id)
   const empName = emp?.name ?? record.employee_id
@@ -25,15 +35,15 @@ function getAttendanceRowValue(
     case 'employee_name':
       return empName
     case 'date':
-      return record.date ? formatDateOnlyForHonduras(record.date) : ''
+      return record.date ? formatDateOnlyForLocale(record.date, ctx.locale, ctx.timeZone) : ''
     case 'check_in':
-      return record.check_in ? formatTimeDisplay(record.check_in) : ''
+      return record.check_in ? formatTimeDisplayInZone(record.check_in, ctx.locale, ctx.timeZone) : ''
     case 'check_out':
-      return record.check_out ? formatTimeDisplay(record.check_out) : ''
+      return record.check_out ? formatTimeDisplayInZone(record.check_out, ctx.locale, ctx.timeZone) : ''
     case 'lunch_start':
-      return record.lunch_start ? formatTimeDisplay(record.lunch_start) : ''
+      return record.lunch_start ? formatTimeDisplayInZone(record.lunch_start, ctx.locale, ctx.timeZone) : ''
     case 'lunch_end':
-      return record.lunch_end ? formatTimeDisplay(record.lunch_end) : ''
+      return record.lunch_end ? formatTimeDisplayInZone(record.lunch_end, ctx.locale, ctx.timeZone) : ''
     case 'status':
       return record.status ?? ''
     case 'hours_worked': {
@@ -64,15 +74,21 @@ function getAttendanceRowValue(
 export function renderAttendanceRows(
   attendance: any[],
   employees: any[],
-  columns: ResolvedColumn[]
+  columns: ResolvedColumn[],
+  fmt: ReportFormatContext = DEFAULT_REPORT_FMT
 ): (string | number)[][] {
   const employeeById = new Map(employees.map((e) => [e.id, e]))
   return attendance.map((r) =>
-    columns.map((col) => getAttendanceRowValue(r, col, employeeById))
+    columns.map((col) => getAttendanceRowValue(r, col, employeeById, fmt))
   )
 }
 
-function getPayrollRowValue(record: any, col: ResolvedColumn, employeeById: Map<string, any>): string | number {
+function getPayrollRowValue(
+  record: any,
+  col: ResolvedColumn,
+  employeeById: Map<string, any>,
+  ctx: ReportFormatContext
+): string | number {
   const emp = record.employees ?? employeeById.get(record.employee_id)
   const empName = emp?.name ?? record.employee_id
   const empCode = emp?.employee_code ?? ''
@@ -93,12 +109,12 @@ function getPayrollRowValue(record: any, col: ResolvedColumn, employeeById: Map<
       return empName
     case 'period':
       return record.period_start && record.period_end
-        ? `${parseDateOnlyAsHonduras(record.period_start).toLocaleDateString('es-HN', { timeZone: HONDURAS_TIMEZONE, month: 'short', day: 'numeric' })} - ${parseDateOnlyAsHonduras(record.period_end).toLocaleDateString('es-HN', { timeZone: HONDURAS_TIMEZONE, month: 'short', day: 'numeric' })}`
+        ? `${parseDateOnlyAsHonduras(record.period_start).toLocaleDateString(ctx.locale, { timeZone: ctx.timeZone, month: 'short', day: 'numeric' })} - ${parseDateOnlyAsHonduras(record.period_end).toLocaleDateString(ctx.locale, { timeZone: ctx.timeZone, month: 'short', day: 'numeric' })}`
         : ''
     case 'period_start':
-      return record.period_start ? formatDateOnlyForHonduras(record.period_start) : ''
+      return record.period_start ? formatDateOnlyForLocale(record.period_start, ctx.locale, ctx.timeZone) : ''
     case 'period_end':
-      return record.period_end ? formatDateOnlyForHonduras(record.period_end) : ''
+      return record.period_end ? formatDateOnlyForLocale(record.period_end, ctx.locale, ctx.timeZone) : ''
     case 'gross_salary':
       return record.gross_salary ?? 0
     case 'total_deductions':
@@ -115,15 +131,16 @@ function getPayrollRowValue(record: any, col: ResolvedColumn, employeeById: Map<
 export function renderPayrollRows(
   payroll: any[],
   employees: any[],
-  columns: ResolvedColumn[]
+  columns: ResolvedColumn[],
+  fmt: ReportFormatContext = DEFAULT_REPORT_FMT
 ): (string | number)[][] {
   const employeeById = new Map(employees.map((e) => [e.id, e]))
   return payroll.map((r) =>
-    columns.map((col) => getPayrollRowValue(r, col, employeeById))
+    columns.map((col) => getPayrollRowValue(r, col, employeeById, fmt))
   )
 }
 
-function getEmployeeRowValue(record: any, col: ResolvedColumn): string | number {
+function getEmployeeRowValue(record: any, col: ResolvedColumn, ctx: ReportFormatContext): string | number {
   const dept = record.departments
   const deptName = Array.isArray(dept) ? dept[0]?.name : dept?.name
 
@@ -139,12 +156,16 @@ function getEmployeeRowValue(record: any, col: ResolvedColumn): string | number 
     case 'status':
       return record.status === 'active' ? 'Activo' : record.status === 'inactive' ? 'Inactivo' : record.status ?? ''
     case 'hire_date':
-      return record.hire_date ? formatDateOnlyForHonduras(record.hire_date) : ''
+      return record.hire_date ? formatDateOnlyForLocale(record.hire_date, ctx.locale, ctx.timeZone) : ''
     default:
       return ''
   }
 }
 
-export function renderEmployeesRows(employees: any[], columns: ResolvedColumn[]): (string | number)[][] {
-  return employees.map((r) => columns.map((col) => getEmployeeRowValue(r, col)))
+export function renderEmployeesRows(
+  employees: any[],
+  columns: ResolvedColumn[],
+  fmt: ReportFormatContext = DEFAULT_REPORT_FMT
+): (string | number)[][] {
+  return employees.map((r) => columns.map((col) => getEmployeeRowValue(r, col, fmt)))
 }

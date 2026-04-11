@@ -17,6 +17,8 @@ import { formatTimeDisplay, formatDateOnlyForHonduras } from '../../../lib/timez
 import { resolveReportConfig } from '../../../lib/reports/column-resolver'
 import type { ResolvedReportConfig } from '../../../lib/reports/column-resolver'
 import { renderAttendanceRows } from '../../../lib/reports/report-engine'
+import { normalizeCountryCode } from '../../../lib/country/supported'
+import { reportFormatForCountry } from '../../../lib/country/payroll-labels'
 
 // Aplicar rate limiting, validación de entrada y seguridad de exportación
 const handlerWithSecurity = withExportRateLimit()(
@@ -96,14 +98,19 @@ async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse
     }
 
     const resolvedConfig = await resolveReportConfig(companyId, 'attendance', supabase)
-    const { data: companyRow } = await supabase.from('companies').select('name').eq('id', companyId).maybeSingle()
+    const { data: companyRow } = await supabase
+      .from('companies')
+      .select('name, country_code')
+      .eq('id', companyId)
+      .maybeSingle()
     const companyDisplayName = companyRow?.name
+    const reportFmt = reportFormatForCountry(normalizeCountryCode(companyRow?.country_code))
 
     // 5. PROCESAR EXPORTACIÓN SEGURA
     if (formato === 'csv') {
       const { columns } = resolvedConfig
       const csvHeaders = columns.map((c) => c.label)
-      const csvRows = renderAttendanceRows(records || [], employees || [], columns)
+      const csvRows = renderAttendanceRows(records || [], employees || [], columns, reportFmt)
       const escapeCSV = (val: string | number) => {
         const s = String(val ?? '')
         if (s.includes(',') || s.includes('"') || s.includes('\n')) {
@@ -126,11 +133,20 @@ async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse
     }
 
     if (formato === 'excel') {
-      return exportToExcel(records || [], employees || [], startDate, endDate, res, resolvedConfig)
+      return exportToExcel(records || [], employees || [], startDate, endDate, res, resolvedConfig, reportFmt)
     }
 
     if (formato === 'pdf') {
-      return exportToPDF(records || [], employees || [], startDate, endDate, res, resolvedConfig, companyDisplayName)
+      return exportToPDF(
+        records || [],
+        employees || [],
+        startDate,
+        endDate,
+        res,
+        resolvedConfig,
+        companyDisplayName,
+        reportFmt
+      )
     }
 
     // Formato no soportado
@@ -166,7 +182,8 @@ async function exportToExcel(
   startDate: string,
   endDate: string,
   res: NextApiResponse,
-  resolvedConfig: ResolvedReportConfig
+  resolvedConfig: ResolvedReportConfig,
+  reportFmt: import('../../../lib/country/payroll-labels').ReportFormatContext
 ) {
   try {
     const columns = resolvedConfig.columns.length
@@ -182,7 +199,7 @@ async function exportToExcel(
           { id: 'justification', label: 'Justificación', sourceField: 'justification', source: 'standard' as const }
         ]
 
-    const rowMatrix = renderAttendanceRows(attendanceRecords, employeesForReport, columns)
+    const rowMatrix = renderAttendanceRows(attendanceRecords, employeesForReport, columns, reportFmt)
 
     const totalRecords = attendanceRecords.length
     let totalHours = 0
@@ -287,7 +304,8 @@ async function exportToPDF(
   endDate: string,
   res: NextApiResponse,
   resolvedConfig: ResolvedReportConfig,
-  companyDisplayName?: string | null
+  companyDisplayName?: string | null,
+  reportFmt?: import('../../../lib/country/payroll-labels').ReportFormatContext
 ) {
   try {
     // Preparar datos para PDF
@@ -362,7 +380,12 @@ async function exportToPDF(
           { id: 'late_minutes', label: 'Min Tardanza', sourceField: 'late_minutes', source: 'standard' as const }
         ]
 
-    const detailRows = renderAttendanceRows(attendanceRecords, employeesForReport, tableColumns)
+    const detailRows = renderAttendanceRows(
+      attendanceRecords,
+      employeesForReport,
+      tableColumns,
+      reportFmt
+    )
     const detailHeaders = tableColumns.map((c) => c.label)
     const primaryColor = resolvedConfig.branding?.primaryColor
 

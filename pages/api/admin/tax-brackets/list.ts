@@ -12,12 +12,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await requireSuperAdmin(req, res)
     
     const supabase = createAdminClient()
-    
-    // Get all tax brackets, ordered by year descending
-    const { data, error } = await supabase
-      .from('tax_brackets')
-      .select('*')
-      .order('year', { ascending: false })
+    const countryFilter =
+      typeof req.query.country_code === 'string' && req.query.country_code.trim()
+        ? req.query.country_code.trim().toUpperCase()
+        : null
+
+    let q = supabase.from('tax_brackets').select('*')
+    if (countryFilter) {
+      q = q.eq('country_code', countryFilter)
+    }
+    const { data, error } = await q.order('year', { ascending: false })
     
     if (error) {
       console.error('Error fetching tax brackets:', error)

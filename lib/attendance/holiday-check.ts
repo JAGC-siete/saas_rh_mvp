@@ -3,6 +3,7 @@
  */
 
 import { createAdminClient } from '../supabase/server'
+import { normalizeCountryCode } from '../country/supported'
 
 /**
  * Obtiene el conjunto de fechas festivas en un rango (para Capa 3 nómina).
@@ -28,11 +29,18 @@ export async function getHolidayDatesInRange(
     if (h?.date && h.date >= startDate && h.date <= endDate) result.add(h.date)
   }
 
+  const { data: co } = await client
+    .from('companies')
+    .select('country_code')
+    .eq('id', companyId)
+    .maybeSingle()
+  const countryCode = normalizeCountryCode(co?.country_code)
+
   const year = parseInt(startDate.slice(0, 4), 10)
   const { data: law } = await client
     .from('labor_laws')
     .select('holidays')
-    .eq('country_code', 'HND')
+    .eq('country_code', countryCode)
     .eq('year', year)
     .eq('is_active', true)
     .maybeSingle()

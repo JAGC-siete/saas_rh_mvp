@@ -1,4 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
+import { normalizeCountryCode } from '../../../lib/country/supported'
 import { 
   getTaxBracketsForYear, 
   calculateISR, 
@@ -73,6 +74,15 @@ async function calculateDeductionsHandler(
     const currentYear = nowInHonduras().getFullYear()
     const targetYear = sanitized.year || currentYear
 
+    const countryCode = normalizeCountryCode(
+      typeof req.body?.country_code === 'string' ? req.body.country_code : 'HND'
+    )
+    if (countryCode !== 'HND') {
+      return res.status(400).json({
+        error: 'La calculadora pública solo incluye deducciones para Honduras (HND).'
+      })
+    }
+
     // Log para métricas
     logger.info('Cálculo de deducciones iniciado', {
       salary: sanitized.salary,
@@ -82,7 +92,7 @@ async function calculateDeductionsHandler(
     })
 
     // Obtener constantes fiscales para el año especificado
-    const constants: TaxConstants = await getTaxBracketsForYear(targetYear)
+    const constants: TaxConstants = await getTaxBracketsForYear(targetYear, 'HND')
 
     // Convertir salario quincenal a mensual si es necesario
     const monthlyGrossSalary = sanitized.paymentModality === 'quincenal' 

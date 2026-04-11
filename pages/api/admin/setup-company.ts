@@ -42,6 +42,8 @@ interface SetupCompanyRequest {
     name: string
     subdomain: string
     plan_type: 'trial' | 'basic' | 'premium' | 'enterprise'
+    /** ISO 3166-1 alpha-3: HND | SLV | GTM */
+    country_code?: string
     settings?: Record<string, any>
   }
   admin: {
@@ -117,6 +119,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // 2. Create company
+    const rawCc = (companyData.country_code || 'HND').toUpperCase()
+    const countryCode = ['HND', 'SLV', 'GTM'].includes(rawCc) ? rawCc : 'HND'
+
+    const defaultTz =
+      countryCode === 'SLV'
+        ? 'America/El_Salvador'
+        : countryCode === 'GTM'
+          ? 'America/Guatemala'
+          : 'America/Tegucigalpa'
+
     const { data: company, error: companyError } = await adminClient
       .from('companies')
       .insert({
@@ -124,9 +136,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         subdomain: companyData.subdomain,
         plan_type: companyData.plan_type || 'premium',
         is_active: true,
+        country_code: countryCode,
+        timezone: defaultTz,
         settings: {
-          currency: 'HNL',
-          timezone: 'America/Tegucigalpa',
+          currency: countryCode === 'SLV' ? 'USD' : countryCode === 'GTM' ? 'GTQ' : 'HNL',
+          timezone: defaultTz,
           language: 'es',
           ...companyData.settings
         }

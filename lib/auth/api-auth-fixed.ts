@@ -1,12 +1,18 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../supabase/server'
 import { createAdminClient } from '../supabase/server'
+import { normalizeCountryCode, type CountryCode } from '../country/supported'
+import { timezoneForCountry } from '../country/payroll-labels'
 
 export interface AuthenticatedUser {
   supabase: any
   user: any
   userProfile: any
   companyId: string | null
+  /** ISO 3166-1 alpha-3 from companies.country_code; null sin empresa */
+  companyCountryCode: CountryCode | null
+  /** IANA; inferido por país si companies.timezone es null; null sin empresa */
+  companyTimezone: string | null
   role: string
 }
 
@@ -72,6 +78,8 @@ export async function authenticateUser(
         user, 
         userProfile: null, 
         companyId: null, 
+        companyCountryCode: null,
+        companyTimezone: null,
         role: 'employee' 
       }
     }
@@ -89,6 +97,8 @@ export async function authenticateUser(
         user, 
         userProfile: null, 
         companyId: null, 
+        companyCountryCode: null,
+        companyTimezone: null,
         role: 'employee' 
       }
     }
@@ -119,11 +129,29 @@ export async function authenticateUser(
       throw new Error('INSUFFICIENT_PERMISSIONS')
     }
 
+    let companyCountryCode: CountryCode | null = null
+    let companyTimezone: string | null = null
+    if (userProfile.company_id) {
+      const { data: co } = await adminSupabase
+        .from('companies')
+        .select('country_code, timezone')
+        .eq('id', userProfile.company_id)
+        .maybeSingle()
+      companyCountryCode = normalizeCountryCode(co?.country_code)
+      const tzRaw = co?.timezone
+      companyTimezone =
+        typeof tzRaw === 'string' && tzRaw.trim().length > 0
+          ? tzRaw.trim()
+          : timezoneForCountry(companyCountryCode)
+    }
+
     return { 
       supabase, 
       user, 
       userProfile, 
       companyId: userProfile.company_id, 
+      companyCountryCode,
+      companyTimezone,
       role: normalizedRole 
     }
   } catch (error) {

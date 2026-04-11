@@ -86,21 +86,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: validation.error })
     }
     
-    // Check if year already exists
+    const cc = (bracketData.country_code || 'HND').toUpperCase()
+
     const { data: existing } = await supabase
       .from('tax_brackets')
       .select('id')
       .eq('year', bracketData.year)
-      .single()
+      .eq('country_code', cc)
+      .maybeSingle()
     
     if (existing) {
-      return res.status(409).json({ error: `Tax bracket for year ${bracketData.year} already exists` })
+      return res.status(409).json({
+        error: `Tax bracket for year ${bracketData.year} and country ${cc} already exists`
+      })
     }
     
     // Prepare data for insertion
     const insertData = {
       year: bracketData.year,
-      country_code: bracketData.country_code || 'HND',
+      country_code: cc,
       is_active: bracketData.is_active !== undefined ? bracketData.is_active : true,
       minimum_wage: bracketData.minimum_wage,
       ihss_ceiling: bracketData.ihss_ceiling,

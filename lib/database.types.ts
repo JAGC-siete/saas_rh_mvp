@@ -545,6 +545,9 @@ export type Database = {
       }
       companies: {
         Row: {
+          country_code: string
+          /** IANA; null = inferir por country_code en app */
+          timezone: string | null
           created_at: string | null
           deleted_at: string | null
           geofence_center_lat: number | null
@@ -564,6 +567,8 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          country_code?: string
+          timezone?: string | null
           created_at?: string | null
           deleted_at?: string | null
           geofence_center_lat?: number | null
@@ -583,6 +588,8 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          country_code?: string
+          timezone?: string | null
           created_at?: string | null
           deleted_at?: string | null
           geofence_center_lat?: number | null
@@ -610,6 +617,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      payroll_statutory_params: {
+        Row: {
+          id: string
+          country_code: string
+          year: number
+          is_active: boolean
+          statutory_config: Json
+          source: string | null
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          country_code: string
+          year: number
+          is_active?: boolean
+          statutory_config: Json
+          source?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          country_code?: string
+          year?: number
+          is_active?: boolean
+          statutory_config?: Json
+          source?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       company_meters: {
         Row: {

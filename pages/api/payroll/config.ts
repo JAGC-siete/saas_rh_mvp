@@ -155,7 +155,11 @@ async function getPayrollConfig(
         isr: true,
         infop: false
       },
-      payment_cut_dates: paymentCutDates
+      payment_cut_dates: paymentCutDates,
+      earning_impact_rules:
+        metadata.earning_impact_rules && typeof metadata.earning_impact_rules === 'object'
+          ? metadata.earning_impact_rules
+          : {}
     }
 
     return res.status(200).json({
@@ -187,6 +191,7 @@ async function upsertPayrollConfig(
       calculation_config = {},
       calculation_script = null,
       metadata = {},
+      earning_impact_rules,
       // Extraer par?metros de configuraci?n de payroll
       payment_frequency,
       currency,
@@ -275,7 +280,10 @@ async function upsertPayrollConfig(
         infop: false
       },
       payment_cut_dates: cutDates,
-      semanal_proration: semanal_proration || 'proportional'
+      semanal_proration: semanal_proration || 'proportional',
+      ...(earning_impact_rules != null && typeof earning_impact_rules === 'object'
+        ? { earning_impact_rules }
+        : {})
     }
 
     // Validar calculation_mode

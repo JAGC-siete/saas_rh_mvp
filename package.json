@@ -15,7 +15,7 @@
     "start": "next start",
     "start:trace": "node -r ./lib/tracing.js node_modules/.bin/next start",
     "dev:trace": "node -r ./lib/tracing.js node_modules/.bin/next dev",
-    "test": "node --test tests/*.js",
+    "test": "npx tsx --test tests/multipay-statutory.test.ts",
     "audit": "./scripts/run-complete-audit.sh",
     "audit:system": "node scripts/audit-system.js",
     "audit:supabase": "node scripts/audit-supabase.js",
@@ -111,6 +111,7 @@
     "lint-staged": "^15.5.2",
     "svgo": "^3.3.2",
     "tailwindcss": "^3.4.17",
+    "tsx": "^4.19.3",
     "yaml": "2.8.2"
   }
 }

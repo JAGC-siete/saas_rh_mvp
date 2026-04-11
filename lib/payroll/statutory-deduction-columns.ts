@@ -3,6 +3,8 @@
  * Evita duplicar ISR automático (eff_isr) cuando hay ISR manual por campo personalizado.
  */
 
+import type { CountryCode } from '../country/supported'
+
 export type LegalDeductionsFlags = {
   ihss?: boolean
   rap?: boolean
@@ -39,10 +41,14 @@ export function manualIsrCustomFieldPresent(
 
 export function resolveStatutoryDeductionColumns(
   legalDeductions?: LegalDeductionsFlags | null,
-  customFieldsConfig?: Record<string, CustomFieldConfigEntry> | null
+  customFieldsConfig?: Record<string, CustomFieldConfigEntry> | null,
+  countryCode?: CountryCode | null
 ): { ihss: boolean; rap: boolean; isr: boolean } {
   const ihss = legalDeductions?.ihss !== false
-  const rap = legalDeductions?.rap !== false
+  let rap = legalDeductions?.rap !== false
+  if (countryCode === 'GTM') {
+    rap = false
+  }
   const isrLegalOn = legalDeductions?.isr !== false
   const isr = isrLegalOn && !manualIsrCustomFieldPresent(customFieldsConfig)
   return { ihss, rap, isr }

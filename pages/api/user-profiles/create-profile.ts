@@ -1,5 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { authenticateUser } from "../../../lib/auth/api-auth-fixed"
+import { normalizeCountryCode } from "../../../lib/country/supported"
+import { timezoneForCountry } from '../../../lib/country/payroll-labels'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -13,6 +15,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { 
       company_name,
       company_id, 
+      country_code: bodyCountryCode,
       employee_id,
       role = 'hr_manager', 
       permissions = {},
@@ -48,6 +51,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const companyId = `comp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       
       // Create new company
+      const cc = normalizeCountryCode(
+        typeof bodyCountryCode === 'string' ? bodyCountryCode.toUpperCase() : 'HND'
+      )
+
       const { data: newCompany, error: companyError } = await supabase
         .from('companies')
         .insert([{
@@ -55,6 +62,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           name: company_name,
           created_by: user.id,
           is_active: true,
+          country_code: cc,
+          timezone: timezoneForCountry(cc),
           created_at: new Date().toISOString()
         }])
         .select('id')

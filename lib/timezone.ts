@@ -1,3 +1,5 @@
+import { DateTime } from 'luxon'
+
 /**
  * 🇭🇳 TIMEZONE UTILITY FOR TEGUCIGALPA, HONDURAS
  * 
@@ -157,31 +159,6 @@ export function getCurrentDayOfWeek(): string {
 // =====================================================
 // NUEVAS FUNCIONES PARA SISTEMA DE ASISTENCIA
 // =====================================================
-
-/**
- * Parse ZKTeco ATTLOG datetime "YYYY-MM-DD HH:MM:SS" as Honduras local time.
- * Returns Date (stored as UTC internally; frontend converts for display).
- */
-export function parseZktecoDateTime(dateTimeStr: string | undefined | null): Date {
-  if (!dateTimeStr || typeof dateTimeStr !== 'string') {
-    return getHondurasTime();
-  }
-  const dateMatch = dateTimeStr.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2}):(\d{2})/);
-  if (!dateMatch) {
-    const parsed = new Date(dateTimeStr);
-    return isNaN(parsed.getTime()) ? getHondurasTime() : parsed;
-  }
-  const [, yearStr, monthStr, dayStr, hourStr, minuteStr, secondStr] = dateMatch;
-  const year = parseInt(yearStr, 10);
-  const month = parseInt(monthStr, 10) - 1;
-  const day = parseInt(dayStr, 10);
-  const hours = parseInt(hourStr, 10);
-  const minutes = parseInt(minuteStr, 10);
-  const seconds = parseInt(secondStr, 10);
-  const hondurasOffsetHours = 6;
-  const utcHours = hours + hondurasOffsetHours;
-  return new Date(Date.UTC(year, month, day, utcHours, minutes, seconds));
-}
 
 /**
  * Convert UTC time to Honduras time (UTC-6, sin DST)
@@ -483,6 +460,41 @@ export function formatDateOnlyForHonduras(dateStr: string): string {
 }
 
 /**
+ * Fecha calendario YYYY-MM-DD en locale/zona indicadas (evita medianoche UTC).
+ */
+export function formatDateOnlyForLocale(
+  dateStr: string,
+  locale: string,
+  timeZone: string
+): string {
+  if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return ''
+  const d = new Date(`${dateStr}T12:00:00`)
+  if (isNaN(d.getTime())) return ''
+  return d.toLocaleDateString(locale, {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  })
+}
+
+export function formatTimeDisplayInZone(
+  timestamp: string | Date | null,
+  locale: string,
+  timeZone: string
+): string {
+  if (!timestamp) return '--:--'
+  const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp
+  if (isNaN(date.getTime())) return '--:--'
+  return date.toLocaleTimeString(locale, {
+    timeZone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  })
+}
+
+/**
  * Obtiene el día de la semana en español para una fecha YYYY-MM-DD (Honduras).
  */
 export function getWeekdayForDateOnly(dateStr: string): string {
@@ -492,4 +504,15 @@ export function getWeekdayForDateOnly(dateStr: string): string {
     timeZone: HONDURAS_TIMEZONE,
     weekday: 'long'
   });
+}
+
+/** Período calendario (year, month 1–12) estrictamente posterior al mes actual en la zona IANA dada. */
+export function isPayrollCalendarPeriodInFuture(
+  year: number,
+  month: number,
+  timeZone: string
+): boolean {
+  const now = DateTime.now().setZone(timeZone)
+  if (!now.isValid) return false
+  return year > now.year || (year === now.year && month > now.month)
 }

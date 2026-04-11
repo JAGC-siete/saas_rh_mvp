@@ -9,6 +9,8 @@ import { renderAttendanceRows, renderPayrollRows, renderEmployeesRows } from '..
 import { generateConsolidatedPayrollPDF, type PlanillaItem } from '../../../lib/payroll/report'
 import { getCustomFields, calculatePayroll } from '../../../lib/payroll-client-specific'
 import { getBiweeklyPeriodDates } from '../../../lib/payroll/period-dates'
+import { normalizeCountryCode, type CountryCode } from '../../../lib/country/supported'
+import { reportFormatForCountry } from '../../../lib/country/payroll-labels'
 
 interface ReportData {
   employees: any[]
@@ -93,7 +95,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // Obtener nombre de la empresa para branding del PDF
     const { data: company } = await supabase
       .from('companies')
-      .select('name')
+      .select('name, country_code')
       .eq('id', companyId)
       .single()
     
@@ -108,7 +110,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       reportData = await generateReportData(supabase, dateFilter, companyId)
     }
     
-    // Agregar nombre de empresa a reportData para usar en PDFs
+    const companyCountry = normalizeCountryCode(company?.country_code)
+    reportData.reportFmt = reportFormatForCountry(companyCountry)
     if (company) {
       reportData.companyName = company.name
     }
@@ -138,7 +141,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       if (reportType === 'attendance') {
         return generateAttendancePDF(res, reportData, dateFilter, company?.name, resolvedConfig)
       } else if (reportType === 'payroll') {
-        return generatePayrollPDF(res, supabase, companyId!, dateFilter, user, company?.name, resolvedConfig)
+        return generatePayrollPDF(
+          res,
+          supabase,
+          companyId!,
+          dateFilter,
+          user,
+          company?.name,
+          resolvedConfig,
+          companyCountry
+        )
       } else if (reportType === 'employees') {
         return generateEmployeesPDF(res, reportData, company?.name, resolvedConfig)
       } else {
@@ -464,7 +476,7 @@ function escapeCSVValue(val: string | number): string {
 
 function generateAttendanceCSV(
   res: NextApiResponse,
-  reportData: { employees: any[]; attendance: any[]; dateFilter: any },
+  reportData: { employees: any[]; attendance: any[]; dateFilter: any; reportFmt?: import('../../../lib/country/payroll-labels').ReportFormatContext },
   resolvedConfig: ResolvedReportConfig
 ) {
   const { columns } = resolvedConfig
@@ -472,7 +484,8 @@ function generateAttendanceCSV(
   const rows = renderAttendanceRows(
     reportData.attendance || [],
     reportData.employees || [],
-    columns
+    columns,
+    reportData.reportFmt
   )
   let csvContent = `Reporte de Asistencia\n`
   csvContent += `Período: ${reportData.dateFilter.startDate} - ${reportData.dateFilter.endDate}\n`
@@ -488,13 +501,13 @@ function generateAttendanceCSV(
 
 function generatePayrollCSV(
   res: NextApiResponse,
-  reportData: { payroll: any[]; dateFilter: any },
+  reportData: { payroll: any[]; dateFilter: any; reportFmt?: import('../../../lib/country/payroll-labels').ReportFormatContext },
   resolvedConfig: ResolvedReportConfig
 ) {
   const { columns } = resolvedConfig
   const employees = (reportData.payroll || []).map((r: any) => r.employees).filter(Boolean)
   const headers = columns.map((c) => c.label)
-  const rows = renderPayrollRows(reportData.payroll || [], employees, columns)
+  const rows = renderPayrollRows(reportData.payroll || [], employees, columns, reportData.reportFmt)
   const formatHNL = (n: number) => `L. ${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   let csvContent = `Reporte de Nómina\n`
   csvContent += `Período: ${reportData.dateFilter.startDate} - ${reportData.dateFilter.endDate}\n`
@@ -514,12 +527,12 @@ function generatePayrollCSV(
 
 function generateEmployeesCSV(
   res: NextApiResponse,
-  reportData: { employees: any[] },
+  reportData: { employees: any[]; reportFmt?: import('../../../lib/country/payroll-labels').ReportFormatContext },
   resolvedConfig: ResolvedReportConfig
 ) {
   const { columns } = resolvedConfig
   const headers = columns.map((c) => c.label)
-  const rows = renderEmployeesRows(reportData.employees || [], columns)
+  const rows = renderEmployeesRows(reportData.employees || [], columns, reportData.reportFmt)
   const dateStr = new Date().toISOString().split('T')[0]
   let csvContent = `Reporte de Empleados\n`
   csvContent += `Fecha de generación: ${formatDateForHonduras(nowInHonduras())}\n\n`
@@ -762,7 +775,8 @@ async function generateAttendanceExcel(
     const rows = renderAttendanceRows(
       reportData.attendance || [],
       reportData.employees || [],
-      columns
+      columns,
+      reportData.reportFmt
     )
     for (const row of rows) {
       const rowObj: Record<string, unknown> = {}
@@ -857,7 +871,8 @@ async function generatePayrollExcel(
     const rows = renderPayrollRows(
       reportData.payroll || [],
       employees,
-      columns
+      columns,
+      reportData.reportFmt
     )
     for (const row of rows) {
       const rowObj: Record<string, unknown> = {}
@@ -932,7 +947,7 @@ async function generateEmployeesExcel(
       width: Math.max(12, Math.min(c.label.length + 2, 25))
     }))
 
-    const rows = renderEmployeesRows(reportData.employees || [], columns)
+    const rows = renderEmployeesRows(reportData.employees || [], columns, reportData.reportFmt)
     for (const row of rows) {
       const rowObj: Record<string, unknown> = {}
       row.forEach((val, i) => { rowObj[`col_${i}`] = val })
@@ -1145,7 +1160,7 @@ async function generateAttendancePDF(
     y += rowHeight
     
     // Datos de asistencia usando columnas resueltas
-    const attRows = renderAttendanceRows(attendanceRecords, employees, tableColumns)
+    const attRows = renderAttendanceRows(attendanceRecords, employees, tableColumns, reportData.reportFmt)
     let rowIndex = 0
     for (const rowValues of attRows) {
       if (y > pageHeight - 60) {
@@ -1212,7 +1227,8 @@ async function generatePayrollPDF(
   dateFilter: { startDate: string; endDate: string },
   user: { email?: string },
   companyName?: string,
-  resolvedConfig?: ResolvedReportConfig
+  resolvedConfig?: ResolvedReportConfig,
+  jurisdictionCountry: CountryCode = 'HND'
 ) {
   const { periodo, quincena } = derivePeriodoQuincena(dateFilter.startDate)
   const [year, month] = periodo.split('-').map(Number)
@@ -1337,7 +1353,9 @@ async function generatePayrollPDF(
 
   const pdfMeta = cpcRow?.metadata || {}
   const pdfPayrollLegal = {
-    legal_deductions: pdfMeta.legal_deductions || { ihss: true, rap: true, isr: true }
+    legal_deductions: pdfMeta.legal_deductions || { ihss: true, rap: true, isr: true },
+    country_code: jurisdictionCountry,
+    currency: (pdfMeta.currency as string) || undefined
   }
 
   const planillaFixed = planillaAll.filter(p => (p as any).pay_type !== 'hourly')
@@ -1408,7 +1426,7 @@ async function generateEmployeesPDF(
           ]
 
     const employees = reportData.employees || []
-    const rows = renderEmployeesRows(employees, columns)
+    const rows = renderEmployeesRows(employees, columns, reportData.reportFmt)
     const headers = columns.map((c) => c.label)
 
     const buffers: Buffer[] = []

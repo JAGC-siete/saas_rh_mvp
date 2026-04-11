@@ -55,7 +55,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const taxYear = 2025 // Año del período para obtener tabla fiscal correcta
 
     // Obtener constantes fiscales para el año del período
-    const taxConstants = await getTaxBracketsForYear(taxYear)
+    const taxConstants = await getTaxBracketsForYear(taxYear, 'HND')
 
     let attendance: any[] = []
     if (employees && employees.length > 0) {

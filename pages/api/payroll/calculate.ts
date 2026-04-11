@@ -1,14 +1,18 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
-import { getHondurasTimestamp, nowInHonduras } from '../../../lib/timezone'
+import { normalizeCountryCode } from '../../../lib/country/supported'
+import { statutoryDeductionLabels } from '../../../lib/country/payroll-labels'
+import { isPayrollCountryEngineEnabled } from '../../../lib/features/payroll-country-flags'
+import { computePayrollEmployeeStatutoryDeductions } from '../../../lib/payroll/statutory-deductions-compute'
+import {
+  assertNonHndStatutoryConfigParses,
+  payrollStatutoryErrorResponse,
+  payrollStatutoryYearUnavailable
+} from '../../../lib/payroll/statutory-api-guard'
+import { getHondurasTimestamp, isPayrollCalendarPeriodInFuture } from '../../../lib/timezone'
 import { requirePlanAndQuota, incrementUsage, getBillingErrorCode } from '../../../lib/billing/enforce'
 import { auditPayrollGenerated } from '../../../lib/audit'
-import { 
-  getTaxBracketsForYear, 
-  calculateISR, 
-  calculateIHSS, 
-  calculateRAP 
-} from '../../../lib/tax/honduras-tax'
+import { getTaxEngine } from '../../../lib/tax/registry'
 import { getIsrForPeriod } from '../../../lib/payroll/isr-ytd'
 import {
   resolvePayrollPeriodContext,
@@ -71,7 +75,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // AUTENTICACIÓN ESTANDARIZADA - Usar requireCompanyAccess
-    const { supabase, companyId, role, user, userProfile } = await requireCompanyAccess(req, res)
+    const { supabase, companyId, role, user, userProfile, companyCountryCode, companyTimezone } =
+      await requireCompanyAccess(req, res)
     
     // Verificar roles específicos para generar nómina
     if (!['super_admin', 'company_admin', 'hr_manager'].includes(role)) {
@@ -86,6 +91,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ 
         error: 'Perfil de usuario incompleto',
         message: 'No se pudo obtener la información de la empresa'
+      })
+    }
+
+    const countryCode = normalizeCountryCode(companyCountryCode)
+    if (!isPayrollCountryEngineEnabled(countryCode)) {
+      return res.status(403).json({
+        error: 'Nómina no habilitada para este país',
+        message:
+          'El motor de nómina para la jurisdicción de la empresa no está activado. Contacte al administrador.',
+        code: 'PAYROLL_COUNTRY_DISABLED'
       })
     }
 
@@ -125,18 +140,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Validar que no sea un período futuro
     const [year, month] = periodo.split('-').map((n: any) => Number(n))
-    const currentDate = nowInHonduras()
-    const periodDate = new Date(year, month - 1, 1)
-    
-    if (periodDate > currentDate) {
+    const tz = companyTimezone || 'America/Tegucigalpa'
+    if (isPayrollCalendarPeriodInFuture(year, month, tz)) {
       return res.status(400).json({ 
         error: 'Período inválido',
         message: 'No se puede generar nómina para períodos futuros'
       })
     }
 
-    // Obtener constantes fiscales para el año del período
-    const taxConstants = await getTaxBracketsForYear(year)
+    const dedLabels = statutoryDeductionLabels(countryCode)
+    const yearCtx = await getTaxEngine(countryCode).loadYearContext(year)
+    const blocked = payrollStatutoryYearUnavailable(yearCtx, countryCode, year)
+    if (!blocked.ok) return res.status(blocked.status).json(blocked.body)
+    await assertNonHndStatutoryConfigParses(countryCode, year, supabase)
+    const hndTaxConstants = yearCtx.hndTaxConstants ?? undefined
 
     // Configuración 3 capas: company_payroll_configs (Capa 2) > labor_laws (Capa 1)
     const { data: payrollConfig } = await supabase
@@ -403,41 +420,55 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const baseParaDeducciones = base_salary
         const factor2Pagos = tipoDeduccion === '2PAGOS' ? 0.5 : 1
 
-        // CÁLCULOS CON TABLA FISCAL DEL AÑO CORRESPONDIENTE
-        if (legalDeductions.ihss) {
-          IHSS = calculateIHSS(baseParaDeducciones, taxConstants) * factor2Pagos
-        }
-        if (legalDeductions.rap) {
-          RAP = calculateRAP(baseParaDeducciones, taxConstants) * factor2Pagos
-        }
-        if (legalDeductions.isr) {
-          const periodIncomeForIsr = payType === 'hourly' ? total_earnings : baseParaDeducciones
-          ISR = useIsrProjection
-            ? await getIsrForPeriod({
-                supabase,
-                employeeId: emp.id,
-                companyId,
-                year,
-                month,
-                quincena: quincenaNum,
-                periodIncome: periodIncomeForIsr,
-                taxConstants,
-                factor2Pagos,
-                useProjection: true,
-                ...(paymentFrequency === 'weekly'
-                  ? { fractionOfMonthElapsed: quincenaNum / 4 }
-                  : {})
-              })
-            : calculateISR(baseParaDeducciones, taxConstants.isr_brackets) * factor2Pagos
-        }
-        
+        const periodIncomeForIsr = payType === 'hourly' ? total_earnings : baseParaDeducciones
+
+        const statutory = await computePayrollEmployeeStatutoryDeductions({
+          countryCode,
+          year,
+          baseMonthlySalary: baseParaDeducciones,
+          factor2Pagos,
+          legalDeductions,
+          simpleIsrMonthlyBase: periodIncomeForIsr,
+          useIsrProjection: countryCode === 'HND' && useIsrProjection,
+          hndTaxConstants,
+          runIsrProjection:
+            countryCode === 'HND' && useIsrProjection && legalDeductions.isr && hndTaxConstants
+              ? () =>
+                  getIsrForPeriod({
+                    supabase,
+                    employeeId: emp.id,
+                    companyId,
+                    year,
+                    month,
+                    quincena: quincenaNum,
+                    periodIncome: periodIncomeForIsr,
+                    taxConstants: hndTaxConstants,
+                    factor2Pagos,
+                    useProjection: true,
+                    ...(paymentFrequency === 'weekly'
+                      ? { fractionOfMonthElapsed: quincenaNum / 4 }
+                      : {})
+                  })
+              : undefined,
+          supabase
+        })
+
+        IHSS = statutory.ihss
+        RAP = statutory.rap
+        ISR = statutory.isr
         total_deductions = IHSS + RAP + ISR
         total = total_earnings - total_deductions
-        
+
         const deduccionesAplicadas = []
-        if (legalDeductions.ihss) deduccionesAplicadas.push(`IHSS L.${IHSS.toFixed(2)}`)
-        if (legalDeductions.rap) deduccionesAplicadas.push(`RAP L.${RAP.toFixed(2)}`)
-        if (legalDeductions.isr) deduccionesAplicadas.push(`ISR L.${ISR.toFixed(2)}`)
+        if (legalDeductions.ihss) {
+          deduccionesAplicadas.push(`${dedLabels.primarySocial} ${currency} ${IHSS.toFixed(2)}`)
+        }
+        if (legalDeductions.rap && countryCode !== 'GTM') {
+          deduccionesAplicadas.push(`${dedLabels.secondarySocial} ${currency} ${RAP.toFixed(2)}`)
+        }
+        if (legalDeductions.isr) {
+          deduccionesAplicadas.push(`${dedLabels.incomeTax} ${currency} ${ISR.toFixed(2)}`)
+        }
         
         notes_on_deductions = tipoDeduccion === '2PAGOS'
           ? `Deducciones en dos pagos (mitad): ${deduccionesAplicadas.join(', ')}`
@@ -512,6 +543,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       seventh_day_pay: item.septimo_dia ?? 0,
       metadata: {
         tax_year: year,
+        country_code: countryCode,
         ...(item.pay_type === 'hourly' && item.total_hours_worked != null && { total_hours_worked: item.total_hours_worked }),
         ...(item.septimo_dia != null && item.septimo_dia > 0 && { septimo_dia: item.septimo_dia })
       },
@@ -560,6 +592,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       planilla
     })
   } catch (error) {
+    const stat = payrollStatutoryErrorResponse(error)
+    if (stat) return res.status(stat.status).json(stat.body)
     console.error('Error en cálculo de nómina:', error)
     return res.status(500).json({ 
       error: 'Error interno del servidor', 

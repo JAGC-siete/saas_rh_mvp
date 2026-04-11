@@ -147,19 +147,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       rap: true,
       isr: true
     }
+
+    const { data: company } = await supabase
+      .from('companies')
+      .select('name, country_code')
+      .eq('id', companyId)
+      .single()
+
     const pdfPayrollConfig = {
       currency,
       payment_frequency: paymentFrequency,
       payment_cut_dates: paymentCutDates,
-      legal_deductions: legalDeductions
+      legal_deductions: legalDeductions,
+      country_code: company?.country_code || 'HND'
     }
-
-    // Generar PDF consolidado
-    const { data: company } = await supabase
-      .from('companies')
-      .select('name')
-      .eq('id', companyId)
-      .single()
 
     // Separate fixed and hourly employees
     const planillaFixed = planilla.filter(p => (p as any).pay_type !== 'hourly')

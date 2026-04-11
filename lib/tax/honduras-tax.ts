@@ -6,6 +6,9 @@
  */
 
 import { createAdminClient } from '../supabase/server'
+import { statutoryJsonToHndTaxConstants } from './statutory-config'
+import type { PayrollStatutoryTrace } from './statutory-trace'
+import hndFallbackJson from './hnd-fallback-2025.json'
 
 export interface TaxBracket {
   limit: number
@@ -23,42 +26,96 @@ export interface TaxConstants {
   medical_deduction_limit?: number
 }
 
-// Default constants for 2025 (fallback if DB doesn't have data)
-const DEFAULT_2025_CONSTANTS: TaxConstants = {
-  minimum_wage: 11903.13,
-  ihss_ceiling: 11903.13,
-  ihss_employee_rate: 0.05,
-  rap_rate: 0.015,
-  isr_brackets: [
-    { limit: 21457.76, rate: 0.00, base: 0, lower: 0 },
-    { limit: 30969.88, rate: 0.15, base: 0, lower: 21457.76 },
-    { limit: 67604.36, rate: 0.20, base: 1428.32, lower: 30969.88 },
-    { limit: Infinity, rate: 0.25, base: 8734.32, lower: 67604.36 }
-  ]
+function taxConstantsFromHndFallbackJson(j: typeof hndFallbackJson): TaxConstants {
+  return {
+    minimum_wage: j.minimum_wage,
+    ihss_ceiling: j.ihss_ceiling,
+    ihss_employee_rate: j.ihss_employee_rate,
+    rap_rate: j.rap_rate,
+    medical_deduction_limit: j.medical_deduction_limit,
+    isr_brackets: j.isr_brackets.map(b => ({
+      limit: b.limit >= 999999999 ? Infinity : b.limit,
+      rate: b.rate,
+      base: b.base,
+      lower: b.lower
+    }))
+  }
+}
+
+/** Misma fuente que `lib/tax/hnd-fallback-2025.json` (tests leen el JSON). */
+export const HND_FALLBACK_2025_CONSTANTS: TaxConstants = taxConstantsFromHndFallbackJson(hndFallbackJson)
+
+const DEFAULT_2025_CONSTANTS = HND_FALLBACK_2025_CONSTANTS
+
+export type TaxBracketsWithTrace = {
+  constants: TaxConstants
+  trace: PayrollStatutoryTrace
 }
 
 /**
- * Get tax brackets and constants for a specific year
- * Falls back to most recent active year or default if not found
- * 
- * IMPORTANT: is_active controls whether a table can be used:
- * - If is_active = false, the table won't be used even for its specific year
- * - This allows disabling tables with errors without deleting them
+ * Honduras: constantes fiscales con trazabilidad (tabla fuente / fallback).
  */
-export async function getTaxBracketsForYear(year: number): Promise<TaxConstants> {
+export async function getTaxBracketsForYearWithTrace(
+  year: number,
+  countryCode: string = 'HND'
+): Promise<TaxBracketsWithTrace> {
+  if (countryCode !== 'HND') {
+    throw new Error(
+      `getTaxBracketsForYearWithTrace: solo HND; recibido ${countryCode}. Use getTaxEngine().loadYearContext.`
+    )
+  }
+
+  const baseTrace = (
+    src: PayrollStatutoryTrace['dataSource'],
+    opts: {
+      resolvedYear: number
+      usedFallback: boolean
+      sourceLabel?: string
+      notes?: string
+    }
+  ): PayrollStatutoryTrace => ({
+    countryCode: 'HND',
+    year,
+    requestedYear: year,
+    resolvedYear: opts.resolvedYear,
+    usedFallback: opts.usedFallback,
+    dataSource: src,
+    sourceLabel: opts.sourceLabel,
+    notes: opts.notes
+  })
+
   try {
     const supabase = createAdminClient()
-    
-    // Try to get the specific year (only if active)
+
+    const { data: statutoryRow } = await supabase
+      .from('payroll_statutory_params')
+      .select('statutory_config, source, notes')
+      .eq('country_code', 'HND')
+      .eq('year', year)
+      .eq('is_active', true)
+      .maybeSingle()
+
+    const fromStatutory = statutoryJsonToHndTaxConstants(statutoryRow?.statutory_config)
+    if (fromStatutory) {
+      return {
+        constants: fromStatutory as TaxConstants,
+        trace: baseTrace('payroll_statutory_params', {
+          resolvedYear: year,
+          usedFallback: false,
+          sourceLabel: statutoryRow?.source ?? undefined,
+          notes: statutoryRow?.notes ?? undefined
+        })
+      }
+    }
+
     let { data, error } = await supabase
       .from('tax_brackets')
       .select('*')
       .eq('year', year)
       .eq('country_code', 'HND')
-      .eq('is_active', true)  // Solo usar tablas activas, incluso para año específico
+      .eq('is_active', true)
       .single()
-    
-    // If not found (year doesn't exist or is inactive), get the most recent active year
+
     if (error || !data) {
       const { data: recentData, error: recentError } = await supabase
         .from('tax_brackets')
@@ -68,35 +125,68 @@ export async function getTaxBracketsForYear(year: number): Promise<TaxConstants>
         .order('year', { ascending: false })
         .limit(1)
         .single()
-      
+
       if (!recentError && recentData) {
         data = recentData
         console.warn(`Tax bracket for year ${year} not found or inactive, using year ${recentData.year} as fallback`)
       }
     }
-    
+
     if (data) {
+      const usedYear = Number(data.year)
+      const isExactYear = usedYear === year
       return {
-        minimum_wage: Number(data.minimum_wage),
-        ihss_ceiling: Number(data.ihss_ceiling),
-        ihss_employee_rate: Number(data.ihss_employee_rate),
-        rap_rate: Number(data.rap_rate),
-        isr_brackets: (data.isr_brackets as any[]).map(b => ({
-          limit: b.limit === 999999999 ? Infinity : Number(b.limit),
-          rate: Number(b.rate),
-          base: Number(b.base),
-          lower: Number(b.lower)
-        })),
-        medical_deduction_limit: Number((data as any).medical_deduction_limit) || 40000
+        constants: {
+          minimum_wage: Number(data.minimum_wage),
+          ihss_ceiling: Number(data.ihss_ceiling),
+          ihss_employee_rate: Number(data.ihss_employee_rate),
+          rap_rate: Number(data.rap_rate),
+          isr_brackets: (data.isr_brackets as any[]).map(b => ({
+            limit: b.limit === 999999999 ? Infinity : Number(b.limit),
+            rate: Number(b.rate),
+            base: Number(b.base),
+            lower: Number(b.lower)
+          })),
+          medical_deduction_limit: Number((data as any).medical_deduction_limit) || 40000
+        },
+        trace: baseTrace('tax_brackets', {
+          resolvedYear: usedYear,
+          usedFallback: !isExactYear,
+          sourceLabel: (data as { source?: string }).source ?? 'tax_brackets',
+          notes: isExactYear ? `tax_brackets HND year=${year}` : `tax_brackets HND fallback row year=${usedYear} requested=${year}`
+        })
       }
     }
   } catch (error) {
     console.error('Error fetching tax brackets from DB:', error)
   }
-  
-  // Fallback to default 2025 constants
+
   console.warn(`Tax brackets for year ${year} not found, using default 2025 constants`)
-  return DEFAULT_2025_CONSTANTS
+  return {
+    constants: DEFAULT_2025_CONSTANTS,
+    trace: baseTrace('fallback_default', {
+      resolvedYear: 2025,
+      usedFallback: true,
+      sourceLabel: 'HND_FALLBACK_2025_CONSTANTS',
+      notes: 'No DB row; embedded fallback constants'
+    })
+  }
+}
+
+/**
+ * Get tax brackets and constants for a specific year
+ * Falls back to most recent active year or default if not found
+ *
+ * IMPORTANT: is_active controls whether a table can be used:
+ * - If is_active = false, the table won't be used even for its specific year
+ * - This allows disabling tables with errors without deleting them
+ */
+export async function getTaxBracketsForYear(
+  year: number,
+  countryCode: string = 'HND'
+): Promise<TaxConstants> {
+  const { constants } = await getTaxBracketsForYearWithTrace(year, countryCode)
+  return constants
 }
 
 export interface ISRProjectedParams {

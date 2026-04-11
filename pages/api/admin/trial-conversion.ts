@@ -3,6 +3,8 @@ import { createClient } from '../../../lib/supabase/server'
 import { logger } from '../../../lib/logger'
 import { createAdminApiHandler, AdminApiHandler, AdminApiContext } from '../../../lib/auth/admin-api-wrapper'
 import { ADMIN_OPERATIONS, ADMIN_RESOURCES } from '../../../lib/logging/admin-logger'
+import { normalizeCountryCode } from '../../../lib/country/supported'
+import { timezoneForCountry } from '../../../lib/country/payroll-labels'
 
 interface ConversionResponse {
   success: boolean
@@ -191,13 +193,21 @@ async function processConversion(conversionId: string, upload: any, originalComp
       .eq('id', conversionId)
 
     // Create new company for converted environment
+    const cc = normalizeCountryCode(originalCompany.country_code)
+    const tz =
+      typeof originalCompany.timezone === 'string' && originalCompany.timezone.trim().length > 0
+        ? originalCompany.timezone.trim()
+        : timezoneForCountry(cc)
+
     const { data: newCompany, error: companyError } = await supabase
       .from('companies')
       .insert({
         name: `${originalCompany.name} - Producción`,
         subdomain: `${originalCompany.subdomain}-prod`,
         plan_type: 'basic',
-        is_active: true
+        is_active: true,
+        country_code: cc,
+        timezone: tz
       })
       .select()
       .single()

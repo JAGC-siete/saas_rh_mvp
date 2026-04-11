@@ -160,7 +160,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     
     // Obtener constantes fiscales para el año del período
-    const taxConstants = await getTaxBracketsForYear(year)
+    const taxConstants = await getTaxBracketsForYear(year, 'HND')
     
     // Calcular salario bruto QUINCENAL (salario mensual ÷ 2)
     const grossSalary = employee.base_salary / 2

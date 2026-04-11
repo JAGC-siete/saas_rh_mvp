@@ -11,7 +11,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Verify super admin
     await requireSuperAdmin(req, res)
     
-    const { year } = req.query
+    const { year, country_code } = req.query
+    const cc =
+      typeof country_code === 'string' && country_code.trim()
+        ? country_code.trim().toUpperCase()
+        : 'HND'
     
     if (!year || isNaN(Number(year))) {
       return res.status(400).json({ error: 'Year parameter is required and must be a number' })
@@ -19,11 +23,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     const supabase = createAdminClient()
     
-    // Get tax bracket for specific year
     const { data, error } = await supabase
       .from('tax_brackets')
       .select('*')
       .eq('year', Number(year))
+      .eq('country_code', cc)
       .single()
     
     if (error) {

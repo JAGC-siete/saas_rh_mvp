@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
+import { normalizeCountryCode } from '../../../lib/country/supported'
 import { generateConsolidatedPayrollPDF, type PlanillaItem } from '../../../lib/payroll/report'
 import {
   parsePayrollPdfGroupByQuery,
@@ -171,7 +172,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // Fetch company name for document title
     const { data: company } = await supabase
       .from('companies')
-      .select('name')
+      .select('name, country_code')
       .eq('id', companyId)
       .single()
 
@@ -257,7 +258,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       currency,
       payment_frequency: paymentFrequency,
       payment_cut_dates: paymentCutDates,
-      legal_deductions: legalDeductions
+      legal_deductions: legalDeductions,
+      country_code: normalizeCountryCode(company?.country_code)
     }
 
     // Separate fixed and hourly employees

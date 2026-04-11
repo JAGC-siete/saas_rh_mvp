@@ -1,4 +1,6 @@
 import { Buffer } from 'buffer'
+import { normalizeCountryCode } from '../country/supported'
+import { statutoryDeductionLabels } from '../country/payroll-labels'
 import { formatDateForHonduras, nowInHonduras, formatDateTimeForHonduras } from '../timezone'
 import { formatPeriodRangeForDisplay } from './period-dates'
 import { resolveStatutoryDeductionColumns } from './statutory-deduction-columns'
@@ -80,6 +82,8 @@ export async function generateConsolidatedPayrollPDF(
       monthly_end?: number
     }
     legal_deductions?: { ihss?: boolean; rap?: boolean; isr?: boolean }
+    /** ISO 3166-1 alpha-3 — etiquetas de deducciones (IHSS/ISSS/IGSS, etc.) */
+    country_code?: string
   },
   periodDates?: { period_start: string; period_end: string },
   reportVisual?: { primaryColor?: string },
@@ -111,11 +115,17 @@ export async function generateConsolidatedPayrollPDF(
       
       const pdfText = (v: unknown) => (v == null ? '' : String(v))
 
+      const jurisdictionCountry = normalizeCountryCode(payrollConfig?.country_code)
+      const dedLabels = statutoryDeductionLabels(jurisdictionCountry)
+
       // Formateo dinámico de currency
       const formatCurrency = (n: number) => {
         const formatted = Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
         if (currency === 'USD') {
           return `$${formatted}`
+        }
+        if (currency === 'GTQ') {
+          return `Q ${formatted}`
         }
         return `L. ${formatted}`
       }
@@ -287,15 +297,18 @@ export async function generateConsolidatedPayrollPDF(
 
         const statutoryCols = resolveStatutoryDeductionColumns(
           payrollConfig?.legal_deductions,
-          customFieldsConfig as Record<string, CustomFieldDef | string> | undefined
+          customFieldsConfig as Record<string, CustomFieldDef | string> | undefined,
+          jurisdictionCountry
         )
 
         const earningsHeaders: string[] = []
         const deductionsHeaders: string[] = []
         const standardDeductionsHeaders: string[] = []
-        if (statutoryCols.ihss) standardDeductionsHeaders.push('IHSS')
-        if (statutoryCols.rap) standardDeductionsHeaders.push('RAP')
-        if (statutoryCols.isr) standardDeductionsHeaders.push('ISR')
+        if (statutoryCols.ihss) standardDeductionsHeaders.push(dedLabels.primarySocial)
+        if (statutoryCols.rap && dedLabels.secondarySocial !== '—') {
+          standardDeductionsHeaders.push(dedLabels.secondarySocial)
+        }
+        if (statutoryCols.isr) standardDeductionsHeaders.push(dedLabels.incomeTax)
         const finalHeaders = ['Devengado', 'Deducciones', 'Neto']
 
         if (customFieldsConfig) {
@@ -578,7 +591,17 @@ export async function generateConsolidatedPayrollPDF(
       doc.fontSize(9).fillColor('#0f172a').text('NOTAS IMPORTANTES:', 40, bankY + 22)
       doc.fontSize(8).fillColor('#334155').text('• Esta planilla ha sido generada automáticamente por el Sistema Hondureño de Recursos Humanos.', 40, bankY + 38)
       doc.fontSize(8).text('• Los montos están calculados según la legislación laboral de Honduras.', 40, bankY + 53)
-      doc.fontSize(8).text('• Las deducciones incluyen las aplicables según configuración (IHSS, RAP, ISR u otras).', 40, bankY + 68)
+      const dedLegend =
+        dedLabels.secondarySocial === '—'
+          ? `${dedLabels.primarySocial}, ${dedLabels.incomeTax}`
+          : `${dedLabels.primarySocial}, ${dedLabels.secondarySocial}, ${dedLabels.incomeTax}`
+      doc
+        .fontSize(8)
+        .text(
+          `• Las deducciones incluyen las aplicables según configuración (${dedLegend} u otras).`,
+          40,
+          bankY + 68
+        )
       doc.fontSize(8).text('• Verificar que la información bancaria sea correcta antes de procesar pagos.', 40, bankY + 83)
       doc.fontSize(8).text('• Para consultas, contactar al departamento de recursos humanos.', 40, bankY + 98)
 
