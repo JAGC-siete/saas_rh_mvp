@@ -5,7 +5,7 @@ import { withExportRateLimit } from '../../../lib/security/rate-limiting'
 import ExcelJS from 'exceljs'
 import { resolveReportConfig } from '../../../lib/reports/column-resolver'
 import type { ResolvedReportConfig } from '../../../lib/reports/column-resolver'
-import { getHeaders, renderAttendanceRows, renderPayrollRows, renderEmployeesRows } from '../../../lib/reports/report-engine'
+import { renderAttendanceRows, renderPayrollRows, renderEmployeesRows } from '../../../lib/reports/report-engine'
 import { generateConsolidatedPayrollPDF, type PlanillaItem } from '../../../lib/payroll/report'
 import { getCustomFields, calculatePayroll } from '../../../lib/payroll-client-specific'
 import { getBiweeklyPeriodDates } from '../../../lib/payroll/period-dates'
@@ -138,9 +138,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       if (reportType === 'attendance') {
         return generateAttendancePDF(res, reportData, dateFilter, company?.name, resolvedConfig)
       } else if (reportType === 'payroll') {
-        return generatePayrollPDF(res, supabase, companyId!, dateFilter, user, company?.name)
+        return generatePayrollPDF(res, supabase, companyId!, dateFilter, user, company?.name, resolvedConfig)
       } else if (reportType === 'employees') {
-        return generateEmployeesPDF(res, reportData, company?.name)
+        return generateEmployeesPDF(res, reportData, company?.name, resolvedConfig)
       } else {
         return generatePDFReport(res, reportData, dateFilter, company?.name)
       }
@@ -1211,7 +1211,8 @@ async function generatePayrollPDF(
   companyId: string,
   dateFilter: { startDate: string; endDate: string },
   user: { email?: string },
-  companyName?: string
+  companyName?: string,
+  resolvedConfig?: ResolvedReportConfig
 ) {
   const { periodo, quincena } = derivePeriodoQuincena(dateFilter.startDate)
   const [year, month] = periodo.split('-').map(Number)
@@ -1342,6 +1343,12 @@ async function generatePayrollPDF(
   const planillaFixed = planillaAll.filter(p => (p as any).pay_type !== 'hourly')
   const planillaHourly = planillaAll.filter(p => (p as any).pay_type === 'hourly')
 
+  const reportVisual =
+    resolvedConfig?.branding?.primaryColor &&
+    /^#[0-9A-Fa-f]{6}$/.test(resolvedConfig.branding.primaryColor)
+      ? { primaryColor: resolvedConfig.branding.primaryColor }
+      : undefined
+
   const pdf = await generateConsolidatedPayrollPDF(
     planillaFixed,
     planillaHourly,
@@ -1350,26 +1357,147 @@ async function generatePayrollPDF(
     user?.email,
     companyName,
     pdfCustomFieldsConfig,
-    pdfPayrollLegal
+    pdfPayrollLegal,
+    undefined,
+    reportVisual
   )
   res.setHeader('Content-Type', 'application/pdf')
   res.setHeader('Content-Disposition', `attachment; filename=planilla_${periodo}_q${quincena}.pdf`)
   return res.send(pdf)
 }
 
-async function generateEmployeesPDF(res: NextApiResponse, reportData: any, companyName?: string) {
-  // Implementar PDF específico para empleados si se necesita
-  return generatePDFReport(res, { 
-    employees: reportData.employees,
-    attendance: [],
-    payroll: [],
-    stats: {
-      totalEmployees: reportData.employees.length,
-      totalAttendance: 0,
-      totalPayroll: 0,
-      averageAttendance: 0,
-      lateEmployees: 0,
-      absentEmployees: 0
+async function generateEmployeesPDF(
+  res: NextApiResponse,
+  reportData: any,
+  companyName?: string,
+  resolvedConfig?: ResolvedReportConfig
+) {
+  try {
+    const PDFDocument = require('pdfkit')
+    const doc = new PDFDocument({
+      size: 'A4',
+      layout: 'portrait',
+      margin: 30,
+      info: {
+        Title: 'Reporte de Empleados',
+        Author: 'Sistema Hondureño de Recursos Humanos',
+        Subject: 'Reporte de Empleados',
+        Keywords: 'empleados, reporte, recursos humanos',
+        Creator: 'HR SaaS System'
+      }
+    })
+
+    const pageWidth = doc.page.width
+    const pageHeight = doc.page.height
+    const primary =
+      resolvedConfig?.branding?.primaryColor &&
+      /^#[0-9A-Fa-f]{6}$/.test(resolvedConfig.branding.primaryColor)
+        ? resolvedConfig.branding.primaryColor
+        : '#1e40af'
+
+    const columns =
+      resolvedConfig?.columns?.length
+        ? resolvedConfig.columns
+        : [
+            { id: 'emp_code', label: 'Código', sourceField: 'employee_code', source: 'standard' as const },
+            { id: 'name', label: 'Nombre', sourceField: 'name', source: 'standard' as const },
+            { id: 'position', label: 'Cargo', sourceField: 'position', source: 'standard' as const },
+            { id: 'department', label: 'Departamento', sourceField: 'department_name', source: 'standard' as const },
+            { id: 'status', label: 'Estado', sourceField: 'status', source: 'standard' as const },
+            { id: 'hire_date', label: 'Fecha Ingreso', sourceField: 'hire_date', source: 'standard' as const }
+          ]
+
+    const employees = reportData.employees || []
+    const rows = renderEmployeesRows(employees, columns)
+    const headers = columns.map((c) => c.label)
+
+    const buffers: Buffer[] = []
+    doc.on('data', (chunk: Buffer) => buffers.push(chunk))
+    doc.on('end', () => {
+      const pdf = Buffer.concat(buffers)
+      res.setHeader('Content-Type', 'application/pdf')
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename=empleados_${new Date().toISOString().split('T')[0]}.pdf`
+      )
+      res.send(pdf)
+    })
+
+    doc.rect(0, 0, pageWidth, 90).fill(primary)
+    doc.fillColor('white')
+    doc
+      .fontSize(20)
+      .font('Helvetica-Bold')
+      .text((companyName || 'SISTEMA DE RECURSOS HUMANOS').toUpperCase(), 30, 22, {
+        align: 'center',
+        width: pageWidth - 60
+      })
+    doc.fontSize(14).font('Helvetica').text('Reporte de Empleados', 30, 52, {
+      align: 'center',
+      width: pageWidth - 60
+    })
+    doc.fillColor('#0f172a')
+    doc.fontSize(9).text(`Fecha: ${formatDateForHonduras(nowInHonduras())}`, 30, 72, {
+      align: 'center',
+      width: pageWidth - 60
+    })
+
+    const tableWidth = pageWidth - 60
+    const startX = 30
+    let y = 105
+    const rowHeight = 16
+    const n = Math.max(1, headers.length)
+    const baseW = Math.floor(tableWidth / n)
+    const colWidths = headers.map((_, i) => (i === n - 1 ? tableWidth - baseW * (n - 1) : baseW))
+
+    const drawHeaderRow = () => {
+      headers.forEach((h, i) => {
+        const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0)
+        doc.rect(x, y, colWidths[i], rowHeight).fillAndStroke(primary, '#0f172a')
+        doc.fillColor('white')
+        doc.fontSize(7).font('Helvetica-Bold').text(h, x + 2, y + 5, {
+          width: colWidths[i] - 4,
+          align: 'center'
+        })
+      })
+      doc.fillColor('#0f172a')
+      y += rowHeight
     }
-  }, { startDate: '', endDate: '' }, companyName)
+
+    drawHeaderRow()
+
+    let rowIndex = 0
+    for (const rowVals of rows) {
+      if (y > pageHeight - 50) {
+        doc.addPage()
+        y = 40
+        drawHeaderRow()
+      }
+      const isEven = rowIndex % 2 === 0
+      rowVals.forEach((val, i) => {
+        const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0)
+        if (isEven) doc.rect(x, y, colWidths[i], rowHeight).fill('#f1f5f9')
+        doc.rect(x, y, colWidths[i], rowHeight).stroke('#e2e8f0')
+        doc.fontSize(7).font('Helvetica').text(String(val ?? ''), x + 2, y + 4, {
+          width: colWidths[i] - 4,
+          align: 'center'
+        })
+      })
+      y += rowHeight
+      rowIndex++
+    }
+
+    doc
+      .fontSize(8)
+      .fillColor('#64748b')
+      .text('SISU: Sistema Hondureño de Recursos Humanos', 30, pageHeight - 30, {
+        align: 'center',
+        width: pageWidth - 60
+      })
+
+    doc.end()
+  } catch (error) {
+    console.error('Error generando PDF de empleados:', error)
+    throw error
+  }
 }

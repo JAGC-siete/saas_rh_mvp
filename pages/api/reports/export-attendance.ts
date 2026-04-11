@@ -13,9 +13,10 @@ import {
   secureLog,
   sanitizeFilename
 } from '../../../lib/security/export-security'
-import { formatTimeDisplay, formatDateOnlyForHonduras, getWeekdayForDateOnly } from '../../../lib/timezone'
-import { createAdminClient } from '../../../lib/supabase/server'
-import { ReportConfig } from '../../../lib/reports/report-config-schema'
+import { formatTimeDisplay, formatDateOnlyForHonduras } from '../../../lib/timezone'
+import { resolveReportConfig } from '../../../lib/reports/column-resolver'
+import type { ResolvedReportConfig } from '../../../lib/reports/column-resolver'
+import { renderAttendanceRows } from '../../../lib/reports/report-engine'
 
 // Aplicar rate limiting, validación de entrada y seguridad de exportación
 const handlerWithSecurity = withExportRateLimit()(
@@ -41,7 +42,7 @@ async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse
       supabase,
       'employees',
       companyId,
-      'id',
+      'id, name, employee_code',
       { status: 'active' }
     )
     
@@ -94,28 +95,27 @@ async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse
       return res.status(500).json({ error: 'Error obteniendo registros de asistencia' })
     }
 
+    const resolvedConfig = await resolveReportConfig(companyId, 'attendance', supabase)
+    const { data: companyRow } = await supabase.from('companies').select('name').eq('id', companyId).maybeSingle()
+    const companyDisplayName = companyRow?.name
+
     // 5. PROCESAR EXPORTACIÓN SEGURA
     if (formato === 'csv') {
-      const headers = ['employee_id','date','status','check_in','check_out','lunch_start','lunch_end','hours_worked','late_minutes']
-      const csvRows = [headers.join(',')]
-      for (const r of (records || [])) {
-        const formattedDate = formatDateOnlyForHonduras(r.date)
-        const formattedCheckIn = r.check_in ? new Date(r.check_in).toLocaleString('es-HN', { timeZone: 'America/Tegucigalpa' }) : ''
-        const formattedCheckOut = r.check_out ? new Date(r.check_out).toLocaleString('es-HN', { timeZone: 'America/Tegucigalpa' }) : ''
-        const formattedLunchStart = r.lunch_start ? new Date(r.lunch_start).toLocaleString('es-HN', { timeZone: 'America/Tegucigalpa' }) : ''
-        const formattedLunchEnd = r.lunch_end ? new Date(r.lunch_end).toLocaleString('es-HN', { timeZone: 'America/Tegucigalpa' }) : ''
-        let hoursWorked = 0
-        if (r.check_in && r.check_out) {
-          let totalMs = new Date(r.check_out).getTime() - new Date(r.check_in).getTime()
-          if (r.lunch_start && r.lunch_end) {
-            totalMs -= new Date(r.lunch_end).getTime() - new Date(r.lunch_start).getTime()
-          }
-          hoursWorked = totalMs / (1000 * 60 * 60)
+      const { columns } = resolvedConfig
+      const csvHeaders = columns.map((c) => c.label)
+      const csvRows = renderAttendanceRows(records || [], employees || [], columns)
+      const escapeCSV = (val: string | number) => {
+        const s = String(val ?? '')
+        if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+          return `"${s.replace(/"/g, '""')}"`
         }
-        const row = [r.employee_id, formattedDate, r.status, formattedCheckIn, formattedCheckOut, formattedLunchStart, formattedLunchEnd, hoursWorked.toFixed(2), r.late_minutes ?? 0]
-        csvRows.push(row.join(','))
+        return s
       }
-      const csv = csvRows.join('\n')
+      let csv = `Reporte de Asistencia\nPeríodo: ${startDate} - ${endDate}\n\n`
+      csv += csvHeaders.map(escapeCSV).join(',') + '\n'
+      for (const row of csvRows) {
+        csv += row.map(escapeCSV).join(',') + '\n'
+      }
       res.setHeader('Content-Type', 'text/csv; charset=utf-8')
       
       // NOMBRE DE ARCHIVO SEGURO (PREVIENE PATH TRAVERSAL)
@@ -126,11 +126,11 @@ async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse
     }
 
     if (formato === 'excel') {
-      return exportToExcel(records || [], startDate, endDate, res)
+      return exportToExcel(records || [], employees || [], startDate, endDate, res, resolvedConfig)
     }
 
     if (formato === 'pdf') {
-      return exportToPDF(records || [], startDate, endDate, res)
+      return exportToPDF(records || [], employees || [], startDate, endDate, res, resolvedConfig, companyDisplayName)
     }
 
     // Formato no soportado
@@ -147,106 +147,99 @@ async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse
   }
 }
 
-async function exportToExcel(attendanceRecords: any[], startDate: string, endDate: string, res: NextApiResponse) {
+function hoursWorkedForRecord(record: any): number {
+  const checkIn = record.check_in ? new Date(record.check_in) : null
+  const checkOut = record.check_out ? new Date(record.check_out) : null
+  const lunchStart = record.lunch_start ? new Date(record.lunch_start) : null
+  const lunchEnd = record.lunch_end ? new Date(record.lunch_end) : null
+  if (!checkIn || !checkOut) return 0
+  let totalMs = checkOut.getTime() - checkIn.getTime()
+  if (lunchStart && lunchEnd) {
+    totalMs -= lunchEnd.getTime() - lunchStart.getTime()
+  }
+  return totalMs / (1000 * 60 * 60)
+}
+
+async function exportToExcel(
+  attendanceRecords: any[],
+  employeesForReport: any[],
+  startDate: string,
+  endDate: string,
+  res: NextApiResponse,
+  resolvedConfig: ResolvedReportConfig
+) {
   try {
-    // Preparar datos para Excel
-    const excelData = attendanceRecords.map(record => {
-      const checkIn = record.check_in ? new Date(record.check_in) : null
-      const checkOut = record.check_out ? new Date(record.check_out) : null
-      const lunchStart = record.lunch_start ? new Date(record.lunch_start) : null
-      const lunchEnd = record.lunch_end ? new Date(record.lunch_end) : null
+    const columns = resolvedConfig.columns.length
+      ? resolvedConfig.columns
+      : [
+          { id: 'emp_code', label: 'Código', sourceField: 'employee_code', source: 'standard' as const },
+          { id: 'emp_name', label: 'Empleado', sourceField: 'employee_name', source: 'standard' as const },
+          { id: 'date', label: 'Fecha', sourceField: 'date', source: 'standard' as const },
+          { id: 'status', label: 'Estado', sourceField: 'status', source: 'standard' as const },
+          { id: 'check_in', label: 'Entrada', sourceField: 'check_in', source: 'standard' as const },
+          { id: 'check_out', label: 'Salida', sourceField: 'check_out', source: 'standard' as const },
+          { id: 'late_minutes', label: 'Min Tardanza', sourceField: 'late_minutes', source: 'standard' as const },
+          { id: 'justification', label: 'Justificación', sourceField: 'justification', source: 'standard' as const }
+        ]
 
-      let hoursWorked = 0
-      if (checkIn && checkOut) {
-        let totalMs = checkOut.getTime() - checkIn.getTime()
-        if (lunchStart && lunchEnd) {
-          totalMs -= lunchEnd.getTime() - lunchStart.getTime()
-        }
-        hoursWorked = totalMs / (1000 * 60 * 60)
-      }
+    const rowMatrix = renderAttendanceRows(attendanceRecords, employeesForReport, columns)
 
-      // Usar late_minutes de attendance_records (calculado con work_schedule en webhook/register)
-      const lateMinutes = record.late_minutes ?? 0
-
-      // Calcular horas extra (asumiendo 8 horas por día)
-      const overtimeHours = Math.max(0, hoursWorked - 8)
-
-      return {
-        'Código': record.employees?.employee_code || '',
-        'Nombre': record.employees?.name || '',
-        'Departamento': record.employees?.department || '',
-        'Posición': record.employees?.role || '',
-        'Fecha': formatDateOnlyForHonduras(record.date),
-        'Día de la Semana': getWeekdayForDateOnly(record.date),
-        'Hora de Entrada': checkIn ? formatTimeDisplay(checkIn.toISOString()) : 'N/A',
-        'Hora de Salida': checkOut ? formatTimeDisplay(checkOut.toISOString()) : 'N/A',
-        'Inicio Almuerzo': lunchStart ? formatTimeDisplay(lunchStart.toISOString()) : '',
-        'Fin Almuerzo': lunchEnd ? formatTimeDisplay(lunchEnd.toISOString()) : '',
-        'Horas Trabajadas': hoursWorked.toFixed(2),
-        'Estado': record.status === 'present' ? 'Presente' : record.status === 'late' ? 'Tardanza' : 'Ausente',
-        'Minutos de Tardanza': lateMinutes,
-        'Horas Extra': overtimeHours.toFixed(2),
-        'Justificación': record.justification || '',
-        'Categoría Justificación': record.justification_category || '',
-        'Ubicación': record.location ? `${record.lat}, ${record.lon}` : 'N/A',
-        'Dispositivo': record.device_id || 'N/A',
-        'Registrado': new Date(record.created_at).toLocaleDateString('es-HN')
-      }
-    })
-
-    // Calcular resumen
-    const totalRecords = excelData.length
-    const totalHours = excelData.reduce((sum, row) => sum + parseFloat(row['Horas Trabajadas']), 0)
-    const totalLateMinutes = excelData.reduce((sum, row) => sum + row['Minutos de Tardanza'], 0)
-    const totalOvertime = excelData.reduce((sum, row) => sum + parseFloat(row['Horas Extra']), 0)
-    const presentRecords = excelData.filter(r => r['Estado'] === 'Presente').length
-    const lateRecords = excelData.filter(r => r['Estado'] === 'Tardanza').length
-    const absentRecords = excelData.filter(r => r['Estado'] === 'Ausente').length
+    const totalRecords = attendanceRecords.length
+    let totalHours = 0
+    let totalLateMinutes = 0
+    let totalOvertime = 0
+    let presentRecords = 0
+    let lateRecords = 0
+    let absentRecords = 0
+    for (const r of attendanceRecords) {
+      const h = hoursWorkedForRecord(r)
+      totalHours += h
+      totalLateMinutes += r.late_minutes ?? 0
+      totalOvertime += Math.max(0, h - 8)
+      if (r.status === 'present') presentRecords++
+      else if (r.status === 'late') lateRecords++
+      else if (r.status === 'absent') absentRecords++
+    }
 
     const resumenData = [
-      { 'Concepto': 'Total Registros', 'Valor': totalRecords },
-      { 'Concepto': 'Total Horas Trabajadas', 'Valor': totalHours.toFixed(2) },
-      { 'Concepto': 'Total Minutos de Tardanza', 'Valor': totalLateMinutes },
-      { 'Concepto': 'Total Horas Extra', 'Valor': totalOvertime.toFixed(2) },
-      { 'Concepto': 'Registros Presentes', 'Valor': presentRecords },
-      { 'Concepto': 'Registros con Tardanza', 'Valor': lateRecords },
-      { 'Concepto': 'Registros Ausentes', 'Valor': absentRecords },
-      { 'Concepto': 'Tasa de Asistencia', 'Valor': `${((presentRecords + lateRecords) / totalRecords * 100).toFixed(1)}%` },
-      { 'Concepto': 'Tasa de Puntualidad', 'Valor': `${(presentRecords / totalRecords * 100).toFixed(1)}%` },
-      { 'Concepto': 'Promedio Horas por Día', 'Valor': (totalHours / totalRecords).toFixed(2) }
+      { Concepto: 'Total Registros', Valor: totalRecords },
+      { Concepto: 'Total Horas Trabajadas', Valor: totalHours.toFixed(2) },
+      { Concepto: 'Total Minutos de Tardanza', Valor: totalLateMinutes },
+      { Concepto: 'Total Horas Extra', Valor: totalOvertime.toFixed(2) },
+      { Concepto: 'Registros Presentes', Valor: presentRecords },
+      { Concepto: 'Registros con Tardanza', Valor: lateRecords },
+      { Concepto: 'Registros Ausentes', Valor: absentRecords },
+      {
+        Concepto: 'Tasa de Asistencia',
+        Valor: totalRecords > 0 ? `${(((presentRecords + lateRecords) / totalRecords) * 100).toFixed(1)}%` : '0%'
+      },
+      {
+        Concepto: 'Tasa de Puntualidad',
+        Valor: totalRecords > 0 ? `${((presentRecords / totalRecords) * 100).toFixed(1)}%` : '0%'
+      },
+      {
+        Concepto: 'Promedio Horas por Día',
+        Valor: totalRecords > 0 ? (totalHours / totalRecords).toFixed(2) : '0'
+      }
     ]
 
     // Crear workbook
     const workbook = new ExcelJS.Workbook()
     const worksheet = workbook.addWorksheet('Asistencia')
     
-    // Agregar datos a la hoja principal
-    worksheet.columns = [
-      { header: 'Código', key: 'Código', width: 12 },
-      { header: 'Nombre', key: 'Nombre', width: 25 },
-      { header: 'Departamento', key: 'Departamento', width: 15 },
-      { header: 'Posición', key: 'Posición', width: 20 },
-      { header: 'Fecha', key: 'Fecha', width: 12 },
-      { header: 'Día de la Semana', key: 'Día de la Semana', width: 15 },
-      { header: 'Hora de Entrada', key: 'Hora de Entrada', width: 12 },
-      { header: 'Hora de Salida', key: 'Hora de Salida', width: 12 },
-      { header: 'Inicio Almuerzo', key: 'Inicio Almuerzo', width: 12 },
-      { header: 'Fin Almuerzo', key: 'Fin Almuerzo', width: 12 },
-      { header: 'Horas Trabajadas', key: 'Horas Trabajadas', width: 12 },
-      { header: 'Estado', key: 'Estado', width: 10 },
-      { header: 'Minutos de Tardanza', key: 'Minutos de Tardanza', width: 15 },
-      { header: 'Horas Extra', key: 'Horas Extra', width: 12 },
-      { header: 'Justificación', key: 'Justificación', width: 30 },
-      { header: 'Categoría Justificación', key: 'Categoría Justificación', width: 20 },
-      { header: 'Ubicación', key: 'Ubicación', width: 20 },
-      { header: 'Dispositivo', key: 'Dispositivo', width: 15 },
-      { header: 'Registrado', key: 'Registrado', width: 12 }
-    ]
+    worksheet.columns = columns.map((c, i) => ({
+      header: c.label,
+      key: `col_${i}`,
+      width: Math.max(12, Math.min(c.label.length + 2, 30))
+    }))
 
-    // Agregar datos
-    excelData.forEach(row => {
-      worksheet.addRow(row)
-    })
+    for (const row of rowMatrix) {
+      const rowObj: Record<string, unknown> = {}
+      row.forEach((val, i) => {
+        rowObj[`col_${i}`] = val
+      })
+      worksheet.addRow(rowObj)
+    }
 
     // Estilo para el encabezado
     worksheet.getRow(1).font = { bold: true }
@@ -263,7 +256,7 @@ async function exportToExcel(attendanceRecords: any[], startDate: string, endDat
       { header: 'Valor', key: 'Valor', width: 15 }
     ]
 
-    resumenData.forEach(row => {
+    resumenData.forEach((row) => {
       summarySheet.addRow(row)
     })
 
@@ -287,7 +280,15 @@ async function exportToExcel(attendanceRecords: any[], startDate: string, endDat
   }
 }
 
-async function exportToPDF(attendanceRecords: any[], startDate: string, endDate: string, res: NextApiResponse) {
+async function exportToPDF(
+  attendanceRecords: any[],
+  employeesForReport: any[],
+  startDate: string,
+  endDate: string,
+  res: NextApiResponse,
+  resolvedConfig: ResolvedReportConfig,
+  companyDisplayName?: string | null
+) {
   try {
     // Preparar datos para PDF
     const attendanceData: AttendanceItem[] = attendanceRecords.map(record => {
@@ -348,8 +349,36 @@ async function exportToPDF(attendanceRecords: any[], startDate: string, endDate:
       average_hours_per_day: totalDays > 0 ? totalHoursWorked / totalDays : 0
     }
 
+    const tableColumns = resolvedConfig.columns.length
+      ? resolvedConfig.columns
+      : [
+          { id: 'emp_code', label: 'Código', sourceField: 'employee_code', source: 'standard' as const },
+          { id: 'emp_name', label: 'Empleado', sourceField: 'employee_name', source: 'standard' as const },
+          { id: 'date', label: 'Fecha', sourceField: 'date', source: 'standard' as const },
+          { id: 'check_in', label: 'Entrada', sourceField: 'check_in', source: 'standard' as const },
+          { id: 'check_out', label: 'Salida', sourceField: 'check_out', source: 'standard' as const },
+          { id: 'hours_worked', label: 'Horas', sourceField: 'hours_worked', source: 'standard' as const },
+          { id: 'status', label: 'Estado', sourceField: 'status', source: 'standard' as const },
+          { id: 'late_minutes', label: 'Min Tardanza', sourceField: 'late_minutes', source: 'standard' as const }
+        ]
+
+    const detailRows = renderAttendanceRows(attendanceRecords, employeesForReport, tableColumns)
+    const detailHeaders = tableColumns.map((c) => c.label)
+    const primaryColor = resolvedConfig.branding?.primaryColor
+
     console.log(`Generando PDF de asistencia: ${attendanceData.length} registros para ${startDate} a ${endDate}`)
-    const pdfBuffer = await generateConsolidatedAttendancePDF(attendanceData, summary, startDate, endDate)
+    const pdfBuffer = await generateConsolidatedAttendancePDF(
+      attendanceData,
+      summary,
+      startDate,
+      endDate,
+      undefined,
+      {
+        companyDisplayName: companyDisplayName ?? undefined,
+        primaryColor: primaryColor ?? undefined,
+        detailTable: { headers: detailHeaders, rows: detailRows }
+      }
+    )
     
     res.setHeader('Content-Type', 'application/pdf')
     

@@ -71,11 +71,16 @@ export async function generateConsolidatedPayrollPDF(
     }
     legal_deductions?: { ihss?: boolean; rap?: boolean; isr?: boolean }
   },
-  periodDates?: { period_start: string; period_end: string }
+  periodDates?: { period_start: string; period_end: string },
+  reportVisual?: { primaryColor?: string }
 ): Promise<Buffer> {
   return new Promise<Buffer>((resolve, reject) => {
     try {
       const PDFDocument = require('pdfkit')
+      const headerPrimary =
+        reportVisual?.primaryColor && /^#[0-9A-Fa-f]{6}$/.test(reportVisual.primaryColor)
+          ? reportVisual.primaryColor
+          : '#0b4fa1'
       
       // Configuración de payroll con valores por defecto
       const currency = payrollConfig?.currency || 'HNL'
@@ -161,7 +166,7 @@ export async function generateConsolidatedPayrollPDF(
 
       // ===== PAGE 1: HEADER & EXEC SUMMARY =====
       const pageWidth = doc.page.width
-      doc.rect(0, 0, pageWidth, 90).fill('#0b4fa1')
+      doc.rect(0, 0, pageWidth, 90).fill(headerPrimary)
       doc.fillColor('white')
       doc.fontSize(22).text(companyName || 'SISTEMA HONDUREÑO DE RECURSOS HUMANOS', 30, 20, { align: 'center', width: pageWidth - 60 })
       doc.fontSize(13).text(payrollTitle, 30, 46, { align: 'center', width: pageWidth - 60 })
@@ -334,7 +339,7 @@ export async function generateConsolidatedPayrollPDF(
         })
         allHeaders.forEach((h, i) => {
           const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0)
-          doc.rect(x, y, colWidths[i], rowHeight).fillAndStroke('#0b4fa1', '#0f172a')
+          doc.rect(x, y, colWidths[i], rowHeight).fillAndStroke(headerPrimary, '#0f172a')
           doc.fillColor('white')
           doc.fontSize(7).text(h, x + 2, y + 3, headerTextOpts(i))
           doc.fillColor('#0f172a')
@@ -352,7 +357,7 @@ export async function generateConsolidatedPayrollPDF(
             // Redraw headers on new page
             allHeaders.forEach((h, i) => {
               const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0)
-              doc.rect(x, y, colWidths[i], rowHeight).fillAndStroke('#0b4fa1', '#0f172a')
+              doc.rect(x, y, colWidths[i], rowHeight).fillAndStroke(headerPrimary, '#0f172a')
               doc.fillColor('white')
               doc.fontSize(7).text(h, x + 2, y + 3, headerTextOpts(i))
               doc.fillColor('#0f172a')
@@ -474,7 +479,7 @@ export async function generateConsolidatedPayrollPDF(
 
       bankHeaders.forEach((h, i) => {
         const x = bankStartX + bankColWidths.slice(0, i).reduce((a, b) => a + b, 0)
-        doc.rect(x, bankY, bankColWidths[i], bankRowHeight).fillAndStroke('#0b4fa1', '#0f172a')
+        doc.rect(x, bankY, bankColWidths[i], bankRowHeight).fillAndStroke(headerPrimary, '#0f172a')
         doc.fillColor('white')
         doc.fontSize(8).text(h, x + 2, bankY + 4, { width: bankColWidths[i] - 4, align: 'center' })
         doc.fillColor('#0f172a')

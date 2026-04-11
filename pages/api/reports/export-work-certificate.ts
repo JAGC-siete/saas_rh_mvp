@@ -416,6 +416,13 @@ function generateWorkCertificatePDF(res: NextApiResponse, certificateData: WorkC
       doc.moveDown(2)
     }
 
+    // Tras la tabla, PDFKit deja `doc.x` al final de la última celda de valor; el siguiente `.text()`
+    // sin x explícito continúa desde ahí y desplaza el párrafo hacia la derecha.
+    const marginLeft = doc.page.margins.left
+    const marginRight = doc.page.margins.right
+    const textWidth = pageWidth - marginLeft - marginRight
+    doc.x = marginLeft
+
     // Información de emisión
     const currentDate = nowInHonduras()
     const day = currentDate.getDate()
@@ -429,7 +436,12 @@ function generateWorkCertificatePDF(res: NextApiResponse, certificateData: WorkC
 
     doc.fontSize(11)
        .font('Helvetica')
-       .text(`Esta constancia se emite a solicitud del interesado para los fines que estime convenientes. Extendida en Tegucigalpa, M.D.C., ${dayPrefix} ${dayInWords} ${daySuffix} del mes de ${monthInWords} del año ${yearInWords}.`, { align: 'left' })
+       .text(
+         `Esta constancia se emite a solicitud del interesado para los fines que estime convenientes. Extendida en Tegucigalpa, M.D.C., ${dayPrefix} ${dayInWords} ${daySuffix} del mes de ${monthInWords} del año ${yearInWords}.`,
+         marginLeft,
+         doc.y,
+         { width: textWidth, align: 'justify' }
+       )
 
     // Footer SISU
     doc.fontSize(8).fillColor('#64748b')

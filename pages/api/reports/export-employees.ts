@@ -11,6 +11,9 @@ import {
 } from '../../../lib/security/export-security'
 import ExcelJS from 'exceljs'
 import { z } from 'zod'
+import { resolveReportConfig } from '../../../lib/reports/column-resolver'
+import type { ResolvedReportConfig } from '../../../lib/reports/column-resolver'
+import { renderEmployeesRows } from '../../../lib/reports/report-engine'
 
 // Schema de validación para exportación de empleados (sin fechas)
 const employeeExportSchema = z.object({
@@ -91,15 +94,16 @@ async function exportEmployeesHandler(req: NextApiRequest, res: NextApiResponse)
 
     // Obtener datos del reporte con filtros
     const reportData = await generateEmployeeReportData(supabase, companyId, filters)
+    const resolvedConfig = await resolveReportConfig(companyId, 'employees', supabase)
 
     const exportFormat = format === 'xlsx' ? 'excel' : format
 
     if (exportFormat === 'pdf') {
-      return generateEmployeePDFReport(res, reportData)
+      return generateEmployeePDFReport(res, reportData, resolvedConfig)
     } else if (exportFormat === 'excel') {
-      return generateEmployeeExcelReport(res, reportData)
+      return generateEmployeeExcelReport(res, reportData, resolvedConfig)
     } else {
-      return generateEmployeeCSVReport(res, reportData)
+      return generateEmployeeCSVReport(res, reportData, resolvedConfig)
     }
 
   } catch (error: any) {
@@ -208,7 +212,7 @@ async function generateEmployeeReportData(supabase: any, companyId: string, filt
   }
 }
 
-function generateEmployeePDFReport(res: NextApiResponse, reportData: any) {
+function generateEmployeePDFReport(res: NextApiResponse, reportData: any, resolvedConfig: ResolvedReportConfig) {
   try {
     const PDFDocument = require('pdfkit')
     const doc = new PDFDocument({ 
@@ -226,11 +230,17 @@ function generateEmployeePDFReport(res: NextApiResponse, reportData: any) {
     
     const pageWidth = doc.page.width
     const pageHeight = doc.page.height
+
+    const primaryHex =
+      resolvedConfig.branding?.primaryColor &&
+      /^#[0-9A-Fa-f]{6}$/.test(resolvedConfig.branding.primaryColor)
+        ? resolvedConfig.branding.primaryColor
+        : '#1e40af'
     
     // Colores consistentes
     const colors = {
-      primary: '#1e40af',
-      primaryDark: '#1e3a8a',
+      primary: primaryHex,
+      primaryDark: primaryHex,
       success: '#059669',
       warning: '#d97706',
       danger: '#dc2626',
@@ -347,106 +357,68 @@ function generateEmployeePDFReport(res: NextApiResponse, reportData: any) {
         { align: 'center', width: pageWidth - 60 }
       )
       
-      // Tabla de empleados mejorada
-      const headers = ['Código', 'Nombre', 'Cargo', 'Departamento', 'Salario', 'Estado']
-      const colWidths = [60, 120, 80, 100, 80, 60]
+      const tableColumns =
+        resolvedConfig.columns.length > 0
+          ? resolvedConfig.columns
+          : [
+              { id: 'emp_code', label: 'Código', sourceField: 'employee_code', source: 'standard' as const },
+              { id: 'name', label: 'Nombre', sourceField: 'name', source: 'standard' as const },
+              { id: 'position', label: 'Cargo', sourceField: 'position', source: 'standard' as const },
+              { id: 'department', label: 'Departamento', sourceField: 'department_name', source: 'standard' as const },
+              { id: 'status', label: 'Estado', sourceField: 'status', source: 'standard' as const },
+              { id: 'hire_date', label: 'Fecha Ingreso', sourceField: 'hire_date', source: 'standard' as const }
+            ]
+
+      const headers = tableColumns.map((c) => c.label)
+      const rowMatrix = renderEmployeesRows(reportData.employees, tableColumns)
+      const tableInnerW = pageWidth - 60
       const startX = 30
       let y = 70
       const rowHeight = 18
-      
-      // Header de tabla mejorado
-      headers.forEach((h: string, i: number) => {
-        const x = startX + colWidths.slice(0, i).reduce((a: number, b: number) => a + b, 0)
-        doc.roundedRect(x, y, colWidths[i], rowHeight, 2)
-          .fill(colors.primary)
-          .stroke(colors.primaryDark)
-        doc.fillColor('white')
-        doc.fontSize(8).font('Helvetica-Bold').text(
-          h, 
-          x + 3, 
-          y + 6, 
-          { width: colWidths[i] - 6, align: 'center' }
-        )
-      })
-      y += rowHeight
-      
-      // Datos de empleados con alternancia de colores
+      const nc = Math.max(1, headers.length)
+      const cw = Math.floor(tableInnerW / nc)
+      const colWidths = headers.map((_, i) => (i === nc - 1 ? tableInnerW - cw * (nc - 1) : cw))
+
+      const drawEmpTableHeader = () => {
+        headers.forEach((h: string, i: number) => {
+          const x = startX + colWidths.slice(0, i).reduce((a: number, b: number) => a + b, 0)
+          doc.roundedRect(x, y, colWidths[i], rowHeight, 2)
+            .fill(colors.primary)
+            .stroke(colors.primaryDark)
+          doc.fillColor('white')
+          doc.fontSize(8).font('Helvetica-Bold').text(h, x + 3, y + 6, {
+            width: colWidths[i] - 6,
+            align: 'center'
+          })
+        })
+        y += rowHeight
+      }
+
+      drawEmpTableHeader()
+
       let rowIndex = 0
-      reportData.employees.forEach((emp: any) => {
+      for (const rowVals of rowMatrix) {
         if (y > pageHeight - 60) {
           doc.addPage()
           y = 30
-          // Re-dibujar headers en nueva página
-          headers.forEach((h: string, i: number) => {
-            const x = startX + colWidths.slice(0, i).reduce((a: number, b: number) => a + b, 0)
-            doc.roundedRect(x, y, colWidths[i], rowHeight, 2)
-              .fill(colors.primary)
-              .stroke(colors.primaryDark)
-            doc.fillColor('white')
-            doc.fontSize(8).font('Helvetica-Bold').text(
-              h, 
-              x + 3, 
-              y + 6, 
-              { width: colWidths[i] - 6, align: 'center' }
-            )
-          })
-          y += rowHeight
+          drawEmpTableHeader()
         }
-        
         const isEven = rowIndex % 2 === 0
-        const statusColors: Record<string, string> = {
-          'active': colors.success,
-          'inactive': colors.warning,
-          'terminated': colors.danger
-        }
-        const statusLabels: Record<string, string> = {
-          'active': 'Activo',
-          'inactive': 'Inactivo',
-          'terminated': 'Terminado'
-        }
-        
-        headers.forEach((_h: string, i: number) => {
+        rowVals.forEach((val, i) => {
           const x = startX + colWidths.slice(0, i).reduce((a: number, b: number) => a + b, 0)
-          
-          // Fondo alternado
           if (isEven) {
             doc.rect(x, y, colWidths[i], rowHeight).fill(colors.lightGray)
           }
           doc.rect(x, y, colWidths[i], rowHeight).stroke(colors.borderGray)
-          
           doc.fillColor('#0f172a')
-          doc.fontSize(7).font('Helvetica')
-          
-          let value = ''
-          switch (i) {
-            case 0: // Código
-              value = emp.employee_code || 'N/A'
-              break
-            case 1: // Nombre
-              value = emp.name || 'N/A'
-              break
-            case 2: // Cargo
-              value = emp.role || 'N/A'
-              break
-            case 3: // Departamento
-              value = emp.departments?.name || 'N/A'
-              break
-            case 4: // Salario
-              value = emp.base_salary ? formatHNL(emp.base_salary) : 'N/A'
-              break
-            case 5: // Estado
-              value = statusLabels[emp.status] || emp.status || 'N/A'
-              doc.fillColor(statusColors[emp.status] || '#0f172a')
-              break
-          }
-          
-          doc.text(value, x + 3, y + 5, { width: colWidths[i] - 6, align: 'center' })
-          doc.fillColor('#0f172a')
+          doc.fontSize(7).font('Helvetica').text(String(val ?? ''), x + 3, y + 5, {
+            width: colWidths[i] - 6,
+            align: 'center'
+          })
         })
-        
         y += rowHeight
         rowIndex++
-      })
+      }
       
       // ===== PÁGINA 3: ESTADÍSTICAS POR DEPARTAMENTO =====
       if (reportData.departmentStats.length > 0) {
@@ -555,40 +527,39 @@ function generateEmployeePDFReport(res: NextApiResponse, reportData: any) {
   }
 }
 
-async function generateEmployeeExcelReport(res: NextApiResponse, reportData: any) {
+async function generateEmployeeExcelReport(res: NextApiResponse, reportData: any, resolvedConfig: ResolvedReportConfig) {
   try {
+    const formatHNL = (n: number) =>
+      `L. ${Number(n || 0).toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
     const workbook = new ExcelJS.Workbook()
     
-    // Hoja 1: Lista de Empleados
-    const sheet = workbook.addWorksheet('Empleados')
-    sheet.columns = [
-      { header: 'Código', key: 'code', width: 12 },
-      { header: 'DNI', key: 'dni', width: 15 },
-      { header: 'Nombre', key: 'name', width: 25 },
-      { header: 'Email', key: 'email', width: 25 },
-      { header: 'Teléfono', key: 'phone', width: 15 },
-      { header: 'Cargo', key: 'role', width: 20 },
-      { header: 'Departamento', key: 'department', width: 20 },
-      { header: 'Salario Base', key: 'salary', width: 15 },
-      { header: 'Fecha Ingreso', key: 'hire_date', width: 14 },
-      { header: 'Estado', key: 'status', width: 12 }
-    ]
+    const tableColumns =
+      resolvedConfig.columns.length > 0
+        ? resolvedConfig.columns
+        : [
+            { id: 'emp_code', label: 'Código', sourceField: 'employee_code', source: 'standard' as const },
+            { id: 'name', label: 'Nombre', sourceField: 'name', source: 'standard' as const },
+            { id: 'position', label: 'Cargo', sourceField: 'position', source: 'standard' as const },
+            { id: 'department', label: 'Departamento', sourceField: 'department_name', source: 'standard' as const },
+            { id: 'status', label: 'Estado', sourceField: 'status', source: 'standard' as const },
+            { id: 'hire_date', label: 'Fecha Ingreso', sourceField: 'hire_date', source: 'standard' as const }
+          ]
 
-    const formatHNL = (n: number) => `L. ${Number(n || 0).toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-    
-    for (const emp of reportData.employees) {
-      sheet.addRow({
-        code: emp.employee_code || '',
-        dni: emp.dni || '',
-        name: emp.name || '',
-        email: emp.email || '',
-        phone: emp.phone || '',
-        role: emp.role || '',
-        department: emp.departments?.name || 'Sin Departamento',
-        salary: formatHNL(emp.base_salary || 0),
-        hire_date: emp.hire_date ? formatDateOnlyForHonduras(emp.hire_date) : '',
-        status: emp.status === 'active' ? 'Activo' : emp.status === 'inactive' ? 'Inactivo' : 'Terminado'
+    const sheet = workbook.addWorksheet('Empleados')
+    sheet.columns = tableColumns.map((c, i) => ({
+      header: c.label,
+      key: `col_${i}`,
+      width: Math.max(12, Math.min(c.label.length + 2, 28))
+    }))
+
+    const rowMatrix = renderEmployeesRows(reportData.employees || [], tableColumns)
+    for (const row of rowMatrix) {
+      const rowObj: Record<string, unknown> = {}
+      row.forEach((val, i) => {
+        rowObj[`col_${i}`] = val
       })
+      sheet.addRow(rowObj)
     }
 
     // Estilo del encabezado
@@ -659,8 +630,31 @@ async function generateEmployeeExcelReport(res: NextApiResponse, reportData: any
   }
 }
 
-function generateEmployeeCSVReport(res: NextApiResponse, reportData: any) {
+function generateEmployeeCSVReport(res: NextApiResponse, reportData: any, resolvedConfig: ResolvedReportConfig) {
   try {
+    const escapeCSV = (val: string | number) => {
+      const s = String(val ?? '')
+      if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+        return `"${s.replace(/"/g, '""')}"`
+      }
+      return s
+    }
+
+    const tableColumns =
+      resolvedConfig.columns.length > 0
+        ? resolvedConfig.columns
+        : [
+            { id: 'emp_code', label: 'Código', sourceField: 'employee_code', source: 'standard' as const },
+            { id: 'name', label: 'Nombre', sourceField: 'name', source: 'standard' as const },
+            { id: 'position', label: 'Cargo', sourceField: 'position', source: 'standard' as const },
+            { id: 'department', label: 'Departamento', sourceField: 'department_name', source: 'standard' as const },
+            { id: 'status', label: 'Estado', sourceField: 'status', source: 'standard' as const },
+            { id: 'hire_date', label: 'Fecha Ingreso', sourceField: 'hire_date', source: 'standard' as const }
+          ]
+
+    const headers = tableColumns.map((c) => c.label)
+    const rowMatrix = renderEmployeesRows(reportData.employees || [], tableColumns)
+
     let csvContent = ''
     
     // Header del reporte
@@ -677,20 +671,11 @@ function generateEmployeeCSVReport(res: NextApiResponse, reportData: any) {
     csvContent += `Salario Total,L. ${reportData.stats.totalSalary.toLocaleString('es-HN')}\n`
     csvContent += `Salario Promedio,L. ${reportData.stats.averageSalary.toLocaleString('es-HN')}\n\n`
     
-    // Lista de empleados
     csvContent += 'LISTA DE EMPLEADOS\n'
-    csvContent += 'Código,Nombre,Email,Cargo,Departamento,Salario,Estado,Fecha Contratación\n'
-    
-    reportData.employees.forEach((emp: any) => {
-      csvContent += `${emp.employee_code || 'N/A'},`
-      csvContent += `${emp.name || 'N/A'},`
-      csvContent += `${emp.email || 'N/A'},`
-      csvContent += `${emp.role || 'N/A'},`
-      csvContent += `${emp.departments?.name || 'N/A'},`
-      csvContent += `${emp.base_salary ? `L. ${emp.base_salary.toLocaleString('es-HN')}` : 'N/A'},`
-      csvContent += `${emp.status === 'active' ? 'Activo' : emp.status === 'inactive' ? 'Inactivo' : 'Terminado'},`
-      csvContent += `${emp.hire_date ? formatDateOnlyForHonduras(emp.hire_date) : 'N/A'}\n`
-    })
+    csvContent += headers.map(escapeCSV).join(',') + '\n'
+    for (const row of rowMatrix) {
+      csvContent += row.map(escapeCSV).join(',') + '\n'
+    }
     
     // Estadísticas por departamento
     if (reportData.departmentStats.length > 0) {

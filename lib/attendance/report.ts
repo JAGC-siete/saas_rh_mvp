@@ -28,6 +28,15 @@ export interface AttendanceSummary {
   average_hours_per_day: number
 }
 
+export interface AttendancePDFOptions {
+  /** Nombre mostrado en cabecera e información de empresa */
+  companyDisplayName?: string
+  /** Color principal (#rrggbb) desde parámetros de reporte */
+  primaryColor?: string
+  /** Tabla de detalle dinámica (columnas configuradas); si no se envía, se usa el layout fijo histórico */
+  detailTable?: { headers: string[]; rows: (string | number)[][] }
+}
+
 /**
  * Generates a consolidated attendance PDF (3 pages: executive summary, attendance table, department analysis)
  * Returns a Buffer that can be sent as application/pdf
@@ -37,11 +46,16 @@ export async function generateConsolidatedAttendancePDF(
   summary: AttendanceSummary,
   startDate: string,
   endDate: string,
-  generatedByEmail?: string
+  generatedByEmail?: string,
+  options?: AttendancePDFOptions
 ): Promise<Buffer> {
   return new Promise<Buffer>((resolve, reject) => {
     try {
       const PDFDocument = require('pdfkit')
+      const headerColor = options?.primaryColor && /^#[0-9A-Fa-f]{6}$/.test(options.primaryColor)
+        ? options.primaryColor
+        : '#1e40af'
+      const companyLabel = (options?.companyDisplayName || 'PARAGON HONDURAS').toUpperCase()
       const doc = new PDFDocument({
         size: 'A4',
         layout: 'portrait',
@@ -67,15 +81,15 @@ export async function generateConsolidatedAttendancePDF(
       })
 
       // ===== PAGE 1: HEADER & EXEC SUMMARY =====
-      doc.rect(0, 0, 595, 100).fill('#1e40af')
+      doc.rect(0, 0, 595, 100).fill(headerColor)
       doc.fillColor('white')
-      doc.fontSize(24).text('PARAGON HONDURAS', 30, 20, { align: 'center', width: 535 })
+      doc.fontSize(24).text(companyLabel, 30, 20, { align: 'center', width: 535 })
       doc.fontSize(16).text('Sistema de Recursos Humanos', 30, 50, { align: 'center', width: 535 })
       doc.fontSize(14).text(`REPORTE DE ASISTENCIA - ${startDate} a ${endDate}`, 30, 75, { align: 'center', width: 535 })
 
       doc.fillColor('black')
       doc.fontSize(10).text('INFORMACIÓN DE LA EMPRESA:', 30, 120)
-      doc.fontSize(9).text('Paragon Honduras', 30, 135)
+      doc.fontSize(9).text(options?.companyDisplayName || 'Paragon Honduras', 30, 135)
       doc.fontSize(9).text('Dirección: Tegucigalpa, Honduras', 30, 150)
       doc.fontSize(9).text('Teléfono: +504 XXXX-XXXX', 30, 165)
       doc.fontSize(9).text('Email: info@paragonhonduras.com', 30, 180)
@@ -127,30 +141,38 @@ export async function generateConsolidatedAttendancePDF(
       doc.addPage()
       doc.fontSize(14).text('DETALLE DE ASISTENCIA POR EMPLEADO', 30, 30, { align: 'center', width: 535 })
 
-      const headers = ['Código', 'Nombre', 'Departamento', 'Fecha', 'Entrada', 'Salida', 'Horas', 'Estado', 'Tardanza', 'Extra']
-      const colWidths = [50, 80, 60, 60, 50, 50, 40, 50, 40, 40]
+      const tableInnerWidth = 535
       const startX = 30
       let y = 70
       const rowHeight = 15
 
-      headers.forEach((h, i) => {
-        const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0)
-        doc.rect(x, y, colWidths[i], rowHeight).fillAndStroke('#1e40af', '#000')
-        doc.fillColor('white')
-        doc.fontSize(8).text(h, x + 2, y + 4, { width: colWidths[i] - 4, align: 'center' })
-        doc.fillColor('black')
-      })
-      y += rowHeight
+      const drawAttendanceHeaderRow = (headers: string[], colWidths: number[]) => {
+        headers.forEach((h, i) => {
+          const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0)
+          doc.rect(x, y, colWidths[i], rowHeight).fillAndStroke(headerColor, '#000')
+          doc.fillColor('white')
+          doc.fontSize(8).text(h, x + 2, y + 4, { width: colWidths[i] - 4, align: 'center' })
+          doc.fillColor('black')
+        })
+        y += rowHeight
+      }
 
-      let pageCount = 1
-      attendanceData.forEach((row) => {
-        if (y > 750) {
-          doc.addPage()
-          y = 30
-          pageCount++
-          doc.fontSize(10).text(`Página ${pageCount} - Continuación`, 30, 15)
-        }
-        const values = [
+      let headers: string[]
+      let colWidths: number[]
+      let dataRows: (string | number)[][]
+
+      if (options?.detailTable?.headers?.length && options.detailTable.rows) {
+        headers = options.detailTable.headers
+        const n = Math.max(1, headers.length)
+        const w = Math.floor(tableInnerWidth / n)
+        colWidths = headers.map((_, i) => (i === n - 1 ? tableInnerWidth - w * (n - 1) : w))
+        dataRows = options.detailTable.rows.map((r) =>
+          headers.map((_, i) => (r[i] !== undefined && r[i] !== null ? r[i] : ''))
+        )
+      } else {
+        headers = ['Código', 'Nombre', 'Departamento', 'Fecha', 'Entrada', 'Salida', 'Horas', 'Estado', 'Tardanza', 'Extra']
+        colWidths = [50, 80, 60, 60, 50, 50, 40, 50, 40, 40]
+        dataRows = attendanceData.map((row) => [
           row.employee_code || '',
           row.name,
           row.department,
@@ -161,11 +183,24 @@ export async function generateConsolidatedAttendancePDF(
           row.status === 'present' ? 'Presente' : row.status === 'late' ? 'Tardanza' : 'Ausente',
           row.late_minutes > 0 ? `${row.late_minutes}min` : '0min',
           row.overtime_hours > 0 ? `${row.overtime_hours.toFixed(1)}h` : '0h'
-        ]
+        ])
+      }
+
+      drawAttendanceHeaderRow(headers, colWidths)
+
+      let pageCount = 1
+      dataRows.forEach((values) => {
+        if (y > 750) {
+          doc.addPage()
+          y = 30
+          pageCount++
+          doc.fontSize(10).text(`Página ${pageCount} - Continuación`, 30, 15)
+          drawAttendanceHeaderRow(headers, colWidths)
+        }
         values.forEach((val, i) => {
           const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0)
           doc.rect(x, y, colWidths[i], rowHeight).stroke()
-          doc.fontSize(7).text(val.toString(), x + 2, y + 4, { width: colWidths[i] - 4, align: 'center' })
+          doc.fontSize(7).text(String(val ?? ''), x + 2, y + 4, { width: colWidths[i] - 4, align: 'center' })
         })
         y += rowHeight
       })
@@ -190,7 +225,7 @@ export async function generateConsolidatedAttendancePDF(
 
       deptHeaders.forEach((h, i) => {
         const x = deptStartX + deptColWidths.slice(0, i).reduce((a, b) => a + b, 0)
-        doc.rect(x, deptY, deptColWidths[i], deptRowHeight).fillAndStroke('#1e40af', '#000')
+        doc.rect(x, deptY, deptColWidths[i], deptRowHeight).fillAndStroke(headerColor, '#000')
         doc.fillColor('white')
         doc.fontSize(8).text(h, x + 2, deptY + 4, { width: deptColWidths[i] - 4, align: 'center' })
         doc.fillColor('black')
