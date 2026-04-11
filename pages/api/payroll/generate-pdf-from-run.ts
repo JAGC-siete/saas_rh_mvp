@@ -62,7 +62,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         *,
         employees!payroll_run_lines_employee_id_fkey(
           id, name, dni, base_salary, bank_name, bank_account, pay_type,
-          team, position, role,
+          team, role,
           departments!employees_department_id_fkey(name)
         )
       `)
@@ -144,7 +144,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         bank_account: line.employees?.bank_account || 'No especificado',
         department: line.employees?.departments?.name || 'Sin Departamento',
         team: line.employees?.team ?? null,
-        position: line.employees?.position ?? null,
+        position: line.employees?.role ?? null,
         role: line.employees?.role ?? null,
         monthly_salary: Number(line.employees?.base_salary) || 0,
         days_worked: payType === 'hourly' ? (totalHours / 8) : (totalHours / 8),

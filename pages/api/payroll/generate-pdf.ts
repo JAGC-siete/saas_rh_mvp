@@ -46,7 +46,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { data: employees, error: empError } = await supabase
       .from('employees')
       .select(
-        `id, name, employee_code, bank_name, bank_account, pay_type, team, position, role,
+        `id, name, employee_code, bank_name, bank_account, pay_type, team, role,
          departments!employees_department_id_fkey(name)`
       )
       .in('id', employeeIds)
@@ -76,7 +76,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         bank_account: employee?.bank_account || 'No especificado',
         department: (employee as { departments?: { name?: string } })?.departments?.name || 'Sin Departamento',
         team: (employee as { team?: string | null })?.team ?? null,
-        position: (employee as { position?: string | null })?.position ?? null,
+        position: (employee as { role?: string | null })?.role ?? null,
         role: (employee as { role?: string | null })?.role ?? null,
         monthly_salary: Number(row.base_salary) || 0,
         days_worked: Number(row.days_worked) || 0,
