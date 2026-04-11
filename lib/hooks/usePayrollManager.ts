@@ -565,6 +565,35 @@ export const usePayrollManager = () => {
         return
       }
 
+      const defaultFilename = `planilla_${state.currentPeriod.year}-${String(state.currentPeriod.month).padStart(2, '0')}_q${state.currentPeriod.quincena}.pdf`
+
+      const filenameFromContentDisposition = (cd: string | null): string | null => {
+        if (!cd) return null
+        const m =
+          cd.match(/filename\*=UTF-8''([^;]+)/i)?.[1] ||
+          cd.match(/filename="([^"]+)"/)?.[1] ||
+          cd.match(/filename=([^;]+)/)?.[1]
+        if (!m) return null
+        const raw = m.trim().replace(/^["']|["']$/g, '')
+        try {
+          return decodeURIComponent(raw)
+        } catch {
+          return raw
+        }
+      }
+
+      const triggerDownload = (blob: Blob, filename: string) => {
+        const blobUrl = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = blobUrl
+        link.download = filename
+        link.rel = 'noopener'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.setTimeout(() => URL.revokeObjectURL(blobUrl), 120_000)
+      }
+
       try {
         const { url } = await payrollApi.generatePDF(state.runId, {
           groupBy: groupBy === 'none' ? undefined : groupBy
@@ -575,9 +604,19 @@ export const usePayrollManager = () => {
           throw new Error(errBody.message || errBody.error || `Error ${res.status}`)
         }
 
-        const contentType = res.headers.get('Content-Type') || ''
-        if (!contentType.toLowerCase().includes('application/pdf')) {
-          const text = await res.text()
+        const buf = await res.arrayBuffer()
+        const bytes = new Uint8Array(buf)
+        const looksPdf =
+          bytes.length >= 4 &&
+          bytes[0] === 0x25 &&
+          bytes[1] === 0x50 &&
+          bytes[2] === 0x44 &&
+          bytes[3] === 0x46
+        const contentType = (res.headers.get('Content-Type') || '').toLowerCase()
+        const typedAsPdf = contentType.includes('application/pdf')
+
+        if (!looksPdf && !typedAsPdf) {
+          const text = new TextDecoder().decode(bytes.slice(0, 4096))
           let parsed: { message?: string; error?: string } | null = null
           try {
             parsed = JSON.parse(text) as { message?: string; error?: string }
@@ -585,33 +624,17 @@ export const usePayrollManager = () => {
             parsed = null
           }
           const fromJson = parsed?.message || parsed?.error
-          throw new Error(fromJson || 'El servidor no devolvió un PDF (respuesta no es application/pdf)')
+          throw new Error(fromJson || 'El servidor no devolvió un PDF válido')
         }
 
-        const blob = await res.blob()
-        if (blob.size === 0) {
+        if (bytes.length === 0) {
           throw new Error('El PDF recibido está vacío')
         }
 
-        const cd = res.headers.get('Content-Disposition')
-        const m =
-          cd?.match(/filename\*=UTF-8''([^;]+)/i)?.[1] ||
-          cd?.match(/filename="([^"]+)"/)?.[1] ||
-          cd?.match(/filename=([^;]+)/)?.[1]
-        const decoded = m ? decodeURIComponent(m.trim()) : null
         const filename =
-          decoded ||
-          `planilla_${state.currentPeriod.year}-${String(state.currentPeriod.month).padStart(2, '0')}_q${state.currentPeriod.quincena}.pdf`
-        const blobUrl = URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = blobUrl
-        link.download = filename
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        // Revocar en el siguiente tick: revoke inmediato puede cancelar la descarga en varios navegadores.
-        window.setTimeout(() => URL.revokeObjectURL(blobUrl), 120_000)
-
+          filenameFromContentDisposition(res.headers.get('Content-Disposition')) || defaultFilename
+        const blob = new Blob([buf], { type: 'application/pdf' })
+        triggerDownload(blob, filename)
         toast.success('PDF Generado', 'El PDF se ha descargado correctamente', 4000)
       } catch (error: unknown) {
         const message = error instanceof Error ? error.message : 'No se pudo generar el PDF'

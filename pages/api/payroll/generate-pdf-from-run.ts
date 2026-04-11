@@ -6,7 +6,7 @@ import {
   payrollPdfGroupByFilenameSuffix,
   type PayrollPdfGroupBy
 } from '../../../lib/payroll/pdf-layout'
-import { withExportRateLimit } from '../../../lib/security/rate-limiting'
+import { withPayrollRateLimit } from '../../../lib/security/rate-limiting'
 import { calculatePayroll, getCustomFields } from '../../../lib/payroll-client-specific'
 import { getBiweeklyPeriodDates, getMonthlyPeriodDates, getWeeklyPeriodDates } from '../../../lib/payroll/period-dates'
 
@@ -313,4 +313,5 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 }
 
-export default withExportRateLimit()(handler)
+/** Mismo bucket que preview/edit: la planilla PDF es parte del flujo habitual, no export masivo. */
+export default withPayrollRateLimit(['GET'])(handler)
