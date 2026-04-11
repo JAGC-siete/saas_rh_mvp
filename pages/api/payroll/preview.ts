@@ -20,6 +20,7 @@ import {
 } from '../../../lib/payroll/fixed-line-recalc'
 import { calculateSeptimoDia } from '../../../lib/payroll/septimo-dia'
 import { HONDURAS_LABOR_FACTOR, HORAS_PERIODO_MENSUAL, HORAS_PERIODO_QUINCENAL } from '../../../lib/payroll/constants'
+import { buildAuthorizedPayrollPreviewPayload } from '../../../lib/payroll/preview-authorized-readonly'
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -189,7 +190,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // Verificar si ya existe una corrida para este período
     const { data: existingRun, error: checkError } = await supabase
       .from('payroll_runs')
-      .select('id, status')
+      .select('id, status, year, month, quincena, tipo')
       .eq('company_id', companyId)
       .eq('year', yearNum)
       .eq('month', monthNum)
@@ -210,42 +211,28 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     let runId: string
 
     if (existingRun) {
-      // Si ya existe una corrida, verificar su estado y manejar según el caso
       console.log('🔍 DEBUG - Existing run found:', { id: existingRun.id, status: existingRun.status })
-      
-      if (existingRun.status === 'authorized') {
-        console.log('⚠️ WARNING - Regenerating preview for authorized run')
-        // UPSERT LOGIC: En lugar de error, permitir regenerar con advertencia
-        // Cambiar estado a 'draft' para permitir ediciones
-        const { error: resetError } = await supabase
-          .from('payroll_runs')
-          .update({ 
-            status: 'draft',
-            updated_at: nowInHonduras().toISOString()
+
+      // Corrida cerrada: devolver datos persistidos sin mutar estado ni líneas.
+      // (Antes: se pasaba a draft y se borraban líneas en cada GET → contabilidad veía draft.)
+      if (existingRun.status === 'authorized' || existingRun.status === 'distributed') {
+        try {
+          const payload = await buildAuthorizedPayrollPreviewPayload(supabase, companyId, {
+            id: existingRun.id,
+            year: existingRun.year,
+            month: existingRun.month,
+            quincena: existingRun.quincena,
+            tipo: existingRun.tipo,
+            status: existingRun.status
           })
-          .eq('id', existingRun.id)
-          .eq('company_id', companyId)
-
-        if (resetError) {
-          console.error('Error resetting run status:', resetError)
-          return res.status(500).json({ error: 'Error actualizando estado de corrida' })
+          return res.status(200).json(payload)
+        } catch (e: unknown) {
+          const msg = e instanceof Error ? e.message : 'Error leyendo planilla autorizada'
+          console.error('Error en preview solo lectura (autorizada):', e)
+          return res.status(500).json({ error: msg })
         }
-
-        // Eliminar líneas existentes para regenerar
-        const { error: deleteError } = await supabase
-          .from('payroll_run_lines')
-          .delete()
-          .eq('run_id', existingRun.id)
-          .eq('company_id', companyId)
-
-        if (deleteError) {
-          console.error('Error deleting existing lines:', deleteError)
-          return res.status(500).json({ error: 'Error eliminando líneas existentes' })
-        }
-
-        console.log('✅ Run reset to draft and lines cleared for regeneration')
       }
-      
+
       runId = existingRun.id
     } else {
       // Crear nueva corrida

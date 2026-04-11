@@ -105,9 +105,13 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
       body: JSON.stringify({ run_id: payroll.runId }),
       credentials: 'include'
     })
-    const data = await res.json()
+    const data = await res.json().catch(() => ({}))
     if (!res.ok) {
-      throw new Error(data.error || 'Error generando asientos')
+      const msg =
+        (data as { error?: string; message?: string }).error ||
+        (data as { message?: string }).message ||
+        'Error generando asientos'
+      throw new Error(msg)
     }
   }, [payroll.runId, payroll.companyId])
 

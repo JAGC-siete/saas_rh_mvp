@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
+import { useToast } from '../../lib/toast'
 import { Button } from '../ui/button'
 import { Card, CardContent } from '../ui/card'
 import { JournalEntryTable } from './JournalEntryTable'
@@ -19,6 +20,7 @@ export function PayrollAccountingTab({
   companyId,
   onGenerate
 }: PayrollAccountingTabProps) {
+  const toast = useToast()
   const [entries, setEntries] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [generating, setGenerating] = useState(false)
@@ -58,6 +60,10 @@ export function PayrollAccountingTab({
     try {
       await onGenerate()
       await fetchEntries()
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Error generando asientos'
+      console.error('generate-journal-entries:', e)
+      toast.error('Asientos contables', msg, 8000)
     } finally {
       setGenerating(false)
     }

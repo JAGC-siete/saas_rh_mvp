@@ -307,7 +307,7 @@ export default function UnifiedPayrollTable({
     showAnimation: boolean;
     showSuccessEffect: boolean;
   } => {
-    const isAuthorized = status === 'authorized'
+    const isAuthorized = status === 'authorized' || status === 'distributed'
     const isAuthorizing = loading && status === 'authorizing'
     const canAuth = (status === 'draft' || status === 'edited') && !!runId && !loading
     
@@ -562,10 +562,14 @@ export default function UnifiedPayrollTable({
           {/* Generate PDF - Only enabled after authorization */}
           <Button
             onClick={() => setPdfModalOpen(true)}
-            disabled={!runId || loading || status !== 'authorized'}
+            disabled={!runId || loading || (status !== 'authorized' && status !== 'distributed')}
             variant="outline"
             className="flex items-center gap-2 bg-white/10 border-white/30 text-white hover:bg-white/20 disabled:opacity-50"
-            title={status !== 'authorized' ? 'Autorice la nómina primero para generar PDF' : 'Generar PDF consolidado'}
+            title={
+              status !== 'authorized' && status !== 'distributed'
+                ? 'Autorice la nómina primero para generar PDF'
+                : 'Generar PDF consolidado'
+            }
           >
             <Icon name="document" className="h-4 w-4" />
             Generar PDF
@@ -574,10 +578,14 @@ export default function UnifiedPayrollTable({
           {/* Send Email - Only enabled after PDF generation (tracked separately) */}
           <Button
             onClick={onSendEmail}
-            disabled={!runId || loading || status !== 'authorized'}
+            disabled={!runId || loading || (status !== 'authorized' && status !== 'distributed')}
             variant="outline"
             className="flex items-center gap-2 bg-white/10 border-white/30 text-white hover:bg-white/20 disabled:opacity-50"
-            title={status !== 'authorized' ? 'Autorice y genere PDF primero' : 'Enviar recibos por email'}
+            title={
+              status !== 'authorized' && status !== 'distributed'
+                ? 'Autorice y genere PDF primero'
+                : 'Enviar recibos por email'
+            }
           >
             <Icon name="envelope" className="h-4 w-4" />
             Enviar por Email

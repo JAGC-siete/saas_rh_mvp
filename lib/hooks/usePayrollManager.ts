@@ -488,7 +488,11 @@ export const usePayrollManager = () => {
         
         // Actualizar los datos unificados con el runId si está disponible
         dispatch({ type: 'SET_DATA', payload: refreshedData })
-        
+
+        if (refreshedData.status) {
+          dispatch({ type: 'SET_STATUS', payload: refreshedData.status as UIRunStatus })
+        }
+
         if (refreshedData.runId) {
           dispatch({ type: 'SET_RUN_ID', payload: refreshedData.runId })
           console.log('🔍 DEBUG - Run ID actualizado:', refreshedData.runId)
@@ -725,7 +729,8 @@ export const usePayrollManager = () => {
   const canPreview = state.status === 'idle' || state.status === 'draft' || state.status === 'error'
   const canEdit = state.status === 'draft' && !!state.runId
   const canAuthorize = (state.status === 'draft' || state.status === 'edited') && !!state.runId
-  const canSend = state.status === 'authorized' && !!state.runId
+  const canSend =
+    (state.status === 'authorized' || state.status === 'distributed') && !!state.runId
   const canReset = state.status !== 'idle'
   
   // DEBUG: Log current state for debugging
