@@ -2,8 +2,8 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import formidable from 'formidable';
 import { createAdminClient } from '../../../lib/supabase/server';
 import { logError, logger } from '../../../lib/logger';
-import { getTodayInHonduras, nowInHonduras, toHN, convertToHondurasTime } from '../../../lib/timezone';
-import { findBestFitSchedule } from '../../../lib/attendance/best-fit-schedule';
+import { nowInHonduras, toHN } from '../../../lib/timezone';
+import { RAW_PUNCH_EVENT_TYPE } from '../../../lib/attendance/daily-close';
 import { createHash } from 'crypto';
 import fs from 'fs';
 
@@ -18,7 +18,8 @@ export const config = {
  * Webhook para recibir eventos desde dispositivos Hikvision DS-K1T344MBWX-QRE1
  * 
  * FORMATO ESPERADO (según manual ISAPI):
- * - Multipart/form-data con parte JSON sin nombre (Content-Type: application/json)
+ * - Multipart/form-data con parte JSON sin nombre (parte con Content-Type: application/json), o
+ * - Cuerpo único application/json (algunos firmwares / pruebas curl)
  * - JSON contiene EventNotificationAlert con:
  *   * eventType: "heartBeat" (conectividad) o eventos de acceso
  *   * Para eventos de acceso: AccessControllerEvent/AcsEvent con cardNo/employeeNoString
@@ -27,7 +28,7 @@ export const config = {
  * - Responde 200 OK inmediatamente después de parsear el JSON
  * - Procesamiento asíncrono para no bloquear al dispositivo
  * - Heartbeats actualizan device health (NO generan asistencia)
- * - Access events generan attendance_records con event_uid para idempotencia
+ * - Access events insertan attendance_events (raw_punch); el cierre diario consolida attendance_records
  */
 
 /**
@@ -35,6 +36,25 @@ export const config = {
  * Política: remover caracteres no numéricos, mantener tal cual.
  * Si el valor es hex (0x... o contiene a-f), convertir a decimal para matching.
  */
+const WEBHOOK_MAX_BODY_BYTES = 10 * 1024 * 1024;
+
+function readRawBody(req: NextApiRequest, maxBytes = WEBHOOK_MAX_BODY_BYTES): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    let total = 0;
+    req.on('data', (chunk: Buffer) => {
+      total += chunk.length;
+      if (total > maxBytes) {
+        reject(new Error('Request body exceeds max size'));
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf-8')));
+    req.on('error', reject);
+  });
+}
+
 function normalizeIdentifier(raw: string | number | undefined): string | undefined {
   if (!raw) return undefined;
   const str = String(raw).trim();
@@ -255,966 +275,105 @@ async function processHeartbeat(root: any, companyId: string) {
         status: 'online',
         macAddressUpdated: macAddress && !device.mac_address,
         ipAddressUpdated: ipAddress && device.ip_address !== ipAddress,
-              });
-            }
-          }
-        }
+      });
+    }
+  }
+}
 
 /**
- * Maneja eventos de empleados fixed SIN horario asignado (Capa Base).
- * Primera marca = check_in, segunda marca = check_out. Sin validación de ventanas.
- * Si flags.horario_no_detectado, se emite el flag pero se procede con Capa 1.
+ * Resuelve dispositivo Hikvision (MAC prioritaria) para FK attendance_events.device_id.
  */
-async function handleFixedEmployeeNoSchedule(
-  employee: any,
-  eventTimestamp: Date,
-  recordDate: string,
-  eventUid: string,
+async function resolveDeviceIdForAccess(
+  supabase: ReturnType<typeof createAdminClient>,
   companyId: string,
-  doorNo: any,
-  readerNo: any,
-  verifyMode: any,
-  cardNo: any,
-  employeeNoString: any,
-  flags?: { horario_no_detectado?: boolean; razon?: string; gap_minutos?: number }
-) {
-  const supabase = createAdminClient();
+  root: any
+): Promise<string | null> {
+  const ipAddress = root.ipAddress;
+  const macAddress = root.macAddress;
+  if (!ipAddress && !macAddress) return null;
 
-  const MAX_SHIFT_HOURS = 30;
-  const MAX_SHIFT_MS = MAX_SHIFT_HOURS * 60 * 60 * 1000;
+  let deviceQuery = supabase
+    .from('devices')
+    .select('id')
+    .eq('company_id', companyId);
 
-  const { data: openRecord } = await supabase
-    .from('attendance_records')
-    .select('id, check_in, check_out, date')
-    .eq('employee_id', employee.id)
-    .is('check_out', null)
-    .order('check_in', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  if (macAddress) {
+    deviceQuery = deviceQuery.eq('mac_address', macAddress);
+  } else {
+    deviceQuery = deviceQuery.eq('ip_address', ipAddress);
+  }
 
-  const deviceMetadata: Record<string, any> = {};
-  if (doorNo != null) deviceMetadata.doorNo = doorNo;
-  if (readerNo != null) deviceMetadata.readerNo = readerNo;
-  if (verifyMode != null) deviceMetadata.verifyMode = verifyMode;
-  if (cardNo != null) deviceMetadata.cardNo = cardNo;
-  if (employeeNoString != null) deviceMetadata.employeeNoString = employeeNoString;
-  if (Object.keys(deviceMetadata).length > 0) deviceMetadata.source = 'hikvision_webhook';
+  const { data: devices, error } = await deviceQuery.limit(1);
+  if (error || !devices?.length) return null;
+  return devices[0].id as string;
+}
 
-  const insertPayload: Record<string, unknown> = {
-    employee_id: employee.id,
-    date: recordDate,
-    check_in: eventTimestamp.toISOString(),
-    event_uid: eventUid,
+/**
+ * Ingesta inmutable: una fila en attendance_events por marca biométrica (sin interpretación).
+ */
+async function insertRawBiometricPunch(params: {
+  supabase: ReturnType<typeof createAdminClient>;
+  employeeId: string;
+  companyId: string;
+  eventTimestamp: Date;
+  eventUid: string;
+  localDate: string;
+  deviceId: string | null;
+  doorNo: any;
+  readerNo: any;
+  verifyMode: any;
+  cardNo: any;
+  employeeNoString: any;
+}) {
+  const {
+    supabase,
+    employeeId,
+    eventTimestamp,
+    eventUid,
+    localDate,
+    deviceId,
+    doorNo,
+    readerNo,
+    verifyMode,
+    cardNo,
+    employeeNoString,
+  } = params;
+
+  const punchFlags: Record<string, unknown> = {};
+  if (doorNo != null) punchFlags.doorNo = doorNo;
+  if (readerNo != null) punchFlags.readerNo = readerNo;
+  if (verifyMode != null) punchFlags.verifyMode = verifyMode;
+  if (cardNo != null) punchFlags.cardNo = cardNo;
+  if (employeeNoString != null) punchFlags.employeeNoString = employeeNoString;
+
+  const { error } = await supabase.from('attendance_events').insert({
+    employee_id: employeeId,
+    event_type: RAW_PUNCH_EVENT_TYPE,
+    ts_utc: eventTimestamp.toISOString(),
     tz: 'America/Tegucigalpa',
     tz_offset_minutes: -360,
-    status: 'present',
-    metadata: Object.keys(deviceMetadata).length > 0 ? deviceMetadata : null,
-  };
-  if (flags?.horario_no_detectado) {
-    insertPayload.flags = {
-      horario_no_detectado: true,
-      razon: flags.razon || 'distancia_horario_excedida',
-      gap_minutos: flags.gap_minutos,
-    };
-  }
-
-  const DUPLICATE_WINDOW_MS = 15 * 60 * 1000; // 15 minutos
-
-  if (!openRecord) {
-    const { data: recentCheckIn } = await supabase
-      .from('attendance_records')
-      .select('id, check_in')
-      .eq('employee_id', employee.id)
-      .eq('date', recordDate)
-      .not('check_in', 'is', null)
-      .order('check_in', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (recentCheckIn) {
-      const recentTime = new Date(recentCheckIn.check_in).getTime();
-      if (Math.abs(eventTimestamp.getTime() - recentTime) <= DUPLICATE_WINDOW_MS) {
-        logger.info('[FIXED NO SCHEDULE] Duplicado ignorado: marca dentro de 15 min', {
-          companyId,
-          employeeId: employee.id,
-          eventUid,
-          diffMs: Math.abs(eventTimestamp.getTime() - recentTime),
-        });
-        return;
-      }
-    }
-    const { error: insertError } = await supabase
-      .from('attendance_records')
-      .insert(insertPayload);
-    if (insertError && insertError.code !== '23505') {
-      logger.error('[FIXED NO SCHEDULE] Error creating check_in', insertError, { companyId, employeeId: employee.id });
-    } else {
-      logger.info('[FIXED NO SCHEDULE] Check_in recorded (Capa Base)', { companyId, employeeId: employee.id, eventUid });
-    }
-    return;
-  }
-
-  const openCheckIn = new Date(openRecord.check_in);
-  const diffMs = eventTimestamp.getTime() - openCheckIn.getTime();
-
-  if (diffMs > 0 && diffMs <= MAX_SHIFT_MS) {
-    const updatePayload: Record<string, unknown> = {
-      check_out: eventTimestamp.toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    if (flags?.horario_no_detectado) {
-      updatePayload.flags = {
-        horario_no_detectado: true,
-        razon: flags.razon || 'distancia_horario_excedida',
-        gap_minutos: flags.gap_minutos,
-      };
-    }
-    const { error: updateError } = await supabase
-      .from('attendance_records')
-      .update(updatePayload)
-      .eq('id', openRecord.id);
-    if (updateError) {
-      logger.error('[FIXED NO SCHEDULE] Error updating check_out', updateError, { companyId, employeeId: employee.id });
-    } else {
-      logger.info('[FIXED NO SCHEDULE] Check_out recorded (Capa Base, cruce medianoche)', {
-        companyId,
-        employeeId: employee.id,
-        eventUid,
-        recordDate: openRecord.date,
-      });
-    }
-    return;
-  }
-
-  if (diffMs > MAX_SHIFT_MS) {
-    logger.warn('[FIXED NO SCHEDULE] Open record exceeded 30h, creating new check_in', {
-      companyId,
-      employeeId: employee.id,
-      openRecordId: openRecord.id,
-    });
-    const { error: insertError } = await supabase
-      .from('attendance_records')
-      .insert(insertPayload);
-    if (insertError && insertError.code !== '23505') {
-      logger.error('[FIXED NO SCHEDULE] Error creating check_in after orphan', insertError, {
-        companyId,
-        employeeId: employee.id,
-      });
-    }
-    return;
-  }
-
-  logger.debug('[FIXED NO SCHEDULE] Event out of order, ignoring', {
-    companyId,
-    employeeId: employee.id,
-    eventUid,
-  });
-}
-
-/**
- * Maneja eventos de empleados administrativos/permanentes (pay_type = 'fixed')
- * Infiere entrada vs salida usando el horario asignado y ventanas de tiempo.
- * Si no hay horario, delega a handleFixedEmployeeNoSchedule (Capa Base).
- */
-async function handleFixedEmployeeEvent(
-  employee: any,
-  root: any,
-  acs: any,
-  eventTimestamp: Date,
-  recordDate: string,
-  eventUid: string,
-  companyId: string,
-  doorNo: any,
-  readerNo: any,
-  verifyMode: any,
-  cardNo: any,
-  employeeNoString: any
-) {
-  const supabase = createAdminClient();
-
-  // Capa Base: empleados sin horario — primera marca = check_in, segunda = check_out
-  if (!employee.work_schedule_id) {
-    await handleFixedEmployeeNoSchedule(
-      employee,
-      eventTimestamp,
-      recordDate,
-      eventUid,
-      companyId,
-      doorNo,
-      readerNo,
-      verifyMode,
-      cardNo,
-      employeeNoString
-    );
-    return;
-  }
-
-  const { data: schedule, error: scheduleError } = await supabase
-    .from('work_schedules')
-    .select('*')
-    .eq('id', employee.work_schedule_id)
-    .single();
-
-  if (scheduleError || !schedule) {
-    logger.warn('[FIXED EMPLOYEE] Error fetching schedule, fallback Capa Base', {
-      companyId,
-      employeeId: employee.id,
-      error: scheduleError,
-    });
-    await handleFixedEmployeeNoSchedule(
-      employee,
-      eventTimestamp,
-      recordDate,
-      eventUid,
-      companyId,
-      doorNo,
-      readerNo,
-      verifyMode,
-      cardNo,
-      employeeNoString,
-      { horario_no_detectado: true, razon: 'error_fetch_horario' }
-    );
-    return;
-  }
-
-  const MAX_SHIFT_HOURS = 30;
-  const MAX_SHIFT_MS = MAX_SHIFT_HOURS * 60 * 60 * 1000;
-
-  const { data: openRecord } = await supabase
-    .from('attendance_records')
-    .select('id, check_in, check_out, date')
-    .eq('employee_id', employee.id)
-    .is('check_out', null)
-    .order('check_in', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  const mode: 'check_in' | 'check_out' = openRecord ? 'check_out' : 'check_in';
-  const bestFit = findBestFitSchedule(
-    schedule as Record<string, unknown>,
-    eventTimestamp,
-    recordDate,
-    mode
-  );
-
-  if (bestFit.horarioNoDetectado) {
-    logger.info('[FIXED EMPLOYEE] Best Fit: horario_no_detectado, procediendo Capa 1', {
-      companyId,
-      employeeId: employee.id,
-      eventUid,
-      razon: bestFit.capa1Razon,
-      gapMinutos: bestFit.gapMinutos,
-    });
-    await handleFixedEmployeeNoSchedule(
-      employee,
-      eventTimestamp,
-      recordDate,
-      eventUid,
-      companyId,
-      doorNo,
-      readerNo,
-      verifyMode,
-      cardNo,
-      employeeNoString,
-      {
-        horario_no_detectado: true,
-        razon: bestFit.capa1Razon || 'distancia_horario_excedida',
-        gap_minutos: bestFit.gapMinutos,
-      }
-    );
-    return;
-  }
-
-  const expectedCheckInStr = bestFit.expectedCheckIn || '08:00';
-  const expectedCheckOutStr = bestFit.expectedCheckOut || '17:00';
-
-  const [expectedInHour, expectedInMin] = expectedCheckInStr.split(':').map(Number);
-  const [expectedOutHour, expectedOutMin] = expectedCheckOutStr.split(':').map(Number);
-  const eventDateObj = new Date(eventTimestamp);
-  const expectedCheckIn = new Date(Date.UTC(
-    eventDateObj.getUTCFullYear(),
-    eventDateObj.getUTCMonth(),
-    eventDateObj.getUTCDate(),
-    expectedInHour + 6,
-    expectedInMin,
-    0
-  ));
-  const expectedCheckOut = new Date(Date.UTC(
-    eventDateObj.getUTCFullYear(),
-    eventDateObj.getUTCMonth(),
-    eventDateObj.getUTCDate(),
-    expectedOutHour + 6,
-    expectedOutMin,
-    0
-  ));
-
-  const diffToInMinutes = (eventTimestamp.getTime() - expectedCheckIn.getTime()) / 60000;
-  const diffToOutMinutes = (eventTimestamp.getTime() - expectedCheckOut.getTime()) / 60000;
-
-  const WINDOW_IN_BEFORE = 60;
-  const WINDOW_IN_AFTER = 60;
-  const WINDOW_OUT_BEFORE = 60;
-  const WINDOW_OUT_AFTER = 60;
-
-  logger.debug('[FIXED EMPLOYEE] Event classification (Best Fit)', {
-    companyId,
-    employeeId: employee.id,
-    recordDate,
-    hasOpenRecord: !!openRecord,
-    openRecordDate: openRecord?.date,
-    diffToInMinutes,
-    diffToOutMinutes,
-    expectedCheckIn: expectedCheckInStr,
-    expectedCheckOut: expectedCheckOutStr,
+    event_uid: eventUid,
+    local_date: localDate,
+    device_id: deviceId,
+    source: 'hikvision_webhook',
+    ref_record_id: null,
+    flags: Object.keys(punchFlags).length > 0 ? punchFlags : null,
   });
 
-  const DUPLICATE_WINDOW_MS = 15 * 60 * 1000;
-
-  // REGLA 1: No hay registro abierto
-  if (!openRecord) {
-    const { data: recentCheckIn } = await supabase
-      .from('attendance_records')
-      .select('id, check_in')
-      .eq('employee_id', employee.id)
-      .eq('date', recordDate)
-      .not('check_in', 'is', null)
-      .order('check_in', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (recentCheckIn) {
-      const recentTime = new Date(recentCheckIn.check_in).getTime();
-      if (Math.abs(eventTimestamp.getTime() - recentTime) <= DUPLICATE_WINDOW_MS) {
-        logger.info('[FIXED EMPLOYEE] Duplicado ignorado: check_in dentro de 15 min', {
-          companyId,
-          employeeId: employee.id,
-          eventUid,
-          diffMs: Math.abs(eventTimestamp.getTime() - recentTime),
-        });
-        return;
-      }
-    }
-
-    // Verificar si está en ventana de entrada
-    if (diffToInMinutes >= -WINDOW_IN_BEFORE && diffToInMinutes <= WINDOW_IN_AFTER) {
-      // Crear registro con check_in
-      const lateMinutes = Math.max(0, diffToInMinutes);
-      
-      // Construir metadata con información del dispositivo Hikvision
-      const deviceMetadata: Record<string, any> = {};
-      if (doorNo !== null && doorNo !== undefined) deviceMetadata.doorNo = doorNo;
-      if (readerNo !== null && readerNo !== undefined) deviceMetadata.readerNo = readerNo;
-      if (verifyMode !== null && verifyMode !== undefined) deviceMetadata.verifyMode = verifyMode;
-      if (cardNo !== null && cardNo !== undefined) deviceMetadata.cardNo = cardNo;
-      if (employeeNoString !== null && employeeNoString !== undefined) deviceMetadata.employeeNoString = employeeNoString;
-      if (Object.keys(deviceMetadata).length > 0) {
-        deviceMetadata.source = 'hikvision_webhook';
-      }
-
-      // 🔍 PASO 2: Log justo ANTES de guardar en BD
-      logger.info('[ACCESS EVENT] About to save check_in to DB', {
-        companyId,
-        employeeId: employee.id,
-        check_in_value: eventTimestamp.toISOString(),
-        check_in_type: typeof eventTimestamp.toISOString(),
-      });
-
-      const { data: record, error: insertError } = await supabase
-        .from('attendance_records')
-        .insert({
-          employee_id: employee.id,
-          date: recordDate,
-          check_in: eventTimestamp.toISOString(),
-          expected_check_in: expectedCheckInStr,
-          late_minutes: Math.round(lateMinutes),
-          event_uid: eventUid,
-          tz: 'America/Tegucigalpa',
-          tz_offset_minutes: -360,
-          status: 'present',
-          metadata: Object.keys(deviceMetadata).length > 0 ? deviceMetadata : null,
-        })
-        .select()
-        .single();
-
-      if (insertError) {
-        if (insertError.code === '23505') {
-          logger.info('[FIXED EMPLOYEE] Duplicate check_in record (idempotency)', {
-            companyId,
-            employeeId: employee.id,
-            eventUid,
-            errorCode: insertError.code,
-          });
-        } else {
-          logger.error('[FIXED EMPLOYEE] Error creating check_in record', insertError, {
-            companyId,
-            employeeId: employee.id,
-            eventUid,
-            recordDate,
-            checkIn: eventTimestamp.toISOString(),
-            errorCode: insertError.code,
-            errorMessage: insertError.message,
-            errorDetails: insertError.details,
-            errorHint: insertError.hint,
-          });
-        }
-      } else {
-        logger.info('[FIXED EMPLOYEE] Check_in recorded', {
-          companyId,
-          employeeId: employee.id,
-          recordId: record?.id,
-          eventUid,
-        });
-      }
+  if (error) {
+    if (error.code === '23505') {
+      logger.info('[ACCESS EVENT] Duplicate punch ignored (event_uid)', { eventUid, employeeId });
       return;
     }
-
-    // Si está más cerca de expected_check_out que de expected_check_in
-    // (llegó tarde al final del día)
-    if (Math.abs(diffToOutMinutes) < Math.abs(diffToInMinutes) && 
-        diffToOutMinutes >= -WINDOW_OUT_BEFORE && diffToOutMinutes <= WINDOW_OUT_AFTER) {
-      // Construir metadata con información del dispositivo Hikvision
-      const deviceMetadata: Record<string, any> = {};
-      if (doorNo !== null && doorNo !== undefined) deviceMetadata.doorNo = doorNo;
-      if (readerNo !== null && readerNo !== undefined) deviceMetadata.readerNo = readerNo;
-      if (verifyMode !== null && verifyMode !== undefined) deviceMetadata.verifyMode = verifyMode;
-      if (cardNo !== null && cardNo !== undefined) deviceMetadata.cardNo = cardNo;
-      if (employeeNoString !== null && employeeNoString !== undefined) deviceMetadata.employeeNoString = employeeNoString;
-      if (Object.keys(deviceMetadata).length > 0) {
-        deviceMetadata.source = 'hikvision_webhook';
-      }
-
-      // Crear registro completo con check_in esperado y check_out del evento
-      const { data: record, error: insertError } = await supabase
-        .from('attendance_records')
-        .insert({
-          employee_id: employee.id,
-          date: recordDate,
-          check_in: expectedCheckIn.toISOString(), // Usar hora esperada
-          check_out: eventTimestamp.toISOString(),
-          expected_check_in: expectedCheckInStr,
-          expected_check_out: expectedCheckOutStr,
-          late_minutes: 0, // Asumir que llegó a tiempo si usamos hora esperada
-          event_uid: eventUid,
-          tz: 'America/Tegucigalpa',
-          tz_offset_minutes: -360,
-          status: 'present',
-          metadata: Object.keys(deviceMetadata).length > 0 ? deviceMetadata : null,
-        })
-        .select()
-        .single();
-
-      if (insertError && insertError.code !== '23505') {
-        logger.error('[FIXED EMPLOYEE] Error creating complete record', insertError, {
-          companyId,
-          employeeId: employee.id,
-        });
-      } else {
-        logger.info('[FIXED EMPLOYEE] Complete record created (late arrival)', {
-          companyId,
-          employeeId: employee.id,
-          recordId: record?.id,
-          eventUid,
-        });
-      }
-      return;
-    }
-
-    // Evento fuera de ventanas
-    logger.warn('[FIXED EMPLOYEE] Event outside time windows, ignoring', {
-      companyId,
-      employeeId: employee.id,
-      diffToInMinutes,
-      diffToOutMinutes,
-      eventTimestamp: eventTimestamp.toISOString(),
-    });
-    return;
-  }
-
-  // REGLA 2: Hay registro abierto (con check_in pero sin check_out)
-  // Cierre de jornada: soporta check-out al día siguiente (cruce medianoche)
-  if (openRecord) {
-    const openCheckIn = new Date(openRecord.check_in);
-    const diffMs = eventTimestamp.getTime() - openCheckIn.getTime();
-
-    if (diffMs > 0 && diffMs <= MAX_SHIFT_MS) {
-      const updateData: any = {
-        check_out: eventTimestamp.toISOString(),
-        expected_check_out: expectedCheckOutStr,
-        early_departure_minutes: bestFit.earlyDepartureMinutes ?? 0,
-        updated_at: new Date().toISOString(),
-      };
-      const deviceMetadata: Record<string, any> = {};
-      if (doorNo != null) deviceMetadata.doorNo = doorNo;
-      if (readerNo != null) deviceMetadata.readerNo = readerNo;
-      if (verifyMode != null) deviceMetadata.verifyMode = verifyMode;
-      if (cardNo != null) deviceMetadata.cardNo = cardNo;
-      if (employeeNoString != null) deviceMetadata.employeeNoString = employeeNoString;
-      if (Object.keys(deviceMetadata).length > 0) {
-        deviceMetadata.source = 'hikvision_webhook';
-        const existingMetadata = (openRecord as any).metadata || {};
-        Object.assign(deviceMetadata, existingMetadata);
-        updateData.metadata = deviceMetadata;
-      }
-
-      const { error: updateError } = await supabase
-        .from('attendance_records')
-        .update(updateData)
-        .eq('id', openRecord.id);
-
-      if (updateError) {
-        logger.error('[FIXED EMPLOYEE] Error updating check_out', updateError, {
-          companyId,
-          employeeId: employee.id,
-          recordId: openRecord.id,
-        });
-      } else {
-        logger.info('[FIXED EMPLOYEE] Check_out recorded (cruce medianoche)', {
-          companyId,
-          employeeId: employee.id,
-          recordId: openRecord.id,
-          eventUid,
-          recordDate: openRecord.date,
-        });
-      }
-      return;
-    }
-
-    if (diffMs > MAX_SHIFT_MS) {
-      logger.warn('[FIXED EMPLOYEE] Open record exceeded 30h, fallback Capa Base', {
-        companyId,
-        employeeId: employee.id,
-        openRecordId: openRecord.id,
-      });
-      await handleFixedEmployeeNoSchedule(
-        employee,
-        eventTimestamp,
-        recordDate,
-        eventUid,
-        companyId,
-        doorNo,
-        readerNo,
-        verifyMode,
-        cardNo,
-        employeeNoString,
-        { horario_no_detectado: true, razon: 'distancia_horario_excedida' }
-      );
-      return;
-    }
-
-    if (diffMs <= 0) {
-      logger.warn('[FIXED EMPLOYEE] Event out of order (before check_in), ignoring', {
-        companyId,
-        employeeId: employee.id,
-        openRecordId: openRecord.id,
-        eventUid,
-      });
-      return;
-    }
-  }
-}
-
-/**
- * Maneja eventos de empleados por hora (pay_type = 'hourly')
- * La primera marca es entrada, la siguiente es salida (dentro de 30 horas)
- */
-async function handleHourlyEmployeeEvent(
-  employee: any,
-  root: any,
-  acs: any,
-  eventTimestamp: Date,
-  recordDate: string,
-  eventUid: string,
-  companyId: string,
-  doorNo: any,
-  readerNo: any,
-  verifyMode: any,
-  cardNo: any,
-  employeeNoString: any
-) {
-  const supabase = createAdminClient();
-
-  // Constante de ventana máxima para un turno (30 horas)
-  const MAX_SHIFT_HOURS = 30;
-  const MAX_SHIFT_MS = MAX_SHIFT_HOURS * 60 * 60 * 1000;
-
-  // Buscar último registro abierto del empleado (sin check_out)
-  const { data: openRecord } = await supabase
-    .from('attendance_records')
-    .select('id, check_in, check_out, date')
-    .eq('employee_id', employee.id)
-    .is('check_out', null)
-    .order('check_in', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  logger.debug('[HOURLY EMPLOYEE] Event processing', {
-    companyId,
-    employeeId: employee.id,
-    recordDate,
-    hasOpenRecord: !!openRecord,
-    openRecordDate: openRecord?.date,
-    eventTimestamp: eventTimestamp.toISOString(),
-  });
-
-  const DUPLICATE_WINDOW_MS = 15 * 60 * 1000;
-
-  // REGLA 1: No hay registro abierto → crear nuevo check_in
-  if (!openRecord) {
-    const { data: recentCheckIn } = await supabase
-      .from('attendance_records')
-      .select('id, check_in')
-      .eq('employee_id', employee.id)
-      .eq('date', recordDate)
-      .not('check_in', 'is', null)
-      .order('check_in', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (recentCheckIn) {
-      const recentTime = new Date(recentCheckIn.check_in).getTime();
-      if (Math.abs(eventTimestamp.getTime() - recentTime) <= DUPLICATE_WINDOW_MS) {
-        logger.info('[HOURLY EMPLOYEE] Duplicado ignorado: check_in dentro de 15 min', {
-          companyId,
-          employeeId: employee.id,
-          eventUid,
-          diffMs: Math.abs(eventTimestamp.getTime() - recentTime),
-        });
-        return;
-      }
-    }
-
-    // Construir metadata con información del dispositivo Hikvision
-    const deviceMetadata: Record<string, any> = {};
-    if (doorNo !== null && doorNo !== undefined) deviceMetadata.doorNo = doorNo;
-    if (readerNo !== null && readerNo !== undefined) deviceMetadata.readerNo = readerNo;
-    if (verifyMode !== null && verifyMode !== undefined) deviceMetadata.verifyMode = verifyMode;
-    if (cardNo !== null && cardNo !== undefined) deviceMetadata.cardNo = cardNo;
-    if (employeeNoString !== null && employeeNoString !== undefined) deviceMetadata.employeeNoString = employeeNoString;
-    if (Object.keys(deviceMetadata).length > 0) {
-      deviceMetadata.source = 'hikvision_webhook';
-    }
-
-    const { data: record, error: insertError } = await supabase
-      .from('attendance_records')
-      .insert({
-        employee_id: employee.id,
-        date: recordDate,
-        check_in: eventTimestamp.toISOString(),
-        event_uid: eventUid,
-        tz: 'America/Tegucigalpa',
-        tz_offset_minutes: -360,
-        status: 'present',
-        metadata: Object.keys(deviceMetadata).length > 0 ? deviceMetadata : null,
-      })
-      .select()
-      .single();
-
-    if (insertError && insertError.code !== '23505') {
-      logger.error('[HOURLY EMPLOYEE] Error creating check_in record', insertError, {
-        companyId,
-        employeeId: employee.id,
-      });
-    } else {
-      logger.info('[HOURLY EMPLOYEE] Check_in recorded', {
-        companyId,
-        employeeId: employee.id,
-        recordId: record?.id,
-        eventUid,
-      });
-    }
-    return;
-  }
-
-  // REGLA 2: Hay registro abierto → calcular diferencia
-  const openRecordCheckIn = new Date(openRecord.check_in);
-  const diffMs = eventTimestamp.getTime() - openRecordCheckIn.getTime();
-
-  logger.debug('[HOURLY EMPLOYEE] Time difference calculation', {
-    companyId,
-    employeeId: employee.id,
-    openRecordId: openRecord.id,
-    openRecordCheckIn: openRecordCheckIn.toISOString(),
-    eventTimestamp: eventTimestamp.toISOString(),
-    diffMs,
-    diffHours: diffMs / (60 * 60 * 1000),
-  });
-
-  // Si la diferencia es positiva y está dentro de la ventana de 30 horas
-  if (diffMs > 0 && diffMs <= MAX_SHIFT_MS) {
-    // Construir metadata con información del dispositivo Hikvision
-    const deviceMetadata: Record<string, any> = {};
-    if (doorNo !== null && doorNo !== undefined) deviceMetadata.doorNo = doorNo;
-    if (readerNo !== null && readerNo !== undefined) deviceMetadata.readerNo = readerNo;
-    if (verifyMode !== null && verifyMode !== undefined) deviceMetadata.verifyMode = verifyMode;
-    if (cardNo !== null && cardNo !== undefined) deviceMetadata.cardNo = cardNo;
-    if (employeeNoString !== null && employeeNoString !== undefined) deviceMetadata.employeeNoString = employeeNoString;
-    if (Object.keys(deviceMetadata).length > 0) {
-      deviceMetadata.source = 'hikvision_webhook';
-      // Preservar metadata existente si existe
-      const existingMetadata = (openRecord as any).metadata || {};
-      Object.assign(deviceMetadata, existingMetadata);
-    }
-
-    // Actualizar registro con check_out
-    const updateData: any = {
-      check_out: eventTimestamp.toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    if (Object.keys(deviceMetadata).length > 0) {
-      updateData.metadata = deviceMetadata;
-    }
-
-    const { error: updateError } = await supabase
-      .from('attendance_records')
-      .update(updateData)
-      .eq('id', openRecord.id);
-
-    if (updateError) {
-      logger.error('[HOURLY EMPLOYEE] Error updating check_out', updateError, {
-        companyId,
-        employeeId: employee.id,
-        recordId: openRecord.id,
-      });
-    } else {
-      logger.info('[HOURLY EMPLOYEE] Check_out recorded', {
-        companyId,
-        employeeId: employee.id,
-        recordId: openRecord.id,
-        eventUid,
-        shiftDurationHours: diffMs / (60 * 60 * 1000),
-      });
-    }
-    return;
-  }
-
-  // Si diffMs <= 0 (evento anterior o igual al check_in)
-  if (diffMs <= 0) {
-    logger.warn('[HOURLY EMPLOYEE] Event out of order, ignoring', {
-      companyId,
-      employeeId: employee.id,
-      openRecordId: openRecord.id,
-      diffMs,
-      eventUid,
-    });
-    return;
-  }
-
-  // Si diffMs > MAX_SHIFT_MS (pasaron más de 30 horas)
-  // Cerrar registro huérfano y crear nuevo check_in
-  logger.warn('[HOURLY EMPLOYEE] Shift exceeded 30 hours, closing orphan record', {
-    companyId,
-    employeeId: employee.id,
-    openRecordId: openRecord.id,
-    diffHours: diffMs / (60 * 60 * 1000),
-  });
-
-  // Cerrar registro huérfano (opcional: puedes dejarlo abierto o cerrarlo con hora estimada)
-  // Por ahora, lo dejamos abierto y creamos un nuevo check_in
-  // Construir metadata con información del dispositivo Hikvision
-  const deviceMetadata: Record<string, any> = {};
-  if (doorNo !== null && doorNo !== undefined) deviceMetadata.doorNo = doorNo;
-  if (readerNo !== null && readerNo !== undefined) deviceMetadata.readerNo = readerNo;
-  if (verifyMode !== null && verifyMode !== undefined) deviceMetadata.verifyMode = verifyMode;
-  if (cardNo !== null && cardNo !== undefined) deviceMetadata.cardNo = cardNo;
-  if (employeeNoString !== null && employeeNoString !== undefined) deviceMetadata.employeeNoString = employeeNoString;
-  if (Object.keys(deviceMetadata).length > 0) {
-    deviceMetadata.source = 'hikvision_webhook';
-  }
-
-  const { data: newRecord, error: insertError } = await supabase
-    .from('attendance_records')
-    .insert({
-      employee_id: employee.id,
-      date: recordDate,
-      check_in: eventTimestamp.toISOString(),
-      event_uid: eventUid,
-      tz: 'America/Tegucigalpa',
-      tz_offset_minutes: -360,
-      status: 'present',
-      metadata: Object.keys(deviceMetadata).length > 0 ? deviceMetadata : null,
-    })
-    .select()
-    .single();
-
-  if (insertError && insertError.code !== '23505') {
-    logger.error('[HOURLY EMPLOYEE] Error creating new check_in after orphan', insertError, {
-      companyId,
-      employeeId: employee.id,
-    });
-      } else {
-    logger.info('[HOURLY EMPLOYEE] New check_in created after orphan record', {
-      companyId,
-      employeeId: employee.id,
-      newRecordId: newRecord?.id,
-      orphanRecordId: openRecord.id,
+    logger.error('[ACCESS EVENT] Failed to insert attendance_events', error, {
+      employeeId,
       eventUid,
     });
   }
 }
 
-/** Company ID que usa flujo de 4 marcas: entrada, inicio almuerzo, fin almuerzo, salida. */
-const FOUR_MARKS_COMPANY_ID = 'c4692355-9b0c-4a2c-8283-7c0b872b6831';
-
 /**
- * Maneja eventos para cliente con 4 marcas biométricas por día:
- * 1ª = entrada, 2ª = inicio almuerzo, 3ª = fin almuerzo, 4ª = salida.
- * El orden del evento define el slot; el almuerzo no es hora fija.
- */
-async function handleFourMarksEmployeeEvent(
-  employee: any,
-  root: any,
-  acs: any,
-  eventTimestamp: Date,
-  recordDate: string,
-  eventUid: string,
-  companyId: string,
-  doorNo: any,
-  readerNo: any,
-  verifyMode: any,
-  cardNo: any,
-  employeeNoString: any
-) {
-  const supabase = createAdminClient();
-
-  const deviceMetadata: Record<string, any> = {};
-  if (doorNo != null) deviceMetadata.doorNo = doorNo;
-  if (readerNo != null) deviceMetadata.readerNo = readerNo;
-  if (verifyMode != null) deviceMetadata.verifyMode = verifyMode;
-  if (cardNo != null) deviceMetadata.cardNo = cardNo;
-  if (employeeNoString != null) deviceMetadata.employeeNoString = employeeNoString;
-  if (Object.keys(deviceMetadata).length > 0) deviceMetadata.source = 'hikvision_webhook';
-
-  const { data: existing } = await supabase
-    .from('attendance_records')
-    .select('id, check_in, lunch_start, lunch_end, check_out, metadata')
-    .eq('employee_id', employee.id)
-    .eq('date', recordDate)
-    .maybeSingle();
-
-  if (!existing) {
-    const { data: record, error: insertError } = await supabase
-      .from('attendance_records')
-      .insert({
-        employee_id: employee.id,
-        date: recordDate,
-        check_in: eventTimestamp.toISOString(),
-        event_uid: eventUid,
-        tz: 'America/Tegucigalpa',
-        tz_offset_minutes: -360,
-        status: 'present',
-        metadata: Object.keys(deviceMetadata).length > 0 ? deviceMetadata : null,
-      })
-      .select()
-      .single();
-
-    if (insertError) {
-      if (insertError.code === '23505') {
-        logger.info('[FOUR_MARKS] Duplicate first event (idempotency), ignoring', {
-          companyId,
-          employeeId: employee.id,
-          recordDate,
-          eventUid,
-        });
-      } else {
-        logger.error('[FOUR_MARKS] Error creating check_in record', insertError, {
-          companyId,
-          employeeId: employee.id,
-          recordDate,
-        });
-      }
-    } else {
-      logger.info('[FOUR_MARKS] 1ª marca: entrada registrada', {
-        companyId,
-        employeeId: employee.id,
-        recordId: record?.id,
-        eventUid,
-      });
-    }
-    return;
-  }
-
-  const meta = { ...((existing.metadata as Record<string, unknown>) || {}), ...deviceMetadata };
-  const updateBase: Record<string, unknown> = {
-    updated_at: new Date().toISOString(),
-    metadata: Object.keys(meta).length > 0 ? meta : null,
-  };
-
-  if (existing.lunch_start == null) {
-    const { error: updateError } = await supabase
-      .from('attendance_records')
-      .update({ ...updateBase, lunch_start: eventTimestamp.toISOString() })
-      .eq('id', existing.id);
-    if (updateError) {
-      logger.error('[FOUR_MARKS] Error updating lunch_start', updateError, {
-        companyId,
-        employeeId: employee.id,
-        recordId: existing.id,
-      });
-    } else {
-      logger.info('[FOUR_MARKS] 2ª marca: inicio almuerzo registrado', {
-        companyId,
-        employeeId: employee.id,
-        recordId: existing.id,
-        eventUid,
-      });
-    }
-    return;
-  }
-
-  if (existing.lunch_end == null) {
-    const { error: updateError } = await supabase
-      .from('attendance_records')
-      .update({ ...updateBase, lunch_end: eventTimestamp.toISOString() })
-      .eq('id', existing.id);
-    if (updateError) {
-      logger.error('[FOUR_MARKS] Error updating lunch_end', updateError, {
-        companyId,
-        employeeId: employee.id,
-        recordId: existing.id,
-      });
-    } else {
-      logger.info('[FOUR_MARKS] 3ª marca: fin almuerzo registrado', {
-        companyId,
-        employeeId: employee.id,
-        recordId: existing.id,
-        eventUid,
-      });
-    }
-    return;
-  }
-
-  if (existing.check_out == null) {
-    const { error: updateError } = await supabase
-      .from('attendance_records')
-      .update({ ...updateBase, check_out: eventTimestamp.toISOString() })
-      .eq('id', existing.id);
-    if (updateError) {
-      logger.error('[FOUR_MARKS] Error updating check_out', updateError, {
-        companyId,
-        employeeId: employee.id,
-        recordId: existing.id,
-      });
-    } else {
-      logger.info('[FOUR_MARKS] 4ª marca: salida registrada', {
-        companyId,
-        employeeId: employee.id,
-        recordId: existing.id,
-        eventUid,
-      });
-    }
-    return;
-  }
-
-  logger.warn('[FOUR_MARKS] Todas las marcas ya registradas, ignorando evento', {
-    companyId,
-    employeeId: employee.id,
-    recordId: existing.id,
-    eventUid,
-  });
-}
-
-/**
- * Procesa evento de acceso: crea registro de asistencia
+ * Procesa evento de acceso: bitácora cruda en attendance_events
  */
 async function processAccessEvent(
   root: any,
@@ -1274,23 +433,6 @@ async function processAccessEvent(
   // Generar event_uid para idempotencia
   const eventUid = generateEventUid(root, acs, normalizedId);
 
-  // Verificar si ya existe (idempotencia)
-  const { data: existingRecord } = await supabase
-    .from('attendance_records')
-    .select('id')
-    .eq('event_uid', eventUid)
-    .single();
-
-  if (existingRecord) {
-    logger.info('[ACCESS EVENT] Duplicate event ignored (idempotency)', {
-      companyId,
-      eventUid,
-      normalizedId,
-      existingRecordId: existingRecord.id,
-    });
-    return;
-  }
-
   let { data: employee, error: employeeError } = await supabase
     .from('employees')
     .select('id, company_id, work_schedule_id, dni, pay_type')
@@ -1343,6 +485,21 @@ async function processAccessEvent(
     workScheduleId: employee.work_schedule_id,
   });
 
+  const { data: existingPunch } = await supabase
+    .from('attendance_events')
+    .select('id')
+    .eq('event_uid', eventUid)
+    .maybeSingle();
+
+  if (existingPunch) {
+    logger.info('[ACCESS EVENT] Duplicate punch ignored (attendance_events.event_uid)', {
+      companyId,
+      eventUid,
+      employeeId: employee.id,
+    });
+    return;
+  }
+
   // Extraer timestamp del evento usando función que garantiza hora de Honduras
   let eventTimestamp: Date;
   const dateTimeStr = root.dateTime ?? acs?.dateTime ?? null;
@@ -1378,205 +535,37 @@ async function processAccessEvent(
     dayOfWeek: hondurasTime.dow,
   });
 
-  // Calcular fecha del registro usando hora local de Honduras
-  // eventTimestamp ya está normalizado (UTC interno que representa hora de Honduras)
-  const eventDate = hondurasTime.date; // Fecha en formato YYYY-MM-DD en hora de Honduras
-  const todayDate = getTodayInHonduras();
-  
-  // Comparar fechas (no timestamps) para decidir si usar fecha del evento o hoy
-  // Si el evento es de hace más de 24 horas, usar su fecha; si no, usar hoy
-  const hoursDiff = (nowInHonduras().getTime() - eventTimestamp.getTime()) / (1000 * 60 * 60);
-  const recordDate = hoursDiff > 24 ? eventDate : todayDate;
-  
-  logger.debug('[ACCESS EVENT] Date calculation', {
+  // Fecha calendario local (Honduras) del instante de la marca — bitácora inmutable
+  const eventDate = hondurasTime.date;
+
+  logger.debug('[ACCESS EVENT] local_date for punch', {
     companyId,
     eventDateHonduras: eventDate,
-    todayDateHonduras: todayDate,
-    hoursDiff,
-    recordDate,
     eventTimestamp: eventTimestamp.toISOString(),
   });
 
-  // Cliente específico: 4 marcas por día (entrada, inicio almuerzo, fin almuerzo, salida)
-  if (companyId === FOUR_MARKS_COMPANY_ID) {
-    await handleFourMarksEmployeeEvent(
-      employee,
-      root,
-      acs,
-      eventTimestamp,
-      recordDate,
-      eventUid,
-      companyId,
-      doorNo,
-      readerNo,
-      verifyMode,
-      cardNo,
-      employeeNoString
-    );
-    return;
-  }
+  const deviceId = await resolveDeviceIdForAccess(supabase, companyId, root);
 
-  // Ramificar según tipo de pago del empleado
-  const payType = (employee as any).pay_type || 'fixed'; // Default a 'fixed' si no existe
-  
-  logger.debug('[ACCESS EVENT] Routing by pay_type', {
+  await insertRawBiometricPunch({
+    supabase,
+    employeeId: employee.id,
     companyId,
-              employeeId: employee.id,
-    payType,
-    normalizedId,
+    eventTimestamp,
+    eventUid,
+    localDate: eventDate,
+    deviceId,
+    doorNo,
+    readerNo,
+    verifyMode,
+    cardNo,
+    employeeNoString,
   });
 
-  if (payType === 'fixed') {
-    await handleFixedEmployeeEvent(
-      employee,
-      root,
-      acs,
-      eventTimestamp,
-      recordDate,
-      eventUid,
-      companyId,
-      doorNo,
-      readerNo,
-      verifyMode,
-      cardNo,
-      employeeNoString
-    );
-  } else if (payType === 'hourly') {
-    await handleHourlyEmployeeEvent(
-      employee,
-      root,
-      acs,
-      eventTimestamp,
-      recordDate,
-      eventUid,
-      companyId,
-      doorNo,
-      readerNo,
-      verifyMode,
-      cardNo,
-      employeeNoString
-    );
-          } else {
-    logger.warn('[ACCESS EVENT] Unknown pay_type, defaulting to fixed', {
-      companyId,
-      employeeId: employee.id,
-      payType,
-    });
-    // Default a fixed si pay_type es desconocido
-    await handleFixedEmployeeEvent(
-      employee,
-      root,
-      acs,
-      eventTimestamp,
-      recordDate,
-      eventUid,
-      companyId,
-      doorNo,
-      readerNo,
-      verifyMode,
-      cardNo,
-      employeeNoString
-    );
-  }
-  
-  logger.info('[ACCESS EVENT] processAccessEvent completed', {
+  logger.info('[ACCESS EVENT] processAccessEvent completed (raw_punch)', {
     companyId,
     normalizedId,
     eventUid,
   });
-}
-
-/**
- * Procesa marca de asistencia (usado por webhook ZKTeco y otros integradores).
- * Encapsula la ramificación por pay_type y FOUR_MARKS.
- */
-export async function processAttendanceMark(params: {
-  employee: { id: string; company_id: string; work_schedule_id: string | null; dni: string; pay_type: string | null };
-  eventTimestamp: Date;
-  recordDate: string;
-  eventUid: string;
-  companyId: string;
-  identifier: string;
-}): Promise<void> {
-  const { employee, eventTimestamp, recordDate, eventUid, companyId, identifier } = params;
-  const root = { dateTime: eventTimestamp.toISOString() };
-  const acs = {
-    doorNo: null,
-    readerNo: null,
-    currentVerifyMode: 'fingerprint',
-    employeeNoString: identifier,
-  };
-  const doorNo = null;
-  const readerNo = null;
-  const verifyMode = 'fingerprint';
-  const cardNo = null;
-  const employeeNoString = identifier;
-
-  if (companyId === FOUR_MARKS_COMPANY_ID) {
-    await handleFourMarksEmployeeEvent(
-      employee,
-      root,
-      acs,
-      eventTimestamp,
-      recordDate,
-      eventUid,
-      companyId,
-      doorNo,
-      readerNo,
-      verifyMode,
-      cardNo,
-      employeeNoString
-    );
-    return;
-  }
-
-  const payType = (employee as { pay_type?: string }).pay_type || 'fixed';
-  if (payType === 'fixed') {
-    await handleFixedEmployeeEvent(
-      employee,
-      root,
-      acs,
-      eventTimestamp,
-      recordDate,
-      eventUid,
-      companyId,
-      doorNo,
-      readerNo,
-      verifyMode,
-      cardNo,
-      employeeNoString
-    );
-  } else if (payType === 'hourly') {
-    await handleHourlyEmployeeEvent(
-      employee,
-      root,
-      acs,
-      eventTimestamp,
-      recordDate,
-      eventUid,
-      companyId,
-      doorNo,
-      readerNo,
-      verifyMode,
-      cardNo,
-      employeeNoString
-    );
-  } else {
-    await handleFixedEmployeeEvent(
-      employee,
-      root,
-      acs,
-      eventTimestamp,
-      recordDate,
-      eventUid,
-      companyId,
-      doorNo,
-      readerNo,
-      verifyMode,
-      cardNo,
-      employeeNoString
-    );
-  }
 }
 
 /**
@@ -1711,25 +700,49 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   let rawEvent: any = null;
 
   try {
-    // Log incoming request metadata
+    const contentTypeHeader = String(req.headers['content-type'] || '').toLowerCase();
+    const isRawJsonBody =
+      contentTypeHeader.includes('application/json') || contentTypeHeader.includes('text/json');
 
-    
+    let jsonString: string | null = null;
+    let fields: Record<string, unknown> = {};
+    let files: Record<string, unknown> = {};
 
-    // Configure formidable
-    const form = formidable({
-      keepExtensions: false,
-      maxFileSize: 10 * 1024 * 1024, // 10MB
-      multiples: false,
-    });
+    if (isRawJsonBody) {
+      try {
+        const body = await readRawBody(req);
+        const trimmed = body.trim();
+        if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+          jsonString = body;
+          logger.info('[ATTENDANCE WEBHOOK] Using raw JSON body (not multipart)', {
+            companyId: company_id,
+            contentType: req.headers['content-type'],
+            byteLength: Buffer.byteLength(body, 'utf8'),
+          });
+        } else if (trimmed.length > 0) {
+          logger.warn('[ATTENDANCE WEBHOOK] Raw JSON Content-Type but body does not look like JSON', {
+            companyId: company_id,
+            preview: trimmed.slice(0, 200),
+          });
+        }
+      } catch (rawErr) {
+        logger.error('[ATTENDANCE WEBHOOK] Raw body read error', rawErr as Error, {
+          companyId: company_id,
+          contentType: req.headers['content-type'],
+        });
+        return res.status(200).json({ success: false, message: 'Failed to read request body' });
+      }
+    } else {
+      const form = formidable({
+        keepExtensions: false,
+        maxFileSize: WEBHOOK_MAX_BODY_BYTES,
+        multiples: false,
+      });
 
-    // Parse multipart
-    let fields: any;
-    let files: any;
-
-    try {
-      [fields, files] = await form.parse(req);
-    } catch (parseError) {
-      logger.error('[ATTENDANCE WEBHOOK] Formidable parse error', parseError as Error, {
+      try {
+        [fields, files] = await form.parse(req);
+      } catch (parseError) {
+        logger.error('[ATTENDANCE WEBHOOK] Formidable parse error', parseError as Error, {
           companyId: company_id,
         contentType: req.headers['content-type'],
       });
@@ -1737,73 +750,70 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       return res.status(200).json({ success: false, message: 'Failed to parse form data' });
     }
 
-    // Extraer JSON root según especificación del manual Hikvision:
-    // - Multipart puede tener múltiples partes (JSON + binarios/imágenes)
-    // - La parte JSON puede venir sin nombre (fieldname) y será tratada como "file"
-    // - Debe iterar TODAS las partes para encontrar la JSON entre varias
-    let jsonString: string | null = null;
-    const tempFilesToCleanup: string[] = [];
+      const tempFilesToCleanup: string[] = [];
 
-    // Caso 1: Buscar JSON en files (partes sin nombre - formato Hikvision EventNotificationAlert)
-    // Iterar TODAS las partes, no solo la primera
-    if (files && Object.keys(files).length > 0) {
-      for (const fileKey of Object.keys(files)) {
-        const fileArray = files[fileKey];
-        if (Array.isArray(fileArray)) {
-          for (const file of fileArray) {
-            // Buscar parte con mimetype application/json
-            if (file.mimetype === 'application/json' && file.filepath) {
-              try {
-                const content = fs.readFileSync(file.filepath, 'utf-8');
-                // Verificar que realmente es JSON
-                if (content.trim().startsWith('{') || content.trim().startsWith('[')) {
-                  jsonString = content;
-                  tempFilesToCleanup.push(file.filepath);
-                  logger.info('[ATTENDANCE WEBHOOK] Found JSON in multipart file part', {
+      // Extraer JSON root según especificación del manual Hikvision:
+      // - Multipart puede tener múltiples partes (JSON + binarios/imágenes)
+      // - La parte JSON puede venir sin nombre (fieldname) y será tratada como "file"
+      // - Debe iterar TODAS las partes para encontrar la JSON entre varias
+
+      if (files && Object.keys(files).length > 0) {
+        for (const fileKey of Object.keys(files)) {
+          const fileArray = files[fileKey];
+          if (Array.isArray(fileArray)) {
+            for (const file of fileArray) {
+              if (file.mimetype === 'application/json' && file.filepath) {
+                try {
+                  const content = fs.readFileSync(file.filepath, 'utf-8');
+                  if (content.trim().startsWith('{') || content.trim().startsWith('[')) {
+                    jsonString = content;
+                    tempFilesToCleanup.push(file.filepath);
+                    logger.info('[ATTENDANCE WEBHOOK] Found JSON in multipart file part', {
+                      companyId: company_id,
+                      fileKey,
+                      mimetype: file.mimetype,
+                      size: file.size,
+                    });
+                    break;
+                  }
+                } catch (fileError) {
+                  logger.error('[ATTENDANCE WEBHOOK] Error reading JSON file part', fileError as Error, {
                     companyId: company_id,
                     fileKey,
-                    mimetype: file.mimetype,
-                    size: file.size,
                   });
-                  break; // Encontramos la parte JSON, salir
                 }
-              } catch (fileError) {
-                logger.error('[ATTENDANCE WEBHOOK] Error reading JSON file part', fileError as Error, {
-                  companyId: company_id,
-                  fileKey,
-                });
               }
             }
-          }
-          if (jsonString) break; // Ya encontramos JSON, salir del loop externo
-        }
-      }
-    }
-
-    // Caso 2: Buscar JSON en fields (formato curl test o named fields)
-    if (!jsonString && Object.keys(fields).length > 0) {
-      // Intentar extraer de cualquier campo que parezca JSON
-      for (const [key, value] of Object.entries(fields)) {
-        if (Array.isArray(value) && value.length > 0) {
-          const fieldValue = value[0];
-          if (typeof fieldValue === 'string' && (fieldValue.trim().startsWith('{') || fieldValue.trim().startsWith('['))) {
-            jsonString = fieldValue;
-            logger.info('[ATTENDANCE WEBHOOK] Found JSON in multipart field', {
-        companyId: company_id,
-              fieldName: key,
-            });
-            break;
+            if (jsonString) break;
           }
         }
       }
-    }
 
-    // Cleanup: eliminar archivos temporales de partes JSON procesadas
-    for (const filepath of tempFilesToCleanup) {
-      try {
-        fs.unlinkSync(filepath);
-      } catch {
-        // Ignore cleanup errors
+      if (!jsonString && Object.keys(fields).length > 0) {
+        for (const [key, value] of Object.entries(fields)) {
+          if (Array.isArray(value) && value.length > 0) {
+            const fieldValue = value[0];
+            if (
+              typeof fieldValue === 'string' &&
+              (fieldValue.trim().startsWith('{') || fieldValue.trim().startsWith('['))
+            ) {
+              jsonString = fieldValue;
+              logger.info('[ATTENDANCE WEBHOOK] Found JSON in multipart field', {
+                companyId: company_id,
+                fieldName: key,
+              });
+              break;
+            }
+          }
+        }
+      }
+
+      for (const filepath of tempFilesToCleanup) {
+        try {
+          fs.unlinkSync(filepath);
+        } catch {
+          // Ignore cleanup errors
+        }
       }
     }
 

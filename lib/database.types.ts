@@ -219,6 +219,7 @@ export type Database = {
           device_id: string | null
           employee_id: string
           event_type: string
+          event_uid: string | null
           flags: Json | null
           geofence_ok: boolean | null
           id: string
@@ -226,6 +227,7 @@ export type Database = {
           justification: string | null
           justification_category: string | null
           lat: number | null
+          local_date: string | null
           lon: number | null
           ref_record_id: string | null
           rule_applied: string | null
@@ -239,6 +241,7 @@ export type Database = {
           device_id?: string | null
           employee_id: string
           event_type: string
+          event_uid?: string | null
           flags?: Json | null
           geofence_ok?: boolean | null
           id?: string
@@ -246,6 +249,7 @@ export type Database = {
           justification?: string | null
           justification_category?: string | null
           lat?: number | null
+          local_date?: string | null
           lon?: number | null
           ref_record_id?: string | null
           rule_applied?: string | null
@@ -259,6 +263,7 @@ export type Database = {
           device_id?: string | null
           employee_id?: string
           event_type?: string
+          event_uid?: string | null
           flags?: Json | null
           geofence_ok?: boolean | null
           id?: string
@@ -266,6 +271,7 @@ export type Database = {
           justification?: string | null
           justification_category?: string | null
           lat?: number | null
+          local_date?: string | null
           lon?: number | null
           ref_record_id?: string | null
           rule_applied?: string | null
@@ -312,11 +318,14 @@ export type Database = {
           expected_check_in: string | null
           expected_check_out: string | null
           flags: Json | null
+          event_uid: string | null
           id: string
           justification: string | null
           justification_category: string | null
           late_minutes: number | null
           local_date: string | null
+          lunch_end: string | null
+          lunch_start: string | null
           rule_applied_in: string | null
           rule_applied_out: string | null
           status: string | null
@@ -336,11 +345,14 @@ export type Database = {
           expected_check_in?: string | null
           expected_check_out?: string | null
           flags?: Json | null
+          event_uid?: string | null
           id?: string
           justification?: string | null
           justification_category?: string | null
           late_minutes?: number | null
           local_date?: string | null
+          lunch_end?: string | null
+          lunch_start?: string | null
           rule_applied_in?: string | null
           rule_applied_out?: string | null
           status?: string | null
@@ -360,11 +372,14 @@ export type Database = {
           expected_check_in?: string | null
           expected_check_out?: string | null
           flags?: Json | null
+          event_uid?: string | null
           id?: string
           justification?: string | null
           justification_category?: string | null
           late_minutes?: number | null
           local_date?: string | null
+          lunch_end?: string | null
+          lunch_start?: string | null
           rule_applied_in?: string | null
           rule_applied_out?: string | null
           status?: string | null

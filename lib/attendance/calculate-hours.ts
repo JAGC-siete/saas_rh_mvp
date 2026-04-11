@@ -63,3 +63,38 @@ export async function calculateAttendanceHoursForDate(
   const results = await calculateAttendanceHoursBatch(recordIds, undefined, client)
   return results.length
 }
+
+/**
+ * Same as calculateAttendanceHoursForDate but scoped to one company (multi-tenant safe).
+ */
+export async function calculateAttendanceHoursForCompanyAndDate(
+  companyId: string,
+  date: string,
+  supabase?: any
+): Promise<number> {
+  const client = supabase ?? createAdminClient()
+
+  const { data: emps, error: e1 } = await client
+    .from('employees')
+    .select('id')
+    .eq('company_id', companyId)
+    .eq('status', 'active')
+
+  if (e1 || !emps?.length) return 0
+
+  const ids = emps.map((r: { id: string }) => r.id)
+
+  const { data: records, error: e2 } = await client
+    .from('attendance_records')
+    .select('id')
+    .eq('date', date)
+    .in('employee_id', ids)
+    .not('check_in', 'is', null)
+    .not('check_out', 'is', null)
+
+  if (e2 || !records?.length) return 0
+
+  const recordIds = records.map((r: { id: string }) => r.id)
+  const results = await calculateAttendanceHoursBatch(recordIds, undefined, client)
+  return results.length
+}
