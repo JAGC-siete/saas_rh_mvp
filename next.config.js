@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+
+  /** pdfkit + dependencias usan require/fs; si Webpack los empaqueta mal, el PDF falla en runtime (500). */
+  serverExternalPackages: ['pdfkit'],
   
   // Configuración necesaria para Railway
   output: 'standalone',

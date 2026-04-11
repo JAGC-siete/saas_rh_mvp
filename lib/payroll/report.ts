@@ -109,6 +109,8 @@ export async function generateConsolidatedPayrollPDF(
         monthly_end: 30
       }
       
+      const pdfText = (v: unknown) => (v == null ? '' : String(v))
+
       // Formateo dinámico de currency
       const formatCurrency = (n: number) => {
         const formatted = Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -167,6 +169,7 @@ export async function generateConsolidatedPayrollPDF(
       })
 
       const buffers: Buffer[] = []
+      doc.on('error', (err: Error) => reject(err))
       doc.on('data', (chunk: Buffer) => buffers.push(chunk))
       doc.on('end', () => {
         try {
@@ -481,7 +484,7 @@ export async function generateConsolidatedPayrollPDF(
             values.forEach((val, i) => {
               const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0)
               doc.rect(x, y, colWidths[i], rowHeight).stroke()
-              doc.fontSize(7).fillColor('#0f172a').text(val.toString(), x + 2, y + 3, cellOpts(i))
+              doc.fontSize(7).fillColor('#0f172a').text(pdfText(val), x + 2, y + 3, cellOpts(i))
             })
             y += rowHeight
           }
@@ -562,7 +565,7 @@ export async function generateConsolidatedPayrollPDF(
         bankValues.forEach((val, i) => {
           const x = bankStartX + bankColWidths.slice(0, i).reduce((a, b) => a + b, 0)
           doc.rect(x, bankY, bankColWidths[i], bankRowHeight).stroke()
-          doc.fontSize(8).fillColor('#0f172a').text(val.toString(), x + 2, bankY + 4, {
+          doc.fontSize(8).fillColor('#0f172a').text(pdfText(val), x + 2, bankY + 4, {
             width: bankColWidths[i] - 4,
             align: 'center',
             lineBreak: false,

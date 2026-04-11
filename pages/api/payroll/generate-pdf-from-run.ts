@@ -287,7 +287,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       planillaHourly,
       periodo,
       payrollRun.quincena,
-      user.email,
+      user?.email,
       company?.name,
       pdfCustomFieldsConfig,
       pdfPayrollConfig,
@@ -304,11 +304,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     )
     return res.send(pdf)
 
-  } catch (error: any) {
-    console.error('Error generando PDF desde run:', error)
-    return res.status(500).json({ 
+  } catch (error: unknown) {
+    const err = error instanceof Error ? error : new Error(String(error))
+    console.error('Error generando PDF desde run:', {
+      run_id,
+      message: err.message,
+      stack: err.stack
+    })
+    return res.status(500).json({
       error: 'Error interno del servidor',
-      message: error.message || 'Error desconocido'
+      message: err.message || 'Error desconocido'
     })
   }
 }
