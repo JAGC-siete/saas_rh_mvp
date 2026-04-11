@@ -3,18 +3,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { DocumentChartBarIcon } from '@heroicons/react/24/outline'
-import type { ReportConfig, ReportType } from '../../lib/reports/report-config-schema'
+import {
+  REPORT_TYPE_OPTIONS,
+  type ReportConfig,
+  type ReportType
+} from '../../lib/reports/report-config-schema'
 
 interface ReportParamsEditorProps {
   companyId: string
   onSave?: () => void
 }
-
-const REPORT_TYPES: { value: ReportType; label: string }[] = [
-  { value: 'attendance', label: 'Asistencia' },
-  { value: 'payroll', label: 'Nómina' },
-  { value: 'employees', label: 'Empleados' }
-]
 
 export default function ReportParamsEditor({ companyId, onSave }: ReportParamsEditorProps) {
   const [reportType, setReportType] = useState<ReportType>('attendance')
@@ -167,7 +165,7 @@ export default function ReportParamsEditor({ companyId, onSave }: ReportParamsEd
               onChange={(e) => setReportType(e.target.value as ReportType)}
               className="w-full max-w-xs px-3 py-2 rounded-lg border border-white/20 bg-white/5 text-white focus:border-brand-400 focus:ring-1 focus:ring-brand-400"
             >
-              {REPORT_TYPES.map((t) => (
+              {REPORT_TYPE_OPTIONS.map((t) => (
                 <option key={t.value} value={t.value} className="bg-slate-800">
                   {t.label}
                 </option>
@@ -256,44 +254,51 @@ export default function ReportParamsEditor({ companyId, onSave }: ReportParamsEd
                 </label>
               </div>
             )}
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-white/10">
-                    <th className="text-left py-2 text-gray-400 font-medium">Columna</th>
-                    <th className="text-left py-2 text-gray-400 font-medium">Etiqueta</th>
-                    <th className="text-left py-2 text-gray-400 font-medium">Visible</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {allColumns.map((col) => {
-                    const cfg = getColumnConfig(col.id)
-                    const label = cfg?.label ?? col.label
-                    const visible = cfg?.visible ?? true
-                    return (
-                      <tr key={col.id} className="border-b border-white/5">
-                        <td className="py-2 text-gray-300">{col.id}</td>
-                        <td className="py-2">
-                          <Input
-                            value={label}
-                            onChange={(e) => handleColumnChange(col.id, 'label', e.target.value)}
-                            className="w-full max-w-[200px] h-8 text-sm bg-white/5 border-white/20 text-white"
-                          />
-                        </td>
-                        <td className="py-2">
-                          <input
-                            type="checkbox"
-                            checked={visible}
-                            onChange={(e) => handleColumnChange(col.id, 'visible', e.target.checked)}
-                            className="rounded border-white/20"
-                          />
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
+            {allColumns.length === 0 ? (
+              <p className="text-sm text-gray-400 rounded-lg border border-white/10 bg-white/5 px-3 py-2">
+                Este tipo de reporte no tiene columnas editables aquí; el branding (color, logo, nombre
+                legal) sí se aplica en PDF y exportaciones cuando el motor de reportes lo use.
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-white/10">
+                      <th className="text-left py-2 text-gray-400 font-medium">Columna</th>
+                      <th className="text-left py-2 text-gray-400 font-medium">Etiqueta</th>
+                      <th className="text-left py-2 text-gray-400 font-medium">Visible</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allColumns.map((col) => {
+                      const cfg = getColumnConfig(col.id)
+                      const label = cfg?.label ?? col.label
+                      const visible = cfg?.visible ?? true
+                      return (
+                        <tr key={col.id} className="border-b border-white/5">
+                          <td className="py-2 text-gray-300">{col.id}</td>
+                          <td className="py-2">
+                            <Input
+                              value={label}
+                              onChange={(e) => handleColumnChange(col.id, 'label', e.target.value)}
+                              className="w-full max-w-[200px] h-8 text-sm bg-white/5 border-white/20 text-white"
+                            />
+                          </td>
+                          <td className="py-2">
+                            <input
+                              type="checkbox"
+                              checked={visible}
+                              onChange={(e) => handleColumnChange(col.id, 'visible', e.target.checked)}
+                              className="rounded border-white/20"
+                            />
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
           <Button

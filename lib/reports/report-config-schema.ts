@@ -35,3 +35,12 @@ export const reportTypeEnum = z.enum([
   'attendance', 'payroll', 'employees', 'work_certificate', 'severance'
 ])
 export type ReportType = z.infer<typeof reportTypeEnum>
+
+/** Orden y etiquetas UI: mismas pestañas que ReportBuilder y opciones en Parámetros de Reportes. */
+export const REPORT_TYPE_OPTIONS: { value: ReportType; label: string }[] = [
+  { value: 'attendance', label: 'Asistencia' },
+  { value: 'payroll', label: 'Nómina' },
+  { value: 'employees', label: 'Empleados' },
+  { value: 'work_certificate', label: 'Constancias' },
+  { value: 'severance', label: 'Liquidación' }
+]

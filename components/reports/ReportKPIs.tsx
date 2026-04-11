@@ -1,14 +1,6 @@
 import { Card } from '../ui/card'
 import { ReportType } from './ReportBuilder'
-import { 
-  TrendingUp, 
-  Users, 
-  Clock, 
-  DollarSign, 
-  AlertCircle,
-  CheckCircle,
-  FileText 
-} from 'lucide-react'
+import { Users, Clock, DollarSign, FileText, ClipboardList } from 'lucide-react'
 
 interface ReportKPIsProps {
   summary?: Record<string, any>
@@ -63,7 +55,7 @@ export default function ReportKPIs({ summary, reportType, loading }: ReportKPIsP
         }
       case 'severance':
         return {
-          icon: TrendingUp,
+          icon: ClipboardList,
           color: 'text-orange-400',
           bg: 'bg-orange-500/20'
         }
