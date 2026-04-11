@@ -500,6 +500,18 @@ function hasPermission(userProfile: UserProfile, permission: string): boolean
 
 ---
 
+## Operación: usuarios y contraseñas (super admin)
+
+Referencia breve para el panel **Usuarios** (`/app/admin/users`).
+
+- **Alta de usuario:** usar **Invitar**, completar email, empresa, rol y contraseña (mínimo **8 caracteres**). El sistema valida la misma regla en servidor. Conviene comunicar la contraseña al usuario por un canal seguro aparte del correo de bienvenida si aplica.
+- **Recuperar acceso (usuario olvidó su contraseña):** si el producto expone recuperación por correo para ese tipo de cuenta, usarla; si no, el super admin puede **Restablecer contraseña** desde el listado: modal con confirmación e indicador de fortaleza (no usar contraseñas triviales).
+- **Reset vs invitación:** el **reset** es para cuentas que ya existen en Auth y hay que definir una contraseña nueva de inmediato. La **invitación/alta** es para crear la cuenta vinculada a empresa y rol; a medio plazo se puede sustituir por enlace de invitación sin contraseña en claro.
+- **Auditoría:** altas y resets desde super admin quedan registrados como acciones de auditoría (`user_created`, `user_password_reset_by_admin`) con actor y `user_id` objetivo, sin almacenar la contraseña.
+- **Portal empleado (OTP):** las respuestas al pedir código no indican si el correo existe o no (mensaje neutro), para reducir enumeración de cuentas.
+
+---
+
 ## 🔄 PRÓXIMOS PASOS (Post-Fase 1)
 
 Después de completar estas 3 etapas, considerar:
@@ -513,6 +525,18 @@ Después de completar estas 3 etapas, considerar:
 **Última actualización:** 2025-01-02  
 **Responsable:** Equipo de Desarrollo  
 **Estado:** Pendiente de inicio
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -1,10 +1,46 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import SuperAdminLayout from '../../../components/SuperAdminLayout'
 import SuperAdminGuard from '../../../components/SuperAdminGuard'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card'
 import { Button } from '../../../components/ui/button'
 import { useNotificationContext } from '../../../components/NotificationProvider'
+import {
+  ADMIN_PASSWORD_POLICY_MESSAGE_ES,
+  computePasswordStrength,
+  generateSecurePassword,
+  passwordStrengthLabel,
+  validateAdminPassword
+} from '../../../lib/auth/password-policy'
+
+function PasswordStrengthHint({ password }: { password: string }) {
+  const score = computePasswordStrength(password)
+  if (!password) return null
+  const label = passwordStrengthLabel(score)
+  const barClass =
+    score <= 1
+      ? 'bg-red-400'
+      : score === 2
+        ? 'bg-amber-400'
+        : score === 3
+          ? 'bg-lime-400'
+          : 'bg-emerald-400'
+  return (
+    <div className="mt-2 space-y-1">
+      <div className="flex gap-1 h-1.5 rounded-full overflow-hidden bg-white/10">
+        {[1, 2, 3, 4].map((i) => (
+          <div
+            key={i}
+            className={`flex-1 rounded-sm transition-colors ${i <= score ? barClass : 'bg-white/5'}`}
+          />
+        ))}
+      </div>
+      <p className="text-xs text-white/60">
+        Fortaleza: <span className="text-white/90">{label}</span>
+      </p>
+    </div>
+  )
+}
 
 interface UserRow {
   id: string
@@ -36,8 +72,19 @@ export default function UsersAdminPage() {
   // Create modal state
   const [showCreate, setShowCreate] = useState(false)
   const [companies, setCompanies] = useState<Array<{ id: string; name: string }>>([])
-  const [form, setForm] = useState({ email: '', password: '', role: 'company_admin', company_id: '' })
-  
+  const [form, setForm] = useState({
+    email: '',
+    password: '',
+    passwordConfirm: '',
+    role: 'company_admin',
+    company_id: ''
+  })
+
+  const [resetModalUser, setResetModalUser] = useState<UserRow | null>(null)
+  const [resetPassword, setResetPassword] = useState('')
+  const [resetPasswordConfirm, setResetPasswordConfirm] = useState('')
+  const [resetSubmitting, setResetSubmitting] = useState(false)
+
   // User detail modal state
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null)
   const [userDetails, setUserDetails] = useState<any>(null)
@@ -92,24 +139,61 @@ export default function UsersAdminPage() {
     }
   }
 
-  const resetPassword = async (u: UserRow) => {
-    const newPass = prompt('Nueva contraseña (min 8 caracteres):')
-    if (!newPass) return
+  const openResetPasswordModal = (u: UserRow) => {
+    setResetModalUser(u)
+    setResetPassword('')
+    setResetPasswordConfirm('')
+  }
+
+  const closeResetPasswordModal = (force?: boolean) => {
+    if (!force && resetSubmitting) return
+    setResetModalUser(null)
+    setResetPassword('')
+    setResetPasswordConfirm('')
+  }
+
+  const fillGeneratedPassword = (setterPass: (v: string) => void, setterConfirm: (v: string) => void) => {
     try {
-      setProcessingUserId(u.id)
-      const res = await fetch(`/api/admin/users/${u.id}?action=reset-password`, {
+      const p = generateSecurePassword()
+      setterPass(p)
+      setterConfirm(p)
+    } catch {
+      addNotification({
+        type: 'error',
+        title: 'Error',
+        message: 'No se pudo generar una contraseña en este entorno.'
+      })
+    }
+  }
+
+  const submitResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!resetModalUser) return
+    if (resetPassword !== resetPasswordConfirm) {
+      addNotification({ type: 'error', title: 'Error', message: 'Las contraseñas no coinciden.' })
+      return
+    }
+    const pw = validateAdminPassword(resetPassword)
+    if (!pw.ok) {
+      addNotification({ type: 'error', title: 'Contraseña', message: pw.message })
+      return
+    }
+    try {
+      setResetSubmitting(true)
+      const res = await fetch(`/api/admin/users/${resetModalUser.id}?action=reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ new_password: newPass })
+        body: JSON.stringify({ new_password: resetPassword })
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data?.message || data?.error || 'No se pudo resetear')
-      addNotification({ type: 'success', title: 'Contraseña actualizada', message: u.email })
+      addNotification({ type: 'success', title: 'Contraseña actualizada', message: resetModalUser.email })
+      closeResetPasswordModal(true)
     } catch (err: any) {
       addNotification({ type: 'error', title: 'Error', message: err.message || 'No se pudo resetear' })
     } finally {
-      setProcessingUserId(null)
+      setResetSubmitting(false)
     }
   }
 
@@ -136,18 +220,32 @@ export default function UsersAdminPage() {
 
   const createUser = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (form.password !== form.passwordConfirm) {
+      addNotification({ type: 'error', title: 'Error', message: 'Las contraseñas no coinciden.' })
+      return
+    }
+    const pw = validateAdminPassword(form.password)
+    if (!pw.ok) {
+      addNotification({ type: 'error', title: 'Contraseña', message: pw.message })
+      return
+    }
     try {
       const res = await fetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(form)
+        body: JSON.stringify({
+          email: form.email,
+          password: form.password,
+          role: form.role,
+          company_id: form.company_id
+        })
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data?.message || data?.error || 'No se pudo crear el usuario')
       addNotification({ type: 'success', title: 'Usuario creado', message: data?.user?.email || '' })
       setShowCreate(false)
-      setForm({ email: '', password: '', role: 'company_admin', company_id: '' })
+      setForm({ email: '', password: '', passwordConfirm: '', role: 'company_admin', company_id: '' })
       // reload first page
       setPage(1)
       const reload = await fetch(`/api/admin/users?page=1&pageSize=${pageSize}`, { credentials: 'include' })
@@ -254,13 +352,41 @@ export default function UsersAdminPage() {
                       </div>
                       <div>
                         <label className="block text-sm text-white/80 mb-1">Contraseña</label>
-                        <input 
-                          type="password" 
-                          required 
-                          minLength={8} 
-                          className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50" 
-                          value={form.password} 
-                          onChange={(e) => setForm({ ...form, password: e.target.value })} 
+                        <input
+                          type="password"
+                          required
+                          minLength={8}
+                          autoComplete="new-password"
+                          className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
+                          value={form.password}
+                          onChange={(e) => setForm({ ...form, password: e.target.value })}
+                        />
+                        <p className="text-xs text-white/50 mt-1">{ADMIN_PASSWORD_POLICY_MESSAGE_ES}</p>
+                        <PasswordStrengthHint password={form.password} />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="mt-2 border-white/30 text-white hover:bg-white/10 text-xs h-8"
+                          onClick={() =>
+                            fillGeneratedPassword(
+                              (v) => setForm((f) => ({ ...f, password: v })),
+                              (v) => setForm((f) => ({ ...f, passwordConfirm: v }))
+                            )
+                          }
+                        >
+                          Generar contraseña segura
+                        </Button>
+                      </div>
+                      <div>
+                        <label className="block text-sm text-white/80 mb-1">Confirmar contraseña</label>
+                        <input
+                          type="password"
+                          required
+                          minLength={8}
+                          autoComplete="new-password"
+                          className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
+                          value={form.passwordConfirm}
+                          onChange={(e) => setForm({ ...form, passwordConfirm: e.target.value })}
                         />
                       </div>
                       <div>
@@ -338,11 +464,11 @@ export default function UsersAdminPage() {
                             >
                               {processingUserId === u.id ? 'Procesando...' : (u.is_active ? 'Desactivar' : 'Activar')}
                             </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={() => resetPassword(u)} 
-                              disabled={processingUserId === u.id}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openResetPasswordModal(u)}
+                              disabled={processingUserId === u.id || resetSubmitting}
                               className="border-white/30 text-white hover:bg-white/10 disabled:opacity-50"
                             >
                               Reset contraseña
@@ -388,7 +514,85 @@ export default function UsersAdminPage() {
         </div>
       )}
 
-      {/* User Details Modal */}
+      {/* Reset password modal */}
+      {resetModalUser && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => closeResetPasswordModal()}
+            aria-hidden
+          />
+          <div
+            role="dialog"
+            aria-modal
+            aria-labelledby="reset-password-title"
+            className="relative z-[61] w-full max-w-md glass border border-white/20 rounded-lg shadow-2xl"
+          >
+            <form onSubmit={submitResetPassword} className="p-6">
+              <h2 id="reset-password-title" className="text-xl font-semibold text-white mb-1">
+                Restablecer contraseña
+              </h2>
+              <p className="text-sm text-white/70 mb-4 break-all">{resetModalUser.email}</p>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm text-white/80 mb-1">Nueva contraseña</label>
+                  <input
+                    type="password"
+                    required
+                    minLength={8}
+                    autoComplete="new-password"
+                    disabled={resetSubmitting}
+                    className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50 disabled:opacity-50"
+                    value={resetPassword}
+                    onChange={(e) => setResetPassword(e.target.value)}
+                  />
+                  <p className="text-xs text-white/50 mt-1">{ADMIN_PASSWORD_POLICY_MESSAGE_ES}</p>
+                  <PasswordStrengthHint password={resetPassword} />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="mt-2 border-white/30 text-white hover:bg-white/10 text-xs h-8"
+                    disabled={resetSubmitting}
+                    onClick={() =>
+                      fillGeneratedPassword(setResetPassword, setResetPasswordConfirm)
+                    }
+                  >
+                    Generar contraseña segura
+                  </Button>
+                </div>
+                <div>
+                  <label className="block text-sm text-white/80 mb-1">Confirmar contraseña</label>
+                  <input
+                    type="password"
+                    required
+                    minLength={8}
+                    autoComplete="new-password"
+                    disabled={resetSubmitting}
+                    className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50 disabled:opacity-50"
+                    value={resetPasswordConfirm}
+                    onChange={(e) => setResetPasswordConfirm(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="mt-6 flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="border-white/30 text-white hover:bg-white/10"
+                  disabled={resetSubmitting}
+                  onClick={() => closeResetPasswordModal()}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={resetSubmitting}>
+                  {resetSubmitting ? 'Guardando…' : 'Guardar contraseña'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {selectedUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div 

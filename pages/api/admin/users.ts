@@ -3,17 +3,18 @@ import { createAdminClient } from '../../../lib/supabase/server'
 import { logger } from '../../../lib/logger'
 import { createSecureErrorResponse } from '../../../lib/security/error-handling'
 import { requireSuperAdmin } from '../../../lib/auth/api-auth-fixed'
+import { logSuperAdminAction } from '../../../lib/security/audit-logger'
+import { validateAdminPassword } from '../../../lib/auth/password-policy'
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    // Use the centralized super admin check
-    await requireSuperAdmin(req, res)
+    const auth = await requireSuperAdmin(req, res)
 
     switch (req.method) {
       case 'GET':
         return await getUsers(req, res)
       case 'POST':
-        return await createUser(req, res)
+        return await createUser(req, res, auth.user.id)
       default:
         res.setHeader('Allow', ['GET', 'POST'])
         return res.status(405).json({ error: 'Method not allowed' })
@@ -173,7 +174,7 @@ async function getUsers(req: NextApiRequest, res: NextApiResponse) {
   }
 }
 
-async function createUser(req: NextApiRequest, res: NextApiResponse) {
+async function createUser(req: NextApiRequest, res: NextApiResponse, actorUserId: string) {
   try {
     const { email, password, role, company_id } = req.body
 
@@ -181,7 +182,7 @@ async function createUser(req: NextApiRequest, res: NextApiResponse) {
     if (!email || !password || !role || !company_id) {
       return res.status(400).json({
         error: 'Missing required fields',
-        message: 'Email, password, role, and company_id are required'
+        message: 'Se requieren email, contraseña, rol e ID de empresa'
       })
     }
 
@@ -190,15 +191,15 @@ async function createUser(req: NextApiRequest, res: NextApiResponse) {
     if (!validRoles.includes(role)) {
       return res.status(400).json({
         error: 'Invalid role',
-        message: `Role must be one of: ${validRoles.join(', ')}`
+        message: `El rol debe ser uno de: ${validRoles.join(', ')}`
       })
     }
 
-    // Validate password strength
-    if (password.length < 8) {
+    const pwCheck = validateAdminPassword(password)
+    if (!pwCheck.ok) {
       return res.status(400).json({
         error: 'Weak password',
-        message: 'Password must be at least 8 characters long'
+        message: pwCheck.message
       })
     }
 
@@ -321,6 +322,11 @@ async function createUser(req: NextApiRequest, res: NextApiResponse) {
       role,
       companyId: company_id,
       companyName: company.name
+    })
+
+    await logSuperAdminAction(actorUserId, 'user_created', 'user', authUser.user.id, {
+      target_role: role,
+      company_id
     })
 
     return res.status(201).json({

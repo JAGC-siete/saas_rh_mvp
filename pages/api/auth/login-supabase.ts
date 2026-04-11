@@ -146,12 +146,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       })
       return res.status(403).json({
         success: false,
-        error: 'Acceso denegado. Usuario sin permisos válidos.',
-        debug: {
-          userType,
-          hasValidAccess,
-          userMetadata
-        }
+        error: 'Credenciales inválidas'
       })
     }
 
