@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useRouter } from 'next/router'
+import Link from 'next/link'
 import Head from 'next/head'
 import dynamic from 'next/dynamic'
 const CloudBackground = dynamic(() => import('../../components/CloudBackground'), { ssr: false })
@@ -168,8 +169,17 @@ export default function LoginExisting() {
                     <ArrowRight className="h-5 w-5 ml-2" />
                   </Button>
 
-                  <div className="text-center">
+                  <div className="text-center space-y-2">
+                    <div>
+                      <Link
+                        href="/app/forgot-password"
+                        className="text-sm text-brand-300 hover:text-white transition-colors"
+                      >
+                        ¿Olvidaste tu contraseña?
+                      </Link>
+                    </div>
                     <button 
+                      type="button"
                       onClick={() => window.location.href = '/activar'}
                       className="text-sm text-brand-300 hover:text-white transition-colors"
                     >

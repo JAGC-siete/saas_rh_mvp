@@ -1,10 +1,15 @@
 /**
  * API Protection Utilities
  * Provides easy integration of idle timeout and authentication
- * 
+ *
+ * Idle timeout (withIdleTimeout → is_session_active / 440) is optional: no API routes
+ * use this wrapper by default. The app relies on SessionExpiryWarning + /api/auth/heartbeat
+ * for client-side inactivity hints and user_sessions updates after login.
+ * Wrap specific /api/admin mutating handlers here if server-enforced idle cutoff is required.
+ *
  * Usage:
  * import { withApiProtection } from '@/lib/api-protection'
- * 
+ *
  * export default withApiProtection(async (req, res) => {
  *   // Your API logic here
  * })

@@ -1,3 +1,4 @@
+import crypto from 'crypto'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getTrustedClientIp } from './trusted-client-ip'
 
@@ -41,6 +42,52 @@ const RATE_LIMITS = {
     windowMs: 5 * 60 * 1000, // 5 minutos
     max: 10, // máximo 10 por ventana (bucket independiente de general)
     message: 'Demasiados intentos de inicialización. Espere unos minutos.'
+  },
+
+  /** Login B2B / empleado por IP + email (fuerza bruta por cuenta) */
+  auth_login: {
+    windowMs: 15 * 60 * 1000,
+    max: 8,
+    message: 'Demasiados intentos de inicio de sesión. Espere unos minutos.'
+  },
+  /** Mismo bucket pero solo por IP (muchas cuentas desde una IP) */
+  auth_login_ip: {
+    windowMs: 15 * 60 * 1000,
+    max: 40,
+    message: 'Demasiados intentos de inicio de sesión desde esta red. Espere unos minutos.'
+  },
+  /** Recuperación contraseña: abuso de envío de correo */
+  auth_forgot_password: {
+    windowMs: 60 * 60 * 1000,
+    max: 3,
+    message: 'Demasiadas solicitudes de recuperación. Intente más tarde.'
+  },
+  auth_forgot_password_ip: {
+    windowMs: 60 * 60 * 1000,
+    max: 12,
+    message: 'Demasiadas solicitudes de recuperación desde esta red. Intente más tarde.'
+  },
+  /** OTP empleado: envío */
+  auth_otp_send: {
+    windowMs: 15 * 60 * 1000,
+    max: 3,
+    message: 'Demasiados envíos de código. Intente en unos minutos.'
+  },
+  auth_otp_send_ip: {
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    message: 'Demasiados envíos de código desde esta red. Espere unos minutos.'
+  },
+  /** OTP empleado: verificación (adivinanza de código) */
+  auth_otp_verify: {
+    windowMs: 15 * 60 * 1000,
+    max: 12,
+    message: 'Demasiados intentos de verificación. Espere unos minutos.'
+  },
+  auth_otp_verify_ip: {
+    windowMs: 15 * 60 * 1000,
+    max: 40,
+    message: 'Demasiados intentos de verificación desde esta red. Espere unos minutos.'
   }
 }
 
@@ -100,6 +147,93 @@ const checkRateLimit = (key: string, limit: { windowMs: number; max: number }): 
     remaining: limit.max - entry.count,
     resetTime: entry.resetTime
   }
+}
+
+export type AuthRateLimitKind = 'auth_login' | 'auth_forgot_password' | 'auth_otp_send' | 'auth_otp_verify'
+
+const AUTH_RATE_PRIMARY: Record<AuthRateLimitKind, keyof typeof RATE_LIMITS> = {
+  auth_login: 'auth_login',
+  auth_forgot_password: 'auth_forgot_password',
+  auth_otp_send: 'auth_otp_send',
+  auth_otp_verify: 'auth_otp_verify'
+}
+
+const AUTH_RATE_IP: Record<AuthRateLimitKind, keyof typeof RATE_LIMITS> = {
+  auth_login: 'auth_login_ip',
+  auth_forgot_password: 'auth_forgot_password_ip',
+  auth_otp_send: 'auth_otp_send_ip',
+  auth_otp_verify: 'auth_otp_verify_ip'
+}
+
+/** Normaliza email para huella (no reversible en logs sin diccionario). */
+export function emailFingerprint(email: string): string {
+  return crypto.createHash('sha256').update(email.trim().toLowerCase()).digest('hex').slice(0, 24)
+}
+
+function setAuthRateLimitHeaders(
+  res: NextApiResponse,
+  limit: { max: number; windowMs: number; message: string },
+  result: { allowed: boolean; remaining: number; resetTime: number }
+) {
+  res.setHeader('X-RateLimit-Limit', limit.max.toString())
+  res.setHeader('X-RateLimit-Remaining', Math.max(0, result.remaining).toString())
+  res.setHeader('X-RateLimit-Reset', new Date(result.resetTime).toISOString())
+  if (!result.allowed) {
+    res.setHeader('Retry-After', Math.ceil((result.resetTime - Date.now()) / 1000).toString())
+  }
+}
+
+/**
+ * Rate limit por IP+email y por IP para rutas de autenticación.
+ * Si `email` falta, solo aplica el bucket por IP (clave única `anonymous`).
+ */
+export function enforceAuthRateLimits(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  kind: AuthRateLimitKind,
+  email?: string | null
+): boolean {
+  cleanupExpiredEntries()
+  const ip = getClientIP(req)
+  const emailTag =
+    email && typeof email === 'string' && email.includes('@') ? emailFingerprint(email) : 'anonymous'
+
+  const primaryLimit = RATE_LIMITS[AUTH_RATE_PRIMARY[kind]]
+  const ipBucketLimit = RATE_LIMITS[AUTH_RATE_IP[kind]]
+
+  const primaryKey = `${ip}:${kind}:${emailTag}`
+  const ipOnlyKey = `${ip}:${kind}:ip`
+
+  const primaryResult = checkRateLimit(primaryKey, primaryLimit)
+  if (!primaryResult.allowed) {
+    setAuthRateLimitHeaders(res, primaryLimit, primaryResult)
+    res.status(429).json({
+      error: 'Demasiadas solicitudes',
+      message: primaryLimit.message,
+      retryAfter: Math.ceil((primaryResult.resetTime - Date.now()) / 1000)
+    })
+    return false
+  }
+
+  const ipResult = checkRateLimit(ipOnlyKey, ipBucketLimit)
+  if (!ipResult.allowed) {
+    setAuthRateLimitHeaders(res, ipBucketLimit, ipResult)
+    res.status(429).json({
+      error: 'Demasiadas solicitudes',
+      message: ipBucketLimit.message,
+      retryAfter: Math.ceil((ipResult.resetTime - Date.now()) / 1000)
+    })
+    return false
+  }
+
+  const stricterRemaining = Math.min(primaryResult.remaining, ipResult.remaining)
+  res.setHeader('X-RateLimit-Limit', String(Math.min(primaryLimit.max, ipBucketLimit.max)))
+  res.setHeader('X-RateLimit-Remaining', String(Math.max(0, stricterRemaining)))
+  res.setHeader(
+    'X-RateLimit-Reset',
+    new Date(Math.max(primaryResult.resetTime, ipResult.resetTime)).toISOString()
+  )
+  return true
 }
 
 // Middleware de rate limiting

@@ -1,20 +1,20 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireSuperAdminWithAudit } from '../../../../lib/auth/api-guards'
 import { createSuccessResponse, createErrorResponse, createValidationErrorResponse } from '../../../../lib/security/api-responses'
-import { createAdminClient } from '../../../../lib/supabase/server'
 import { logger } from '../../../../lib/logger'
-import { randomBytes, randomInt } from 'crypto'
-import { sendAffiliateCredentialsEmail } from '../../../../lib/emails/affiliate-credentials'
+import { randomBytes } from 'crypto'
+import { sendAffiliateWelcomeEmail } from '../../../../lib/emails/affiliate-credentials'
 
-// Función para generar contraseña segura
-function generateSecurePassword(): string {
-  const length = 16
-  const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*'
-  
-  return Array.from({ length }, () => {
-    const randomIndex = randomInt(0, charset.length)
-    return charset[randomIndex]
-  }).join('')
+function isAuthDuplicateUserError(err: unknown): boolean {
+  const e = err as { message?: string; code?: string }
+  const msg = (e?.message || '').toLowerCase()
+  const code = (e?.code || '').toLowerCase()
+  return (
+    code === 'email_exists' ||
+    msg.includes('already been registered') ||
+    msg.includes('already registered') ||
+    msg.includes('user already exists')
+  )
 }
 
 /**
@@ -92,31 +92,40 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }))
     }
 
-    // Generar contraseña automática
-    const generatedPassword = generateSecurePassword()
+    const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net').replace(/\/$/, '')
+    const redirectTo = `${siteUrl}/auth/update-password?next=${encodeURIComponent('/app/login')}`
 
-    // Create user in Supabase Auth
-    const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
-      email: request.email,
-      password: generatedPassword,
-      email_confirm: true,
-      user_metadata: {
-        full_name: request.questionnaire_data?.full_name || request.email.split('@')[0],
-        affiliate_request_id: request.id
+    const { data: authData, error: authError } = await adminClient.auth.admin.inviteUserByEmail(
+      request.email,
+      {
+        data: {
+          full_name: request.questionnaire_data?.full_name || request.email.split('@')[0],
+          affiliate_request_id: request.id
+        },
+        redirectTo
       }
-    })
+    )
 
-    if (authError || !authData.user) {
-      logger.error('Error creating auth user for affiliate approval', {
+    if (authError || !authData?.user) {
+      if (isAuthDuplicateUserError(authError)) {
+        return res.status(409).json(
+          createErrorResponse('Ya existe un usuario con este correo', 'EMAIL_EXISTS', {
+            email: request.email
+          })
+        )
+      }
+      logger.error('Error inviting auth user for affiliate approval', {
         request_id,
         email: request.email,
         error: authError?.message || String(authError)
       })
-      return res.status(500).json(createErrorResponse(
-        'Error creando usuario de autenticación',
-        'AUTH_USER_CREATION_FAILED',
-        { details: authError?.message }
-      ))
+      return res.status(500).json(
+        createErrorResponse(
+          'Error enviando invitación de autenticación',
+          'AUTH_INVITE_FAILED',
+          { details: authError?.message }
+        )
+      )
     }
 
     const userId = authData.user.id
@@ -252,17 +261,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Don't fail here - user and affiliate were created successfully
     }
 
-    // Send email with credentials (don't fail if this errors)
     try {
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net'
-      await sendAffiliateCredentialsEmail({
+      const loginBase = process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net'
+      await sendAffiliateWelcomeEmail({
         to: request.email,
         email: request.email,
-        password: generatedPassword,
         referralCode: referralCode,
-        loginUrl: `${siteUrl}/auth/login`
+        loginUrl: `${loginBase.replace(/\/$/, '')}/app/login`
       })
-      logger.info('Affiliate credentials email sent', {
+      logger.info('Affiliate welcome email sent', {
         request_id,
         email: request.email
       })
@@ -291,7 +298,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     return res.status(200).json(createSuccessResponse({
-      message: 'Solicitud aprobada exitosamente. Se ha enviado un email con las credenciales.',
+      message:
+        'Solicitud aprobada. Se envió invitación para definir contraseña (correo de Supabase) y un resumen del programa.',
       affiliate_id: affiliate?.id,
       user_id: userId,
       referral_code: referralCode

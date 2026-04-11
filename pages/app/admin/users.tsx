@@ -79,11 +79,14 @@ export default function UsersAdminPage() {
     role: 'company_admin',
     company_id: ''
   })
+  /** Por defecto invitación por correo (sin contraseña en el panel). */
+  const [useManualPasswordOnCreate, setUseManualPasswordOnCreate] = useState(false)
 
   const [resetModalUser, setResetModalUser] = useState<UserRow | null>(null)
   const [resetPassword, setResetPassword] = useState('')
   const [resetPasswordConfirm, setResetPasswordConfirm] = useState('')
   const [resetSubmitting, setResetSubmitting] = useState(false)
+  const [resetShowManual, setResetShowManual] = useState(false)
 
   // User detail modal state
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null)
@@ -143,6 +146,7 @@ export default function UsersAdminPage() {
     setResetModalUser(u)
     setResetPassword('')
     setResetPasswordConfirm('')
+    setResetShowManual(false)
   }
 
   const closeResetPasswordModal = (force?: boolean) => {
@@ -150,6 +154,7 @@ export default function UsersAdminPage() {
     setResetModalUser(null)
     setResetPassword('')
     setResetPasswordConfirm('')
+    setResetShowManual(false)
   }
 
   const fillGeneratedPassword = (setterPass: (v: string) => void, setterConfirm: (v: string) => void) => {
@@ -197,6 +202,34 @@ export default function UsersAdminPage() {
     }
   }
 
+  const submitSendRecoveryLink = async () => {
+    if (!resetModalUser) return
+    try {
+      setResetSubmitting(true)
+      const res = await fetch(
+        `/api/admin/users/${resetModalUser.id}?action=send-recovery-link`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({})
+        }
+      )
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.message || data?.error || 'No se pudo enviar el enlace')
+      addNotification({
+        type: 'success',
+        title: 'Correo enviado',
+        message: data?.message || 'Revisa que el usuario tenga bandeja disponible.'
+      })
+      closeResetPasswordModal(true)
+    } catch (err: any) {
+      addNotification({ type: 'error', title: 'Error', message: err.message || 'No se pudo enviar' })
+    } finally {
+      setResetSubmitting(false)
+    }
+  }
+
   useEffect(() => {
     if (page > totalPages) setPage(totalPages)
   }, [totalPages, page])
@@ -220,31 +253,42 @@ export default function UsersAdminPage() {
 
   const createUser = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (form.password !== form.passwordConfirm) {
-      addNotification({ type: 'error', title: 'Error', message: 'Las contraseñas no coinciden.' })
-      return
-    }
-    const pw = validateAdminPassword(form.password)
-    if (!pw.ok) {
-      addNotification({ type: 'error', title: 'Contraseña', message: pw.message })
-      return
+    if (useManualPasswordOnCreate) {
+      if (form.password !== form.passwordConfirm) {
+        addNotification({ type: 'error', title: 'Error', message: 'Las contraseñas no coinciden.' })
+        return
+      }
+      const pw = validateAdminPassword(form.password)
+      if (!pw.ok) {
+        addNotification({ type: 'error', title: 'Contraseña', message: pw.message })
+        return
+      }
     }
     try {
+      const body: Record<string, unknown> = {
+        email: form.email,
+        role: form.role,
+        company_id: form.company_id,
+        mode: useManualPasswordOnCreate ? 'password' : 'invite'
+      }
+      if (useManualPasswordOnCreate) {
+        body.password = form.password
+      }
       const res = await fetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-          email: form.email,
-          password: form.password,
-          role: form.role,
-          company_id: form.company_id
-        })
+        body: JSON.stringify(body)
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data?.message || data?.error || 'No se pudo crear el usuario')
-      addNotification({ type: 'success', title: 'Usuario creado', message: data?.user?.email || '' })
+      addNotification({
+        type: 'success',
+        title: data?.invite_sent ? 'Invitación enviada' : 'Usuario creado',
+        message: data?.message || data?.user?.email || ''
+      })
       setShowCreate(false)
+      setUseManualPasswordOnCreate(false)
       setForm({ email: '', password: '', passwordConfirm: '', role: 'company_admin', company_id: '' })
       // reload first page
       setPage(1)
@@ -340,6 +384,11 @@ export default function UsersAdminPage() {
                 <Card variant="glass" className="mb-4 border-white/20">
                   <CardContent className="pt-4">
                     <form onSubmit={createUser} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="md:col-span-2 rounded-md border border-white/15 bg-white/5 px-3 py-2 text-sm text-white/80">
+                        Por defecto se envía una <strong className="text-white/90">invitación por correo</strong>; el
+                        usuario define su contraseña en una página segura. Active la opción avanzada solo para soporte o
+                        entornos sin correo.
+                      </div>
                       <div>
                         <label className="block text-sm text-white/80 mb-1">Email</label>
                         <input 
@@ -350,11 +399,24 @@ export default function UsersAdminPage() {
                           onChange={(e) => setForm({ ...form, email: e.target.value })} 
                         />
                       </div>
+                      <div className="flex items-end">
+                        <label className="flex items-center gap-2 text-sm text-white/80 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            className="rounded border-white/30 bg-white/10"
+                            checked={useManualPasswordOnCreate}
+                            onChange={(e) => setUseManualPasswordOnCreate(e.target.checked)}
+                          />
+                          Establecer contraseña manualmente (avanzado)
+                        </label>
+                      </div>
+                      {useManualPasswordOnCreate && (
+                        <>
                       <div>
                         <label className="block text-sm text-white/80 mb-1">Contraseña</label>
                         <input
                           type="password"
-                          required
+                          required={useManualPasswordOnCreate}
                           minLength={8}
                           autoComplete="new-password"
                           className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
@@ -381,7 +443,7 @@ export default function UsersAdminPage() {
                         <label className="block text-sm text-white/80 mb-1">Confirmar contraseña</label>
                         <input
                           type="password"
-                          required
+                          required={useManualPasswordOnCreate}
                           minLength={8}
                           autoComplete="new-password"
                           className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
@@ -389,6 +451,8 @@ export default function UsersAdminPage() {
                           onChange={(e) => setForm({ ...form, passwordConfirm: e.target.value })}
                         />
                       </div>
+                        </>
+                      )}
                       <div>
                         <label className="block text-sm text-white/80 mb-1">Rol</label>
                         <select 
@@ -415,8 +479,8 @@ export default function UsersAdminPage() {
                         </select>
                       </div>
                       <div className="md:col-span-2 flex items-center gap-2">
-                        <Button type="submit">Crear usuario</Button>
-                        <Button type="button" variant="outline" onClick={() => setShowCreate(false)} className="border-white/30 text-white hover:bg-white/10">Cancelar</Button>
+                        <Button type="submit">{useManualPasswordOnCreate ? 'Crear usuario' : 'Enviar invitación'}</Button>
+                        <Button type="button" variant="outline" onClick={() => { setShowCreate(false); setUseManualPasswordOnCreate(false) }} className="border-white/30 text-white hover:bg-white/10">Cancelar</Button>
                       </div>
                     </form>
                   </CardContent>
@@ -471,7 +535,7 @@ export default function UsersAdminPage() {
                               disabled={processingUserId === u.id || resetSubmitting}
                               className="border-white/30 text-white hover:bg-white/10 disabled:opacity-50"
                             >
-                              Reset contraseña
+                              Restablecer acceso
                             </Button>
                           </div>
                         </CardContent>
@@ -528,67 +592,101 @@ export default function UsersAdminPage() {
             aria-labelledby="reset-password-title"
             className="relative z-[61] w-full max-w-md glass border border-white/20 rounded-lg shadow-2xl"
           >
-            <form onSubmit={submitResetPassword} className="p-6">
+            <div className="p-6">
               <h2 id="reset-password-title" className="text-xl font-semibold text-white mb-1">
-                Restablecer contraseña
+                Restablecer acceso
               </h2>
               <p className="text-sm text-white/70 mb-4 break-all">{resetModalUser.email}</p>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm text-white/80 mb-1">Nueva contraseña</label>
-                  <input
-                    type="password"
-                    required
-                    minLength={8}
-                    autoComplete="new-password"
-                    disabled={resetSubmitting}
-                    className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50 disabled:opacity-50"
-                    value={resetPassword}
-                    onChange={(e) => setResetPassword(e.target.value)}
-                  />
-                  <p className="text-xs text-white/50 mt-1">{ADMIN_PASSWORD_POLICY_MESSAGE_ES}</p>
-                  <PasswordStrengthHint password={resetPassword} />
+              <p className="text-sm text-white/60 mb-4">
+                Lo recomendado es enviar un enlace por correo (Supabase); el usuario define la contraseña sin exponerla a
+                administradores.
+              </p>
+              <Button
+                type="button"
+                className="w-full"
+                disabled={resetSubmitting}
+                onClick={() => submitSendRecoveryLink()}
+              >
+                {resetSubmitting ? 'Enviando…' : 'Enviar enlace por correo'}
+              </Button>
+              <button
+                type="button"
+                className="mt-3 w-full text-left text-xs text-amber-200/90 hover:text-amber-100 underline-offset-2 hover:underline"
+                onClick={() => setResetShowManual((v) => !v)}
+              >
+                {resetShowManual ? 'Ocultar opción avanzada' : 'Establecer contraseña manualmente (soporte)'}
+              </button>
+              {resetShowManual && (
+                <form onSubmit={submitResetPassword} className="mt-4 space-y-4 border-t border-white/10 pt-4">
+                  <div>
+                    <label className="block text-sm text-white/80 mb-1">Nueva contraseña</label>
+                    <input
+                      type="password"
+                      required
+                      minLength={8}
+                      autoComplete="new-password"
+                      disabled={resetSubmitting}
+                      className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50 disabled:opacity-50"
+                      value={resetPassword}
+                      onChange={(e) => setResetPassword(e.target.value)}
+                    />
+                    <p className="text-xs text-white/50 mt-1">{ADMIN_PASSWORD_POLICY_MESSAGE_ES}</p>
+                    <PasswordStrengthHint password={resetPassword} />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="mt-2 border-white/30 text-white hover:bg-white/10 text-xs h-8"
+                      disabled={resetSubmitting}
+                      onClick={() =>
+                        fillGeneratedPassword(setResetPassword, setResetPasswordConfirm)
+                      }
+                    >
+                      Generar contraseña segura
+                    </Button>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-white/80 mb-1">Confirmar contraseña</label>
+                    <input
+                      type="password"
+                      required
+                      minLength={8}
+                      autoComplete="new-password"
+                      disabled={resetSubmitting}
+                      className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50 disabled:opacity-50"
+                      value={resetPasswordConfirm}
+                      onChange={(e) => setResetPasswordConfirm(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="border-white/30 text-white hover:bg-white/10"
+                      disabled={resetSubmitting}
+                      onClick={() => closeResetPasswordModal()}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button type="submit" disabled={resetSubmitting}>
+                      {resetSubmitting ? 'Guardando…' : 'Guardar contraseña'}
+                    </Button>
+                  </div>
+                </form>
+              )}
+              {!resetShowManual && (
+                <div className="mt-6 flex justify-end">
                   <Button
                     type="button"
                     variant="outline"
-                    className="mt-2 border-white/30 text-white hover:bg-white/10 text-xs h-8"
+                    className="border-white/30 text-white hover:bg-white/10"
                     disabled={resetSubmitting}
-                    onClick={() =>
-                      fillGeneratedPassword(setResetPassword, setResetPasswordConfirm)
-                    }
+                    onClick={() => closeResetPasswordModal()}
                   >
-                    Generar contraseña segura
+                    Cerrar
                   </Button>
                 </div>
-                <div>
-                  <label className="block text-sm text-white/80 mb-1">Confirmar contraseña</label>
-                  <input
-                    type="password"
-                    required
-                    minLength={8}
-                    autoComplete="new-password"
-                    disabled={resetSubmitting}
-                    className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50 disabled:opacity-50"
-                    value={resetPasswordConfirm}
-                    onChange={(e) => setResetPasswordConfirm(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="mt-6 flex justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="border-white/30 text-white hover:bg-white/10"
-                  disabled={resetSubmitting}
-                  onClick={() => closeResetPasswordModal()}
-                >
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={resetSubmitting}>
-                  {resetSubmitting ? 'Guardando…' : 'Guardar contraseña'}
-                </Button>
-              </div>
-            </form>
+              )}
+            </div>
           </div>
         </div>
       )}

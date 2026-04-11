@@ -1,3 +1,4 @@
+import { createClient as createSupabaseJsClient } from '@supabase/supabase-js'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient, createAdminClient } from '../../../../lib/supabase/server'
 import { logger } from '../../../../lib/logger'
@@ -82,12 +83,15 @@ async function getUser(supabase: any, id: string, res: NextApiResponse) {
       throw error
     }
 
-    // Get email from auth.users - try to get specific user first
-    let authUser: any = null
+    let authUser: { email?: string | null; last_sign_in_at?: string | null } | null = null
     try {
-      // Try to get user by ID directly if possible, otherwise search in list
-      const { data: authUsers } = await adminClient.auth.admin.listUsers()
-      authUser = authUsers?.users?.find((u: any) => u.id === id)
+      const { data: authData, error: authErr } = await adminClient.auth.admin.getUserById(id)
+      if (!authErr && authData?.user) {
+        authUser = {
+          email: authData.user.email,
+          last_sign_in_at: authData.user.last_sign_in_at ?? null
+        }
+      }
     } catch (authError: any) {
       logger.warn('Error fetching auth user', { userId: id, error: authError?.message || String(authError) })
     }
@@ -336,6 +340,51 @@ async function postActions(
 ) {
   try {
     const action = (req.query.action as string) || ''
+    if (action === 'send-recovery-link') {
+      if (!env.NEXT_PUBLIC_SUPABASE_URL || !env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+        return res.status(503).json({
+          error: 'Service unavailable',
+          message: 'Recuperación por correo no está configurada (Supabase URL/anon key).'
+        })
+      }
+
+      const adminClient = createAdminClient()
+      const { data: authRow, error: getUserError } = await adminClient.auth.admin.getUserById(id)
+      if (getUserError || !authRow?.user?.email) {
+        return res.status(404).json({
+          error: 'User not found',
+          message: 'No se encontró el usuario o no tiene correo en Auth'
+        })
+      }
+
+      const siteUrl = env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '')
+      const redirectTo = `${siteUrl}/auth/update-password?next=${encodeURIComponent('/app/login')}`
+
+      const pub = createSupabaseJsClient(
+        env.NEXT_PUBLIC_SUPABASE_URL,
+        env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+        { auth: { persistSession: false, autoRefreshToken: false } }
+      )
+
+      const { error: resetErr } = await pub.auth.resetPasswordForEmail(authRow.user.email, {
+        redirectTo
+      })
+
+      if (resetErr) {
+        logger.warn('send-recovery-link: resetPasswordForEmail error (still returning success to client)', {
+          userId: id,
+          message: resetErr.message
+        })
+      }
+
+      await logSuperAdminAction(actorUserId, 'user_recovery_email_sent', 'user', id, {})
+
+      return res.status(200).json({
+        success: true,
+        message: 'Si el servicio de correo está activo, el usuario recibirá un enlace para restablecer la contraseña.'
+      })
+    }
+
     if (action === 'reset-password') {
       // Require SERVICE_ROLE_KEY - auth.admin.updateUserById only works with it
       if (!env.SUPABASE_SERVICE_ROLE_KEY) {

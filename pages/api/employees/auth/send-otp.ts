@@ -3,6 +3,7 @@ import { createClient, createAdminClient } from '../../../../lib/supabase/server
 import { logger } from '../../../../lib/logger'
 import { sendOtp } from '../../../../lib/employee-otp'
 import { EMPLOYEE_OTP_SEND_NEUTRAL_MESSAGE } from '../../../../lib/auth/public-auth-messages'
+import { enforceAuthRateLimits } from '../../../../lib/security/rate-limiting'
 
 interface SendOtpRequest {
   email: string
@@ -31,6 +32,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         success: false, 
         error: 'Email inválido' 
       })
+    }
+
+    if (!enforceAuthRateLimits(req, res, 'auth_otp_send', email)) {
+      return
     }
 
     const adminSupabase = createAdminClient()

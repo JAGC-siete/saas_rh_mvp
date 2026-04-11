@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient, createAdminClient } from '../../../lib/supabase/server'
 import { logger } from '../../../lib/logger'
 import { createSessionOnLogin } from '../../../lib/middleware/session-manager'
+import { enforceAuthRateLimits } from '../../../lib/security/rate-limiting'
 
 interface LoginRequest {
   email: string
@@ -42,6 +43,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         success: false, 
         error: 'Email inválido' 
       })
+    }
+
+    if (!enforceAuthRateLimits(req, res, 'auth_login', email)) {
+      return
     }
 
     const supabase = createClient(req, res)

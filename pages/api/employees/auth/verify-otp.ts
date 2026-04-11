@@ -3,6 +3,7 @@ import { createClient, createAdminClient } from '../../../../lib/supabase/server
 import { logger } from '../../../../lib/logger'
 import { verifyOtp } from '../../../../lib/employee-otp'
 import { EMPLOYEE_OTP_VERIFY_NEUTRAL_ERROR } from '../../../../lib/auth/public-auth-messages'
+import { enforceAuthRateLimits } from '../../../../lib/security/rate-limiting'
 
 interface VerifyOtpRequest {
   email: string
@@ -42,6 +43,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         success: false, 
         error: 'Código debe ser de 6 dígitos' 
       })
+    }
+
+    if (!enforceAuthRateLimits(req, res, 'auth_otp_verify', email)) {
+      return
     }
 
     const adminSupabase = createAdminClient()
