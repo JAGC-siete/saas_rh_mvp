@@ -6,6 +6,9 @@ import ExcelJS from 'exceljs'
 import { resolveReportConfig } from '../../../lib/reports/column-resolver'
 import type { ResolvedReportConfig } from '../../../lib/reports/column-resolver'
 import { getHeaders, renderAttendanceRows, renderPayrollRows, renderEmployeesRows } from '../../../lib/reports/report-engine'
+import { generateConsolidatedPayrollPDF, type PlanillaItem } from '../../../lib/payroll/report'
+import { getCustomFields, calculatePayroll } from '../../../lib/payroll-client-specific'
+import { getBiweeklyPeriodDates } from '../../../lib/payroll/period-dates'
 
 interface ReportData {
   employees: any[]
@@ -135,7 +138,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       if (reportType === 'attendance') {
         return generateAttendancePDF(res, reportData, dateFilter, company?.name, resolvedConfig)
       } else if (reportType === 'payroll') {
-        return generatePayrollPDF(res, reportData, dateFilter, company?.name)
+        return generatePayrollPDF(res, supabase, companyId!, dateFilter, user, company?.name)
       } else if (reportType === 'employees') {
         return generateEmployeesPDF(res, reportData, company?.name)
       } else {
@@ -238,22 +241,10 @@ async function generateReportData(supabase: any, dateFilter: any, companyId: str
   const expectedAttendances = totalEmployees * daysInRange
   const averageAttendance = expectedAttendances > 0 ? (totalAttendance / expectedAttendances) * 100 : 0
 
-  // Calcular empleados tardíos y ausentes
+  // Calcular empleados tardíos usando late_minutes (calculado con work_schedule en webhook/register)
   const lateEmployees = new Set(
     attendanceRecords
-      ?.filter((record: any) => {
-        if (!record.check_in) return false
-        // TODO: Update to use employee's actual work schedule instead of hard-coded 8:15
-        // For now, using late_minutes field from attendance_records if available
-        if (record.late_minutes !== undefined) {
-          return record.late_minutes > 5
-        }
-        // Fallback to hard-coded logic (should be replaced with dynamic schedule lookup)
-        const checkInTime = new Date(record.check_in)
-        const hour = checkInTime.getHours()
-        const minutes = checkInTime.getMinutes()
-        return hour > 8 || (hour === 8 && minutes > 15)
-      })
+      ?.filter((record: any) => (record.late_minutes ?? 0) > 5)
       .map((record: any) => record.employee_id) || []
   ).size
 
@@ -402,19 +393,7 @@ function generatePDFReport(res: NextApiResponse, reportData: ReportData, dateFil
       const empAttendance = reportData.attendance.filter((att: any) => att.employee_id === emp.id)
       const presentDays = empAttendance.filter((att: any) => att.status === 'present').length
       const absentDays = empAttendance.filter((att: any) => att.status === 'absent').length
-      const lateDays = empAttendance.filter((att: any) => {
-        if (!att.check_in) return false
-        // TODO: Update to use employee's actual work schedule instead of hard-coded 8:15
-        // For now, using late_minutes field from attendance_records if available
-        if (att.late_minutes !== undefined) {
-          return att.late_minutes > 5
-        }
-        // Fallback to hard-coded logic (should be replaced with dynamic schedule lookup)
-        const checkInTime = new Date(att.check_in)
-        const hour = checkInTime.getHours()
-        const minutes = checkInTime.getMinutes()
-        return hour > 8 || (hour === 8 && minutes > 15)
-      }).length
+      const lateDays = empAttendance.filter((att: any) => (att.late_minutes ?? 0) > 5).length
       
       return {
         employee: emp,
@@ -475,81 +454,122 @@ function generatePDFReport(res: NextApiResponse, reportData: ReportData, dateFil
   }
 }
 
+function escapeCSVValue(val: string | number): string {
+  const s = String(val ?? '')
+  if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+    return `"${s.replace(/"/g, '""')}"`
+  }
+  return s
+}
+
+function generateAttendanceCSV(
+  res: NextApiResponse,
+  reportData: { employees: any[]; attendance: any[]; dateFilter: any },
+  resolvedConfig: ResolvedReportConfig
+) {
+  const { columns } = resolvedConfig
+  const headers = columns.map((c) => c.label)
+  const rows = renderAttendanceRows(
+    reportData.attendance || [],
+    reportData.employees || [],
+    columns
+  )
+  let csvContent = `Reporte de Asistencia\n`
+  csvContent += `Período: ${reportData.dateFilter.startDate} - ${reportData.dateFilter.endDate}\n`
+  csvContent += `Fecha de generación: ${formatDateForHonduras(nowInHonduras())}\n\n`
+  csvContent += headers.map(escapeCSVValue).join(',') + '\n'
+  for (const row of rows) {
+    csvContent += row.map(escapeCSVValue).join(',') + '\n'
+  }
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8')
+  res.setHeader('Content-Disposition', `attachment; filename=asistencia_${reportData.dateFilter.startDate}_${reportData.dateFilter.endDate}.csv`)
+  res.send(csvContent)
+}
+
+function generatePayrollCSV(
+  res: NextApiResponse,
+  reportData: { payroll: any[]; dateFilter: any },
+  resolvedConfig: ResolvedReportConfig
+) {
+  const { columns } = resolvedConfig
+  const employees = (reportData.payroll || []).map((r: any) => r.employees).filter(Boolean)
+  const headers = columns.map((c) => c.label)
+  const rows = renderPayrollRows(reportData.payroll || [], employees, columns)
+  const formatHNL = (n: number) => `L. ${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  let csvContent = `Reporte de Nómina\n`
+  csvContent += `Período: ${reportData.dateFilter.startDate} - ${reportData.dateFilter.endDate}\n`
+  csvContent += `Fecha de generación: ${formatDateForHonduras(nowInHonduras())}\n`
+  const totalBruto = (reportData.payroll || []).reduce((s: number, r: any) => s + (r.gross_salary || 0), 0)
+  const totalNeto = (reportData.payroll || []).reduce((s: number, r: any) => s + (r.net_salary || 0), 0)
+  csvContent += `Total Bruto,${formatHNL(totalBruto)}\n`
+  csvContent += `Total Neto,${formatHNL(totalNeto)}\n\n`
+  csvContent += headers.map(escapeCSVValue).join(',') + '\n'
+  for (const row of rows) {
+    csvContent += row.map(escapeCSVValue).join(',') + '\n'
+  }
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8')
+  res.setHeader('Content-Disposition', `attachment; filename=nomina_${reportData.dateFilter.startDate}_${reportData.dateFilter.endDate}.csv`)
+  res.send(csvContent)
+}
+
+function generateEmployeesCSV(
+  res: NextApiResponse,
+  reportData: { employees: any[] },
+  resolvedConfig: ResolvedReportConfig
+) {
+  const { columns } = resolvedConfig
+  const headers = columns.map((c) => c.label)
+  const rows = renderEmployeesRows(reportData.employees || [], columns)
+  const dateStr = new Date().toISOString().split('T')[0]
+  let csvContent = `Reporte de Empleados\n`
+  csvContent += `Fecha de generación: ${formatDateForHonduras(nowInHonduras())}\n\n`
+  csvContent += headers.map(escapeCSVValue).join(',') + '\n'
+  for (const row of rows) {
+    csvContent += row.map(escapeCSVValue).join(',') + '\n'
+  }
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8')
+  res.setHeader('Content-Disposition', `attachment; filename=empleados_${dateStr}.csv`)
+  res.send(csvContent)
+}
+
 function generateCSVReport(
   res: NextApiResponse,
-  reportData: ReportData,
+  reportData: any,
   dateFilter: any,
-  _reportType?: string,
-  _resolvedConfig?: ResolvedReportConfig
+  reportType: string,
+  resolvedConfig: ResolvedReportConfig
 ) {
   try {
-    // Generar CSV con múltiples secciones
-    let csvContent = ''
-    
-    // Header del reporte
-    csvContent += 'REPORTE DE ESTADÍSTICAS\n'
-    csvContent += `Período: ${dateFilter.startDate} - ${dateFilter.endDate}\n`
-    csvContent += `Fecha de generación: ${formatDateForHonduras(nowInHonduras())}\n\n`
-    
-    // Resumen ejecutivo
-    csvContent += 'RESUMEN EJECUTIVO\n'
-    csvContent += 'Métrica,Valor\n'
+    if (reportType === 'attendance') {
+      return generateAttendanceCSV(res, { ...reportData, dateFilter }, resolvedConfig)
+    }
+    if (reportType === 'payroll') {
+      return generatePayrollCSV(res, { ...reportData, dateFilter }, resolvedConfig)
+    }
+    if (reportType === 'employees') {
+      return generateEmployeesCSV(res, reportData, resolvedConfig)
+    }
+    // Fallback: general report (backward compatibility when reportData has stats)
     const formatHNL = (n: number) => `L. ${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-    csvContent += `Total Empleados,${reportData.stats.totalEmployees}\n`
-    csvContent += `Registros de Asistencia,${reportData.stats.totalAttendance}\n`
-    csvContent += `Nómina Total,${formatHNL(reportData.stats.totalPayroll)}\n`
-    csvContent += `Promedio Asistencia,${reportData.stats.averageAttendance.toFixed(1)}\n`
-    csvContent += `Empleados Tardíos,${reportData.stats.lateEmployees}\n`
-    csvContent += `Empleados Ausentes,${reportData.stats.absentEmployees}\n\n`
-    
-    // Lista de empleados
-    csvContent += 'LISTA DE EMPLEADOS\n'
-    csvContent += 'Código,Nombre,Departamento,Salario Base,Estado\n'
-    reportData.employees.forEach((emp: any) => {
-      csvContent += `${emp.dni || emp.id},"${emp.name}",${emp.department_id || 'Sin Departamento'},${formatHNL(emp.base_salary || 0)},${emp.status}\n`
-    })
-    csvContent += '\n'
-    
-    // Estadísticas de asistencia
-    csvContent += 'ESTADÍSTICAS DE ASISTENCIA\n'
-    csvContent += 'Empleado,Días Presente,Días Ausente,Días Tardío,Total\n'
-    
-    const attendanceSummary = reportData.employees.map((emp: any) => {
-      const empAttendance = reportData.attendance.filter((att: any) => att.employee_id === emp.id)
-      const presentDays = empAttendance.filter((att: any) => att.status === 'present').length
-      const absentDays = empAttendance.filter((att: any) => att.status === 'absent').length
-      const lateDays = empAttendance.filter((att: any) => {
-        if (!att.check_in) return false
-        // TODO: Update to use employee's actual work schedule instead of hard-coded 8:15
-        // For now, using late_minutes field from attendance_records if available
-        if (att.late_minutes !== undefined) {
-          return att.late_minutes > 5
-        }
-        // Fallback to hard-coded logic (should be replaced with dynamic schedule lookup)
-        const checkInTime = new Date(att.check_in)
-        const hour = checkInTime.getHours()
-        const minutes = checkInTime.getMinutes()
-        return hour > 8 || (hour === 8 && minutes > 15)
-      }).length
-      
-      return {
-        employee: emp,
-        presentDays,
-        absentDays,
-        lateDays,
-        totalDays: presentDays + absentDays
-      }
-    })
-    
-    attendanceSummary.forEach((summary: any) => {
-      csvContent += `"${summary.employee.name}",${summary.presentDays},${summary.absentDays},${summary.lateDays},${summary.totalDays}\n`
-    })
-    
-    // Configurar respuesta CSV
+    let csvContent = 'REPORTE DE ESTADÍSTICAS\n'
+    csvContent += `Período: ${dateFilter?.startDate || ''} - ${dateFilter?.endDate || ''}\n`
+    csvContent += `Fecha de generación: ${formatDateForHonduras(nowInHonduras())}\n\n`
+    if (reportData.stats) {
+      csvContent += 'RESUMEN EJECUTIVO\nMétrica,Valor\n'
+      csvContent += `Total Empleados,${reportData.stats.totalEmployees}\n`
+      csvContent += `Registros de Asistencia,${reportData.stats.totalAttendance}\n`
+      csvContent += `Nómina Total,${formatHNL(reportData.stats.totalPayroll)}\n`
+      csvContent += `Promedio Asistencia,${(reportData.stats.averageAttendance || 0).toFixed(1)}\n`
+      csvContent += `Empleados Tardíos,${reportData.stats.lateEmployees}\n`
+      csvContent += `Empleados Ausentes,${reportData.stats.absentEmployees}\n\n`
+    }
+    csvContent += 'LISTA DE EMPLEADOS\nCódigo,Nombre,Departamento,Salario Base,Estado\n'
+    for (const emp of reportData.employees || []) {
+      csvContent += `${escapeCSVValue(emp.dni || emp.id)},"${(emp.name || '').replace(/"/g, '""')}",${escapeCSVValue(emp.department_id || 'Sin Departamento')},${formatHNL(emp.base_salary || 0)},${emp.status}\n`
+    }
     res.setHeader('Content-Type', 'text/csv; charset=utf-8')
-    res.setHeader('Content-Disposition', `attachment; filename=reporte_${dateFilter.startDate}_${dateFilter.endDate}.csv`)
+    res.setHeader('Content-Disposition', `attachment; filename=reporte_${dateFilter?.startDate || 'general'}_${dateFilter?.endDate || ''}.csv`)
     res.send(csvContent)
-    
   } catch (error) {
     console.error('Error generando CSV:', error)
     throw error
@@ -612,12 +632,34 @@ async function generateAttendanceReportData(supabase: any, dateFilter: any, comp
 }
 
 async function generatePayrollReportData(supabase: any, dateFilter: any, companyId: string | null) {
-  // Obtener registros de nómina con relación a empleados
-  let payrollQuery = supabase
-    .from('payroll_records')
+  const STANDARD_CUTS = { biweekly_first_start: 1, biweekly_first_end: 15, biweekly_second_start: 16, biweekly_second_end: 31 }
+
+  const { data: runs, error: runsError } = await supabase
+    .from('payroll_runs')
+    .select('id, year, month, quincena')
+    .eq('company_id', companyId)
+    .gte('year', parseInt(dateFilter.startDate.slice(0, 4), 10) - 1)
+    .lte('year', parseInt(dateFilter.endDate.slice(0, 4), 10) + 1)
+
+  if (runsError) throw new Error('Error obteniendo corridas de nómina')
+
+  const overlappingRunIds: string[] = []
+  for (const r of runs || []) {
+    const { fechaInicio, fechaFin } = getBiweeklyPeriodDates(r.year, r.month, r.quincena as 1 | 2, STANDARD_CUTS)
+    if (fechaInicio <= dateFilter.endDate && fechaFin >= dateFilter.startDate) {
+      overlappingRunIds.push(r.id)
+    }
+  }
+
+  if (overlappingRunIds.length === 0) {
+    return { payroll: [], dateFilter }
+  }
+
+  const { data: lines, error: linesError } = await supabase
+    .from('payroll_run_lines')
     .select(`
       *,
-      employees!inner(
+      employees!payroll_run_lines_employee_id_fkey(
         id,
         name,
         employee_code,
@@ -625,19 +667,34 @@ async function generatePayrollReportData(supabase: any, dateFilter: any, company
         department_id,
         departments:department_id(name),
         company_id
-      )
+      ),
+      payroll_runs(id, year, month, quincena)
     `)
-    .gte('period_start', dateFilter.startDate)
-    .lte('period_end', dateFilter.endDate)
+    .in('run_id', overlappingRunIds)
+    .eq('company_id', companyId)
 
-  if (companyId) {
-    payrollQuery = payrollQuery.eq('employees.company_id', companyId)
-  }
+  if (linesError) throw new Error('Error obteniendo líneas de nómina')
 
-  const { data: payroll, error: payrollError } = await payrollQuery
-  if (payrollError) throw new Error('Error obteniendo nómina')
+  const payroll = (lines || []).map((line: any) => {
+    const run = line.payroll_runs
+    const { fechaInicio, fechaFin } = run
+      ? getBiweeklyPeriodDates(run.year, run.month, run.quincena as 1 | 2, STANDARD_CUTS)
+      : { fechaInicio: dateFilter.startDate, fechaFin: dateFilter.endDate }
+    const statutoryDed = (Number(line.eff_ihss) || 0) + (Number(line.eff_rap) || 0) + (Number(line.eff_isr) || 0)
+    return {
+      employee_id: line.employee_id,
+      period_start: fechaInicio,
+      period_end: fechaFin,
+      gross_salary: Number(line.eff_bruto) || 0,
+      total_deductions: statutoryDed,
+      net_salary: Number(line.eff_neto) || 0,
+      status: 'approved',
+      employees: line.employees,
+      metadata: line.metadata
+    }
+  })
 
-  return { payroll: payroll || [], dateFilter }
+  return { payroll, dateFilter }
 }
 
 async function generateEmployeesReportData(supabase: any, companyId: string | null) {
@@ -1141,9 +1198,163 @@ async function generateAttendancePDF(
   }
 }
 
-async function generatePayrollPDF(res: NextApiResponse, _reportData: any, _dateFilter: any, _companyName?: string) {
-  // Implementar PDF específico para nómina si se necesita
-  return res.status(400).json({ error: 'PDF de nómina use /api/payroll/report' })
+function derivePeriodoQuincena(startDate: string): { periodo: string; quincena: number } {
+  const [year, month, day] = startDate.split('-').map(Number)
+  const periodo = `${year}-${String(month).padStart(2, '0')}`
+  const quincena = day <= 15 ? 1 : 2
+  return { periodo, quincena }
+}
+
+async function generatePayrollPDF(
+  res: NextApiResponse,
+  supabase: any,
+  companyId: string,
+  dateFilter: { startDate: string; endDate: string },
+  user: { email?: string },
+  companyName?: string
+) {
+  const { periodo, quincena } = derivePeriodoQuincena(dateFilter.startDate)
+  const [year, month] = periodo.split('-').map(Number)
+
+  const { data: payrollRun, error: runError } = await supabase
+    .from('payroll_runs')
+    .select('id')
+    .eq('company_id', companyId)
+    .eq('year', year)
+    .eq('month', month)
+    .eq('quincena', quincena)
+    .single()
+
+  if (runError || !payrollRun) {
+    return res.status(404).json({ error: 'No hay corrida de nómina para el período indicado. Use /api/payroll/report con periodo y quincena específicos.' })
+  }
+
+  const { data: payrollLines, error: linesError } = await supabase
+    .from('payroll_run_lines')
+    .select(`
+      *,
+      employees!payroll_run_lines_employee_id_fkey(
+        name,
+        dni,
+        employee_code,
+        base_salary,
+        bank_name,
+        bank_account,
+        pay_type,
+        departments!employees_department_id_fkey(name)
+      )
+    `)
+    .eq('run_id', payrollRun.id)
+    .eq('company_id', companyId)
+    .order('created_at', { ascending: false })
+
+  if (linesError) {
+    return res.status(500).json({ error: 'Error obteniendo líneas de nómina' })
+  }
+
+  if (!payrollLines || payrollLines.length === 0) {
+    return res.status(404).json({ error: 'No hay líneas de nómina para el período indicado' })
+  }
+
+  const planillaAll: PlanillaItem[] = await Promise.all(
+    payrollLines.map(async (line: any) => {
+      let customDeductions = 0
+      let deductionsNotes = ''
+      if (line.metadata && companyId) {
+        const calcResult = await calculatePayroll(
+          companyId,
+          Number(line.eff_bruto) || 0,
+          line.metadata,
+          supabase
+        )
+        customDeductions = calcResult.totalDeduccionesAdicionales
+        const deductionFields = [
+          { key: 'comedor', label: 'Comedor' },
+          { key: 'cooperativa_aportaciones', label: 'Coop. Aportaciones' },
+          { key: 'cooperativa_retirable', label: 'Coop. Retirable' },
+          { key: 'cooperativa_prestamo', label: 'Coop. Préstamo' },
+          { key: 'embargo_alimentos', label: 'Embargo' },
+          { key: 'prestamo_banrural', label: 'Préstamo BANRURAL' },
+          { key: 'prestamo_celular', label: 'Préstamo Celular' },
+          { key: 'anticipo_prestamo', label: 'Anticipo/Préstamo' },
+          { key: 'impuesto_vecinal', label: 'Impuesto Vecinal' }
+        ]
+        const deductionItems: string[] = []
+        for (const field of deductionFields) {
+          const value = parseFloat(line.metadata[field.key] || '0')
+          if (value > 0) deductionItems.push(`${field.label}: L. ${value.toFixed(2)}`)
+        }
+        if (deductionItems.length > 0) deductionsNotes = deductionItems.join('; ')
+      }
+
+      const statutoryDeductions = (Number(line.eff_ihss) || 0) + (Number(line.eff_rap) || 0) + (Number(line.eff_isr) || 0)
+      const totalDeductions = statutoryDeductions + customDeductions
+      const payType = line.employees?.pay_type || 'fixed'
+      const totalHours = Number(line.eff_hours) || 0
+      const hourlyRate = payType === 'hourly' && totalHours > 0 
+        ? (Number(line.eff_bruto) || 0) / totalHours 
+        : 0
+
+      return {
+        id: line.employees?.dni || line.employees?.employee_code || '',
+        name: line.employees?.name || '',
+        bank: line.employees?.bank_name || 'No especificado',
+        bank_account: line.employees?.bank_account || 'No especificado',
+        department: line.employees?.departments?.name || 'Sin Departamento',
+        monthly_salary: Number(line.employees?.base_salary) || 0,
+        days_worked: payType === 'hourly' ? (totalHours / 8) : (totalHours / 8),
+        days_absent: 0,
+        late_days: 0,
+        total_earnings: Number(line.eff_bruto) || 0,
+        IHSS: Number(line.eff_ihss) || 0,
+        RAP: Number(line.eff_rap) || 0,
+        ISR: Number(line.eff_isr) || 0,
+        total_deductions: totalDeductions,
+        total: Number(line.eff_neto) || 0,
+        notes_on_ingress: line.edited ? 'Editado' : '',
+        notes_on_deductions: deductionsNotes,
+        metadata: line.metadata || {},
+        pay_type: payType,
+        total_hours_worked: payType === 'hourly' ? totalHours : undefined,
+        hourly_rate: payType === 'hourly' ? hourlyRate : undefined
+      }
+    })
+  )
+
+  const { data: cpcRow } = await supabase
+    .from('company_payroll_configs')
+    .select('custom_fields, metadata')
+    .eq('company_id', companyId)
+    .eq('is_active', true)
+    .maybeSingle()
+
+  let pdfCustomFieldsConfig: Record<string, any> | undefined
+  const customFieldsConfig = await getCustomFields(companyId, supabase)
+  if (customFieldsConfig && cpcRow?.custom_fields) {
+    pdfCustomFieldsConfig = cpcRow.custom_fields as Record<string, any>
+  }
+
+  const pdfMeta = cpcRow?.metadata || {}
+  const pdfPayrollLegal = {
+    legal_deductions: pdfMeta.legal_deductions || { ihss: true, rap: true, isr: true }
+  }
+
+  const planillaFixed = planillaAll.filter(p => (p as any).pay_type !== 'hourly')
+  const planillaHourly = planillaAll.filter(p => (p as any).pay_type === 'hourly')
+
+  const pdf = await generateConsolidatedPayrollPDF(
+    planillaFixed,
+    planillaHourly,
+    periodo,
+    quincena,
+    user?.email,
+    companyName,
+    pdfCustomFieldsConfig,
+    pdfPayrollLegal
+  )
+  res.setHeader('Content-Type', 'application/pdf')
+  res.setHeader('Content-Disposition', `attachment; filename=planilla_${periodo}_q${quincena}.pdf`)
+  return res.send(pdf)
 }
 
 async function generateEmployeesPDF(res: NextApiResponse, reportData: any, companyName?: string) {

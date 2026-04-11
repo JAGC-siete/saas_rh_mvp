@@ -14,10 +14,12 @@ const ATTENDANCE_COLUMNS: StandardColumnDef[] = [
   { id: 'date', label: 'Fecha', order: 3, sourceField: 'date', source: 'standard' },
   { id: 'check_in', label: 'Entrada', order: 4, sourceField: 'check_in', source: 'standard' },
   { id: 'check_out', label: 'Salida', order: 5, sourceField: 'check_out', source: 'standard' },
-  { id: 'status', label: 'Estado', order: 6, sourceField: 'status', source: 'standard' },
-  { id: 'hours_worked', label: 'Horas', order: 7, sourceField: 'hours_worked', source: 'standard' },
-  { id: 'late_minutes', label: 'Min Tardanza', order: 8, sourceField: 'late_minutes', source: 'standard' },
-  { id: 'justification', label: 'Justificación', order: 9, sourceField: 'justification', source: 'standard' }
+  { id: 'lunch_start', label: 'Inicio Almuerzo', order: 6, sourceField: 'lunch_start', source: 'standard' },
+  { id: 'lunch_end', label: 'Fin Almuerzo', order: 7, sourceField: 'lunch_end', source: 'standard' },
+  { id: 'status', label: 'Estado', order: 8, sourceField: 'status', source: 'standard' },
+  { id: 'hours_worked', label: 'Horas', order: 9, sourceField: 'hours_worked', source: 'standard' },
+  { id: 'late_minutes', label: 'Min Tardanza', order: 10, sourceField: 'late_minutes', source: 'standard' },
+  { id: 'justification', label: 'Justificación', order: 11, sourceField: 'justification', source: 'standard' }
 ]
 
 const PAYROLL_COLUMNS: StandardColumnDef[] = [

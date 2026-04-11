@@ -14,6 +14,8 @@ import {
   sanitizeFilename
 } from '../../../lib/security/export-security'
 import { formatTimeDisplay, formatDateOnlyForHonduras, getWeekdayForDateOnly } from '../../../lib/timezone'
+import { createAdminClient } from '../../../lib/supabase/server'
+import { ReportConfig } from '../../../lib/reports/report-config-schema'
 
 // Aplicar rate limiting, validación de entrada y seguridad de exportación
 const handlerWithSecurity = withExportRateLimit()(

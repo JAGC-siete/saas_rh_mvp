@@ -429,7 +429,7 @@ function generateWorkCertificatePDF(res: NextApiResponse, certificateData: WorkC
 
     doc.fontSize(11)
        .font('Helvetica')
-       .text(`Esta constancia se emite a solicitud del interesado para los fines que estime convenientes. Extendida en Tegucigalpa, M.D.C., ${dayPrefix} ${dayInWords} ${daySuffix} del mes de ${monthInWords} del año ${yearInWords}.`, { align: 'justify' })
+       .text(`Esta constancia se emite a solicitud del interesado para los fines que estime convenientes. Extendida en Tegucigalpa, M.D.C., ${dayPrefix} ${dayInWords} ${daySuffix} del mes de ${monthInWords} del año ${yearInWords}.`, { align: 'left' })
 
     // Footer SISU
     doc.fontSize(8).fillColor('#64748b')
