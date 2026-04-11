@@ -15,6 +15,8 @@ interface PayrollFixedTableProps {
   onEditCustomFields?: (_lineId: string, _metadata: any, _baseSalary: number, _employeeId?: string) => void
   /** Recalcula bruto/deducciones/neto en servidor (solo corrida draft/edited) */
   canAdjustFixedDays?: boolean
+  /** Para mensajes cuando el botón de días está deshabilitado */
+  payrollRunStatus?: string
   // eslint-disable-next-line no-unused-vars
   onAdjustFixedDays?: (_payload: {
     run_line_id: string
@@ -31,6 +33,7 @@ export default function PayrollFixedTable({
   onGenerateVoucher,
   onEditCustomFields,
   canAdjustFixedDays = false,
+  payrollRunStatus,
   onAdjustFixedDays,
   loading = false,
   hasCustom = false,
@@ -143,22 +146,27 @@ export default function PayrollFixedTable({
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">
                     {formatCurrency(row.base_salary || 0)}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">
-                    <div className="flex items-center gap-2">
-                      <span>{row.days_worked || 0}</span>
-                      {canAdjustFixedDays && onAdjustFixedDays && (
+                  <td className="px-4 py-3 text-sm text-gray-200">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="tabular-nums font-medium text-white">{row.days_worked || 0}</span>
+                      {onAdjustFixedDays && row.line_id ? (
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
                           onClick={() => openDaysModal(row)}
-                          disabled={loading}
-                          className="h-7 px-2 bg-white/10 border-white/30 text-white hover:bg-white/20"
-                          title="Ajustar días y recalcular bruto / neto"
+                          disabled={loading || !canAdjustFixedDays}
+                          className="h-8 gap-1.5 border-white/30 bg-white/10 px-2.5 text-xs text-white hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
+                          title={
+                            canAdjustFixedDays
+                              ? 'Ajustar días del período y recalcular bruto, deducciones y neto'
+                              : `No se pueden editar días con la corrida en estado "${payrollRunStatus || 'actual'}". Debe estar en borrador o consolidada (sin autorizar).`
+                          }
                         >
-                          <Icon name="edit" className="h-3.5 w-3.5" />
+                          <Icon name="edit" className="h-3.5 w-3.5 shrink-0" />
+                          Editar días
                         </Button>
-                      )}
+                      ) : null}
                     </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-green-300">
