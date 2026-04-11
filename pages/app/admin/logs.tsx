@@ -57,7 +57,9 @@ export default function AdminLogs() {
       if (activeFilters.startDate) params.append('startDate', activeFilters.startDate)
       if (activeFilters.endDate) params.append('endDate', activeFilters.endDate)
       
-      const response = await fetch(`/api/admin/logs?${params.toString()}`)
+      const response = await fetch(`/api/admin/logs?${params.toString()}`, {
+        credentials: 'include'
+      })
       
       if (!response.ok) {
         const errorData = await response.json()
