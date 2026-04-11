@@ -70,7 +70,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .eq('company_id', companyId)
 
     if (linesError) {
-      console.error('Error obteniendo líneas de nómina:', linesError)
+      console.error('Error obteniendo líneas de nómina:', {
+        message: linesError.message,
+        code: linesError.code,
+        details: linesError.details,
+        hint: linesError.hint
+      })
       return res.status(500).json({ error: 'Error obteniendo líneas de nómina' })
     }
 
