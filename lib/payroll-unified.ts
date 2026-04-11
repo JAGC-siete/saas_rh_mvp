@@ -123,7 +123,9 @@ export async function fetchUnifiedPayroll(
 
           // Merge metadata and effective values into rows
           rows = rows.map((r) => {
-            const line = (r as any).line_id ? byLineId[(r as any).line_id as string] : byEmployee[r.employee_id]
+            const lid = (r as any).line_id as string | undefined
+            const line =
+              (lid && byLineId[lid]) || byEmployee[r.employee_id]
             if (line) {
               const effBruto = Number(line.eff_bruto) || Number(r.total_earnings) || 0
               const effNeto = Number(line.eff_neto) ?? r.total

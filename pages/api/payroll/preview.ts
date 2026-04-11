@@ -602,6 +602,19 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     
     const incompleteRecordsAlert: { employee_id: string; employee_name: string; dates: string[] }[] = []
 
+    const { data: existingRunLinesForSkip } = await supabase
+      .from('payroll_run_lines')
+      .select(
+        'id, employee_id, metadata, eff_hours, eff_bruto, eff_ihss, eff_rap, eff_isr, eff_neto'
+      )
+      .eq('run_id', runId)
+      .eq('company_id', companyId)
+
+    const existingLineByEmployee: Record<string, any> = {}
+    for (const row of existingRunLinesForSkip || []) {
+      if (row.employee_id) existingLineByEmployee[row.employee_id] = row
+    }
+
     for (const emp of empleadosParaNomina) {
       const payType = emp.pay_type ?? (calculationMode === 'hourly' ? 'hourly' : 'fixed')
 
@@ -634,6 +647,40 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
       if (payType === 'fixed') {
         // ========== EMPLEADOS FIJOS (FIXED) ==========
+        const prevLine = existingLineByEmployee[emp.id]
+        const prevMeta = prevLine?.metadata as Record<string, unknown> | null | undefined
+        if (prevMeta != null && prevMeta.days_adjusted_at != null && prevLine) {
+          const effH = Number(prevLine.eff_hours) || 0
+          const effBruto = Number(prevLine.eff_bruto) || 0
+          const effIhss = Number(prevLine.eff_ihss) || 0
+          const effRap = Number(prevLine.eff_rap) || 0
+          const effIsr = Number(prevLine.eff_isr) || 0
+          const effNeto = Number(prevLine.eff_neto) || 0
+          const totalDed = effBruto - effNeto
+          planilla_fixed.push({
+            employee_id: emp.id,
+            id: emp.dni || emp.id,
+            name: emp?.name || 'Sin nombre',
+            bank: emp.bank_name || 'No especificado',
+            bank_account: emp.bank_account || 'No especificado',
+            department: departmentName,
+            base_salary: base_salary,
+            monthly_salary: base_salary,
+            days_worked: effH,
+            days_absent: Math.max(0, diasPeriodo - effH),
+            total_earnings: Math.round(effBruto * 100) / 100,
+            IHSS: Math.round(effIhss * 100) / 100,
+            RAP: Math.round(effRap * 100) / 100,
+            ISR: Math.round(effIsr * 100) / 100,
+            total_deducciones: Math.round(Math.max(0, totalDed) * 100) / 100,
+            total: Math.round(effNeto * 100) / 100,
+            line_id: prevLine.id,
+            pay_type: 'fixed',
+            metadata: prevLine.metadata
+          })
+          continue
+        }
+
         const days_worked = registros.length > 0 ? registros.length : diasPeriodo
         const days_absent = diasPeriodo - days_worked
 
