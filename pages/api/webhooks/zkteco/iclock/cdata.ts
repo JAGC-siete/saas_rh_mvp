@@ -9,7 +9,7 @@ import { logger } from '../../../../../lib/logger';
 import { parseAttlogBody } from '../../../../../lib/attendance/parse-zkteco-attlog';
 import { resolveEmployeeByPin } from '../../../../../lib/attendance/resolve-employee-by-pin';
 import { parseZktecoDateTime, getTodayInHonduras, nowInHonduras, toHN } from '../../../../../lib/timezone';
-import { processAttendanceMark } from '../../../attendance';
+import { processAttendanceMark } from '../../attendance';
 import { createHash } from 'crypto';
 
 export const config = {
