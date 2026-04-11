@@ -1,6 +1,7 @@
 import { Buffer } from 'buffer'
 import { formatDateForHonduras, nowInHonduras, formatDateTimeForHonduras } from '../timezone'
 import { formatPeriodRangeForDisplay } from './period-dates'
+import { resolveStatutoryDeductionColumns } from './statutory-deduction-columns'
 
 
 
@@ -68,6 +69,7 @@ export async function generateConsolidatedPayrollPDF(
       monthly_start?: number
       monthly_end?: number
     }
+    legal_deductions?: { ihss?: boolean; rap?: boolean; isr?: boolean }
   },
   periodDates?: { period_start: string; period_end: string }
 ): Promise<Buffer> {
@@ -251,9 +253,17 @@ export async function generateConsolidatedPayrollPDF(
           baseHeaders = ['Código', 'Nombre', 'Departamento', 'Días Trab.', 'Salario Base Mensual']
         }
 
+        const statutoryCols = resolveStatutoryDeductionColumns(
+          payrollConfig?.legal_deductions,
+          customFieldsConfig as Record<string, CustomFieldDef | string> | undefined
+        )
+
         const earningsHeaders: string[] = []
         const deductionsHeaders: string[] = []
-        const standardDeductionsHeaders = ['IHSS', 'RAP', 'ISR']
+        const standardDeductionsHeaders: string[] = []
+        if (statutoryCols.ihss) standardDeductionsHeaders.push('IHSS')
+        if (statutoryCols.rap) standardDeductionsHeaders.push('RAP')
+        if (statutoryCols.isr) standardDeductionsHeaders.push('ISR')
         const finalHeaders = ['Devengado', 'Deducciones', 'Neto']
         
         // Extract custom fields by category
@@ -283,12 +293,12 @@ export async function generateConsolidatedPayrollPDF(
         
         // Calculate column widths dynamically (smaller for better fit)
         const baseColWidths = isHourly 
-          ? (hasSeptimoDia ? [55, 95, 70, 35, 45, 55, 65, 55] : [60, 100, 75, 40, 50, 60, 70]) // Hourly
-          : [60, 100, 75, 50, 80] // Fixed: smaller widths
+          ? (hasSeptimoDia ? [55, 110, 70, 35, 45, 55, 65, 55] : [60, 115, 75, 40, 50, 60, 70]) // Hourly — nombre más ancho
+          : [60, 118, 75, 50, 80] // Fixed
         const customFieldWidth = 50 // Reduced from 60
         const earningsColWidths = earningsHeaders.map(() => customFieldWidth)
         const devengadoWidth = 65
-        const standardDeductionsWidths = [45, 45, 45]
+        const standardDeductionsWidths = standardDeductionsHeaders.map(() => 45)
         const deductionsColWidths = deductionsHeaders.map(() => customFieldWidth)
         const finalColWidths = [65, 65] // Deducciones, Neto
         
@@ -316,11 +326,17 @@ export async function generateConsolidatedPayrollPDF(
         const rowHeight = 15 // Reduced from 17
 
         // Draw headers with smaller font
+        const headerTextOpts = (i: number) => ({
+          width: colWidths[i] - 4,
+          align: 'center' as const,
+          lineBreak: false,
+          ellipsis: true
+        })
         allHeaders.forEach((h, i) => {
           const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0)
           doc.rect(x, y, colWidths[i], rowHeight).fillAndStroke('#0b4fa1', '#0f172a')
           doc.fillColor('white')
-          doc.fontSize(7).text(h, x + 2, y + 3, { width: colWidths[i] - 4, align: 'center' })
+          doc.fontSize(7).text(h, x + 2, y + 3, headerTextOpts(i))
           doc.fillColor('#0f172a')
         })
         y += rowHeight
@@ -338,7 +354,7 @@ export async function generateConsolidatedPayrollPDF(
               const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0)
               doc.rect(x, y, colWidths[i], rowHeight).fillAndStroke('#0b4fa1', '#0f172a')
               doc.fillColor('white')
-              doc.fontSize(7).text(h, x + 2, y + 3, { width: colWidths[i] - 4, align: 'center' })
+              doc.fontSize(7).text(h, x + 2, y + 3, headerTextOpts(i))
               doc.fillColor('#0f172a')
             })
             y += rowHeight
@@ -350,8 +366,8 @@ export async function generateConsolidatedPayrollPDF(
           if (isHourly) {
             values.push(
               row.id || '',
-              row.name.substring(0, 20), // Truncate long names
-              (row.department || '').substring(0, 15),
+              row.name || '',
+              (row.department || '').substring(0, 18),
               row.days_worked.toFixed(1),
               (row.total_hours_worked || 0).toFixed(2),
               formatCurrency(row.hourly_rate || 0),
@@ -363,8 +379,8 @@ export async function generateConsolidatedPayrollPDF(
           } else {
             values.push(
               row.id || '',
-              row.name.substring(0, 20),
-              (row.department || '').substring(0, 15),
+              row.name || '',
+              (row.department || '').substring(0, 18),
               row.days_worked.toFixed(1),
               formatCurrency(row.monthly_salary)
             )
@@ -385,10 +401,10 @@ export async function generateConsolidatedPayrollPDF(
           // Add Devengado (total earnings)
           values.push(formatCurrency(row.total_earnings))
           
-          // Add standard deductions
-          values.push(formatCurrency(row.IHSS))
-          values.push(formatCurrency(row.RAP))
-          values.push(formatCurrency(row.ISR))
+          // Add standard deductions (según legal_deductions / ISR manual)
+          if (statutoryCols.ihss) values.push(formatCurrency(row.IHSS))
+          if (statutoryCols.rap) values.push(formatCurrency(row.RAP))
+          if (statutoryCols.isr) values.push(formatCurrency(row.ISR))
           
           // Add custom deductions fields
           if (customFieldsConfig) {
@@ -406,10 +422,16 @@ export async function generateConsolidatedPayrollPDF(
           values.push(formatCurrency(row.total_deductions))
           values.push(formatCurrency(row.total))
           
+          const cellOpts = (i: number) => ({
+            width: colWidths[i] - 4,
+            align: 'center' as const,
+            lineBreak: false,
+            ellipsis: true
+          })
           values.forEach((val, i) => {
             const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0)
             doc.rect(x, y, colWidths[i], rowHeight).stroke()
-            doc.fontSize(7).fillColor('#0f172a').text(val.toString(), x + 2, y + 3, { width: colWidths[i] - 4, align: 'center' })
+            doc.fontSize(7).fillColor('#0f172a').text(val.toString(), x + 2, y + 3, cellOpts(i))
           })
           y += rowHeight
         })
@@ -474,7 +496,12 @@ export async function generateConsolidatedPayrollPDF(
         bankValues.forEach((val, i) => {
           const x = bankStartX + bankColWidths.slice(0, i).reduce((a, b) => a + b, 0)
           doc.rect(x, bankY, bankColWidths[i], bankRowHeight).stroke()
-          doc.fontSize(8).fillColor('#0f172a').text(val.toString(), x + 2, bankY + 4, { width: bankColWidths[i] - 4, align: 'center' })
+          doc.fontSize(8).fillColor('#0f172a').text(val.toString(), x + 2, bankY + 4, {
+            width: bankColWidths[i] - 4,
+            align: 'center',
+            lineBreak: false,
+            ellipsis: true
+          })
         })
         bankY += bankRowHeight
       })
@@ -482,7 +509,7 @@ export async function generateConsolidatedPayrollPDF(
       doc.fontSize(9).fillColor('#0f172a').text('NOTAS IMPORTANTES:', 40, bankY + 22)
       doc.fontSize(8).fillColor('#334155').text('• Esta planilla ha sido generada automáticamente por el Sistema Hondureño de Recursos Humanos.', 40, bankY + 38)
       doc.fontSize(8).text('• Los montos están calculados según la legislación laboral de Honduras.', 40, bankY + 53)
-      doc.fontSize(8).text('• Las deducciones incluyen: IHSS, RAP, ISR (según tabla progresiva).', 40, bankY + 68)
+      doc.fontSize(8).text('• Las deducciones incluyen las aplicables según configuración (IHSS, RAP, ISR u otras).', 40, bankY + 68)
       doc.fontSize(8).text('• Verificar que la información bancaria sea correcta antes de procesar pagos.', 40, bankY + 83)
       doc.fontSize(8).text('• Para consultas, contactar al departamento de recursos humanos.', 40, bankY + 98)
 

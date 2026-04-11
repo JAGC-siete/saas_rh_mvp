@@ -4,7 +4,6 @@ import DashboardLayout from '../../components/DashboardLayout'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
-import { Label } from '../../components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
 import { CesantiasRequestInput, motivoSalidaEnum } from '../../lib/payroll/cesantias-schema'
 
@@ -177,9 +176,9 @@ export default function CesantiasPage() {
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="salarioBaseMensual" className="text-gray-200">
+                    <label htmlFor="salarioBaseMensual" className="text-gray-200 text-sm font-medium">
                       Salario base mensual (L)
-                    </Label>
+                    </label>
                     <Input
                       id="salarioBaseMensual"
                       type="number"
@@ -196,9 +195,9 @@ export default function CesantiasPage() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="fechaIngreso" className="text-gray-200">
+                      <label htmlFor="fechaIngreso" className="text-gray-200 text-sm font-medium">
                         Fecha de ingreso
-                      </Label>
+                      </label>
                       <Input
                         id="fechaIngreso"
                         type="date"
@@ -212,9 +211,9 @@ export default function CesantiasPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="fechaEgreso" className="text-gray-200">
+                      <label htmlFor="fechaEgreso" className="text-gray-200 text-sm font-medium">
                         Fecha de egreso
-                      </Label>
+                      </label>
                       <Input
                         id="fechaEgreso"
                         type="date"
@@ -229,7 +228,7 @@ export default function CesantiasPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-gray-200">Motivo de salida</Label>
+                    <label className="text-gray-200 text-sm font-medium">Motivo de salida</label>
                     <Select
                       value={form.parametrosCalculo.motivoSalida}
                       onValueChange={(value) =>
@@ -253,9 +252,9 @@ export default function CesantiasPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="montoRapAcumulado" className="text-gray-200">
+                    <label htmlFor="montoRapAcumulado" className="text-gray-200 text-sm font-medium">
                       Monto acumulado RAP / Reserva Laboral (opcional)
-                    </Label>
+                    </label>
                     <Input
                       id="montoRapAcumulado"
                       type="number"
@@ -281,9 +280,9 @@ export default function CesantiasPage() {
                         checked={form.parametrosCalculo.preavisoGozado ?? false}
                         onChange={(e) => handleParametrosChange('preavisoGozado', e.target.checked)}
                       />
-                      <Label htmlFor="preavisoGozado" className="text-gray-200">
+                      <label htmlFor="preavisoGozado" className="text-gray-200 text-sm font-medium">
                         El trabajador ya laboró el preaviso
-                      </Label>
+                      </label>
                     </div>
                   )}
 

@@ -38,6 +38,10 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
   
   // Payment frequency from company config (para mostrar "Deducción en dos pagos" solo cuando es quincenal)
   const [paymentFrequency, setPaymentFrequency] = useState<string | null>(null)
+  const [payrollApiConfig, setPayrollApiConfig] = useState<{
+    legal_deductions?: { ihss?: boolean; rap?: boolean; isr?: boolean }
+    custom_fields?: Record<string, unknown>
+  } | null>(null)
 
   // Tab: Planilla | Partida Contable
   const [activeTab, setActiveTab] = useState<'planilla' | 'contabilidad'>('planilla')
@@ -53,12 +57,24 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
   useEffect(() => {
     if (!payroll.companyId) return
     fetch('/api/payroll/config')
-      .then((res) => res.ok ? res.json() : null)
+      .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        const pf = data?.config?.payment_frequency
+        const cfg = data?.config
+        const pf = cfg?.payment_frequency
         setPaymentFrequency(pf ?? null)
+        setPayrollApiConfig(
+          cfg
+            ? {
+                legal_deductions: cfg.legal_deductions,
+                custom_fields: cfg.custom_fields
+              }
+            : null
+        )
       })
-      .catch(() => setPaymentFrequency(null))
+      .catch(() => {
+        setPaymentFrequency(null)
+        setPayrollApiConfig(null)
+      })
   }, [payroll.companyId])
 
   // Si frecuencia es mensual/semanal (no quincenal) y tipo es 2PAGOS, resetear a CON
@@ -612,6 +628,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
           status={payroll.status}
           period={payroll.currentPeriod}
           companyId={payroll.companyId}
+          payrollApiConfig={payrollApiConfig}
         />
       )}
       </>

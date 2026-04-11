@@ -7,6 +7,10 @@ import { Button } from './ui/button'
 import { Icon, IconName } from './Icon'
 import { formatCurrency } from '../lib/utils/currency'
 import { UnifiedRow, UnifiedResumen } from '../lib/payroll-unified'
+import {
+  resolveStatutoryDeductionColumns,
+  type CustomFieldConfigEntry
+} from '../lib/payroll/statutory-deduction-columns'
 // // import { extractCustomFields, calculatePayroll } from '../lib/payroll-client-specific'
 import { createClient } from '../lib/supabase/client'
 import { Pagination } from './ui/pagination'
@@ -38,6 +42,10 @@ interface UnifiedPayrollTableProps {
     quincena: number
   }
   companyId?: string
+  payrollApiConfig?: {
+    legal_deductions?: { ihss?: boolean; rap?: boolean; isr?: boolean }
+    custom_fields?: Record<string, unknown>
+  } | null
 }
 
 export default function UnifiedPayrollTable({
@@ -58,7 +66,8 @@ export default function UnifiedPayrollTable({
   runId,
   status,
   period,
-  companyId
+  companyId,
+  payrollApiConfig = null
 }: UnifiedPayrollTableProps) {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
   const [currentPageFixed, setCurrentPageFixed] = useState(1)
@@ -111,6 +120,16 @@ export default function UnifiedPayrollTable({
       window.removeEventListener('payrollConfigUpdated', handleConfigUpdate as EventListener)
     }
   }, [companyId])
+
+  const statutoryDeductionColumns = useMemo(
+    () =>
+      resolveStatutoryDeductionColumns(
+        payrollApiConfig?.legal_deductions ?? null,
+        (payrollApiConfig?.custom_fields as Record<string, CustomFieldConfigEntry> | undefined) ??
+          null
+      ),
+    [payrollApiConfig]
+  )
 
   // Get unique departments for filter
   const departments = useMemo(() => {
@@ -440,6 +459,7 @@ export default function UnifiedPayrollTable({
             onEditCustomFields={onEditCustomFields}
             loading={loading}
             hasCustom={hasCustom}
+            statutoryDeductions={statutoryDeductionColumns}
           />
             {/* Paginación independiente para empleados fijos */}
             {totalPagesFixed > 1 && (
@@ -465,6 +485,7 @@ export default function UnifiedPayrollTable({
             onEditCustomFields={onEditCustomFields}
             loading={loading}
             hasCustom={hasCustom}
+            statutoryDeductions={statutoryDeductionColumns}
           />
             {/* Paginación independiente para empleados por hora */}
             {totalPagesHourly > 1 && (

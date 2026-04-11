@@ -90,7 +90,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Obtener configuración de payroll (quincena_config como fuente primaria, metadata legacy)
     const { data: payrollConfig } = await supabase
       .from('company_payroll_configs')
-      .select('metadata, payment_frequency, quincena_config')
+      .select('metadata, payment_frequency, quincena_config, custom_fields')
       .eq('company_id', companyId)
       .eq('is_active', true)
       .single()
@@ -124,13 +124,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }
     const currency = payrollMetadata.currency || 'HNL'
     const pfRaw = payrollConfig?.payment_frequency ?? payrollMetadata.payment_frequency ?? 'biweekly'
-    const paymentFrequency = pfRaw === 'mensual' ? 'monthly' : pfRaw === 'quincenal' ? 'biweekly' : pfRaw
+    const paymentFrequency = pfRaw === 'mensual' ? 'monthly' : pfRaw === 'quincenal' ? 'biweekly' : pfRaw === 'semanal' ? 'weekly' : pfRaw
 
-    // Preparar configuración de payroll para el PDF
+    let pdfCustomFieldsForPdf: Record<string, any> | undefined
+    if (payrollConfig?.custom_fields && typeof payrollConfig.custom_fields === 'object') {
+      pdfCustomFieldsForPdf = payrollConfig.custom_fields as Record<string, any>
+    }
+
+    const legalDeductions = payrollMetadata.legal_deductions || {
+      ihss: true,
+      rap: true,
+      isr: true
+    }
     const pdfPayrollConfig = {
       currency,
       payment_frequency: paymentFrequency,
-      payment_cut_dates: paymentCutDates
+      payment_cut_dates: paymentCutDates,
+      legal_deductions: legalDeductions
     }
 
     // Generar PDF consolidado
@@ -151,7 +161,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       Number(quincena), 
       user?.email, 
       company?.name,
-      undefined, // customFieldsConfig (no disponible en este endpoint legacy)
+      pdfCustomFieldsForPdf,
       pdfPayrollConfig
     )
     

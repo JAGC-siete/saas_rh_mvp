@@ -1,11 +1,12 @@
 import Decimal from 'decimal.js'
+import { z } from 'zod'
 import { CesantiasRequestInput, motivoSalidaEnum } from './cesantias-schema'
 
 export const DIAS_MES_COMERCIAL = 30
 export const DIAS_ANO_COMERCIAL = 360
 export const CESANTIA_MAX_ANOS = 25
 
-export type MotivoSalida = typeof motivoSalidaEnum._type
+export type MotivoSalida = z.infer<typeof motivoSalidaEnum>
 
 export interface BasesSalariales {
   salarioBaseMensual: number

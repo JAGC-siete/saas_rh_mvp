@@ -1,7 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { generateConsolidatedPayrollPDF, type PlanillaItem } from '../../../lib/payroll/report'
-import { getCustomFields } from '../../../lib/payroll-client-specific'
 import { calculatePayroll } from '../../../lib/payroll-client-specific'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -158,23 +157,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq('id', companyId)
       .single()
 
-    // Get custom fields configuration for PDF columns (validar companyId no sea null)
     let pdfCustomFieldsConfig: Record<string, any> | undefined = undefined
+    let pdfPayrollConfig: { legal_deductions: { ihss?: boolean; rap?: boolean; isr?: boolean } } | undefined = undefined
     if (companyId) {
-      const customFieldsConfig = await getCustomFields(companyId, supabase)
-      
-      // Get full config from DB to get category information
-      if (customFieldsConfig) {
-        const { data: payrollConfig } = await supabase
-          .from('company_payroll_configs')
-          .select('custom_fields')
-          .eq('company_id', companyId)
-          .eq('is_active', true)
-          .single()
-        
-        if (payrollConfig?.custom_fields) {
-          pdfCustomFieldsConfig = payrollConfig.custom_fields as Record<string, any>
-        }
+      const { data: payrollConfigRow } = await supabase
+        .from('company_payroll_configs')
+        .select('custom_fields, metadata')
+        .eq('company_id', companyId)
+        .eq('is_active', true)
+        .maybeSingle()
+
+      const meta = payrollConfigRow?.metadata || {}
+      if (payrollConfigRow?.custom_fields) {
+        pdfCustomFieldsConfig = payrollConfigRow.custom_fields as Record<string, any>
+      }
+      pdfPayrollConfig = {
+        legal_deductions: meta.legal_deductions || { ihss: true, rap: true, isr: true }
       }
     }
 
@@ -189,7 +187,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       Number(quincena), 
       user.email, 
       company?.name,
-      pdfCustomFieldsConfig
+      pdfCustomFieldsConfig,
+      pdfPayrollConfig
     )
     res.setHeader('Content-Type', 'application/pdf')
     res.setHeader('Content-Disposition', `attachment; filename=planilla_${periodo}_q${quincena}.pdf`)

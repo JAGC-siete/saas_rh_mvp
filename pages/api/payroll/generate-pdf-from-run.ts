@@ -226,10 +226,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     // Preparar configuración de payroll para el PDF
+    const legalDeductions = payrollMetadata.legal_deductions || {
+      ihss: true,
+      rap: true,
+      isr: true
+    }
     const pdfPayrollConfig = {
       currency,
       payment_frequency: paymentFrequency,
-      payment_cut_dates: paymentCutDates
+      payment_cut_dates: paymentCutDates,
+      legal_deductions: legalDeductions
     }
 
     // Separate fixed and hourly employees

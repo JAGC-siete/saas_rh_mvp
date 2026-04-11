@@ -13,6 +13,7 @@ interface PayrollFixedTableProps {
   onEditCustomFields?: (_lineId: string, _metadata: any, _baseSalary: number, _employeeId?: string) => void
   loading?: boolean
   hasCustom?: boolean
+  statutoryDeductions?: { ihss: boolean; rap: boolean; isr: boolean }
 }
 
 export default function PayrollFixedTable({
@@ -20,7 +21,8 @@ export default function PayrollFixedTable({
   onGenerateVoucher,
   onEditCustomFields,
   loading = false,
-  hasCustom = false
+  hasCustom = false,
+  statutoryDeductions = { ihss: true, rap: true, isr: true }
 }: PayrollFixedTableProps) {
   const summary = rows.reduce((acc, r) => {
     acc.totalBruto += r.total_earnings || 0
@@ -65,10 +67,10 @@ export default function PayrollFixedTable({
             {rows.length > 0 ? (
               rows.map((row) => (
                 <tr key={row.employee_id} className="hover:bg-white/10 transition-colors duration-200">
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <td className="px-4 py-3 align-top min-w-[10rem] max-w-[18rem]">
                     <div>
-                      <div className="text-sm font-medium text-white">{row.name}</div>
-                      <div className="text-xs text-gray-300">{row.department || 'N/A'}</div>
+                      <div className="text-sm font-medium text-white break-words leading-snug">{row.name}</div>
+                      <div className="text-xs text-gray-300 break-words mt-0.5">{row.department || 'N/A'}</div>
                     </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">
@@ -81,10 +83,16 @@ export default function PayrollFixedTable({
                     {formatCurrency(row.total_earnings || 0)}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-red-300">
-                    <div className="text-xs">
-                      <div>IHSS: {formatCurrency(row.IHSS || 0)}</div>
-                      <div>RAP: {formatCurrency(row.RAP || 0)}</div>
-                      <div>ISR: {formatCurrency(row.ISR || 0)}</div>
+                    <div className="text-xs space-y-0.5">
+                      {statutoryDeductions.ihss && (
+                        <div>IHSS: {formatCurrency(row.IHSS || 0)}</div>
+                      )}
+                      {statutoryDeductions.rap && (
+                        <div>RAP: {formatCurrency(row.RAP || 0)}</div>
+                      )}
+                      {statutoryDeductions.isr && (
+                        <div>ISR: {formatCurrency(row.ISR || 0)}</div>
+                      )}
                       <div className="font-semibold mt-1">Total: {formatCurrency(row.total_deducciones || 0)}</div>
                     </div>
                   </td>
