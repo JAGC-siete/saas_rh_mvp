@@ -43,7 +43,7 @@ export default function OutsideScheduleTable({
     <Card variant="glass" className="border border-white/10">
       <CardHeader className="pb-3 border-b border-white/10">
         <CardTitle className="text-base font-semibold text-white flex items-center gap-2">
-          <span className="text-xl">⏱</span>
+          <ExclamationTriangleIcon className="h-6 w-6 text-amber-400 shrink-0" aria-hidden />
           {title}
         </CardTitle>
       </CardHeader>

@@ -1,3 +1,4 @@
+import { ChartBarIcon } from '@heroicons/react/24/outline'
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts'
 
 interface KpiBarsChartProps {
@@ -9,12 +10,13 @@ interface KpiBarsChartProps {
     total_empleados?: number
   }
   loading?: boolean
+  /** Etiqueta del eje X (ej. período filtrado), evita mostrar "Hoy" cuando el preset es otro. */
+  barLabel?: string
 }
 
-export default function KpiBarsChart({ kpis, loading = false }: KpiBarsChartProps) {
-  // Preparar datos para el gráfico de barras apiladas
+export default function KpiBarsChart({ kpis, loading = false, barLabel = 'Período' }: KpiBarsChartProps) {
   const chartData = [{
-    name: 'Hoy',
+    name: barLabel,
     presentes: kpis.presentes || 0,
     tardes: kpis.tardes || 0,
     ausentes: kpis.ausentes || 0,
@@ -32,8 +34,8 @@ export default function KpiBarsChart({ kpis, loading = false }: KpiBarsChartProp
   if (chartData[0].total === 0) {
     return (
       <div className="h-[220px] bg-gradient-to-br from-white/5 to-white/0 rounded-xl border border-white/10 backdrop-blur-sm flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-4xl mb-3">📊</div>
+        <div className="text-center px-4">
+          <ChartBarIcon className="h-12 w-12 mx-auto text-gray-600 mb-3" aria-hidden />
           <div className="text-gray-400 mb-2 font-medium">Sin datos de asistencia</div>
           <div className="text-sm text-gray-500">No hay registros disponibles</div>
         </div>

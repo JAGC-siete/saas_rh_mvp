@@ -30,11 +30,11 @@ interface FiltersBarProps {
 }
 
 const presets = [
-  { label: 'Hoy', value: 'today', icon: '📅' },
-  { label: 'Esta Semana', value: 'week', icon: '📆' },
-  { label: 'Esta Quincena', value: 'fortnight', icon: '📋' },
-  { label: 'Este Mes', value: 'month', icon: '🗓️' },
-  { label: 'Este Año', value: 'year', icon: '📊' }
+  { label: 'Hoy', value: 'today' },
+  { label: 'Esta semana', value: 'week' },
+  { label: 'Esta quincena', value: 'fortnight' },
+  { label: 'Este mes', value: 'month' },
+  { label: 'Este año', value: 'year' },
 ]
 
 const MAX_RANGE_DAYS = 366
@@ -189,10 +189,12 @@ export default function FiltersBar({
             >
               {presets.map((p) => (
                 <option key={p.value} value={p.value} className="bg-gray-800">
-                  {p.icon} {p.label}
+                  {p.label}
                 </option>
               ))}
-              <option value="custom" className="bg-gray-800">🗓️ Rango personalizado</option>
+              <option value="custom" className="bg-gray-800">
+                Rango personalizado
+              </option>
             </select>
             <ChevronDownIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
           </div>
@@ -238,7 +240,9 @@ export default function FiltersBar({
                 disabled={loadingEmployees || loading}
                 className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm font-medium cursor-pointer hover:bg-white/15 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 appearance-none pr-8 disabled:opacity-50"
               >
-                <option value="" className="bg-gray-800">👤 Todos los empleados</option>
+                <option value="" className="bg-gray-800">
+                  Todos los empleados
+                </option>
                 {employees.map((employee) => (
                   <option key={employee.id} value={employee.id} className="bg-gray-800">
                     {employee.name} {employee.employee_code ? `(${employee.employee_code})` : ''}
@@ -264,7 +268,9 @@ export default function FiltersBar({
                 disabled={loadingRoles || loading}
                 className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm font-medium cursor-pointer hover:bg-white/15 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 appearance-none pr-8 disabled:opacity-50"
               >
-                <option value="" className="bg-gray-800">👥 Todos los equipos</option>
+                <option value="" className="bg-gray-800">
+                  Todos los equipos
+                </option>
                 {roles.map(role => (
                   <option key={role} value={role} className="bg-gray-800">{role}</option>
                 ))}
@@ -288,7 +294,9 @@ export default function FiltersBar({
                 disabled={loadingDepartments || loading}
                 className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm font-medium cursor-pointer hover:bg-white/15 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 appearance-none pr-8 disabled:opacity-50"
               >
-                <option value="" className="bg-gray-800">🏢 Todos los departamentos</option>
+                <option value="" className="bg-gray-800">
+                  Todos los departamentos
+                </option>
                 {departments.map((dept) => (
                   <option key={dept.id} value={dept.id} className="bg-gray-800">{dept.name}</option>
                 ))}

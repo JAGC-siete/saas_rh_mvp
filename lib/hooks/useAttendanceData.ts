@@ -8,7 +8,7 @@ interface AttendanceKPIs {
   total_empleados?: number
 }
 
-interface AttendanceRow {
+export interface AttendanceRow {
   id: string
   name: string
   dni: string
@@ -182,15 +182,27 @@ export function useAttendanceData(preset: string, employeeId?: string, role?: st
 }
 
 // Utilidad para calcular tasas derivadas
+// Denominador `total`: presentes + tardes + ausentes (cómo agrupa el KPI del período).
+// `llegadas`: quienes registraron asistencia (presentes + tardes); sirve para % relativos a llegadas.
 export function calculateAttendanceRates(kpis: AttendanceKPIs) {
-  const total = (kpis.presentes ?? 0) + (kpis.tardes ?? 0) + (kpis.ausentes ?? 0)
-  const asistenciaPct = total > 0 ? (((kpis.presentes ?? 0) + (kpis.tardes ?? 0)) / total) * 100 : 0
-  const puntualidadPct = total > 0 ? ((kpis.presentes ?? 0) / total) * 100 : 0
-  
+  const presentes = kpis.presentes ?? 0
+  const tardes = kpis.tardes ?? 0
+  const ausentes = kpis.ausentes ?? 0
+  const tempranos = kpis.tempranos ?? 0
+  const total = presentes + tardes + ausentes
+  const llegadas = presentes + tardes
+  const asistenciaPct = total > 0 ? ((llegadas / total) * 100) : 0
+  const puntualidadSobreLlegadasPct = llegadas > 0 ? (presentes / llegadas) * 100 : 0
+  const tempranosSobreLlegadasPct = llegadas > 0 ? (tempranos / llegadas) * 100 : 0
+  const tardesSobreLlegadasPct = llegadas > 0 ? (tardes / llegadas) * 100 : 0
+
   return {
     total,
-    asistenciaPct: Math.round(asistenciaPct * 10) / 10, // 1 decimal
-    puntualidadPct: Math.round(puntualidadPct * 10) / 10
+    llegadas,
+    asistenciaPct: Math.round(asistenciaPct * 10) / 10,
+    puntualidadSobreLlegadasPct: Math.round(puntualidadSobreLlegadasPct * 10) / 10,
+    tempranosSobreLlegadasPct: Math.round(tempranosSobreLlegadasPct * 10) / 10,
+    tardesSobreLlegadasPct: Math.round(tardesSobreLlegadasPct * 10) / 10,
   }
 }
 

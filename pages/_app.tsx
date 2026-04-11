@@ -3,6 +3,7 @@ import { AppProps } from 'next/app'
 import { AuthProvider } from '../lib/auth'
 import { NotificationProvider } from '../components/NotificationProvider'
 import { SessionExpiryWarning } from '../components/SessionExpiryWarning'
+import { ToastContainer } from '../lib/toast'
 import '../styles/globals.css'
 import '../styles/landing.css'
 
@@ -47,6 +48,7 @@ export default function App({ Component, pageProps }: AppProps) {
                 }
               }} 
             />
+            <ToastContainer />
           </div>
         </NotificationProvider>
       </AuthProvider>

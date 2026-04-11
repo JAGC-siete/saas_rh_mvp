@@ -1,8 +1,18 @@
-import { useState, useMemo } from 'react'
+import React, { useState, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { formatTimeDisplay } from '../../lib/timezone'
 import { getSeverityFromDelta } from '../../lib/hooks/useAttendanceData'
-import { UserCircleIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
+import {
+  UserCircleIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  FunnelIcon,
+  ClockIcon,
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+  ExclamationCircleIcon,
+  XCircleIcon,
+} from '@heroicons/react/24/outline'
 import { AttendanceRecordFlagsBadges, type AttendanceListFlags } from './AttendanceRecordFlagsBadges'
 
 interface ArrivalRow {
@@ -85,20 +95,50 @@ export default function ArrivalTable({ earlyData, lateData, title, onSelect, pag
   const goPrev = () => setPage((p) => (p > 1 ? p - 1 : p))
   const goNext = () => setPage((p) => (p < totalPages ? p + 1 : p))
 
-  const severityFilters = [
-    { key: 'all' as SeverityFilter, label: 'Todos', count: unifiedRows.length, icon: '🔍' },
-    { key: 'early' as SeverityFilter, label: 'Temprano', count: unifiedRows.filter(r => r.tone === 'info').length, icon: '✅' },
-    { key: 'on_time' as SeverityFilter, label: 'A tiempo', count: unifiedRows.filter(r => r.tone === 'ok').length, icon: '🕐' },
-    { key: 'warn' as SeverityFilter, label: 'Tarde 5–10', count: unifiedRows.filter(r => r.tone === 'warn').length, icon: '⚠️' },
-    { key: 'alert' as SeverityFilter, label: 'Tarde 11–20', count: unifiedRows.filter(r => r.tone === 'alert').length, icon: '🔴' },
-    { key: 'danger' as SeverityFilter, label: 'Tarde >20', count: unifiedRows.filter(r => r.tone === 'danger').length, icon: '🚨' },
+  const severityFilters: {
+    key: SeverityFilter
+    label: string
+    count: number
+    Icon: React.ComponentType<{ className?: string; 'aria-hidden'?: boolean }>
+  }[] = [
+    { key: 'all', label: 'Todos', count: unifiedRows.length, Icon: FunnelIcon },
+    {
+      key: 'early',
+      label: 'Temprano',
+      count: unifiedRows.filter((r) => r.tone === 'info').length,
+      Icon: ClockIcon,
+    },
+    {
+      key: 'on_time',
+      label: 'A tiempo',
+      count: unifiedRows.filter((r) => r.tone === 'ok').length,
+      Icon: CheckCircleIcon,
+    },
+    {
+      key: 'warn',
+      label: 'Tarde 5–10',
+      count: unifiedRows.filter((r) => r.tone === 'warn').length,
+      Icon: ExclamationTriangleIcon,
+    },
+    {
+      key: 'alert',
+      label: 'Tarde 11–20',
+      count: unifiedRows.filter((r) => r.tone === 'alert').length,
+      Icon: ExclamationCircleIcon,
+    },
+    {
+      key: 'danger',
+      label: 'Tarde >20',
+      count: unifiedRows.filter((r) => r.tone === 'danger').length,
+      Icon: XCircleIcon,
+    },
   ]
 
   return (
     <Card variant="glass" className="border border-white/10">
       <CardHeader className="pb-3 border-b border-white/10">
         <CardTitle className="text-base font-semibold text-white flex items-center gap-2">
-          <span className="text-xl">⏰</span>
+          <ClockIcon className="h-6 w-6 text-gray-300 shrink-0" aria-hidden />
           {title}
         </CardTitle>
         
@@ -108,15 +148,19 @@ export default function ArrivalTable({ earlyData, lateData, title, onSelect, pag
             {severityFilters.map((filter) => (
               <button
                 key={filter.key}
+                type="button"
                 onClick={() => setSeverityFilter(filter.key)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all ${
+                aria-pressed={severityFilter === filter.key}
+                aria-label={`${filter.label}, ${filter.count} registros`}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full transition-all ${
                   severityFilter === filter.key
                     ? 'bg-brand-600 text-white shadow-lg shadow-brand-600/30'
                     : 'bg-white/10 text-gray-300 hover:bg-white/20 border border-white/20'
                 }`}
               >
-                <span className="mr-1.5">{filter.icon}</span>
-                {filter.label} <span className="ml-1 opacity-75">({filter.count})</span>
+                <filter.Icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                {filter.label}{' '}
+                <span className="opacity-75 tabular-nums">({filter.count})</span>
               </button>
             ))}
           </div>
@@ -151,8 +195,19 @@ export default function ArrivalTable({ earlyData, lateData, title, onSelect, pag
                         onClick={() => onSelect && onSelect(row.id, row.name)}
                         className="flex items-center gap-3 flex-1 min-w-0 text-left"
                       >
-                        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${row.bgColor}`}>
-                          <span className="text-lg">{row.tone === 'info' ? '✅' : row.tone === 'ok' ? '🕐' : row.tone === 'warn' ? '⚠️' : '🔴'}</span>
+                        <div
+                          className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${row.bgColor}`}
+                          aria-hidden
+                        >
+                          {row.tone === 'info' && <ClockIcon className="h-4 w-4 text-blue-300" />}
+                          {row.tone === 'ok' && <CheckCircleIcon className="h-4 w-4 text-emerald-300" />}
+                          {row.tone === 'warn' && (
+                            <ExclamationTriangleIcon className="h-4 w-4 text-yellow-300" />
+                          )}
+                          {row.tone === 'alert' && (
+                            <ExclamationCircleIcon className="h-4 w-4 text-orange-300" />
+                          )}
+                          {row.tone === 'danger' && <XCircleIcon className="h-4 w-4 text-red-300" />}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="font-medium text-white truncate">{row.name}</div>
