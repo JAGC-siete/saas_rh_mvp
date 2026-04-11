@@ -16,6 +16,7 @@ import { createClient } from '../lib/supabase/client'
 import { Pagination } from './ui/pagination'
 import PayrollFixedTable from './PayrollFixedTable'
 import PayrollHourlyTable from './PayrollHourlyTable'
+import type { PayrollPdfGroupBy } from '../lib/payroll/pdf-layout'
 
 export type IncompleteRecordAlert = { employee_id: string; employee_name: string; dates: string[] }
 
@@ -27,7 +28,8 @@ interface UnifiedPayrollTableProps {
   onGenerateVoucher: (_lineId: string) => void
   onPreAuthorize?: () => void
   onAuthorize: () => void
-  onGeneratePDF: () => void
+  // eslint-disable-next-line no-unused-vars
+  onGeneratePDF: (_groupBy: PayrollPdfGroupBy) => void | Promise<void>
   onSendEmail: () => void
   // eslint-disable-next-line no-unused-vars
   onEditCustomFields?: (_lineId: string, _metadata: any, _baseSalary: number, _employeeId?: string) => void
@@ -88,6 +90,9 @@ export default function UnifiedPayrollTable({
   const [sortBy, setSortBy] = useState<'name' | 'department'>('name')
   const [departmentFilter, setDepartmentFilter] = useState<string>('all')
   const [hasCustom, setHasCustom] = useState(false)
+  const [pdfModalOpen, setPdfModalOpen] = useState(false)
+  const [pdfGroupBy, setPdfGroupBy] = useState<PayrollPdfGroupBy>('none')
+  const [pdfDownloading, setPdfDownloading] = useState(false)
   // eslint-disable-next-line no-unused-vars
   const [_payrollConfig, setPayrollConfig] = useState<any>(null)
   
@@ -556,7 +561,7 @@ export default function UnifiedPayrollTable({
 
           {/* Generate PDF - Only enabled after authorization */}
           <Button
-            onClick={onGeneratePDF}
+            onClick={() => setPdfModalOpen(true)}
             disabled={!runId || loading || status !== 'authorized'}
             variant="outline"
             className="flex items-center gap-2 bg-white/10 border-white/30 text-white hover:bg-white/20 disabled:opacity-50"
@@ -579,6 +584,57 @@ export default function UnifiedPayrollTable({
           </Button>
         </div>
       </CardContent>
+
+      {pdfModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-lg border border-white/20 bg-gray-900 p-6 text-white shadow-xl">
+            <h3 className="text-lg font-semibold">Descargar planilla en PDF</h3>
+            <p className="mt-2 text-sm text-gray-300">
+              Elija cómo organizar las tablas de empleados fijos y por hora en el documento.
+            </p>
+            <label htmlFor="pdf-group-by" className="mt-4 block text-sm font-medium text-gray-200">
+              Agrupar por
+            </label>
+            <select
+              id="pdf-group-by"
+              value={pdfGroupBy}
+              onChange={(e) => setPdfGroupBy(e.target.value as PayrollPdfGroupBy)}
+              className="mt-2 w-full rounded-md border border-white/20 bg-white/10 px-3 py-2 text-sm text-white"
+            >
+              <option value="none">Una sola tabla (todos los empleados)</option>
+              <option value="department">Departamento</option>
+              <option value="team">Equipo</option>
+              <option value="position">Posición</option>
+            </select>
+            <div className="mt-6 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setPdfModalOpen(false)}
+                disabled={pdfDownloading}
+                className="border-white/30 bg-white/10 text-white hover:bg-white/20"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                onClick={async () => {
+                  setPdfDownloading(true)
+                  try {
+                    await onGeneratePDF(pdfGroupBy)
+                    setPdfModalOpen(false)
+                  } finally {
+                    setPdfDownloading(false)
+                  }
+                }}
+                disabled={pdfDownloading}
+              >
+                {pdfDownloading ? 'Descargando…' : 'Descargar'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </Card>
   )
 }

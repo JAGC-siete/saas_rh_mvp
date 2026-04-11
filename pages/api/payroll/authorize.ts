@@ -3,6 +3,7 @@ import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { getHondurasTimestamp } from '../../../lib/timezone'
 import { withExportRateLimit } from '../../../lib/security/rate-limiting'
 import { updateEmployeeIsrYtdOnAuthorize } from '../../../lib/payroll/isr-ytd'
+import { parsePayrollPdfGroupByQuery } from '../../../lib/payroll/pdf-layout'
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -198,9 +199,18 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       // No fallar por error de auditoría
     }
 
-    // Generar PDF consolidado usando la vista efectiva
-    // TODO: Implementar generación de PDF usando v_payroll_lines_effective
-    const pdfUrl = `/api/payroll/generate-pdf-from-run?run_id=${run_id}`
+    const { data: payrollConfigRow } = await supabase
+      .from('company_payroll_configs')
+      .select('metadata')
+      .eq('company_id', companyId)
+      .eq('is_active', true)
+      .maybeSingle()
+
+    const payrollMeta = (payrollConfigRow?.metadata || {}) as Record<string, unknown>
+    const pdfGroupBy = parsePayrollPdfGroupByQuery(payrollMeta.payroll_pdf_group_by)
+    const groupQs = pdfGroupBy !== 'none' ? `&group_by=${encodeURIComponent(pdfGroupBy)}` : ''
+
+    const pdfUrl = `/api/payroll/generate-pdf-from-run?run_id=${run_id}${groupQs}`
 
     // Generar vouchers individuales
     const vouchers = lines.map((line: any) => ({

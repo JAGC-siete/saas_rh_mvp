@@ -8,6 +8,7 @@ import { useToast } from '../toast'
 import { fetchUnifiedPayroll, getCurrentPeriod, UnifiedRow, UnifiedResumen } from '../payroll-unified'
 import { usePayrollMetrics } from './usePayrollMetrics'
 import { payrollApi, mapPayrollError } from '../payroll-api'
+import type { PayrollPdfGroupBy } from '../payroll/pdf-layout'
 import { PayrollFilters, UIRunStatus } from '../../types/payroll'
 
 // Unified State Interface
@@ -557,28 +558,49 @@ export const usePayrollManager = () => {
     }
   }, [state.runId, setStatus, setLoading, clearError, setError, toast])
 
-  const generatePDF = useCallback(async () => {
-    if (!state.runId) {
-      toast.error('Error', 'No hay una corrida de nómina activa', 4000)
-      return
-    }
-    
-    try {
-      const response = await payrollApi.generatePDF(state.runId)
-      
-      // Trigger direct download
-      const link = document.createElement('a')
-      link.href = response.url
-      link.download = `planilla_${state.currentPeriod.year}-${state.currentPeriod.month.toString().padStart(2, '0')}.pdf`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      
-      toast.success('PDF Generado', 'El PDF se ha descargado correctamente', 4000)
-    } catch (error: any) {
-      toast.error('Error Generando PDF', 'No se pudo generar el PDF', 6000)
-    }
-  }, [state.runId, state.currentPeriod, toast])
+  const generatePDF = useCallback(
+    async (groupBy: PayrollPdfGroupBy = 'none') => {
+      if (!state.runId) {
+        toast.error('Error', 'No hay una corrida de nómina activa', 4000)
+        return
+      }
+
+      try {
+        const { url } = await payrollApi.generatePDF(state.runId, {
+          groupBy: groupBy === 'none' ? undefined : groupBy
+        })
+        const res = await fetch(url, { credentials: 'include' })
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => ({} as { message?: string; error?: string }))
+          throw new Error(errBody.message || errBody.error || `Error ${res.status}`)
+        }
+        const blob = await res.blob()
+        const cd = res.headers.get('Content-Disposition')
+        const m =
+          cd?.match(/filename\*=UTF-8''([^;]+)/i)?.[1] ||
+          cd?.match(/filename="([^"]+)"/)?.[1] ||
+          cd?.match(/filename=([^;]+)/)?.[1]
+        const decoded = m ? decodeURIComponent(m.trim()) : null
+        const filename =
+          decoded ||
+          `planilla_${state.currentPeriod.year}-${String(state.currentPeriod.month).padStart(2, '0')}_q${state.currentPeriod.quincena}.pdf`
+        const blobUrl = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = blobUrl
+        link.download = filename
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(blobUrl)
+
+        toast.success('PDF Generado', 'El PDF se ha descargado correctamente', 4000)
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'No se pudo generar el PDF'
+        toast.error('Error Generando PDF', message, 6000)
+      }
+    },
+    [state.runId, state.currentPeriod, toast]
+  )
 
   const generateVoucher = useCallback(async (runLineId: string) => {
     try {

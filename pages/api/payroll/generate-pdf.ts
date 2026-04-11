@@ -2,6 +2,10 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 // import { createClient } from '../../../lib/supabase/server'
 import { requireUser } from '../../../lib/auth/requireUser'
 import { generateConsolidatedPayrollPDF, type PlanillaItem } from '../../../lib/payroll/report'
+import {
+  parsePayrollPdfGroupByQuery,
+  payrollPdfGroupByFilenameSuffix
+} from '../../../lib/payroll/pdf-layout'
 import { requirePlanAndQuota, incrementUsage } from '../../../lib/billing/enforce'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -19,7 +23,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    const { periodo, quincena, draftData } = req.body
+    const { periodo, quincena, draftData, group_by } = req.body || {}
+    const pdfGroupBy = parsePayrollPdfGroupByQuery(group_by)
 
     if (!periodo || !/^[0-9]{4}-[0-9]{2}$/.test(periodo)) {
       return res.status(400).json({ error: 'Periodo inválido (YYYY-MM)' })
@@ -40,7 +45,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const employeeIds = draftData.rows.map((row: any) => row.employee_id)
     const { data: employees, error: empError } = await supabase
       .from('employees')
-      .select('id, name, employee_code, department, position, bank_name, bank_account, pay_type')
+      .select(
+        `id, name, employee_code, bank_name, bank_account, pay_type, team, position, role,
+         departments!employees_department_id_fkey(name)`
+      )
       .in('id', employeeIds)
       .eq('company_id', companyId)
 
@@ -66,7 +74,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         name: employee?.name || row.name || '',
         bank: employee?.bank_name || 'No especificado',
         bank_account: employee?.bank_account || 'No especificado',
-        department: employee?.department || 'Sin Departamento',
+        department: (employee as { departments?: { name?: string } })?.departments?.name || 'Sin Departamento',
+        team: (employee as { team?: string | null })?.team ?? null,
+        position: (employee as { position?: string | null })?.position ?? null,
+        role: (employee as { role?: string | null })?.role ?? null,
         monthly_salary: Number(row.base_salary) || 0,
         days_worked: Number(row.days_worked) || 0,
         days_absent: Number(row.days_absent) || 0,
@@ -157,12 +168,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const pdf = await generateConsolidatedPayrollPDF(
       planillaFixed,
       planillaHourly,
-      periodo, 
-      Number(quincena), 
-      user?.email, 
+      periodo,
+      Number(quincena),
+      user?.email,
       company?.name,
       pdfCustomFieldsForPdf,
-      pdfPayrollConfig
+      pdfPayrollConfig,
+      undefined,
+      undefined,
+      { groupBy: pdfGroupBy }
     )
     
     // Increment usage meter for PDF generation
@@ -174,7 +188,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     
     res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', `attachment; filename=planilla_${periodo}_q${quincena}.pdf`)
+    const groupSuffix = payrollPdfGroupByFilenameSuffix(pdfGroupBy)
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=planilla_${periodo}_q${quincena}${groupSuffix}.pdf`
+    )
     return res.send(pdf)
 
   } catch (error: any) {

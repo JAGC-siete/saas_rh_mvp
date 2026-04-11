@@ -1,6 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { generateConsolidatedPayrollPDF, type PlanillaItem } from '../../../lib/payroll/report'
+import {
+  parsePayrollPdfGroupByQuery,
+  payrollPdfGroupByFilenameSuffix,
+  type PayrollPdfGroupBy
+} from '../../../lib/payroll/pdf-layout'
 import { withExportRateLimit } from '../../../lib/security/rate-limiting'
 import { calculatePayroll, getCustomFields } from '../../../lib/payroll-client-specific'
 import { getBiweeklyPeriodDates, getMonthlyPeriodDates, getWeeklyPeriodDates } from '../../../lib/payroll/period-dates'
@@ -10,7 +15,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const { run_id } = req.query
+  const { run_id, group_by } = req.query
 
   if (!run_id || typeof run_id !== 'string') {
     return res.status(400).json({ error: 'run_id es requerido' })
@@ -57,6 +62,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         *,
         employees!payroll_run_lines_employee_id_fkey(
           id, name, dni, base_salary, bank_name, bank_account, pay_type,
+          team, position, role,
           departments!employees_department_id_fkey(name)
         )
       `)
@@ -132,6 +138,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         bank: line.employees?.bank_name || 'No especificado',
         bank_account: line.employees?.bank_account || 'No especificado',
         department: line.employees?.departments?.name || 'Sin Departamento',
+        team: line.employees?.team ?? null,
+        position: line.employees?.position ?? null,
+        role: line.employees?.role ?? null,
         monthly_salary: Number(line.employees?.base_salary) || 0,
         days_worked: payType === 'hourly' ? (totalHours / 8) : (totalHours / 8),
         days_absent: 0, // Calcular si es necesario
@@ -170,6 +179,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .single()
     
     const payrollMetadata = payrollConfig?.metadata || {}
+    const defaultGroupFromConfig = parsePayrollPdfGroupByQuery(
+      (payrollMetadata as Record<string, unknown>).payroll_pdf_group_by
+    )
+    const groupByQuery = parsePayrollPdfGroupByQuery(group_by)
+    const pdfGroupBy: PayrollPdfGroupBy =
+      group_by !== undefined && group_by !== '' && group_by != null
+        ? groupByQuery
+        : defaultGroupFromConfig
     const qcCol = payrollConfig?.quincena_config as { first_start?: number; first_end?: number; second_start?: number; second_end?: number } | null
     const metaCutDates = payrollMetadata?.payment_cut_dates || {}
     const hasCustomQuincena = !!(qcCol && (qcCol.first_start != null || qcCol.first_end != null || qcCol.second_start != null || qcCol.second_end != null))
@@ -274,11 +291,17 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       company?.name,
       pdfCustomFieldsConfig,
       pdfPayrollConfig,
-      periodDates
+      periodDates,
+      undefined,
+      { groupBy: pdfGroupBy }
     )
-    
+
+    const groupSuffix = payrollPdfGroupByFilenameSuffix(pdfGroupBy)
     res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', `attachment; filename=planilla_${periodo}_q${payrollRun.quincena}.pdf`)
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=planilla_${periodo}_q${payrollRun.quincena}${groupSuffix}.pdf`
+    )
     return res.send(pdf)
 
   } catch (error: any) {
