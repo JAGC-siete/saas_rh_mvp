@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, Fragment } from 'react'
 import { createClient } from '../lib/supabase/client'
 import { Button } from './ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
@@ -17,6 +17,13 @@ import {
   TERMINATION_REASON_OPTIONS,
   getTerminationReasonLabel
 } from '../lib/employees/termination-reasons'
+import {
+  groupKeyForRow,
+  type PlanillaRowForGrouping,
+  type PayrollPdfGroupBy
+} from '../lib/payroll/pdf-layout'
+
+type EmployeeListSortBy = 'name' | Exclude<PayrollPdfGroupBy, 'none'>
 
 interface Department {
   id: string
@@ -153,6 +160,23 @@ const formatAddress = (address: Employee['address']) => {
   return values.length ? values.join(', ') : 'No especificada'
 }
 
+const EMPLOYEE_SORT_CYCLE: EmployeeListSortBy[] = ['name', 'department', 'team', 'position']
+
+function employeeToPlanillaRow(emp: Employee): PlanillaRowForGrouping {
+  return {
+    department: emp.departments?.name,
+    team: emp.team,
+    role: emp.role,
+    position: emp.role,
+  }
+}
+
+function employeeSectionHeading(sortBy: Exclude<EmployeeListSortBy, 'name'>, gkey: string): string {
+  if (sortBy === 'department') return `Departamento: ${gkey}`
+  if (sortBy === 'team') return `Equipo: ${gkey}`
+  return `Posición: ${gkey}`
+}
+
 export default function EmployeeManager({ companyId: propCompanyId }: { companyId?: string }) {
   const { user, loading: sessionLoading, userProfile } = useAuth()
   const { companyId: contextCompanyId, loading: companyLoading } = useCompanyContext()
@@ -184,6 +208,8 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
   const [employeeForCertificate, setEmployeeForCertificate] = useState<Employee | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+  const [departmentFilter, setDepartmentFilter] = useState('all')
+  const [sortBy, setSortBy] = useState<EmployeeListSortBy>('name')
   const [currentPage, setCurrentPage] = useState(1)
   const [uploadedProfileImagePath, setUploadedProfileImagePath] = useState<string | null>(null)
   const [profileImageError, setProfileImageError] = useState<string | null>(null)
@@ -784,15 +810,22 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
     return typeof raw === 'string' && raw.trim() ? raw.trim() : null
   }, [selectedEmployeeMetadata])
 
+  const departmentFilterOptions = useMemo(() => {
+    const set = new Set<string>()
+    for (const emp of employees) {
+      const d = emp.departments?.name
+      set.add(d && String(d).trim() ? String(d).trim() : 'Sin Departamento')
+    }
+    return [...set].sort((a, b) => a.localeCompare(b, 'es'))
+  }, [employees])
+
   // Filter and sort employees
   const filteredAndSortedEmployees = useMemo(() => {
-    // Start with a copy to avoid mutating the original array
     let filtered = [...employees]
 
-    // Filter by search term
     if (searchTerm.trim()) {
       const search = searchTerm.toLowerCase()
-      filtered = filtered.filter(emp => 
+      filtered = filtered.filter(emp =>
         emp.name?.toLowerCase().includes(search) ||
         emp.employee_code?.toLowerCase().includes(search) ||
         emp.dni?.toLowerCase().includes(search) ||
@@ -803,20 +836,37 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       )
     }
 
-    // Sort alphabetically - create a new sorted array
+    if (departmentFilter !== 'all') {
+      filtered = filtered.filter(emp => {
+        const name = (emp.departments?.name && String(emp.departments.name).trim())
+          ? String(emp.departments.name).trim()
+          : 'Sin Departamento'
+        return name === departmentFilter
+      })
+    }
+
     const sorted = [...filtered].sort((a, b) => {
       const nameA = a.name?.toLowerCase() || ''
       const nameB = b.name?.toLowerCase() || ''
-      
-      if (sortOrder === 'asc') {
-        return nameA.localeCompare(nameB)
-      } else {
-        return nameB.localeCompare(nameA)
+
+      if (sortBy === 'name') {
+        return sortOrder === 'asc'
+          ? nameA.localeCompare(nameB, 'es')
+          : nameB.localeCompare(nameA, 'es')
       }
+
+      const keyA = groupKeyForRow(employeeToPlanillaRow(a), sortBy)
+      const keyB = groupKeyForRow(employeeToPlanillaRow(b), sortBy)
+      const primary =
+        sortOrder === 'asc'
+          ? keyA.localeCompare(keyB, 'es')
+          : keyB.localeCompare(keyA, 'es')
+      if (primary !== 0) return primary
+      return nameA.localeCompare(nameB, 'es')
     })
 
     return sorted
-  }, [employees, searchTerm, sortOrder])
+  }, [employees, searchTerm, sortOrder, departmentFilter, sortBy])
 
   // Paginate results
   const paginatedEmployees = useMemo(() => {
@@ -828,13 +878,19 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
   // Calculate total pages
   const totalPages = Math.ceil(filteredAndSortedEmployees.length / itemsPerPage)
 
-  // Reset to page 1 when search term changes
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchTerm])
+  }, [searchTerm, departmentFilter, sortBy])
 
   const toggleSortOrder = () => {
     setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')
+  }
+
+  const cycleSortBy = () => {
+    setSortBy(prev => {
+      const i = EMPLOYEE_SORT_CYCLE.indexOf(prev)
+      return EMPLOYEE_SORT_CYCLE[(i + 1) % EMPLOYEE_SORT_CYCLE.length]
+    })
   }
 
   useEffect(() => {
@@ -993,32 +1049,72 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
             </Button>
           </div>
 
-          {/* Search and Sort Controls */}
-          <div className="flex gap-3 items-center">
-            <div className="flex-1 relative">
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <Input
-                type="text"
-                placeholder="Buscar por nombre, código, DNI, email..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-white/10 border-white/20 text-white placeholder-gray-400"
-              />
+          {/* Search, department filter, and sort (aligned with nómina / PDF grouping) */}
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+              <div className="flex-1 relative min-w-0">
+                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <Input
+                  type="text"
+                  placeholder="Buscar por nombre, código, DNI, email..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 bg-white/10 border-white/20 text-white placeholder-gray-400"
+                />
+              </div>
             </div>
-            <Button
-              onClick={toggleSortOrder}
-              variant="outline"
-              className="flex items-center gap-2 bg-white/10 border-white/20 text-white hover:bg-white/20"
-            >
-              {sortOrder === 'asc' ? (
-                <ChevronUpIcon className="h-4 w-4" />
-              ) : (
-                <ChevronDownIcon className="h-4 w-4" />
-              )}
-              <span className="text-sm">
-                {sortOrder === 'asc' ? 'A-Z' : 'Z-A'}
-              </span>
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 sm:items-center sm:flex-wrap">
+              <div className="flex items-center gap-2 min-w-0">
+                <label htmlFor="employee-dept-filter" className="text-sm font-medium text-white shrink-0">
+                  Departamento:
+                </label>
+                <select
+                  id="employee-dept-filter"
+                  value={departmentFilter}
+                  onChange={(e) => setDepartmentFilter(e.target.value)}
+                  className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 min-w-0 flex-1 sm:flex-none sm:min-w-[11rem]"
+                >
+                  <option value="all" className="bg-gray-800">
+                    Todos
+                  </option>
+                  {departmentFilterOptions.map((dept) => (
+                    <option key={dept} value={dept} className="bg-gray-800">
+                      {dept}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-medium text-white">Ordenar por:</span>
+                <Button
+                  type="button"
+                  onClick={cycleSortBy}
+                  variant="outline"
+                  className="px-3 py-2 h-auto bg-white/10 border-white/20 text-white hover:bg-white/20 text-sm"
+                >
+                  {sortBy === 'name'
+                    ? 'Nombre'
+                    : sortBy === 'department'
+                      ? 'Departamento'
+                      : sortBy === 'team'
+                        ? 'Equipo'
+                        : 'Posición'}
+                </Button>
+                <Button
+                  type="button"
+                  onClick={toggleSortOrder}
+                  variant="outline"
+                  className="flex items-center gap-2 bg-white/10 border-white/20 text-white hover:bg-white/20"
+                >
+                  {sortOrder === 'asc' ? (
+                    <ChevronUpIcon className="h-4 w-4" />
+                  ) : (
+                    <ChevronDownIcon className="h-4 w-4" />
+                  )}
+                  <span className="text-sm">{sortOrder === 'asc' ? 'A-Z' : 'Z-A'}</span>
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -1074,12 +1170,32 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
           ) : (
             <>
             <div className="space-y-4">
-              {paginatedEmployees.map((employee) => {
+              {paginatedEmployees.map((employee, pageIndex) => {
                 const whatsappLink = getWhatsAppLink(employee.phone, employee.name)
+                const globalIdx = (currentPage - 1) * itemsPerPage + pageIndex
+                const gkey =
+                  sortBy !== 'name'
+                    ? groupKeyForRow(employeeToPlanillaRow(employee), sortBy)
+                    : ''
+                const prevEmp = globalIdx > 0 ? filteredAndSortedEmployees[globalIdx - 1] : null
+                const prevGkey =
+                  prevEmp && sortBy !== 'name'
+                    ? groupKeyForRow(employeeToPlanillaRow(prevEmp), sortBy)
+                    : null
+                const showSectionHeader =
+                  sortBy !== 'name' && (globalIdx === 0 || gkey !== prevGkey)
 
                 return (
+                  <Fragment key={employee.id}>
+                    {showSectionHeader && (
+                      <div
+                        className="pt-1 pb-0 text-sm font-semibold text-blue-200 border-b border-white/15"
+                        role="presentation"
+                      >
+                        {employeeSectionHeading(sortBy, gkey)}
+                      </div>
+                    )}
                   <div 
-                    key={employee.id} 
                     className={`border rounded-lg p-4 transition-all duration-200 ${
                       editingEmployee?.id === employee.id 
                         ? 'border-blue-500/50 bg-blue-500/10 shadow-lg shadow-blue-500/20' 
@@ -1215,7 +1331,9 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                     </div>
                   </div>
                 </div>
-              )})}
+                  </Fragment>
+                )
+              })}
             </div>
 
             {/* Pagination Controls */}
