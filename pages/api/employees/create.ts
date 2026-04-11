@@ -3,8 +3,12 @@ import { createAdminClient } from '../../../lib/supabase/server'
 import { requireUser } from '../../../lib/auth/requireUser'
 import { getHondurasTimestamp } from '../../../lib/timezone'
 import { requirePlanAndQuota, incrementUsage } from '../../../lib/billing/enforce'
-import { addEmployeeSyncJob } from '../../../lib/queues/employeeSyncQueue';
-import { trace, context } from '@opentelemetry/api';
+import { addEmployeeSyncJob } from '../../../lib/queues/employeeSyncQueue'
+import { trace, context } from '@opentelemetry/api'
+import {
+  isAllowedTerminationReasonCode,
+  normalizeTerminationReasonDetail
+} from '../../../lib/employees/termination-reasons'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -45,6 +49,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       payment_frequency,
       hire_date,
       termination_date,
+      termination_reason_code,
+      termination_reason_detail,
       status = 'active',
       bank_name,
       bank_account,
@@ -58,6 +64,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({
         error: 'Missing required fields: employee_code, dni, name, and base_salary are required'
       })
+    }
+
+    if (status === 'inactive') {
+      const code =
+        typeof termination_reason_code === 'string' ? termination_reason_code.trim() : ''
+      if (!code || !isAllowedTerminationReasonCode(code)) {
+        return res.status(400).json({
+          error: 'Motivo de baja requerido',
+          message: 'Si crea el empleado como inactivo, debe enviar termination_reason_code válido.'
+        })
+      }
     }
 
     // Enforce duplicate code check per company
@@ -90,6 +107,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       payment_frequency: (payment_frequency === 'quincenal' || payment_frequency === 'mensual' || payment_frequency === 'semanal') ? payment_frequency : null,
       hire_date: hire_date || null,
       termination_date: termination_date || null,
+      termination_reason_code:
+        status === 'inactive' && typeof termination_reason_code === 'string'
+          ? termination_reason_code.trim()
+          : null,
+      termination_reason_detail:
+        status === 'inactive'
+          ? normalizeTerminationReasonDetail(termination_reason_detail)
+          : null,
       status,
       bank_name: bank_name || null,
       bank_account: bank_account || null,

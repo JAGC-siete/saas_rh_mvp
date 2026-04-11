@@ -1417,6 +1417,8 @@ export type Database = {
           status: string | null
           team: string | null
           termination_date: string | null
+          termination_reason_code: string | null
+          termination_reason_detail: string | null
           updated_at: string | null
           work_schedule_id: string | null
         }
@@ -1444,6 +1446,8 @@ export type Database = {
           status?: string | null
           team?: string | null
           termination_date?: string | null
+          termination_reason_code?: string | null
+          termination_reason_detail?: string | null
           updated_at?: string | null
           work_schedule_id?: string | null
         }
@@ -1471,6 +1475,8 @@ export type Database = {
           status?: string | null
           team?: string | null
           termination_date?: string | null
+          termination_reason_code?: string | null
+          termination_reason_detail?: string | null
           updated_at?: string | null
           work_schedule_id?: string | null
         }

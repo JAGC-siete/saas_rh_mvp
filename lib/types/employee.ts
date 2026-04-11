@@ -11,6 +11,9 @@ export interface Employee {
   base_salary: number
   hire_date: string | null
   termination_date: string | null
+  /** Motivo de baja (códigos en lib/employees/termination-reasons). */
+  termination_reason_code?: string | null
+  termination_reason_detail?: string | null
   status: 'active' | 'inactive'
   bank_name: string | null
   bank_account: string | null
