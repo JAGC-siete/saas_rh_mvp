@@ -125,6 +125,7 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
         .single()
       
       if (error || !data) {
+        console.warn('Employee not found by last5', { last5, body: req.body })
         return res.status(404).json({ error: 'Employee not found' })
       }
       employee = data
@@ -136,6 +137,7 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
         .single()
       
       if (error || !data) {
+        logger.warn('Employee not found by last5', { last5, body: req.body })
         return res.status(404).json({ error: 'Employee not found' })
       }
       employee = data
