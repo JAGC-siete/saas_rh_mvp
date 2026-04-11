@@ -249,6 +249,23 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
     setShowCustomFieldsModal(true)
   }, [])
 
+  const handleAdjustFixedDays = useCallback(
+    async (payload: { run_line_id: string; days_worked: number; reason?: string }) => {
+      const res = await fetch('/api/payroll/adjust-fixed-days', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload)
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data.message || data.error || 'Error al ajustar días')
+      }
+      await payroll.loadUnifiedData()
+    },
+    [payroll]
+  )
+
   // Handle save custom fields - ONLY UPDATE PREVIEW (not persisted until authorization) (memoized)
   const handleSaveCustomFields = useCallback(async (metadata: Record<string, unknown>) => {
     if (!modalState) {
@@ -621,6 +638,10 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
           onGeneratePDF={payroll.generatePDF}
           onSendEmail={() => payroll.sendEmail()}
           onEditCustomFields={handleEditCustomFields}
+          canAdjustFixedDays={
+            !!payroll.runId && (payroll.status === 'draft' || payroll.status === 'edited')
+          }
+          onAdjustFixedDays={handleAdjustFixedDays}
           loading={payroll.loading}
           canAuthorize={payroll.canAuthorize}
           canSend={payroll.canSend}

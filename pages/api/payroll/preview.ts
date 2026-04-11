@@ -11,7 +11,13 @@ import {
 } from '../../../lib/tax/honduras-tax'
 import { getIsrForPeriod } from '../../../lib/payroll/isr-ytd'
 import { getHolidayDatesInRange } from '../../../lib/attendance/holiday-check'
-import { getBiweeklyPeriodDates, getMonthlyPeriodDates } from '../../../lib/payroll/period-dates'
+import {
+  resolvePayrollPeriodContext,
+  computeFixedGrossFromDays,
+  computeFixedLineDeductionsAndNet,
+  buildFixedLinePlanMetadata,
+  type PreviewPaymentFrequency
+} from '../../../lib/payroll/fixed-line-recalc'
 import { calculateSeptimoDia } from '../../../lib/payroll/septimo-dia'
 import { HONDURAS_LABOR_FACTOR, HORAS_PERIODO_MENSUAL, HORAS_PERIODO_QUINCENAL } from '../../../lib/payroll/constants'
 
@@ -64,14 +70,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       })
     }
     
-    if (![1, 2].includes(quincenaNum)) {
-      console.error('❌ ERROR - Quincena inválida:', quincenaNum)
-      return res.status(400).json({ 
-        error: 'Quincena inválida (debe ser 1 o 2)',
-        received: quincenaNum
-      })
-    }
-
     if (!['CON', 'SIN', '2PAGOS'].includes(tipoParam)) {
       console.error('❌ ERROR - Tipo inválido:', tipoParam)
       return res.status(400).json({ 
@@ -106,7 +104,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const payrollMetadata = payrollConfig?.metadata || {}
     const qcCol = payrollConfig?.quincena_config as { first_start?: number; first_end?: number; second_start?: number; second_end?: number } | null
     const metaCutDates = payrollMetadata?.payment_cut_dates || {}
-    const mapFreq = (v: string) => (v === 'mensual' ? 'monthly' : v === 'quincenal' ? 'biweekly' : v === 'semanal' ? 'weekly' : v || 'biweekly')
+    const mapFreq = (v: string) => {
+      const x = (v || '').toLowerCase()
+      if (x === 'mensual' || x === 'monthly') return 'monthly'
+      if (x === 'semanal' || x === 'weekly') return 'weekly'
+      if (x === 'quincenal' || x === 'biweekly') return 'biweekly'
+      return 'biweekly'
+    }
     const paymentFrequency = mapFreq(payrollConfig?.payment_frequency || payrollMetadata.payment_frequency || 'quincenal')
     const hasCustomQuincena = !!(qcCol && (qcCol.first_start != null || qcCol.first_end != null || qcCol.second_start != null || qcCol.second_end != null))
     const paymentCutDates = qcCol
@@ -140,6 +144,22 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const incompleteRecordDefaultHours = (payrollConfig as any)?.incomplete_record_default_hours ?? payrollMetadata?.incomplete_record_default_hours ?? null
     const semanalProration = (payrollMetadata?.semanal_proration || 'proportional') as 'proportional' | 'fixed'
 
+    if (paymentFrequency === 'weekly') {
+      if (![1, 2, 3, 4].includes(quincenaNum)) {
+        console.error('❌ ERROR - Semana inválida:', quincenaNum)
+        return res.status(400).json({
+          error: 'Semana inválida (debe ser 1, 2, 3 o 4 para nómina semanal)',
+          received: quincenaNum
+        })
+      }
+    } else if (![1, 2].includes(quincenaNum)) {
+      console.error('❌ ERROR - Quincena inválida:', quincenaNum)
+      return res.status(400).json({
+        error: 'Quincena inválida (debe ser 1 o 2)',
+        received: quincenaNum
+      })
+    }
+
     const { data: companyRow } = await supabase
       .from('companies')
       .select('settings')
@@ -147,59 +167,23 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .single()
     const useIsrProjection = (companyRow?.settings as Record<string, unknown>)?.use_isr_projection === true
     
-    // Calcular fechas del período según configuración
-    const ultimoDia = new Date(yearNum, monthNum, 0).getDate()
-    
-    // Validar que ultimoDia sea válido
-    if (!ultimoDia || ultimoDia < 1 || ultimoDia > 31) {
-      console.error(`❌ ERROR - ultimoDia inválido: ${ultimoDia} para año ${yearNum}, mes ${monthNum}`)
-      return res.status(400).json({ 
+    const periodCtx = resolvePayrollPeriodContext(
+      yearNum,
+      monthNum,
+      quincenaNum,
+      paymentFrequency as PreviewPaymentFrequency,
+      paymentCutDates
+    )
+    const { fechaInicio, fechaFin, diasPeriodo, ultimoDiaCalendario } = periodCtx
+
+    if (!ultimoDiaCalendario || ultimoDiaCalendario < 1 || ultimoDiaCalendario > 31) {
+      console.error(
+        `❌ ERROR - ultimoDiaCalendario inválido: ${ultimoDiaCalendario} para año ${yearNum}, mes ${monthNum}`
+      )
+      return res.status(400).json({
         error: 'Período inválido',
         message: `No se pudo calcular el último día del mes ${monthNum} del año ${yearNum}`
       })
-    }
-    
-    let fechaInicio: string
-    let fechaFin: string
-    let diasPeriodo: number
-    
-    if (paymentFrequency === 'monthly') {
-      // Nómina mensual (soporta offset: 28-27)
-      const monthlyType = paymentCutDates?.monthly_type || 'standard'
-      const ms = paymentCutDates?.monthly_start ?? 1
-      const me = paymentCutDates?.monthly_end ?? 30
-      if (monthlyType === 'custom' && ms && me) {
-        const result = getMonthlyPeriodDates(yearNum, monthNum, ms, me)
-        fechaInicio = result.fechaInicio
-        fechaFin = result.fechaFin
-        diasPeriodo = result.diasPeriodo
-      } else {
-        // Standard: del 1 al último día del mes
-        fechaInicio = `${yearNum}-${monthNum.toString().padStart(2, '0')}-01`
-        fechaFin = `${yearNum}-${monthNum.toString().padStart(2, '0')}-${ultimoDia}`
-        diasPeriodo = ultimoDia
-      }
-    } else {
-      // Nómina quincenal (biweekly)
-      const biweeklyType = paymentCutDates?.biweekly_type || 'standard'
-      if (biweeklyType === 'custom' && paymentCutDates?.biweekly_first_start != null && paymentCutDates?.biweekly_first_end != null && 
-          paymentCutDates?.biweekly_second_start != null && paymentCutDates?.biweekly_second_end != null) {
-        const result = getBiweeklyPeriodDates(yearNum, monthNum, quincenaNum as 1 | 2, paymentCutDates)
-        fechaInicio = result.fechaInicio
-        fechaFin = result.fechaFin
-        diasPeriodo = result.diasPeriodo
-      } else {
-        // Standard: 1-15 y 16-último día
-        if (quincenaNum === 1) {
-          fechaInicio = `${yearNum}-${monthNum.toString().padStart(2, '0')}-01`
-          fechaFin = `${yearNum}-${monthNum.toString().padStart(2, '0')}-15`
-          diasPeriodo = 15
-        } else {
-          fechaInicio = `${yearNum}-${monthNum.toString().padStart(2, '0')}-16`
-          fechaFin = `${yearNum}-${monthNum.toString().padStart(2, '0')}-${ultimoDia}`
-          diasPeriodo = ultimoDia - 15
-        }
-      }
     }
 
     // Verificar si ya existe una corrida para este período
@@ -669,101 +653,39 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           if (isHoliday || isRestDay) days_extra++
         }
         
-        // CALCULAR SALARIO SEGÚN payment_frequency
-        let total_earnings = 0
-        if (paymentFrequency === 'monthly') {
-          // Nómina mensual: usar salario completo proporcional a días trabajados
-          if (ultimoDia > 0) {
-            total_earnings = (base_salary / ultimoDia) * days_worked
-          } else {
-            console.warn(`⚠️ WARNING - ultimoDia es 0 para empleado ${emp.name}, usando salario completo`)
-            total_earnings = base_salary
-          }
-        } else {
-          // Nómina quincenal (biweekly): dividir salario mensual / 2 y ajustar por días trabajados
-          const salarioQuincenal = base_salary / 2
-          if (diasPeriodo > 0) {
-            total_earnings = salarioQuincenal * (days_worked / diasPeriodo)
-          } else {
-            console.warn(`⚠️ WARNING - diasPeriodo es 0 para empleado ${emp.name}, usando salario quincenal completo`)
-            total_earnings = salarioQuincenal
-          }
-        }
-        
-        // Validar que total_earnings sea un número válido
+        let total_earnings = computeFixedGrossFromDays({
+          baseSalary: base_salary,
+          daysWorked: days_worked,
+          paymentFrequency: paymentFrequency as PreviewPaymentFrequency,
+          diasPeriodo,
+          ultimoDiaCalendario: periodCtx.ultimoDiaCalendario,
+          isMonthlyCalendarStandard: periodCtx.isMonthlyCalendarStandard,
+          semanalProration
+        })
+
         if (!isFinite(total_earnings) || isNaN(total_earnings)) {
           console.error(`❌ ERROR - total_earnings inválido para empleado ${emp.name}:`, total_earnings)
           total_earnings = 0
         }
-        
-        let IHSS = 0, RAP = 0, ISR = 0, total_deductions = 0, total = 0
 
-        // APLICAR DEDUCCIONES SEGÚN legal_deductions
-        if (tipoParam === 'CON') {
-          // CÁLCULOS CON TABLA FISCAL - DEDUCCIONES MENSUALES COMPLETAS
-          if (legalDeductions.ihss) {
-            IHSS = calculateIHSS(base_salary, taxConstants)
-          }
-          if (legalDeductions.rap) {
-            RAP = calculateRAP(base_salary, taxConstants)
-          }
-          if (legalDeductions.isr) {
-            ISR = useIsrProjection
-              ? await getIsrForPeriod({
-                  supabase,
-                  employeeId: emp.id,
-                  companyId,
-                  year: yearNum,
-                  month: monthNum,
-                  quincena: quincenaNum,
-                  periodIncome: base_salary,
-                  taxConstants,
-                  factor2Pagos: 1,
-                  useProjection: true
-                })
-              : calculateISR(base_salary, taxConstants.isr_brackets)
-          }
-          total_deductions = IHSS + RAP + ISR
-          total = total_earnings - total_deductions
-        } else if (tipoParam === '2PAGOS') {
-          // Deducción en dos pagos: salario mensual, mitad de deducciones (sin deductionFactor)
-          if (legalDeductions.ihss) {
-            IHSS = calculateIHSS(base_salary, taxConstants) * 0.5
-          }
-          if (legalDeductions.rap) {
-            RAP = calculateRAP(base_salary, taxConstants) * 0.5
-          }
-          if (legalDeductions.isr) {
-            ISR = useIsrProjection
-              ? await getIsrForPeriod({
-                  supabase,
-                  employeeId: emp.id,
-                  companyId,
-                  year: yearNum,
-                  month: monthNum,
-                  quincena: quincenaNum,
-                  periodIncome: base_salary,
-                  taxConstants,
-                  factor2Pagos: 0.5,
-                  useProjection: true
-                })
-              : calculateISR(base_salary, taxConstants.isr_brackets) * 0.5
-          }
-          total_deductions = IHSS + RAP + ISR
-          total = total_earnings - total_deductions
-        } else {
-          // Tipo 'SIN': solo salario proporcional, sin deducciones de ley
-          total = total_earnings
-        }
-
-        // Sincronizar con módulo Deducciones: planes activos se aplican siempre (CON, SIN o 2PAGOS)
         const empPlans = plansByEmployee[emp.id] || []
-        let customDeductionsFromPlans = 0
-        for (const plan of empPlans) {
-          customDeductionsFromPlans += Number(plan.monto_por_plazo) || 0
-        }
-        total_deductions += customDeductionsFromPlans
-        total = total_earnings - total_deductions
+        const ded = await computeFixedLineDeductionsAndNet({
+          supabase,
+          companyId,
+          employeeId: emp.id,
+          year: yearNum,
+          month: monthNum,
+          quincena: quincenaNum,
+          paymentFrequency: paymentFrequency as PreviewPaymentFrequency,
+          tipoParam: tipoParam as 'CON' | 'SIN' | '2PAGOS',
+          legalDeductions,
+          useIsrProjection,
+          taxConstants,
+          totalEarnings: total_earnings,
+          baseSalary: base_salary,
+          empPlans
+        })
+        const { IHSS, RAP, ISR, totalDeductions: total_deductions, total } = ded
 
         // Validar que runId existe antes de insertar
         if (!runId) {
@@ -794,17 +716,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           }
         }
 
-        const lineMetadata: Record<string, unknown> = { tax_year: yearNum }
-        if (days_extra > 0) {
-          lineMetadata.days_extra = days_extra
-          lineMetadata.notes_extra = `${days_extra} día(s) Extra/Especial (festivo/descanso)`
-        }
-        const planIds: string[] = []
-        for (const plan of empPlans) {
-          lineMetadata[plan.field_key] = plan.monto_por_plazo
-          planIds.push(plan.id)
-        }
-        if (planIds.length > 0) lineMetadata._deduction_plan_ids = planIds
+        const lineMetadata = buildFixedLinePlanMetadata(yearNum, empPlans, {
+          ...(days_extra > 0
+            ? {
+                days_extra,
+                notes_extra: `${days_extra} día(s) Extra/Especial (festivo/descanso)`
+              }
+            : {})
+        })
 
         // Insertar línea en payroll_run_lines
         const { data: insertedLine, error: lineError } = await supabase

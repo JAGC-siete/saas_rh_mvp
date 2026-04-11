@@ -10,7 +10,11 @@ import {
   calculateRAP 
 } from '../../../lib/tax/honduras-tax'
 import { getIsrForPeriod } from '../../../lib/payroll/isr-ytd'
-import { getBiweeklyPeriodDates, getMonthlyPeriodDates } from '../../../lib/payroll/period-dates'
+import {
+  resolvePayrollPeriodContext,
+  type PreviewPaymentFrequency,
+  type PaymentCutDatesInput
+} from '../../../lib/payroll/fixed-line-recalc'
 import { calculatePeriodBaseSalary, normalizeFrequency } from '../../../lib/payroll/calculate-period-base-salary'
 import { calculateSeptimoDia } from '../../../lib/payroll/septimo-dia'
 import { HONDURAS_LABOR_FACTOR } from '../../../lib/payroll/constants'
@@ -112,8 +116,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Periodo inválido (formato: YYYY-MM)' })
     }
     
-    if (![1, 2].includes(quincena)) {
-      return res.status(400).json({ error: 'Quincena inválida (debe ser 1 o 2)' })
+    const quincenaNum = Number(quincena)
+    if (!Number.isInteger(quincenaNum) || quincenaNum < 1) {
+      return res.status(400).json({
+        error: 'Quincena/semana inválida (entero ≥ 1; con nómina semanal use 1–4)'
+      })
     }
 
     // Validar que no sea un período futuro
@@ -145,20 +152,44 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     // payment_frequency: nueva columna (Capa 2) o metadata legacy o default mensual
     const pfRaw = payrollConfig?.payment_frequency || payrollMetadata.payment_frequency || 'mensual'
-    const paymentFrequency = pfRaw === 'quincenal' ? 'biweekly' : pfRaw === 'semanal' ? 'weekly' : 'monthly'
+    const mapPreviewFreq = (v: string): PreviewPaymentFrequency => {
+      const x = (v || '').toLowerCase()
+      if (x === 'mensual' || x === 'monthly') return 'monthly'
+      if (x === 'semanal' || x === 'weekly') return 'weekly'
+      if (x === 'quincenal' || x === 'biweekly') return 'biweekly'
+      return 'biweekly'
+    }
+    const previewPaymentFrequency = mapPreviewFreq(pfRaw as string)
+    const paymentFrequency =
+      pfRaw === 'quincenal' || (pfRaw as string).toLowerCase() === 'biweekly'
+        ? 'biweekly'
+        : pfRaw === 'semanal' || (pfRaw as string).toLowerCase() === 'weekly'
+          ? 'weekly'
+          : 'monthly'
     const frequencyForCalc = normalizeFrequency(pfRaw)
     const hasCustomQuincena = !!(quincenaConfig.first_start != null || quincenaConfig.first_end != null || 
       quincenaConfig.second_start != null || quincenaConfig.second_end != null)
-    const biweeklyType = metaCutDates.biweekly_type === 'custom' || hasCustomQuincena ? 'custom' : 'standard'
-    const paymentCutDates = {
+    const biweeklyType: 'custom' | 'standard' =
+      metaCutDates.biweekly_type === 'custom' || hasCustomQuincena ? 'custom' : 'standard'
+    const paymentCutDates: PaymentCutDatesInput = {
       biweekly_type: biweeklyType,
       biweekly_first_start: quincenaConfig.first_start ?? metaCutDates.biweekly_first_start ?? 1,
       biweekly_first_end: quincenaConfig.first_end ?? metaCutDates.biweekly_first_end ?? 15,
       biweekly_second_start: quincenaConfig.second_start ?? metaCutDates.biweekly_second_start ?? 16,
       biweekly_second_end: quincenaConfig.second_end ?? metaCutDates.biweekly_second_end ?? 30,
-      monthly_type: metaCutDates.monthly_type || 'standard',
+      monthly_type: metaCutDates.monthly_type === 'custom' ? 'custom' : 'standard',
       monthly_start: metaCutDates.monthly_start ?? 1,
       monthly_end: metaCutDates.monthly_end ?? 30
+    }
+
+    if (previewPaymentFrequency === 'weekly') {
+      if (![1, 2, 3, 4].includes(quincenaNum)) {
+        return res.status(400).json({
+          error: 'Semana inválida (debe ser 1, 2, 3 o 4 para nómina semanal)'
+        })
+      }
+    } else if (![1, 2].includes(quincenaNum)) {
+      return res.status(400).json({ error: 'Quincena inválida (debe ser 1 o 2)' })
     }
     const legalDeductions = payrollMetadata.legal_deductions || {
       ihss: true,
@@ -177,63 +208,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .single()
     const useIsrProjection = (companyRow?.settings as Record<string, unknown>)?.use_isr_projection === true
     
-    // Calcular fechas del período según configuración
-    const ultimoDia = new Date(year, month, 0).getDate()
-    let fechaInicio: string
-    let fechaFin: string
-    let diasPeriodo: number
-    
-    if (paymentFrequency === 'monthly') {
-      // Nómina mensual (soporta offset: 28-27)
-      const monthlyType = paymentCutDates?.monthly_type || 'standard'
-      const ms = paymentCutDates?.monthly_start ?? 1
-      const me = paymentCutDates?.monthly_end ?? 30
-      if (monthlyType === 'custom' && ms && me) {
-        const result = getMonthlyPeriodDates(year, month, ms, me)
-        fechaInicio = result.fechaInicio
-        fechaFin = result.fechaFin
-        diasPeriodo = result.diasPeriodo
-      } else {
-        // Standard: del 1 al último día del mes
-        fechaInicio = `${periodo}-01`
-        fechaFin = `${periodo}-${ultimoDia}`
-        diasPeriodo = ultimoDia
-      }
-    } else {
-      // Nómina quincenal (biweekly)
-      const biweeklyTypeVal = paymentCutDates?.biweekly_type || 'standard'
-      if (biweeklyTypeVal === 'custom' && paymentCutDates?.biweekly_first_start != null && paymentCutDates?.biweekly_first_end != null && 
-          paymentCutDates?.biweekly_second_start != null && paymentCutDates?.biweekly_second_end != null) {
-        const result = getBiweeklyPeriodDates(year, month, quincena as 1 | 2, paymentCutDates)
-        fechaInicio = result.fechaInicio
-        fechaFin = result.fechaFin
-        diasPeriodo = result.diasPeriodo
-      } else {
-        // Standard: 1-15 y 16-último día
-        if (quincena === 1) {
-          fechaInicio = `${periodo}-01`
-          fechaFin = `${periodo}-15`
-          diasPeriodo = 15
-        } else {
-          fechaInicio = `${periodo}-16`
-          fechaFin = `${periodo}-${ultimoDia}`
-          diasPeriodo = ultimoDia - 15
-        }
-      }
-    }
-    
-    // IMPORTANTE: Las deducciones se aplican SOLO UNA VEZ al mes (en Q2) o siempre en mensual
-    // Q1 (biweekly): solo salario bruto proporcional por días trabajados
-    // Q2 (biweekly) o mensual: salario bruto proporcional + deducciones mensuales completas
-    // tipo: CON=completas, 2PAGOS=mitad (repartidas en 2 pagos), SIN=ninguna
-    const aplicarDeducciones = (paymentFrequency === 'monthly' || quincena === 2) && tipo !== 'SIN'
+    // Fechas y días del período: misma lógica que preview / fixed-line-recalc (incl. semanal S1–S4)
+    const periodCtx = resolvePayrollPeriodContext(
+      year,
+      month,
+      quincenaNum,
+      previewPaymentFrequency,
+      paymentCutDates
+    )
+    const { fechaInicio, fechaFin, diasPeriodo } = periodCtx
+
+    // IMPORTANTE: Deducciones de ley
+    // - Mensual: siempre (salvo tipo SIN)
+    // - Quincenal: solo segunda quincena (Q2), como antes
+    // - Semanal: solo semana 4 (cierre del mes; análogo a Q2; semanas 1–3 solo bruto)
+    // tipo: CON=completas, 2PAGOS=mitad, SIN=ninguna
+    const aplicarDeducciones =
+      (paymentFrequency === 'monthly' ||
+        (paymentFrequency === 'biweekly' && quincenaNum === 2) ||
+        (paymentFrequency === 'weekly' && quincenaNum === 4)) &&
+      tipo !== 'SIN'
     const tipoDeduccion = (tipo === '2PAGOS' ? '2PAGOS' : tipo === 'SIN' ? 'SIN' : 'CON') as 'CON' | 'SIN' | '2PAGOS'
 
     console.log('Generando nómina:', {
       periodo,
-      quincena,
+      quincena: quincenaNum,
+      previewPaymentFrequency,
       fechaInicio,
       fechaFin,
+      diasPeriodo,
       aplicarDeducciones,
       tipoCalculo,
       tipoDeduccion
@@ -416,11 +419,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 companyId,
                 year,
                 month,
-                quincena,
+                quincena: quincenaNum,
                 periodIncome: periodIncomeForIsr,
                 taxConstants,
                 factor2Pagos,
-                useProjection: true
+                useProjection: true,
+                ...(paymentFrequency === 'weekly'
+                  ? { fractionOfMonthElapsed: quincenaNum / 4 }
+                  : {})
               })
             : calculateISR(baseParaDeducciones, taxConstants.isr_brackets) * factor2Pagos
         }
@@ -437,9 +443,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           ? `Deducciones en dos pagos (mitad): ${deduccionesAplicadas.join(', ')}`
           : `Deducciones mensuales completas: ${deduccionesAplicadas.join(', ')}`
       } else {
-        // Q1 (biweekly): solo salario proporcional, sin deducciones
         total = total_earnings
-        notes_on_deductions = 'Primera quincena: solo salario proporcional (deducciones se aplican en Q2)'
+        if (tipo === 'SIN') {
+          notes_on_deductions = 'Tipo SIN: sin deducciones de ley.'
+        } else if (paymentFrequency === 'weekly') {
+          notes_on_deductions =
+            'Nómina semanal (semanas 1–3): solo salario proporcional; deducciones de ley en la semana 4.'
+        } else if (paymentFrequency === 'biweekly') {
+          notes_on_deductions =
+            'Primera quincena: solo salario proporcional (deducciones en la segunda quincena).'
+        } else {
+          notes_on_deductions = 'Sin deducciones de ley en este período.'
+        }
       }
 
       // Notas automáticas

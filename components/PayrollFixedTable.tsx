@@ -1,8 +1,10 @@
 // Componente para mostrar tabla de empleados fijos (fixed)
-import React from 'react'
+import React, { useState } from 'react'
 import { formatCurrency } from '../lib/utils/currency'
 import { UnifiedRow } from '../lib/payroll-unified'
 import { Button } from './ui/button'
+import { Input } from './ui/input'
+import { Textarea } from './ui/textarea'
 import { Icon } from './Icon'
 
 interface PayrollFixedTableProps {
@@ -11,6 +13,14 @@ interface PayrollFixedTableProps {
   onGenerateVoucher: (_lineId: string) => void
   // eslint-disable-next-line no-unused-vars
   onEditCustomFields?: (_lineId: string, _metadata: any, _baseSalary: number, _employeeId?: string) => void
+  /** Recalcula bruto/deducciones/neto en servidor (solo corrida draft/edited) */
+  canAdjustFixedDays?: boolean
+  // eslint-disable-next-line no-unused-vars
+  onAdjustFixedDays?: (_payload: {
+    run_line_id: string
+    days_worked: number
+    reason?: string
+  }) => Promise<void>
   loading?: boolean
   hasCustom?: boolean
   statutoryDeductions?: { ihss: boolean; rap: boolean; isr: boolean }
@@ -20,10 +30,67 @@ export default function PayrollFixedTable({
   rows,
   onGenerateVoucher,
   onEditCustomFields,
+  canAdjustFixedDays = false,
+  onAdjustFixedDays,
   loading = false,
   hasCustom = false,
   statutoryDeductions = { ihss: true, rap: true, isr: true }
 }: PayrollFixedTableProps) {
+  const [daysModal, setDaysModal] = useState<{
+    runLineId: string
+    employeeName: string
+    currentDays: number
+  } | null>(null)
+  const [daysInput, setDaysInput] = useState('')
+  const [daysReason, setDaysReason] = useState('')
+  const [daysSaving, setDaysSaving] = useState(false)
+
+  const openDaysModal = (row: UnifiedRow) => {
+    const runLineId = row.line_id
+    if (!runLineId) {
+      alert('No hay línea de corrida para este empleado. Genere vista previa primero.')
+      return
+    }
+    setDaysModal({
+      runLineId,
+      employeeName: row.name || 'Empleado',
+      currentDays: row.days_worked ?? 0
+    })
+    setDaysInput(String(row.days_worked ?? 0))
+    setDaysReason('')
+  }
+
+  const closeDaysModal = () => {
+    setDaysModal(null)
+    setDaysInput('')
+    setDaysReason('')
+  }
+
+  const submitDaysAdjust = async () => {
+    if (!daysModal || !onAdjustFixedDays) return
+    const n = parseInt(daysInput, 10)
+    if (!Number.isFinite(n) || n < 0 || !Number.isInteger(n)) {
+      alert('Ingrese un número entero de días ≥ 0')
+      return
+    }
+    setDaysSaving(true)
+    try {
+      await onAdjustFixedDays({
+        run_line_id: daysModal.runLineId,
+        days_worked: n,
+        reason: daysReason.trim() || undefined
+      })
+      setDaysModal(null)
+      setDaysInput('')
+      setDaysReason('')
+    } catch (e) {
+      console.error(e)
+      alert(e instanceof Error ? e.message : 'Error al ajustar días')
+    } finally {
+      setDaysSaving(false)
+    }
+  }
+
   const summary = rows.reduce((acc, r) => {
     acc.totalBruto += r.total_earnings || 0
     acc.totalDeducciones += r.total_deducciones || 0
@@ -77,7 +144,22 @@ export default function PayrollFixedTable({
                     {formatCurrency(row.base_salary || 0)}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">
-                    {row.days_worked || 0}
+                    <div className="flex items-center gap-2">
+                      <span>{row.days_worked || 0}</span>
+                      {canAdjustFixedDays && onAdjustFixedDays && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openDaysModal(row)}
+                          disabled={loading}
+                          className="h-7 px-2 bg-white/10 border-white/30 text-white hover:bg-white/20"
+                          title="Ajustar días y recalcular bruto / neto"
+                        >
+                          <Icon name="edit" className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-green-300">
                     {formatCurrency(row.total_earnings || 0)}
@@ -137,6 +219,55 @@ export default function PayrollFixedTable({
           </tbody>
         </table>
       </div>
+
+      {daysModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-lg border border-white/20 bg-gray-900 p-6 text-white shadow-xl">
+            <h3 className="text-lg font-semibold">Ajustar días trabajados</h3>
+            <p className="mt-1 text-sm text-gray-300">{daysModal.employeeName}</p>
+            <p className="mt-2 text-xs text-amber-200/90">
+              Se recalculan salario proporcional, deducciones de ley y planes como en la vista previa.
+            </p>
+            <div className="mt-4 space-y-3">
+              <div>
+                <label htmlFor="adj-days" className="block text-sm font-medium text-gray-200">
+                  Días trabajados (período)
+                </label>
+                <Input
+                  id="adj-days"
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={daysInput}
+                  onChange={(e) => setDaysInput(e.target.value)}
+                  className="mt-1 border-white/20 bg-white/10 text-white"
+                />
+              </div>
+              <div>
+                <label htmlFor="adj-reason" className="block text-sm font-medium text-gray-200">
+                  Motivo (opcional)
+                </label>
+                <Textarea
+                  id="adj-reason"
+                  value={daysReason}
+                  onChange={(e) => setDaysReason(e.target.value)}
+                  rows={2}
+                  className="mt-1 border-white/20 bg-white/10 text-white"
+                  placeholder="Ej. corrección de asistencia"
+                />
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={closeDaysModal} disabled={daysSaving}>
+                Cancelar
+              </Button>
+              <Button type="button" onClick={submitDaysAdjust} disabled={daysSaving}>
+                {daysSaving ? 'Guardando…' : 'Recalcular y guardar'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

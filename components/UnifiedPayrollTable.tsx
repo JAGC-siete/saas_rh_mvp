@@ -31,6 +31,13 @@ interface UnifiedPayrollTableProps {
   onSendEmail: () => void
   // eslint-disable-next-line no-unused-vars
   onEditCustomFields?: (_lineId: string, _metadata: any, _baseSalary: number, _employeeId?: string) => void
+  canAdjustFixedDays?: boolean
+  // eslint-disable-next-line no-unused-vars
+  onAdjustFixedDays?: (_payload: {
+    run_line_id: string
+    days_worked: number
+    reason?: string
+  }) => Promise<void>
   loading?: boolean
   canAuthorize?: boolean
   canSend?: boolean
@@ -58,6 +65,8 @@ export default function UnifiedPayrollTable({
   onGeneratePDF,
   onSendEmail,
   onEditCustomFields,
+  canAdjustFixedDays = false,
+  onAdjustFixedDays,
   loading = false,
   // eslint-disable-next-line no-unused-vars
   canAuthorize: _canAuthorize = false,
@@ -457,6 +466,8 @@ export default function UnifiedPayrollTable({
             rows={paginatedFixedRows}
             onGenerateVoucher={onGenerateVoucher}
             onEditCustomFields={onEditCustomFields}
+            canAdjustFixedDays={canAdjustFixedDays}
+            onAdjustFixedDays={onAdjustFixedDays}
             loading={loading}
             hasCustom={hasCustom}
             statutoryDeductions={statutoryDeductionColumns}

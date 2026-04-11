@@ -62,6 +62,11 @@ export interface GetIsrForPeriodParams {
   taxConstants: TaxConstants
   factor2Pagos?: number
   useProjection?: boolean
+  /**
+   * When set (e.g. weekly semana 1–4 → s/4), overrides biweekly quincena fraction for projection.
+   * monthsElapsed = (month - 1) + fractionOfMonthElapsed
+   */
+  fractionOfMonthElapsed?: number
 }
 
 /**
@@ -79,7 +84,8 @@ export async function getIsrForPeriod(params: GetIsrForPeriodParams): Promise<nu
     periodIncome,
     taxConstants,
     factor2Pagos = 1,
-    useProjection = false
+    useProjection = false,
+    fractionOfMonthElapsed
   } = params
 
   const monthlyEquivalent = periodIncome / factor2Pagos
@@ -101,7 +107,13 @@ export async function getIsrForPeriod(params: GetIsrForPeriodParams): Promise<nu
   const medicalUsed = Number(ytd?.medical_expenses_used) || 0
   const medicalLimit = taxConstants.medical_deduction_limit ?? 40000
 
-  const monthsElapsed = month - 1 + (quincena === 2 ? 1 : 0.5)
+  const fraction =
+    fractionOfMonthElapsed != null && isFinite(fractionOfMonthElapsed)
+      ? Math.min(1, Math.max(0, fractionOfMonthElapsed))
+      : quincena === 2
+        ? 1
+        : 0.5
+  const monthsElapsed = month - 1 + fraction
   const withheld = calculateISRProjected({
     monthlyIncome: monthlyEquivalent,
     month: monthsElapsed,
