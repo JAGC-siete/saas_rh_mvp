@@ -3,7 +3,10 @@ import formidable from 'formidable';
 import { createAdminClient } from '../../../lib/supabase/server';
 import { logError, logger } from '../../../lib/logger';
 import { nowInHonduras, toHN } from '../../../lib/timezone';
-import { RAW_PUNCH_EVENT_TYPE } from '../../../lib/attendance/daily-close';
+import {
+  RAW_PUNCH_EVENT_TYPE,
+  generateDailyCloseReport,
+} from '../../../lib/attendance/daily-close';
 import { createHash } from 'crypto';
 import fs from 'fs';
 
@@ -28,7 +31,9 @@ export const config = {
  * - Responde 200 OK inmediatamente después de parsear el JSON
  * - Procesamiento asíncrono para no bloquear al dispositivo
  * - Heartbeats actualizan device health (NO generan asistencia)
- * - Access events insertan attendance_events (raw_punch); el cierre diario consolida attendance_records
+ * - Access events insertan attendance_events (raw_punch); tras insert exitoso se ejecuta
+ *   generateDailyCloseReport para ese local_date (borrador en vivo; registros finalizados no se pisan).
+ * - La pantalla de cierre / finalizar sigue siendo la vía para bloquear y ajustes admin.
  */
 
 /**
@@ -310,6 +315,7 @@ async function resolveDeviceIdForAccess(
 
 /**
  * Ingesta inmutable: una fila en attendance_events por marca biométrica (sin interpretación).
+ * @returns true si se insertó una fila nueva (no duplicado).
  */
 async function insertRawBiometricPunch(params: {
   supabase: ReturnType<typeof createAdminClient>;
@@ -324,7 +330,7 @@ async function insertRawBiometricPunch(params: {
   verifyMode: any;
   cardNo: any;
   employeeNoString: any;
-}) {
+}): Promise<boolean> {
   const {
     supabase,
     employeeId,
@@ -363,13 +369,15 @@ async function insertRawBiometricPunch(params: {
   if (error) {
     if (error.code === '23505') {
       logger.info('[ACCESS EVENT] Duplicate punch ignored (event_uid)', { eventUid, employeeId });
-      return;
+      return false;
     }
     logger.error('[ACCESS EVENT] Failed to insert attendance_events', error, {
       employeeId,
       eventUid,
     });
+    return false;
   }
+  return true;
 }
 
 /**
@@ -546,7 +554,7 @@ async function processAccessEvent(
 
   const deviceId = await resolveDeviceIdForAccess(supabase, companyId, root);
 
-  await insertRawBiometricPunch({
+  const inserted = await insertRawBiometricPunch({
     supabase,
     employeeId: employee.id,
     companyId,
@@ -560,6 +568,22 @@ async function processAccessEvent(
     cardNo,
     employeeNoString,
   });
+
+  if (inserted) {
+    try {
+      await generateDailyCloseReport({
+        companyId,
+        localDate: eventDate,
+        supabase,
+      });
+    } catch (closeErr) {
+      logger.error(
+        '[ACCESS EVENT] generateDailyCloseReport after raw_punch failed',
+        closeErr instanceof Error ? closeErr : new Error(String(closeErr)),
+        { companyId, localDate: eventDate, employeeId: employee.id }
+      );
+    }
+  }
 
   logger.info('[ACCESS EVENT] processAccessEvent completed (raw_punch)', {
     companyId,
