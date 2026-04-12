@@ -1,16 +1,6 @@
 import { useState, useEffect } from 'react'
 import { formatDateTimeForHonduras } from '../../lib/timezone'
-import {
-  XMarkIcon,
-  ClockIcon,
-  ChartBarIcon,
-  IdentificationIcon,
-  BriefcaseIcon,
-  CalendarDaysIcon,
-  CheckCircleIcon,
-  ArrowRightStartOnRectangleIcon,
-} from '@heroicons/react/24/outline'
-import type { AttendanceEmployeeDetail } from '../../lib/attendance/dashboard-types'
+import { XMarkIcon, ClockIcon, ChartBarIcon, IdentificationIcon, BriefcaseIcon } from '@heroicons/react/24/outline'
 
 interface TimelineEvent {
   ts_local: string
@@ -35,7 +25,7 @@ interface EmployeeDrawerProps {
   /** Período del filtro del dashboard (ej. "de Hoy", "de esta Semana") — no está hardcodeado, viene del preset. */
   periodLabel?: string
   rawPunches?: EmployeeDrawerRawPunch[]
-  employeeData?: AttendanceEmployeeDetail
+  employeeData?: any
   stats?: {
     attendanceAverage: string
     presentDays: number
@@ -66,8 +56,7 @@ export default function EmployeeDrawer({
 
   if (!open) return null
 
-  const rawDept = employeeData?.departments
-  const department = Array.isArray(rawDept) ? rawDept[0] : rawDept
+  const department = employeeData?.departments
   const workSchedule = employeeData?.work_schedules
 
   return (
@@ -203,9 +192,8 @@ export default function EmployeeDrawer({
           {/* Timeline: período viene del filtro del dashboard (preset), no está hardcodeado */}
           <div>
             <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                <CalendarDaysIcon className="h-6 w-6 text-gray-400 shrink-0" aria-hidden />
-                Historial{periodLabel ? ` ${periodLabel}` : ''}
+              <h3 className="text-lg font-semibold text-white">
+                📅 Historial{periodLabel ? ` ${periodLabel}` : ''}
               </h3>
               {rawPunches.length > 0 && (
                 <div className="flex rounded-lg border border-white/15 overflow-hidden text-xs">
@@ -247,8 +235,8 @@ export default function EmployeeDrawer({
               </div>
             ) : events.length === 0 ? (
               <div className="rounded-xl p-8 text-center border-2 border-dashed border-white/20 bg-white/5">
-                <p className="text-gray-400 font-medium">No hay registros consolidados en este período</p>
-                <p className="text-sm text-gray-500 mt-1">Usa la pestaña de marcas del reloj si hay eventos crudos.</p>
+                <p className="text-gray-400 font-medium">No hay registros de asistencia en este período</p>
+                <p className="text-sm text-gray-500 mt-1">Si el empleado marcó en el reloj, revisa fechas y permisos; la pestaña de marcas muestra eventos del reloj cuando existen.</p>
               </div>
             ) : (
               <div className="space-y-2">
@@ -256,19 +244,10 @@ export default function EmployeeDrawer({
                   <div key={idx} className="bg-white/5 rounded-lg p-4 border border-white/10 hover:border-brand-500/30 transition-colors">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-start gap-3 flex-1">
-                        <div
-                          className={`p-2 rounded-lg ${
-                            ev.event_type.toLowerCase().includes('in')
-                              ? 'bg-emerald-500/20'
-                              : 'bg-red-500/20'
-                          }`}
-                          aria-hidden
-                        >
-                          {ev.event_type.toLowerCase().includes('in') ? (
-                            <CheckCircleIcon className="h-5 w-5 text-emerald-400" />
-                          ) : (
-                            <ArrowRightStartOnRectangleIcon className="h-5 w-5 text-red-300" />
-                          )}
+                        <div className={`p-2 rounded-lg ${
+                          ev.event_type.toLowerCase().includes('in') ? 'bg-emerald-500/20' : 'bg-red-500/20'
+                        }`}>
+                          {ev.event_type.toLowerCase().includes('in') ? '✅' : '🚪'}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-white font-medium">{ev.event_type}</p>
