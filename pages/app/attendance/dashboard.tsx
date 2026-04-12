@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/router'
 import {
   ArrowTrendingUpIcon,
@@ -16,6 +17,7 @@ import TrendsChart, { type TrendData } from '../../../components/attendance/Tren
 import KpiBarsChart from '../../../components/attendance/KpiBarsChart'
 import { Card } from '../../../components/ui/card'
 import { useCompanyContext } from '../../../lib/useCompanyContext'
+import { getTodayInHonduras } from '../../../lib/timezone'
 import EmployeeDrawer, { type EmployeeDrawerRawPunch } from '../../../components/attendance/EmployeeDrawer'
 import { useAttendanceData, calculateAttendanceRates } from '../../../lib/hooks/useAttendanceData'
 import { mapAttendanceError } from '../../../lib/attendance-api'
@@ -106,6 +108,12 @@ export default function AttendanceDashboardApp() {
   const [trendsError, setTrendsError] = useState<string | null>(null)
   const [trendsRetryTick, setTrendsRetryTick] = useState(0)
   const [showDistribution, setShowDistribution] = useState(false)
+  const [dailyCloseHint, setDailyCloseHint] = useState<{
+    withEvents: number
+    anomalies: number
+    finalized: number
+  } | null>(null)
+
   useEffect(() => {
     if (!router.isReady || urlSynced) return
     const q = router.query as Record<string, string | undefined>
@@ -241,6 +249,33 @@ export default function AttendanceDashboardApp() {
     trendsRetryTick,
   ])
 
+  useEffect(() => {
+    if (preset !== 'today' || !companyId) {
+      setDailyCloseHint(null)
+      return
+    }
+    const ac = new AbortController()
+    const day = getTodayInHonduras()
+    fetch(`/api/attendance/daily-close?date=${encodeURIComponent(day)}`, {
+      credentials: 'include',
+      signal: ac.signal,
+    })
+      .then((r) => r.json())
+      .then((j) => {
+        if (j?.summary) {
+          setDailyCloseHint({
+            withEvents: j.summary.total_with_events,
+            anomalies: j.summary.total_anomalies,
+            finalized: j.summary.total_finalized,
+          })
+        } else {
+          setDailyCloseHint(null)
+        }
+      })
+      .catch(() => setDailyCloseHint(null))
+    return () => ac.abort()
+  }, [preset, companyId])
+
   const handlePresetChange = (p: string) => {
     setPreset(p)
     if (p === 'custom' && !from && !to) {
@@ -370,10 +405,61 @@ export default function AttendanceDashboardApp() {
             <h1 className="text-2xl font-bold text-white tracking-tight">Asistencia</h1>
             <p className="mt-2 text-sm text-gray-400 max-w-3xl">
               Resumen operativo del período y filtros seleccionados: presentes, ausencias, llegadas y
-              excepciones. Las cifras y exportaciones reflejan los registros que envía el reloj a la
-              aplicación (entrada y salida en tiempo casi real).
+              excepciones. Las cifras siguen las mismas reglas que la exportación (consolidado post-cierre
+              cuando aplica).
+            </p>
+            <p className="mt-3 text-sm">
+              <Link
+                href="/app/attendance/daily-close"
+                className="text-brand-400 font-medium hover:text-brand-300 underline-offset-2 hover:underline"
+              >
+                Cierre de día
+              </Link>
+              <span className="text-gray-500"> — revisar marcas del reloj y anomalías.</span>
             </p>
           </header>
+
+          {preset === 'today' && dailyCloseHint && dailyCloseHint.withEvents > 0 && (
+            <div
+              className={`rounded-xl border overflow-hidden ${
+                dailyCloseHint.anomalies > 0
+                  ? 'bg-amber-500/10 border-amber-500/35 text-amber-100'
+                  : 'bg-blue-500/10 border-blue-500/30 text-blue-100'
+              }`}
+            >
+              <div className="px-4 py-3 sm:px-5 sm:py-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                <div className="space-y-3 min-w-0">
+                  <h2 className="text-sm font-semibold text-white">
+                    Cierre de día · {getTodayInHonduras()}
+                  </h2>
+                  <dl className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                    <div>
+                      <dt className="text-gray-400 text-xs uppercase tracking-wide">Con marcas</dt>
+                      <dd className="font-semibold tabular-nums text-lg">{dailyCloseHint.withEvents}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-gray-400 text-xs uppercase tracking-wide">Anomalías</dt>
+                      <dd className="font-semibold tabular-nums text-lg">{dailyCloseHint.anomalies}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-gray-400 text-xs uppercase tracking-wide">Finalizados</dt>
+                      <dd className="font-semibold tabular-nums text-lg">{dailyCloseHint.finalized}</dd>
+                    </div>
+                  </dl>
+                  <p className="text-xs text-gray-400 leading-snug max-w-xl">
+                    <span className="text-gray-300">Finalizado</span> indica registro ya cerrado en el
+                    flujo de cierre; las marcas crudas del dispositivo siguen visibles en esa pantalla.
+                  </p>
+                </div>
+                <Link
+                  href="/app/attendance/daily-close"
+                  className="inline-flex items-center justify-center shrink-0 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15 border border-white/20 text-sm font-medium text-white"
+                >
+                  Ir a cierre de día
+                </Link>
+              </div>
+            </div>
+          )}
 
           <HeaderBar
             preset={preset}

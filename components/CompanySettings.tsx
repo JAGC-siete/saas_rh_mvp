@@ -408,9 +408,8 @@ export default function CompanySettings() {
           <Card variant="glass" className="p-5 border border-white/15">
             <h4 className="text-md font-medium text-white mb-1">Modalidad de marcas biométricas</h4>
             <p className="text-xs text-gray-400 mb-3">
-              Opcional para flujos que consolidan desde marcas crudas. Con ingesta directa en el registro del día, la
-              lógica del reloj usa principalmente el horario del empleado. STRICT_2 / STRICT_4 / FLEXIBLE describen
-              cómo agrupar marcas cuando aplica consolidación.
+              Define cómo se interpretan las marcas del reloj al consolidar el día (cierre diario). STRICT_2: entrada y
+              salida; STRICT_4: entrada, almuerzo y salida; FLEXIBLE: acepta 2 o 4 marcas según cantidad recibida.
             </p>
             <div className="flex flex-wrap items-end gap-3">
               <div className="min-w-[200px]">
