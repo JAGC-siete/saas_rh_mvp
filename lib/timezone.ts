@@ -201,18 +201,6 @@ export function getCheckOutWindow(nowLocal: any, schedule: any): { open: string;
 }
 
 /**
- * Check if day is open for public registration (Call Center policy)
- * SIMPLIFICADO: Solo domingo cerrado, resto de días abiertos
- */
-export function isDayOpenForPublic(nowLocal: any): boolean {
-  // Solo domingo cerrado
-  if (nowLocal.dow === 0) return false; // Sunday closed
-  
-  // Lunes a sábado: abiertos (sin restricciones de hora)
-  return true;
-}
-
-/**
  * Override Saturday schedule for half-day (08:00-12:00)
  */
 export function overrideIfSaturdayHalfDay(expectedTime: string, schedule: any, nowLocal: any): string {

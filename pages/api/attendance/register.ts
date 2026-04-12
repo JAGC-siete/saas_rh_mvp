@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient } from '../../../lib/supabase/server'
 import { logger } from '../../../lib/logger'
 import { 
-   toHN, overrideIfSaturdayHalfDay, decideCheckInRule, mapRule, distanceMeters, isDayOpenForPublic, nowInHonduras, getHondurasTimestamp } from '../../../lib/timezone'
+   toHN, overrideIfSaturdayHalfDay, decideCheckInRule, mapRule, distanceMeters, nowInHonduras, getHondurasTimestamp } from '../../../lib/timezone'
 import { CALL_CENTER_MESSAGES, generateContextualMessage } from '../../../lib/call-center-config'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -286,16 +286,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       action = 'check_in'
       decisionReason = 'REGLA_SECUNDARIA: Sin registro previo, evento es entrada'
       console.log('🎯 REGLA SECUNDARIA: Sin registro previo, evento es entrada')
-    }
-    
-    // Validar que el día esté abierto para registro público
-    if (!isDayOpenForPublic(nowLocal)) {
-      return res.status(400).json({
-        error: CALL_CENTER_MESSAGES.closed_day,
-        currentTime: nowLocal.time,
-        dayOfWeek: nowLocal.dow,
-        decisionReason: decisionReason
-      })
     }
 
               console.log('🎯 Acción detectada:', {
