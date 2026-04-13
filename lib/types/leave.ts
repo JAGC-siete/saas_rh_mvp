@@ -86,4 +86,6 @@ export interface LeaveFormEmployeeOption {
   email: string | null
   company_id: string | null
   status?: string | null
+  /** Si viene de GET /api/employees (fila employees.*) */
+  department_id?: string | null
 }
