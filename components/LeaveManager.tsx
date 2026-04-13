@@ -7,8 +7,11 @@ import type {
   LeaveAttendanceSummaryPayload,
   LeaveFormEmployeeOption,
 } from '../lib/types/leave'
+import { cn } from '../lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
+import { Button } from './ui/button'
 import { formatDateForHonduras } from '../lib/timezone'
+import { useToast } from '../lib/toast'
 import EmployeeCell from './common/EmployeeCell'
 
 interface FormData {
@@ -46,6 +49,8 @@ function attendanceDashboardHref(request: LeaveRequest): string {
   return `/app/attendance/dashboard?${q.toString()}`
 }
 
+type LeavePanel = 'list' | 'form'
+
 function summaryLabelEs(s: string): string {
   switch (s) {
     case 'presente':
@@ -60,6 +65,7 @@ function summaryLabelEs(s: string): string {
 }
 
 export default function LeaveManager() {
+  const toast = useToast()
   const {
     leaveRequests,
     leaveTypes,
@@ -78,7 +84,7 @@ export default function LeaveManager() {
   const [formEmployees, setFormEmployees] = useState<LeaveFormEmployeeOption[]>([])
   const [formEmployeesLoading, setFormEmployeesLoading] = useState(false)
   const [employeeQuery, setEmployeeQuery] = useState('')
-  const [showForm, setShowForm] = useState(false)
+  const [panel, setPanel] = useState<LeavePanel>('list')
   const formEmployeesFetchedForOpen = useRef(false)
 
   const [summaryExpandedId, setSummaryExpandedId] = useState<string | null>(null)
@@ -91,7 +97,7 @@ export default function LeaveManager() {
   }, [fetchLeaveRequests, fetchLeaveTypes])
 
   useEffect(() => {
-    if (!showForm) {
+    if (panel !== 'form') {
       formEmployeesFetchedForOpen.current = false
       setEmployeeQuery('')
       return
@@ -112,7 +118,7 @@ export default function LeaveManager() {
         setFormEmployeesLoading(false)
       }
     })()
-  }, [showForm])
+  }, [panel])
 
   const filteredFormEmployees = useMemo(() => {
     const q = employeeQuery.trim().toLowerCase()
@@ -158,12 +164,12 @@ export default function LeaveManager() {
     const file = e.target.files?.[0]
     if (file) {
       if (!['application/pdf', 'image/jpeg', 'image/jpg'].includes(file.type)) {
-        alert('Solo se permiten archivos PDF o JPG')
+        toast.warning('Archivo', 'Solo se permiten PDF o JPG.')
         return
       }
 
       if (file.size > 5 * 1024 * 1024) {
-        alert('El archivo debe ser menor a 5MB')
+        toast.warning('Archivo', 'El archivo debe ser menor a 5 MB.')
         return
       }
 
@@ -186,18 +192,18 @@ export default function LeaveManager() {
     e.preventDefault()
 
     if (!formData.employee_dni || !formData.leave_type_id || !formData.start_date || !formData.end_date) {
-      alert('Por favor complete todos los campos obligatorios')
+      toast.warning('Formulario', 'Complete los campos obligatorios.')
       return
     }
 
     const employee = formEmployees.find((emp) => emp.dni === formData.employee_dni)
     if (!employee) {
-      alert('Seleccione un empleado válido de la lista')
+      toast.warning('Empleado', 'Seleccione un empleado de la lista de resultados.')
       return
     }
 
     if (formData.duration_type === 'hours' && (!formData.duration_hours || formData.duration_hours <= 0)) {
-      alert('Para permisos por horas, debe especificar la duración')
+      toast.warning('Duración', 'Para permisos por horas, indique la duración.')
       return
     }
 
@@ -217,8 +223,9 @@ export default function LeaveManager() {
       setFormData(INITIAL_FORM_DATA)
       setSelectedFile(null)
       setEmployeeQuery('')
-      setShowForm(false)
+      setPanel('list')
       fetchLeaveRequests()
+      toast.success('Permiso', 'Solicitud registrada correctamente.')
     } catch (err) {
       console.error('Error creating leave request:', err)
     }
@@ -249,11 +256,11 @@ export default function LeaveManager() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'approved':
-        return 'text-green-600 bg-green-100'
+        return 'text-emerald-200 bg-emerald-500/15 border border-emerald-400/35'
       case 'rejected':
-        return 'text-red-600 bg-red-100'
+        return 'text-rose-200 bg-rose-500/15 border border-rose-400/35'
       default:
-        return 'text-yellow-600 bg-yellow-100'
+        return 'text-amber-100 bg-amber-500/15 border border-amber-400/35'
     }
   }
 
@@ -270,54 +277,78 @@ export default function LeaveManager() {
       try {
         const res = await fetch(`/api/leave/${requestId}?attendance_summary=1`)
         const json = await res.json()
-        if (!res.ok) throw new Error(json.error || 'Error al cargar resumen')
+        if (!res.ok) throw new Error(json.message || json.error || 'Error al cargar resumen')
         setSummaryData(json.data as LeaveAttendanceSummaryPayload)
       } catch (e) {
-        console.error(e)
+        const msg = e instanceof Error ? e.message : 'Error al cargar resumen'
+        toast.error('Asistencia', msg)
         setSummaryExpandedId(null)
         setSummaryData(null)
       } finally {
         setSummaryLoading(false)
       }
     },
-    [summaryExpandedId]
+    [summaryExpandedId, toast]
   )
 
   const selectedPreview = formEmployees.find((e) => e.dni === formData.employee_dni)
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600" />
+      <div className="flex flex-col justify-center items-center gap-3 py-16" role="status" aria-live="polite">
+        <div
+          className="h-10 w-10 animate-spin rounded-full border-2 border-white/20 border-t-brand-500"
+          aria-hidden
+        />
+        <p className="text-sm text-gray-400">Cargando solicitudes…</p>
       </div>
     )
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold text-gray-900">Solicitud de Permisos</h2>
-        <button
+    <div className="space-y-6 w-full">
+      <div
+        role="tablist"
+        aria-label="Vista de permisos"
+        className="flex flex-wrap gap-2 border-b border-white/10 pb-4"
+      >
+        <Button
           type="button"
-          onClick={() => setShowForm(!showForm)}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors"
+          role="tab"
+          aria-selected={panel === 'list'}
+          variant={panel === 'list' ? 'default' : 'secondary'}
+          className={cn(
+            'rounded-full px-4 py-2 text-sm font-medium shadow-none hover:translate-y-0 active:translate-y-0',
+            panel !== 'list' &&
+              'bg-white/5 text-gray-300 border-white/10 hover:bg-white/10 hover:text-white'
+          )}
+          onClick={() => setPanel('list')}
         >
-          {showForm ? 'Cancelar' : 'Nueva Solicitud'}
-        </button>
+          Listado
+        </Button>
+        <Button
+          type="button"
+          role="tab"
+          aria-selected={panel === 'form'}
+          variant={panel === 'form' ? 'default' : 'secondary'}
+          className={cn(
+            'rounded-full px-4 py-2 text-sm font-medium shadow-none hover:translate-y-0 active:translate-y-0',
+            panel !== 'form' &&
+              'bg-white/5 text-gray-300 border-white/10 hover:bg-white/10 hover:text-white'
+          )}
+          onClick={() => setPanel('form')}
+        >
+          Nueva solicitud
+        </Button>
       </div>
 
       {error && (
-        <Card variant="glass" className="mb-4 border-red-400/30">
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-red-400 rounded-full" />
-              <p className="text-red-200 font-medium">{error}</p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="rounded-lg bg-red-500/10 border border-red-500/30 text-red-200 px-4 py-3 text-sm">
+          {error}
+        </div>
       )}
 
-      {showForm && (
+      {panel === 'form' && (
         <Card variant="glass" className="mb-6 shadow-2xl border-white/20">
           <CardHeader className="border-b border-white/10">
             <CardTitle className="text-white text-xl font-bold">Registrar Permiso Pre-autorizado</CardTitle>
@@ -341,17 +372,19 @@ export default function LeaveManager() {
                   {formEmployeesLoading && (
                     <p className="text-xs text-gray-400 mt-1">Cargando empleados…</p>
                   )}
-                  {!formEmployeesLoading && showForm && filteredFormEmployees.length > 0 && (
+                  {!formEmployeesLoading && panel === 'form' && filteredFormEmployees.length > 0 && (
                     <ul className="mt-2 max-h-40 overflow-y-auto rounded-lg border border-white/10 bg-black/30">
                       {filteredFormEmployees.map((emp) => (
                         <li key={emp.id}>
-                          <button
+                          <Button
                             type="button"
+                            variant="ghost"
+                            size="sm"
                             onClick={() => pickFormEmployee(emp)}
-                            className="w-full text-left px-3 py-2 text-sm text-white hover:bg-white/10"
+                            className="h-auto w-full justify-start rounded-none px-3 py-2 text-sm font-normal text-white hover:bg-white/10"
                           >
                             {emp.name} — {emp.dni}
-                          </button>
+                          </Button>
                         </li>
                       ))}
                     </ul>
@@ -498,42 +531,42 @@ export default function LeaveManager() {
                       <p className="text-sm text-white">{selectedFile.name}</p>
                       <p className="text-xs text-gray-300">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
                     </div>
-                    <button type="button" onClick={removeFile} className="text-red-400 hover:text-red-300">
+                    <Button type="button" variant="ghost" size="sm" onClick={removeFile} className="text-rose-300 hover:text-rose-200 hover:bg-rose-500/10">
                       Quitar
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>
 
-              <div className="flex justify-end space-x-4 pt-6 border-t border-white/10">
-                <button
+              <div className="flex justify-end gap-3 pt-6 border-t border-white/10">
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => {
                     setFormData(INITIAL_FORM_DATA)
                     setSelectedFile(null)
                     setEmployeeQuery('')
-                    setShowForm(false)
+                    setPanel('list')
                   }}
-                  className="px-6 py-3 text-gray-300 bg-white/10 border border-white/20 rounded-lg"
                 >
                   Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg disabled:opacity-50"
-                >
-                  {isSubmitting ? 'Enviando…' : 'Enviar Solicitud'}
-                </button>
+                </Button>
+                <Button type="submit" variant="default" disabled={isSubmitting} className="min-w-[10rem]">
+                  {isSubmitting ? 'Enviando…' : 'Enviar solicitud'}
+                </Button>
               </div>
             </form>
           </CardContent>
         </Card>
       )}
 
-      <Card variant="glass">
-        <CardHeader>
-          <CardTitle className="text-white text-xl">Solicitudes de Permisos</CardTitle>
+      {panel === 'list' && (
+      <Card variant="glass" className="border border-white/10">
+        <CardHeader className="border-b border-white/10 pb-3">
+          <CardTitle className="text-white text-lg font-semibold tracking-tight">Solicitudes</CardTitle>
+          <p className="text-xs text-gray-400 mt-1 font-normal">
+            Aprobación, rechazo y vínculo con asistencia por fila.
+          </p>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -589,7 +622,7 @@ export default function LeaveManager() {
                             href={request.attachment_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-blue-300 hover:text-blue-200 underline"
+                            className="text-brand-400 font-medium hover:text-brand-300 underline-offset-2 hover:underline"
                           >
                             Ver archivo
                           </a>
@@ -602,47 +635,54 @@ export default function LeaveManager() {
                           {(request.employee_id || request.employee?.id) && (
                             <Link
                               href={attendanceDashboardHref(request)}
-                              className="text-blue-300 hover:text-blue-200 underline"
-                            >
-                              Ver en dashboard
-                            </Link>
+                            className="text-brand-400 font-medium hover:text-brand-300 underline-offset-2 hover:underline"
+                          >
+                            Ver en dashboard
+                          </Link>
                           )}
-                          <button
+                          <Button
                             type="button"
+                            variant="link"
                             onClick={() => toggleAttendanceSummary(request.id)}
-                            className="text-left text-amber-200/90 hover:text-amber-100 underline"
+                            className="h-auto min-h-0 justify-start p-0 text-sm font-normal"
                           >
                             {summaryExpandedId === request.id ? 'Ocultar resumen' : 'Resumen días'}
-                          </button>
+                          </Button>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-1.5">
                           {request.status === 'pending' && (
                             <>
-                              <button
+                              <Button
                                 type="button"
+                                variant="ghost"
+                                size="sm"
                                 onClick={() => updateLeaveRequest(request.id, { status: 'approved' })}
-                                className="text-green-400 hover:text-green-300"
+                                className="text-emerald-300 hover:bg-emerald-500/15 hover:text-emerald-200"
                               >
                                 Aprobar
-                              </button>
-                              <button
+                              </Button>
+                              <Button
                                 type="button"
+                                variant="ghost"
+                                size="sm"
                                 onClick={() => updateLeaveRequest(request.id, { status: 'rejected' })}
-                                className="text-red-400 hover:text-red-300"
+                                className="text-rose-300 hover:bg-rose-500/15 hover:text-rose-200"
                               >
                                 Rechazar
-                              </button>
+                              </Button>
                             </>
                           )}
-                          <button
+                          <Button
                             type="button"
+                            variant="ghost"
+                            size="sm"
                             onClick={() => deleteLeaveRequest(request.id)}
-                            className="text-red-400 hover:text-red-300"
+                            className="text-gray-400 hover:bg-white/10 hover:text-rose-300"
                           >
                             Eliminar
-                          </button>
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -695,6 +735,7 @@ export default function LeaveManager() {
           )}
         </CardContent>
       </Card>
+      )}
     </div>
   )
 }
