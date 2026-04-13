@@ -4,6 +4,23 @@ import { createClient } from '../../../lib/supabase/server'
 import { logger } from '../../../lib/logger'
 import { getHondurasTimestamp, nowInHonduras } from '../../../lib/timezone'
 
+function enumerateCalendarDays(fromStr: string, toStr: string): string[] {
+  const from = fromStr.slice(0, 10)
+  const to = toStr.slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from > to) {
+    return []
+  }
+  const out: string[] = []
+  let cur = from
+  while (cur <= to && out.length <= 366) {
+    out.push(cur)
+    const [y, m, d] = cur.split('-').map(Number)
+    const next = new Date(Date.UTC(y, m - 1, d + 1))
+    cur = next.toISOString().slice(0, 10)
+  }
+  return out
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const startTime = nowInHonduras().getTime()
   const { id } = req.query
@@ -45,12 +62,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
 
     switch (req.method) {
+      case 'GET': {
+        const wantSummary =
+          req.query.attendance_summary === '1' ||
+          req.query.attendance_summary === 'true'
+        if (wantSummary) {
+          return await handleGetLeaveAttendanceSummary(req, res, supabase, user, id)
+        }
+        logger.warn('Leave API method not allowed', { method: req.method, leaveRequestId: id })
+        return res.status(405).json({ error: 'Method not allowed' })
+      }
+
       case 'PUT':
         return await handleUpdateLeaveRequest(req, res, supabase, userProfile, id)
-      
+
       case 'DELETE':
         return await handleDeleteLeaveRequest(req, res, supabase, userProfile, id)
-      
+
       default:
         logger.warn('Leave API method not allowed', { method: req.method, leaveRequestId: id })
         return res.status(405).json({ error: 'Method not allowed' })
@@ -69,6 +97,133 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       error: 'Internal server error',
       message: 'Ocurrió un error procesando la solicitud'
     })
+  }
+}
+
+async function handleGetLeaveAttendanceSummary(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  supabase: any,
+  user: { id: string },
+  leaveRequestId: string
+) {
+  try {
+    const { data: profileRow, error: profileErr } = await supabase
+      .from('user_profiles')
+      .select('role, company_id, employee_id')
+      .eq('id', user.id)
+      .single()
+
+    if (profileErr || !profileRow) {
+      return res.status(403).json({ error: 'Perfil no encontrado' })
+    }
+
+    const { data: currentRequest, error: fetchError } = await supabase
+      .from('leave_requests')
+      .select(`
+        id,
+        employee_id,
+        start_date,
+        end_date,
+        employee:employees(
+          id,
+          company_id,
+          department_id
+        )
+      `)
+      .eq('id', leaveRequestId)
+      .single()
+
+    if (fetchError || !currentRequest) {
+      return res.status(404).json({ error: 'Leave request not found' })
+    }
+
+    let hasPermission = false
+    if (profileRow.role === 'super_admin') {
+      hasPermission = true
+    } else if (profileRow.role === 'company_admin' || profileRow.role === 'hr_manager') {
+      if (currentRequest.employee.company_id === profileRow.company_id) {
+        hasPermission = true
+      }
+    } else if (profileRow.role === 'manager') {
+      if (currentRequest.employee.department_id === profileRow.employee_id) {
+        hasPermission = true
+      }
+    }
+
+    if (!hasPermission) {
+      return res.status(403).json({ error: 'Access denied' })
+    }
+
+    const from = currentRequest.start_date.slice(0, 10)
+    const to = currentRequest.end_date.slice(0, 10)
+    const daysList = enumerateCalendarDays(from, to)
+
+    if (daysList.length === 0) {
+      return res.status(200).json({
+        data: {
+          days: [],
+          employee_id: currentRequest.employee_id,
+          leave_request_id: leaveRequestId,
+        },
+      })
+    }
+
+    const { data: timelineRaw, error: timelineError } = await supabase.rpc('attendance_employee_timeline', {
+      p_employee_id: currentRequest.employee_id,
+      p_from: from,
+      p_to: to,
+    })
+
+    if (timelineError) {
+      logger.error('attendance_employee_timeline (leave summary)', timelineError)
+      return res.status(500).json({ error: timelineError.message })
+    }
+
+    const byDate = new Map<string, { check_in: string | null; status: string | null }>()
+    for (const row of timelineRaw || []) {
+      const key = typeof row.date === 'string' ? row.date.slice(0, 10) : String(row.date).slice(0, 10)
+      byDate.set(key, { check_in: row.check_in ?? null, status: row.status ?? null })
+    }
+
+    const days = daysList.map((date) => {
+      const row = byDate.get(date)
+      if (!row) {
+        return {
+          date,
+          summary: 'sin_datos' as const,
+          has_check_in: false,
+          record_status: null as string | null,
+        }
+      }
+      const has_check_in = !!row.check_in
+      const st = (row.status || '').toLowerCase()
+      let summary: 'sin_datos' | 'presente' | 'ausente'
+      if (has_check_in) {
+        summary = 'presente'
+      } else if (st === 'absent') {
+        summary = 'ausente'
+      } else {
+        summary = 'ausente'
+      }
+      return {
+        date,
+        summary,
+        has_check_in,
+        record_status: row.status,
+      }
+    })
+
+    return res.status(200).json({
+      data: {
+        days,
+        employee_id: currentRequest.employee_id,
+        leave_request_id: leaveRequestId,
+      },
+    })
+  } catch (error) {
+    logger.error('Error in handleGetLeaveAttendanceSummary', error)
+    return res.status(500).json({ error: 'Internal server error' })
   }
 }
 
@@ -152,12 +307,18 @@ async function handleUpdateLeaveRequest(
       updateData.approved_at = null
     }
 
-    // Update leave request
+    const leaveSelectEnriched = `
+      *,
+      employee:employees!leave_requests_employee_id_fkey(id, name, email, dni, company_id),
+      leave_type:leave_types(id, name, color, is_paid, requires_approval)
+    `
+
+    // Update leave request (misma forma enriquecida que GET /api/leave para el cliente)
     const { data, error } = await supabase
       .from('leave_requests')
       .update(updateData)
       .eq('id', leaveRequestId)
-      .select()
+      .select(leaveSelectEnriched)
       .single()
 
     if (error) {

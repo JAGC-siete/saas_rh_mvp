@@ -30,6 +30,10 @@ export function useLeave(): UseLeaveReturn {
     setError(null)
   }, [])
 
+  /**
+   * Las solicitudes de permiso se consumen enriquecidas: `employee` y `leave_type`
+   * vienen del join en GET /api/leave; no duplicar resolución con listas locales salvo en el formulario de alta.
+   */
   const fetchLeaveRequests = useCallback(async () => {
     try {
       setIsLoading(true)

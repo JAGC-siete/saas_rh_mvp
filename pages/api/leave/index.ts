@@ -65,7 +65,7 @@ async function handleGetLeaveRequests(req: NextApiRequest, res: NextApiResponse)
       companyId
     })
 
-    res.status(200).json(result)
+    res.status(200).json({ data: result })
   } catch (error: any) {
     logger.error('Leave requests API error:', { error: error.message })
     return res.status(error.message === 'UNAUTHORIZED' ? 401 : 500).json({
@@ -251,7 +251,7 @@ async function handleCreateLeaveRequest(req: NextApiRequest, res: NextApiRespons
       daysRequested: days_requested
     })
 
-    res.status(201).json(leaveRequest)
+    res.status(201).json({ data: leaveRequest })
   } catch (error: any) {
     logger.error('Leave create request API error:', { error: error.message })
     return res.status(error.message === 'UNAUTHORIZED' ? 401 : 500).json({
