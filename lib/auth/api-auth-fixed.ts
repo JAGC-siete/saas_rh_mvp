@@ -60,7 +60,7 @@ export async function authenticateUser(
     
     const { data: userProfile, error: profileError } = await adminSupabase
       .from('user_profiles')
-      .select('company_id, role, employee_id, permissions, is_active')
+      .select('id, company_id, role, employee_id, permissions, is_active')
       .eq('id', user.id)
       .maybeSingle() // Use maybeSingle() to handle 0 rows gracefully
 

@@ -4,6 +4,38 @@ import { createClient } from '../../../lib/supabase/server'
 import { logger } from '../../../lib/logger'
 import { getHondurasTimestamp, nowInHonduras } from '../../../lib/timezone'
 
+const leaveEmployeeGateSelect = `
+  id,
+  company_id,
+  department_id,
+  departments!employees_department_id_fkey(manager_id)
+`
+
+function departmentManagerId(employee: {
+  departments?: { manager_id: string | null } | { manager_id: string | null }[] | null
+}): string | null {
+  const d = employee.departments
+  if (!d) return null
+  const row = Array.isArray(d) ? d[0] : d
+  return row?.manager_id ?? null
+}
+
+function canAccessLeaveRequestForId(
+  userProfile: { role: string; company_id: string | null; employee_id: string | null },
+  employee: { company_id: string; departments?: { manager_id: string | null } | { manager_id: string | null }[] | null }
+): boolean {
+  const role = userProfile.role
+  if (role === 'super_admin') return true
+  if (role === 'company_admin' || role === 'hr_manager') {
+    return employee.company_id === userProfile.company_id
+  }
+  if (role === 'manager') {
+    const mid = departmentManagerId(employee)
+    return !!mid && !!userProfile.employee_id && mid === userProfile.employee_id
+  }
+  return false
+}
+
 function enumerateCalendarDays(fromStr: string, toStr: string): string[] {
   const from = fromStr.slice(0, 10)
   const to = toStr.slice(0, 10)
@@ -39,8 +71,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Invalid leave request ID' })
     }
 
-    // Authenticate user
-    const authResult = await authenticateUser(req, res, ['can_manage_employees'])
+    // Authenticate user (managers con can_approve_leave alineado a RLS de leave_requests)
+    const authResult = await authenticateUser(req, res, ['can_approve_leave'])
     if (!authResult.success) {
       logger.warn('Leave API authentication failed', {
         error: authResult.error,
@@ -67,7 +99,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           req.query.attendance_summary === '1' ||
           req.query.attendance_summary === 'true'
         if (wantSummary) {
-          return await handleGetLeaveAttendanceSummary(req, res, supabase, user, id)
+          return await handleGetLeaveAttendanceSummary(req, res, supabase, userProfile, id)
         }
         logger.warn('Leave API method not allowed', { method: req.method, leaveRequestId: id })
         return res.status(405).json({ error: 'Method not allowed' })
@@ -104,20 +136,10 @@ async function handleGetLeaveAttendanceSummary(
   req: NextApiRequest,
   res: NextApiResponse,
   supabase: any,
-  user: { id: string },
+  userProfile: { role: string; company_id: string | null; employee_id: string | null },
   leaveRequestId: string
 ) {
   try {
-    const { data: profileRow, error: profileErr } = await supabase
-      .from('user_profiles')
-      .select('role, company_id, employee_id')
-      .eq('id', user.id)
-      .single()
-
-    if (profileErr || !profileRow) {
-      return res.status(403).json({ error: 'Perfil no encontrado' })
-    }
-
     const { data: currentRequest, error: fetchError } = await supabase
       .from('leave_requests')
       .select(`
@@ -125,11 +147,7 @@ async function handleGetLeaveAttendanceSummary(
         employee_id,
         start_date,
         end_date,
-        employee:employees(
-          id,
-          company_id,
-          department_id
-        )
+        employee:employees(${leaveEmployeeGateSelect})
       `)
       .eq('id', leaveRequestId)
       .single()
@@ -138,20 +156,7 @@ async function handleGetLeaveAttendanceSummary(
       return res.status(404).json({ error: 'Leave request not found' })
     }
 
-    let hasPermission = false
-    if (profileRow.role === 'super_admin') {
-      hasPermission = true
-    } else if (profileRow.role === 'company_admin' || profileRow.role === 'hr_manager') {
-      if (currentRequest.employee.company_id === profileRow.company_id) {
-        hasPermission = true
-      }
-    } else if (profileRow.role === 'manager') {
-      if (currentRequest.employee.department_id === profileRow.employee_id) {
-        hasPermission = true
-      }
-    }
-
-    if (!hasPermission) {
+    if (!canAccessLeaveRequestForId(userProfile, currentRequest.employee)) {
       return res.status(403).json({ error: 'Access denied' })
     }
 
@@ -250,11 +255,7 @@ async function handleUpdateLeaveRequest(
       .from('leave_requests')
       .select(`
         *,
-        employee:employees(
-          id,
-          company_id,
-          department_id
-        )
+        employee:employees(${leaveEmployeeGateSelect})
       `)
       .eq('id', leaveRequestId)
       .single()
@@ -263,24 +264,7 @@ async function handleUpdateLeaveRequest(
       return res.status(404).json({ error: 'Leave request not found' })
     }
 
-    // Verify permissions based on role
-    let hasPermission = false
-
-    if (userProfile.role === 'super_admin') {
-      hasPermission = true
-    } else if (userProfile.role === 'company_admin' || userProfile.role === 'hr_manager') {
-      // Check if employee belongs to user's company
-      if (currentRequest.employee.company_id === userProfile.company_id) {
-        hasPermission = true
-      }
-    } else if (userProfile.role === 'manager') {
-      // Check if user is manager of the employee's department
-      if (currentRequest.employee.department_id === userProfile.employee_id) {
-        hasPermission = true
-      }
-    }
-
-    if (!hasPermission) {
+    if (!canAccessLeaveRequestForId(userProfile, currentRequest.employee)) {
       logger.warn('Permission denied for leave request update', {
         userId: userProfile.id,
         userRole: userProfile.role,
@@ -298,7 +282,8 @@ async function handleUpdateLeaveRequest(
     }
 
     if (status === 'approved') {
-      updateData.approved_by = userProfile.employee_id || userProfile.id
+      // FK leave_requests_approved_by_fkey → employees.id (no usar auth user id)
+      updateData.approved_by = userProfile.employee_id ?? null
       updateData.approved_at = getHondurasTimestamp()
       updateData.rejection_reason = null
     } else if (status === 'rejected') {

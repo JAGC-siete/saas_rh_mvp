@@ -16,8 +16,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress
     })
 
-    // Authenticate user
-    const authResult = await authenticateUser(req, res, ['can_manage_employees'])
+    // Listar tipos: mismo alcance que permisos (managers con can_approve_leave). Crear tipo sigue acotado por rol dentro del handler.
+    const authResult = await authenticateUser(req, res, ['can_approve_leave'])
     if (!authResult.success) {
       logger.warn('Leave types API authentication failed', {
         error: authResult.error,
