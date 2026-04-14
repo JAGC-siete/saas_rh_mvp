@@ -18,9 +18,8 @@ La causa raíz es el **parseo incorrecto de fechas tipo `YYYY-MM-DD`** en JavaSc
 - **Tabla:** `attendance_records`
 - **Campo:** `date` (tipo `DATE` o `TEXT` en formato `YYYY-MM-DD`)
 - **Significado:** Fecha calendario en hora de Honduras (America/Tegucigalpa)
-- **Origen:** Calculada correctamente en los webhooks:
-  - ZKTeco (`cdata.ts`): `toHN(eventTimestamp).date` → fecha en Honduras
-  - Hikvision: `hondurasTime.date` → fecha en Honduras
+- **Origen:** Calculada correctamente en los webhooks y registro manual:
+  - Hikvision (`/api/webhooks/attendance`): fecha en Honduras según el procesamiento del evento
   - Registro manual: `nowLocal.date` → fecha en Honduras
 
 **Conclusión:** El valor almacenado en BD es correcto. Ej: `"2026-03-02"` = lunes 2 de marzo en Honduras.
