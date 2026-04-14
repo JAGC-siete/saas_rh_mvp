@@ -21,6 +21,7 @@ import {
   ScaleIcon
 } from '@heroicons/react/24/outline'
 import { TrophyIcon } from '@heroicons/react/24/solid'
+import NotificationBell from './ui/NotificationBell'
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -223,7 +224,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Empleados', href: '/app/employees', icon: UsersIcon, permission: 'employees' },
     { name: 'Departamentos', href: '/app/departments', icon: UsersIcon, permission: 'departments' },
     { name: 'Asistencia', href: '/app/attendance/dashboard', icon: ClockIcon, permission: 'attendance' },
-    { name: 'Cierre de día', href: '/app/attendance/daily-close', icon: CalendarDaysIcon, permission: 'attendance' },
+    { name: 'Cierre de día', href: '/app/attendance/dashboard?panel=close', icon: CalendarDaysIcon, permission: 'attendance' },
     { name: 'Permisos', href: '/app/leave', icon: UserIcon, permission: 'leave' },
     { name: 'Nómina', href: '/app/payroll', icon: CurrencyDollarIcon, permission: 'payroll' },
     { name: 'Cesantías', href: '/app/cesantias', icon: ScaleIcon, permission: 'payroll' },
@@ -277,7 +278,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className="flex flex-col h-full">
           {/* Header (sin logo) */}
           <div className="flex items-center justify-between h-16 px-4 border-b border-white/10">
-            <div />
+            <NotificationBell />
             <Button
               variant="ghost"
               size="sm"

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
   ResponsiveContainer,
   PieChart,
@@ -14,6 +14,7 @@ import {
 import type { LeaveRequest, LeaveType } from '../../lib/types/leave'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { Button } from '../ui/button'
+import { useNotificationContext } from '../NotificationProvider'
 import { cn } from '../../lib/utils'
 import { parseISO, isWithinInterval, startOfDay, subDays, getISOWeek, getISOWeekYear } from 'date-fns'
 
@@ -52,8 +53,10 @@ export default function LeaveDashboard({
   leaveTypes,
   className,
 }: LeaveDashboardProps) {
+  const { addNotification } = useNotificationContext()
   const [range, setRange] = useState<LeaveDashboardRange>('30d')
   const now = useMemo(() => new Date(), [])
+  const lastNotifiedPendingRef = useRef<number | null>(null)
 
   const filtered = useMemo(
     () => leaveRequests.filter((r) => requestInRange(r, range, now)),
@@ -74,6 +77,24 @@ export default function LeaveDashboard({
     }
     return { pending, approved, rejected, daysApproved, total: filtered.length }
   }, [filtered])
+
+  useEffect(() => {
+    const pending = kpis.pending
+    const last = lastNotifiedPendingRef.current
+    // Notify once (or when count changes) to avoid spam on re-renders.
+    if (pending > 0 && pending !== last) {
+      addNotification({
+        type: 'warning',
+        title: 'Permisos pendientes',
+        message: `Hay ${pending} solicitud${pending === 1 ? '' : 'es'} esperando aprobación.`,
+        duration: 8000,
+      })
+      lastNotifiedPendingRef.current = pending
+    }
+    if (pending === 0) {
+      lastNotifiedPendingRef.current = 0
+    }
+  }, [kpis.pending, addNotification])
 
   const byType = useMemo(() => {
     const map = new Map<string, { name: string; value: number; color: string }>()
@@ -147,7 +168,7 @@ export default function LeaveDashboard({
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <KpiCard label="Pendientes" value={kpis.pending} accent="amber" />
+        <KpiCard label="Pendientes" value={kpis.pending} accent="amber" badge={kpis.pending > 0 ? kpis.pending : undefined} />
         <KpiCard label="Aprobadas" value={kpis.approved} accent="emerald" />
         <KpiCard label="Rechazadas" value={kpis.rejected} accent="rose" />
         <KpiCard
@@ -238,11 +259,13 @@ function KpiCard({
   value,
   sub,
   accent,
+  badge,
 }: {
   label: string
   value: string | number
   sub?: string
   accent: 'amber' | 'emerald' | 'rose' | 'sky'
+  badge?: string | number
 }) {
   const ring =
     accent === 'amber'
@@ -253,10 +276,15 @@ function KpiCard({
           ? 'border-rose-400/25 bg-rose-500/10'
           : 'border-sky-400/25 bg-sky-500/10'
   return (
-    <div className={cn('rounded-xl border p-4', ring)}>
+    <div className={cn('relative rounded-xl border p-4', ring)}>
       <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">{label}</p>
       <p className="mt-1 text-2xl font-bold text-white tabular-nums">{value}</p>
       {sub && <p className="text-[11px] text-gray-500 mt-1">{sub}</p>}
+      {badge != null && (
+        <span className="absolute -top-2 -right-2 min-w-5 h-5 px-1.5 flex items-center justify-center rounded-full bg-amber-500 text-white text-[10px] font-bold leading-none shadow">
+          {badge}
+        </span>
+      )}
     </div>
   )
 }
