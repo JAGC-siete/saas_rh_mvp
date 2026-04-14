@@ -2,10 +2,10 @@ import React, { createContext, useContext } from 'react'
 import { useNotifications, type AddNotificationInput, Notification } from '../lib/hooks/useNotifications'
 import NotificationToast from './NotificationToast'
 
-interface NotificationContextType {
+export interface NotificationContextType {
   notifications: Notification[]
   // eslint-disable-next-line no-unused-vars
-  addNotification: (notification: AddNotificationInput) => string
+  addNotification: (notification: AddNotificationInput) => string | null
   // eslint-disable-next-line no-unused-vars
   removeNotification: (id: string) => void
   // eslint-disable-next-line no-unused-vars
