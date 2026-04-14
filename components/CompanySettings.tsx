@@ -7,8 +7,10 @@ import { Card, CardContent } from './ui/card'
 import { 
   ClockIcon,
   CalculatorIcon,
-  DocumentChartBarIcon
+  DocumentChartBarIcon,
+  ClipboardDocumentListIcon
 } from '@heroicons/react/24/outline'
+import LeaveTypesSettings from './LeaveTypesSettings'
 import PayrollConfigEditor from './PayrollConfigEditor'
 import ReportParamsEditor from './reports/ReportParamsEditor'
 import { BIOMETRIC_MODES, type BiometricMode } from '../lib/attendance/attendance-metadata'
@@ -316,6 +318,7 @@ export default function CompanySettings() {
     { id: 'schedules', name: 'Horarios', icon: ClockIcon },
     { id: 'payroll', name: 'Configuración Payroll', icon: CalculatorIcon },
     { id: 'reports', name: 'Parámetros de Reportes', icon: DocumentChartBarIcon },
+    { id: 'leaveTypes', name: 'Parámetros de permisos', icon: ClipboardDocumentListIcon },
   ]
 
   const days = [
@@ -630,6 +633,21 @@ export default function CompanySettings() {
             companyId={companyId}
             onSave={() => console.log('Report params saved')}
           />
+        ) : (
+          <Card variant="glass" className="p-6">
+            <CardContent className="text-center">
+              <p className="text-red-400 mb-4">{error || companyError || 'No se pudo cargar la información de la empresa'}</p>
+              {!companyId && (
+                <p className="text-sm text-gray-300">Verifica que tu perfil de usuario tenga una empresa asignada.</p>
+              )}
+            </CardContent>
+          </Card>
+        )
+      )}
+
+      {activeTab === 'leaveTypes' && (
+        companyId && company ? (
+          <LeaveTypesSettings companyId={companyId} />
         ) : (
           <Card variant="glass" className="p-6">
             <CardContent className="text-center">

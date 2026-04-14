@@ -19,6 +19,7 @@ export default function EnvironmentError() {
   const [envStatus, setEnvStatus] = useState<EnvStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState<string | null>(null)
+  const [diagnosticsBlocked, setDiagnosticsBlocked] = useState(false)
 
   useEffect(() => {
     checkEnvironment()
@@ -27,7 +28,13 @@ export default function EnvironmentError() {
   const checkEnvironment = async () => {
     try {
       setLoading(true)
+      setDiagnosticsBlocked(false)
       const response = await fetch('/api/env-check')
+      if (response.status === 404) {
+        setDiagnosticsBlocked(true)
+        setEnvStatus(null)
+        return
+      }
       const data = await response.json()
       setEnvStatus(data.environment)
     } catch (error) {
@@ -72,6 +79,29 @@ vercel --prod`
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
+    )
+  }
+
+  if (diagnosticsBlocked) {
+    return (
+      <Card className="border-amber-200 bg-amber-50">
+        <CardContent className="pt-6 space-y-3">
+          <div className="flex items-center gap-2 text-amber-900">
+            <AlertTriangle className="h-5 w-5" />
+            <span className="font-medium">Verificación automática no disponible</span>
+          </div>
+          <p className="text-sm text-amber-900/90">
+            En producción el endpoint de diagnóstico está desactivado. Revise en el panel de su proveedor
+            (Railway, Vercel, etc.) que existan{' '}
+            <code className="text-xs bg-amber-100/80 px-1 rounded">NEXT_PUBLIC_SUPABASE_URL</code>,{' '}
+            <code className="text-xs bg-amber-100/80 px-1 rounded">NEXT_PUBLIC_SUPABASE_ANON_KEY</code> y{' '}
+            <code className="text-xs bg-amber-100/80 px-1 rounded">SUPABASE_SERVICE_ROLE_KEY</code>.
+            Para habilitar temporalmente la comprobación vía API, defina{' '}
+            <code className="text-xs bg-amber-100/80 px-1 rounded">ENABLE_SERVER_DIAGNOSTICS=true</code> en el
+            servidor (solo el tiempo necesario para diagnosticar).
+          </p>
+        </CardContent>
+      </Card>
     )
   }
 

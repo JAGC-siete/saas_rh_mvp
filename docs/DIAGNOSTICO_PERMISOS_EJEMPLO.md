@@ -1,8 +1,8 @@
-# Diagnóstico: "Permisos insuficientes" - banegas.lizbeth@icolud.com
+# Diagnóstico: "Permisos insuficientes" (usuario de ejemplo)
 
 ## Objetivo
 
-Investigar por qué el usuario `banegas.lizbeth@icolud.com` recibe mensajes de "Permisos insuficientes" / "Insufficient permissions" tras el deploy y las modificaciones en Supabase.
+Investigar por qué un usuario (sustituya el correo en las consultas, p. ej. `usuario.ejemplo@dominio.com`) recibe mensajes de "Permisos insuficientes" / "Insufficient permissions" tras el deploy y las modificaciones en Supabase.
 
 ---
 
@@ -26,7 +26,7 @@ SELECT
   up.updated_at
 FROM auth.users au
 LEFT JOIN user_profiles up ON up.id = au.id
-WHERE au.email = 'banegas.lizbeth@icolud.com';
+WHERE au.email = 'usuario.ejemplo@dominio.com';
 ```
 
 **Verificar:**
@@ -50,7 +50,7 @@ SELECT
 FROM user_profiles up
 LEFT JOIN companies c ON c.id = up.company_id
 JOIN auth.users au ON au.id = up.id
-WHERE au.email = 'banegas.lizbeth@icolud.com';
+WHERE au.email = 'usuario.ejemplo@dominio.com';
 ```
 
 **Verificar:**
@@ -123,7 +123,7 @@ UPDATE user_profiles
 SET permissions = COALESCE(permissions, '{}'::jsonb) || 
   '{"can_view_reports": true, "can_export_reports": true}'::jsonb,
   updated_at = NOW()
-WHERE id = (SELECT id FROM auth.users WHERE email = 'banegas.lizbeth@icolud.com');
+WHERE id = (SELECT id FROM auth.users WHERE email = 'usuario.ejemplo@dominio.com');
 ```
 
 Si el rol está mal (ej. `"Admin"` con mayúscula o typo):
@@ -133,7 +133,7 @@ Si el rol está mal (ej. `"Admin"` con mayúscula o typo):
 UPDATE user_profiles
 SET role = 'hr_manager',  -- o el rol correcto
     updated_at = NOW()
-WHERE id = (SELECT id FROM auth.users WHERE email = 'banegas.lizbeth@icolud.com');
+WHERE id = (SELECT id FROM auth.users WHERE email = 'usuario.ejemplo@dominio.com');
 ```
 
 ---

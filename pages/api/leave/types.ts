@@ -42,6 +42,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       case 'POST':
         return await handleCreateLeaveType(req, res, supabase, userProfile)
+
+      case 'PATCH':
+        return await handlePatchLeaveType(req, res, supabase, userProfile)
       
       default:
         logger.warn('Leave types API method not allowed', { method: req.method })
@@ -70,15 +73,8 @@ async function handleGetLeaveTypes(
   userProfile: any
 ) {
   try {
-    let query = supabase
-      .from('leave_types')
-      .select('*')
-      .order('name')
-
-    // Filter by company if not super_admin
-    if (userProfile.role !== 'super_admin' && userProfile.company_id) {
-      query = query.eq('company_id', userProfile.company_id)
-    }
+    // Alcance por RLS (incluye managers y demás roles con empresa asignada).
+    const query = supabase.from('leave_types').select('*').order('name')
 
     const { data, error } = await query
 
@@ -101,6 +97,71 @@ async function handleGetLeaveTypes(
   }
 }
 
+async function handlePatchLeaveType(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  supabase: any,
+  userProfile: any
+) {
+  try {
+    if (!['super_admin', 'company_admin', 'hr_manager'].includes(userProfile.role)) {
+      return res.status(403).json({ error: 'Access denied' })
+    }
+
+    const {
+      id,
+      name,
+      max_days_per_year,
+      is_paid,
+      requires_approval,
+      color,
+      employee_self_service,
+      is_statutory_art95,
+      is_statutory,
+    } = req.body
+
+    if (!id || typeof id !== 'string') {
+      return res.status(400).json({ error: 'Missing id', message: 'El id del tipo de permiso es obligatorio' })
+    }
+
+    const patch: Record<string, unknown> = {}
+    if (typeof name === 'string' && name.trim()) patch.name = name.trim()
+    if (max_days_per_year === null || max_days_per_year === '') patch.max_days_per_year = null
+    else if (typeof max_days_per_year === 'number' && Number.isFinite(max_days_per_year)) patch.max_days_per_year = max_days_per_year
+    if (typeof is_paid === 'boolean') patch.is_paid = is_paid
+    if (typeof requires_approval === 'boolean') patch.requires_approval = requires_approval
+    if (typeof color === 'string' && color.trim()) patch.color = color.trim()
+    if (typeof employee_self_service === 'boolean') patch.employee_self_service = employee_self_service
+    if (typeof is_statutory_art95 === 'boolean') patch.is_statutory_art95 = is_statutory_art95
+    if (typeof is_statutory === 'boolean') patch.is_statutory = is_statutory
+
+    if (Object.keys(patch).length === 0) {
+      return res.status(400).json({ error: 'No fields to update' })
+    }
+
+    let updateQuery = supabase.from('leave_types').update(patch).eq('id', id)
+    if (userProfile.role !== 'super_admin' && userProfile.company_id) {
+      updateQuery = updateQuery.eq('company_id', userProfile.company_id)
+    }
+
+    const { data, error } = await updateQuery.select().single()
+
+    if (error) {
+      logger.error('Error updating leave type', error)
+      return res.status(500).json({ error: 'Error updating leave type' })
+    }
+
+    if (!data) {
+      return res.status(404).json({ error: 'Leave type not found' })
+    }
+
+    return res.status(200).json({ data })
+  } catch (error) {
+    logger.error('Error in handlePatchLeaveType', error)
+    return res.status(500).json({ error: 'Internal server error' })
+  }
+}
+
 async function handleCreateLeaveType(
   req: NextApiRequest, 
   res: NextApiResponse, 
@@ -108,7 +169,16 @@ async function handleCreateLeaveType(
   userProfile: any
 ) {
   try {
-    const { name, max_days_per_year, is_paid, requires_approval, color } = req.body
+    const {
+      name,
+      max_days_per_year,
+      is_paid,
+      requires_approval,
+      color,
+      employee_self_service,
+      is_statutory_art95,
+      is_statutory,
+    } = req.body
 
     // Validate required fields
     if (!name) {
@@ -133,7 +203,10 @@ async function handleCreateLeaveType(
       max_days_per_year: max_days_per_year || null,
       is_paid: is_paid !== undefined ? is_paid : true,
       requires_approval: requires_approval !== undefined ? requires_approval : true,
-      color: color || '#3498db'
+      color: color || '#3498db',
+      employee_self_service: employee_self_service === true,
+      is_statutory_art95: is_statutory_art95 === true,
+      is_statutory: is_statutory === true,
     }
 
     // Set company_id if not super_admin

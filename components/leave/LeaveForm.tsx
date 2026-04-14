@@ -2,7 +2,7 @@ import React, { useMemo, useRef, useEffect, useState } from 'react'
 import type { LeaveFormEmployeeOption, LeaveRequest, LeaveType } from '../../lib/types/leave'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { Button } from '../ui/button'
-import EmployeeCell from '../common/EmployeeCell'
+import { ChevronDownIcon } from '@heroicons/react/24/outline'
 import {
   proposedDaysFromForm,
   usedDaysByTypeForEmployee,
@@ -53,7 +53,9 @@ export default function LeaveForm({
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [formEmployees, setFormEmployees] = useState<LeaveFormEmployeeOption[]>([])
   const [formEmployeesLoading, setFormEmployeesLoading] = useState(false)
-  const [employeeQuery, setEmployeeQuery] = useState('')
+  const [employeeSearch, setEmployeeSearch] = useState('')
+  const [employeeMenuOpen, setEmployeeMenuOpen] = useState(false)
+  const employeePickerRef = useRef<HTMLDivElement>(null)
   const fetched = useRef(false)
 
   useEffect(() => {
@@ -75,8 +77,22 @@ export default function LeaveForm({
     })()
   }, [])
 
+  useEffect(() => {
+    if (!employeeMenuOpen) return
+    const onDoc = (e: MouseEvent) => {
+      const el = employeePickerRef.current
+      if (el && !el.contains(e.target as Node)) setEmployeeMenuOpen(false)
+    }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [employeeMenuOpen])
+
+  useEffect(() => {
+    if (employeeMenuOpen) setEmployeeSearch('')
+  }, [employeeMenuOpen])
+
   const filteredFormEmployees = useMemo(() => {
-    const q = employeeQuery.trim().toLowerCase()
+    const q = employeeSearch.trim().toLowerCase()
     const list = formEmployees
     if (!q) return list.slice(0, 12)
     return list
@@ -85,7 +101,7 @@ export default function LeaveForm({
           emp.name.toLowerCase().includes(q) || (emp.dni && emp.dni.toLowerCase().includes(q))
       )
       .slice(0, 12)
-  }, [formEmployees, employeeQuery])
+  }, [formEmployees, employeeSearch])
 
   const selectedPreview = formEmployees.find((e) => e.dni === formData.employee_dni)
 
@@ -159,8 +175,17 @@ export default function LeaveForm({
 
   const pickFormEmployee = (emp: LeaveFormEmployeeOption) => {
     setFormData((prev) => ({ ...prev, employee_dni: emp.dni }))
-    setEmployeeQuery(`${emp.name} (${emp.dni})`)
+    setEmployeeMenuOpen(false)
   }
+
+  const clearFormEmployee = () => {
+    setFormData((prev) => ({ ...prev, employee_dni: '' }))
+    setEmployeeSearch('')
+    setEmployeeMenuOpen(false)
+  }
+
+  const statutoryTypes = useMemo(() => leaveTypes.filter((t) => t.is_statutory === true), [leaveTypes])
+  const companyPolicyTypes = useMemo(() => leaveTypes.filter((t) => !t.is_statutory), [leaveTypes])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -186,7 +211,7 @@ export default function LeaveForm({
     await onSubmit(formData, selectedFile)
     setFormData(LEAVE_FORM_INITIAL)
     setSelectedFile(null)
-    setEmployeeQuery('')
+    setEmployeeSearch('')
     const fileInput = document.getElementById('file-input') as HTMLInputElement
     if (fileInput) fileInput.value = ''
   }
@@ -204,41 +229,78 @@ export default function LeaveForm({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-white mb-2">Empleado *</label>
-              <input
-                type="text"
-                value={employeeQuery}
-                onChange={(e) => setEmployeeQuery(e.target.value)}
-                placeholder="Buscar por nombre o DNI…"
-                className="w-full px-4 py-3 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white/10 text-white placeholder-gray-300"
-                disabled={formEmployeesLoading}
-              />
-              {formEmployeesLoading && <p className="text-xs text-gray-400 mt-1">Cargando empleados…</p>}
-              {!formEmployeesLoading && filteredFormEmployees.length > 0 && (
-                <ul className="mt-2 max-h-40 overflow-y-auto rounded-lg border border-white/10 bg-black/30">
-                  {filteredFormEmployees.map((emp) => (
-                    <li key={emp.id}>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => pickFormEmployee(emp)}
-                        className="h-auto w-full justify-start rounded-none px-3 py-2 text-sm font-normal text-white hover:bg-white/10"
-                      >
-                        {emp.name} — {emp.dni}
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {formData.employee_dni && selectedPreview && (
-                <div className="mt-2 p-2 bg-white/5 rounded-md border border-white/10">
-                  <EmployeeCell
-                    name={selectedPreview.name}
-                    dni={selectedPreview.dni}
-                    nameClassName="text-sm font-medium text-blue-200"
-                    dniClassName="text-sm text-gray-300"
+              <div ref={employeePickerRef} className="relative">
+                <button
+                  type="button"
+                  disabled={formEmployeesLoading}
+                  onClick={() => setEmployeeMenuOpen((o) => !o)}
+                  className="flex w-full items-center justify-between gap-3 rounded-xl border border-white/20 bg-white/[0.07] px-4 py-3 text-left text-sm text-white transition hover:border-white/30 hover:bg-white/[0.1] disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-400/80"
+                >
+                  <span className="min-w-0 flex-1 truncate">
+                    {selectedPreview ? (
+                      <span className="flex min-w-0 flex-col gap-0.5">
+                        <span className="truncate font-medium text-white">{selectedPreview.name}</span>
+                        <span className="truncate text-xs text-gray-400">{selectedPreview.dni}</span>
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">Seleccionar empleado…</span>
+                    )}
+                  </span>
+                  <ChevronDownIcon
+                    className={`h-5 w-5 shrink-0 text-gray-400 transition-transform ${employeeMenuOpen ? 'rotate-180' : ''}`}
+                    aria-hidden
                   />
-                </div>
+                </button>
+                {formData.employee_dni && selectedPreview && (
+                  <button
+                    type="button"
+                    onClick={clearFormEmployee}
+                    className="mt-2 text-xs font-medium text-rose-300/90 hover:text-rose-200"
+                  >
+                    Quitar selección
+                  </button>
+                )}
+                {employeeMenuOpen && (
+                  <div className="absolute left-0 right-0 z-30 mt-2 overflow-hidden rounded-xl border border-white/15 bg-[#121a2e]/95 shadow-2xl shadow-black/40 backdrop-blur-md">
+                    <div className="border-b border-white/10 p-2">
+                      <input
+                        type="text"
+                        value={employeeSearch}
+                        onChange={(e) => {
+                          setEmployeeSearch(e.target.value)
+                          if (formData.employee_dni) {
+                            setFormData((prev) => ({ ...prev, employee_dni: '' }))
+                          }
+                        }}
+                        placeholder="Buscar por nombre o DNI…"
+                        className="w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/60"
+                        autoFocus
+                      />
+                    </div>
+                    <div className="max-h-56 overflow-y-auto py-1">
+                      {formEmployeesLoading ? (
+                        <p className="px-3 py-4 text-center text-xs text-gray-400">Cargando empleados…</p>
+                      ) : filteredFormEmployees.length === 0 ? (
+                        <p className="px-3 py-4 text-center text-xs text-gray-400">Sin coincidencias</p>
+                      ) : (
+                        filteredFormEmployees.map((emp) => (
+                          <button
+                            key={emp.id}
+                            type="button"
+                            onClick={() => pickFormEmployee(emp)}
+                            className="flex w-full flex-col items-start gap-0.5 px-3 py-2.5 text-left text-sm text-white transition hover:bg-white/10"
+                          >
+                            <span className="font-medium leading-tight">{emp.name}</span>
+                            <span className="text-xs text-gray-400">{emp.dni}</span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+              {formEmployeesLoading && !employeeMenuOpen && (
+                <p className="text-xs text-gray-400 mt-1">Cargando empleados…</p>
               )}
             </div>
 
@@ -254,12 +316,32 @@ export default function LeaveForm({
                 <option value="" className="bg-gray-800 text-white">
                   Seleccionar tipo
                 </option>
-                {leaveTypes.map((type) => (
-                  <option key={type.id} value={type.id} className="bg-gray-800 text-white">
-                    {type.name}
-                  </option>
-                ))}
+                {statutoryTypes.length > 0 && (
+                  <optgroup label="Por ley / normativa" className="bg-gray-900 text-gray-200">
+                    {statutoryTypes.map((type) => (
+                      <option key={type.id} value={type.id} className="bg-gray-800 text-white">
+                        {type.name}
+                        {type.is_paid === false ? ' (sin goce)' : ''}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {companyPolicyTypes.length > 0 && (
+                  <optgroup label="Política de la empresa" className="bg-gray-900 text-gray-200">
+                    {companyPolicyTypes.map((type) => (
+                      <option key={type.id} value={type.id} className="bg-gray-800 text-white">
+                        {type.name}
+                        {type.is_paid === false ? ' (sin goce)' : ''}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
+              {leaveTypes.length === 0 && (
+                <p className="mt-2 text-xs text-amber-200/90">
+                  No hay tipos de permiso para su empresa. Configúrelos en Parametros → Parámetros de permisos.
+                </p>
+              )}
               {formData.leave_type_id && selectedType && (
                 <div className="mt-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-gray-200 space-y-1">
                   <p>

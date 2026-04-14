@@ -9,6 +9,8 @@ export interface LeaveType {
   created_at: string
   employee_self_service?: boolean
   is_statutory_art95?: boolean
+  /** Normativa laboral vs política interna de la empresa */
+  is_statutory?: boolean
 }
 
 /** Empleado tal como viene del join en GET /api/leave */

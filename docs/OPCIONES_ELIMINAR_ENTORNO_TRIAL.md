@@ -33,7 +33,7 @@ Si cualquiera de estos existe, el sistema bloquea la creación de un nuevo trial
 
 **Pasos:**
 1. Abre el archivo `sql/eliminar_entorno_trial_usuario.sql`
-2. Cambia el email en la línea: `target_email TEXT := 'girias@cargogl.com';`
+2. Cambia el email en la línea: `target_email TEXT := 'cliente.ejemplo@empresa.com';`
 3. Ejecuta el script en el SQL Editor de Supabase
 4. Verifica con la consulta al final del script
 
@@ -55,7 +55,7 @@ Si cualquiera de estos existe, el sistema bloquea la creación de un nuevo trial
 
 **Pasos:**
 1. Abre el archivo `sql/desactivar_entorno_trial_usuario.sql`
-2. Cambia el email en la línea: `target_email TEXT := 'girias@cargogl.com';`
+2. Cambia el email en la línea: `target_email TEXT := 'cliente.ejemplo@empresa.com';`
 3. Ejecuta el script en el SQL Editor de Supabase
 
 ### Opción 3: Eliminación Manual desde Dashboard
@@ -70,14 +70,14 @@ Si cualquiera de estos existe, el sistema bloquea la creación de un nuevo trial
 2. **Eliminar de la base de datos:**
    ```sql
    -- Eliminar trial_access_users
-   DELETE FROM trial_access_users WHERE LOWER(email) = LOWER('girias@cargogl.com');
+   DELETE FROM trial_access_users WHERE LOWER(email) = LOWER('cliente.ejemplo@empresa.com');
    
    -- Eliminar activaciones
-   DELETE FROM activaciones WHERE LOWER(contacto_email) = LOWER('girias@cargogl.com');
+   DELETE FROM activaciones WHERE LOWER(contacto_email) = LOWER('cliente.ejemplo@empresa.com');
    
    -- Eliminar user_profile (si existe)
    DELETE FROM user_profiles 
-   WHERE id IN (SELECT id FROM auth.users WHERE LOWER(email) = LOWER('girias@cargogl.com'));
+   WHERE id IN (SELECT id FROM auth.users WHERE LOWER(email) = LOWER('cliente.ejemplo@empresa.com'));
    
    -- Eliminar company (si es trial y no tiene otros usuarios)
    -- Primero verifica:
@@ -85,7 +85,7 @@ Si cualquiera de estos existe, el sistema bloquea la creación de un nuevo trial
    FROM companies 
    WHERE id IN (
      SELECT company_id FROM user_profiles 
-     WHERE id IN (SELECT id FROM auth.users WHERE LOWER(email) = LOWER('girias@cargogl.com'))
+     WHERE id IN (SELECT id FROM auth.users WHERE LOWER(email) = LOWER('cliente.ejemplo@empresa.com'))
    );
    
    -- Si la company es de tipo trial y no tiene otros usuarios, elimínala:
@@ -108,7 +108,7 @@ Este script te mostrará:
 
 **Pasos:**
 1. Abre `sql/diagnostico_trial_usuario.sql`
-2. Cambia el email en la línea: `SELECT LOWER(TRIM('girias@cargogl.com')) AS email`
+2. Cambia el email en la línea: `SELECT LOWER(TRIM('cliente.ejemplo@empresa.com')) AS email`
 3. Ejecuta el script
 4. Revisa los resultados para entender qué se va a eliminar
 
@@ -122,7 +122,7 @@ También puedes usar esta consulta rápida:
 
 ```sql
 WITH params AS (
-  SELECT LOWER('girias@cargogl.com') AS email
+  SELECT LOWER('cliente.ejemplo@empresa.com') AS email
 )
 SELECT 
   'trial_access_users' AS tabla, COUNT(*) AS registros
