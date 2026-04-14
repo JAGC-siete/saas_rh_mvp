@@ -1,5 +1,6 @@
 import React from 'react'
 import { nowInHonduras } from './timezone'
+import { NotificationContext } from '../components/NotificationProvider'
 
 
 
@@ -103,17 +104,32 @@ export const toastManager = ToastManager.getInstance()
 
 // React Hook for using toasts
 export const useToast = () => {
+  const notificationCtx = React.useContext(NotificationContext)
+
+  // Prefer the unified NotificationProvider when available.
+  // Fallback to legacy toastManager for backwards compatibility.
+  if (notificationCtx) {
+    return {
+      success: (title: string, message: string, duration?: number) =>
+        notificationCtx.addNotification({ type: 'success', title, message, duration }),
+      error: (title: string, message: string, duration?: number) =>
+        notificationCtx.addNotification({ type: 'error', title, message, duration }),
+      warning: (title: string, message: string, duration?: number) =>
+        notificationCtx.addNotification({ type: 'warning', title, message, duration }),
+      info: (title: string, message: string, duration?: number) =>
+        notificationCtx.addNotification({ type: 'info', title, message, duration }),
+      remove: (id: string) => notificationCtx.removeNotification(id),
+      clearAll: () => notificationCtx.clearAll(),
+    }
+  }
+
   return {
-    success: (title: string, message: string, duration?: number) => 
-      toastManager.success(title, message, duration),
-    error: (title: string, message: string, duration?: number) => 
-      toastManager.error(title, message, duration),
-    warning: (title: string, message: string, duration?: number) => 
-      toastManager.warning(title, message, duration),
-    info: (title: string, message: string, duration?: number) => 
-      toastManager.info(title, message, duration),
+    success: (title: string, message: string, duration?: number) => toastManager.success(title, message, duration),
+    error: (title: string, message: string, duration?: number) => toastManager.error(title, message, duration),
+    warning: (title: string, message: string, duration?: number) => toastManager.warning(title, message, duration),
+    info: (title: string, message: string, duration?: number) => toastManager.info(title, message, duration),
     remove: (id: string) => toastManager.removeToast(id),
-    clearAll: () => toastManager.clearAll()
+    clearAll: () => toastManager.clearAll(),
   }
 }
 

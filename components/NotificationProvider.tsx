@@ -10,7 +10,7 @@ interface NotificationContextType {
   clearAll: () => void
 }
 
-const NotificationContext = createContext<NotificationContextType | undefined>(undefined)
+export const NotificationContext = createContext<NotificationContextType | undefined>(undefined)
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const { notifications, addNotification, removeNotification, clearAll } = useNotifications()

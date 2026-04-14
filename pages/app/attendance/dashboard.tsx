@@ -22,7 +22,7 @@ import EmployeeDrawer, { type EmployeeDrawerRawPunch } from '../../../components
 import { useAttendanceData, calculateAttendanceRates } from '../../../lib/hooks/useAttendanceData'
 import { mapAttendanceError } from '../../../lib/attendance-api'
 import { getDateRange } from '../../../lib/attendance'
-import { useToast } from '../../../lib/toast'
+import { useNotificationContext } from '../../../components/NotificationProvider'
 import type {
   AttendanceEmployeeApiResponse,
   AttendanceEmployeeTimelineEvent,
@@ -75,7 +75,7 @@ function readQueryParam(q: Record<string, string | string[] | undefined>, key: s
 
 export default function AttendanceDashboardApp() {
   const router = useRouter()
-  const toast = useToast()
+  const { addNotification } = useNotificationContext()
   const [preset, setPreset] = useState('today')
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('')
   const [selectedRole, setSelectedRole] = useState('')
@@ -343,7 +343,7 @@ export default function AttendanceDashboardApp() {
       window.URL.revokeObjectURL(downloadUrl)
     } catch (err: unknown) {
       const errorMessage = mapAttendanceError(err)
-      toast.error('Exportación', errorMessage)
+      addNotification({ type: 'error', title: 'Exportación', message: errorMessage })
     }
   }
 
@@ -354,10 +354,11 @@ export default function AttendanceDashboardApp() {
       const data = (await res.json()) as AttendanceEmployeeApiResponse
 
       if (!res.ok) {
-        toast.error(
-          'Empleado',
-          typeof data?.error === 'string' ? data.error : `No se pudo cargar el detalle (${res.status})`
-        )
+        addNotification({
+          type: 'error',
+          title: 'Empleado',
+          message: typeof data?.error === 'string' ? data.error : `No se pudo cargar el detalle (${res.status})`,
+        })
         return
       }
 
@@ -372,7 +373,7 @@ export default function AttendanceDashboardApp() {
         schedule: data.schedule,
       })
     } catch (err: unknown) {
-      toast.error('Empleado', mapAttendanceError(err))
+      addNotification({ type: 'error', title: 'Empleado', message: mapAttendanceError(err) })
     }
   }
 
