@@ -5,11 +5,11 @@ import { useLeave } from '../lib/hooks/useLeave'
 import type { LeaveAttendanceSummaryPayload } from '../lib/types/leave'
 import { cn } from '../lib/utils'
 import { Button } from './ui/button'
-import { useToast } from '../lib/toast'
 import { useAuth } from '../lib/auth'
 import LeaveDashboard from './leave/LeaveDashboard'
 import LeaveForm, { type LeaveFormData } from './leave/LeaveForm'
 import LeaveRequestsTable from './leave/LeaveRequestsTable'
+import { useNotificationContext } from './NotificationProvider'
 
 const LeaveCalendar = dynamic(() => import('./leave/LeaveCalendar'), {
   ssr: false,
@@ -30,7 +30,7 @@ const VIEW_LABELS: Record<LeaveView, string> = {
 }
 
 export default function LeaveManager() {
-  const toast = useToast()
+  const { addNotification } = useNotificationContext()
   const router = useRouter()
   const { userProfile } = useAuth()
   const {
@@ -51,6 +51,15 @@ export default function LeaveManager() {
   const [summaryExpandedId, setSummaryExpandedId] = useState<string | null>(null)
   const [summaryData, setSummaryData] = useState<LeaveAttendanceSummaryPayload | null>(null)
   const [summaryLoading, setSummaryLoading] = useState(false)
+
+  const toast = {
+    warning: (title: string, message: string) =>
+      addNotification({
+        type: 'warning',
+        title,
+        message,
+      }),
+  }
 
   useEffect(() => {
     fetchLeaveRequests()
@@ -90,14 +99,14 @@ export default function LeaveManager() {
         setSummaryData(json.data as LeaveAttendanceSummaryPayload)
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'Error al cargar resumen'
-        toast.error('Asistencia', msg)
+        addNotification({ type: 'error', title: 'Asistencia', message: msg })
         setSummaryExpandedId(null)
         setSummaryData(null)
       } finally {
         setSummaryLoading(false)
       }
     },
-    [summaryExpandedId, toast]
+    [summaryExpandedId, addNotification]
   )
 
   const handleFormSubmit = async (data: LeaveFormData, attachment: File | null) => {
@@ -114,10 +123,14 @@ export default function LeaveManager() {
         attachment: attachment || undefined,
       })
       await fetchLeaveRequests()
-      toast.success('Permiso', 'Solicitud registrada correctamente.')
+      addNotification({ type: 'success', title: 'Permiso', message: 'Solicitud registrada correctamente.' })
       goView('list')
     } catch (e) {
-      toast.error('Permiso', e instanceof Error ? e.message : 'No se pudo registrar la solicitud.')
+      addNotification({
+        type: 'error',
+        title: 'Permiso',
+        message: e instanceof Error ? e.message : 'No se pudo registrar la solicitud.',
+      })
       throw e
     }
   }
@@ -195,7 +208,7 @@ export default function LeaveManager() {
           isSubmitting={isSubmitting}
           onSubmit={handleFormSubmit}
           onCancel={() => goView('list')}
-          toast={{ warning: toast.warning }}
+          toast={toast}
         />
       )}
     </div>
