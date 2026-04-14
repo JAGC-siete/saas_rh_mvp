@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { formatTimeDisplay } from '../../lib/timezone'
-import { UserCircleIcon, XCircleIcon } from '@heroicons/react/24/outline'
+import { UserCircleIcon } from '@heroicons/react/24/outline'
 import { AttendanceRecordFlagsBadges, type AttendanceListFlags } from './AttendanceRecordFlagsBadges'
 
 interface AbsenceRow {
@@ -34,7 +34,7 @@ export default function AbsenceTable({ data, title, onSelect, pageSize = 10 }: A
     <Card variant="glass" className="border border-white/10">
       <CardHeader className="pb-3 border-b border-white/10">
         <CardTitle className="text-base font-semibold text-white flex items-center gap-2">
-          <XCircleIcon className="h-6 w-6 text-red-400 shrink-0" aria-hidden />
+          <span className="text-xl">❌</span>
           {title}
         </CardTitle>
       </CardHeader>

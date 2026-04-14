@@ -181,28 +181,35 @@ export function useAttendanceData(preset: string, employeeId?: string, role?: st
   }
 }
 
-// Utilidad para calcular tasas derivadas
-// Denominador `total`: presentes + tardes + ausentes (cómo agrupa el KPI del período).
-// `llegadas`: quienes registraron asistencia (presentes + tardes); sirve para % relativos a llegadas.
+// Utilidad para calcular tasas derivadas (KPIs vienen de attendance_kpis_filtered)
 export function calculateAttendanceRates(kpis: AttendanceKPIs) {
   const presentes = kpis.presentes ?? 0
-  const tardes = kpis.tardes ?? 0
   const ausentes = kpis.ausentes ?? 0
   const tempranos = kpis.tempranos ?? 0
-  const total = presentes + tardes + ausentes
-  const llegadas = presentes + tardes
-  const asistenciaPct = total > 0 ? ((llegadas / total) * 100) : 0
-  const puntualidadSobreLlegadasPct = llegadas > 0 ? (presentes / llegadas) * 100 : 0
-  const tempranosSobreLlegadasPct = llegadas > 0 ? (tempranos / llegadas) * 100 : 0
-  const tardesSobreLlegadasPct = llegadas > 0 ? (tardes / llegadas) * 100 : 0
+  const tardes = kpis.tardes ?? 0
+  const totalFromRpc = kpis.total_empleados
+  const total =
+    totalFromRpc != null && totalFromRpc > 0 ? totalFromRpc : presentes + ausentes
+
+  const llegadas = presentes
+  const asistenciaPct = total > 0 ? (presentes / total) * 100 : 0
+  const puntualidadPct = total > 0 ? (presentes / total) * 100 : 0
+
+  const puntualidadSobreLlegadasPct =
+    llegadas > 0 ? ((Math.max(0, presentes - tardes) / llegadas) * 100) : 0
+  const tempranosSobreLlegadasPct = llegadas > 0 ? ((tempranos / llegadas) * 100) : 0
+  const tardesSobreLlegadasPct = llegadas > 0 ? ((tardes / llegadas) * 100) : 0
+
+  const round1 = (n: number) => Math.round(n * 10) / 10
 
   return {
     total,
     llegadas,
-    asistenciaPct: Math.round(asistenciaPct * 10) / 10,
-    puntualidadSobreLlegadasPct: Math.round(puntualidadSobreLlegadasPct * 10) / 10,
-    tempranosSobreLlegadasPct: Math.round(tempranosSobreLlegadasPct * 10) / 10,
-    tardesSobreLlegadasPct: Math.round(tardesSobreLlegadasPct * 10) / 10,
+    asistenciaPct: round1(asistenciaPct),
+    puntualidadPct: round1(puntualidadPct),
+    puntualidadSobreLlegadasPct: round1(puntualidadSobreLlegadasPct),
+    tempranosSobreLlegadasPct: round1(tempranosSobreLlegadasPct),
+    tardesSobreLlegadasPct: round1(tardesSobreLlegadasPct),
   }
 }
 

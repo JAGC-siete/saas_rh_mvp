@@ -12,7 +12,7 @@ interface AttendanceTablesSectionProps {
   late: AttendanceRow[]
   outsideSchedule: AttendanceRow[]
   presetLabel: string
-  onSelectEmployee: (id: string, name: string) => void
+  onSelectEmployee: (_employeeId: string, _employeeName: string) => void
 }
 
 export default function AttendanceTablesSection({
