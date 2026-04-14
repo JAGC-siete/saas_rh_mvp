@@ -1,6 +1,10 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../../lib/supabase/server'
 import { logger } from '../../../../lib/logger'
+import {
+  assertEmployeePortalEnabled,
+  resolveEmployeeAndCompanyId,
+} from '../../../../lib/employee-portal/company-settings'
 
 interface AttendanceResponse {
   records: any[]
@@ -29,23 +33,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     if (authError || !user) {
       return res.status(401).json({ error: 'No autorizado' })
     }
-    
-    // Get employee ID from user metadata (primary) or user_profiles (fallback)
-    let employeeId = user.user_metadata?.employee_id
-    
-    if (!employeeId) {
-      const { data: userProfile } = await supabase
-        .from('user_profiles')
-        .select('employee_id')
-        .eq('id', user.id)
-        .single()
-      
-      employeeId = userProfile?.employee_id
-    }
-    
-    if (!employeeId) {
+
+    const ctx = await resolveEmployeeAndCompanyId(supabase, user)
+    if (!ctx) {
       return res.status(401).json({ error: 'Datos de empleado no encontrados' })
     }
+    if (!(await assertEmployeePortalEnabled(supabase, ctx.companyId, res))) {
+      return
+    }
+    const { employeeId } = ctx
 
     // Get query parameters
     const {

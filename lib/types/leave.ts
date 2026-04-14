@@ -7,6 +7,8 @@ export interface LeaveType {
   requires_approval: boolean
   color: string
   created_at: string
+  employee_self_service?: boolean
+  is_statutory_art95?: boolean
 }
 
 /** Empleado tal como viene del join en GET /api/leave */
@@ -30,7 +32,7 @@ export interface LeaveRequest {
   duration_type: 'hours' | 'days'
   is_half_day?: boolean
   reason?: string
-  status: 'pending' | 'approved' | 'rejected'
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled'
   approved_by?: string
   approved_at?: string
   rejection_reason?: string

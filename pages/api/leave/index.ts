@@ -4,6 +4,11 @@ import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
 import { hasPermission } from '../../../lib/auth-utils'
 import { logger } from '../../../lib/logger'
 import { createAdminClient } from '../../../lib/supabase/server'
+import {
+  proposedDaysFromForm,
+  validateDateOrder,
+  validateDurationHoursBlock,
+} from '../../../lib/leave/leave-request-validation'
 
 export const config = {
   api: {
@@ -157,31 +162,18 @@ async function handleCreateLeaveRequest(req: NextApiRequest, res: NextApiRespons
       })
     }
 
-    const startDate = new Date(start_date)
-    const endDate = new Date(end_date)
-    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-      return res.status(400).json({ error: 'Invalid date format', message: 'Fechas inválidas' })
-    }
-    if (endDate < startDate) {
-      return res.status(400).json({
-        error: 'Invalid date range',
-        message: 'La fecha fin no puede ser anterior al inicio',
-      })
+    const dateOrder = validateDateOrder(start_date, end_date)
+    if (!dateOrder.ok) {
+      return res.status(400).json({ error: 'Invalid date format', message: dateOrder.message })
     }
 
-    if (duration_type === 'hours') {
-      if (is_half_day && duration_hours != null && duration_hours !== 4) {
-        return res.status(400).json({
-          error: 'Invalid duration',
-          message: 'Medio día debe ser exactamente 4 horas',
-        })
-      }
-      if (!is_half_day && (!duration_hours || duration_hours <= 0 || duration_hours > 24)) {
-        return res.status(400).json({
-          error: 'Invalid duration',
-          message: 'Las horas deben estar entre 1 y 24',
-        })
-      }
+    const durCheck = validateDurationHoursBlock({
+      duration_type,
+      is_half_day,
+      duration_hours,
+    })
+    if (!durCheck.ok) {
+      return res.status(400).json({ error: 'Invalid duration', message: durCheck.message })
     }
 
     let empQuery = supabase.from('employees').select('id, company_id').eq('dni', employee_dni)
@@ -218,14 +210,20 @@ async function handleCreateLeaveRequest(req: NextApiRequest, res: NextApiRespons
       })
     }
 
-    let days_requested: number
-    if (duration_type === 'hours') {
-      const actualHours = is_half_day ? 4 : duration_hours || 8
-      days_requested = actualHours / 8.0
-    } else {
-      const timeDiff = endDate.getTime() - startDate.getTime()
-      days_requested = Math.ceil(timeDiff / (1000 * 60 * 60 * 24)) + 1
+    const proposed = proposedDaysFromForm({
+      duration_type,
+      start_date,
+      end_date,
+      duration_hours,
+      is_half_day,
+    })
+    if (proposed == null) {
+      return res.status(400).json({
+        error: 'Invalid dates',
+        message: 'No se pudo calcular la duración de la solicitud',
+      })
     }
+    const days_requested = proposed
 
     let attachment_url: string | undefined
     let attachment_type: 'pdf' | 'jpg' | undefined

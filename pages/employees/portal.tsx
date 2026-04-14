@@ -1,9 +1,21 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/router'
 import EmployeePasswordLogin from '../../components/employee-portal/EmployeePasswordLogin'
 import { useAuth } from '../../lib/auth'
-// import { useNotificationContext } from '../../components/NotificationProvider'
+import { useNotificationContext, type NotificationContextType } from '../../components/NotificationProvider'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
+import {
+  PieChart,
+  Pie,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend
+} from 'recharts'
 import { Button } from '../../components/ui/button'
 import { 
   UserIcon, 
@@ -200,10 +212,15 @@ function AttendanceRecordsList({ employeeId }: { employeeId?: string }) {
 }
 
 // Component for payroll section
-function PayrollSection({ employeeId }: { employeeId?: string }) {
+function PayrollSection({
+  employeeId,
+  addNotification
+}: {
+  employeeId?: string
+  addNotification: NotificationContextType['addNotification']
+}) {
   const [payrollData, setPayrollData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  // eslint-disable-next-line no-unused-vars
   const [generatingPDF, setGeneratingPDF] = useState(false)
 
   useEffect(() => {
@@ -232,11 +249,48 @@ function PayrollSection({ employeeId }: { employeeId?: string }) {
     fetchPayroll()
   }, [employeeId])
 
-  // eslint-disable-next-line no-unused-vars
   const generatePDF = async (periodo: string, quincena: number) => {
-    // Mostrar mensaje de funcionalidad en desarrollo
-    alert('🚧 Funcionalidad en desarrollo\n\nLa generación de recibos de nómina en PDF estará disponible próximamente.')
-    return
+    setGeneratingPDF(true)
+    try {
+      const response = await fetch('/api/employees/me/payroll-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ periodo, quincena })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error((errorData as { error?: string }).error || 'Error al generar el recibo')
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `recibo-nomina-${periodo}-q${quincena}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(url)
+
+      addNotification({
+        type: 'success',
+        title: 'Recibo de nómina',
+        message: 'PDF descargado correctamente',
+        module: 'payroll'
+      })
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Inténtalo nuevamente'
+      addNotification({
+        type: 'error',
+        title: 'Error al descargar PDF',
+        message,
+        module: 'payroll'
+      })
+    } finally {
+      setGeneratingPDF(false)
+    }
   }
 
   if (loading) {
@@ -526,12 +580,30 @@ interface PermissionsSummary {
   }
 }
 
+interface RecentAttendanceRow {
+  id: string
+  date: string
+  check_in: string | null
+  check_out: string | null
+  status: string | null
+}
+
+interface VacationSummary {
+  entitledDays: number
+  usedDaysThisYear: number
+  remainingDays: number
+  source: 'leave_types' | 'default'
+}
+
 export default function EmployeePortal() {
   // Use same auth system as admin portal
   const { user, session, logout } = useAuth()
+  const { addNotification } = useNotificationContext()
   const [profile, setProfile] = useState<EmployeeProfile | null>(null)
   const [attendanceSummary, setAttendanceSummary] = useState<AttendanceSummary | null>(null)
   const [permissionsSummary, setPermissionsSummary] = useState<PermissionsSummary | null>(null)
+  const [recentAttendance, setRecentAttendance] = useState<RecentAttendanceRow[]>([])
+  const [vacationSummary, setVacationSummary] = useState<VacationSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'profile' | 'attendance' | 'permissions' | 'payroll'>('profile')
   const [showPermissionForm, setShowPermissionForm] = useState(false)
@@ -576,6 +648,9 @@ export default function EmployeePortal() {
         
         // Set permissions summary with proper structure
         setPermissionsSummary(dashboardData.permissions_summary)
+
+        setRecentAttendance(dashboardData.recent_attendance || [])
+        setVacationSummary(dashboardData.vacation_summary || null)
         
       } else {
         const errorData = await dashboardResponse.text()
@@ -613,6 +688,8 @@ export default function EmployeePortal() {
     setProfile(null)
     setAttendanceSummary(null)
     setPermissionsSummary(null)
+    setRecentAttendance([])
+    setVacationSummary(null)
   }, [])
 
   const handleLogout = useCallback(async () => {
@@ -650,6 +727,35 @@ export default function EmployeePortal() {
     if (!attendanceSummary?.summary.totalDays) return 0
     return Math.round((attendanceSummary.summary.presentDays / attendanceSummary.summary.totalDays) * 100)
   }
+
+  /** Últimos hasta 5 días con registro en el mes (orden cronológico para el gráfico). */
+  const attendanceBarData = useMemo(() => {
+    const slice = [...recentAttendance].slice(0, 5)
+    return slice
+      .reverse()
+      .map((r) => {
+        let hours = 0
+        if (r.check_in && r.check_out) {
+          const diff =
+            (new Date(r.check_out).getTime() - new Date(r.check_in).getTime()) / (1000 * 60 * 60)
+          hours = Math.round(Math.max(0, diff) * 10) / 10
+        }
+        const d = parseDateOnlyAsHonduras(r.date)
+        const dayLabel = isNaN(d.getTime())
+          ? r.date
+          : d.toLocaleDateString('es-HN', {
+              timeZone: HONDURAS_TIMEZONE,
+              weekday: 'short'
+            })
+        return { day: dayLabel, hours, date: r.date }
+      })
+  }, [recentAttendance])
+
+  const vacationEntitled = vacationSummary?.entitledDays ?? 15
+  const vacationRemaining = vacationSummary?.remainingDays ?? 15
+  const vacationProgressPct = vacationEntitled > 0
+    ? Math.min(100, Math.round((vacationRemaining / vacationEntitled) * 100))
+    : 0
 
   const handlePermissionSubmit = async (formData: any) => {
     try {
@@ -823,6 +929,132 @@ export default function EmployeePortal() {
                 <div className="w-12 h-12 bg-purple-500/20 rounded-full flex items-center justify-center">
                   <ChartBarIcon className="h-6 w-6 text-purple-400" />
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* === MEJORA 4: MINI GRÁFICOS RECHARTS === */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <Card className="glass-strong">
+            <CardHeader>
+              <CardTitle className="text-lg">Distribución de Asistencia (mes)</CardTitle>
+            </CardHeader>
+            <CardContent className="h-72 pt-2">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={[
+                      { name: 'Presente', value: attendanceSummary?.summary.presentDays || 0, fill: '#10b981' },
+                      { name: 'Ausente', value: attendanceSummary?.summary.absentDays || 0, fill: '#ef4444' },
+                      { name: 'Tardanza', value: attendanceSummary?.summary.lateDays || 0, fill: '#eab308' }
+                    ]}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={55}
+                    outerRadius={90}
+                    dataKey="value"
+                  />
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-strong">
+            <CardHeader>
+              <CardTitle className="text-lg">Horas trabajadas (días recientes)</CardTitle>
+              <CardDescription className="text-gray-400">
+                Hasta 5 días con registro en el mes actual
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="h-72 pt-2">
+              {attendanceBarData.length === 0 ? (
+                <div className="flex h-full min-h-[200px] items-center justify-center text-sm text-gray-400">
+                  Sin registros de asistencia recientes en el mes
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={attendanceBarData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                    <XAxis dataKey="day" stroke="#9ca3af" />
+                    <YAxis stroke="#9ca3af" />
+                    <Tooltip />
+                    <Bar dataKey="hours" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* === MEJORA 1: BALANCES GRANDES (datos del dashboard) === */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+          <Card className="glass-strong border-emerald-400/30">
+            <CardContent className="p-6 text-center">
+              <div className="flex justify-between items-start">
+                <div className="text-left flex-1 min-w-0">
+                  <p className="text-sm text-emerald-300">Vacaciones restantes</p>
+                  <p className="text-5xl font-bold text-emerald-400 mt-2">
+                    {vacationRemaining}
+                  </p>
+                  <p className="text-xs text-emerald-400">
+                    de {vacationEntitled} días · usados {vacationSummary?.usedDaysThisYear ?? 0} este año
+                  </p>
+                  {vacationSummary?.source === 'default' && (
+                    <p className="text-xs text-emerald-200/70 mt-2">
+                      Sin tipo «Vacaciones» en la empresa; se muestra cupo referencia.
+                    </p>
+                  )}
+                  <div className="mt-3 h-2 bg-white/10 rounded-full overflow-hidden">
+                    <div
+                      className="h-2 bg-emerald-400 rounded-full transition-all"
+                      style={{ width: `${vacationProgressPct}%` }}
+                    />
+                  </div>
+                </div>
+                <CalendarDaysIcon className="h-10 w-10 text-emerald-400/30 shrink-0 ml-2" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-strong border-orange-400/30">
+            <CardContent className="p-6 text-center">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-sm text-orange-300">Permisos usados este mes</p>
+                  <p className="text-5xl font-bold text-orange-400 mt-2">
+                    {permissionsSummary?.summary.permissionsThisMonth || 0}
+                  </p>
+                </div>
+                <DocumentTextIcon className="h-10 w-10 text-orange-400/30" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-strong border-blue-400/30">
+            <CardContent className="p-6 text-center">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-sm text-blue-300">% Asistencia</p>
+                  <p className="text-5xl font-bold text-blue-400 mt-2">
+                    {getAttendancePercentage()}%
+                  </p>
+                </div>
+                <ChartBarIcon className="h-10 w-10 text-blue-400/30" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-strong border-purple-400/30">
+            <CardContent className="p-6 text-center">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-sm text-purple-300">Próximo pago</p>
+                  <p className="text-3xl font-bold text-purple-400 mt-2">15 Mayo</p>
+                </div>
+                <CurrencyDollarIcon className="h-10 w-10 text-purple-400/30" />
               </div>
             </CardContent>
           </Card>
@@ -1077,11 +1309,26 @@ export default function EmployeePortal() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <PayrollSection employeeId={user?.user_metadata?.employee_id} />
+                <PayrollSection
+                  employeeId={user?.user_metadata?.employee_id}
+                  addNotification={addNotification}
+                />
               </CardContent>
             </Card>
           )}
         </div>
+
+        {/* === MEJORA 3: BOTÓN FLOTANTE SOLICITAR PERMISO === */}
+        <Button
+          onClick={() => {
+            setActiveTab('permissions')
+            setShowPermissionForm(true)
+          }}
+          className="fixed bottom-8 right-8 z-50 h-14 w-14 rounded-2xl bg-brand-600 hover:bg-brand-700 shadow-2xl flex items-center justify-center text-white text-3xl md:bottom-10 md:right-10"
+          aria-label="Nueva solicitud de permiso"
+        >
+          +
+        </Button>
       </div>
     </div>
   )

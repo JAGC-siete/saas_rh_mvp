@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireUser } from '../../../../lib/auth/requireUser'
 import { generateEmployeeReceiptPDF } from '../../../../lib/payroll/receipt'
 import { calculatePeriodBaseSalary, normalizeFrequency } from '../../../../lib/payroll/calculate-period-base-salary'
+import { assertEmployeePortalEnabled } from '../../../../lib/employee-portal/company-settings'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -17,6 +18,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         error: 'Acceso denegado',
         message: 'Solo los empleados pueden acceder a esta funcionalidad'
       })
+    }
+
+    if (!(await assertEmployeePortalEnabled(supabase, userProfile.company_id, res))) {
+      return
     }
 
     const { periodo, quincena } = req.body

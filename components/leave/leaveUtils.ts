@@ -1,9 +1,7 @@
 import type { LeaveRequest, LeaveType } from '../../lib/types/leave'
+import { parseLocalDateYmd, proposedDaysFromForm as proposedDaysFromFormCore } from '../../lib/leave/leave-request-validation'
 
-export function parseLocalDateYmd(ymd: string): Date {
-  const [y, m, d] = ymd.slice(0, 10).split('-').map(Number)
-  return new Date(y, m - 1, d)
-}
+export { parseLocalDateYmd }
 
 export function attendanceDashboardHref(request: LeaveRequest): string {
   const employeeId = request.employee_id || request.employee?.id || ''
@@ -61,6 +59,8 @@ export function getStatusColorClass(status: string): string {
       return 'text-emerald-200 bg-emerald-500/15 border border-emerald-400/35'
     case 'rejected':
       return 'text-rose-200 bg-rose-500/15 border border-rose-400/35'
+    case 'cancelled':
+      return 'text-gray-200 bg-white/10 border border-white/20'
     default:
       return 'text-amber-100 bg-amber-500/15 border border-amber-400/35'
   }
@@ -69,6 +69,7 @@ export function getStatusColorClass(status: string): string {
 export function statusLabelEs(status: string): string {
   if (status === 'pending') return 'Pendiente'
   if (status === 'approved') return 'Aprobado'
+  if (status === 'cancelled') return 'Cancelada'
   return 'Rechazado'
 }
 
@@ -80,16 +81,7 @@ export function proposedDaysFromForm(input: {
   duration_hours?: number
   is_half_day: boolean
 }): number | null {
-  if (!input.start_date || !input.end_date) return null
-  if (input.duration_type === 'hours') {
-    const h = input.is_half_day ? 4 : input.duration_hours || 8
-    return h / 8
-  }
-  const start = parseLocalDateYmd(input.start_date)
-  const end = parseLocalDateYmd(input.end_date)
-  if (end < start) return null
-  const diff = end.getTime() - start.getTime()
-  return Math.ceil(diff / (1000 * 60 * 60 * 24)) + 1
+  return proposedDaysFromFormCore(input)
 }
 
 export function usedDaysByTypeForEmployee(

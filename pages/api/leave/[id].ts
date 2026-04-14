@@ -3,6 +3,7 @@ import { authenticateUser } from '../../../lib/auth-utils'
 import { createClient } from '../../../lib/supabase/server'
 import { logger } from '../../../lib/logger'
 import { getHondurasTimestamp, nowInHonduras } from '../../../lib/timezone'
+import { fetchLeaveAttendanceSummaryForRange } from '../../../lib/leave/leave-attendance-summary'
 
 const leaveEmployeeGateSelect = `
   id,
@@ -34,23 +35,6 @@ function canAccessLeaveRequestForId(
     return !!mid && !!userProfile.employee_id && mid === userProfile.employee_id
   }
   return false
-}
-
-function enumerateCalendarDays(fromStr: string, toStr: string): string[] {
-  const from = fromStr.slice(0, 10)
-  const to = toStr.slice(0, 10)
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from > to) {
-    return []
-  }
-  const out: string[] = []
-  let cur = from
-  while (cur <= to && out.length <= 366) {
-    out.push(cur)
-    const [y, m, d] = cur.split('-').map(Number)
-    const next = new Date(Date.UTC(y, m - 1, d + 1))
-    cur = next.toISOString().slice(0, 10)
-  }
-  return out
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -160,72 +144,18 @@ async function handleGetLeaveAttendanceSummary(
       return res.status(403).json({ error: 'Access denied' })
     }
 
-    const from = currentRequest.start_date.slice(0, 10)
-    const to = currentRequest.end_date.slice(0, 10)
-    const daysList = enumerateCalendarDays(from, to)
-
-    if (daysList.length === 0) {
-      return res.status(200).json({
-        data: {
-          days: [],
-          employee_id: currentRequest.employee_id,
-          leave_request_id: leaveRequestId,
-        },
-      })
-    }
-
-    const { data: timelineRaw, error: timelineError } = await supabase.rpc('attendance_employee_timeline', {
-      p_employee_id: currentRequest.employee_id,
-      p_from: from,
-      p_to: to,
+    const result = await fetchLeaveAttendanceSummaryForRange(supabase, {
+      leave_request_id: leaveRequestId,
+      employee_id: currentRequest.employee_id,
+      start_date: currentRequest.start_date,
+      end_date: currentRequest.end_date,
     })
 
-    if (timelineError) {
-      logger.error('attendance_employee_timeline (leave summary)', timelineError)
-      return res.status(500).json({ error: timelineError.message })
+    if (!result.ok) {
+      return res.status(result.status).json({ error: result.error })
     }
 
-    const byDate = new Map<string, { check_in: string | null; status: string | null }>()
-    for (const row of timelineRaw || []) {
-      const key = typeof row.date === 'string' ? row.date.slice(0, 10) : String(row.date).slice(0, 10)
-      byDate.set(key, { check_in: row.check_in ?? null, status: row.status ?? null })
-    }
-
-    const days = daysList.map((date) => {
-      const row = byDate.get(date)
-      if (!row) {
-        return {
-          date,
-          summary: 'sin_datos' as const,
-          has_check_in: false,
-          record_status: null as string | null,
-        }
-      }
-      const has_check_in = !!row.check_in
-      const st = (row.status || '').toLowerCase()
-      let summary: 'sin_datos' | 'presente' | 'ausente'
-      if (has_check_in) {
-        summary = 'presente'
-      } else if (st === 'absent') {
-        summary = 'ausente'
-      } else {
-        summary = 'ausente'
-      }
-      return {
-        date,
-        summary,
-        has_check_in,
-        record_status: row.status,
-      }
-    })
-
-    return res.status(200).json({
-      data: {
-        days,
-        employee_id: currentRequest.employee_id,
-        leave_request_id: leaveRequestId,
-      },
-    })
+    return res.status(200).json({ data: result.data })
   } catch (error) {
     logger.error('Error in handleGetLeaveAttendanceSummary', error)
     return res.status(500).json({ error: 'Internal server error' })
