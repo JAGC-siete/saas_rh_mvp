@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
 import { getHondurasTimestamp, formatDateForHonduras, nowInHonduras, parseDateOnlyAsHonduras } from '../../../lib/timezone'
 import { createAdminClient } from '../../../lib/supabase/server'
+import { assertEmployeePortalEnabled } from '../../../lib/employee-portal/company-settings'
 
 interface WorkCertificateData {
   employee: {
@@ -33,15 +34,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // Autenticación y autorización usando el mismo método que payroll
-    const { supabase, companyId, role, user, userProfile } = await requireCompanyAccess(req, res)
-    
-    // Verificar permisos (solo admins y HR managers pueden generar constancias)
-    if (!['super_admin', 'company_admin', 'hr_manager'].includes(role)) {
-      return res.status(403).json({ 
-        error: 'Permisos insuficientes',
-        message: 'No tiene permisos para generar constancias laborales'
-      })
-    }
+    const { supabase, companyId, role, userProfile } = await requireCompanyAccess(req, res)
 
     const { 
       employeeId, 
@@ -54,6 +47,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (!employeeId) {
       return res.status(400).json({ error: 'ID de empleado requerido' })
+    }
+
+    const adminRoles = ['super_admin', 'company_admin', 'hr_manager']
+    const isEmployeeSelf =
+      role === 'employee' &&
+      Boolean(userProfile?.employee_id) &&
+      employeeId === userProfile.employee_id
+
+    if (!adminRoles.includes(role) && !isEmployeeSelf) {
+      return res.status(403).json({
+        error: 'Permisos insuficientes',
+        message: 'No tiene permisos para generar constancias laborales',
+      })
+    }
+
+    if (isEmployeeSelf) {
+      if (!(await assertEmployeePortalEnabled(supabase, companyId, res))) {
+        return
+      }
     }
 
     if (!['pdf', 'csv'].includes(format)) {

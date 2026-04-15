@@ -14,6 +14,7 @@ import {
   sanitizeFilename
 } from '../../../lib/security/export-security'
 import { formatTimeDisplay, formatDateOnlyForHonduras } from '../../../lib/timezone'
+import { assertEmployeePortalEnabled } from '../../../lib/employee-portal/company-settings'
 import { resolveReportConfig } from '../../../lib/reports/column-resolver'
 import type { ResolvedReportConfig } from '../../../lib/reports/column-resolver'
 import { renderAttendanceRows } from '../../../lib/reports/report-engine'
@@ -31,13 +32,32 @@ export default handlerWithSecurity
 
 async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const { supabase, companyId } = await requireCompanyAccess(req, res)
+    const { supabase, companyId, role, userProfile } = await requireCompanyAccess(req, res)
     
     if (!companyId) {
       return res.status(400).json({ error: 'Company ID is required' })
     }
 
-    const { startDate, endDate, formato, employee_id } = req.body
+    let { startDate, endDate, formato, employee_id } = req.body
+
+    if (role === 'employee') {
+      if (!userProfile?.employee_id) {
+        return res.status(403).json({
+          error: 'Acceso denegado',
+          message: 'Perfil de empleado no vinculado',
+        })
+      }
+      if (!(await assertEmployeePortalEnabled(supabase, companyId, res))) {
+        return
+      }
+      if (employee_id && employee_id !== userProfile.employee_id) {
+        return res.status(403).json({
+          error: 'Acceso denegado',
+          message: 'Solo puede exportar su propia asistencia',
+        })
+      }
+      employee_id = userProfile.employee_id
+    }
 
     // Obtener empleados de la empresa usando getCompanyData
     const { data: employees, error: empError } = await getCompanyData(

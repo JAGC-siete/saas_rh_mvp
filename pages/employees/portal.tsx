@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/router'
 import EmployeePasswordLogin from '../../components/employee-portal/EmployeePasswordLogin'
 import { useAuth } from '../../lib/auth'
@@ -609,6 +609,9 @@ export default function EmployeePortal() {
   const [activeTab, setActiveTab] = useState<'profile' | 'attendance' | 'permissions' | 'payroll'>('profile')
   const [showPermissionForm, setShowPermissionForm] = useState(false)
   const [isSubmittingPermission, setIsSubmittingPermission] = useState(false)
+  const [fabMenuOpen, setFabMenuOpen] = useState(false)
+  const [fabBusy, setFabBusy] = useState(false)
+  const fabWrapRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
   
   // Check if user is employee
@@ -705,6 +708,159 @@ export default function EmployeePortal() {
       router.reload()
     }
   }, [logout, router, clearSession])
+
+  const closeFabMenu = useCallback(() => setFabMenuOpen(false), [])
+
+  useEffect(() => {
+    if (!fabMenuOpen) return
+    const onDoc = (e: MouseEvent) => {
+      const el = fabWrapRef.current
+      if (el && !el.contains(e.target as Node)) closeFabMenu()
+    }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [fabMenuOpen, closeFabMenu])
+
+  const getHondurasMonthRange = useCallback(() => {
+    const hondurasDateStr = new Date().toLocaleDateString('en-CA', { timeZone: HONDURAS_TIMEZONE })
+    const [y, m] = hondurasDateStr.split('-').map((v) => parseInt(v, 10))
+    const lastDay = new Date(y, m, 0).getDate()
+    const mm = String(m).padStart(2, '0')
+    const startDate = `${y}-${mm}-01`
+    const endDate = `${y}-${mm}-${String(lastDay).padStart(2, '0')}`
+    return { startDate, endDate }
+  }, [])
+
+  const handleFabConstancia = useCallback(async () => {
+    const employeeId = user?.user_metadata?.employee_id as string | undefined
+    if (!employeeId) {
+      addNotification({
+        type: 'error',
+        title: 'Constancia',
+        message: 'No se encontró el empleado vinculado a su cuenta.',
+        module: 'system',
+      })
+      setFabMenuOpen(false)
+      return
+    }
+    setFabBusy(true)
+    try {
+      const response = await fetch('/api/reports/export-work-certificate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/pdf' },
+        credentials: 'include',
+        body: JSON.stringify({
+          employeeId,
+          format: 'pdf',
+          purpose: 'Constancia de trabajo',
+          certificateType: 'general',
+          includeDeductions: true,
+        }),
+      })
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}))
+        throw new Error(
+          (err as { message?: string }).message ||
+            (err as { error?: string }).error ||
+            'No se pudo generar el PDF'
+        )
+      }
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `constancia_trabajo_${employeeId.slice(0, 8)}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(url)
+      addNotification({
+        type: 'success',
+        title: 'Constancia',
+        message: 'PDF descargado correctamente.',
+        module: 'system',
+      })
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Inténtelo de nuevo.'
+      addNotification({ type: 'error', title: 'Constancia', message, module: 'system' })
+    } finally {
+      setFabBusy(false)
+      setFabMenuOpen(false)
+    }
+  }, [user, addNotification])
+
+  const handleFabAttendanceReport = useCallback(async () => {
+    const employeeId = user?.user_metadata?.employee_id as string | undefined
+    if (!employeeId) {
+      addNotification({
+        type: 'error',
+        title: 'Reporte',
+        message: 'No se encontró el empleado vinculado a su cuenta.',
+        module: 'system',
+      })
+      setFabMenuOpen(false)
+      return
+    }
+    const { startDate, endDate } = getHondurasMonthRange()
+    setFabBusy(true)
+    try {
+      const response = await fetch('/api/reports/export-attendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          startDate,
+          endDate,
+          formato: 'pdf',
+          employee_id: employeeId,
+        }),
+      })
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}))
+        throw new Error(
+          (err as { message?: string }).message ||
+            (err as { error?: string }).error ||
+            'No se pudo generar el reporte'
+        )
+      }
+      const blob = await response.blob()
+      const cd = response.headers.get('Content-Disposition')
+      let filename = `reporte-asistencia-${startDate}-${endDate}.pdf`
+      const m = cd && cd.match(/filename="?([^";]+)"?/i)
+      if (m?.[1]) filename = m[1].trim()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(url)
+      addNotification({
+        type: 'success',
+        title: 'Reporte de asistencia',
+        message: 'PDF descargado correctamente.',
+        module: 'attendance',
+      })
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Inténtelo de nuevo.'
+      addNotification({
+        type: 'error',
+        title: 'Reporte de asistencia',
+        message,
+        module: 'attendance',
+      })
+    } finally {
+      setFabBusy(false)
+      setFabMenuOpen(false)
+    }
+  }, [user, addNotification, getHondurasMonthRange])
+
+  const handleFabVoucherNav = useCallback(() => {
+    setActiveTab('payroll')
+    setShowPermissionForm(false)
+    setFabMenuOpen(false)
+  }, [])
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'No especificado'
@@ -1065,10 +1221,10 @@ export default function EmployeePortal() {
         {/* Navigation Tabs */}
         <div className="flex space-x-1 mb-8">
           {[
-            { id: 'profile', label: 'Mi Perfil', icon: UserIcon },
-            { id: 'attendance', label: 'Mi Asistencia', icon: ClockIcon },
-            { id: 'permissions', label: 'Mi Permisos', icon: DocumentTextIcon },
-            { id: 'payroll', label: 'Mi Nómina', icon: CurrencyDollarIcon }
+            { id: 'profile', label: 'Perfil', icon: UserIcon },
+            { id: 'attendance', label: 'Asistencia', icon: ClockIcon },
+            { id: 'permissions', label: 'Permisos', icon: DocumentTextIcon },
+            { id: 'payroll', label: 'Recibos de pago', icon: CurrencyDollarIcon }
           ].map((tab) => (
             <button
               key={tab.id}
@@ -1179,7 +1335,7 @@ export default function EmployeePortal() {
           {activeTab === 'attendance' && (
             <Card className="glass-strong">
               <CardHeader>
-                <CardTitle className="text-white">Mi Asistencia</CardTitle>
+                <CardTitle className="text-white">Asistencia</CardTitle>
                 <CardDescription className="text-gray-300">
                   Registro de asistencia del mes actual
                 </CardDescription>
@@ -1238,7 +1394,7 @@ export default function EmployeePortal() {
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <div>
-                    <CardTitle className="text-white">Mi Permisos</CardTitle>
+                    <CardTitle className="text-white">Permisos</CardTitle>
                     <CardDescription className="text-gray-300">
                       Registre permisos pre-autorizados y consulte su historial
                     </CardDescription>
@@ -1305,7 +1461,7 @@ export default function EmployeePortal() {
           {activeTab === 'payroll' && (
             <Card className="glass-strong">
               <CardHeader>
-                <CardTitle className="text-white">Mi Nómina</CardTitle>
+                <CardTitle className="text-white">Recibos de pago</CardTitle>
                 <CardDescription className="text-gray-300">
                   Información sobre sus pagos y deducciones
                 </CardDescription>
@@ -1320,17 +1476,60 @@ export default function EmployeePortal() {
           )}
         </div>
 
-        {/* === MEJORA 3: BOTÓN FLOTANTE SOLICITAR PERMISO === */}
-        <Button
-          onClick={() => {
-            setActiveTab('permissions')
-            setShowPermissionForm(true)
-          }}
-          className="fixed bottom-8 right-8 z-50 h-14 w-14 rounded-2xl bg-brand-600 hover:bg-brand-700 shadow-2xl flex items-center justify-center text-white text-3xl md:bottom-10 md:right-10"
-          aria-label="Nueva solicitud de permiso"
+        {/* Menú rápido: documentos y reportes (la solicitud de permiso sigue en la pestaña Permisos) */}
+        <div
+          ref={fabWrapRef}
+          className="fixed bottom-8 right-8 z-50 flex flex-col items-end gap-2 md:bottom-10 md:right-10"
         >
-          +
-        </Button>
+          {fabMenuOpen && (
+            <div
+              role="menu"
+              className="mb-1 min-w-[14rem] rounded-xl border border-white/15 bg-slate-950/95 py-1 shadow-2xl backdrop-blur-md"
+            >
+              <button
+                type="button"
+                role="menuitem"
+                disabled={fabBusy}
+                onClick={() => void handleFabConstancia()}
+                className="flex w-full items-center px-4 py-3 text-left text-sm text-white hover:bg-white/10 disabled:opacity-50"
+              >
+                Constancia de trabajo
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                disabled={fabBusy}
+                onClick={handleFabVoucherNav}
+                className="flex w-full items-center px-4 py-3 text-left text-sm text-white hover:bg-white/10 disabled:opacity-50"
+              >
+                Voucher de pago
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                disabled={fabBusy}
+                onClick={() => void handleFabAttendanceReport()}
+                className="flex w-full items-center px-4 py-3 text-left text-sm text-white hover:bg-white/10 disabled:opacity-50"
+              >
+                Reporte de asistencia
+              </button>
+            </div>
+          )}
+          <Button
+            type="button"
+            onClick={() => setFabMenuOpen((o) => !o)}
+            className="h-14 w-14 rounded-2xl bg-brand-600 hover:bg-brand-700 shadow-2xl flex items-center justify-center text-white text-3xl"
+            aria-label={fabMenuOpen ? 'Cerrar menú de acciones' : 'Abrir menú de acciones'}
+            aria-expanded={fabMenuOpen}
+            aria-haspopup="menu"
+          >
+            {fabBusy ? (
+              <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-white border-t-transparent" />
+            ) : (
+              '+'
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   )
