@@ -1,78 +1,55 @@
 /**
- * Google Ads Conversion Tracking
- * Integración con Google Ads para rastrear conversiones desde el landing page
+ * Google Ads / gtag (conversiones y engagement)
+ *
+ * Las conversiones importadas en Google Ads usan `send_to` con el valor completo
+ * que muestra la interfaz (p. ej. AW-123456789/xxxx). Configurá cada acción con
+ * `NEXT_PUBLIC_GADS_SEND_TO_*` en el entorno; si falta, solo se envían eventos
+ * de engagement (no se inflan conversiones).
+ *
+ * Variables: ver `.env.example` sección Google Ads.
  */
 
-// Google Ads Conversion ID - Reemplazar con tu ID real cuando configures la campaña
-// Formato: AW-XXXXXXXXX
-const GOOGLE_ADS_CONVERSION_ID = process.env.NEXT_PUBLIC_GOOGLE_ADS_CONVERSION_ID || 'AW-17840996991'
+const SEND_TO_ACTIVATION = process.env.NEXT_PUBLIC_GADS_SEND_TO_ACTIVATION
+/** Opcional: conversión secundaria en clic de CTA (por defecto desactivada). */
+const SEND_TO_CTA = process.env.NEXT_PUBLIC_GADS_SEND_TO_CTA
+const SEND_TO_WHATSAPP = process.env.NEXT_PUBLIC_GADS_SEND_TO_WHATSAPP
+const SEND_TO_COMPARISON = process.env.NEXT_PUBLIC_GADS_SEND_TO_COMPARISON
 
-// Conversion Labels - Configurar en Google Ads
-export const CONVERSION_LABELS = {
-  ACTIVATION_FORM: 'activation_form_submit', // Formulario de activación
-  CTA_CLICK: 'cta_click', // Click en CTA principal
-  WHATSAPP_CLICK: 'whatsapp_click', // Click en WhatsApp
-  COMPARISON_VIEW: 'comparison_view', // Vista de página de comparación
-  DEMO_REQUEST: 'demo_request', // Solicitud de demo
-} as const
-
-export type ConversionLabel = typeof CONVERSION_LABELS[keyof typeof CONVERSION_LABELS]
-
-interface ConversionEvent {
+interface ConversionPayload {
   send_to: string
   value?: number
   currency?: string
   transaction_id?: string
 }
 
-/**
- * Track Google Ads conversion
- * @param label - Conversion label from Google Ads
- * @param value - Optional conversion value
- * @param currency - Currency code (default: USD)
- * @param transactionId - Optional transaction ID for deduplication
- */
-export function trackGoogleAdsConversion(
-  label: ConversionLabel,
-  value?: number,
-  currency: string = 'USD',
-  transactionId?: string
+function fireGoogleAdsConversion(
+  sendTo: string | undefined,
+  extra?: { value?: number; currency?: string; transaction_id?: string }
 ): void {
   if (typeof window === 'undefined') return
-
-  // Check if gtag is available
+  const trimmed = sendTo?.trim()
+  if (!trimmed) return
   if (typeof window.gtag === 'undefined') {
     console.warn('Google Ads: gtag not available')
     return
   }
-
-  const conversionEvent: ConversionEvent = {
-    send_to: `${GOOGLE_ADS_CONVERSION_ID}/${label}`,
+  const conversionEvent: ConversionPayload = { send_to: trimmed }
+  if (extra?.value !== undefined) {
+    conversionEvent.value = extra.value
+    conversionEvent.currency = extra.currency ?? 'USD'
   }
-
-  if (value !== undefined) {
-    conversionEvent.value = value
-    conversionEvent.currency = currency
+  if (extra?.transaction_id) {
+    conversionEvent.transaction_id = extra.transaction_id
   }
-
-  if (transactionId) {
-    conversionEvent.transaction_id = transactionId
-  }
-
-  // Send conversion event
   window.gtag('event', 'conversion', conversionEvent)
+}
 
-  console.log('Google Ads conversion tracked:', {
-    label,
-    value,
-    currency,
-    transactionId,
-  })
+function comparisonSessionKey(page: string): string {
+  return `gads_dedupe_comparison_${page.replace(/[^a-z0-9]+/gi, '_')}`
 }
 
 /**
- * Track activation form submission
- * This is the primary conversion event for lead generation
+ * Track activation form submission (conversión principal de lead si SEND_TO_ACTIVATION está definido).
  */
 export function trackActivationFormSubmit(
   email: string,
@@ -80,16 +57,11 @@ export function trackActivationFormSubmit(
   empleados: number,
   transactionId?: string
 ): void {
-  // Track as conversion
-  trackGoogleAdsConversion(
-    CONVERSION_LABELS.ACTIVATION_FORM,
-    undefined, // Lead value - adjust based on your LTV
-    'USD',
-    transactionId || `activation_${Date.now()}_${email}`
-  )
+  fireGoogleAdsConversion(SEND_TO_ACTIVATION, {
+    transaction_id: transactionId || `activation_${Date.now()}_${email}`,
+  })
 
-  // Also track in Google Analytics
-  if (typeof window.gtag !== 'undefined') {
+  if (typeof window !== 'undefined' && typeof window.gtag !== 'undefined') {
     window.gtag('event', 'form_submit', {
       event_category: 'Activation',
       event_label: 'Activation Form',
@@ -103,12 +75,12 @@ export function trackActivationFormSubmit(
 }
 
 /**
- * Track CTA click
+ * CTA: evento de engagement; conversión Ads solo si NEXT_PUBLIC_GADS_SEND_TO_CTA está definido.
  */
 export function trackCTAClick(ctaType: string, location: string): void {
-  trackGoogleAdsConversion(CONVERSION_LABELS.CTA_CLICK)
+  fireGoogleAdsConversion(SEND_TO_CTA)
 
-  if (typeof window.gtag !== 'undefined') {
+  if (typeof window !== 'undefined' && typeof window.gtag !== 'undefined') {
     window.gtag('event', 'cta_click', {
       event_category: 'Engagement',
       event_label: ctaType,
@@ -118,12 +90,12 @@ export function trackCTAClick(ctaType: string, location: string): void {
 }
 
 /**
- * Track WhatsApp click
+ * Click en enlace WhatsApp; conversión opcional vía NEXT_PUBLIC_GADS_SEND_TO_WHATSAPP.
  */
 export function trackWhatsAppClick(context: string): void {
-  trackGoogleAdsConversion(CONVERSION_LABELS.WHATSAPP_CLICK)
+  fireGoogleAdsConversion(SEND_TO_WHATSAPP)
 
-  if (typeof window.gtag !== 'undefined') {
+  if (typeof window !== 'undefined' && typeof window.gtag !== 'undefined') {
     window.gtag('event', 'whatsapp_click', {
       event_category: 'Contact',
       event_label: context,
@@ -132,12 +104,20 @@ export function trackWhatsAppClick(context: string): void {
 }
 
 /**
- * Track comparison page view
+ * Vista de página de comparación; deduplica en la misma pestaña para no duplicar conversión al recargar.
  */
 export function trackComparisonView(page: string): void {
-  trackGoogleAdsConversion(CONVERSION_LABELS.COMPARISON_VIEW)
+  if (typeof window !== 'undefined') {
+    const key = comparisonSessionKey(page)
+    if (sessionStorage.getItem(key)) {
+      return
+    }
+    sessionStorage.setItem(key, '1')
+  }
 
-  if (typeof window.gtag !== 'undefined') {
+  fireGoogleAdsConversion(SEND_TO_COMPARISON)
+
+  if (typeof window !== 'undefined' && typeof window.gtag !== 'undefined') {
     window.gtag('event', 'page_view', {
       event_category: 'Comparison',
       event_label: page,
@@ -145,10 +125,6 @@ export function trackComparisonView(page: string): void {
   }
 }
 
-/**
- * Get UTM parameters from URL
- * Useful for tracking which ad/campaign brought the user
- */
 export function getUTMParameters(): {
   utm_source?: string
   utm_medium?: string
@@ -168,9 +144,6 @@ export function getUTMParameters(): {
   }
 }
 
-/**
- * Store UTM parameters in sessionStorage for later use
- */
 export function storeUTMParameters(): void {
   if (typeof window === 'undefined') return
 
@@ -180,9 +153,6 @@ export function storeUTMParameters(): void {
   }
 }
 
-/**
- * Get stored UTM parameters
- */
 export function getStoredUTMParameters(): ReturnType<typeof getUTMParameters> {
   if (typeof window === 'undefined') return {}
 
@@ -194,27 +164,17 @@ export function getStoredUTMParameters(): ReturnType<typeof getUTMParameters> {
   }
 }
 
-/**
- * Initialize Google Ads tracking
- * Call this on page load to store UTM parameters
- */
 export function initGoogleAdsTracking(): void {
   storeUTMParameters()
 }
 
-// Extend Window interface for TypeScript
 declare global {
   interface Window {
     gtag?: (
       command: string,
-      targetId: string | ConversionEvent,
-      config?: ConversionEvent | Record<string, any>
+      targetId: string | ConversionPayload,
+      config?: ConversionPayload | Record<string, unknown>
     ) => void
-    dataLayer?: any[]
+    dataLayer?: unknown[]
   }
 }
-
-
-
-
-

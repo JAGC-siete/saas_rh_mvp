@@ -50,18 +50,10 @@ export interface WebSiteSchema {
   '@type': string
   name: string
   url: string
-  potentialAction?: {
-    '@type': string
-    target: {
-      '@type': string
-      urlTemplate: string
-    }
-    'query-input': string
-  }
 }
 
 /**
- * Generates WebSite schema with search action
+ * Generates WebSite schema (sin SearchAction hasta exista búsqueda interna real).
  */
 export function generateWebSiteSchema(): WebSiteSchema {
   return {
@@ -69,14 +61,6 @@ export function generateWebSiteSchema(): WebSiteSchema {
     '@type': 'WebSite',
     name: 'Humano SISU',
     url: BASE_URL,
-    potentialAction: {
-      '@type': 'SearchAction',
-      target: {
-        '@type': 'EntryPoint',
-        urlTemplate: `${BASE_URL}/search?q={search_term_string}`
-      },
-      'query-input': 'required name=search_term_string'
-    }
   }
 }
 

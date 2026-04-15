@@ -1,6 +1,7 @@
 import Head from 'next/head'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
+import TrackedWhatsAppLink from '../components/TrackedWhatsAppLink'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { CheckCircle, Clock, MessageCircle, ArrowRight } from 'lucide-react'
 
@@ -112,15 +113,16 @@ export default function GraciasPage() {
             Volver a inicio
           </Link>
           
-          <a
+          <TrackedWhatsAppLink
             href="https://wa.me/50432226773?text=Hola, acabo de activar mi sistema HUMANO SISU"
             target="_blank"
             rel="noopener noreferrer"
             className="bg-brand-600 hover:bg-brand-700 text-white px-6 py-3 rounded-lg font-medium transition-colors inline-flex items-center justify-center gap-2"
+            trackingContext="gracias_post_pago_whatsapp"
           >
             Escribir por WhatsApp
             <ArrowRight className="w-4 h-4" />
-          </a>
+          </TrackedWhatsAppLink>
         </div>
 
         {/* Social Proof */}

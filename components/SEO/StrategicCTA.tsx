@@ -1,5 +1,6 @@
 import React from 'react'
 import Link from 'next/link'
+import TrackedWhatsAppLink from '../TrackedWhatsAppLink'
 
 interface StrategicCTAProps {
   variant?: 'primary' | 'secondary' | 'whatsapp'
@@ -32,7 +33,7 @@ const ctaConfigs: Record<string, CTAConfig> = {
     href: '/activar'
   },
   'implementacion-48h': {
-    text: 'Implementación en 48h Garantizada',
+    text: 'Implementación express (hasta 48 h)',
     href: '/implementacion-48-horas'
   },
   'demo-personalizada': {
@@ -62,14 +63,15 @@ export default function StrategicCTA({
   if (config.whatsapp) {
     const whatsappUrl = `https://wa.me/${config.whatsapp}?text=${encodeURIComponent(config.whatsappText || config.text)}`
     return (
-      <a
+      <TrackedWhatsAppLink
         href={whatsappUrl}
         target="_blank"
         rel="noopener noreferrer"
         className={baseClasses}
+        trackingContext={`strategic_cta_${type}`}
       >
         {config.text}
-      </a>
+      </TrackedWhatsAppLink>
     )
   }
 

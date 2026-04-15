@@ -2,6 +2,7 @@ import Head from 'next/head'
 import Link from 'next/link'
 import MainHeader from '../components/MainHeader'
 import DemoFooter from '../components/DemoFooter'
+import TrackedWhatsAppLink from '../components/TrackedWhatsAppLink'
 import { getPageTitle } from '../lib/seo/title'
 import { getPageDescription } from '../lib/seo/description'
 import SchemaMarkup from '../components/SEO/SchemaMarkup'
@@ -55,8 +56,9 @@ export default function Implementacion48HorasPage() {
 
   const guarantees = [
     {
-      title: 'Garantía de Tiempo',
-      description: 'Si no está funcionando en 48 horas, trabajamos gratis hasta que funcione.',
+      title: 'Compromiso de puesta en marcha',
+      description:
+        'Con la información, accesos y responsables acordados, si no queda operativo en el plazo previsto coordinamos soporte adicional de implementación hasta dejarlo funcionando, según alcance contractual.',
       icon: '⏱️'
     },
     {
@@ -133,14 +135,15 @@ export default function Implementacion48HorasPage() {
 
           {/* CTA Button */}
           <div className="flex justify-center mb-6">
-            <a
+            <TrackedWhatsAppLink
               href="https://wa.me/50432226773?text=Hola,%20quiero%20solicitar%20cotización%20de%20Humano%20SISU"
               target="_blank"
               rel="noopener noreferrer"
               className="px-6 sm:px-8 py-3 sm:py-4 bg-sky-600 text-white rounded-xl font-semibold text-base sm:text-lg hover:bg-sky-700 transition-colors shadow-sm"
+              trackingContext="implementacion_48h_hero_cotizacion"
             >
               Solicitar cotización
-            </a>
+            </TrackedWhatsAppLink>
           </div>
         </div>
       </section>
@@ -175,7 +178,7 @@ export default function Implementacion48HorasPage() {
             <ul className="space-y-3 text-gray-300">
               <li className="flex items-start gap-2">
                 <CheckCircleIcon className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
-                <span><strong>48 horas garantizadas</strong></span>
+                <span><strong>Puesta en marcha típica en hasta 48 h</strong> (según alcance acordado)</span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircleIcon className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
@@ -260,10 +263,10 @@ export default function Implementacion48HorasPage() {
         {/* CTA Section */}
         <section className="text-center glass-strong rounded-xl sm:rounded-2xl p-6 sm:p-8 md:p-12 mb-12 sm:mb-16 border border-white/10">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 text-white">
-            ¿Listo para empezar en 48 horas?
+            ¿Listo para una puesta en marcha express?
           </h2>
           <p className="text-lg sm:text-xl text-brand-200/90 mb-6 sm:mb-8">
-            Solicita tu implementación ahora. Prueba gratis 30 días.
+            Solicitá tu implementación ahora. Prueba gratis 30 días. Los plazos dependen del alcance acordado y de que nos compartas la información a tiempo.
           </p>
           <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
             <Link
@@ -272,14 +275,15 @@ export default function Implementacion48HorasPage() {
             >
               Solicitar Implementación
             </Link>
-            <a
-              href="https://wa.me/50432226773?text=Hola,%20quiero%20saber%20más%20sobre%20la%20implementación%20en%2048%20horas"
+            <TrackedWhatsAppLink
+              href="https://wa.me/50432226773?text=Hola,%20quiero%20saber%20más%20sobre%20la%20implementación%20express%20de%20Humano%20SISU"
               target="_blank"
               rel="noopener noreferrer"
               className="px-6 sm:px-8 py-3 sm:py-4 bg-green-600 text-white rounded-xl font-semibold text-base sm:text-lg hover:bg-green-700 transition-colors shadow-sm"
+              trackingContext="implementacion_48h_footer_experto"
             >
               Hablar con un Experto
-            </a>
+            </TrackedWhatsAppLink>
           </div>
         </section>
       </main>

@@ -8,7 +8,8 @@ export default function PoliticaPrivacidad() {
       <Head>
         <title>Política de Privacidad - Humano SISU</title>
         <meta name="description" content="Política de privacidad y manejo de datos de Humano SISU" />
-        <meta name="robots" content="noindex, nofollow" />
+        <meta name="robots" content="index, follow" />
+        <link rel="canonical" href="https://humanosisu.net/politicadeprivacidad" />
       </Head>
 
       <div className="min-h-screen bg-slate-900 text-white">

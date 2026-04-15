@@ -58,6 +58,11 @@ const publicPages: SitemapUrl[] = [
     priority: 0.5
   },
   {
+    loc: '/terminos-de-servicio',
+    changefreq: 'yearly',
+    priority: 0.4
+  },
+  {
     loc: '/suscripcion',
     changefreq: 'monthly',
     priority: 0.8

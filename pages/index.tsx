@@ -94,13 +94,13 @@ export default function LandingPage() {
           {/* Trust badges */}
           <div className="flex flex-wrap justify-center gap-2 sm:gap-3 md:gap-6 mb-6 sm:mb-8 animate-fade-up-subtle">
             <span className="px-3 py-1 bg-green-500/20 text-green-300 text-xs rounded-full border border-green-500/30">
-              Cumple STSS Honduras
+              Enfoque normativa STSS (HN)
             </span>
             <span className="px-3 py-1 bg-blue-500/20 text-blue-300 text-xs rounded-full border border-blue-500/30">
-              Setup inicial en instantáneo
+              Configuración inicial rápida
             </span>
             <span className="px-3 py-1 bg-purple-500/20 text-purple-300 text-xs rounded-full border border-purple-500/30">
-              100% Hondureño
+              Producto y soporte en Honduras
             </span>
             <span className="px-3 py-1 bg-orange-500/20 text-orange-300 text-xs rounded-full border border-orange-500/30">
               Soporte local

@@ -1,7 +1,10 @@
 import Head from 'next/head'
 import Link from 'next/link'
+import { useEffect } from 'react'
 import MainHeader from '../components/MainHeader'
 import DemoFooter from '../components/DemoFooter'
+import TrackedWhatsAppLink from '../components/TrackedWhatsAppLink'
+import { trackComparisonView } from '../lib/analytics/googleAds'
 import { getPageTitle } from '../lib/seo/title'
 import { getPageDescription } from '../lib/seo/description'
 import SchemaMarkup from '../components/SEO/SchemaMarkup'
@@ -12,6 +15,10 @@ import dynamic from 'next/dynamic'
 const CloudBackground = dynamic(() => import('../components/CloudBackground'), { ssr: false })
 
 export default function AlternativaOdooPage() {
+  useEffect(() => {
+    trackComparisonView('alternativa_odoo')
+  }, [])
+
   const pageTitle = getPageTitle('alternativaOdoo')
   const pageDescription = getPageDescription('alternativaOdoo')
   const webPageSchema = generateWebPageSchema({
@@ -35,9 +42,9 @@ export default function AlternativaOdooPage() {
     },
     {
       feature: 'Tiempo de implementación',
-      humanoSisu: '48 horas',
+      humanoSisu: 'Hasta 48 h',
       odoo: '2-8 semanas',
-      description: 'Configuración y puesta en marcha'
+      description: 'Configuración y puesta en marcha (plazos según alcance acordado)'
     },
     {
       feature: 'Costo de implementación',
@@ -118,14 +125,15 @@ export default function AlternativaOdooPage() {
             >
               Prueba gratis ahora
             </Link>
-            <a
+            <TrackedWhatsAppLink
               href="https://wa.me/50432226773?text=Hola,%20quiero%20comparar%20Humano%20SISU%20con%20Odoo"
               target="_blank"
               rel="noopener noreferrer"
               className="px-5 sm:px-6 py-2.5 sm:py-3 bg-green-600 text-white rounded-xl font-semibold text-sm sm:text-base hover:bg-green-700 transition-colors shadow-sm"
+              trackingContext="alternativa_odoo_hero_whatsapp"
             >
               Compara con Odoo Gratis
-            </a>
+            </TrackedWhatsAppLink>
           </div>
         </div>
       </section>
@@ -200,9 +208,9 @@ export default function AlternativaOdooPage() {
             </div>
             <div className="glass-strong rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/10 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
               <div className="text-4xl mb-4">⚡</div>
-              <h3 className="text-lg sm:text-xl font-bold mb-2 text-white">48 Horas vs Semanas</h3>
+              <h3 className="text-lg sm:text-xl font-bold mb-2 text-white">Puesta en marcha express vs semanas</h3>
               <p className="text-brand-200/90 text-sm sm:text-base">
-                Odoo tarda semanas o meses en implementarse. Humano SISU está funcionando en 48 horas garantizadas.
+                Odoo suele tardar semanas o meses en implementarse. Con Humano SISU la puesta en marcha típica es en hasta 48 horas cuando el alcance y los datos acordados están listos.
               </p>
             </div>
           </div>
@@ -223,14 +231,15 @@ export default function AlternativaOdooPage() {
             >
               Comenzar Prueba Gratis
             </Link>
-            <a
+            <TrackedWhatsAppLink
               href="https://wa.me/50432226773?text=Hola,%20quiero%20saber%20más%20sobre%20Humano%20SISU%20vs%20Odoo"
               target="_blank"
               rel="noopener noreferrer"
               className="px-6 sm:px-8 py-3 sm:py-4 bg-green-600 text-white rounded-xl font-semibold text-base sm:text-lg hover:bg-green-700 transition-colors shadow-sm"
+              trackingContext="alternativa_odoo_cta_whatsapp"
             >
               Hablar con un Experto
-            </a>
+            </TrackedWhatsAppLink>
           </div>
         </section>
 
@@ -250,14 +259,15 @@ export default function AlternativaOdooPage() {
               <li>Soporte durante la transición</li>
               <li>Capacitación incluida</li>
             </ul>
-            <a
+            <TrackedWhatsAppLink
               href="https://wa.me/50432226773?text=Hola,%20quiero%20migrar%20desde%20Odoo%20a%20Humano%20SISU"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-block px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors shadow-sm"
+              trackingContext="alternativa_odoo_migracion_whatsapp"
             >
               Solicitar Migración
-            </a>
+            </TrackedWhatsAppLink>
           </div>
         </section>
       </main>

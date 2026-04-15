@@ -70,6 +70,7 @@ export const MIDDLEWARE_CONFIG = {
       '/about',
       '/trial-dashboard',
       '/politicadeprivacidad',
+      '/terminos-de-servicio',
       '/calculadora-deducciones',
       '/alternativa-odoo-honduras',
       '/sistema-biometrico-nomina',
