@@ -237,7 +237,7 @@ export default function TrialDashboard() {
             <div className="flex justify-between items-center">
               <div>
                 <h1 className="text-2xl font-bold text-white">👋 Bienvenido a SISU — Tu RH Automatizado en 24 h o Menos</h1>
-                <p className="text-gray-300">Convertí tu planilla manual en un sistema automático que cumple la ley hondureña y se maneja solo</p>
+                <p className="text-gray-300">Convertí tu planilla manual en un sistema automático alineado a normativa local y que se maneja solo</p>
               </div>
               <div className="text-right">
                 <p className="text-sm text-gray-400">Trial activado para</p>

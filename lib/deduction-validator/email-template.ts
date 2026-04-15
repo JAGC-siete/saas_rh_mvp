@@ -84,7 +84,7 @@ export function generateDeductionEmailHTML(data: DeductionEmailData): string {
         
         <p style="color: #666; font-size: 14px; margin-top: 30px;">
           Si tiene alguna pregunta, no dude en contactarnos.<br>
-          <strong>Humano SISU</strong> - Sistema Hondureño de Recursos Humanos
+          <strong>Humano SISU</strong> — RRHH y nómina regional (El Salvador, Guatemala y Honduras)
         </p>
       </div>
       

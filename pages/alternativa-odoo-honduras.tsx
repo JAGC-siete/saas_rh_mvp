@@ -35,10 +35,10 @@ export default function AlternativaOdooPage() {
       description: 'Control de asistencia biométrico nativo integrado con nómina'
     },
     {
-      feature: 'Localización 100% Honduras',
+      feature: 'Localización por país (SV, GT, HN)',
       humanoSisu: true,
       odoo: false,
-      description: 'IHSS, RAP, ISR calculados según ley hondureña vigente'
+      description: 'Deducciones y nómina según normativa local vigente en cada país'
     },
     {
       feature: 'Tiempo de implementación',
@@ -81,7 +81,7 @@ export default function AlternativaOdooPage() {
         <meta property="og:description" content={pageDescription} />
         <meta property="og:url" content="https://humanosisu.net/alternativa-odoo-honduras" />
         <link rel="canonical" href="https://humanosisu.net/alternativa-odoo-honduras" />
-        <meta name="keywords" content="alternativa a Odoo Honduras, Odoo vs sistema nómina Honduras, mejor que Odoo para MIPYMES Honduras, Odoo alternativa, sistema nómina Honduras" />
+        <meta name="keywords" content="alternativa a Odoo El Salvador Guatemala Honduras, Odoo vs nómina regional, MIPYMES Centroamérica, sistema nómina local" />
       </Head>
       <SchemaMarkup schema={webPageSchema} />
 
@@ -93,7 +93,7 @@ export default function AlternativaOdooPage() {
           {/* Trust badges */}
           <div className="flex flex-wrap justify-center gap-2 sm:gap-3 md:gap-6 mb-6 sm:mb-8 animate-fade-up-subtle">
             <span className="px-3 py-1 bg-green-500/20 text-green-300 text-xs rounded-full border border-green-500/30">
-              🇭🇳 100% Hondureño
+              Regional · SV, GT, HN
             </span>
             <span className="px-3 py-1 bg-blue-500/20 text-blue-300 text-xs rounded-full border border-blue-500/30">
               ⚡ 48h vs Semanas
@@ -109,11 +109,11 @@ export default function AlternativaOdooPage() {
           {/* Hero Title */}
           <div className="text-center mb-6 sm:mb-8 px-2">
             <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight sm:leading-tight">
-              <span className="text-white block sm:inline">El software de RH para Honduras que integra todo:</span>
+              <span className="text-white block sm:inline">El software de RH para tu operación local que integra todo:</span>
               <span className="text-brand-300 block text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl mt-2 sm:mt-1">Biométrico, Nómina y Ley.</span>
             </h1>
             <p className="text-lg sm:text-xl text-brand-200/90 max-w-3xl mx-auto mt-4 sm:mt-6">
-              Olvida las hojas de cálculo. Automatizamos tus deducciones de ley (IHSS, RAP, INFOP) con activación inmediata y soporte en tu país.
+              Olvida las hojas de cálculo. Automatizamos tus deducciones de ley según el país con activación inmediata y soporte local.
             </p>
           </div>
 
@@ -201,9 +201,9 @@ export default function AlternativaOdooPage() {
             </div>
             <div className="glass-strong rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/10 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
               <div className="text-4xl mb-4">🇭🇳</div>
-              <h3 className="text-lg sm:text-xl font-bold mb-2 text-white">100% Hondureño</h3>
+              <h3 className="text-lg sm:text-xl font-bold mb-2 text-white">Localización profunda</h3>
               <p className="text-brand-200/90 text-sm sm:text-base">
-                Odoo es genérico y requiere configuración compleja. Humano SISU viene preconfigurado con IHSS, RAP, ISR según ley hondureña.
+                Odoo es genérico y requiere configuración compleja. Humano SISU viene preconfigurado con deducciones y reglas nacionales para El Salvador, Guatemala y Honduras.
               </p>
             </div>
             <div className="glass-strong rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-white/10 transition-all duration-300 hover:border-brand-400/40 hover:shadow-xl hover:shadow-brand-900/30">
@@ -250,7 +250,7 @@ export default function AlternativaOdooPage() {
           </h2>
           <div className="glass-strong rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 border border-white/10">
             <p className="text-base sm:text-lg text-brand-200/90 mb-4 sm:mb-6">
-              Si actualmente usas Odoo y buscas una solución más simple, rápida y específica para Honduras, 
+              Si actualmente usas Odoo y buscas una solución más simple, rápida y específica para tu país en la región, 
               podemos ayudarte a migrar tus datos.
             </p>
             <ul className="list-disc list-inside space-y-2 text-brand-200/90 mb-6 sm:mb-8 text-sm sm:text-base">

@@ -119,7 +119,7 @@ export default function DeduccionesHondurasPage() {
               <span className="text-brand-300 block text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl mt-2 sm:mt-1">Sin cálculos manuales, sin errores.</span>
             </h1>
             <p className="text-lg sm:text-xl text-brand-200/90 max-w-3xl mx-auto mt-4 sm:mt-6">
-              Integra tus biométricos con nuestro software 100% hondureño. Automatiza el cálculo de IHSS, RAP e ISR mientras tu equipo se enfoca en crecer.
+              Esta guía profundiza en IHSS, RAP e ISR en Honduras. Humano SISU es regional: misma plataforma con reglas nacionales para El Salvador, Guatemala y Honduras.
             </p>
           </div>
 

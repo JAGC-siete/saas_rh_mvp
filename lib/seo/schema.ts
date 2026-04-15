@@ -15,7 +15,7 @@ export interface OrganizationSchema {
     '@type': string
     telephone: string
     contactType: string
-    areaServed: string
+    areaServed: string | string[]
     availableLanguage: string
   }
   sameAs?: string[]
@@ -31,12 +31,13 @@ export function generateOrganizationSchema(): OrganizationSchema {
     name: 'Humano SISU',
     url: BASE_URL,
     logo: `${BASE_URL}/logo-humano-sisu.png`,
-    description: 'Sistema automatizado de recursos humanos para MIPYMES en Honduras. Gestión de asistencia, nómina con deducciones IHSS, RAP, ISR y más.',
+    description:
+      'Sistema automatizado de recursos humanos para MIPYMES en El Salvador, Guatemala y Honduras. Gestión de asistencia, nómina con deducciones de ley locales y más.',
     contactPoint: {
       '@type': 'ContactPoint',
       telephone: '+504 32226773',
       contactType: 'customer service',
-      areaServed: 'HN',
+      areaServed: ['SV', 'GT', 'HN'],
       availableLanguage: 'Spanish'
     },
     sameAs: [
@@ -200,7 +201,7 @@ export interface LocalBusinessSchema {
   areaServed: {
     '@type': string
     name: string
-  }
+  } | Array<{ '@type': string; name: string }>
   priceRange?: string
 }
 
@@ -226,10 +227,11 @@ export function generateLocalBusinessSchema(options: {
       addressRegion: options.address.region,
       addressLocality: options.address.locality
     } : undefined,
-    areaServed: {
-      '@type': 'Country',
-      name: 'Honduras'
-    },
+    areaServed: [
+      { '@type': 'Country', name: 'El Salvador' },
+      { '@type': 'Country', name: 'Guatemala' },
+      { '@type': 'Country', name: 'Honduras' },
+    ],
     priceRange: '$$'
   }
 }

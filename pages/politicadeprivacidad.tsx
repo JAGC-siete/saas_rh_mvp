@@ -34,7 +34,7 @@ export default function PoliticaPrivacidad() {
             <section className="mb-8">
               <h2 className="text-2xl font-semibold text-white mb-4">1) Responsable</h2>
               <p className="text-slate-300">
-                <strong>Humano SISU</strong> (&quot;nosotros&quot;), <strong>Honduras</strong>.
+                <strong>Humano SISU</strong> (&quot;nosotros&quot;), con operación en <strong>El Salvador, Guatemala y Honduras</strong>.
                 <br />
                 Contacto: <strong>jorgearturo@humanosisu.net</strong> | <strong>504 32226773</strong>
               </p>
@@ -104,7 +104,7 @@ export default function PoliticaPrivacidad() {
                 Podés ejercer <strong>acceso, rectificación, supresión, oposición, limitación y portabilidad</strong>, además de <strong>retirar tu consentimiento</strong> en cualquier momento, escribiendo a <strong>jorgearturo@humanosisu.net</strong> con el asunto &quot;Derechos de datos – [tu nombre]&quot;.
               </p>
               <p className="text-slate-300">
-                También podés reclamar ante la autoridad de control competente conforme a las <strong>leyes aplicables de protección de datos de Honduras y/o Guatemala</strong>.
+                También podés reclamar ante la autoridad de control competente conforme a las <strong>leyes aplicables de protección de datos de El Salvador, Guatemala y/o Honduras</strong>.
               </p>
             </section>
 

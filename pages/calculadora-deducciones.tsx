@@ -222,7 +222,7 @@ export default function CalculadoraDeduccionesPage() {
       <Head>
         <title>{pageTitle}</title>
         <meta name="description" content={pageDescription} />
-        <meta name="keywords" content="calculadora IHSS RAP ISR Honduras, deducciones nómina, sin cálculos manuales, planilla Honduras, INFOP" />
+        <meta name="keywords" content="calculadora IHSS RAP ISR, deducciones nómina Honduras, sin cálculos manuales, planilla, INFOP, nómina regional" />
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDescription} />
         <meta property="og:url" content="https://humanosisu.net/calculadora-deducciones" />
@@ -240,7 +240,7 @@ export default function CalculadoraDeduccionesPage() {
               IHSS, RAP e ISR según ley
             </span>
             <span className="px-3 py-1 bg-blue-500/20 text-blue-300 text-xs rounded-full border border-blue-500/30">
-              100% hondureño · Leyes vigentes
+              Ley local vigente (Honduras)
             </span>
             <span className="px-3 py-1 bg-purple-500/20 text-purple-300 text-xs rounded-full border border-purple-500/30">
               Sin cálculos manuales
@@ -248,7 +248,7 @@ export default function CalculadoraDeduccionesPage() {
           </div>
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 leading-tight">
             <span className="text-white block sm:inline">Deja de calcular IHSS, RAP e ISR a mano</span>
-            <span className="text-brand-300 block sm:inline mt-2 sm:mt-1">Calculadora de deducciones Honduras</span>
+            <span className="text-brand-300 block sm:inline mt-2 sm:mt-1">Calculadora de deducciones (Honduras)</span>
           </h1>
           <p className="text-lg sm:text-xl text-brand-200/90 max-w-2xl mx-auto">
             Olvida las hojas de cálculo. Valida tus deducciones de ley (IHSS, RAP, INFOP) según normativa vigente. Herramienta gratuita y precisa.
@@ -571,7 +571,7 @@ export default function CalculadoraDeduccionesPage() {
                   Control de asistencia y nómina en un solo lugar: Sin cálculos manuales, sin errores.
                 </h3>
                 <p className="text-brand-200/90 mb-4">
-                  Integra tus biométricos con nuestro software 100% hondureño. Del cálculo al comprobante en segundos. Automatiza IHSS, RAP e ISR.
+                  Integra tus biométricos con Humano SISU (regional: SV, GT, HN). Del cálculo al comprobante en segundos. Automatiza deducciones locales.
                 </p>
                 <Link
                   href="/activar"
@@ -592,7 +592,7 @@ export default function CalculadoraDeduccionesPage() {
           <div className="relative z-10">
             <h3 className="text-xl font-bold text-white mb-4">¿Automatizamos tu nómina?</h3>
             <p className="text-brand-200/90 mb-6">
-              Olvida las hojas de cálculo. Software de RH 100% hondureño que integra biométrico, nómina y deducciones de ley (IHSS, RAP, INFOP). Activación inmediata, soporte en tu país.
+              Olvida las hojas de cálculo. Software de RH regional que integra biométrico, nómina y deducciones de ley según tu país. Activación inmediata, soporte local.
             </p>
             <Link
               href="/activar"

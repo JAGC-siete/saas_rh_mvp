@@ -3,6 +3,13 @@ import { createAdminClient } from '../../lib/supabase/server'
 import { getHondurasTimestamp, nowInHonduras } from '../../lib/timezone'
 import { randomUUID } from 'crypto'
 import { TRIAL_CONFIG } from '../../lib/config/trial'
+import {
+  currencyForCountryCode,
+  ianaTimezoneForCountryCode,
+  isCountryCode,
+  isValidLocalMobileForCountry,
+  type CountryCode,
+} from '../../lib/country/supported'
 
 export const config = {
   api: {
@@ -18,6 +25,8 @@ interface ActivationData {
   contactoEmail: string
   departamentos: number
   aceptaTrial: boolean
+  /** ISO 3166-1 alpha-3: HND | SLV | GTM — determina nómina, festivos y zona horaria de la empresa trial */
+  countryCode: string
   referralCode?: string // Add referral code
 }
 
@@ -43,10 +52,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       contactoEmail,
       departamentos,
       aceptaTrial,
+      countryCode: countryCodeRaw,
       referralCode // Destructure referral code
     }: ActivationData = req.body
 
-    console.log('📝 Datos recibidos:', { empleados, empresa, nombre, contactoWhatsApp, contactoEmail, departamentos, aceptaTrial, referralCode })
+    const countryCandidate =
+      typeof countryCodeRaw === 'string' ? countryCodeRaw.trim().toUpperCase() : ''
+    if (!isCountryCode(countryCandidate)) {
+      return res.status(400).json({
+        error: 'Seleccioná un país válido: Honduras (HND), El Salvador (SLV) o Guatemala (GTM).',
+      })
+    }
+    const countryCode: CountryCode = countryCandidate
+
+    console.log('📝 Datos recibidos:', {
+      empleados,
+      empresa,
+      nombre,
+      contactoWhatsApp,
+      contactoEmail,
+      departamentos,
+      aceptaTrial,
+      countryCode,
+      referralCode,
+    })
 
     // Validar campos requeridos
     if (!contactoEmail) {
@@ -67,12 +96,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    // Validar formato de WhatsApp solo si se proporciona
+    // Validar formato de WhatsApp solo si se proporciona (según país elegido)
     if (contactoWhatsApp && contactoWhatsApp.trim()) {
-      const whatsappRegex = /^(\+504|504)?[0-9]{8}$/
-      if (!whatsappRegex.test(contactoWhatsApp.replace(/[-\s]/g, ''))) {
-        return res.status(400).json({ 
-          error: '📱 Formato de WhatsApp inválido. Usa formato hondureño: 9999-9999 o +50499999999' 
+      if (!isValidLocalMobileForCountry(contactoWhatsApp, countryCode)) {
+        const hint =
+          countryCode === 'SLV'
+            ? '+503 y 8 dígitos locales'
+            : countryCode === 'GTM'
+              ? '+502 y 8 dígitos locales'
+              : '+504 y 8 dígitos locales'
+        return res.status(400).json({
+          error: `📱 Formato de WhatsApp inválido para el país seleccionado. Usá ${hint}.`,
         })
       }
     }
@@ -139,7 +173,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         departamentos: { total: departamentos },
         monto: null, // Ya no se calcula en el trial
         comprobante: null, // Ya no se sube en el trial
-        notas: `Trial activado automáticamente. Empleados: ${empleados}, Departamentos: ${departamentos}`
+        notas: `Trial activado automáticamente. País: ${countryCode}. Empleados: ${empleados}, Departamentos: ${departamentos}`,
       }])
       .select()
 
@@ -159,6 +193,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       contactoEmail,
       empleados,
       departamentos,
+      countryCode,
       referralCode // Pass referral code
     })
 
@@ -178,7 +213,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       contactoEmail,
       empleados,
       tenant_id,
-      status: 'trial_pending_data'
+      status: 'trial_pending_data',
+      country_code: countryCode,
     })
 
     // Enviar email de resumen con vCard
@@ -189,7 +225,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       email: contactoEmail,
       whatsapp: contactoWhatsApp || null,
       empleados,
-      tenant_id
+      tenant_id,
+      country_code: countryCode,
     })
 
     console.log('🎉 Activación completada exitosamente')
@@ -336,10 +373,11 @@ async function crearEntornoTrial(supabase: any, data: {
   contactoEmail: string
   empleados: number
   departamentos: number
+  countryCode: CountryCode
   referralCode?: string // Add referral code to function signature
 }) {
   try {
-    console.log('🏗️ Creando entorno completo de trial para:', data.empresa)
+    console.log('🏗️ Creando entorno completo de trial para:', data.empresa, 'país:', data.countryCode)
     
     // 0. Check for referral code
     let affiliateId: string | null = null
@@ -360,11 +398,13 @@ async function crearEntornoTrial(supabase: any, data: {
       }
     }
 
-    // 1. Crear company única
+    // 1. Crear company única (country_code + timezone alimentan nómina, labor_laws y asistencia por país)
     console.log('📦 Paso 1: Creando company...')
     const companyId = randomUUID()
     const subdomain = `trial-${Date.now().toString(36)}`
-    
+    const tz = ianaTimezoneForCountryCode(data.countryCode)
+    const currency = currencyForCountryCode(data.countryCode)
+
     const { data: newCompany, error: companyError } = await supabase
         .from('companies')
         .insert([{
@@ -372,10 +412,14 @@ async function crearEntornoTrial(supabase: any, data: {
         name: data.empresa,
         subdomain,
           plan_type: 'trial',
+          country_code: data.countryCode,
+          timezone: tz,
           settings: {
             trial_activated_at: getHondurasTimestamp(),
           trial_employee_limit: data.empleados,
-            timezone: 'America/Tegucigalpa'
+            timezone: tz,
+            currency,
+            language: 'es',
           },
           is_active: true,
           referred_by_affiliate_id: affiliateId // Set affiliate ID
@@ -417,7 +461,7 @@ async function crearEntornoTrial(supabase: any, data: {
       checkin_close: addMinutes(h.start, 90),
       checkout_open: subtractMinutes(h.end, 90),
       checkout_close: addMinutes(h.end, 60),
-      timezone: 'America/Tegucigalpa'
+      timezone: tz
     }))
 
     const { data: schedules, error: schedulesError } = await supabase
@@ -846,11 +890,11 @@ async function enviarCorreoBienvenida(data: {
               <div class="hero">
                 <div class="badge">Acceso Exclusivo</div>
                 <h1>¡Has sido seleccionado para explorar SISU!</h1>
-                <p>${data.nombre || 'Equipo'}, te damos la bienvenida a SISU, el nuevo sistema hondureño de recursos humanos diseñado para transformar la forma en que gestionas tu equipo. Has recibido este acceso limitado y gratuito por 7 días para descubrir cómo SISU elimina tareas repetitivas y libera tiempo valioso para lo que realmente importa.</p>
+                <p>${data.nombre || 'Equipo'}, te damos la bienvenida a SISU, el sistema regional de recursos humanos para El Salvador, Guatemala y Honduras, diseñado para transformar la forma en que gestionás tu equipo. Has recibido este acceso limitado y gratuito por 7 días para descubrir cómo SISU elimina tareas repetitivas y libera tiempo valioso para lo que realmente importa.</p>
               </div>
               <div class="content">
                 <div class="pill">
-                  SISU convierte horas de trabajo operativo en minutos: asistencia automática, nómina precisa, portal para empleados y dashboards inteligentes. Todo en una plataforma segura y fácil de usar, hecha para empresas hondureñas.
+                  SISU convierte horas de trabajo operativo en minutos: asistencia automática, nómina precisa, portal para empleados y dashboards inteligentes. Todo en una plataforma segura y fácil de usar, con reglas nacionales según tu país.
                 </div>
 
                 <div class="section-title">Credenciales seguras</div>
@@ -904,7 +948,7 @@ async function enviarCorreoBienvenida(data: {
               </div>
               <div class="footer">
                 <hr />
-                SISU · Plataforma hondureña de Recursos Humanos. Si tú no solicitaste este acceso, puedes ignorar el correo.
+                SISU · Plataforma de Recursos Humanos (El Salvador, Guatemala y Honduras). Si tú no solicitaste este acceso, podés ignorar el correo.
               </div>
             </div>
           </div>
@@ -956,6 +1000,7 @@ async function dispararWebhookActivaciones(data: {
   empleados: number
   tenant_id: string
   status: string
+  country_code: CountryCode
 }) {
   try {
     const webhookUrl = process.env.ACTIVACIONES_WEBHOOK_URL
@@ -973,6 +1018,7 @@ async function dispararWebhookActivaciones(data: {
       employees: data.empleados,
       tenant_id: data.tenant_id,
       status: data.status,
+      country_code: data.country_code,
       submitted_at: getHondurasTimestamp()
     }
 
@@ -1003,6 +1049,7 @@ function generarVCard(data: {
   empresa: string
   email: string
   whatsapp: string | null
+  countryCode?: CountryCode
 }): string {
   const vcard = [
     'BEGIN:VCARD',
@@ -1013,10 +1060,15 @@ function generarVCard(data: {
   ]
 
   if (data.whatsapp) {
-    // Limpiar formato del WhatsApp (quitar espacios, guiones, etc.)
     const phone = data.whatsapp.replace(/[-\s]/g, '')
-    // Asegurar que tenga el código de país
-    const formattedPhone = phone.startsWith('+') ? phone : phone.startsWith('504') ? `+${phone}` : `+504${phone}`
+    const cc = data.countryCode || 'HND'
+    const calling =
+      cc === 'SLV' ? '503' : cc === 'GTM' ? '502' : '504'
+    const formattedPhone = phone.startsWith('+')
+      ? phone
+      : phone.startsWith(calling)
+        ? `+${phone}`
+        : `+${calling}${phone}`
     vcard.push(`TEL;TYPE=CELL:${formattedPhone}`)
   }
 
@@ -1032,6 +1084,7 @@ async function enviarEmailResumenRegistro(data: {
   whatsapp: string | null
   empleados: number
   tenant_id: string
+  country_code: CountryCode
 }) {
   try {
     const apiKey = process.env.RESEND_API_KEY
@@ -1050,7 +1103,8 @@ async function enviarEmailResumenRegistro(data: {
       nombre: data.nombre,
       empresa: data.empresa,
       email: data.email,
-      whatsapp: data.whatsapp
+      whatsapp: data.whatsapp,
+      countryCode: data.country_code,
     })
 
     // Convertir vCard a buffer para adjuntarlo
@@ -1138,6 +1192,10 @@ async function enviarEmailResumenRegistro(data: {
               <div class="info-row">
                 <span class="label">👥 Empleados:</span>
                 <span class="value">${data.empleados}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">🌎 País (nómina):</span>
+                <span class="value">${data.country_code}</span>
               </div>
               <div class="info-row">
                 <span class="label">🆔 Tenant ID:</span>

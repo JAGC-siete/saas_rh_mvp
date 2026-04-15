@@ -63,7 +63,7 @@ export default function LandingPage() {
         <title>{pageTitle}</title>
         <link rel="icon" href="/logo-humano-sisu.png" />
         <meta name="description" content={pageDescription} />
-        <meta name="keywords" content="planilla Honduras, IHSS, RAP, ISR, automatización RH, STSS, Humano SISU, innovación, nómina automatizada" />
+        <meta name="keywords" content="planilla El Salvador Guatemala Honduras, IHSS, RAP, ISR, automatización RH, STSS, Humano SISU, nómina automatizada" />
         <meta name="author" content="Humano SISU" />
         <meta name="robots" content="index, follow" />
         <meta property="og:title" content={pageTitle} />
@@ -94,13 +94,13 @@ export default function LandingPage() {
           {/* Trust badges */}
           <div className="flex flex-wrap justify-center gap-2 sm:gap-3 md:gap-6 mb-6 sm:mb-8 animate-fade-up-subtle">
             <span className="px-3 py-1 bg-green-500/20 text-green-300 text-xs rounded-full border border-green-500/30">
-              Enfoque normativa STSS (HN)
+              Normativa laboral local
             </span>
             <span className="px-3 py-1 bg-blue-500/20 text-blue-300 text-xs rounded-full border border-blue-500/30">
               Configuración inicial rápida
             </span>
             <span className="px-3 py-1 bg-purple-500/20 text-purple-300 text-xs rounded-full border border-purple-500/30">
-              Producto y soporte en Honduras
+              Producto y soporte local (SV, GT, HN)
             </span>
             <span className="px-3 py-1 bg-orange-500/20 text-orange-300 text-xs rounded-full border border-orange-500/30">
               Soporte local
@@ -114,7 +114,7 @@ export default function LandingPage() {
               <span className="text-brand-300 block text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl mt-2 sm:mt-1">Sin cálculos manuales, sin errores.</span>
             </h1>
             <p className="text-lg sm:text-xl text-brand-200/90 max-w-3xl mx-auto mt-4 sm:mt-6">
-              Integra tus biométricos con nuestro software 100% hondureño. Automatiza el cálculo de IHSS, RAP e ISR mientras tu equipo se enfoca en crecer.
+              Integra tus biométricos con nuestro software regional. Automatiza deducciones y nómina según normativa local mientras tu equipo se enfoca en crecer.
             </p>
           </div>
 

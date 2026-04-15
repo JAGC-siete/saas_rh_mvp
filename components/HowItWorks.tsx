@@ -30,7 +30,7 @@ export default function HowItWorks() {
           <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight mb-6 sm:mb-8 px-2">
             <span className="text-white block sm:inline">Automatizá el 80% de las tareas de tu Recursos Humanos</span>
             <span className="hidden sm:inline"> </span>
-            <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">con un dispositivo biometrico de RRHH 100% hondureño</span>
+            <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">con un dispositivo biométrico de RRHH para tu operación local</span>
           </h2>
         </div>
 

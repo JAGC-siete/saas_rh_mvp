@@ -76,7 +76,7 @@ export default function AfiliadosPage() {
             Conviértete en Afiliado de Humano SISU
           </h1>
           <p className="text-lg text-gray-400 max-w-2xl mx-auto mb-6">
-            Gana comisiones recurrentes por cada cliente que refieras. Ayúdanos a llevar la mejor solución de RRHH a más empresas en Honduras.
+            Gana comisiones recurrentes por cada cliente que refieras. Ayúdanos a llevar la mejor solución de RRHH a más empresas en la región.
           </p>
         </section>
 

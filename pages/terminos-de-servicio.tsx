@@ -35,7 +35,7 @@ export default function TerminosDeServicio() {
               <h2 className="text-2xl font-semibold text-white mb-4">1) Quién ofrece el servicio</h2>
               <p className="text-slate-300">
                 <strong>Humano SISU</strong> es un software de gestión de recursos humanos y nómina orientado a empresas en{' '}
-                <strong>Honduras</strong>. Contacto:{' '}
+                <strong>El Salvador, Guatemala y Honduras</strong>. Contacto:{' '}
                 <strong>jorgearturo@humanosisu.net</strong> | <strong>504 32226773</strong> (WhatsApp).
               </p>
             </section>
@@ -61,7 +61,7 @@ export default function TerminosDeServicio() {
               <h2 className="text-2xl font-semibold text-white mb-4">4) Exactitud y cumplimiento normativo</h2>
               <p className="text-slate-300 mb-4">
                 El software incorpora cálculos y flujos orientados a la normativa laboral y fiscal aplicable en
-                Honduras según la configuración de tu empresa. La responsabilidad final sobre planillas,
+                la normativa del país configurado en tu empresa (El Salvador, Guatemala u Honduras). La responsabilidad final sobre planillas,
                 declaraciones y obligaciones ante autoridades sigue siendo de la empresa titular de los datos.
               </p>
             </section>

@@ -107,7 +107,7 @@ const DemoFooter: React.FC = () => {
               Gestión de Recursos Humanos 100% digital, legal y sin complicaciones. Hecho para PYMEs.
             </p>
             <div className="text-sm text-gray-500">
-              <p>© 2026 Humano SISU. Sistema hondureño de recursos humanos.</p>
+              <p>© 2026 Humano SISU. Nómina y RRHH para El Salvador, Guatemala y Honduras.</p>
             </div>
           </div>
         </div>

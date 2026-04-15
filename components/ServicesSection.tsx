@@ -95,7 +95,7 @@ export default function ServicesSection() {
             </div>
 
             <ul className="mt-3 sm:mt-4 space-y-2 sm:space-y-3">
-              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>Cálculo legal automático (Honduras)</span></li>
+              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>Cálculo legal automático según tu país</span></li>
               <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>4 horas → 4 minutos</span></li>
               <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>Distribución Automatizada de recibos de pago</span></li>
             </ul>
@@ -110,7 +110,7 @@ export default function ServicesSection() {
               </div>
               <div className="min-w-0 flex-1">
                 <h3 className="text-lg sm:text-xl font-bold text-white">Cálculo automático</h3>
-                <p className="text-xs sm:text-sm text-brand-300/90">IHSS, RAP, ISR automáticos según ley hondureña</p>
+                <p className="text-xs sm:text-sm text-brand-300/90">IHSS, RAP, ISR automáticos según normativa local</p>
               </div>
             </div>
 

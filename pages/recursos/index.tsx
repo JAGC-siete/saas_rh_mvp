@@ -32,7 +32,7 @@ export default function RecursosIndex({ items }: RecursosIndexProps) {
         <meta property="og:description" content={pageDescription} />
         <meta property="og:url" content="https://humanosisu.net/recursos" />
         <link rel="canonical" href="https://humanosisu.net/recursos" />
-        <meta name="keywords" content="automatización RH Honduras, nómina, artículos, recursos, MIPYMES" />
+        <meta name="keywords" content="automatización RH regional, nómina local, artículos, recursos, MIPYMES" />
       </Head>
       <SchemaMarkup schema={webPageSchema} />
 

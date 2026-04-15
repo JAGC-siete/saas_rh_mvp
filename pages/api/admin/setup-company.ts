@@ -1,5 +1,11 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient } from '../../../lib/supabase/server'
+import {
+  currencyForCountryCode,
+  ianaTimezoneForCountryCode,
+  isCountryCode,
+  type CountryCode,
+} from '../../../lib/country/supported'
 import { requireSuperAdmin } from '../../../lib/auth/api-auth-fixed'
 import { logger } from '../../../lib/logger'
 import { createSecureErrorResponse } from '../../../lib/security/error-handling'
@@ -120,14 +126,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // 2. Create company
     const rawCc = (companyData.country_code || 'HND').toUpperCase()
-    const countryCode = ['HND', 'SLV', 'GTM'].includes(rawCc) ? rawCc : 'HND'
-
-    const defaultTz =
-      countryCode === 'SLV'
-        ? 'America/El_Salvador'
-        : countryCode === 'GTM'
-          ? 'America/Guatemala'
-          : 'America/Tegucigalpa'
+    const countryCode: CountryCode = isCountryCode(rawCc) ? rawCc : 'HND'
+    const defaultTz = ianaTimezoneForCountryCode(countryCode)
 
     const { data: company, error: companyError } = await adminClient
       .from('companies')
@@ -139,7 +139,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         country_code: countryCode,
         timezone: defaultTz,
         settings: {
-          currency: countryCode === 'SLV' ? 'USD' : countryCode === 'GTM' ? 'GTQ' : 'HNL',
+          currency: currencyForCountryCode(countryCode),
           timezone: defaultTz,
           language: 'es',
           ...companyData.settings

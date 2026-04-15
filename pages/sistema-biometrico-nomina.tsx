@@ -81,7 +81,7 @@ export default function SistemaBiometricoNominaPage() {
         <meta property="og:description" content={pageDescription} />
         <meta property="og:url" content="https://humanosisu.net/sistema-biometrico-nomina" />
         <link rel="canonical" href="https://humanosisu.net/sistema-biometrico-nomina" />
-        <meta name="keywords" content="sistema biométrico con nómina, control asistencia biométrico Honduras, biométrico integrado nómina, sistema asistencia nómina Honduras" />
+        <meta name="keywords" content="sistema biométrico con nómina, control asistencia biométrico, biométrico integrado nómina, asistencia nómina El Salvador Guatemala Honduras" />
       </Head>
       <SchemaMarkup schema={[webPageSchema, softwareSchema]} />
 
@@ -113,7 +113,7 @@ export default function SistemaBiometricoNominaPage() {
               <span className="text-brand-300 block text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl mt-2 sm:mt-1">Sin cálculos manuales, sin errores.</span>
             </h1>
             <p className="text-lg sm:text-xl text-brand-200/90 max-w-3xl mx-auto mt-4 sm:mt-6">
-              Integra tus biométricos con nuestro software 100% hondureño. Automatiza el cálculo de IHSS, RAP e ISR mientras tu equipo se enfoca en crecer.
+              Integra tus biométricos con nuestro software regional. Automatiza deducciones y nómina local mientras tu equipo se enfoca en crecer.
             </p>
           </div>
 

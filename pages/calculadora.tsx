@@ -12,11 +12,12 @@ const CloudBackground = dynamic(() => import('../components/CloudBackground'), {
 
 export default function CalculadoraHubPage() {
   const pageTitle = generateTitle({
-    primaryKeyword: 'Calculadoras laborales gratis Honduras',
+    primaryKeyword: 'Calculadoras laborales gratis (norma local)',
     secondaryKeywords: 'Deducciones e indemnización',
   })
   const pageDescription = generateDescription({
-    valueProposition: 'Calcula deducciones del salario (IHSS, RAP, ISR) y prestaciones laborales (cesantía, preaviso, vacaciones, 13vo y 14vo) en Honduras',
+    valueProposition:
+      'Calcula deducciones (IHSS, RAP, ISR) y prestaciones según las calculadoras locales; el producto Humano SISU cubre El Salvador, Guatemala y Honduras',
     cta: 'Usa la calculadora gratis',
     additionalBenefit: 'sin hojas de cálculo, sin cálculos manuales',
   })
@@ -34,7 +35,7 @@ export default function CalculadoraHubPage() {
         <meta name="description" content={pageDescription} />
         <meta
           name="keywords"
-          content="calculadora deducciones Honduras, IHSS RAP ISR, calculadora prestaciones Honduras, cesantía preaviso vacaciones, 13vo 14vo"
+          content="calculadora deducciones, IHSS RAP ISR Honduras, calculadora prestaciones, cesantía preaviso vacaciones, 13vo 14vo, nómina regional"
         />
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDescription} />
@@ -52,14 +53,14 @@ export default function CalculadoraHubPage() {
               Herramientas gratuitas
             </span>
             <span className="px-3 py-1 bg-blue-500/20 text-blue-200 text-xs rounded-full border border-blue-500/30">
-              Honduras · Leyes vigentes
+              Norma local vigente (ej. HN)
             </span>
             <span className="px-3 py-1 bg-purple-500/20 text-purple-200 text-xs rounded-full border border-purple-500/30">
               Sin hojas de cálculo
             </span>
           </div>
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 leading-tight">
-            <span className="text-white block">Calculadoras laborales gratuitas de Honduras</span>
+            <span className="text-white block">Calculadoras laborales gratuitas (norma local)</span>
             <span className="text-brand-300 block mt-2">Deducciones de salario y liquidación por finiquito</span>
           </h1>
           <p className="text-lg sm:text-xl text-brand-200/90 max-w-2xl mx-auto">

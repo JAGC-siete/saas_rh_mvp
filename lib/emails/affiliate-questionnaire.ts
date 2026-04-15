@@ -20,7 +20,7 @@ export async function sendAffiliateQuestionnaireEmail(data: AffiliateQuestionnai
     subject: 'Completa tu cuestionario de afiliación (programa 2026) - Humano SISU',
     text: `¡Hola!
 
-Gracias por tu interés en el programa de afiliados de Humano SISU: comisiones recurrentes por cada cliente que refieras, ayudando a llevar una solución de RRHH a más empresas en Honduras.
+Gracias por tu interés en el programa de afiliados de Humano SISU: comisiones recurrentes por cada cliente que refieras, ayudando a llevar una solución de RRHH a más empresas en la región (El Salvador, Guatemala y Honduras).
 
 Resumen del programa (como en la página de afiliados):
 • Estructura de comisiones 2026: 10% por tu primer negocio cerrado; +1% por cada nuevo negocio hasta un tope del 20%. El nivel que alcances se mantiene fijo durante todo 2026.
@@ -54,7 +54,7 @@ El equipo de Humano SISU`,
           
           <p style="color: #666; line-height: 1.6;">
             Este correo es el siguiente paso para unirte al <strong>programa de afiliados de Humano SISU</strong>:
-            comisiones recurrentes por cada cliente que refieras, para llevar una solución de RRHH a más empresas en Honduras.
+            comisiones recurrentes por cada cliente que refieras, para llevar una solución de RRHH a más empresas en El Salvador, Guatemala y Honduras.
           </p>
           
           <p style="color: #666; line-height: 1.6;">

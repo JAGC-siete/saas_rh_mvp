@@ -15,7 +15,7 @@ const badgeColors = {
 
 const defaultBadges: TrustBadge[] = [
   {
-    text: '100% Hondureño',
+    text: 'Cobertura regional (SV, GT, HN)',
     icon: '🇭🇳',
     color: 'green'
   },

@@ -307,11 +307,12 @@ export default function CalculadoraPrestacionesPage() {
   }
 
   const pageTitle = generateTitle({
-    primaryKeyword: 'Calculadora de prestaciones Honduras',
+    primaryKeyword: 'Calculadora de prestaciones (Honduras)',
     secondaryKeywords: 'Cesantía, preaviso, vacaciones, 13vo, 14vo',
   })
   const pageDescription = generateDescription({
-    valueProposition: 'Calcula tu liquidación laboral en Honduras: cesantía, preaviso, vacaciones y proporcionales de 13vo y 14vo',
+    valueProposition:
+      'Calcula tu liquidación laboral según norma local (esta versión Honduras): cesantía, preaviso, vacaciones y proporcionales de 13vo y 14vo',
     cta: 'Calcula gratis',
     additionalBenefit: 'resultado claro y desglose por concepto',
   })
@@ -376,7 +377,7 @@ export default function CalculadoraPrestacionesPage() {
         <meta name="description" content={pageDescription} />
         <meta
           name="keywords"
-          content="calculadora prestaciones Honduras, calculadora cesantía Honduras, finiquito Honduras, preaviso vacaciones aguinaldo 14vo"
+          content="calculadora prestaciones, cesantía, finiquito, preaviso vacaciones aguinaldo 14vo, norma local Honduras"
         />
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDescription} />
@@ -394,7 +395,7 @@ export default function CalculadoraPrestacionesPage() {
               Liquidación por finiquito
             </span>
             <span className="px-3 py-1 bg-blue-500/20 text-blue-300 text-xs rounded-full border border-blue-500/30">
-              Honduras · Año comercial 360
+              Norma local (HN) · Año comercial 360
             </span>
             <span className="px-3 py-1 bg-purple-500/20 text-purple-300 text-xs rounded-full border border-purple-500/30">
               Desglose por concepto
@@ -402,7 +403,7 @@ export default function CalculadoraPrestacionesPage() {
           </div>
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 leading-tight">
             <span className="text-white block">Calculadora de prestaciones laborales</span>
-            <span className="text-brand-300 block sm:inline mt-2 sm:mt-1">Honduras</span>
+            <span className="text-brand-300 block sm:inline mt-2 sm:mt-1">Ley laboral local (Honduras)</span>
           </h1>
           <p className="text-lg sm:text-xl text-brand-200/90 max-w-2xl mx-auto">
             Calcula una estimación de tu liquidación: cesantía, preaviso, vacaciones y proporcionales de 13vo y 14vo.

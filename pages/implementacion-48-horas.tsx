@@ -37,7 +37,7 @@ export default function Implementacion48HorasPage() {
     {
       time: 'Hora 8-24',
       title: 'Configuración de nómina',
-      description: 'Configuramos deducciones IHSS, RAP, ISR según tus necesidades. Todo preconfigurado para Honduras.',
+      description: 'Configuramos deducciones y nómina según tu país (El Salvador, Guatemala u Honduras). Preconfiguración local.',
       icon: '💰'
     },
     {
@@ -97,7 +97,7 @@ export default function Implementacion48HorasPage() {
         <meta property="og:description" content={pageDescription} />
         <meta property="og:url" content="https://humanosisu.net/implementacion-48-horas" />
         <link rel="canonical" href="https://humanosisu.net/implementacion-48-horas" />
-        <meta name="keywords" content="implementación nómina 48 horas, sistema nómina rápido Honduras, implementación rápida nómina, setup nómina rápido" />
+        <meta name="keywords" content="implementación nómina express, sistema nómina rápido regional, implementación rápida nómina, setup nómina El Salvador Guatemala Honduras" />
       </Head>
       <SchemaMarkup schema={webPageSchema} />
 

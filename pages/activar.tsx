@@ -7,6 +7,8 @@ import { TRIAL_CONFIG } from '../lib/config/trial'
 import { motion } from 'framer-motion'
 import MainHeader from '../components/MainHeader'
 import { trackActivationFormSubmit, initGoogleAdsTracking } from '../lib/analytics/googleAds'
+import type { CountryCode } from '../lib/country/supported'
+import { isCountryCode, isValidLocalMobileForCountry } from '../lib/country/supported'
 
 interface FormData {
   empleados: number
@@ -16,6 +18,7 @@ interface FormData {
   contactoEmail: string
   departamentos: number
   aceptaTrial: boolean
+  countryCode: CountryCode
 }
 
 interface ValidationErrors {
@@ -24,7 +27,66 @@ interface ValidationErrors {
   departamentos?: string
   contactoWhatsApp?: string
   empleados?: string
+  countryCode?: string
   submit?: string
+}
+
+function whatsAppFormatHint(cc: CountryCode): string {
+  if (cc === 'SLV') return '+503 y 8 dígitos locales'
+  if (cc === 'GTM') return '+502 y 8 dígitos locales'
+  return '+504 y 8 dígitos locales'
+}
+
+function whatsappPlaceholderForCountry(cc: CountryCode): string {
+  if (cc === 'SLV') return '+503 9999-9999'
+  if (cc === 'GTM') return '+502 9999-9999'
+  return '+504 9999-9999'
+}
+
+/** Validación completa del formulario (una sola fuente de verdad para submit y validación en vivo). */
+function computeActivarErrors(fd: FormData): ValidationErrors {
+  const e: ValidationErrors = {}
+
+  const vEmail = fd.contactoEmail.trim()
+  if (!vEmail) {
+    e.contactoEmail = '✉️ Este campo es obligatorio. Necesitamos tu email para enviarte las credenciales de acceso.'
+  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(vEmail)) {
+    e.contactoEmail = '✉️ El formato del email no es válido. Ejemplo: nombre@empresa.com'
+  }
+
+  const vEmpresa = fd.empresa.trim()
+  if (!vEmpresa) {
+    e.empresa = '🏢 Este campo es obligatorio. Ingresa el nombre de tu empresa.'
+  } else if (vEmpresa.length < 2) {
+    e.empresa = '🏢 El nombre de la empresa debe tener al menos 2 caracteres.'
+  } else if (vEmpresa.length > 100) {
+    e.empresa = '🏢 El nombre de la empresa no puede tener más de 100 caracteres.'
+  }
+
+  if (fd.departamentos < 1) {
+    e.departamentos = '🏢 Debe haber al menos 1 departamento.'
+  } else if (fd.departamentos > TRIAL_CONFIG.MAX_DEPARTMENTS) {
+    e.departamentos = `🏢 El número máximo de departamentos es ${TRIAL_CONFIG.MAX_DEPARTMENTS}.`
+  }
+
+  if (fd.empleados < TRIAL_CONFIG.MIN_EMPLOYEES) {
+    e.empleados = `👥 Debe haber al menos ${TRIAL_CONFIG.MIN_EMPLOYEES} empleado.`
+  } else if (fd.empleados > TRIAL_CONFIG.MAX_EMPLOYEES) {
+    e.empleados = `👥 El número máximo de empleados es ${TRIAL_CONFIG.MAX_EMPLOYEES}.`
+  }
+
+  if (!isCountryCode(fd.countryCode)) {
+    e.countryCode = '🌎 Seleccioná el país donde opera tu empresa (define zona horaria, moneda y reglas de nómina).'
+  }
+
+  const wa = fd.contactoWhatsApp.trim()
+  if (wa && isCountryCode(fd.countryCode)) {
+    if (!isValidLocalMobileForCountry(fd.contactoWhatsApp, fd.countryCode)) {
+      e.contactoWhatsApp = `📱 Formato inválido para el país seleccionado. Usá ${whatsAppFormatHint(fd.countryCode)}.`
+    }
+  }
+
+  return e
 }
 
 export default function ActivarPage() {
@@ -38,7 +100,8 @@ export default function ActivarPage() {
     contactoWhatsApp: '',
     contactoEmail: '',
     departamentos: 1,
-    aceptaTrial: true
+    aceptaTrial: true,
+    countryCode: 'HND',
   })
 
   // Initialize Google Ads tracking on mount
@@ -49,108 +112,33 @@ export default function ActivarPage() {
   const handleEmpleadosChange = (value: number) => {
     const newValue = Math.max(TRIAL_CONFIG.MIN_EMPLOYEES, Math.min(TRIAL_CONFIG.MAX_EMPLOYEES, value))
     setFormData(prev => ({ ...prev, empleados: newValue }))
-    validateField('empleados', newValue)
+    setErrors(computeActivarErrors({ ...formData, empleados: newValue }))
   }
 
   const handleDepartamentosChange = (value: number) => {
     const newValue = Math.max(TRIAL_CONFIG.MIN_DEPARTMENTS, Math.min(TRIAL_CONFIG.MAX_DEPARTMENTS, value))
     setFormData(prev => ({ ...prev, departamentos: newValue }))
-    validateField('departamentos', newValue)
-  }
-
-  const validateField = (field: keyof FormData, value: string | boolean | number) => {
-    const newErrors = { ...errors }
-    switch (field) {
-      case 'contactoEmail': {
-        const v = (typeof value === 'string' ? value : '').trim()
-        if (!v) {
-          newErrors.contactoEmail = '✉️ Este campo es obligatorio. Necesitamos tu email para enviarte las credenciales de acceso.'
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) {
-          newErrors.contactoEmail = '✉️ El formato del email no es válido. Ejemplo: nombre@empresa.com'
-        } else {
-          delete newErrors.contactoEmail
-        }
-        break
-      }
-      case 'empresa': {
-        const v = (typeof value === 'string' ? value : '').trim()
-        if (!v) {
-          newErrors.empresa = '🏢 Este campo es obligatorio. Ingresa el nombre de tu empresa.'
-        } else if (v.length < 2) {
-          newErrors.empresa = '🏢 El nombre de la empresa debe tener al menos 2 caracteres.'
-        } else if (v.length > 100) {
-          newErrors.empresa = '🏢 El nombre de la empresa no puede tener más de 100 caracteres.'
-        } else {
-          delete newErrors.empresa
-        }
-        break
-      }
-      case 'departamentos': {
-        const v = typeof value === 'number' ? value : 1
-        if (v < 1) {
-          newErrors.departamentos = '🏢 Debe haber al menos 1 departamento.'
-        } else if (v > TRIAL_CONFIG.MAX_DEPARTMENTS) {
-          newErrors.departamentos = `🏢 El número máximo de departamentos es ${TRIAL_CONFIG.MAX_DEPARTMENTS}.`
-        } else {
-          delete newErrors.departamentos
-        }
-        break
-      }
-      case 'empleados': {
-        const v = typeof value === 'number' ? value : 1
-        if (v < TRIAL_CONFIG.MIN_EMPLOYEES) {
-          newErrors.empleados = `👥 Debe haber al menos ${TRIAL_CONFIG.MIN_EMPLOYEES} empleado.`
-        } else if (v > TRIAL_CONFIG.MAX_EMPLOYEES) {
-          newErrors.empleados = `👥 El número máximo de empleados es ${TRIAL_CONFIG.MAX_EMPLOYEES}.`
-        } else {
-          delete newErrors.empleados
-        }
-        break
-      }
-      case 'contactoWhatsApp': {
-        const v = (typeof value === 'string' ? value : '').trim()
-        if (v && v.length > 0) {
-          const whatsappRegex = /^(\+504|504)?[0-9]{8}$/
-          const cleaned = v.replace(/[-\s]/g, '')
-          if (!whatsappRegex.test(cleaned)) {
-            newErrors.contactoWhatsApp = '📱 Formato inválido. Usa: 9999-9999 o +50499999999'
-          } else {
-            delete newErrors.contactoWhatsApp
-          }
-        } else {
-          delete newErrors.contactoWhatsApp
-        }
-        break
-      }
-    }
-    setErrors(newErrors)
-    return newErrors
+    setErrors(computeActivarErrors({ ...formData, departamentos: newValue }))
   }
 
   const handleInputChange = (field: keyof FormData, value: string | boolean | number) => {
+    const fd = { ...formData, [field]: value } as FormData
     setFormData(prev => ({ ...prev, [field]: value }))
-    // Validar en tiempo real para campos requeridos
-    if (field === 'contactoEmail' || field === 'empresa' || field === 'departamentos' || field === 'empleados' || field === 'contactoWhatsApp') {
-      validateField(field, value)
+
+    if (field === 'nombre' || field === 'aceptaTrial') {
+      setErrors(prev => (prev.submit ? { ...prev, submit: undefined } : prev))
+      return
     }
-    // Limpiar error de submit cuando el usuario empieza a escribir
-    if (errors.submit) {
-      setErrors(prev => ({ ...prev, submit: undefined }))
-    }
+
+    setErrors(prev => {
+      const next = computeActivarErrors(fd)
+      return prev.submit ? { ...next, submit: undefined } : next
+    })
   }
 
   const handleSubmit = async () => {
-    // Limpiar errores previos
-    setErrors({})
-    
-    // Validar todos los campos requeridos
-    const emailErrors = validateField('contactoEmail', formData.contactoEmail)
-    const empresaErrors = validateField('empresa', formData.empresa)
-    const deptErrors = validateField('departamentos', formData.departamentos)
-    const empleadosErrors = validateField('empleados', formData.empleados)
-    const whatsappErrors = formData.contactoWhatsApp ? validateField('contactoWhatsApp', formData.contactoWhatsApp) : {}
-    const allErrors = { ...emailErrors, ...empresaErrors, ...deptErrors, ...empleadosErrors, ...whatsappErrors }
-    
+    const allErrors = computeActivarErrors(formData)
+
     if (Object.keys(allErrors).length > 0) {
       setErrors(allErrors)
       // Scroll al primer error
@@ -175,7 +163,8 @@ export default function ActivarPage() {
         contactoWhatsApp: formData.contactoWhatsApp?.trim() || '',
         contactoEmail: formData.contactoEmail.trim(),
         departamentos: formData.departamentos,
-        aceptaTrial: formData.aceptaTrial || false
+        aceptaTrial: formData.aceptaTrial || false,
+        countryCode: formData.countryCode,
       }
 
       const response = await fetch('/api/activar', {
@@ -325,7 +314,7 @@ export default function ActivarPage() {
                   Control de asistencia y nómina en un solo lugar: Sin cálculos manuales, sin errores.
                 </h1>
                 <p className="text-lg md:text-xl text-cyan-100/90 mb-6 lg:mb-8">
-                  Integra tus biométricos con nuestro software 100% hondureño. Automatiza el cálculo de IHSS, RAP e ISR mientras tu equipo se enfoca en crecer. Activa en segundos, sin tarjeta.
+                  Integra tus biométricos con nuestro software regional. Automatiza deducciones y nómina local mientras tu equipo se enfoca en crecer. Activa en segundos, sin tarjeta.
                 </p>
                 {/* Feature pills - alineados con mensajes ganadores de Google Ads */}
                 <div className="flex flex-wrap justify-center lg:justify-start gap-2 mb-6 lg:mb-8">
@@ -333,7 +322,7 @@ export default function ActivarPage() {
                     IHSS, RAP e ISR automático
                   </span>
                   <span className="px-3 py-1 bg-blue-500/20 text-blue-300 text-xs sm:text-sm rounded-full border border-blue-500/30">
-                    100% hondureño · Soporte local
+                    SV, GT y HN · Soporte local
                   </span>
                   <span className="px-3 py-1 bg-purple-500/20 text-purple-300 text-xs sm:text-sm rounded-full border border-purple-500/30">
                     Del biométrico al comprobante en segundos
@@ -353,7 +342,7 @@ export default function ActivarPage() {
                   <span className="text-cyan-400">⚡</span>
                   Información mínima necesaria
                 </CardTitle>
-                <p className="text-cyan-100/80 text-sm leading-relaxed mb-6">Olvida las hojas de cálculo. Con esta información crearemos tu empresa, departamentos, horarios y empleados de prueba. Tu entorno con deducciones de ley (IHSS, RAP, INFOP) listo en minutos.</p>
+                <p className="text-cyan-100/80 text-sm leading-relaxed mb-6">Olvida las hojas de cálculo. Con esta información crearemos tu empresa, departamentos, horarios y empleados de prueba. Elegís el país y el trial queda con zona horaria, moneda y reglas de nómina alineadas a esa jurisdicción.</p>
               </div>
 
               <div className="space-y-6">
@@ -377,6 +366,37 @@ export default function ActivarPage() {
                   )}
                 </div>
 
+                {/* País de operación — enlaza companies.country_code y motor regional */}
+                <div>
+                  <label htmlFor="activar-country" className="block text-white font-medium mb-2">
+                    País de operación *
+                  </label>
+                  <select
+                    id="activar-country"
+                    name="countryCode"
+                    value={formData.countryCode}
+                    onChange={(e) => {
+                      const v = e.target.value
+                      if (!isCountryCode(v)) return
+                      handleInputChange('countryCode', v)
+                    }}
+                    className={`w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border text-white focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all ${
+                      errors.countryCode ? 'border-red-500/50 bg-red-500/5' : 'border-white/20'
+                    } hover:border-cyan-400/30 hover:bg-white/10`}
+                  >
+                    <option value="HND">Honduras</option>
+                    <option value="SLV">El Salvador</option>
+                    <option value="GTM">Guatemala</option>
+                  </select>
+                  {errors.countryCode ? (
+                    <p className="text-red-400 text-sm mt-2 font-medium">{errors.countryCode}</p>
+                  ) : (
+                    <p className="text-brand-400 text-sm mt-2">
+                      Define moneda, huso horario y reglas de planilla para el entorno de prueba.
+                    </p>
+                  )}
+                </div>
+
                 {/* Contact Name */}
                 <div>
                   <label className="block text-white font-medium mb-2">Tu nombre</label>
@@ -395,19 +415,22 @@ export default function ActivarPage() {
                   <label className="block text-white font-medium mb-2">WhatsApp</label>
                   <input
                     type="tel"
+                    name="contactoWhatsApp"
                     value={formData.contactoWhatsApp}
                     onChange={(e) => handleInputChange('contactoWhatsApp', e.target.value)}
                     className={`w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all ${
                       errors.contactoWhatsApp ? 'border-red-500/50 bg-red-500/5' : 'border-white/20'
                     } hover:border-cyan-400/30 hover:bg-white/10`}
-                    placeholder="+504 9999-9999"
+                    placeholder={whatsappPlaceholderForCountry(formData.countryCode)}
                   />
                   {errors.contactoWhatsApp ? (
                     <p className="text-red-400 text-sm mt-2 font-medium flex items-center">
                       {errors.contactoWhatsApp}
                     </p>
                   ) : (
-                    <p className="text-brand-400 text-sm mt-2">Formato: +504 9999-9999 (opcional)</p>
+                    <p className="text-brand-400 text-sm mt-2">
+                      Formato según país: {whatsAppFormatHint(formData.countryCode)} (opcional)
+                    </p>
                   )}
                 </div>
 
@@ -558,7 +581,7 @@ export default function ActivarPage() {
                 
                 {!errors.submit && (
                   <p className="text-brand-400 text-xs text-center">
-                    Activación inmediata. Recibirás credenciales por email. Tu entorno incluye empleados de prueba, departamentos y nómina con IHSS, RAP e ISR ya calculados. Sin compromiso. Soporte en Honduras.
+                    Activación inmediata. Recibirás credenciales por email. Tu entorno incluye empleados de prueba, departamentos y nómina con deducciones locales ya configuradas. Sin compromiso. Soporte en la región.
                   </p>
                 )}
               </div>

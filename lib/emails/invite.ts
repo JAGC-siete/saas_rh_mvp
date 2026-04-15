@@ -28,7 +28,7 @@ export async function sendInviteEmail(data: InviteEmailData) {
 
 Has sido invitado a unirte a ${data.companyName} en Humano SISU como ${roleDisplayNames[data.role as keyof typeof roleDisplayNames] || data.role}.
 
-Humano SISU es el sistema de recursos humanos más completo para empresas en Honduras.
+Humano SISU es el sistema de recursos humanos más completo para empresas en El Salvador, Guatemala y Honduras.
 
 Para aceptar la invitación, haz clic en el siguiente enlace:
 ${data.inviteUrl}
