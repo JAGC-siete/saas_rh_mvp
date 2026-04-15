@@ -211,7 +211,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // ✅ Solo redirigir si estamos en el cliente y tenemos window
         if (isClient && typeof window !== 'undefined') {
           if (event === 'SIGNED_IN' && window.location.pathname === '/app/login') {
-            window.location.href = '/dashboard' // ✅ Compatible con Edge Runtime
+            // Decide redirect using the user object stored on login response.
+            // Security is enforced server-side; this is UX only.
+            let redirectTo = '/app/dashboard'
+            try {
+              const raw = localStorage.getItem('user')
+              if (raw) {
+                const u = JSON.parse(raw)
+                const role = String(u?.role || '').trim().toLowerCase()
+                const companyId = u?.company_id || null
+                if (role === 'super_admin') redirectTo = '/app/admin'
+                else if (!companyId) redirectTo = '/onboarding'
+              }
+            } catch {
+              // ignore parse errors; fallback redirect applies
+            }
+
+            window.location.href = redirectTo // ✅ Compatible con Edge Runtime
           } else if (event === 'SIGNED_OUT' && window.location.pathname !== '/app/login' && window.location.pathname !== '/') {
             window.location.href = '/app/login' // ✅ Compatible con Edge Runtime
           }
