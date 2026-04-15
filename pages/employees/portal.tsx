@@ -30,6 +30,7 @@ import { clientLogger } from '../../lib/logger-client'
 import EmployeePermissionForm from '../../components/employee-portal/EmployeePermissionForm'
 import EmployeePermissionHistory from '../../components/employee-portal/EmployeePermissionHistory'
 import { formatTimeDisplay, parseDateOnlyAsHonduras, formatDateOnlyForHonduras, HONDURAS_TIMEZONE } from '../../lib/timezone'
+import NotificationBell from '../../components/ui/NotificationBell'
 
 // Component for attendance records list
 function AttendanceRecordsList({ employeeId }: { employeeId?: string }) {
@@ -837,6 +838,7 @@ export default function EmployeePortal() {
             </div>
             
             <div className="flex items-center space-x-4">
+              <NotificationBell className="hidden sm:block" />
               <div className="text-right">
                 <p className="text-sm font-medium text-white">{user?.user_metadata?.full_name || 'Empleado'}</p>
                 <p className="text-xs text-gray-300">{user?.user_metadata?.role || 'employee'}</p>

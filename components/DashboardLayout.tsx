@@ -288,7 +288,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className="flex flex-col h-full">
           {/* Header (sin logo) */}
           <div className="flex items-center justify-between h-16 px-4 border-b border-white/10">
-            <NotificationBell />
+            <div className="text-sm font-semibold text-white/90">
+              {sidebarOpen ? 'SISU' : 'S'}
+            </div>
             <Button
               variant="ghost"
               size="sm"
@@ -384,6 +386,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Main content */}
       <div className="flex-1 overflow-auto">
+        <div className="sticky top-0 z-40 border-b border-white/10 bg-black/20 backdrop-blur-md">
+          <div className="h-16 px-4 flex items-center justify-end">
+            <NotificationBell />
+          </div>
+        </div>
         <main className="h-full">
           {children}
         </main>
