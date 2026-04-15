@@ -25,10 +25,13 @@ export default function LoginExisting() {
     setError('')
 
     try {
+      const normalizedEmail = email.trim().toLowerCase()
+      const normalizedPassword = password.replace(/[\u0009\u000A\u000D\u00A0\u200B\u200C\u200D\uFEFF]/g, '')
+
       const response = await fetch('/api/auth/login-supabase', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email: normalizedEmail, password: normalizedPassword })
       })
 
       if (!response.ok) {

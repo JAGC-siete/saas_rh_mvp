@@ -29,23 +29,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
   try {
     const { email, password }: LoginRequest = req.body
+    const normalizedEmail = (email ?? '').trim().toLowerCase()
+    // Passwords can legitimately contain spaces; only trim common copy/paste whitespace.
+    const normalizedPassword = (password ?? '').replace(/[\u0009\u000A\u000D\u00A0\u200B\u200C\u200D\uFEFF]/g, '')
 
     // Validación de entrada
-    if (!email || !password) {
+    if (!normalizedEmail || !normalizedPassword) {
       return res.status(400).json({ 
         success: false, 
         error: 'Email y contraseña son requeridos' 
       })
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
       return res.status(400).json({ 
         success: false, 
         error: 'Email inválido' 
       })
     }
 
-    if (!enforceAuthRateLimits(req, res, 'auth_login', email)) {
+    if (!enforceAuthRateLimits(req, res, 'auth_login', normalizedEmail)) {
       return
     }
 
@@ -53,8 +56,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     
     // Intentar login con Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email: email,
-      password: password
+      email: normalizedEmail,
+      password: normalizedPassword
     })
 
     // CRITICAL: Wait for cookies to be set before proceeding
@@ -62,7 +65,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     await new Promise(resolve => setTimeout(resolve, 100))
 
     if (authError || !authData.user) {
-      logger.warn('Login failed', { email, error: authError?.message })
+      logger.warn('Login failed', { email: normalizedEmail, error: authError?.message })
       return res.status(401).json({
         success: false,
         error: 'Credenciales inválidas'
@@ -104,7 +107,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       if (!profileError && userProfile) {
         const normalizedRole = (userProfile.role || '').trim().toLowerCase()
         // Admin roles include: super_admin, company_admin, hr_manager
-        const adminRoles = ['super_admin', 'admin', 'company_admin', 'hr_manager']
+        const adminRoles = ['super_admin', 'admin', 'company_admin', 'hr_manager', 'manager']
         if (adminRoles.includes(normalizedRole)) {
           userType = 'admin'
           hasValidAccess = true
@@ -141,7 +144,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       
       // VERBOSE LOGGING: Log complete context for debugging
       logger.error('User login successful but no valid access permissions', { 
-        email, 
+        email: normalizedEmail, 
         userId: authData.user.id,
         userMetadata,
         userType,
@@ -156,7 +159,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     }
 
     logger.info(`${userType} login successful`, {
-      email,
+      email: normalizedEmail,
       userId: authData.user.id,
       userType,
       employeeId: userMetadata?.employee_id || null
@@ -177,7 +180,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       
       logger.info('User profile retrieved for response', {
         userId: authData.user.id,
-        email,
+        email: normalizedEmail,
         companyId: profile?.company_id,
         role: normalizedRole
       })
@@ -195,7 +198,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     if (!sessionResult.success) {
       logger.warn('Failed to create session record', {
         userId: authData.user.id,
-        email
+        email: normalizedEmail
       })
       // Continue anyway - don't block login, but idle timeout won't work
     }
