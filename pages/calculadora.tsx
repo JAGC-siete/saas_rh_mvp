@@ -38,8 +38,8 @@ export default function CalculadoraHubPage() {
         />
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDescription} />
-        <meta property="og:url" content="https://humano-sisu.com/calculadora" />
-        <link rel="canonical" href="https://humano-sisu.com/calculadora" />
+        <meta property="og:url" content="https://humanosisu.net/calculadora" />
+        <link rel="canonical" href="https://humanosisu.net/calculadora" />
       </Head>
       <SchemaMarkup schema={webPageSchema} />
 

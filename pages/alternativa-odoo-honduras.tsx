@@ -72,8 +72,8 @@ export default function AlternativaOdooPage() {
         <meta name="description" content={pageDescription} />
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDescription} />
-        <meta property="og:url" content="https://humano-sisu.com/alternativa-odoo-honduras" />
-        <link rel="canonical" href="https://humano-sisu.com/alternativa-odoo-honduras" />
+        <meta property="og:url" content="https://humanosisu.net/alternativa-odoo-honduras" />
+        <link rel="canonical" href="https://humanosisu.net/alternativa-odoo-honduras" />
         <meta name="keywords" content="alternativa a Odoo Honduras, Odoo vs sistema nómina Honduras, mejor que Odoo para MIPYMES Honduras, Odoo alternativa, sistema nómina Honduras" />
       </Head>
       <SchemaMarkup schema={webPageSchema} />

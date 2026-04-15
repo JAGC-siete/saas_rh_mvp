@@ -1,15 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '@supabase/supabase-js'
 import { withRateLimit } from '../../../lib/security/rate-limiting'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-if (!supabaseUrl || !supabaseServiceRoleKey) {
-  throw new Error('Supabase URL and service role key are required.')
-}
-
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey)
+import { env } from '../../../lib/env'
 
 export default withRateLimit('general')(handler)
 
@@ -19,6 +11,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   const { token, questionnaireData, termsAccepted } = req.body
+
+  if (!env.NEXT_PUBLIC_SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+    return res.status(503).json({ error: 'Servicio no disponible. Intenta más tarde.' })
+  }
+  const supabaseAdmin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY)
 
   // Validar token
   if (!token || typeof token !== 'string') {

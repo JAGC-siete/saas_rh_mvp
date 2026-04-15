@@ -69,15 +69,15 @@ export default function LandingPage() {
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDescription} />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://humano-sisu.com" />
-        <meta property="og:image" content={`https://humano-sisu.com${ogImage}`} />
+        <meta property="og:url" content="https://humanosisu.net" />
+        <meta property="og:image" content={`https://humanosisu.net${ogImage}`} />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={pageTitle} />
         <meta name="twitter:description" content={pageDescription} />
-        <meta name="twitter:image" content={`https://humano-sisu.com${ogImage}`} />
-        <link rel="canonical" href="https://humano-sisu.com" />
+        <meta name="twitter:image" content={`https://humanosisu.net${ogImage}`} />
+        <link rel="canonical" href="https://humanosisu.net" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
       </Head>

@@ -3,15 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { randomBytes } from 'crypto'
 import { withRateLimit } from '../../../lib/security/rate-limiting'
 import { sendAffiliateQuestionnaireEmail } from '../../../lib/emails/affiliate-questionnaire'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-if (!supabaseUrl || !supabaseServiceRoleKey) {
-  throw new Error('Supabase URL and service role key are required.')
-}
-
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey)
+import { env } from '../../../lib/env'
 
 export default withRateLimit('general')(handler)
 
@@ -21,6 +13,22 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   const { email, source } = req.body
+
+  // Config guardrails: avoid crashing build/runtime if env is missing
+  if (!env.NEXT_PUBLIC_SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+    return res.status(503).json({
+      error: 'Servicio no disponible. Intenta más tarde.',
+      code: 'SERVICE_UNAVAILABLE'
+    })
+  }
+  if (!env.RESEND_API_KEY) {
+    return res.status(503).json({
+      error: 'Servicio de correo no disponible. Intenta más tarde.',
+      code: 'EMAIL_SERVICE_UNAVAILABLE'
+    })
+  }
+
+  const supabaseAdmin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY)
 
   // Validar email
   if (!email || typeof email !== 'string') {
@@ -126,7 +134,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       })
     } catch (emailError) {
       console.warn('Error enviando email de cuestionario:', emailError)
-      // No fallar la request si el email falla, pero loguear
+      return res.status(503).json({
+        error: 'No se pudo enviar el correo con el cuestionario. Intenta más tarde.',
+        code: 'EMAIL_SEND_FAILED'
+      })
     }
 
     // Retornar éxito siempre (por seguridad, no exponer si email existe)

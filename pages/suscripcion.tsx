@@ -17,7 +17,7 @@ export default function SuscripcionPage() {
           content="Una subscripción de correo para personas que trabajan y/o estudian"
         />
         <meta name="robots" content="index, follow" />
-        <link rel="canonical" href="https://humano-sisu.com/suscripcion" />
+        <link rel="canonical" href="https://humanosisu.net/suscripcion" />
       </Head>
 
       {/* Header */}

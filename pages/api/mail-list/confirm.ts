@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../lib/supabase/server'
 import { logger } from '../../../lib/logger'
+import { env } from '../../../lib/env'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -17,6 +18,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net'
   
   // Usar cliente anónimo - RLS permitirá SELECT/UPDATE por token
+  if (!env.NEXT_PUBLIC_SUPABASE_URL || !env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    logger.error('Supabase env missing - cannot confirm mail list', { source: 'mail_list_confirm' })
+    return res.redirect(`${siteUrl}/mail-list/confirm?error=server_error`)
+  }
+
   const supabase = createClient(req, res)
 
   try {

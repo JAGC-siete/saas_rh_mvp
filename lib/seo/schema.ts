@@ -2,7 +2,7 @@
  * Schema.org JSON-LD generators for SEO
  */
 
-const BASE_URL = 'https://humano-sisu.com'
+const BASE_URL = 'https://humanosisu.net'
 
 export interface OrganizationSchema {
   '@context': string

@@ -1,5 +1,5 @@
 # Humano SISU - Robots.txt
-# https://humano-sisu.com/robots.txt
+# https://humanosisu.net/robots.txt
 
 User-agent: *
 Allow: /
@@ -15,7 +15,7 @@ Disallow: /test-client-env
 Disallow: /railway-debug
 
 # Sitemap location
-Sitemap: https://humano-sisu.com/sitemap.xml
+Sitemap: https://humanosisu.net/sitemap.xml
 
 # Crawl-delay (optional, adjust if needed)
 # Crawl-delay: 1

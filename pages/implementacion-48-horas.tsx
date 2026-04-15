@@ -93,8 +93,8 @@ export default function Implementacion48HorasPage() {
         <meta name="description" content={pageDescription} />
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDescription} />
-        <meta property="og:url" content="https://humano-sisu.com/implementacion-48-horas" />
-        <link rel="canonical" href="https://humano-sisu.com/implementacion-48-horas" />
+        <meta property="og:url" content="https://humanosisu.net/implementacion-48-horas" />
+        <link rel="canonical" href="https://humanosisu.net/implementacion-48-horas" />
         <meta name="keywords" content="implementación nómina 48 horas, sistema nómina rápido Honduras, implementación rápida nómina, setup nómina rápido" />
       </Head>
       <SchemaMarkup schema={webPageSchema} />

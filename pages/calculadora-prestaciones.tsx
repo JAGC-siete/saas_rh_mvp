@@ -380,8 +380,8 @@ export default function CalculadoraPrestacionesPage() {
         />
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDescription} />
-        <meta property="og:url" content="https://humano-sisu.com/calculadora-prestaciones" />
-        <link rel="canonical" href="https://humano-sisu.com/calculadora-prestaciones" />
+        <meta property="og:url" content="https://humanosisu.net/calculadora-prestaciones" />
+        <link rel="canonical" href="https://humanosisu.net/calculadora-prestaciones" />
       </Head>
       <SchemaMarkup schema={webPageSchema} />
 

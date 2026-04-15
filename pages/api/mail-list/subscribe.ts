@@ -5,6 +5,7 @@ import { withRateLimit } from '../../../lib/security/rate-limiting'
 import { sendMailListConfirmationEmail } from '../../../lib/emails/mail-list-confirmation'
 import { createSuccessResponse, createErrorResponse, createValidationErrorResponse } from '../../../lib/security/api-responses'
 import { logger } from '../../../lib/logger'
+import { env } from '../../../lib/env'
 
 export default withRateLimit('general')(handler)
 
@@ -14,6 +15,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   const { email, source } = req.body
+
+  if (!env.NEXT_PUBLIC_SUPABASE_URL || !env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    logger.error('Supabase env missing - cannot subscribe mail list', {
+      source: source || 'unknown'
+    })
+    return res.status(503).json(createErrorResponse(
+      'Servicio no disponible. Intenta más tarde.',
+      'SERVICE_UNAVAILABLE'
+    ))
+  }
 
   // Validación estricta de email
   if (!email || typeof email !== 'string') {
@@ -136,7 +147,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         logger.warn('RESEND_API_KEY not configured - confirmation email will not be sent', {
           email: normalizedEmail
         })
-        // Continuar sin fallar la request
+        // En este flujo, sin email no hay confirmación posible. Retornar error.
+        return res.status(503).json(createErrorResponse(
+          'Servicio de correo no disponible. Intenta más tarde.',
+          'EMAIL_SERVICE_UNAVAILABLE'
+        ))
       } else {
         await sendMailListConfirmationEmail({
           to: normalizedEmail,
@@ -152,7 +167,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         errorCode: emailError?.errorCode,
         email: normalizedEmail
       })
-      // No fallar la request si el email falla, pero loguear detalladamente
+      return res.status(503).json(createErrorResponse(
+        'No se pudo enviar el correo de confirmación. Intenta más tarde.',
+        'EMAIL_SEND_FAILED'
+      ))
     }
 
     // Retornar éxito siempre (por seguridad, no exponer si email existe)

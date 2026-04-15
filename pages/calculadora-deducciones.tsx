@@ -225,8 +225,8 @@ export default function CalculadoraDeduccionesPage() {
         <meta name="keywords" content="calculadora IHSS RAP ISR Honduras, deducciones nómina, sin cálculos manuales, planilla Honduras, INFOP" />
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDescription} />
-        <meta property="og:url" content="https://humano-sisu.com/calculadora-deducciones" />
-        <link rel="canonical" href="https://humano-sisu.com/calculadora-deducciones" />
+        <meta property="og:url" content="https://humanosisu.net/calculadora-deducciones" />
+        <link rel="canonical" href="https://humanosisu.net/calculadora-deducciones" />
       </Head>
       <SchemaMarkup schema={webPageSchema} />
 

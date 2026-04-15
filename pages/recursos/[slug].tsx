@@ -13,7 +13,7 @@ interface RecursoPageProps {
 }
 
 export default function RecursoPage({ article }: RecursoPageProps) {
-  const canonical = `https://humano-sisu.com/recursos/${article.slug}`
+  const canonical = `https://humanosisu.net/recursos/${article.slug}`
   const articleSchema = generateArticleSchema({
     url: `/recursos/${article.slug}`,
     headline: article.title,
@@ -39,7 +39,7 @@ export default function RecursoPage({ article }: RecursoPageProps) {
         <meta property="og:description" content={article.description} />
         <meta property="og:url" content={canonical} />
         <meta property="og:type" content="article" />
-        {article.image && <meta property="og:image" content={article.image.startsWith('http') ? article.image : `https://humano-sisu.com${article.image}`} />}
+        {article.image && <meta property="og:image" content={article.image.startsWith('http') ? article.image : `https://humanosisu.net${article.image}`} />}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={article.title} />
         <meta name="twitter:description" content={article.description} />

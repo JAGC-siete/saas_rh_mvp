@@ -76,11 +76,9 @@ export default function MailListConfirmPage() {
                   ¡Suscripción Confirmada!
                 </h1>
                 <p className="text-brand-200/90 text-lg mb-6">
-                  ¡Perfecto! Tu suscripción ha sido confirmada. Ahora recibirás nuestras actualizaciones sobre nuevas funcionalidades, consejos de recursos humanos y promociones exclusivas directamente en tu correo.
+                  ¡Perfecto! Tu suscripción ha sido confirmada. Ahora recibirás ideas prácticas para reducir el ruido, mejorar tu entorno inmediato y recuperar control del espacio propio desempeño (exclusivo para personas que trabajan y/o estudian).
                 </p>
-                <p className="text-brand-200/70 text-sm mb-6">
-                  No apto para sensibles.
-                </p>
+                <p className="text-brand-200/70 text-sm mb-6">Gracias por estar aquí.</p>
                 <div className="space-y-4">
                   <Link href="/">
                     <button className="inline-flex items-center justify-center rounded-xl px-6 py-3 text-base font-semibold shadow-sm bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all duration-300 hover:-translate-y-1">

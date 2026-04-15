@@ -30,44 +30,41 @@ export async function sendMailListConfirmationEmail(data: MailListConfirmationEm
 
   const content = {
     to: data.to,
-    subject: '📧 Confirma tu suscripción - Humano SISU',
+    subject: 'Confirma tu suscripción (ideas prácticas) - Humano SISU',
     text: `¡Hola!
 
-Gracias por tu interés en Humano SISU, el sistema de recursos humanos más completo para empresas en Honduras.
+Gracias por suscribirte.
 
-Para confirmar tu suscripción y recibir nuestras actualizaciones, haz clic en el siguiente enlace:
+Para confirmar tu suscripción y empezar a recibir el correo, haz clic en este enlace:
 ${data.confirmUrl}
 
 ¿Qué recibirás?
-• Actualizaciones sobre nuevas funcionalidades
-• Consejos y mejores prácticas de recursos humanos
-• Promociones especiales y ofertas
-• Noticias sobre cumplimiento laboral en Honduras
+• Ideas de cambio para mejorar tu entorno inmediato
+• Formas de reducir el ruido y recuperar control del espacio propio desempeño
+• Enfoques prácticos para personas que trabajan y/o estudian (sin política, sin “gurús”)
 
 Si no solicitaste esta suscripción, puedes ignorar este email o darte de baja usando el siguiente enlace:
 ${unsubscribeUrl}
 
-¡Bienvenido a la comunidad Humano SISU!
+Gracias por estar aquí.
 
 El equipo de Humano SISU`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; color: white;">
-          <h1 style="margin: 0; font-size: 28px;">📧 Confirma tu Suscripción</h1>
-          <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Humano SISU - Sistema de Recursos Humanos</p>
+          <h1 style="margin: 0; font-size: 28px;">Confirma tu suscripción</h1>
+          <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Humano SISU</p>
         </div>
         
         <div style="padding: 30px; background: #f8f9fa;">
-          <h2 style="color: #333; margin-top: 0;">¡Gracias por tu interés!</h2>
+          <h2 style="color: #333; margin-top: 0;">Gracias por suscribirte</h2>
           
           <p style="color: #666; line-height: 1.6;">
-            Gracias por tu interés en <strong>Humano SISU</strong>, el sistema de recursos humanos 
-            más completo para empresas en Honduras.
+            Esta es una <strong>suscripción de correo</strong> para personas que trabajan y/o estudian.
           </p>
           
           <p style="color: #666; line-height: 1.6;">
-            Para confirmar tu suscripción y comenzar a recibir nuestras actualizaciones directamente en tu correo, 
-            haz clic en el botón de abajo:
+            Para confirmar tu suscripción y comenzar a recibir ideas prácticas, haz clic en el botón:
           </p>
           
           <div style="text-align: center; margin: 30px 0;">
@@ -80,10 +77,9 @@ El equipo de Humano SISU`,
           <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea;">
             <h3 style="color: #333; margin-top: 0;">¿Qué recibirás?</h3>
             <ul style="color: #666; line-height: 1.8;">
-              <li>✅ Actualizaciones sobre nuevas funcionalidades</li>
-              <li>✅ Consejos y mejores prácticas de recursos humanos</li>
-              <li>✅ Promociones especiales y ofertas</li>
-              <li>✅ Noticias sobre cumplimiento laboral en Honduras</li>
+              <li>✅ Ideas de cambio para cambiar tu entorno inmediato</li>
+              <li>✅ Formas de reducir el ruido y recuperar control del espacio propio desempeño</li>
+              <li>✅ Exclusivo para personas que trabajan y/o estudian</li>
             </ul>
           </div>
           
@@ -95,9 +91,8 @@ El equipo de Humano SISU`,
           </div>
           
           <p style="color: #666; font-size: 14px; margin-top: 30px;">
-            No apto para sensibles.<br>
-            ¿Preguntas? Responde este email o contáctanos.<br>
-            <strong>¡Bienvenido a la comunidad Humano SISU!</strong>
+            Si no solicitaste esto, puedes darte de baja.<br>
+            <strong>Gracias por estar aquí.</strong>
           </p>
         </div>
         

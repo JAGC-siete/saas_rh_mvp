@@ -62,8 +62,8 @@ export default function AfiliadosPage() {
         <meta name="description" content={pageDescription} />
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDescription} />
-        <meta property="og:url" content="https://humano-sisu.com/afiliados" />
-        <link rel="canonical" href="https://humano-sisu.com/afiliados" />
+        <meta property="og:url" content="https://humanosisu.net/afiliados" />
+        <link rel="canonical" href="https://humanosisu.net/afiliados" />
       </Head>
       <SchemaMarkup schema={webPageSchema} />
 

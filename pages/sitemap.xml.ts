@@ -7,7 +7,7 @@ interface SitemapUrl {
   priority?: number
 }
 
-const BASE_URL = 'https://humano-sisu.com'
+const BASE_URL = 'https://humanosisu.net'
 
 // Public pages that should be included in sitemap
 const publicPages: SitemapUrl[] = [

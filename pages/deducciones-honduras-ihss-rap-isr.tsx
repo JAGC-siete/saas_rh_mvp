@@ -85,8 +85,8 @@ export default function DeduccionesHondurasPage() {
         <meta name="description" content={pageDescription} />
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDescription} />
-        <meta property="og:url" content="https://humano-sisu.com/deducciones-honduras-ihss-rap-isr" />
-        <link rel="canonical" href="https://humano-sisu.com/deducciones-honduras-ihss-rap-isr" />
+        <meta property="og:url" content="https://humanosisu.net/deducciones-honduras-ihss-rap-isr" />
+        <link rel="canonical" href="https://humanosisu.net/deducciones-honduras-ihss-rap-isr" />
         <meta name="keywords" content="cálculo IHSS RAP ISR automático, deducciones Honduras, planilla con IHSS, cálculo nómina Honduras, IHSS RAP ISR 2025" />
       </Head>
       <SchemaMarkup schema={[webPageSchema, faqSchema]} />

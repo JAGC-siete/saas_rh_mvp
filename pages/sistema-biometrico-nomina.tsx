@@ -79,8 +79,8 @@ export default function SistemaBiometricoNominaPage() {
         <meta name="description" content={pageDescription} />
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={pageDescription} />
-        <meta property="og:url" content="https://humano-sisu.com/sistema-biometrico-nomina" />
-        <link rel="canonical" href="https://humano-sisu.com/sistema-biometrico-nomina" />
+        <meta property="og:url" content="https://humanosisu.net/sistema-biometrico-nomina" />
+        <link rel="canonical" href="https://humanosisu.net/sistema-biometrico-nomina" />
         <meta name="keywords" content="sistema biométrico con nómina, control asistencia biométrico Honduras, biométrico integrado nómina, sistema asistencia nómina Honduras" />
       </Head>
       <SchemaMarkup schema={[webPageSchema, softwareSchema]} />
