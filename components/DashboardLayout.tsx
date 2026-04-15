@@ -75,7 +75,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         setLoadingPermissions(true)
         console.log('🔍 Fetching permissions for user:', user.id, user.email)
         // #region agent log
-        fetch('http://127.0.0.1:7905/ingest/cca64cb9-7b9a-4f35-ab00-567718985e2d',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'25b418'},body:JSON.stringify({sessionId:'25b418',runId:'pre-fix',hypothesisId:'H1',location:'components/DashboardLayout.tsx:fetchUserPermissions(entry)',message:'Entered fetchUserPermissions',data:{hasUserProfile:!!userProfile,userIdPresent:!!user?.id,path:typeof window!=='undefined'?window.location.pathname:null},timestamp:Date.now()})}).catch(()=>{});
+        fetch('/api/__debug/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'25b418',runId:'pre-fix',hypothesisId:'H1',location:'components/DashboardLayout.tsx:fetchUserPermissions(entry)',message:'Entered fetchUserPermissions',data:{hasUserProfile:!!userProfile,userIdPresent:!!user?.id,path:typeof window!=='undefined'?window.location.pathname:null},timestamp:Date.now()})}).catch(()=>{});
         // #endregion agent log
         
         // Primero intentar usar userProfile del contexto de auth
@@ -99,7 +99,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           const canonical = normalizePermissionsToCanonical(normalizedRole, rawPermissions)
           const isAdmin = ['super_admin', 'company_admin', 'hr_manager', 'manager', 'admin'].includes(normalizedRole)
           // #region agent log
-          fetch('http://127.0.0.1:7905/ingest/cca64cb9-7b9a-4f35-ab00-567718985e2d',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'25b418'},body:JSON.stringify({sessionId:'25b418',runId:'pre-fix',hypothesisId:'H2',location:'components/DashboardLayout.tsx:userProfileBranch',message:'Computed canonical permissions (userProfile branch)',data:{normalizedRole,hasRawPermissions:!!userProfile.permissions,rawPermissionKeys:Object.keys(rawPermissions||{}).slice(0,50),can_view_settings:canonical.can_view_settings,can_manage_settings:canonical.can_manage_settings,can_view_reports:canonical.can_view_reports,isAdmin},timestamp:Date.now()})}).catch(()=>{});
+          fetch('/api/__debug/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'25b418',runId:'pre-fix',hypothesisId:'H2',location:'components/DashboardLayout.tsx:userProfileBranch',message:'Computed canonical permissions (userProfile branch)',data:{normalizedRole,hasRawPermissions:!!userProfile.permissions,rawPermissionKeys:Object.keys(rawPermissions||{}).slice(0,50),can_view_settings:canonical.can_view_settings,can_manage_settings:canonical.can_manage_settings,can_view_reports:canonical.can_view_reports,isAdmin},timestamp:Date.now()})}).catch(()=>{});
           // #endregion agent log
 
           const permissions: UserPermissions = {
@@ -116,7 +116,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             affiliates: true // Show affiliates link to all users
           }
           // #region agent log
-          fetch('http://127.0.0.1:7905/ingest/cca64cb9-7b9a-4f35-ab00-567718985e2d',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'25b418'},body:JSON.stringify({sessionId:'25b418',runId:'pre-fix',hypothesisId:'H3',location:'components/DashboardLayout.tsx:userProfileBranch(setUserPermissions)',message:'Setting UI permissions (userProfile branch)',data:{settings:permissions.settings,reports:permissions.reports,admin:permissions.admin},timestamp:Date.now()})}).catch(()=>{});
+          fetch('/api/__debug/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'25b418',runId:'pre-fix',hypothesisId:'H3',location:'components/DashboardLayout.tsx:userProfileBranch(setUserPermissions)',message:'Setting UI permissions (userProfile branch)',data:{settings:permissions.settings,reports:permissions.reports,admin:permissions.admin},timestamp:Date.now()})}).catch(()=>{});
           // #endregion agent log
           
           setUserPermissions(permissions)
@@ -136,7 +136,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         }
         
         const { profiles } = await response.json()
-        const profile = profiles?.[0]
+        // CRITICAL: Pick the current user's profile (not the newest one in the company)
+        const profile = (profiles || []).find((p: any) => p?.id === user?.id) || profiles?.[0]
         
         if (!profile) {
           console.warn('No user profile data found, using default permissions')
@@ -171,7 +172,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         const canonical = normalizePermissionsToCanonical(normalizedRole, rawPermissions)
         const isAdmin = ['super_admin', 'company_admin', 'hr_manager', 'manager', 'admin'].includes(normalizedRole)
         // #region agent log
-        fetch('http://127.0.0.1:7905/ingest/cca64cb9-7b9a-4f35-ab00-567718985e2d',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'25b418'},body:JSON.stringify({sessionId:'25b418',runId:'pre-fix',hypothesisId:'H4',location:'components/DashboardLayout.tsx:apiProfileBranch',message:'Computed canonical permissions (API profile branch)',data:{normalizedRole,rawPermissionKeys:Object.keys(rawPermissions||{}).slice(0,50),can_view_settings:canonical.can_view_settings,can_manage_settings:canonical.can_manage_settings,can_view_reports:canonical.can_view_reports,isAdmin},timestamp:Date.now()})}).catch(()=>{});
+        fetch('/api/__debug/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'25b418',runId:'pre-fix',hypothesisId:'H4',location:'components/DashboardLayout.tsx:apiProfileBranch',message:'Computed canonical permissions (API profile branch)',data:{normalizedRole,rawPermissionKeys:Object.keys(rawPermissions||{}).slice(0,50),can_view_settings:canonical.can_view_settings,can_manage_settings:canonical.can_manage_settings,can_view_reports:canonical.can_view_reports,isAdmin,selectedProfileId:profile?.id===user?.id?'self':'other'},timestamp:Date.now()})}).catch(()=>{});
         // #endregion agent log
 
         console.log('🔐 Permission checks:', { isAdmin, normalizedRole, can_view_settings: canonical.can_view_settings, can_view_reports: canonical.can_view_reports })
@@ -192,7 +193,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           affiliates: true // Show affiliates link to all users
         }
         // #region agent log
-        fetch('http://127.0.0.1:7905/ingest/cca64cb9-7b9a-4f35-ab00-567718985e2d',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'25b418'},body:JSON.stringify({sessionId:'25b418',runId:'pre-fix',hypothesisId:'H5',location:'components/DashboardLayout.tsx:apiProfileBranch(setUserPermissions)',message:'Setting UI permissions (API profile branch)',data:{settings:permissions.settings,reports:permissions.reports,admin:permissions.admin},timestamp:Date.now()})}).catch(()=>{});
+        fetch('/api/__debug/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'25b418',runId:'pre-fix',hypothesisId:'H5',location:'components/DashboardLayout.tsx:apiProfileBranch(setUserPermissions)',message:'Setting UI permissions (API profile branch)',data:{settings:permissions.settings,reports:permissions.reports,admin:permissions.admin},timestamp:Date.now()})}).catch(()=>{});
         // #endregion agent log
         
         console.log('✅ Final permissions FORCED by role:', {
@@ -262,7 +263,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         allPermissions: userPermissions
       })
       // #region agent log
-      fetch('http://127.0.0.1:7905/ingest/cca64cb9-7b9a-4f35-ab00-567718985e2d',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'25b418'},body:JSON.stringify({sessionId:'25b418',runId:'pre-fix',hypothesisId:'H6',location:'components/DashboardLayout.tsx:filteredNavigation',message:'Navigation item filtered out',data:{itemName:item.name,permissionKey:item.permission,hasPermissionValue:hasPermission,settingsValue:userPermissions.settings,reportsValue:userPermissions.reports,adminValue:userPermissions.admin},timestamp:Date.now()})}).catch(()=>{});
+      fetch('/api/__debug/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'25b418',runId:'pre-fix',hypothesisId:'H6',location:'components/DashboardLayout.tsx:filteredNavigation',message:'Navigation item filtered out',data:{itemName:item.name,permissionKey:item.permission,hasPermissionValue:hasPermission,settingsValue:userPermissions.settings,reportsValue:userPermissions.reports,adminValue:userPermissions.admin},timestamp:Date.now()})}).catch(()=>{});
       // #endregion agent log
     }
     
