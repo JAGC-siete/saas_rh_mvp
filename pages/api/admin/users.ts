@@ -116,12 +116,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 async function getUsers(req: NextApiRequest, res: NextApiResponse) {
   try {
     // Query params
     const q = (req.query.q as string | undefined)?.trim() || ''
     const role = (req.query.role as string | undefined) || ''
     const state = (req.query.state as string | undefined) || ''
+    const companyIdRaw = ((req.query.company_id as string | undefined) || '').trim()
     const page = Math.max(1, parseInt((req.query.page as string) || '1', 10))
     const pageSize = Math.min(100, Math.max(1, parseInt((req.query.pageSize as string) || '12', 10)))
     const from = (page - 1) * pageSize
@@ -152,6 +155,12 @@ async function getUsers(req: NextApiRequest, res: NextApiResponse) {
     if (state === 'active') baseQuery = baseQuery.eq('is_active', true)
     if (state === 'inactive') baseQuery = baseQuery.eq('is_active', false)
 
+    if (companyIdRaw === 'none') {
+      baseQuery = baseQuery.is('company_id', null)
+    } else if (companyIdRaw && UUID_RE.test(companyIdRaw)) {
+      baseQuery = baseQuery.eq('company_id', companyIdRaw)
+    }
+
     // Order
     baseQuery = baseQuery.order('created_at', { ascending: false })
 
@@ -180,13 +189,19 @@ async function getUsers(req: NextApiRequest, res: NextApiResponse) {
       const employeeName = employee 
         ? (Array.isArray(employee) ? employee[0]?.name : employee.name)
         : null
+      const company = profile.companies
+      const companyName = company
+        ? Array.isArray(company)
+          ? company[0]?.name ?? null
+          : (company as { name?: string }).name ?? null
+        : null
       return {
         id: profile.id,
         email: authData?.email || '',
         name: employeeName,
         role: profile.role,
         company_id: profile.company_id,
-        company_name: profile.companies?.name || null,
+        company_name: companyName,
         is_active: profile.is_active,
         last_login: profile.last_login || authData?.last_sign_in_at || null,
         created_at: profile.created_at
@@ -218,7 +233,9 @@ async function getUsers(req: NextApiRequest, res: NextApiResponse) {
         pageSize,
         query: q,
         role: role || null,
-        state: state || null
+        state: state || null,
+        company_id:
+          companyIdRaw === 'none' ? 'none' : companyIdRaw && UUID_RE.test(companyIdRaw) ? companyIdRaw : null
       }
     })
   } catch (error) {

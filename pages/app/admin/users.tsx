@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Head from 'next/head'
 import SuperAdminLayout from '../../../components/SuperAdminLayout'
 import SuperAdminGuard from '../../../components/SuperAdminGuard'
@@ -66,6 +66,7 @@ export default function UsersAdminPage() {
   const [search, setSearch] = useState('')
   const [role, setRole] = useState('')
   const [state, setState] = useState('')
+  const [companyFilter, setCompanyFilter] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(12)
 
@@ -93,18 +94,50 @@ export default function UsersAdminPage() {
   const [userDetails, setUserDetails] = useState<any>(null)
   const [loadingDetails, setLoadingDetails] = useState(false)
 
+  const buildUsersListQueryString = useCallback(
+    (pageNum: number, size: number) => {
+      const params = new URLSearchParams()
+      if (search.trim()) params.set('q', search.trim())
+      if (role) params.set('role', role)
+      if (state) params.set('state', state)
+      if (companyFilter) params.set('company_id', companyFilter)
+      params.set('page', String(pageNum))
+      params.set('pageSize', String(size))
+      return params.toString()
+    },
+    [search, role, state, companyFilter]
+  )
+
+  useEffect(() => {
+    let cancelled = false
+    const loadCompaniesForFilters = async () => {
+      try {
+        const res = await fetch(
+          '/api/admin/companies-improved?page=1&pageSize=100&orderBy=name&orderDir=asc',
+          { credentials: 'include' }
+        )
+        if (!res.ok || cancelled) return
+        const data = await res.json()
+        if (cancelled) return
+        setCompanies((data.companies || []).map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })))
+      } catch {
+        // El modal Invitar reintenta si sigue vacío
+      }
+    }
+    loadCompaniesForFilters()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   useEffect(() => {
     const loadUsers = async () => {
       try {
         setLoadingUsers(true)
         setError(null)
-        const params = new URLSearchParams()
-        if (search.trim()) params.set('q', search.trim())
-        if (role) params.set('role', role)
-        if (state) params.set('state', state)
-        params.set('page', String(page))
-        params.set('pageSize', String(pageSize))
-        const res = await fetch(`/api/admin/users?${params.toString()}`, { credentials: 'include' })
+        const res = await fetch(`/api/admin/users?${buildUsersListQueryString(page, pageSize)}`, {
+          credentials: 'include'
+        })
         if (!res.ok) throw new Error('Error cargando usuarios')
         const data = await res.json()
         setUsers(data.users || [])
@@ -116,7 +149,7 @@ export default function UsersAdminPage() {
       }
     }
     loadUsers()
-  }, [search, role, state, page, pageSize])
+  }, [buildUsersListQueryString, page, pageSize])
 
   // No need for client-side filtering - API handles it
   const totalPages = Math.max(1, Math.ceil(totalUsers / pageSize))
@@ -292,7 +325,9 @@ export default function UsersAdminPage() {
       setForm({ email: '', password: '', passwordConfirm: '', role: 'company_admin', company_id: '' })
       // reload first page
       setPage(1)
-      const reload = await fetch(`/api/admin/users?page=1&pageSize=${pageSize}`, { credentials: 'include' })
+      const reload = await fetch(`/api/admin/users?${buildUsersListQueryString(1, pageSize)}`, {
+        credentials: 'include'
+      })
       const payload = await reload.json()
       setUsers(payload.users || [])
     } catch (err: any) {
@@ -337,14 +372,35 @@ export default function UsersAdminPage() {
                   Administra usuarios del sistema y sus permisos
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <input
                   type="text"
                   value={search}
                   onChange={(e) => { setPage(1); setSearch(e.target.value) }}
-                  placeholder="Buscar por email o nombre"
-                  className="px-3 py-2 border border-white/20 rounded-md w-72 bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
+                  placeholder="Buscar por email, nombre o empresa"
+                  className="px-3 py-2 border border-white/20 rounded-md w-72 min-w-[12rem] bg-white/10 text-white placeholder:text-white/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
                 />
+                <select
+                  className="border border-white/20 rounded-md px-2 py-2 text-sm max-w-[14rem] truncate bg-white/10 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
+                  value={companyFilter}
+                  onChange={(e) => {
+                    setPage(1)
+                    setCompanyFilter(e.target.value)
+                  }}
+                  title="Filtrar por empresa"
+                >
+                  <option value="" className="bg-slate-800">
+                    Todas las empresas
+                  </option>
+                  <option value="none" className="bg-slate-800">
+                    Sin empresa
+                  </option>
+                  {companies.map((c) => (
+                    <option key={c.id} value={c.id} className="bg-slate-800">
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
                 <select 
                   className="border border-white/20 rounded-md px-2 py-2 text-sm bg-white/10 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50" 
                   value={role} 
@@ -372,7 +428,17 @@ export default function UsersAdminPage() {
 
             <Card variant="glass" className="border-white/10">
               <CardHeader>
-                <CardTitle className="text-base text-white">Listado ({totalUsers})</CardTitle>
+                <CardTitle className="text-base text-white">
+                  Listado ({totalUsers})
+                  {companyFilter === 'none' && (
+                    <span className="block text-xs font-normal text-white/60 mt-0.5">Filtrado: sin empresa</span>
+                  )}
+                  {companyFilter && companyFilter !== 'none' && (
+                    <span className="block text-xs font-normal text-white/60 mt-0.5 truncate">
+                      Filtrado: {companies.find((c) => c.id === companyFilter)?.name || 'empresa'}
+                    </span>
+                  )}
+                </CardTitle>
               </CardHeader>
               <CardContent>
               {error && (
