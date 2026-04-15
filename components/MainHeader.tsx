@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 
@@ -12,6 +12,14 @@ interface MainHeaderProps {
 export default function MainHeader({ enableScrollEffect = false, fixed = true }: MainHeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isCalculatorMenuOpen, setIsCalculatorMenuOpen] = useState(false)
+  const [isCalculatorMobileOpen, setIsCalculatorMobileOpen] = useState(false)
+  const calculatorMenuRef = useRef<HTMLDivElement | null>(null)
+
+  const calculatorMenuId = useMemo(
+    () => `calculator-menu-${Math.random().toString(36).slice(2)}`,
+    []
+  )
 
   useEffect(() => {
     if (enableScrollEffect) {
@@ -23,6 +31,30 @@ export default function MainHeader({ enableScrollEffect = false, fixed = true }:
       return () => window.removeEventListener('scroll', handleScroll)
     }
   }, [enableScrollEffect])
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsCalculatorMenuOpen(false)
+        setIsCalculatorMobileOpen(false)
+      }
+    }
+
+    const onPointerDown = (e: PointerEvent) => {
+      if (!isCalculatorMenuOpen) return
+      const target = e.target as Node | null
+      if (target && calculatorMenuRef.current && !calculatorMenuRef.current.contains(target)) {
+        setIsCalculatorMenuOpen(false)
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    window.addEventListener('pointerdown', onPointerDown)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('pointerdown', onPointerDown)
+    }
+  }, [isCalculatorMenuOpen])
 
   const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault()
@@ -89,12 +121,81 @@ export default function MainHeader({ enableScrollEffect = false, fixed = true }:
                 >
                   Programa de Afiliados
                 </Link>
-                <Link
-                  href="/calculadora-deducciones"
-                  className="text-brand-200 hover:text-white px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap"
-                >
-                  Calculadora
-                </Link>
+                <div className="relative" ref={calculatorMenuRef}>
+                  <button
+                    type="button"
+                    className="text-brand-200 hover:text-white px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap inline-flex items-center gap-2"
+                    aria-haspopup="menu"
+                    aria-expanded={isCalculatorMenuOpen}
+                    aria-controls={calculatorMenuId}
+                    onClick={() => setIsCalculatorMenuOpen((v) => !v)}
+                  >
+                    Calculadora
+                    <svg
+                      className={`h-4 w-4 transition-transform ${isCalculatorMenuOpen ? 'rotate-180' : ''}`}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      aria-hidden="true"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {isCalculatorMenuOpen && (
+                    <div
+                      id={calculatorMenuId}
+                      role="menu"
+                      className="absolute right-0 mt-2 w-[340px] glass-strong rounded-xl shadow-2xl border border-white/20 backdrop-blur-sm overflow-hidden"
+                    >
+                      <Link
+                        href="/calculadora"
+                        role="menuitem"
+                        className="block px-4 py-3 text-sm text-brand-100 hover:bg-white/10 transition-colors"
+                        onClick={() => setIsCalculatorMenuOpen(false)}
+                      >
+                        <div className="font-semibold text-white">Ver calculadoras</div>
+                        <div className="text-xs text-brand-200/80 mt-0.5">Elige entre deducciones o prestaciones</div>
+                      </Link>
+                      <div className="h-px bg-white/10" />
+                      <Link
+                        href="/calculadora-deducciones"
+                        role="menuitem"
+                        className="block px-4 py-3 text-sm text-brand-100 hover:bg-white/10 transition-colors"
+                        onClick={() => setIsCalculatorMenuOpen(false)}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-500/15 border border-cyan-400/20">
+                            <svg className="h-4 w-4 text-cyan-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c1.657 0 3-1.343 3-3S13.657 2 12 2 9 3.343 9 5s1.343 3 3 3zm0 0v14m-4-4h8" />
+                            </svg>
+                          </span>
+                          <div>
+                            <div className="font-semibold text-white">Deducciones del salario</div>
+                            <div className="text-xs text-brand-200/80 mt-0.5">ISR · IHSS · RAP</div>
+                          </div>
+                        </div>
+                      </Link>
+                      <Link
+                        href="/calculadora-prestaciones"
+                        role="menuitem"
+                        className="block px-4 py-3 text-sm text-brand-100 hover:bg-white/10 transition-colors"
+                        onClick={() => setIsCalculatorMenuOpen(false)}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-green-500/15 border border-green-400/20">
+                            <svg className="h-4 w-4 text-green-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m-7 6h8a2 2 0 002-2V6a2 2 0 00-2-2H10l-2 2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                          </span>
+                          <div>
+                            <div className="font-semibold text-white">Prestaciones laborales</div>
+                            <div className="text-xs text-brand-200/80 mt-0.5">Cesantía · Preaviso · Vacaciones · 13vo · 14vo</div>
+                          </div>
+                        </div>
+                      </Link>
+                    </div>
+                  )}
+                </div>
                 <button
                   onClick={() => {
                     window.location.href = '/activar'
@@ -169,12 +270,53 @@ export default function MainHeader({ enableScrollEffect = false, fixed = true }:
                 Programa de Afiliados
               </Link>
               <Link
-                href="/calculadora-deducciones"
+                href="/calculadora"
                 className="block px-3 py-2 text-base font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Calculadora
               </Link>
+              <button
+                type="button"
+                className="w-full flex items-center justify-between px-3 py-2 text-base font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"
+                aria-expanded={isCalculatorMobileOpen}
+                onClick={() => setIsCalculatorMobileOpen((v) => !v)}
+              >
+                <span>Elige una calculadora</span>
+                <svg
+                  className={`h-5 w-5 transition-transform ${isCalculatorMobileOpen ? 'rotate-180' : ''}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              {isCalculatorMobileOpen && (
+                <div className="pl-3 pr-2 pb-2 space-y-1">
+                  <Link
+                    href="/calculadora-deducciones"
+                    className="block px-3 py-2 text-sm font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"
+                    onClick={() => {
+                      setIsCalculatorMobileOpen(false)
+                      setIsMobileMenuOpen(false)
+                    }}
+                  >
+                    Deducciones del salario (ISR / IHSS / RAP)
+                  </Link>
+                  <Link
+                    href="/calculadora-prestaciones"
+                    className="block px-3 py-2 text-sm font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"
+                    onClick={() => {
+                      setIsCalculatorMobileOpen(false)
+                      setIsMobileMenuOpen(false)
+                    }}
+                  >
+                    Prestaciones laborales (cesantía, preaviso, vacaciones…)
+                  </Link>
+                </div>
+              )}
               <button
                 onClick={() => {
                   setIsMobileMenuOpen(false)

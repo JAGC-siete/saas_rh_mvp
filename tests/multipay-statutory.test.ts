@@ -205,3 +205,77 @@ describe('loadStatutoryConfigExact + compute SLV', () => {
     assert.ok(out.ihss > 0)
   })
 })
+
+describe('calculadora pública prestaciones (HND)', () => {
+  function mockRes() {
+    const headers: Record<string, string> = {}
+    const res: any = {
+      statusCode: 200,
+      headersSent: false,
+      setHeader: (k: string, v: string) => {
+        headers[k] = v
+      },
+      status: (code: number) => {
+        res.statusCode = code
+        return res
+      },
+      json: (data: any) => {
+        res.headersSent = true
+        res.body = data
+        return res
+      }
+    }
+    return { res, headers }
+  }
+
+  it('POST válido retorna rubros + totalPagar', async () => {
+    const handler = (await import('../pages/api/public/calculate-prestaciones')).default as any
+    const { res } = mockRes()
+    const req: any = {
+      method: 'POST',
+      url: '/api/public/calculate-prestaciones',
+      headers: { 'user-agent': 'test', 'x-forwarded-for': '127.0.0.1' },
+      body: {
+        datosManuales: {
+          salarioBaseMensual: 35000,
+          fechaIngreso: '2024-07-01',
+          fechaEgreso: '2025-10-31'
+        },
+        parametrosCalculo: {
+          motivoSalida: 'RENUNCIA',
+          montoRapAcumulado: 0,
+          preavisoGozado: false
+        }
+      }
+    }
+
+    await handler(req, res)
+    assert.equal(res.statusCode, 200)
+    assert.ok(res.body?.rubros)
+    assert.ok(typeof res.body?.rubros?.totalPagar === 'number')
+  })
+
+  it('fechas inválidas retorna 400 con validation', async () => {
+    const handler = (await import('../pages/api/public/calculate-prestaciones')).default as any
+    const { res } = mockRes()
+    const req: any = {
+      method: 'POST',
+      url: '/api/public/calculate-prestaciones',
+      headers: { 'user-agent': 'test', 'x-forwarded-for': '127.0.0.1' },
+      body: {
+        datosManuales: {
+          salarioBaseMensual: 35000,
+          fechaIngreso: '2025-10-31',
+          fechaEgreso: '2024-07-01'
+        },
+        parametrosCalculo: {
+          motivoSalida: 'RENUNCIA'
+        }
+      }
+    }
+
+    await handler(req, res)
+    assert.equal(res.statusCode, 400)
+    assert.ok(res.body?.validation)
+  })
+})
