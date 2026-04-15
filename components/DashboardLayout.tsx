@@ -22,6 +22,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { TrophyIcon } from '@heroicons/react/24/solid'
 import NotificationBell from './ui/NotificationBell'
+import { normalizePermissionsToCanonical } from '../lib/security/canonical-permissions'
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -92,12 +93,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           }
           
           const normalizedRole = (userProfile.role || '').toString().trim().toLowerCase()
-          const isAdmin = ['super_admin', 'company_admin', 'hr_manager', 'admin'].includes(normalizedRole)
-          const canAccessSettings = ['super_admin', 'company_admin', 'admin'].includes(normalizedRole)
-          const canAccessReports =
-            ['super_admin', 'company_admin', 'hr_manager', 'manager', 'admin'].includes(normalizedRole) ||
-            rawPermissions.can_view_reports === true ||
-            rawPermissions.can_export_reports === true
+          const canonical = normalizePermissionsToCanonical(normalizedRole, rawPermissions)
+          const isAdmin = ['super_admin', 'company_admin', 'hr_manager', 'manager', 'admin'].includes(normalizedRole)
 
           const permissions: UserPermissions = {
             dashboard: true,
@@ -106,9 +103,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             attendance: true,
             leave: true,
             payroll: true,
-            reports: canAccessReports,
+            reports: canonical.can_view_reports,
             gamification: true,
-            settings: canAccessSettings,
+            settings: canonical.can_view_settings,
             admin: isAdmin,
             affiliates: true // Show affiliates link to all users
           }
@@ -162,15 +159,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         const normalizedRole = (profile.role || '').toString().trim().toLowerCase()
         console.log('🔍 Normalized role:', normalizedRole)
         
-        // CRÍTICO: Determinar permisos basados en el rol PRIMERO (antes del merge)
-        const isAdmin = ['super_admin', 'company_admin', 'hr_manager', 'admin'].includes(normalizedRole)
-        const canAccessSettings = ['super_admin', 'company_admin', 'admin'].includes(normalizedRole)
-        const canAccessReports =
-          ['super_admin', 'company_admin', 'hr_manager', 'manager', 'admin'].includes(normalizedRole) ||
-          rawPermissions.can_view_reports === true ||
-          rawPermissions.can_export_reports === true
+        const canonical = normalizePermissionsToCanonical(normalizedRole, rawPermissions)
+        const isAdmin = ['super_admin', 'company_admin', 'hr_manager', 'manager', 'admin'].includes(normalizedRole)
 
-        console.log('🔐 Permission checks:', { isAdmin, canAccessSettings, canAccessReports, normalizedRole })
+        console.log('🔐 Permission checks:', { isAdmin, normalizedRole, can_view_settings: canonical.can_view_settings, can_view_reports: canonical.can_view_reports })
 
         // Construir objeto de permisos final - FORZAR settings y admin basado en rol
         const permissions: UserPermissions = {
@@ -180,10 +172,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           attendance: true,
           leave: true,
           payroll: true,
-          reports: canAccessReports,
+          reports: canonical.can_view_reports,
           gamification: true,
-          // CRÍTICO: Forzar estos valores basado en rol, ignorar lo que venga de la DB
-          settings: canAccessSettings,
+          // Canonical can_* keys decide UX visibility (backend remains source of truth)
+          settings: canonical.can_view_settings,
           admin: isAdmin,
           affiliates: true // Show affiliates link to all users
         }
@@ -193,10 +185,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           normalizedRole,
           permissions,
           isAdmin,
-          canAccessSettings,
           settingsValue: permissions.settings,
           adminValue: permissions.admin,
-          note: 'settings and admin are FORCED by role, ignoring DB values'
+          note: 'settings/reports are derived from canonical can_* (with legacy mapping)'
         })
         
         setUserPermissions(permissions)
