@@ -16,10 +16,18 @@ type ZodValidationError = {
 const MOTIVO_SALIDA_OPTIONS: { value: CesantiasRequestInput['parametrosCalculo']['motivoSalida']; label: string }[] = [
   { value: 'RENUNCIA', label: 'Renuncia' },
   { value: 'DESPIDO_JUSTIFICADO', label: 'Despido Justificado' },
-  { value: 'DESPIDO_INJUSTIFICADO', label: 'Despido Injustificado' }
+  { value: 'DESPIDO_INJUSTIFICADO', label: 'Despido Injustificado' },
+  { value: 'CAUSA_AJENA_TRABAJADOR', label: 'Causa ajena a la voluntad del trabajador' },
+  { value: 'FALLECIMIENTO', label: 'Fallecimiento del trabajador' },
+  { value: 'PENSION_JUBILACION_EQUIVALENTE', label: 'Jubilación / pensión equivalente' },
+  { value: 'FIN_CONTRATO', label: 'Fin de contrato' },
+  { value: 'MUTUO_ACUERDO', label: 'Mutuo acuerdo' }
 ]
 
 export default function CesantiasPage() {
+  const [salaryAverageMode, setSalaryAverageMode] = useState<'proxy' | 'manual' | 'last6'>('proxy')
+  const [salariosUltimos6MesesRaw, setSalariosUltimos6MesesRaw] = useState('')
+
   const [form, setForm] = useState<CesantiasRequestInput>({
     empleadoId: undefined,
     datosManuales: {
@@ -30,7 +38,8 @@ export default function CesantiasPage() {
     parametrosCalculo: {
       motivoSalida: motivoSalidaEnum.enum.RENUNCIA,
       montoRapAcumulado: 0,
-      preavisoGozado: false
+      preavisoGozado: false,
+      condiciones: {}
     }
   })
   const [loading, setLoading] = useState(false)
@@ -43,7 +52,7 @@ export default function CesantiasPage() {
       ...prev,
       datosManuales: {
         ...prev.datosManuales,
-        [field]: field === 'salarioBaseMensual' ? Number(value) || 0 : value
+        [field]: field === 'salarioBaseMensual' || field === 'salarioPromedioMensual' ? Number(value) || 0 : value
       }
     }))
   }
@@ -66,6 +75,58 @@ export default function CesantiasPage() {
     }))
   }
 
+  const handleCondicionesChange = (
+    field: keyof NonNullable<CesantiasRequestInput['parametrosCalculo']['condiciones']>,
+    value: boolean
+  ) => {
+    setForm((prev) => ({
+      ...prev,
+      parametrosCalculo: {
+        ...prev.parametrosCalculo,
+        condiciones: {
+          ...(prev.parametrosCalculo.condiciones || {}),
+          [field]: value
+        }
+      }
+    }))
+  }
+
+  const buildPayload = (): CesantiasRequestInput => {
+    const next: CesantiasRequestInput = JSON.parse(JSON.stringify(form))
+
+    if (salaryAverageMode === 'manual') {
+      // salarioPromedioMensual ya vive en el form; si es 0 lo omitimos
+      if (!next.datosManuales.salarioPromedioMensual) {
+        delete (next.datosManuales as any).salarioPromedioMensual
+      }
+      delete (next.datosManuales as any).salariosUltimos6Meses
+      return next
+    }
+
+    if (salaryAverageMode === 'last6') {
+      const parsed = salariosUltimos6MesesRaw
+        .split(/[,\n]/g)
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .map((s) => Number(s))
+        .filter((n) => Number.isFinite(n) && n >= 0)
+
+      if (parsed.length > 0) {
+        ;(next.datosManuales as any).salariosUltimos6Meses = parsed.slice(0, 6)
+      } else {
+        delete (next.datosManuales as any).salariosUltimos6Meses
+      }
+
+      delete (next.datosManuales as any).salarioPromedioMensual
+      return next
+    }
+
+    // proxy: no enviar campos de promedio, el motor hará fallback
+    delete (next.datosManuales as any).salarioPromedioMensual
+    delete (next.datosManuales as any).salariosUltimos6Meses
+    return next
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -74,12 +135,13 @@ export default function CesantiasPage() {
     setResult(null)
 
     try {
+      const payload = buildPayload()
       const response = await fetch('/api/payroll/cesantias/calculate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(form)
+        body: JSON.stringify(payload)
       })
 
       if (!response.ok) {
@@ -125,6 +187,8 @@ export default function CesantiasPage() {
   }
 
   const handleReset = () => {
+    setSalaryAverageMode('proxy')
+    setSalariosUltimos6MesesRaw('')
     setForm({
       empleadoId: undefined,
       datosManuales: {
@@ -135,7 +199,8 @@ export default function CesantiasPage() {
       parametrosCalculo: {
         motivoSalida: motivoSalidaEnum.enum.RENUNCIA,
         montoRapAcumulado: 0,
-        preavisoGozado: false
+        preavisoGozado: false,
+        condiciones: {}
       }
     })
     setError(null)
@@ -170,7 +235,7 @@ export default function CesantiasPage() {
                 <CardDescription className="text-gray-300">
                   Ingresa los datos mínimos requeridos para el cálculo oficial. Las fórmulas
                   siguen el Código del Trabajo de Honduras (año comercial de 360 días y salario
-                  promedio 14/12).
+                  promedio Art. 123 con fallback 14/12).
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -252,6 +317,60 @@ export default function CesantiasPage() {
                   </div>
 
                   <div className="space-y-2">
+                    <label className="text-gray-200 text-sm font-medium">Salario promedio (Art. 123)</label>
+                    <Select
+                      value={salaryAverageMode}
+                      onValueChange={(value) => setSalaryAverageMode(value as any)}
+                    >
+                      <SelectTrigger className="bg-slate-900 border-white/20 text-gray-100">
+                        <SelectValue placeholder="Selecciona modo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="proxy">Estimación (fallback 14/12)</SelectItem>
+                        <SelectItem value="manual">Ingresar salario promedio mensual</SelectItem>
+                        <SelectItem value="last6">Ingresar últimos 6 salarios</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    {salaryAverageMode === 'manual' && (
+                      <div className="pt-2 space-y-2">
+                        <label htmlFor="salarioPromedioMensual" className="text-gray-200 text-sm font-medium">
+                          Salario promedio mensual (L) (opcional)
+                        </label>
+                        <Input
+                          id="salarioPromedioMensual"
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={form.datosManuales.salarioPromedioMensual ?? ''}
+                          onChange={(e) => handleChange('salarioPromedioMensual', e.target.value)}
+                        />
+                        <p className="text-xs text-gray-400">
+                          Úsalo si ya calculaste el promedio real (incluyendo extras y 50% de 13/14 según Art. 123).
+                        </p>
+                      </div>
+                    )}
+
+                    {salaryAverageMode === 'last6' && (
+                      <div className="pt-2 space-y-2">
+                        <label htmlFor="salariosUltimos6Meses" className="text-gray-200 text-sm font-medium">
+                          Últimos 6 salarios mensuales (L)
+                        </label>
+                        <textarea
+                          id="salariosUltimos6Meses"
+                          value={salariosUltimos6MesesRaw}
+                          onChange={(e) => setSalariosUltimos6MesesRaw(e.target.value)}
+                          placeholder="Ej: 30000, 32000, 31000, 30000, 30500, 31500"
+                          className="w-full min-h-[90px] rounded-md bg-slate-900 border border-white/20 px-3 py-2 text-gray-100 placeholder:text-gray-500"
+                        />
+                        <p className="text-xs text-gray-400">
+                          Acepta comas o saltos de línea. El motor agregará 50% de 13/14 en el promedio.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
                     <label htmlFor="montoRapAcumulado" className="text-gray-200 text-sm font-medium">
                       Monto acumulado RAP / Reserva Laboral (opcional)
                     </label>
@@ -271,7 +390,8 @@ export default function CesantiasPage() {
                     )}
                   </div>
 
-                  {form.parametrosCalculo.motivoSalida === 'DESPIDO_INJUSTIFICADO' && (
+                  {(form.parametrosCalculo.motivoSalida === 'DESPIDO_INJUSTIFICADO' ||
+                    form.parametrosCalculo.motivoSalida === 'CAUSA_AJENA_TRABAJADOR') && (
                     <div className="flex items-center space-x-2">
                       <input
                         id="preavisoGozado"
@@ -282,6 +402,36 @@ export default function CesantiasPage() {
                       />
                       <label htmlFor="preavisoGozado" className="text-gray-200 text-sm font-medium">
                         El trabajador ya laboró el preaviso
+                      </label>
+                    </div>
+                  )}
+
+                  {form.parametrosCalculo.motivoSalida === 'RENUNCIA' && (
+                    <div className="flex items-center space-x-2">
+                      <input
+                        id="retiroVoluntario"
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-white/30 bg-slate-900"
+                        checked={form.parametrosCalculo.condiciones?.retiroVoluntario ?? false}
+                        onChange={(e) => handleCondicionesChange('retiroVoluntario', e.target.checked)}
+                      />
+                      <label htmlFor="retiroVoluntario" className="text-gray-200 text-sm font-medium">
+                        Retiro voluntario (15+ años)
+                      </label>
+                    </div>
+                  )}
+
+                  {form.parametrosCalculo.motivoSalida === 'FALLECIMIENTO' && (
+                    <div className="flex items-center space-x-2">
+                      <input
+                        id="fallecimientoNatural"
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-white/30 bg-slate-900"
+                        checked={form.parametrosCalculo.condiciones?.fallecimientoNatural ?? false}
+                        onChange={(e) => handleCondicionesChange('fallecimientoNatural', e.target.checked)}
+                      />
+                      <label htmlFor="fallecimientoNatural" className="text-gray-200 text-sm font-medium">
+                        Fallecimiento natural
                       </label>
                     </div>
                   )}
@@ -350,6 +500,10 @@ export default function CesantiasPage() {
                         <div>
                           <span className="text-gray-400">Salario promedio diario: </span>
                           <span>{formatCurrency(result.bases.salarioPromedioDiario)}</span>
+                        </div>
+                        <div>
+                          <span className="text-gray-400">Modo de promedio: </span>
+                          <span>{result.metadata.salaryAverageMode}</span>
                         </div>
                       </div>
                     </div>
