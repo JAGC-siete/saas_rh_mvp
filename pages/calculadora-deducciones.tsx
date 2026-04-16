@@ -171,6 +171,9 @@ export default function CalculadoraDeduccionesPage() {
     }).format(amount)
   }
 
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  const canSendPdf = consentNewsletter && fullName.trim().length > 0 && emailRegex.test(email)
+
   const handleCalculate = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
@@ -234,7 +237,6 @@ export default function CalculadoraDeduccionesPage() {
   const handleSendEmail = async () => {
     if (!email || !result) return
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
       setError('Por favor ingresa un email válido')
       return
@@ -823,7 +825,7 @@ export default function CalculadoraDeduccionesPage() {
               <div className="mb-6">
                 <button
                   onClick={handleSendEmail}
-                  disabled={sendingEmail}
+                  disabled={sendingEmail || !canSendPdf}
                   className="w-full py-3.5 px-6 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-black/20 hover:-translate-y-0.5 active:translate-y-0"
                 >
                   {sendingEmail ? 'Enviando reporte por email...' : 'Enviar Reporte Detallado por Email'}

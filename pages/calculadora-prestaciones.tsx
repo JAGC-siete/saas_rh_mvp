@@ -318,6 +318,9 @@ export default function CalculadoraPrestacionesPage() {
     return Object.keys(nextErrors).length === 0
   }
 
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  const canSendPdf = consentNewsletter && fullName.trim().length > 0 && emailRegex.test(email)
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
@@ -506,7 +509,6 @@ export default function CalculadoraPrestacionesPage() {
   const handleSendEmail = async () => {
     if (!email || !result) return
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
       setError('Por favor ingresa un email válido')
       return
@@ -1130,7 +1132,7 @@ export default function CalculadoraPrestacionesPage() {
                   {email && !emailSent && (
                     <button
                       onClick={handleSendEmail}
-                      disabled={sendingEmail}
+                      disabled={sendingEmail || !canSendPdf}
                       className="w-full py-3.5 px-6 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-black/20"
                     >
                       {sendingEmail ? 'Enviando por email...' : 'Enviar resultado por email (PDF)'}
