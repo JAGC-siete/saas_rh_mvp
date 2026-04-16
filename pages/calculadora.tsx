@@ -88,7 +88,7 @@ export default function CalculadoraHubPage() {
               </p>
               <Link
                 href="/calculadora-deducciones"
-                className="inline-flex w-full items-center justify-center py-3.5 px-6 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-semibold rounded-xl transition-all shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/30"
+                className="inline-flex w-full items-center justify-center py-3.5 px-6 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl transition-all shadow-lg shadow-black/20"
               >
                 Calcular deducciones
               </Link>
