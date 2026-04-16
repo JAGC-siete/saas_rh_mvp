@@ -145,7 +145,7 @@ export default function MainHeader({ enableScrollEffect = false, fixed = true }:
                     <div
                       id={calculatorMenuId}
                       role="menu"
-                      className="absolute right-0 mt-2 w-[340px] glass-strong rounded-xl shadow-2xl border border-white/20 backdrop-blur-sm overflow-hidden"
+                      className="absolute right-0 mt-2 w-[340px] glass-strong bg-slate-950/80 rounded-xl shadow-2xl border border-white/15 backdrop-blur-xl overflow-hidden ring-1 ring-white/10"
                     >
                       <Link
                         href="/calculadora"
@@ -164,7 +164,7 @@ export default function MainHeader({ enableScrollEffect = false, fixed = true }:
                         onClick={() => setIsCalculatorMenuOpen(false)}
                       >
                         <div className="flex items-center gap-2">
-                          <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-500/15 border border-cyan-400/20">
+                          <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-500/15 border border-cyan-400/25">
                             <svg className="h-4 w-4 text-cyan-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c1.657 0 3-1.343 3-3S13.657 2 12 2 9 3.343 9 5s1.343 3 3 3zm0 0v14m-4-4h8" />
                             </svg>
@@ -182,7 +182,7 @@ export default function MainHeader({ enableScrollEffect = false, fixed = true }:
                         onClick={() => setIsCalculatorMenuOpen(false)}
                       >
                         <div className="flex items-center gap-2">
-                          <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-green-500/15 border border-green-400/20">
+                          <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-green-500/15 border border-green-400/25">
                             <svg className="h-4 w-4 text-green-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m-7 6h8a2 2 0 002-2V6a2 2 0 00-2-2H10l-2 2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
