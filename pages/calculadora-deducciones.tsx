@@ -824,7 +824,7 @@ export default function CalculadoraDeduccionesPage() {
                 <button
                   onClick={handleSendEmail}
                   disabled={sendingEmail}
-                  className="w-full py-3.5 px-6 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-purple-500/20 hover:shadow-purple-500/30 transform hover:-translate-y-0.5 active:translate-y-0"
+                  className="w-full py-3.5 px-6 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-black/20 hover:-translate-y-0.5 active:translate-y-0"
                 >
                   {sendingEmail ? 'Enviando reporte por email...' : 'Enviar Reporte Detallado por Email'}
                 </button>
