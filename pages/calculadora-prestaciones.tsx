@@ -139,13 +139,13 @@ function Tooltip({
         <div
           id={`${tooltipId}-content`}
           role="tooltip"
-          className="absolute z-[60] w-[min(20rem,calc(100vw-2rem))] p-3 mt-2 text-sm text-white rounded-xl shadow-2xl border border-white/20 left-0 md:left-auto md:right-0 whitespace-normal break-words leading-relaxed bg-slate-950/95 backdrop-blur-md"
+          className="absolute z-[60] w-[min(20rem,calc(100vw-2rem))] p-3 mb-2 text-sm text-white rounded-xl shadow-2xl border border-white/20 left-0 md:left-auto md:right-0 whitespace-normal break-words leading-relaxed bg-slate-950/95 backdrop-blur-md bottom-full"
           aria-live="polite"
         >
           <div className="font-semibold mb-1 text-cyan-300">{title}</div>
           <div className="text-brand-50/95">{content}</div>
           <div
-            className="absolute -top-2 left-4 md:left-auto md:right-4 w-4 h-4 bg-slate-950/95 border-l border-t border-white/20 backdrop-blur-md transform rotate-45"
+            className="absolute -bottom-2 left-4 md:left-auto md:right-4 w-4 h-4 bg-slate-950/95 border-r border-b border-white/20 backdrop-blur-md transform rotate-45"
             aria-hidden="true"
           />
         </div>
@@ -156,7 +156,7 @@ function Tooltip({
 
 export default function CalculadoraPrestacionesPage() {
   const [salarioBaseMensual, setSalarioBaseMensual] = useState('')
-  const [salaryInputMode, setSalaryInputMode] = useState<'PROMEDIO' | 'ULTIMOS_6'>('PROMEDIO')
+  const [salaryInputMode, setSalaryInputMode] = useState<'BASE' | 'PROMEDIO' | 'ULTIMOS_6'>('BASE')
   const [salarioPromedioMensual, setSalarioPromedioMensual] = useState('')
   const [salariosUltimos6MesesRaw, setSalariosUltimos6MesesRaw] = useState('')
   const [fechaIngreso, setFechaIngreso] = useState('')
@@ -229,9 +229,11 @@ export default function CalculadoraPrestacionesPage() {
 
   const validateClient = () => {
     const nextErrors: Record<string, string> = {}
-    const salarioNum = parseFloat(salarioBaseMensual.replace(/[^\d.]/g, ''))
-    if (!Number.isFinite(salarioNum) || salarioNum <= 0) {
-      nextErrors.salarioBaseMensual = 'Ingresa un salario mensual válido (mayor que 0).'
+    const salarioBaseNum = parseFloat(salarioBaseMensual.replace(/[^\d.]/g, ''))
+    if (salaryInputMode === 'BASE') {
+      if (!Number.isFinite(salarioBaseNum) || salarioBaseNum <= 0) {
+        nextErrors.salarioBaseMensual = 'Ingresa un salario base mensual válido (mayor que 0).'
+      }
     }
     if (salaryInputMode === 'PROMEDIO') {
       const avgNum = parseFloat(salarioPromedioMensual.replace(/[^\d.]/g, ''))
@@ -239,14 +241,16 @@ export default function CalculadoraPrestacionesPage() {
         nextErrors.salarioPromedioMensual = 'Ingresa un salario promedio mensual válido (mayor que 0).'
       }
     } else {
-      const nums = salariosUltimos6MesesRaw
-        .split(/[,\n]/g)
-        .map((s) => s.trim())
-        .filter(Boolean)
-        .map((s) => Number(s))
-        .filter((n) => Number.isFinite(n) && n >= 0)
-      if (nums.length === 0) {
-        nextErrors.salariosUltimos6MesesRaw = 'Ingresa al menos 1 salario (hasta 6).'
+      if (salaryInputMode === 'ULTIMOS_6') {
+        const nums = salariosUltimos6MesesRaw
+          .split(/[,\n]/g)
+          .map((s) => s.trim())
+          .filter(Boolean)
+          .map((s) => Number(s))
+          .filter((n) => Number.isFinite(n) && n >= 0)
+        if (nums.length === 0) {
+          nextErrors.salariosUltimos6MesesRaw = 'Ingresa al menos 1 salario (hasta 6).'
+        }
       }
     }
     if (!isValidDateString(fechaIngreso)) {
@@ -283,9 +287,25 @@ export default function CalculadoraPrestacionesPage() {
       return
     }
 
-    const salarioNum = parseFloat(salarioBaseMensual.replace(/[^\d.]/g, ''))
     const avgNum = parseFloat(salarioPromedioMensual.replace(/[^\d.]/g, ''))
     const rapNum = incluirRAP ? parseFloat(montoRapAcumulado.replace(/[^\d.]/g, '')) : 0
+
+    const salariosUltimos6 = salariosUltimos6MesesRaw
+      .split(/[,\n]/g)
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((s) => Number(s))
+      .filter((n) => Number.isFinite(n) && n >= 0)
+      .slice(0, 6)
+
+    const baseFromMode =
+      salaryInputMode === 'BASE'
+        ? parseFloat(salarioBaseMensual.replace(/[^\d.]/g, ''))
+        : salaryInputMode === 'PROMEDIO'
+          ? avgNum
+          : salariosUltimos6.length > 0
+            ? salariosUltimos6.reduce((a, b) => a + b, 0) / salariosUltimos6.length
+            : NaN
 
     setLoading(true)
     try {
@@ -296,18 +316,12 @@ export default function CalculadoraPrestacionesPage() {
         },
         body: JSON.stringify({
           datosManuales: {
-            salarioBaseMensual: salarioNum,
+            salarioBaseMensual: Number.isFinite(baseFromMode) ? baseFromMode : 0,
             ...(salaryInputMode === 'PROMEDIO'
               ? { salarioPromedioMensual: Number.isFinite(avgNum) ? avgNum : undefined }
-              : {
-                  salariosUltimos6Meses: salariosUltimos6MesesRaw
-                    .split(/[,\n]/g)
-                    .map((s) => s.trim())
-                    .filter(Boolean)
-                    .map((s) => Number(s))
-                    .filter((n) => Number.isFinite(n) && n >= 0)
-                    .slice(0, 6),
-                }),
+              : salaryInputMode === 'ULTIMOS_6'
+                ? { salariosUltimos6Meses: salariosUltimos6 }
+                : {}),
             fechaIngreso,
             fechaEgreso,
           },
@@ -360,7 +374,7 @@ export default function CalculadoraPrestacionesPage() {
 
   const handleReset = () => {
     setSalarioBaseMensual('')
-    setSalaryInputMode('PROMEDIO')
+    setSalaryInputMode('BASE')
     setSalarioPromedioMensual('')
     setSalariosUltimos6MesesRaw('')
     setFechaIngreso('')
@@ -490,42 +504,20 @@ export default function CalculadoraPrestacionesPage() {
             <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 via-cyan-500/20 to-blue-500/20 opacity-50 blur-xl pointer-events-none" />
             <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
               <div>
-                <label htmlFor="salarioBaseMensual" className="block text-sm font-medium text-white mb-2">
-                  Salario base mensual
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <span className="text-brand-300 sm:text-sm">Lps.</span>
-                  </div>
-                  <input
-                    id="salarioBaseMensual"
-                    type="text"
-                    value={salarioBaseMensual}
-                    onChange={(e) => {
-                      setSalarioBaseMensual(e.target.value)
-                      if (fieldErrors.salarioBaseMensual) {
-                        setFieldErrors((prev) => {
-                          const next = { ...prev }
-                          delete next.salarioBaseMensual
-                          return next
-                        })
-                      }
-                    }}
-                    placeholder="0.00"
-                    className={`block w-full pl-16 pr-3 py-3.5 border rounded-xl bg-white/5 backdrop-blur-sm text-white placeholder-brand-200/70 focus:outline-none focus:ring-2 focus:ring-green-400/50 focus:border-green-400/50 transition-all hover:border-green-400/30 hover:bg-white/10 ${
-                      fieldErrors.salarioBaseMensual ? 'border-red-500/50 bg-red-500/5' : 'border-white/20'
-                    }`}
-                    required
-                  />
-                </div>
-                {fieldErrors.salarioBaseMensual && (
-                  <p className="mt-1 text-sm text-red-400">{fieldErrors.salarioBaseMensual}</p>
-                )}
-              </div>
-
-              <div>
                 <label className="block text-sm font-medium text-white mb-2">¿Cómo quieres ingresar tus ingresos?</label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setSalaryInputMode('BASE')}
+                    className={`py-3 px-4 rounded-xl border transition-all text-left ${
+                      salaryInputMode === 'BASE'
+                        ? 'border-cyan-400/60 bg-cyan-400/10 text-white'
+                        : 'border-white/20 bg-white/5 text-brand-100 hover:bg-white/10'
+                    }`}
+                  >
+                    <div className="font-semibold text-sm">Salario base mensual</div>
+                    <div className="text-xs text-brand-200/80 mt-1">Ingresar un solo monto.</div>
+                  </button>
                   <button
                     type="button"
                     onClick={() => setSalaryInputMode('PROMEDIO')}
@@ -536,7 +528,7 @@ export default function CalculadoraPrestacionesPage() {
                     }`}
                   >
                     <div className="font-semibold text-sm">Salario promedio mensual</div>
-                    <div className="text-xs text-brand-200/80 mt-1">Si ya lo tienes calculado (últimos 6 meses).</div>
+                    <div className="text-xs text-brand-200/80 mt-1">Si ya lo tienes calculado.</div>
                   </button>
                   <button
                     type="button"
@@ -547,13 +539,50 @@ export default function CalculadoraPrestacionesPage() {
                         : 'border-white/20 bg-white/5 text-brand-100 hover:bg-white/10'
                     }`}
                   >
-                    <div className="font-semibold text-sm">Ingresos últimos 6 meses</div>
-                    <div className="text-xs text-brand-200/80 mt-1">El sistema calculará el promedio por ti.</div>
+                    <div className="font-semibold text-sm">Últimos 6 meses</div>
+                    <div className="text-xs text-brand-200/80 mt-1">El sistema hará el promedio.</div>
                   </button>
                 </div>
               </div>
 
-              {salaryInputMode === 'PROMEDIO' ? (
+              {salaryInputMode === 'BASE' ? (
+                <div>
+                  <label htmlFor="salarioBaseMensual" className="block text-sm font-medium text-white mb-2">
+                    Salario base mensual
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <span className="text-brand-300 sm:text-sm">Lps.</span>
+                    </div>
+                    <input
+                      id="salarioBaseMensual"
+                      type="text"
+                      value={salarioBaseMensual}
+                      onChange={(e) => {
+                        setSalarioBaseMensual(e.target.value)
+                        if (fieldErrors.salarioBaseMensual) {
+                          setFieldErrors((prev) => {
+                            const next = { ...prev }
+                            delete next.salarioBaseMensual
+                            return next
+                          })
+                        }
+                      }}
+                      placeholder="0.00"
+                      className={`block w-full pl-16 pr-3 py-3.5 border rounded-xl bg-white/5 backdrop-blur-sm text-white placeholder-brand-200/70 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all hover:border-cyan-400/30 hover:bg-white/10 ${
+                        fieldErrors.salarioBaseMensual ? 'border-red-500/50 bg-red-500/5' : 'border-white/20'
+                      }`}
+                      required
+                    />
+                  </div>
+                  {fieldErrors.salarioBaseMensual && (
+                    <p className="mt-1 text-sm text-red-400">{fieldErrors.salarioBaseMensual}</p>
+                  )}
+                  <p className="mt-1 text-xs text-brand-200/80">
+                    Si eliges esta opción, el sistema estimará el salario promedio usando una regla estándar.
+                  </p>
+                </div>
+              ) : salaryInputMode === 'PROMEDIO' ? (
                 <div>
                   <label htmlFor="salarioPromedioMensual" className="block text-sm font-medium text-white mb-2">
                     Salario promedio mensual (últimos 6 meses)
@@ -587,7 +616,7 @@ export default function CalculadoraPrestacionesPage() {
                     <p className="mt-1 text-sm text-red-400">{fieldErrors.salarioPromedioMensual}</p>
                   )}
                   <p className="mt-1 text-xs text-brand-200/80">
-                    Debe reflejar el promedio de tus ingresos de los últimos 6 meses (incluye extras si aplica).
+                    Usaremos este valor también como salario base para el cálculo (para que no tengas que llenar dos campos).
                   </p>
                 </div>
               ) : (
@@ -619,7 +648,7 @@ export default function CalculadoraPrestacionesPage() {
                     <p className="mt-1 text-sm text-red-400">{fieldErrors.salariosUltimos6MesesRaw}</p>
                   )}
                   <p className="mt-1 text-xs text-brand-200/80">
-                    Acepta comas o saltos de línea. Usaremos hasta 6 valores para el promedio.
+                    Acepta comas o saltos de línea. Calcularemos el promedio y lo usaremos también como salario base.
                   </p>
                 </div>
               )}
