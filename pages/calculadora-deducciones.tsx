@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 import MainHeader from '../components/MainHeader'
 import DemoFooter from '../components/DemoFooter'
 import dynamic from 'next/dynamic'
-import { validateFormInputs, getAvailableYears } from '../lib/deduction-validator/client-validation'
+import { validateFormInputs } from '../lib/deduction-validator/client-validation'
 import { getPageTitle } from '../lib/seo/title'
 import { getPageDescription } from '../lib/seo/description'
 import SchemaMarkup from '../components/SEO/SchemaMarkup'
@@ -95,6 +95,7 @@ export default function CalculadoraDeduccionesPage() {
   const [company, setCompany] = useState<string>('')
   const [phone, setPhone] = useState<string>('')
   const [consentNewsletter, setConsentNewsletter] = useState<boolean>(false)
+  const [isContactOpen, setIsContactOpen] = useState(false)
   const [selectedDeductions, setSelectedDeductions] = useState<{
     ihss: boolean
     rap: boolean
@@ -109,8 +110,6 @@ export default function CalculadoraDeduccionesPage() {
     isr: true
   })
   const currentYear = new Date().getFullYear()
-  const [year, setYear] = useState<number>(currentYear)
-  const [availableYears, setAvailableYears] = useState<number[]>([])
   const [email, setEmail] = useState<string>('')
   const [loading, setLoading] = useState(false)
   const [sendingEmail, setSendingEmail] = useState(false)
@@ -118,11 +117,6 @@ export default function CalculadoraDeduccionesPage() {
   const [error, setError] = useState<string | null>(null)
   const [validationErrors, setValidationErrors] = useState<{ [key: string]: string }>({})
   const [emailSent, setEmailSent] = useState(false)
-
-  // Generar años disponibles dinámicamente
-  useEffect(() => {
-    setAvailableYears(getAvailableYears(currentYear))
-  }, [currentYear])
 
   // Cargar contacto solo si hubo consentimiento previo
   useEffect(() => {
@@ -185,7 +179,6 @@ export default function CalculadoraDeduccionesPage() {
     const validation = validateFormInputs({
       salary,
       paymentModality,
-      year,
       email
     })
 
@@ -215,7 +208,7 @@ export default function CalculadoraDeduccionesPage() {
         body: JSON.stringify({
           salary: salaryNum,
           paymentModality,
-          year,
+          year: currentYear,
           deductions: selectedDeductions
         })
       })
@@ -323,10 +316,10 @@ export default function CalculadoraDeduccionesPage() {
           </div>
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 leading-tight">
             <span className="text-white block sm:inline">¿Te están deduciendo lo justo?</span>
-            <span className="text-brand-300 block sm:inline mt-2 sm:mt-1">Sal de dudas en 30 segundos. ⏱️</span>
+            <span className="text-brand-300 block sm:inline mt-2 sm:mt-1">Sal de dudas en 30 segundos.</span>
           </h1>
           <p className="text-lg sm:text-xl text-brand-200/90 max-w-2xl mx-auto">
-            No te quedes con la duda. Tus ingresos importan. Esta calculadora te ayuda a validar si tus deducciones de ley (ISR, IHSS, RAP) en Honduras son correctas, de forma gratuita y sin errores.
+            Tus ingresos importan. Esta calculadora te ayuda a validar si tus deducciones de ley (ISR, IHSS, RAP) en Honduras son correctas, de forma gratuita y sin errores.
           </p>
         </div>
 
@@ -502,41 +495,6 @@ export default function CalculadoraDeduccionesPage() {
               </p>
             </div>
 
-            {/* Year Selector */}
-            <div>
-              <label htmlFor="year" className="block text-sm font-medium text-white mb-2">
-                Año (opcional)
-              </label>
-              <select
-                id="year"
-                value={year}
-                onChange={(e) => setYear(parseInt(e.target.value))}
-                className={`block w-full px-3 py-3.5 border rounded-xl bg-white/5 backdrop-blur-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all hover:border-cyan-400/30 hover:bg-white/10 ${
-                  validationErrors.year ? 'border-red-500/50 bg-red-500/5' : 'border-white/20'
-                }`}
-              >
-                {availableYears.length > 0 ? (
-                  availableYears.map((y) => (
-                    <option key={y} value={y} className="bg-slate-800">
-                      {y}
-                    </option>
-                  ))
-                ) : (
-                  <option value={currentYear} className="bg-slate-800">
-                    {currentYear}
-                  </option>
-                )}
-              </select>
-              {validationErrors.year && (
-                <p className="mt-1 text-sm text-red-400">{validationErrors.year}</p>
-              )}
-              {!validationErrors.year && (
-                <p className="mt-1 text-sm text-brand-300/70">
-                  Selecciona el año para validar deducciones de años anteriores
-                </p>
-              )}
-            </div>
-
             {/* Email Input (Optional) */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-white mb-2">
@@ -572,70 +530,94 @@ export default function CalculadoraDeduccionesPage() {
               )}
             </div>
 
-            {/* Contact + Consent (always visible) */}
-            <div className="glass rounded-xl p-4 border border-white/10 backdrop-blur-sm">
-              <div className="text-white font-semibold mb-3">Recibe el cálculo en PDF (opcional)</div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="fullName" className="block text-sm font-medium text-white mb-2">
-                    Nombre (opcional)
-                  </label>
-                  <input
-                    id="fullName"
-                    type="text"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Tu nombre"
-                    className="block w-full px-3 py-3 border rounded-xl bg-white/5 backdrop-blur-sm text-white placeholder-brand-200/70 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500/50 transition-all hover:bg-white/10 border-white/20"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="company" className="block text-sm font-medium text-white mb-2">
-                    Empresa (opcional)
-                  </label>
-                  <input
-                    id="company"
-                    type="text"
-                    value={company}
-                    onChange={(e) => setCompany(e.target.value)}
-                    placeholder="Nombre de tu empresa"
-                    className="block w-full px-3 py-3 border rounded-xl bg-white/5 backdrop-blur-sm text-white placeholder-brand-200/70 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500/50 transition-all hover:bg-white/10 border-white/20"
-                  />
-                </div>
-                <div className="sm:col-span-2">
-                  <label htmlFor="phone" className="block text-sm font-medium text-white mb-2">
-                    Celular (opcional)
-                  </label>
-                  <input
-                    id="phone"
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="Ej: +504 9999-9999"
-                    className="block w-full px-3 py-3 border rounded-xl bg-white/5 backdrop-blur-sm text-white placeholder-brand-200/70 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500/50 transition-all hover:bg-white/10 border-white/20"
-                    inputMode="tel"
-                  />
-                  <p className="mt-1 text-xs text-brand-200/70">
-                    Validación suave: puedes ingresar tu número en el formato que uses.
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-4 flex items-start gap-3">
-                <input
-                  id="consentNewsletter"
-                  type="checkbox"
-                  checked={consentNewsletter}
-                  onChange={(e) => setConsentNewsletter(e.target.checked)}
-                  className="mt-1 h-4 w-4 rounded border-white/30 bg-slate-900"
-                />
-                <label htmlFor="consentNewsletter" className="text-sm text-brand-100 leading-relaxed">
-                  Acepto suscribirme al newsletter para recibir mi cálculo en PDF.
+            {/* Contact + Consent (accordion) */}
+            <div className="glass rounded-xl border border-white/10 backdrop-blur-sm overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setIsContactOpen((v) => !v)}
+                className="w-full px-4 py-4 flex items-center justify-between gap-3 hover:bg-white/5 transition-colors"
+                aria-expanded={isContactOpen}
+              >
+                <div className="text-left">
+                  <div className="text-white font-semibold">Recibe el cálculo en PDF (opcional)</div>
                   <div className="text-xs text-brand-200/70 mt-1">
-                    Respetamos tu privacidad. <span className="text-white/90">No guardamos datos salariales</span>; solo nombre y correo (y celular/empresa si los ingresas).
+                    Respetamos tu privacidad. No guardamos datos salariales.
                   </div>
-                </label>
-              </div>
+                </div>
+                <svg
+                  className={`h-5 w-5 text-brand-200 transition-transform ${isContactOpen ? 'rotate-180' : ''}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {isContactOpen && (
+                <div className="px-4 pb-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="fullName" className="block text-sm font-medium text-white mb-2">
+                        Nombre (opcional)
+                      </label>
+                      <input
+                        id="fullName"
+                        type="text"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        placeholder="Tu nombre"
+                        className="block w-full px-3 py-3 border rounded-xl bg-white/5 backdrop-blur-sm text-white placeholder-brand-200/70 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500/50 transition-all hover:bg-white/10 border-white/20"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="company" className="block text-sm font-medium text-white mb-2">
+                        Empresa (opcional)
+                      </label>
+                      <input
+                        id="company"
+                        type="text"
+                        value={company}
+                        onChange={(e) => setCompany(e.target.value)}
+                        placeholder="Nombre de tu empresa"
+                        className="block w-full px-3 py-3 border rounded-xl bg-white/5 backdrop-blur-sm text-white placeholder-brand-200/70 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500/50 transition-all hover:bg-white/10 border-white/20"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label htmlFor="phone" className="block text-sm font-medium text-white mb-2">
+                        Celular (opcional)
+                      </label>
+                      <input
+                        id="phone"
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="Ej: +504 9999-9999"
+                        className="block w-full px-3 py-3 border rounded-xl bg-white/5 backdrop-blur-sm text-white placeholder-brand-200/70 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500/50 transition-all hover:bg-white/10 border-white/20"
+                        inputMode="tel"
+                      />
+                      <p className="mt-1 text-xs text-brand-200/70">Validación suave: puedes ingresar tu número en el formato que uses.</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex items-start gap-3">
+                    <input
+                      id="consentNewsletter"
+                      type="checkbox"
+                      checked={consentNewsletter}
+                      onChange={(e) => setConsentNewsletter(e.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-white/30 bg-slate-900"
+                    />
+                    <label htmlFor="consentNewsletter" className="text-sm text-brand-100 leading-relaxed">
+                      Acepto suscribirme al newsletter para recibir mi cálculo en PDF.
+                      <div className="text-xs text-brand-200/70 mt-1">
+                        Solo guardamos nombre y correo (y celular/empresa si los ingresas).
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Error Message */}
