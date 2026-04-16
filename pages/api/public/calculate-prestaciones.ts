@@ -10,6 +10,8 @@ const prestacionesRequestSchema = z
   .object({
     datosManuales: z.object({
       salarioBaseMensual: z.number().positive(),
+      salarioPromedioMensual: z.number().positive().optional(),
+      salariosUltimos6Meses: z.array(z.number().nonnegative()).min(1).max(6).optional(),
       fechaIngreso: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
         message: 'La fecha de ingreso debe tener formato YYYY-MM-DD',
       }),
@@ -21,6 +23,13 @@ const prestacionesRequestSchema = z
       motivoSalida: motivoSalidaEnum,
       montoRapAcumulado: z.number().min(0).optional().default(0),
       preavisoGozado: z.boolean().optional().default(false),
+      condiciones: z
+        .object({
+          fallecimientoNatural: z.boolean().optional(),
+          tienePensionEquivalente: z.boolean().optional(),
+          retiroVoluntario: z.boolean().optional(),
+        })
+        .optional(),
     }),
   })
   .superRefine((val, ctx) => {

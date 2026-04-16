@@ -42,6 +42,7 @@ export interface LiquidacionResult {
   metadata: {
     motivoSalida: MotivoSalida
     preavisoGozado: boolean
+    salaryAverageMode: 'real_6m' | 'manual_avg' | 'proxy_14_12'
   }
 }
 
@@ -106,18 +107,47 @@ function calcularAntiguedad360(fechaIngreso: Date, fechaEgreso: Date): TiemposLa
   }
 }
 
-function calcularBasesSalariales(salarioBaseMensual: number): BasesSalariales {
+function calcularBasesSalariales(
+  salarioBaseMensual: number,
+  salarioPromedioMensual: number
+): BasesSalariales {
   const base = new Decimal(salarioBaseMensual)
   const salarioBaseDiario = base.div(DIAS_MES_COMERCIAL)
-  const salarioPromedioMensual = base.mul(14).div(12)
-  const salarioPromedioDiario = salarioPromedioMensual.div(DIAS_MES_COMERCIAL)
+  const promedioMensual = new Decimal(salarioPromedioMensual)
+  const salarioPromedioDiario = promedioMensual.div(DIAS_MES_COMERCIAL)
 
   return {
     salarioBaseMensual: base.toNumber(),
     salarioBaseDiario: salarioBaseDiario.toDecimalPlaces(6).toNumber(),
-    salarioPromedioMensual: salarioPromedioMensual.toDecimalPlaces(6).toNumber(),
+    salarioPromedioMensual: promedioMensual.toDecimalPlaces(6).toNumber(),
     salarioPromedioDiario: salarioPromedioDiario.toDecimalPlaces(6).toNumber()
   }
+}
+
+function calcularSalarioPromedioMensualArt123(input: CesantiasRequestInput): {
+  salarioPromedioMensual: number
+  mode: 'real_6m' | 'manual_avg' | 'proxy_14_12'
+} {
+  const { salarioBaseMensual, salarioPromedioMensual, salariosUltimos6Meses } = input.datosManuales
+
+  // Si el caller provee promedio manual, lo respetamos (asumimos ya incluye Art. 123).
+  if (typeof salarioPromedioMensual === 'number' && Number.isFinite(salarioPromedioMensual) && salarioPromedioMensual > 0) {
+    return { salarioPromedioMensual, mode: 'manual_avg' }
+  }
+
+  // Si hay últimos 6 meses (o fracción), promediamos y agregamos 50% de 13° y 14°.
+  if (Array.isArray(salariosUltimos6Meses) && salariosUltimos6Meses.length > 0) {
+    const valid = salariosUltimos6Meses.filter((x) => typeof x === 'number' && Number.isFinite(x) && x >= 0)
+    if (valid.length > 0) {
+      const avg6 = new Decimal(valid.reduce((acc, x) => acc + x, 0)).div(valid.length)
+      const half13and14Monthly = new Decimal(salarioBaseMensual).div(12) // 50% de 13° + 50% de 14° = 1 salario/12
+      return { salarioPromedioMensual: avg6.plus(half13and14Monthly).toNumber(), mode: 'real_6m' }
+    }
+  }
+
+  // Fallback retrocompatible (proxy actual): base * 14/12
+  const proxy = new Decimal(salarioBaseMensual).mul(14).div(12).toNumber()
+  return { salarioPromedioMensual: proxy, mode: 'proxy_14_12' }
 }
 
 function calcularDiasPreaviso(totalDiasLaborados: number): number {
@@ -182,20 +212,83 @@ function calcularDecimoCuarto(
 function calcularCesantia(
   salarioPromedioMensual: Decimal,
   tiempos: TiemposLaborados,
-  motivoSalida: MotivoSalida
+  _motivoSalida: MotivoSalida
 ): Decimal {
-  if (motivoSalida !== 'DESPIDO_INJUSTIFICADO') {
-    // En renuncia/despido justificado la cesantía se cubre vía RAP (reserva laboral), no se paga directa
+  // Nota: la elegibilidad/factor por motivo se resuelve fuera (ver lógica principal).
+  // Aquí implementamos únicamente la tabla de Art. 120 (base + proporcional) en año comercial 360/30.
+
+  const totalDias = Math.max(0, tiempos.totalDias)
+  if (totalDias <= 0) return new Decimal(0)
+
+  const salarioPromedioDiario = salarioPromedioMensual.div(DIAS_MES_COMERCIAL)
+
+  // Tramos < 1 año
+  if (totalDias < 90) {
+    return new Decimal(0)
+  }
+  if (totalDias >= 90 && totalDias < 180) {
+    return salarioPromedioDiario.mul(10)
+  }
+  if (totalDias >= 180 && totalDias < DIAS_ANO_COMERCIAL) {
+    return salarioPromedioDiario.mul(20)
+  }
+
+  // > 1 año: 1 mes por año completo + proporcional solo del último año incompleto.
+  const anosCompletos = Math.floor(totalDias / DIAS_ANO_COMERCIAL)
+  const diasFraccion = totalDias % DIAS_ANO_COMERCIAL
+
+  // Proporcional STSS: (días trabajados en el año incompleto) / 12
+  const diasCesantiaProporcional = new Decimal(diasFraccion).div(12)
+
+  // 1 mes = 30 días de salario promedio
+  const diasPorAnosCompletos = new Decimal(anosCompletos).mul(DIAS_MES_COMERCIAL)
+
+  const totalDiasCesantia = diasPorAnosCompletos.plus(diasCesantiaProporcional)
+
+  // Tope total: 25 meses de salario = 25 * 30 días
+  const maxDiasCesantia = new Decimal(CESANTIA_MAX_ANOS).mul(DIAS_MES_COMERCIAL)
+  const cappedDiasCesantia = Decimal.min(totalDiasCesantia, maxDiasCesantia)
+
+  return salarioPromedioDiario.mul(cappedDiasCesantia)
+}
+
+function calcularFactorCesantiaPorMotivo(input: CesantiasRequestInput, tiempos: TiemposLaborados): Decimal {
+  const { motivoSalida, condiciones } = input.parametrosCalculo
+
+  const tienePensionEquivalente =
+    motivoSalida === 'PENSION_JUBILACION_EQUIVALENTE' || condiciones?.tienePensionEquivalente === true
+  if (tienePensionEquivalente) return new Decimal(0)
+
+  if (motivoSalida === 'DESPIDO_JUSTIFICADO') return new Decimal(0)
+  if (motivoSalida === 'MUTUO_ACUERDO') return new Decimal(0)
+  if (motivoSalida === 'FIN_CONTRATO') return new Decimal(0)
+
+  if (motivoSalida === 'RENUNCIA') {
+    const cumple15Anos = tiempos.totalDias >= 15 * DIAS_ANO_COMERCIAL
+    if (cumple15Anos && condiciones?.retiroVoluntario) {
+      return new Decimal(0.35)
+    }
     return new Decimal(0)
   }
 
-  const maxDias = CESANTIA_MAX_ANOS * DIAS_ANO_COMERCIAL
-  const diasParaCesantia = Math.min(tiempos.totalDias, maxDias)
-  if (diasParaCesantia <= 0) return new Decimal(0)
+  if (motivoSalida === 'FALLECIMIENTO') {
+    // Regla conocida: 75% si fue natural después de 6 meses (modelo simplificado con flag y antigüedad)
+    if (condiciones?.fallecimientoNatural) {
+      return tiempos.totalDias >= 180 ? new Decimal(0.75) : new Decimal(0)
+    }
+    // Si no se especifica, asumimos que sí corresponde cesantía completa (orientativo).
+    return new Decimal(1)
+  }
 
-  return salarioPromedioMensual
-    .div(DIAS_ANO_COMERCIAL)
-    .mul(diasParaCesantia)
+  if (motivoSalida === 'DESPIDO_INJUSTIFICADO') return new Decimal(1)
+  if (motivoSalida === 'CAUSA_AJENA_TRABAJADOR') return new Decimal(1)
+
+  return new Decimal(0)
+}
+
+function aplicaPreaviso(motivoSalida: MotivoSalida): boolean {
+  // Preaviso suele aplicar a terminaciones imputables al empleador (modelo orientativo).
+  return motivoSalida === 'DESPIDO_INJUSTIFICADO' || motivoSalida === 'CAUSA_AJENA_TRABAJADOR'
 }
 
 export function calcularLiquidacionHonduras(
@@ -207,7 +300,8 @@ export function calcularLiquidacionHonduras(
   const ingresoDate = new Date(fechaIngreso)
   const egresoDate = new Date(fechaEgreso)
 
-  const bases = calcularBasesSalariales(salarioBaseMensual)
+  const avg = calcularSalarioPromedioMensualArt123(input)
+  const bases = calcularBasesSalariales(salarioBaseMensual, avg.salarioPromedioMensual)
   const tiempos = calcularAntiguedad360(ingresoDate, egresoDate)
 
   const salarioBaseMensualDec = new Decimal(bases.salarioBaseMensual)
@@ -217,17 +311,19 @@ export function calcularLiquidacionHonduras(
 
   // Preaviso
   let preavisoDec = new Decimal(0)
-  if (motivoSalida === 'DESPIDO_INJUSTIFICADO' && !preavisoGozado) {
+  if (aplicaPreaviso(motivoSalida) && !preavisoGozado) {
     const diasPreaviso = calcularDiasPreaviso(tiempos.totalDias)
     preavisoDec = salarioPromedioDiarioDec.mul(diasPreaviso)
   }
 
   // Cesantía
-  const cesantiaBrutaDec = calcularCesantia(
+  const cesantiaBaseDec = calcularCesantia(
     salarioPromedioMensualDec,
     tiempos,
     motivoSalida
   )
+  const factorCesantiaDec = calcularFactorCesantiaPorMotivo(input, tiempos)
+  const cesantiaBrutaDec = cesantiaBaseDec.mul(factorCesantiaDec)
 
   // Vacaciones
   const vacacionesDec = calcularVacacionesProporcionales(
@@ -276,7 +372,8 @@ export function calcularLiquidacionHonduras(
     rubros,
     metadata: {
       motivoSalida,
-      preavisoGozado
+      preavisoGozado,
+      salaryAverageMode: avg.mode
     }
   }
 }

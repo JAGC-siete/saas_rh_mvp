@@ -23,6 +23,9 @@ type PublicMotivoSalida =
   | 'RENUNCIA_VOLUNTARIA'
   | 'DESPIDO_INJUSTIFICADO'
   | 'DESPIDO_JUSTIFICADO'
+  | 'CAUSA_AJENA_TRABAJADOR'
+  | 'FALLECIMIENTO'
+  | 'PENSION_JUBILACION_EQUIVALENTE'
   | 'FIN_CONTRATO'
   | 'MUTUO_ACUERDO'
 
@@ -40,9 +43,24 @@ const MOTIVO_OPTIONS: { value: PublicMotivoSalida; label: string; help: string }
     help: 'Suele generar cesantía y puede incluir pago de preaviso.',
   },
   {
+    value: 'CAUSA_AJENA_TRABAJADOR',
+    label: 'Causa ajena a tu voluntad',
+    help: 'Puede generar cesantía y preaviso según el caso (orientativo).',
+  },
+  {
     value: 'DESPIDO_JUSTIFICADO',
     label: 'Despido justificado',
     help: 'Puede afectar cesantía/preaviso según el caso.',
+  },
+  {
+    value: 'FALLECIMIENTO',
+    label: 'Fallecimiento del trabajador',
+    help: 'Cálculo orientativo; puede aplicar un porcentaje según condiciones.',
+  },
+  {
+    value: 'PENSION_JUBILACION_EQUIVALENTE',
+    label: 'Jubilación / pensión equivalente',
+    help: 'En general excluye el auxilio de cesantía (orientativo).',
   },
   {
     value: 'FIN_CONTRATO',
@@ -60,8 +78,11 @@ function mapMotivoToInternal(motivo: PublicMotivoSalida): MotivoSalida {
   if (motivo === 'DESPIDO_INJUSTIFICADO') return 'DESPIDO_INJUSTIFICADO'
   if (motivo === 'DESPIDO_JUSTIFICADO') return 'DESPIDO_JUSTIFICADO'
   if (motivo === 'RENUNCIA_VOLUNTARIA') return 'RENUNCIA'
-  if (motivo === 'FIN_CONTRATO') return 'DESPIDO_JUSTIFICADO'
-  return 'DESPIDO_JUSTIFICADO'
+  if (motivo === 'CAUSA_AJENA_TRABAJADOR') return 'CAUSA_AJENA_TRABAJADOR'
+  if (motivo === 'FALLECIMIENTO') return 'FALLECIMIENTO'
+  if (motivo === 'PENSION_JUBILACION_EQUIVALENTE') return 'PENSION_JUBILACION_EQUIVALENTE'
+  if (motivo === 'FIN_CONTRATO') return 'FIN_CONTRATO'
+  return 'MUTUO_ACUERDO'
 }
 
 function formatCurrency(value: number) {
@@ -139,6 +160,8 @@ export default function CalculadoraPrestacionesPage() {
   const [fechaEgreso, setFechaEgreso] = useState('')
   const [motivoSalidaPublico, setMotivoSalidaPublico] = useState<PublicMotivoSalida>('RENUNCIA_VOLUNTARIA')
   const [preavisoGozado, setPreavisoGozado] = useState(false)
+  const [retiroVoluntario15, setRetiroVoluntario15] = useState(false)
+  const [fallecimientoNatural, setFallecimientoNatural] = useState(false)
   const [incluirRAP, setIncluirRAP] = useState(false)
   const [montoRapAcumulado, setMontoRapAcumulado] = useState('')
 
@@ -149,9 +172,11 @@ export default function CalculadoraPrestacionesPage() {
 
   const motivoSalida = useMemo(() => mapMotivoToInternal(motivoSalidaPublico), [motivoSalidaPublico])
   const showPreavisoToggle = useMemo(
-    () => motivoSalidaPublico === 'DESPIDO_INJUSTIFICADO',
+    () => motivoSalidaPublico === 'DESPIDO_INJUSTIFICADO' || motivoSalidaPublico === 'CAUSA_AJENA_TRABAJADOR',
     [motivoSalidaPublico]
   )
+  const showRetiroVoluntarioToggle = useMemo(() => motivoSalidaPublico === 'RENUNCIA_VOLUNTARIA', [motivoSalidaPublico])
+  const showFallecimientoNaturalToggle = useMemo(() => motivoSalidaPublico === 'FALLECIMIENTO', [motivoSalidaPublico])
 
   useEffect(() => {
     try {
@@ -163,6 +188,8 @@ export default function CalculadoraPrestacionesPage() {
       if (typeof parsed?.fechaEgreso === 'string') setFechaEgreso(parsed.fechaEgreso)
       if (typeof parsed?.motivoSalidaPublico === 'string') setMotivoSalidaPublico(parsed.motivoSalidaPublico)
       if (typeof parsed?.preavisoGozado === 'boolean') setPreavisoGozado(parsed.preavisoGozado)
+      if (typeof parsed?.retiroVoluntario15 === 'boolean') setRetiroVoluntario15(parsed.retiroVoluntario15)
+      if (typeof parsed?.fallecimientoNatural === 'boolean') setFallecimientoNatural(parsed.fallecimientoNatural)
       if (typeof parsed?.incluirRAP === 'boolean') setIncluirRAP(parsed.incluirRAP)
       if (typeof parsed?.montoRapAcumulado === 'string') setMontoRapAcumulado(parsed.montoRapAcumulado)
     } catch {
@@ -180,6 +207,8 @@ export default function CalculadoraPrestacionesPage() {
           fechaEgreso,
           motivoSalidaPublico,
           preavisoGozado,
+            retiroVoluntario15,
+            fallecimientoNatural,
           incluirRAP,
           montoRapAcumulado,
         })
@@ -187,7 +216,17 @@ export default function CalculadoraPrestacionesPage() {
     } catch {
       // ignore
     }
-  }, [salarioBaseMensual, fechaIngreso, fechaEgreso, motivoSalidaPublico, preavisoGozado, incluirRAP, montoRapAcumulado])
+  }, [
+    salarioBaseMensual,
+    fechaIngreso,
+    fechaEgreso,
+    motivoSalidaPublico,
+    preavisoGozado,
+    retiroVoluntario15,
+    fallecimientoNatural,
+    incluirRAP,
+    montoRapAcumulado,
+  ])
 
   const validateClient = () => {
     const nextErrors: Record<string, string> = {}
@@ -249,6 +288,10 @@ export default function CalculadoraPrestacionesPage() {
             motivoSalida,
             montoRapAcumulado: Number.isFinite(rapNum) ? rapNum : 0,
             preavisoGozado: showPreavisoToggle ? preavisoGozado : false,
+            condiciones: {
+              retiroVoluntario: showRetiroVoluntarioToggle ? retiroVoluntario15 : false,
+              fallecimientoNatural: showFallecimientoNaturalToggle ? fallecimientoNatural : false,
+            },
           },
         }),
       })
@@ -294,6 +337,8 @@ export default function CalculadoraPrestacionesPage() {
     setFechaEgreso('')
     setMotivoSalidaPublico('RENUNCIA_VOLUNTARIA')
     setPreavisoGozado(false)
+    setRetiroVoluntario15(false)
+    setFallecimientoNatural(false)
     setIncluirRAP(false)
     setMontoRapAcumulado('')
     setError(null)
@@ -533,6 +578,36 @@ export default function CalculadoraPrestacionesPage() {
                       type="checkbox"
                       checked={preavisoGozado}
                       onChange={(e) => setPreavisoGozado(e.target.checked)}
+                      className="h-4 w-4 rounded border-white/30 bg-slate-900"
+                    />
+                    Sí
+                  </label>
+                </div>
+              )}
+
+              {showRetiroVoluntarioToggle && (
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-sm text-white font-medium">¿Retiro voluntario con 15+ años?</div>
+                  <label className="inline-flex items-center gap-2 text-sm text-brand-200/90">
+                    <input
+                      type="checkbox"
+                      checked={retiroVoluntario15}
+                      onChange={(e) => setRetiroVoluntario15(e.target.checked)}
+                      className="h-4 w-4 rounded border-white/30 bg-slate-900"
+                    />
+                    Sí
+                  </label>
+                </div>
+              )}
+
+              {showFallecimientoNaturalToggle && (
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-sm text-white font-medium">¿Fallecimiento natural?</div>
+                  <label className="inline-flex items-center gap-2 text-sm text-brand-200/90">
+                    <input
+                      type="checkbox"
+                      checked={fallecimientoNatural}
+                      onChange={(e) => setFallecimientoNatural(e.target.checked)}
                       className="h-4 w-4 rounded border-white/30 bg-slate-900"
                     />
                     Sí
