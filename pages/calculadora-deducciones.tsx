@@ -330,7 +330,7 @@ export default function CalculadoraDeduccionesPage() {
                   onClick={() => setPaymentModality('quincenal')}
                   className={`py-3.5 px-4 rounded-xl border-2 transition-all font-medium ${
                     paymentModality === 'quincenal'
-                      ? 'border-cyan-400 bg-cyan-500/20 text-white shadow-lg shadow-cyan-500/20'
+                      ? 'border-brand-500/70 bg-brand-600 hover:bg-brand-700 text-white shadow-lg shadow-black/20'
                       : 'border-white/20 bg-white/5 backdrop-blur-sm text-brand-200 hover:border-cyan-400/50 hover:bg-white/10'
                   }`}
                 >
@@ -341,7 +341,7 @@ export default function CalculadoraDeduccionesPage() {
                   onClick={() => setPaymentModality('mensual')}
                   className={`py-3.5 px-4 rounded-xl border-2 transition-all font-medium ${
                     paymentModality === 'mensual'
-                      ? 'border-cyan-400 bg-cyan-500/20 text-white shadow-lg shadow-cyan-500/20'
+                      ? 'border-brand-500/70 bg-brand-600 hover:bg-brand-700 text-white shadow-lg shadow-black/20'
                       : 'border-white/20 bg-white/5 backdrop-blur-sm text-brand-200 hover:border-cyan-400/50 hover:bg-white/10'
                   }`}
                 >
@@ -405,7 +405,7 @@ export default function CalculadoraDeduccionesPage() {
                       }
                       className={`text-left rounded-xl border-2 px-4 py-3.5 transition-all backdrop-blur-sm ${
                         active
-                          ? 'border-cyan-400 bg-cyan-500/20 text-white shadow-lg shadow-cyan-500/10'
+                          ? 'border-brand-500/70 bg-brand-600 hover:bg-brand-700 text-white shadow-lg shadow-black/20'
                           : 'border-white/20 bg-white/5 text-brand-200 hover:border-cyan-400/50 hover:bg-white/10'
                       }`}
                       aria-pressed={active}
@@ -417,12 +417,12 @@ export default function CalculadoraDeduccionesPage() {
                         </div>
                         <span
                           className={`inline-flex items-center justify-center h-6 w-6 rounded-md border ${
-                            active ? 'border-cyan-300/60 bg-cyan-500/20' : 'border-white/20 bg-white/5'
+                            active ? 'border-white/30 bg-white/10' : 'border-white/20 bg-white/5'
                           }`}
                           aria-hidden="true"
                         >
                           {active ? (
-                            <svg className="h-4 w-4 text-cyan-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                             </svg>
                           ) : (
