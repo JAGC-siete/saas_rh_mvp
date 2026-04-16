@@ -8,13 +8,16 @@ import { motion } from 'framer-motion'
 import MainHeader from '../components/MainHeader'
 import { trackActivationFormSubmit, initGoogleAdsTracking } from '../lib/analytics/googleAds'
 import type { CountryCode } from '../lib/country/supported'
-import { isCountryCode, isValidLocalMobileForCountry } from '../lib/country/supported'
+import { isCountryCode } from '../lib/country/supported'
+import { normalizeSoftPhone } from '../lib/privacy'
 
 interface FormData {
   empleados: number
   empresa: string
   nombre: string
-  contactoWhatsApp: string
+  whatsappCountryCallingCode: string
+  whatsappNumber: string
+  contactoWhatsApp: string // legacy: se arma al submit
   contactoEmail: string
   departamentos: number
   aceptaTrial: boolean
@@ -31,16 +34,27 @@ interface ValidationErrors {
   submit?: string
 }
 
-function whatsAppFormatHint(cc: CountryCode): string {
-  if (cc === 'SLV') return '+503 y 8 dígitos locales'
-  if (cc === 'GTM') return '+502 y 8 dígitos locales'
-  return '+504 y 8 dígitos locales'
-}
+const WHATSAPP_CALLING_CODES: { code: string; country: string }[] = [
+  { code: '+1', country: 'Estados Unidos / Canadá' },
+  { code: '+52', country: 'México' },
+  { code: '+503', country: 'El Salvador' },
+  { code: '+504', country: 'Honduras' },
+  { code: '+502', country: 'Guatemala' },
+  { code: '+505', country: 'Nicaragua' },
+  { code: '+506', country: 'Costa Rica' },
+  { code: '+507', country: 'Panamá' },
+  { code: '+57', country: 'Colombia' },
+  { code: '+51', country: 'Perú' },
+  { code: '+56', country: 'Chile' },
+  { code: '+54', country: 'Argentina' },
+  { code: '+58', country: 'Venezuela' },
+  { code: '+34', country: 'España' },
+]
 
-function whatsappPlaceholderForCountry(cc: CountryCode): string {
-  if (cc === 'SLV') return '+503 9999-9999'
-  if (cc === 'GTM') return '+502 9999-9999'
-  return '+504 9999-9999'
+function defaultCallingCodeForPayrollCountry(cc: CountryCode): string {
+  if (cc === 'SLV') return '+503'
+  if (cc === 'GTM') return '+502'
+  return '+504'
 }
 
 /** Validación completa del formulario (una sola fuente de verdad para submit y validación en vivo). */
@@ -79,11 +93,10 @@ function computeActivarErrors(fd: FormData): ValidationErrors {
     e.countryCode = '🌎 Seleccioná el país donde opera tu empresa (define zona horaria, moneda y reglas de nómina).'
   }
 
-  const wa = fd.contactoWhatsApp.trim()
-  if (wa && isCountryCode(fd.countryCode)) {
-    if (!isValidLocalMobileForCountry(fd.contactoWhatsApp, fd.countryCode)) {
-      e.contactoWhatsApp = `📱 Formato inválido para el país seleccionado. Usá ${whatsAppFormatHint(fd.countryCode)}.`
-    }
+  const waCombined = `${fd.whatsappCountryCallingCode || ''} ${fd.whatsappNumber || ''}`.trim()
+  const waNormalized = normalizeSoftPhone(waCombined)
+  if (waCombined && !waNormalized) {
+    e.contactoWhatsApp = '📱 Número de WhatsApp inválido. Intenta con el código de país y al menos 7 dígitos.'
   }
 
   return e
@@ -97,6 +110,8 @@ export default function ActivarPage() {
     empleados: 1,
     empresa: '',
     nombre: '',
+    whatsappCountryCallingCode: '+504',
+    whatsappNumber: '',
     contactoWhatsApp: '',
     contactoEmail: '',
     departamentos: 1,
@@ -160,7 +175,8 @@ export default function ActivarPage() {
         empleados: formData.empleados,
         empresa: formData.empresa.trim(),
         nombre: formData.nombre?.trim() || '',
-        contactoWhatsApp: formData.contactoWhatsApp?.trim() || '',
+        contactoWhatsApp:
+          normalizeSoftPhone(`${formData.whatsappCountryCallingCode} ${formData.whatsappNumber}`) || '',
         contactoEmail: formData.contactoEmail.trim(),
         departamentos: formData.departamentos,
         aceptaTrial: formData.aceptaTrial || false,
@@ -378,6 +394,10 @@ export default function ActivarPage() {
                     onChange={(e) => {
                       const v = e.target.value
                       if (!isCountryCode(v)) return
+                      // Si el usuario aún no ha escrito WhatsApp, sugerimos el código por defecto del país (sin forzar)
+                      if (!formData.whatsappNumber.trim()) {
+                        handleInputChange('whatsappCountryCallingCode', defaultCallingCodeForPayrollCountry(v))
+                      }
                       handleInputChange('countryCode', v)
                     }}
                     className={`w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border text-white focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all ${
@@ -392,7 +412,7 @@ export default function ActivarPage() {
                     <p className="text-red-400 text-sm mt-2 font-medium">{errors.countryCode}</p>
                   ) : (
                     <p className="text-brand-400 text-sm mt-2">
-                      Define moneda, huso horario y reglas de planilla para el entorno de prueba.
+                      Define moneda, parametros de planilla y legislacion laboral para el entorno de prueba.
                     </p>
                   )}
                 </div>
@@ -413,23 +433,40 @@ export default function ActivarPage() {
                 {/* WhatsApp */}
                 <div>
                   <label className="block text-white font-medium mb-2">WhatsApp</label>
-                  <input
-                    type="tel"
-                    name="contactoWhatsApp"
-                    value={formData.contactoWhatsApp}
-                    onChange={(e) => handleInputChange('contactoWhatsApp', e.target.value)}
-                    className={`w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all ${
-                      errors.contactoWhatsApp ? 'border-red-500/50 bg-red-500/5' : 'border-white/20'
-                    } hover:border-cyan-400/30 hover:bg-white/10`}
-                    placeholder={whatsappPlaceholderForCountry(formData.countryCode)}
-                  />
+                  <div className="grid grid-cols-1 sm:grid-cols-[160px_1fr] gap-3">
+                    <select
+                      name="whatsappCountryCallingCode"
+                      value={formData.whatsappCountryCallingCode}
+                      onChange={(e) => handleInputChange('whatsappCountryCallingCode', e.target.value)}
+                      className={`w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border text-white focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500/50 transition-all ${
+                        errors.contactoWhatsApp ? 'border-red-500/50 bg-red-500/5' : 'border-white/20'
+                      } hover:border-brand-500/30 hover:bg-white/10`}
+                    >
+                      {WHATSAPP_CALLING_CODES.map((opt) => (
+                        <option key={opt.code} value={opt.code} className="bg-slate-800">
+                          {opt.code} · {opt.country}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="tel"
+                      name="contactoWhatsApp"
+                      value={formData.whatsappNumber}
+                      onChange={(e) => handleInputChange('whatsappNumber', e.target.value)}
+                      className={`w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500/50 transition-all ${
+                        errors.contactoWhatsApp ? 'border-red-500/50 bg-red-500/5' : 'border-white/20'
+                      } hover:border-brand-500/30 hover:bg-white/10`}
+                      placeholder="9999-9999"
+                      inputMode="tel"
+                    />
+                  </div>
                   {errors.contactoWhatsApp ? (
                     <p className="text-red-400 text-sm mt-2 font-medium flex items-center">
                       {errors.contactoWhatsApp}
                     </p>
                   ) : (
                     <p className="text-brand-400 text-sm mt-2">
-                      Formato según país: {whatsAppFormatHint(formData.countryCode)} (opcional)
+                      Incluye tu número local; el código de país se selecciona arriba. (opcional)
                     </p>
                   )}
                 </div>
@@ -538,25 +575,25 @@ export default function ActivarPage() {
                 </div>
 
                 {/* Trial Checkbox */}
-                <div className="flex items-start space-x-3 p-4 bg-cyan-500/10 backdrop-blur-sm rounded-xl border border-cyan-400/30">
+                <div className="flex items-start space-x-3 p-4 bg-brand-600/10 backdrop-blur-sm rounded-xl border border-brand-500/30">
                   <input
                     type="checkbox"
                     id="acepta-trial"
                     checked={formData.aceptaTrial}
                     onChange={(e) => handleInputChange('aceptaTrial', e.target.checked)}
-                    className="mt-1 w-5 h-5 text-cyan-500 bg-white/10 border-cyan-400/50 rounded focus:ring-cyan-400 focus:ring-2 cursor-pointer"
+                    className="mt-1 w-5 h-5 text-brand-600 bg-white/10 border-brand-500/50 rounded focus:ring-brand-500 focus:ring-2 cursor-pointer"
                   />
                   <label htmlFor="acepta-trial" className="text-white text-sm leading-relaxed cursor-pointer">
                     Deseo crear mi entorno de prueba ahora. Recibiré acceso inmediato con empleados y departamentos configurados.
                   </label>
-                  <p className="text-cyan-200/70 text-xs mt-2 ml-8">Trial de 30 días. Sin costo. Sin compromiso.</p>
+                  <p className="text-brand-200/70 text-xs mt-2 ml-8">Trial de 30 días. Sin costo. Sin compromiso.</p>
                 </div>
 
                 {/* Submit Button */}
                 <button
                   onClick={handleSubmit}
                   disabled={!formData.contactoEmail || !formData.empresa || formData.departamentos < 1 || isLoading || Object.keys(errors).length > 0}
-                  className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white px-8 py-4 rounded-xl font-semibold inline-flex items-center justify-center transition-all shadow-lg shadow-cyan-500/25 hover:shadow-xl hover:shadow-cyan-500/40 disabled:opacity-50 disabled:cursor-not-allowed text-lg hover:scale-[1.02] active:scale-[0.98]"
+                  className="w-full bg-brand-600 hover:bg-brand-700 text-white px-8 py-4 rounded-xl font-semibold inline-flex items-center justify-center transition-all shadow-lg shadow-black/20 disabled:opacity-50 disabled:cursor-not-allowed text-lg hover:scale-[1.02] active:scale-[0.98]"
                 >
                   {isLoading ? (
                     <>

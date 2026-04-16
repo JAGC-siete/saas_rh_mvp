@@ -7,9 +7,9 @@ import {
   currencyForCountryCode,
   ianaTimezoneForCountryCode,
   isCountryCode,
-  isValidLocalMobileForCountry,
   type CountryCode,
 } from '../../lib/country/supported'
+import { normalizeSoftPhone } from '../../lib/privacy'
 
 export const config = {
   api: {
@@ -96,17 +96,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    // Validar formato de WhatsApp solo si se proporciona (según país elegido)
+    // Validación suave de WhatsApp (global): permitir cualquier código de país y formato razonable
     if (contactoWhatsApp && contactoWhatsApp.trim()) {
-      if (!isValidLocalMobileForCountry(contactoWhatsApp, countryCode)) {
-        const hint =
-          countryCode === 'SLV'
-            ? '+503 y 8 dígitos locales'
-            : countryCode === 'GTM'
-              ? '+502 y 8 dígitos locales'
-              : '+504 y 8 dígitos locales'
+      const normalized = normalizeSoftPhone(contactoWhatsApp)
+      if (!normalized) {
         return res.status(400).json({
-          error: `📱 Formato de WhatsApp inválido para el país seleccionado. Usá ${hint}.`,
+          error: '📱 Número de WhatsApp inválido. Incluye el código de país y al menos 7 dígitos.',
         })
       }
     }
