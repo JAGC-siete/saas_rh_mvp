@@ -312,21 +312,21 @@ export default function CalculadoraDeduccionesPage() {
         <div className="text-center mb-8 sm:mb-12">
           <div className="flex flex-wrap justify-center gap-2 sm:gap-3 md:gap-4 mb-6 animate-fade-up-subtle">
             <span className="px-3 py-1 bg-green-500/20 text-green-300 text-xs rounded-full border border-green-500/30">
-              IHSS, RAP e ISR según ley
+              Valida deducciones de ley
             </span>
             <span className="px-3 py-1 bg-blue-500/20 text-blue-300 text-xs rounded-full border border-blue-500/30">
-              Ley local vigente (Honduras)
+              Honduras · ISR · IHSS · RAP
             </span>
             <span className="px-3 py-1 bg-purple-500/20 text-purple-300 text-xs rounded-full border border-purple-500/30">
-              Sin cálculos manuales
+              Gratis y en 30 segundos
             </span>
           </div>
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 leading-tight">
-            <span className="text-white block sm:inline">Deja de calcular IHSS, RAP e ISR a mano</span>
-            <span className="text-brand-300 block sm:inline mt-2 sm:mt-1">Calculadora de deducciones (Honduras)</span>
+            <span className="text-white block sm:inline">¿Te están deduciendo lo justo?</span>
+            <span className="text-brand-300 block sm:inline mt-2 sm:mt-1">Sal de dudas en 30 segundos. ⏱️</span>
           </h1>
           <p className="text-lg sm:text-xl text-brand-200/90 max-w-2xl mx-auto">
-            Olvida las hojas de cálculo. Valida tus deducciones de ley (IHSS, RAP, INFOP) según normativa vigente. Herramienta gratuita y precisa.
+            No te quedes con la duda. Tus ingresos importan. Esta calculadora te ayuda a validar si tus deducciones de ley (ISR, IHSS, RAP) en Honduras son correctas, de forma gratuita y sin errores.
           </p>
         </div>
 
