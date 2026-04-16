@@ -6,9 +6,15 @@ import { validateEmail } from '../../../lib/deduction-validator/validation'
 import { withRateLimit } from '../../../lib/deduction-validator/rate-limit-wrapper'
 import { RATE_LIMITS } from '../../../lib/rate-limit'
 import { logger } from '../../../lib/logger'
+import { createAdminClient } from '../../../lib/supabase/server'
+import { maskEmail, normalizeSoftPhone } from '../../../lib/privacy'
 
 interface SendDeductionReportRequest {
   email: string
+  fullName?: string
+  company?: string
+  phone?: string
+  consentNewsletter?: boolean
   salary: number
   grossSalary: number
   monthlyGrossSalary: number
@@ -70,11 +76,14 @@ async function sendReportHandler(
   }
 
   const startTime = Date.now()
-  const clientIP = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown'
 
   try {
     const {
       email,
+      fullName,
+      company,
+      phone,
+      consentNewsletter,
       salary,
       grossSalary,
       monthlyGrossSalary,
@@ -95,9 +104,8 @@ async function sendReportHandler(
     const emailValidation = validateEmail(email)
     if (!emailValidation.valid) {
       logger.warn('Email inválido en send-deduction-report', {
-        email,
+        email: maskEmail(email),
         error: emailValidation.error,
-        ip: clientIP
       })
       return res.status(400).json({ 
         error: emailValidation.error || 'El email proporcionado no es válido' 
@@ -105,14 +113,55 @@ async function sendReportHandler(
     }
 
     const sanitizedEmail = emailValidation.sanitized as string
+    const consent = consentNewsletter === true
+    const name = typeof fullName === 'string' ? fullName.trim() : ''
+
+    if (!consent) {
+      return res.status(400).json({
+        error: 'Debes aceptar la suscripción para recibir el cálculo en PDF.',
+      })
+    }
+
+    if (!name) {
+      return res.status(400).json({
+        error: 'Ingresa tu nombre para enviarte el PDF.',
+      })
+    }
 
     // Log para métricas
     logger.info('Envío de reporte por email iniciado', {
-      email: sanitizedEmail,
+      email: maskEmail(sanitizedEmail),
       year,
       paymentModality,
-      ip: clientIP
     })
+
+    // Guardar lead (sin datos salariales)
+    try {
+      const supabase = createAdminClient()
+      const phoneNorm = normalizeSoftPhone(phone)
+
+      await (supabase as any)
+        .from('leads_public_tools')
+        .upsert(
+          {
+            email: sanitizedEmail,
+            full_name: name,
+            company: typeof company === 'string' ? company.trim() || null : null,
+            phone: phoneNorm,
+            source: 'deducciones',
+            consent_newsletter: true,
+            consented_at: new Date().toISOString(),
+            last_seen_at: new Date().toISOString(),
+          },
+          { onConflict: 'email' }
+        )
+    } catch (e: any) {
+      logger.warn('No se pudo guardar lead (deducciones)', {
+        email: maskEmail(sanitizedEmail),
+        error: e?.message,
+      })
+      // No bloqueamos envío de PDF si falla el guardado
+    }
 
     // Generar PDF
     const pdfBuffer = await generateDeductionReportPDF({
@@ -179,8 +228,7 @@ async function sendReportHandler(
     if ((result as any)?.error) {
       logger.error('Error enviando email con Resend', {
         error: (result as any).error?.message,
-        email: sanitizedEmail,
-        ip: clientIP
+        email: maskEmail(sanitizedEmail),
       })
       return res.status(500).json({ 
         error: 'Error al enviar el reporte por email',
@@ -191,10 +239,9 @@ async function sendReportHandler(
     // Log de éxito
     const duration = Date.now() - startTime
     logger.info('Reporte enviado exitosamente', {
-      email: sanitizedEmail,
+      email: maskEmail(sanitizedEmail),
       messageId: (result as any)?.id,
       duration,
-      ip: clientIP
     })
 
     return res.status(200).json({ 
@@ -209,7 +256,6 @@ async function sendReportHandler(
       error: error.message,
       stack: error.stack,
       duration,
-      ip: clientIP
     })
     
     return res.status(500).json({ 

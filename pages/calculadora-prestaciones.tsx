@@ -168,6 +168,10 @@ export default function CalculadoraPrestacionesPage() {
   const [incluirRAP, setIncluirRAP] = useState(false)
   const [montoRapAcumulado, setMontoRapAcumulado] = useState('')
   const [email, setEmail] = useState('')
+  const [fullName, setFullName] = useState('')
+  const [company, setCompany] = useState('')
+  const [phone, setPhone] = useState('')
+  const [consentNewsletter, setConsentNewsletter] = useState(false)
   const [sendingEmail, setSendingEmail] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
 
@@ -201,7 +205,13 @@ export default function CalculadoraPrestacionesPage() {
       if (typeof parsed?.fallecimientoNatural === 'boolean') setFallecimientoNatural(parsed.fallecimientoNatural)
       if (typeof parsed?.incluirRAP === 'boolean') setIncluirRAP(parsed.incluirRAP)
       if (typeof parsed?.montoRapAcumulado === 'string') setMontoRapAcumulado(parsed.montoRapAcumulado)
-      if (typeof parsed?.email === 'string') setEmail(parsed.email)
+      if (parsed?.consentNewsletter === true) {
+        if (typeof parsed?.email === 'string') setEmail(parsed.email)
+        if (typeof parsed?.fullName === 'string') setFullName(parsed.fullName)
+        if (typeof parsed?.company === 'string') setCompany(parsed.company)
+        if (typeof parsed?.phone === 'string') setPhone(parsed.phone)
+        setConsentNewsletter(true)
+      }
     } catch {
       // ignore
     }
@@ -224,7 +234,15 @@ export default function CalculadoraPrestacionesPage() {
             fallecimientoNatural,
           incluirRAP,
           montoRapAcumulado,
-          email,
+          ...(consentNewsletter
+            ? {
+                consentNewsletter: true,
+                email,
+                fullName,
+                company,
+                phone,
+              }
+            : {}),
         })
       )
     } catch {
@@ -244,6 +262,10 @@ export default function CalculadoraPrestacionesPage() {
     incluirRAP,
     montoRapAcumulado,
     email,
+    fullName,
+    company,
+    phone,
+    consentNewsletter,
   ])
 
   const validateClient = () => {
@@ -489,6 +511,14 @@ export default function CalculadoraPrestacionesPage() {
       setError('Por favor ingresa un email válido')
       return
     }
+    if (!consentNewsletter) {
+      setError('Debes aceptar la suscripción para recibir el cálculo en PDF.')
+      return
+    }
+    if (!fullName.trim()) {
+      setError('Ingresa tu nombre para enviarte el PDF.')
+      return
+    }
 
     setSendingEmail(true)
     setError(null)
@@ -501,6 +531,10 @@ export default function CalculadoraPrestacionesPage() {
         },
         body: JSON.stringify({
           email,
+          fullName,
+          company,
+          phone,
+          consentNewsletter,
           datosManuales: {
             salarioBaseMensual: result.bases.salarioBaseMensual,
             salarioPromedioMensual: result.bases.salarioPromedioMensual,
@@ -914,6 +948,72 @@ export default function CalculadoraPrestacionesPage() {
                 <p className="mt-1 text-xs text-brand-200/80">
                   Si lo ingresas, podrás enviarte el resultado con un PDF adjunto.
                 </p>
+              </div>
+
+              {/* Contact + Consent (always visible) */}
+              <div className="glass rounded-xl p-4 border border-white/10 backdrop-blur-sm">
+                <div className="text-white font-semibold mb-3">Recibe el cálculo en PDF (opcional)</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="fullName" className="block text-sm font-medium text-white mb-2">
+                      Nombre (opcional)
+                    </label>
+                    <input
+                      id="fullName"
+                      type="text"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="Tu nombre"
+                      className="block w-full px-3 py-3 border rounded-xl bg-white/5 backdrop-blur-sm text-white placeholder-brand-200/70 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500/50 transition-all hover:bg-white/10 border-white/20"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="company" className="block text-sm font-medium text-white mb-2">
+                      Empresa (opcional)
+                    </label>
+                    <input
+                      id="company"
+                      type="text"
+                      value={company}
+                      onChange={(e) => setCompany(e.target.value)}
+                      placeholder="Nombre de tu empresa"
+                      className="block w-full px-3 py-3 border rounded-xl bg-white/5 backdrop-blur-sm text-white placeholder-brand-200/70 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500/50 transition-all hover:bg-white/10 border-white/20"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label htmlFor="phone" className="block text-sm font-medium text-white mb-2">
+                      Celular (opcional)
+                    </label>
+                    <input
+                      id="phone"
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="Ej: +504 9999-9999"
+                      className="block w-full px-3 py-3 border rounded-xl bg-white/5 backdrop-blur-sm text-white placeholder-brand-200/70 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500/50 transition-all hover:bg-white/10 border-white/20"
+                      inputMode="tel"
+                    />
+                    <p className="mt-1 text-xs text-brand-200/70">
+                      Validación suave: puedes ingresar tu número en el formato que uses.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex items-start gap-3">
+                  <input
+                    id="consentNewsletter"
+                    type="checkbox"
+                    checked={consentNewsletter}
+                    onChange={(e) => setConsentNewsletter(e.target.checked)}
+                    className="mt-1 h-4 w-4 rounded border-white/30 bg-slate-900"
+                  />
+                  <label htmlFor="consentNewsletter" className="text-sm text-brand-100 leading-relaxed">
+                    Acepto suscribirme al newsletter para recibir mi cálculo en PDF.
+                    <div className="text-xs text-brand-200/70 mt-1">
+                      Respetamos tu privacidad. <span className="text-white/90">No guardamos datos salariales</span>; solo nombre y correo (y celular/empresa si los ingresas).
+                    </div>
+                  </label>
+                </div>
               </div>
 
               {error && (

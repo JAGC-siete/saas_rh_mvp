@@ -90,6 +90,11 @@ function Tooltip({ title, content, children }: TooltipProps) {
 export default function CalculadoraDeduccionesPage() {
   const [salary, setSalary] = useState<string>('')
   const [paymentModality, setPaymentModality] = useState<'quincenal' | 'mensual'>('mensual')
+  const CONTACT_STORAGE_KEY = 'public_deducciones_contact_v1'
+  const [fullName, setFullName] = useState<string>('')
+  const [company, setCompany] = useState<string>('')
+  const [phone, setPhone] = useState<string>('')
+  const [consentNewsletter, setConsentNewsletter] = useState<boolean>(false)
   const [selectedDeductions, setSelectedDeductions] = useState<{
     ihss: boolean
     rap: boolean
@@ -118,6 +123,44 @@ export default function CalculadoraDeduccionesPage() {
   useEffect(() => {
     setAvailableYears(getAvailableYears(currentYear))
   }, [currentYear])
+
+  // Cargar contacto solo si hubo consentimiento previo
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(CONTACT_STORAGE_KEY)
+      if (!raw) return
+      const parsed = JSON.parse(raw) as any
+      if (parsed?.consentNewsletter === true) {
+        if (typeof parsed?.fullName === 'string') setFullName(parsed.fullName)
+        if (typeof parsed?.company === 'string') setCompany(parsed.company)
+        if (typeof parsed?.phone === 'string') setPhone(parsed.phone)
+        setConsentNewsletter(true)
+      }
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  // Persistir contacto solo con consentimiento
+  useEffect(() => {
+    try {
+      if (!consentNewsletter) {
+        localStorage.removeItem(CONTACT_STORAGE_KEY)
+        return
+      }
+      localStorage.setItem(
+        CONTACT_STORAGE_KEY,
+        JSON.stringify({
+          consentNewsletter: true,
+          fullName,
+          company,
+          phone,
+        })
+      )
+    } catch {
+      // ignore
+    }
+  }, [consentNewsletter, fullName, company, phone])
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-HN', {
@@ -196,6 +239,14 @@ export default function CalculadoraDeduccionesPage() {
       setError('Por favor ingresa un email válido')
       return
     }
+    if (!consentNewsletter) {
+      setError('Debes aceptar la suscripción para recibir el cálculo en PDF.')
+      return
+    }
+    if (!fullName.trim()) {
+      setError('Ingresa tu nombre para enviarte el PDF.')
+      return
+    }
 
     setSendingEmail(true)
     setError(null)
@@ -208,6 +259,10 @@ export default function CalculadoraDeduccionesPage() {
         },
         body: JSON.stringify({
           email,
+          fullName,
+          company,
+          phone,
+          consentNewsletter,
           ...result,
           salary: parseFloat(salary.replace(/[^\d.]/g, ''))
         })
@@ -512,6 +567,72 @@ export default function CalculadoraDeduccionesPage() {
                   Si proporcionas tu email, te enviaremos un reporte detallado en PDF
                 </p>
               )}
+            </div>
+
+            {/* Contact + Consent (always visible) */}
+            <div className="glass rounded-xl p-4 border border-white/10 backdrop-blur-sm">
+              <div className="text-white font-semibold mb-3">Recibe el cálculo en PDF (opcional)</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="fullName" className="block text-sm font-medium text-white mb-2">
+                    Nombre (opcional)
+                  </label>
+                  <input
+                    id="fullName"
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Tu nombre"
+                    className="block w-full px-3 py-3 border rounded-xl bg-white/5 backdrop-blur-sm text-white placeholder-brand-200/70 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500/50 transition-all hover:bg-white/10 border-white/20"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="company" className="block text-sm font-medium text-white mb-2">
+                    Empresa (opcional)
+                  </label>
+                  <input
+                    id="company"
+                    type="text"
+                    value={company}
+                    onChange={(e) => setCompany(e.target.value)}
+                    placeholder="Nombre de tu empresa"
+                    className="block w-full px-3 py-3 border rounded-xl bg-white/5 backdrop-blur-sm text-white placeholder-brand-200/70 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500/50 transition-all hover:bg-white/10 border-white/20"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label htmlFor="phone" className="block text-sm font-medium text-white mb-2">
+                    Celular (opcional)
+                  </label>
+                  <input
+                    id="phone"
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="Ej: +504 9999-9999"
+                    className="block w-full px-3 py-3 border rounded-xl bg-white/5 backdrop-blur-sm text-white placeholder-brand-200/70 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500/50 transition-all hover:bg-white/10 border-white/20"
+                    inputMode="tel"
+                  />
+                  <p className="mt-1 text-xs text-brand-200/70">
+                    Validación suave: puedes ingresar tu número en el formato que uses.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 flex items-start gap-3">
+                <input
+                  id="consentNewsletter"
+                  type="checkbox"
+                  checked={consentNewsletter}
+                  onChange={(e) => setConsentNewsletter(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-white/30 bg-slate-900"
+                />
+                <label htmlFor="consentNewsletter" className="text-sm text-brand-100 leading-relaxed">
+                  Acepto suscribirme al newsletter para recibir mi cálculo en PDF.
+                  <div className="text-xs text-brand-200/70 mt-1">
+                    Respetamos tu privacidad. <span className="text-white/90">No guardamos datos salariales</span>; solo nombre y correo (y celular/empresa si los ingresas).
+                  </div>
+                </label>
+              </div>
             </div>
 
             {/* Error Message */}

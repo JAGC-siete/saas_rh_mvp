@@ -5,6 +5,8 @@ import { logger } from '../../../lib/logger'
 import { validateEmail } from '../../../lib/deduction-validator/validation'
 import { notificationManager } from '../../../lib/notification-providers'
 import { generatePrestacionesReportPDF } from '../../../lib/prestaciones-public/pdf-report'
+import { createAdminClient } from '../../../lib/supabase/server'
+import { maskEmail, normalizeSoftPhone } from '../../../lib/privacy'
 import {
   generatePrestacionesEmailHTML,
   generatePrestacionesEmailSubject,
@@ -12,6 +14,10 @@ import {
 
 interface SendPrestacionesReportRequest {
   email: string
+  fullName?: string
+  company?: string
+  phone?: string
+  consentNewsletter?: boolean
   datosManuales: {
     salarioBaseMensual: number
     salarioPromedioMensual: number
@@ -63,7 +69,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   const startTime = Date.now()
-  const clientIP = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown'
 
   try {
     const body: SendPrestacionesReportRequest = req.body
@@ -71,20 +76,59 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const emailValidation = validateEmail(body.email)
     if (!emailValidation.valid) {
       logger.warn('Email inválido en send-prestaciones-report', {
-        email: body.email,
+        email: maskEmail(body.email),
         error: emailValidation.error,
-        ip: clientIP,
       })
       return res.status(400).json({
         error: emailValidation.error || 'El email proporcionado no es válido',
       })
     }
     const sanitizedEmail = emailValidation.sanitized as string
+    const consent = body.consentNewsletter === true
+    const name = typeof body.fullName === 'string' ? body.fullName.trim() : ''
+
+    if (!consent) {
+      return res.status(400).json({
+        error: 'Debes aceptar la suscripción para recibir el cálculo en PDF.',
+      })
+    }
+    if (!name) {
+      return res.status(400).json({
+        error: 'Ingresa tu nombre para enviarte el PDF.',
+      })
+    }
 
     logger.info('Envío de prestaciones por email iniciado', {
-      email: sanitizedEmail,
-      ip: clientIP,
+      email: maskEmail(sanitizedEmail),
     })
+
+    // Guardar lead (sin datos salariales)
+    try {
+      const supabase = createAdminClient()
+      const phoneNorm = normalizeSoftPhone(body.phone)
+
+      await (supabase as any)
+        .from('leads_public_tools')
+        .upsert(
+          {
+            email: sanitizedEmail,
+            full_name: name,
+            company: typeof body.company === 'string' ? body.company.trim() || null : null,
+            phone: phoneNorm,
+            source: 'prestaciones',
+            consent_newsletter: true,
+            consented_at: new Date().toISOString(),
+            last_seen_at: new Date().toISOString(),
+          },
+          { onConflict: 'email' }
+        )
+    } catch (e: any) {
+      logger.warn('No se pudo guardar lead (prestaciones)', {
+        email: maskEmail(sanitizedEmail),
+        error: e?.message,
+      })
+      // No bloqueamos envío de PDF si falla el guardado
+    }
 
     const pdfBuffer = await generatePrestacionesReportPDF({
       salarioBaseMensual: body.datosManuales.salarioBaseMensual,
@@ -141,8 +185,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     if ((result as any)?.error) {
       logger.error('Error enviando email con Resend (prestaciones)', {
         error: (result as any).error?.message,
-        email: sanitizedEmail,
-        ip: clientIP,
+        email: maskEmail(sanitizedEmail),
       })
       return res.status(500).json({
         error: 'Error al enviar el reporte por email',
@@ -152,10 +195,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     const duration = Date.now() - startTime
     logger.info('Reporte prestaciones enviado exitosamente', {
-      email: sanitizedEmail,
+      email: maskEmail(sanitizedEmail),
       messageId: (result as any)?.id,
       duration,
-      ip: clientIP,
     })
 
     return res.status(200).json({
@@ -169,7 +211,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       error: error?.message,
       stack: error?.stack,
       duration,
-      ip: clientIP,
     })
 
     return res.status(500).json({
