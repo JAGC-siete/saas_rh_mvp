@@ -25,7 +25,7 @@ const MOTIVO_SALIDA_OPTIONS: { value: CesantiasRequestInput['parametrosCalculo']
 ]
 
 export default function CesantiasPage() {
-  const [salaryAverageMode, setSalaryAverageMode] = useState<'proxy' | 'manual' | 'last6'>('proxy')
+  const [incomeInputMode, setIncomeInputMode] = useState<'BASE' | 'PROMEDIO' | 'ULTIMOS_6'>('BASE')
   const [salariosUltimos6MesesRaw, setSalariosUltimos6MesesRaw] = useState('')
 
   const [form, setForm] = useState<CesantiasRequestInput>({
@@ -94,16 +94,28 @@ export default function CesantiasPage() {
   const buildPayload = (): CesantiasRequestInput => {
     const next: CesantiasRequestInput = JSON.parse(JSON.stringify(form))
 
-    if (salaryAverageMode === 'manual') {
-      // salarioPromedioMensual ya vive en el form; si es 0 lo omitimos
-      if (!next.datosManuales.salarioPromedioMensual) {
-        delete (next.datosManuales as any).salarioPromedioMensual
+    const parsedLast6 = salariosUltimos6MesesRaw
+      .split(/[,\n]/g)
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((s) => Number(s))
+      .filter((n) => Number.isFinite(n) && n >= 0)
+      .slice(0, 6)
+
+    const avgLast6 = parsedLast6.length > 0 ? parsedLast6.reduce((a, b) => a + b, 0) / parsedLast6.length : 0
+
+    if (incomeInputMode === 'PROMEDIO') {
+      // Usar salarioPromedioMensual como base también (UX: un solo campo)
+      const avg = Number(next.datosManuales.salarioPromedioMensual || 0)
+      if (avg > 0) {
+        next.datosManuales.salarioBaseMensual = avg
       }
+      if (!next.datosManuales.salarioPromedioMensual) delete (next.datosManuales as any).salarioPromedioMensual
       delete (next.datosManuales as any).salariosUltimos6Meses
       return next
     }
 
-    if (salaryAverageMode === 'last6') {
+    if (incomeInputMode === 'ULTIMOS_6') {
       const parsed = salariosUltimos6MesesRaw
         .split(/[,\n]/g)
         .map((s) => s.trim())
@@ -113,6 +125,9 @@ export default function CesantiasPage() {
 
       if (parsed.length > 0) {
         ;(next.datosManuales as any).salariosUltimos6Meses = parsed.slice(0, 6)
+        // Usar promedio como base también (UX: no pedir campo extra)
+        const avg = avgLast6
+        if (avg > 0) next.datosManuales.salarioBaseMensual = avg
       } else {
         delete (next.datosManuales as any).salariosUltimos6Meses
       }
@@ -121,7 +136,7 @@ export default function CesantiasPage() {
       return next
     }
 
-    // proxy: no enviar campos de promedio, el motor hará fallback
+    // BASE: no enviar campos de promedio, el motor hará fallback
     delete (next.datosManuales as any).salarioPromedioMensual
     delete (next.datosManuales as any).salariosUltimos6Meses
     return next
@@ -187,7 +202,7 @@ export default function CesantiasPage() {
   }
 
   const handleReset = () => {
-    setSalaryAverageMode('proxy')
+    setIncomeInputMode('BASE')
     setSalariosUltimos6MesesRaw('')
     setForm({
       empleadoId: undefined,
@@ -229,7 +244,7 @@ export default function CesantiasPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="bg-slate-900/60 border-white/10">
+            <Card className="glass-strong border-white/10">
               <CardHeader>
                 <CardTitle className="text-white">Datos de cálculo</CardTitle>
                 <CardDescription className="text-gray-300">
@@ -241,22 +256,66 @@ export default function CesantiasPage() {
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="space-y-2">
-                    <label htmlFor="salarioBaseMensual" className="text-gray-200 text-sm font-medium">
-                      Salario base mensual (L)
-                    </label>
-                    <Input
-                      id="salarioBaseMensual"
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      value={form.datosManuales.salarioBaseMensual || ''}
-                      onChange={(e) => handleChange('salarioBaseMensual', e.target.value)}
-                      required
-                    />
-                    {fieldErrors.salarioBaseMensual && (
-                      <p className="text-xs text-red-400 mt-1">{fieldErrors.salarioBaseMensual}</p>
-                    )}
+                    <label className="text-gray-200 text-sm font-medium">¿Cómo quieres ingresar tus ingresos?</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setIncomeInputMode('BASE')}
+                        className={`py-3 px-4 rounded-xl border transition-all text-left ${
+                          incomeInputMode === 'BASE'
+                            ? 'border-cyan-400/60 bg-cyan-400/10 text-white'
+                            : 'border-white/20 bg-white/5 text-gray-200 hover:bg-white/10'
+                        }`}
+                      >
+                        <div className="font-semibold text-sm">Salario base mensual</div>
+                        <div className="text-xs text-gray-300/80 mt-1">Ingresar un solo monto.</div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIncomeInputMode('PROMEDIO')}
+                        className={`py-3 px-4 rounded-xl border transition-all text-left ${
+                          incomeInputMode === 'PROMEDIO'
+                            ? 'border-cyan-400/60 bg-cyan-400/10 text-white'
+                            : 'border-white/20 bg-white/5 text-gray-200 hover:bg-white/10'
+                        }`}
+                      >
+                        <div className="font-semibold text-sm">Salario promedio mensual</div>
+                        <div className="text-xs text-gray-300/80 mt-1">Si ya lo tienes calculado.</div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIncomeInputMode('ULTIMOS_6')}
+                        className={`py-3 px-4 rounded-xl border transition-all text-left ${
+                          incomeInputMode === 'ULTIMOS_6'
+                            ? 'border-cyan-400/60 bg-cyan-400/10 text-white'
+                            : 'border-white/20 bg-white/5 text-gray-200 hover:bg-white/10'
+                        }`}
+                      >
+                        <div className="font-semibold text-sm">Últimos 6 meses</div>
+                        <div className="text-xs text-gray-300/80 mt-1">El sistema hará el promedio.</div>
+                      </button>
+                    </div>
                   </div>
+
+                  {incomeInputMode === 'BASE' && (
+                    <div className="space-y-2">
+                      <label htmlFor="salarioBaseMensual" className="text-gray-200 text-sm font-medium">
+                        Salario base mensual (L)
+                      </label>
+                      <Input
+                        id="salarioBaseMensual"
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={form.datosManuales.salarioBaseMensual || ''}
+                        onChange={(e) => handleChange('salarioBaseMensual', e.target.value)}
+                        required
+                      />
+                      {fieldErrors.salarioBaseMensual && (
+                        <p className="text-xs text-red-400 mt-1">{fieldErrors.salarioBaseMensual}</p>
+                      )}
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -316,59 +375,43 @@ export default function CesantiasPage() {
                     )}
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="text-gray-200 text-sm font-medium">Salario promedio (Art. 123)</label>
-                    <Select
-                      value={salaryAverageMode}
-                      onValueChange={(value) => setSalaryAverageMode(value as any)}
-                    >
-                      <SelectTrigger className="bg-slate-900 border-white/20 text-gray-100">
-                        <SelectValue placeholder="Selecciona modo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="proxy">Estimación (fallback 14/12)</SelectItem>
-                        <SelectItem value="manual">Ingresar salario promedio mensual</SelectItem>
-                        <SelectItem value="last6">Ingresar últimos 6 salarios</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  {incomeInputMode === 'PROMEDIO' && (
+                    <div className="space-y-2">
+                      <label htmlFor="salarioPromedioMensual" className="text-gray-200 text-sm font-medium">
+                        Salario promedio mensual (L)
+                      </label>
+                      <Input
+                        id="salarioPromedioMensual"
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={form.datosManuales.salarioPromedioMensual ?? ''}
+                        onChange={(e) => handleChange('salarioPromedioMensual', e.target.value)}
+                        required
+                      />
+                      <p className="text-xs text-gray-400">
+                        Usaremos este valor también como salario base para el cálculo.
+                      </p>
+                    </div>
+                  )}
 
-                    {salaryAverageMode === 'manual' && (
-                      <div className="pt-2 space-y-2">
-                        <label htmlFor="salarioPromedioMensual" className="text-gray-200 text-sm font-medium">
-                          Salario promedio mensual (L) (opcional)
-                        </label>
-                        <Input
-                          id="salarioPromedioMensual"
-                          type="number"
-                          min={0}
-                          step="0.01"
-                          value={form.datosManuales.salarioPromedioMensual ?? ''}
-                          onChange={(e) => handleChange('salarioPromedioMensual', e.target.value)}
-                        />
-                        <p className="text-xs text-gray-400">
-                          Úsalo si ya calculaste el promedio real (incluyendo extras y 50% de 13/14 según Art. 123).
-                        </p>
-                      </div>
-                    )}
-
-                    {salaryAverageMode === 'last6' && (
-                      <div className="pt-2 space-y-2">
-                        <label htmlFor="salariosUltimos6Meses" className="text-gray-200 text-sm font-medium">
-                          Últimos 6 salarios mensuales (L)
-                        </label>
-                        <textarea
-                          id="salariosUltimos6Meses"
-                          value={salariosUltimos6MesesRaw}
-                          onChange={(e) => setSalariosUltimos6MesesRaw(e.target.value)}
-                          placeholder="Ej: 30000, 32000, 31000, 30000, 30500, 31500"
-                          className="w-full min-h-[90px] rounded-md bg-slate-900 border border-white/20 px-3 py-2 text-gray-100 placeholder:text-gray-500"
-                        />
-                        <p className="text-xs text-gray-400">
-                          Acepta comas o saltos de línea. El motor agregará 50% de 13/14 en el promedio.
-                        </p>
-                      </div>
-                    )}
-                  </div>
+                  {incomeInputMode === 'ULTIMOS_6' && (
+                    <div className="space-y-2">
+                      <label htmlFor="salariosUltimos6Meses" className="text-gray-200 text-sm font-medium">
+                        Ingresos de los últimos 6 meses (1 a 6)
+                      </label>
+                      <textarea
+                        id="salariosUltimos6Meses"
+                        value={salariosUltimos6MesesRaw}
+                        onChange={(e) => setSalariosUltimos6MesesRaw(e.target.value)}
+                        placeholder="Ej: 30000, 32000, 31000, 30000, 30500, 31500"
+                        className="w-full min-h-[90px] rounded-md bg-white/5 border border-white/20 px-3 py-2 text-gray-100 placeholder:text-gray-500"
+                      />
+                      <p className="text-xs text-gray-400">
+                        Acepta comas o saltos de línea. Calcularemos el promedio y lo usaremos también como salario base.
+                      </p>
+                    </div>
+                  )}
 
                   <div className="space-y-2">
                     <label htmlFor="montoRapAcumulado" className="text-gray-200 text-sm font-medium">
@@ -463,7 +506,7 @@ export default function CesantiasPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-slate-900/60 border-white/10">
+            <Card className="glass-strong border-white/10">
               <CardHeader>
                 <CardTitle className="text-white">Resultado</CardTitle>
                 <CardDescription className="text-gray-300">

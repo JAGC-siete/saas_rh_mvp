@@ -27,7 +27,7 @@ export default function AttendanceTablesSection({
 
   const tabs: { id: TabId; label: string; count: number }[] = [
     { id: 'absent', label: 'Ausentes', count: absent.length },
-    { id: 'arrivals', label: 'Llegadas', count: early.length + late.length },
+    { id: 'arrivals', label: 'Presentes', count: early.length + late.length },
     { id: 'outside', label: 'Fuera de horario', count: outsideSchedule.length },
   ]
 
@@ -83,7 +83,7 @@ export default function AttendanceTablesSection({
             <ArrivalTable
               earlyData={early}
               lateData={late}
-              title={`Llegadas ${presetLabel}`}
+              title={`Presentes ${presetLabel}`}
               onSelect={onSelectEmployee}
             />
           )}

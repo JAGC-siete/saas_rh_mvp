@@ -19,6 +19,10 @@ interface DeductionResult {
   ihssPercentage: number
   rap: number
   rapPercentage: number
+  afp: number
+  afpPercentage: number
+  infop: number
+  infopPercentage: number
   isr: number
   isrPercentage: number
   totalDeductions: number
@@ -86,6 +90,19 @@ function Tooltip({ title, content, children }: TooltipProps) {
 export default function CalculadoraDeduccionesPage() {
   const [salary, setSalary] = useState<string>('')
   const [paymentModality, setPaymentModality] = useState<'quincenal' | 'mensual'>('mensual')
+  const [selectedDeductions, setSelectedDeductions] = useState<{
+    ihss: boolean
+    rap: boolean
+    afp: boolean
+    infop: boolean
+    isr: boolean
+  }>({
+    ihss: true,
+    rap: true,
+    afp: false,
+    infop: false,
+    isr: true
+  })
   const currentYear = new Date().getFullYear()
   const [year, setYear] = useState<number>(currentYear)
   const [availableYears, setAvailableYears] = useState<number[]>([])
@@ -152,7 +169,8 @@ export default function CalculadoraDeduccionesPage() {
         body: JSON.stringify({
           salary: salaryNum,
           paymentModality,
-          year
+          year,
+          deductions: selectedDeductions
         })
       })
 
@@ -332,6 +350,100 @@ export default function CalculadoraDeduccionesPage() {
               </div>
             </div>
 
+            {/* Deductions Selector */}
+            <div>
+              <label className="block text-sm font-medium text-white mb-3">
+                Deducciones a incluir
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {(
+                  [
+                    {
+                      key: 'ihss',
+                      title: 'IHSS',
+                      subtitle: 'Seguridad social',
+                      hint:
+                        'Instituto Hondureño de Seguridad Social. 5% hasta el tope.'
+                    },
+                    {
+                      key: 'rap',
+                      title: 'RAP',
+                      subtitle: 'Ahorro pensiones',
+                      hint:
+                        'Régimen de Ahorro para Pensiones. 1.5% sobre excedente del salario mínimo.'
+                    },
+                    {
+                      key: 'afp',
+                      title: 'AFP',
+                      subtitle: 'Fondo de pensiones',
+                      hint:
+                        'En esta calculadora pública (Honduras) se muestra como opción, pero su cálculo está en 0.'
+                    },
+                    {
+                      key: 'infop',
+                      title: 'INFOP',
+                      subtitle: 'Formación (1%)',
+                      hint:
+                        'Normalmente aporte patronal. Si lo activas, lo incluimos como 1% del salario.'
+                    },
+                    {
+                      key: 'isr',
+                      title: 'ISR',
+                      subtitle: 'Impuesto renta',
+                      hint:
+                        'Impuesto progresivo según tablas vigentes.'
+                    }
+                  ] as const
+                ).map((item) => {
+                  const active = selectedDeductions[item.key]
+                  return (
+                    <button
+                      key={item.key}
+                      type="button"
+                      onClick={() =>
+                        setSelectedDeductions((prev) => ({ ...prev, [item.key]: !prev[item.key] }))
+                      }
+                      className={`text-left rounded-xl border-2 px-4 py-3.5 transition-all backdrop-blur-sm ${
+                        active
+                          ? 'border-cyan-400 bg-cyan-500/20 text-white shadow-lg shadow-cyan-500/10'
+                          : 'border-white/20 bg-white/5 text-brand-200 hover:border-cyan-400/50 hover:bg-white/10'
+                      }`}
+                      aria-pressed={active}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="font-semibold">{item.title}</div>
+                          <div className="text-xs mt-0.5 text-brand-300/80">{item.subtitle}</div>
+                        </div>
+                        <span
+                          className={`inline-flex items-center justify-center h-6 w-6 rounded-md border ${
+                            active ? 'border-cyan-300/60 bg-cyan-500/20' : 'border-white/20 bg-white/5'
+                          }`}
+                          aria-hidden="true"
+                        >
+                          {active ? (
+                            <svg className="h-4 w-4 text-cyan-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          ) : (
+                            <svg className="h-4 w-4 text-brand-300/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          )}
+                        </span>
+                      </div>
+                      <div className="text-xs mt-2 text-brand-200/70">
+                        {item.hint}
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+              <p className="mt-2 text-sm text-brand-300/70">
+                Tip: si desactivas una deducción, el cálculo la excluye del total.
+              </p>
+            </div>
+
             {/* Year Selector */}
             <div>
               <label htmlFor="year" className="block text-sm font-medium text-white mb-2">
@@ -418,7 +530,7 @@ export default function CalculadoraDeduccionesPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 px-6 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-semibold rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-cyan-400 shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/30 transform hover:-translate-y-0.5 active:translate-y-0"
+              className="w-full py-3.5 px-6 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-lg shadow-black/20 hover:-translate-y-0.5 active:translate-y-0"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
@@ -476,6 +588,7 @@ export default function CalculadoraDeduccionesPage() {
               <h3 className="text-lg font-semibold text-white mb-3">Desglose de Deducciones</h3>
               
               {/* IHSS */}
+              {selectedDeductions.ihss && (
               <div className="glass rounded-xl p-4 border border-white/10 backdrop-blur-sm">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
@@ -490,8 +603,10 @@ export default function CalculadoraDeduccionesPage() {
                   </div>
                 </div>
               </div>
+              )}
 
               {/* RAP */}
+              {selectedDeductions.rap && (
               <div className="glass rounded-xl p-4 border border-white/10 backdrop-blur-sm">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
@@ -506,8 +621,46 @@ export default function CalculadoraDeduccionesPage() {
                   </div>
                 </div>
               </div>
+              )}
+
+              {/* AFP */}
+              {selectedDeductions.afp && (
+              <div className="glass rounded-xl p-4 border border-white/10 backdrop-blur-sm">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-white font-medium">AFP</span>
+                    <Tooltip title="AFP" content="Fondo privado de pensiones. En esta calculadora pública para Honduras, se muestra como opción pero actualmente retorna 0.">
+                      <span className="text-brand-300">(Fondo de pensiones)</span>
+                    </Tooltip>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-lg font-bold text-white">{formatCurrency(result.afp)}</div>
+                    <div className="text-sm text-brand-300">{result.afpPercentage.toFixed(2)}%</div>
+                  </div>
+                </div>
+              </div>
+              )}
+
+              {/* INFOP */}
+              {selectedDeductions.infop && (
+              <div className="glass rounded-xl p-4 border border-white/10 backdrop-blur-sm">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-white font-medium">INFOP</span>
+                    <Tooltip title="INFOP" content="Instituto Nacional de Formación Profesional. Usualmente es aporte patronal. Si lo activas aquí, lo incluimos como 1% del salario.">
+                      <span className="text-brand-300">(Formación profesional)</span>
+                    </Tooltip>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-lg font-bold text-white">{formatCurrency(result.infop)}</div>
+                    <div className="text-sm text-brand-300">{result.infopPercentage.toFixed(2)}%</div>
+                  </div>
+                </div>
+              </div>
+              )}
 
               {/* ISR */}
+              {selectedDeductions.isr && (
               <div className="glass rounded-xl p-4 border border-white/10 backdrop-blur-sm">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
@@ -522,6 +675,7 @@ export default function CalculadoraDeduccionesPage() {
                   </div>
                 </div>
               </div>
+              )}
 
               {/* Total Deductions */}
               <div className="glass rounded-xl p-4 border border-red-500/30 backdrop-blur-sm bg-gradient-to-br from-red-500/10 to-orange-500/5">
@@ -575,7 +729,7 @@ export default function CalculadoraDeduccionesPage() {
                 </p>
                 <Link
                   href="/activar"
-                  className="inline-block py-3 px-8 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-semibold rounded-xl transition-all shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/30 transform hover:-translate-y-0.5 active:translate-y-0"
+                  className="inline-block py-3 px-8 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl transition-all shadow-lg shadow-black/20 hover:-translate-y-0.5 active:translate-y-0"
                 >
                   Activar gratis hoy — Sin tarjeta de crédito
                 </Link>
@@ -596,7 +750,7 @@ export default function CalculadoraDeduccionesPage() {
             </p>
             <Link
               href="/activar"
-              className="inline-block py-2.5 px-6 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-semibold rounded-xl transition-all shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/30 transform hover:-translate-y-0.5 active:translate-y-0"
+              className="inline-block py-2.5 px-6 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl transition-all shadow-lg shadow-black/20 hover:-translate-y-0.5 active:translate-y-0"
             >
               Activar gratis hoy — Sin tarjeta
             </Link>

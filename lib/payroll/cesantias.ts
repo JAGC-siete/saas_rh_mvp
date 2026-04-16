@@ -211,8 +211,7 @@ function calcularDecimoCuarto(
 
 function calcularCesantia(
   salarioPromedioMensual: Decimal,
-  tiempos: TiemposLaborados,
-  _motivoSalida: MotivoSalida
+  tiempos: TiemposLaborados
 ): Decimal {
   // Nota: la elegibilidad/factor por motivo se resuelve fuera (ver lógica principal).
   // Aquí implementamos únicamente la tabla de Art. 120 (base + proporcional) en año comercial 360/30.
@@ -319,8 +318,7 @@ export function calcularLiquidacionHonduras(
   // Cesantía
   const cesantiaBaseDec = calcularCesantia(
     salarioPromedioMensualDec,
-    tiempos,
-    motivoSalida
+    tiempos
   )
   const factorCesantiaDec = calcularFactorCesantiaPorMotivo(input, tiempos)
   const cesantiaBrutaDec = cesantiaBaseDec.mul(factorCesantiaDec)

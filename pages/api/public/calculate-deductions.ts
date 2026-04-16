@@ -7,6 +7,7 @@ import {
   calculateRAP,
   TaxConstants
 } from '../../../lib/tax/honduras-tax'
+import { calculateINFOP } from '../../../lib/payroll/employer-contributions'
 import { nowInHonduras } from '../../../lib/timezone'
 import { RATE_LIMITS } from '../../../lib/rate-limit'
 import { logger } from '../../../lib/logger'
@@ -17,6 +18,13 @@ interface CalculateDeductionsRequest {
   salary: number | string
   paymentModality: string
   year?: number | string
+  deductions?: {
+    ihss?: boolean
+    rap?: boolean
+    afp?: boolean
+    infop?: boolean
+    isr?: boolean
+  }
 }
 
 interface DeductionResult {
@@ -26,6 +34,10 @@ interface DeductionResult {
   ihssPercentage: number
   rap: number
   rapPercentage: number
+  afp: number
+  afpPercentage: number
+  infop: number
+  infopPercentage: number
   isr: number
   isrPercentage: number
   totalDeductions: number
@@ -36,6 +48,11 @@ interface DeductionResult {
     minimumWage: number
     ihssCeiling: number
   }
+}
+
+function coerceBoolean(value: unknown, defaultValue: boolean): boolean {
+  if (typeof value === 'boolean') return value
+  return defaultValue
 }
 
 async function calculateDeductionsHandler(
@@ -50,7 +67,7 @@ async function calculateDeductionsHandler(
   const clientIP = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown'
 
   try {
-    const { salary, paymentModality, year }: CalculateDeductionsRequest = req.body
+    const { salary, paymentModality, year, deductions }: CalculateDeductionsRequest = req.body
 
     // Validación robusta de inputs
     const validation = validateCalculatorInputs({
@@ -99,23 +116,39 @@ async function calculateDeductionsHandler(
       ? sanitized.salary * 2 
       : sanitized.salary
 
-    // Calcular deducciones mensuales
-    const ihssMonthly = calculateIHSS(monthlyGrossSalary, constants)
-    const rapMonthly = calculateRAP(monthlyGrossSalary, constants)
-    const isrMonthly = calculateISR(monthlyGrossSalary, constants.isr_brackets)
+    const selected = {
+      ihss: coerceBoolean(deductions?.ihss, true),
+      rap: coerceBoolean(deductions?.rap, true),
+      // AFP no aplica en Honduras en esta calculadora pública (se deja opcional para UI/futuras extensiones)
+      afp: coerceBoolean(deductions?.afp, false),
+      // INFOP es normalmente aporte patronal; se expone como “incluir en el cálculo” cuando el usuario lo activa
+      infop: coerceBoolean(deductions?.infop, false),
+      isr: coerceBoolean(deductions?.isr, true)
+    }
+
+    // Calcular deducciones mensuales (según selección)
+    const ihssMonthly = selected.ihss ? calculateIHSS(monthlyGrossSalary, constants) : 0
+    const rapMonthly = selected.rap ? calculateRAP(monthlyGrossSalary, constants) : 0
+    const afpMonthly = 0
+    const infopMonthly = selected.infop ? calculateINFOP(monthlyGrossSalary) : 0
+    const isrMonthly = selected.isr ? calculateISR(monthlyGrossSalary, constants.isr_brackets) : 0
 
     // Si es quincenal, dividir todas las deducciones por 2
     const divisor = sanitized.paymentModality === 'quincenal' ? 2 : 1
     const ihss = Math.round((ihssMonthly / divisor) * 100) / 100
     const rap = Math.round((rapMonthly / divisor) * 100) / 100
+    const afp = Math.round((afpMonthly / divisor) * 100) / 100
+    const infop = Math.round((infopMonthly / divisor) * 100) / 100
     const isr = Math.round((isrMonthly / divisor) * 100) / 100
 
-    const totalDeductions = Math.round((ihss + rap + isr) * 100) / 100
+    const totalDeductions = Math.round((ihss + rap + afp + infop + isr) * 100) / 100
     const netSalary = Math.round((sanitized.salary - totalDeductions) * 100) / 100
 
     // Calcular porcentajes
     const ihssPercentage = sanitized.salary > 0 ? (ihss / sanitized.salary) * 100 : 0
     const rapPercentage = sanitized.salary > 0 ? (rap / sanitized.salary) * 100 : 0
+    const afpPercentage = sanitized.salary > 0 ? (afp / sanitized.salary) * 100 : 0
+    const infopPercentage = sanitized.salary > 0 ? (infop / sanitized.salary) * 100 : 0
     const isrPercentage = sanitized.salary > 0 ? (isr / sanitized.salary) * 100 : 0
 
     const result: DeductionResult = {
@@ -125,6 +158,10 @@ async function calculateDeductionsHandler(
       ihssPercentage: Math.round(ihssPercentage * 100) / 100,
       rap: Math.round(rap * 100) / 100,
       rapPercentage: Math.round(rapPercentage * 100) / 100,
+      afp: Math.round(afp * 100) / 100,
+      afpPercentage: Math.round(afpPercentage * 100) / 100,
+      infop: Math.round(infop * 100) / 100,
+      infopPercentage: Math.round(infopPercentage * 100) / 100,
       isr: Math.round(isr * 100) / 100,
       isrPercentage: Math.round(isrPercentage * 100) / 100,
       totalDeductions: Math.round(totalDeductions * 100) / 100,

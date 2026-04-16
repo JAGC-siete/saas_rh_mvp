@@ -462,23 +462,6 @@ export default function AttendanceDashboardApp() {
             </div>
           )}
 
-          <HeaderBar
-            preset={preset}
-            onPresetChange={handlePresetChange}
-            selectedEmployeeId={selectedEmployeeId}
-            onEmployeeChange={handleEmployeeChange}
-            selectedRole={selectedRole}
-            onRoleChange={setSelectedRole}
-            selectedDepartmentId={selectedDepartmentId}
-            onDepartmentChange={setSelectedDepartmentId}
-            lastUpdated={lastUpdated}
-            onExport={handleExport}
-            loading={loading}
-            from={from}
-            to={to}
-            onRangeChange={handleRangeChange}
-          />
-
           <section aria-labelledby="attendance-summary-heading" className="space-y-4">
             <h2 id="attendance-summary-heading" className="sr-only">
               Resumen del período
@@ -532,6 +515,23 @@ export default function AttendanceDashboardApp() {
               </div>
             </Card>
           </section>
+
+          <HeaderBar
+            preset={preset}
+            onPresetChange={handlePresetChange}
+            selectedEmployeeId={selectedEmployeeId}
+            onEmployeeChange={handleEmployeeChange}
+            selectedRole={selectedRole}
+            onRoleChange={setSelectedRole}
+            selectedDepartmentId={selectedDepartmentId}
+            onDepartmentChange={setSelectedDepartmentId}
+            lastUpdated={lastUpdated}
+            onExport={handleExport}
+            loading={loading}
+            from={from}
+            to={to}
+            onRangeChange={handleRangeChange}
+          />
 
           <AttendanceTablesSection
             key={tablesSectionKey}

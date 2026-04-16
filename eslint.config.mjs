@@ -27,6 +27,8 @@ const eslintConfig = [
       "**/.next/**",
       "**/out/**",
       "**/dist/**"
+      ,"SAAS 2.0/**"
+      ,"**/*.min.js"
     ]
   }
 ];
