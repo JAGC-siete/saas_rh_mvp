@@ -102,7 +102,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   return (
     <NotificationContext.Provider value={{ notifications, addNotification, removeNotification, markAsRead, markAllAsRead, unreadCount, filteredNotifications, clearAll }}>
       {children}
-      <div className="fixed top-4 right-4 z-50 space-y-2">
+      <div className="fixed top-4 inset-x-4 sm:inset-x-auto sm:right-4 z-50 space-y-2">
         {notifications.map(notification => (
           <NotificationToast
             key={notification.id}

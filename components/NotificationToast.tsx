@@ -55,7 +55,9 @@ export default function NotificationToast({ notification, onRemove }: Notificati
   const message = formatToastMessage(notification.message)
 
   return (
-    <div className={`max-w-sm w-full shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden ${colorClass}`}>
+    <div
+      className={`w-[min(24rem,calc(100vw-2rem))] shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden ${colorClass}`}
+    >
       <div className="p-4">
         <div className="flex items-start">
           <div className="flex-shrink-0">
