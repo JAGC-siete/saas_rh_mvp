@@ -167,6 +167,9 @@ export default function CalculadoraPrestacionesPage() {
   const [fallecimientoNatural, setFallecimientoNatural] = useState(false)
   const [incluirRAP, setIncluirRAP] = useState(false)
   const [montoRapAcumulado, setMontoRapAcumulado] = useState('')
+  const [email, setEmail] = useState('')
+  const [sendingEmail, setSendingEmail] = useState(false)
+  const [emailSent, setEmailSent] = useState(false)
 
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<LiquidacionResponse | null>(null)
@@ -198,6 +201,7 @@ export default function CalculadoraPrestacionesPage() {
       if (typeof parsed?.fallecimientoNatural === 'boolean') setFallecimientoNatural(parsed.fallecimientoNatural)
       if (typeof parsed?.incluirRAP === 'boolean') setIncluirRAP(parsed.incluirRAP)
       if (typeof parsed?.montoRapAcumulado === 'string') setMontoRapAcumulado(parsed.montoRapAcumulado)
+      if (typeof parsed?.email === 'string') setEmail(parsed.email)
     } catch {
       // ignore
     }
@@ -220,12 +224,27 @@ export default function CalculadoraPrestacionesPage() {
             fallecimientoNatural,
           incluirRAP,
           montoRapAcumulado,
+          email,
         })
       )
     } catch {
       // ignore
     }
-  }, [salarioBaseMensual, salaryInputMode, salarioPromedioMensual, salariosUltimos6MesesRaw, fechaIngreso, fechaEgreso, motivoSalidaPublico, preavisoGozado, retiroVoluntario15, fallecimientoNatural, incluirRAP, montoRapAcumulado])
+  }, [
+    salarioBaseMensual,
+    salaryInputMode,
+    salarioPromedioMensual,
+    salariosUltimos6MesesRaw,
+    fechaIngreso,
+    fechaEgreso,
+    motivoSalidaPublico,
+    preavisoGozado,
+    retiroVoluntario15,
+    fallecimientoNatural,
+    incluirRAP,
+    montoRapAcumulado,
+    email,
+  ])
 
   const validateClient = () => {
     const nextErrors: Record<string, string> = {}
@@ -281,6 +300,7 @@ export default function CalculadoraPrestacionesPage() {
     e.preventDefault()
     setError(null)
     setResult(null)
+    setEmailSent(false)
 
     if (!validateClient()) {
       setError('Revisa los datos del formulario.')
@@ -385,6 +405,8 @@ export default function CalculadoraPrestacionesPage() {
     setFallecimientoNatural(false)
     setIncluirRAP(false)
     setMontoRapAcumulado('')
+    setEmail('')
+    setEmailSent(false)
     setError(null)
     setFieldErrors({})
     setResult(null)
@@ -458,6 +480,54 @@ export default function CalculadoraPrestacionesPage() {
       },
     ]
   }, [result])
+
+  const handleSendEmail = async () => {
+    if (!email || !result) return
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      setError('Por favor ingresa un email válido')
+      return
+    }
+
+    setSendingEmail(true)
+    setError(null)
+
+    try {
+      const response = await fetch('/api/public/send-prestaciones-report', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          datosManuales: {
+            salarioBaseMensual: result.bases.salarioBaseMensual,
+            salarioPromedioMensual: result.bases.salarioPromedioMensual,
+            fechaIngreso,
+            fechaEgreso,
+            antiguedadTexto: `${result.tiempos.anos}a ${result.tiempos.meses}m ${result.tiempos.dias}d`,
+          },
+          parametros: {
+            motivoSalida: result.metadata.motivoSalida,
+            preavisoGozado: result.metadata.preavisoGozado,
+          },
+          rubros: result.rubros,
+        }),
+      })
+
+      const data = await response.json().catch(() => null)
+      if (!response.ok) {
+        throw new Error(data?.error || 'Error al enviar el reporte por email')
+      }
+
+      setEmailSent(true)
+    } catch (err: any) {
+      setError(err.message || 'Error al enviar el reporte por email. Por favor intenta de nuevo.')
+    } finally {
+      setSendingEmail(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-app pt-16 sm:pt-20 md:pt-24 relative">
@@ -829,6 +899,23 @@ export default function CalculadoraPrestacionesPage() {
                 )}
               </div>
 
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-white mb-2">
+                  Email (opcional)
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="tu@email.com"
+                  className="block w-full px-3 py-3.5 border rounded-xl bg-white/5 backdrop-blur-sm text-white placeholder-brand-200/70 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all hover:border-cyan-400/30 hover:bg-white/10 border-white/20"
+                />
+                <p className="mt-1 text-xs text-brand-200/80">
+                  Si lo ingresas, podrás enviarte el resultado con un PDF adjunto.
+                </p>
+              </div>
+
               {error && (
                 <div className="bg-red-500/20 border border-red-500/50 rounded-xl p-4 text-red-200 backdrop-blur-sm">
                   {error}
@@ -939,6 +1026,22 @@ export default function CalculadoraPrestacionesPage() {
                   <div className="text-xs text-brand-200/80">
                     Esta es una estimación basada en la Ley Laboral de Honduras. No sustituye asesoría legal.
                   </div>
+
+                  {email && !emailSent && (
+                    <button
+                      onClick={handleSendEmail}
+                      disabled={sendingEmail}
+                      className="w-full py-3.5 px-6 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-purple-500/20 hover:shadow-purple-500/30"
+                    >
+                      {sendingEmail ? 'Enviando por email...' : 'Enviar resultado por email (PDF)'}
+                    </button>
+                  )}
+
+                  {emailSent && (
+                    <div className="glass rounded-xl p-4 border border-green-500/50 backdrop-blur-sm bg-gradient-to-r from-green-500/20 to-emerald-500/10 text-green-200 text-center">
+                      ✓ Reporte enviado exitosamente a {email}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
