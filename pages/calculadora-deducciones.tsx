@@ -307,7 +307,7 @@ export default function CalculadoraDeduccionesPage() {
 
       <MainHeader enableScrollEffect={true} fixed={true} />
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 relative z-10">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 relative z-10">
         {/* Header Section */}
         <div className="text-center mb-8 sm:mb-12">
           <div className="flex flex-wrap justify-center gap-2 sm:gap-3 md:gap-4 mb-6 animate-fade-up-subtle">
@@ -330,11 +330,12 @@ export default function CalculadoraDeduccionesPage() {
           </p>
         </div>
 
-        {/* Form Section */}
-        <div className="glass-strong rounded-2xl shadow-2xl p-6 sm:p-8 mb-8 relative overflow-hidden">
-          {/* Glowing border effect */}
-          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-purple-500/20 opacity-50 blur-xl pointer-events-none"></div>
-          <form onSubmit={handleCalculate} className="space-y-6 relative z-10">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Left: Form */}
+          <div className="glass-strong rounded-2xl shadow-2xl p-6 sm:p-8 relative overflow-hidden">
+            {/* Glowing border effect */}
+            <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-purple-500/20 opacity-50 blur-xl pointer-events-none"></div>
+            <form onSubmit={handleCalculate} className="space-y-6 relative z-10">
             {/* Salary Input */}
             <div>
               <label htmlFor="salary" className="block text-sm font-medium text-white mb-2">
@@ -667,21 +668,32 @@ export default function CalculadoraDeduccionesPage() {
                 'Calcular Deducciones'
               )}
             </button>
-          </form>
-        </div>
+            </form>
+          </div>
 
-        {/* Results Section */}
-        {result && (
-          <div className="glass-strong rounded-2xl shadow-2xl p-6 sm:p-8 mb-8 relative overflow-hidden">
+          {/* Right: Results */}
+          <div className="glass-strong rounded-2xl shadow-2xl p-6 sm:p-8 relative overflow-hidden">
             {/* Glowing border effect */}
             <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 via-cyan-500/20 to-blue-500/20 opacity-50 blur-xl pointer-events-none"></div>
             <div className="relative z-10">
-            <div className="mb-6">
-              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Resultados del Cálculo</h2>
-              <p className="text-brand-300/80 text-sm">
-                Año: {result.year} | Modalidad: {result.paymentModality === 'quincenal' ? 'Quincenal' : 'Mensual'}
-              </p>
-            </div>
+              {!result && (
+                <div className="text-sm text-brand-200/80">
+                  Completa el formulario para ver el desglose. Si eres empresa, también puedes{' '}
+                  <Link href="/activar" className="text-brand-300 hover:text-white underline decoration-white/20">
+                    automatizar nómina
+                  </Link>{' '}
+                  y evitar cálculos manuales.
+                </div>
+              )}
+
+              {result && (
+                <>
+                  <div className="mb-6">
+                    <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Resultados del Cálculo</h2>
+                    <p className="text-brand-300/80 text-sm">
+                      Año: {result.year} | Modalidad: {result.paymentModality === 'quincenal' ? 'Quincenal' : 'Mensual'}
+                    </p>
+                  </div>
 
             {/* Results Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -839,31 +851,34 @@ export default function CalculadoraDeduccionesPage() {
               </div>
             )}
 
-            {/* Conversion CTA - alineado con mensajes ganadores Google Ads */}
-            <div className="glass-strong rounded-xl p-6 border border-cyan-500/30 backdrop-blur-sm bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-purple-500/20 text-center relative overflow-hidden">
-              {/* Glowing border effect */}
-              <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-purple-500/10 opacity-50 blur-xl pointer-events-none"></div>
-              <div className="relative z-10">
-                <h3 className="text-xl font-bold text-white mb-2">
-                  Control de asistencia y nómina en un solo lugar: Sin cálculos manuales, sin errores.
-                </h3>
-                <p className="text-brand-200/90 mb-4">
-                  Integra tus biométricos con Humano SISU (regional: SV, GT, HN). Del cálculo al comprobante en segundos. Automatiza deducciones locales.
-                </p>
-                <Link
-                  href="/activar"
-                  className="inline-block py-3 px-8 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl transition-all shadow-lg shadow-black/20 hover:-translate-y-0.5 active:translate-y-0"
-                >
-                  Activar gratis hoy — Sin tarjeta de crédito
-                </Link>
-              </div>
-            </div>
+                  {/* Conversion CTA - alineado con mensajes ganadores Google Ads */}
+                  <div className="glass-strong rounded-xl p-6 border border-cyan-500/30 backdrop-blur-sm bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-purple-500/20 text-center relative overflow-hidden">
+                    {/* Glowing border effect */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-purple-500/10 opacity-50 blur-xl pointer-events-none"></div>
+                    <div className="relative z-10">
+                      <h3 className="text-xl font-bold text-white mb-2">
+                        Control de asistencia y nómina en un solo lugar: Sin cálculos manuales, sin errores.
+                      </h3>
+                      <p className="text-brand-200/90 mb-4">
+                        Integra tus biométricos con Humano SISU (regional: SV, GT, HN). Del cálculo al comprobante en segundos.
+                        Automatiza deducciones locales.
+                      </p>
+                      <Link
+                        href="/activar"
+                        className="inline-block py-3 px-8 bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-xl transition-all shadow-lg shadow-black/20 hover:-translate-y-0.5 active:translate-y-0"
+                      >
+                        Activar gratis hoy — Sin tarjeta de crédito
+                      </Link>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
-        )}
+        </div>
 
         {/* Info Section */}
-        <div className="relative glass-strong rounded-2xl shadow-2xl p-6 sm:p-8 text-center overflow-hidden">
+        <div className="mt-8 relative glass-strong rounded-2xl shadow-2xl p-6 sm:p-8 text-center overflow-hidden">
           {/* Glowing border effect */}
           <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-purple-500/20 opacity-50 blur-xl pointer-events-none"></div>
           <div className="relative z-10">
