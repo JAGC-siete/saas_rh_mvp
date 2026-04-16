@@ -139,11 +139,11 @@ function Tooltip({
         <div
           id={`${tooltipId}-content`}
           role="tooltip"
-          className="absolute z-50 w-72 p-3 mt-2 text-sm text-white glass rounded-xl shadow-xl border border-white/20 backdrop-blur-sm left-0 md:left-auto md:right-0"
+          className="absolute z-[60] w-[min(18rem,calc(100vw-2rem))] p-3 mt-2 text-sm text-white glass rounded-xl shadow-xl border border-white/20 backdrop-blur-sm left-0 md:left-auto md:right-0 whitespace-normal break-words leading-relaxed"
           aria-live="polite"
         >
           <div className="font-semibold mb-1 text-cyan-300">{title}</div>
-          <div className="text-brand-200/90">{content}</div>
+          <div className="text-brand-100/90">{content}</div>
           <div
             className="absolute -top-2 left-4 md:left-auto md:right-4 w-4 h-4 bg-white/10 border-l border-t border-white/20 backdrop-blur-sm transform rotate-45"
             aria-hidden="true"
@@ -374,43 +374,43 @@ export default function CalculadoraPrestacionesPage() {
         key: 'preaviso',
         label: 'Preaviso',
         amount: result.rubros.preaviso,
-        help: 'Estimación del pago por preaviso según antigüedad y motivo de salida.',
+        help: 'Pago por falta de preaviso cuando aplica y no se trabajó. Depende de la antigüedad y el motivo de salida.',
       },
       {
         key: 'cesantiaBruta',
         label: 'Cesantía (bruta)',
         amount: result.rubros.cesantiaBruta,
-        help: 'Estimación por antigüedad. En algunos casos puede ser 0 según el motivo de salida.',
+        help: 'Auxilio de cesantía antes de descuentos/compensaciones. Puede ser 0 según el motivo de salida o condiciones.',
       },
       {
         key: 'rapAplicado',
         label: 'RAP aplicado',
         amount: result.rubros.rapAplicado,
-        help: 'Si incluyes RAP, se descuenta hasta el monto de la cesantía calculada.',
+        help: 'Monto de RAP/Reserva Laboral usado para compensar la cesantía, hasta el máximo de la cesantía calculada.',
       },
       {
         key: 'cesantiaNeta',
         label: 'Cesantía (neta)',
         amount: result.rubros.cesantiaNeta,
-        help: 'Cesantía bruta menos RAP aplicado (si corresponde).',
+        help: 'Cesantía bruta menos RAP aplicado (si corresponde). Este es el monto estimado de cesantía a pagar.',
       },
       {
         key: 'vacaciones',
         label: 'Vacaciones proporcionales',
         amount: result.rubros.vacaciones,
-        help: 'Pago estimado por vacaciones proporcionales según años de servicio.',
+        help: 'Estimación por vacaciones (según antigüedad). Puede variar si ya se gozaron vacaciones o por políticas internas.',
       },
       {
         key: 'aguinaldo',
         label: '13vo mes proporcional',
         amount: result.rubros.aguinaldo,
-        help: 'Proporcional del 13vo según días del año (cálculo 360 días).',
+        help: 'Proporcional del 13vo calculado por días en el año (base 360).',
       },
       {
         key: 'decimoCuarto',
         label: '14vo mes proporcional',
         amount: result.rubros.decimoCuarto,
-        help: 'Proporcional del 14vo según período julio–junio (cálculo 360 días).',
+        help: 'Proporcional del 14vo calculado por días desde julio (base 360).',
       },
     ]
   }, [result])
@@ -456,7 +456,7 @@ export default function CalculadoraPrestacionesPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="glass-strong rounded-2xl shadow-2xl p-6 sm:p-8 relative overflow-hidden">
+          <div className="glass-strong rounded-2xl shadow-2xl p-6 sm:p-8 relative">
             <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 via-cyan-500/20 to-blue-500/20 opacity-50 blur-xl pointer-events-none" />
             <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
               <div>
@@ -694,7 +694,7 @@ export default function CalculadoraPrestacionesPage() {
             </form>
           </div>
 
-          <div className="glass-strong rounded-2xl shadow-2xl p-6 sm:p-8 relative overflow-hidden">
+          <div className="glass-strong rounded-2xl shadow-2xl p-6 sm:p-8 relative">
             <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/15 via-blue-500/15 to-purple-500/15 opacity-50 blur-xl pointer-events-none" />
             <div className="relative z-10">
               {!result && (
