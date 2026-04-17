@@ -155,7 +155,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ahcRecords: ahcCount,
       totalRecords: totalRecordsCount ?? 0,
       canProceed: true,
-      recommendedAction: missing > 0 ? 'Ejecutar recalculo batch de los faltantes' : 'AHC completo ✓',
+      recommendedAction:
+        missing > 0
+          ? 'Usa «Recalcular pendientes» para completar los cálculos antes de cerrar la nómina.'
+          : 'Las horas de asistencia ya están listas para este período.',
       period: { year, month, quincena, tipo, from: fechaInicio, to: fechaFin },
     })
   } catch (e) {

@@ -23,7 +23,8 @@ import {
   FileText,
   Crown,
   Activity,
-  Mail
+  Mail,
+  Layers
 } from 'lucide-react'
 
 interface SuperAdminLayoutProps {
@@ -83,6 +84,12 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
       href: '/app/admin/billing',
       icon: CreditCard,
       description: 'Gestión de pagos'
+    },
+    {
+      name: 'Planes y módulos',
+      href: '/app/admin/plan-features',
+      icon: Layers,
+      description: 'Segmentación por categoría de servicio'
     },
     {
       name: 'Sistema',

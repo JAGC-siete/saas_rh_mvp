@@ -630,14 +630,19 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
                       : 'bg-amber-500/20 text-amber-200'
                   }`}
                 >
-                  {payroll.ahcPreflight.status === 'GREEN' ? 'AHC listo' : 'AHC incompleto'}
+                  {payroll.ahcPreflight.status === 'GREEN'
+                    ? 'Horas calculadas'
+                    : 'Faltan horas por calcular'}
                 </span>
-                <span className="text-sm text-gray-200 font-medium">Horas extra (asistencia → nómina)</span>
+                <span className="text-sm text-gray-200 font-medium">
+                  Horas desde asistencia (incluye extras para nómina)
+                </span>
               </div>
               <p className="text-xs text-gray-300">
-                Registros completos: <span className="font-semibold">{payroll.ahcPreflight.completeRecords}</span> ·
-                Calculados (AHC): <span className="font-semibold">{payroll.ahcPreflight.ahcRecords}</span> ·
-                Pendientes: <span className="font-semibold">{payroll.ahcPreflight.missingAHC}</span>
+                Marcas completas (entrada/salida):{' '}
+                <span className="font-semibold">{payroll.ahcPreflight.completeRecords}</span> · Ya calculadas:{' '}
+                <span className="font-semibold">{payroll.ahcPreflight.ahcRecords}</span> · Por calcular:{' '}
+                <span className="font-semibold">{payroll.ahcPreflight.missingAHC}</span>
               </p>
               {payroll.ahcPreflight.recommendedAction && (
                 <p className="text-xs text-gray-400">{payroll.ahcPreflight.recommendedAction}</p>

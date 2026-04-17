@@ -66,7 +66,7 @@ CREATE TRIGGER company_feature_overrides_updated_at
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 -- =====================================================
--- 2) Seed your 3 plan categories + features
+-- 2) Seed internal plans (free_trial, basic, pro, enterprise) + features
 -- =====================================================
 
 INSERT INTO public.plan_catalog (plan_key, name, description)
