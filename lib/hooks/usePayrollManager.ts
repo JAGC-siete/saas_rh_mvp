@@ -28,6 +28,17 @@ export interface PayrollManagerState {
   // Legacy compatibility (will be removed)
   runId?: string
   hasLoadedInitialData: boolean
+
+  // AHC preflight (attendance_hours_calculation completeness)
+  ahcPreflight?: {
+    status: 'GREEN' | 'YELLOW' | 'RED'
+    missingAHC: number
+    completeRecords: number
+    ahcRecords: number
+    totalRecords: number
+    recommendedAction?: string
+  } | null
+  ahcPreflightLoading?: boolean
 }
 
 // Action Types
@@ -40,6 +51,8 @@ export type PayrollManagerAction =
   | { type: 'SET_PERIOD'; payload: { year: number; month: number; quincena: 1 | 2 } }
   | { type: 'SET_RUN_ID'; payload: string | undefined }
   | { type: 'SET_LOADED_INITIAL'; payload: boolean }
+  | { type: 'SET_AHC_PREFLIGHT'; payload: PayrollManagerState['ahcPreflight'] }
+  | { type: 'SET_AHC_PREFLIGHT_LOADING'; payload: boolean }
   | { type: 'CLEAR_ERROR' }
   | { type: 'RESET_STATE' }
 
@@ -62,7 +75,9 @@ const getInitialState = (): PayrollManagerState => {
       tipo: 'CON'
     },
     runId: undefined,
-    hasLoadedInitialData: false
+    hasLoadedInitialData: false,
+    ahcPreflight: null,
+    ahcPreflightLoading: false
   }
 }
 
@@ -118,6 +133,12 @@ const payrollManagerReducer = (
     
     case 'SET_LOADED_INITIAL':
       return { ...state, hasLoadedInitialData: action.payload }
+
+    case 'SET_AHC_PREFLIGHT':
+      return { ...state, ahcPreflight: action.payload }
+
+    case 'SET_AHC_PREFLIGHT_LOADING':
+      return { ...state, ahcPreflightLoading: action.payload }
     
     case 'CLEAR_ERROR':
       return { ...state, error: null }
@@ -302,6 +323,66 @@ export const usePayrollManager = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [companyId, state.currentPeriod.year, state.currentPeriod.month, state.currentPeriod.quincena, state.filters.tipo])
+
+  const loadAhcPreflight = useCallback(async () => {
+    if (!companyId) return
+    dispatch({ type: 'SET_AHC_PREFLIGHT_LOADING', payload: true })
+    try {
+      const q = new URLSearchParams({
+        year: String(state.filters.year),
+        month: String(state.filters.month),
+        quincena: String(state.filters.quincena),
+        tipo: String(state.filters.tipo || 'CON'),
+      })
+      const res = await fetch(`/api/payroll/preflight?${q.toString()}`, { credentials: 'include' })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        dispatch({ type: 'SET_AHC_PREFLIGHT', payload: null })
+        return
+      }
+      dispatch({
+        type: 'SET_AHC_PREFLIGHT',
+        payload: {
+          status: json.status,
+          missingAHC: json.missingAHC ?? 0,
+          completeRecords: json.completeRecords ?? 0,
+          ahcRecords: json.ahcRecords ?? 0,
+          totalRecords: json.totalRecords ?? 0,
+          recommendedAction: json.recommendedAction,
+        },
+      })
+    } finally {
+      dispatch({ type: 'SET_AHC_PREFLIGHT_LOADING', payload: false })
+    }
+  }, [companyId, state.filters.year, state.filters.month, state.filters.quincena, state.filters.tipo])
+
+  const recalculateMissingAhc = useCallback(async () => {
+    if (!companyId) return
+    const res = await fetch('/api/payroll/recalculate-missing-ahc', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        year: state.filters.year,
+        month: state.filters.month,
+        quincena: state.filters.quincena,
+        tipo: state.filters.tipo || 'CON',
+      }),
+    })
+    const json = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      const msg = json?.error || json?.message || `Error ${res.status}`
+      throw new Error(msg)
+    }
+    return json as { success: boolean; missing: number; calculated: number }
+  }, [companyId, state.filters.year, state.filters.month, state.filters.quincena, state.filters.tipo])
+
+  // Refresh preflight after preview loads
+  useEffect(() => {
+    if (!companyId) return
+    if (!state.unifiedData) return
+    void loadAhcPreflight()
+  }, [companyId, state.unifiedData, loadAhcPreflight])
 
   // Legacy API Actions (for compatibility during migration)
   const generatePreview = useCallback(async () => {
@@ -766,6 +847,8 @@ export const usePayrollManager = () => {
     sendEmail,
     generatePDF,
     generateVoucher,
+    loadAhcPreflight,
+    recalculateMissingAhc,
     
     // Filter Management
     updateFilter,

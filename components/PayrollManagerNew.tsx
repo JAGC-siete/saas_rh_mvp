@@ -119,9 +119,22 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
   const handlePreview = useCallback(async () => {
     try {
       await payroll.generatePreview()
+      await payroll.loadAhcPreflight()
     } catch (error: unknown) {
       // Error handling is done in the hook
       console.error('Error in handlePreview:', error)
+    }
+  }, [payroll])
+
+  const handleRecalculateMissingAhc = useCallback(async () => {
+    try {
+      const r = await payroll.recalculateMissingAhc()
+      alert(`Recalculo completado.\n\nPendientes: ${r.missing}\nCalculados: ${r.calculated}`)
+      await payroll.loadUnifiedData()
+      await payroll.loadAhcPreflight()
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Error desconocido'
+      alert(`Error recalculando horas pendientes: ${msg}`)
     }
   }, [payroll])
 
@@ -596,6 +609,64 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
         canPreview={payroll.canPreview}
         paymentFrequency={paymentFrequency as 'quincenal' | 'mensual' | 'semanal' | null}
       />
+
+      {/* Preflight AHC (overtime readiness) */}
+      {payroll.unifiedData && payroll.ahcPreflight && (
+        <Card
+          variant="glass"
+          className={`border ${
+            payroll.ahcPreflight.status === 'GREEN'
+              ? 'border-emerald-500/30 bg-emerald-500/10'
+              : 'border-amber-500/35 bg-amber-500/10'
+          }`}
+        >
+          <CardContent className="pt-5 pb-5 flex flex-wrap items-start justify-between gap-4">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span
+                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${
+                    payroll.ahcPreflight.status === 'GREEN'
+                      ? 'bg-emerald-500/20 text-emerald-200'
+                      : 'bg-amber-500/20 text-amber-200'
+                  }`}
+                >
+                  {payroll.ahcPreflight.status === 'GREEN' ? 'AHC listo' : 'AHC incompleto'}
+                </span>
+                <span className="text-sm text-gray-200 font-medium">Horas extra (asistencia → nómina)</span>
+              </div>
+              <p className="text-xs text-gray-300">
+                Registros completos: <span className="font-semibold">{payroll.ahcPreflight.completeRecords}</span> ·
+                Calculados (AHC): <span className="font-semibold">{payroll.ahcPreflight.ahcRecords}</span> ·
+                Pendientes: <span className="font-semibold">{payroll.ahcPreflight.missingAHC}</span>
+              </p>
+              {payroll.ahcPreflight.recommendedAction && (
+                <p className="text-xs text-gray-400">{payroll.ahcPreflight.recommendedAction}</p>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="border-white/20 text-white"
+                disabled={payroll.ahcPreflightLoading || payroll.loading}
+                onClick={() => payroll.loadAhcPreflight()}
+              >
+                {payroll.ahcPreflightLoading ? 'Verificando…' : 'Actualizar estado'}
+              </Button>
+              {payroll.ahcPreflight.missingAHC > 0 && (
+                <Button
+                  type="button"
+                  className="bg-brand-600 hover:bg-brand-700 text-white"
+                  disabled={payroll.loading}
+                  onClick={() => void handleRecalculateMissingAhc()}
+                >
+                  Recalcular pendientes
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Tabs: Planilla | Partida Contable */}
       {payroll.unifiedData && payroll.runId && (
