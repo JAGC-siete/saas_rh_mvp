@@ -6,6 +6,13 @@ import {
   resolveCompanyIdForDailyClose,
 } from '../../../../lib/attendance/daily-close'
 
+function parseBool(v: unknown): boolean | undefined {
+  if (typeof v !== 'string') return undefined
+  if (v === 'true' || v === '1') return true
+  if (v === 'false' || v === '0') return false
+  return undefined
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET')
@@ -38,6 +45,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       companyId,
       localDate: date,
       supabase: admin,
+      filters: {
+        only_with_events: parseBool(req.query.only_with_events) ?? true,
+        department_id: typeof req.query.department_id === 'string' ? req.query.department_id : undefined,
+        role: typeof req.query.role === 'string' ? req.query.role : undefined,
+        team: typeof req.query.team === 'string' ? req.query.team : undefined,
+        search: typeof req.query.search === 'string' ? req.query.search : undefined,
+        sort: typeof req.query.sort === 'string' ? req.query.sort : undefined,
+      },
     })
 
     return res.status(200).json({

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/router'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
@@ -9,9 +10,17 @@ import { formatDateTimeForHonduras, getTodayInHonduras } from '../../lib/timezon
 import type { BiometricMode } from '../../lib/attendance/attendance-metadata'
 
 export type DailyCloseItem = {
-  employee: { id: string; name: string; department_id: string | null }
+  employee: {
+    id: string
+    name: string
+    department_id: string | null
+    employee_code?: string | null
+    role?: string | null
+    team?: string | null
+  }
   bucket: 'normal' | 'anomaly'
   anomaly_types: string[]
+  in_progress?: boolean
   events: { id: string; ts_utc: string; device_id: string | null }[]
   record: Record<string, unknown> | null
 }
@@ -68,6 +77,7 @@ export default function DailyClosePanel({
   onAfterFinalize,
   onAfterRecordPatch,
 }: DailyClosePanelProps) {
+  const router = useRouter()
   const { userProfile } = useAuth()
   const { companyId: ctxCompanyId, loading: ctxLoading } = useCompanyContext()
   const role = (userProfile?.role || '').toLowerCase()
@@ -76,6 +86,15 @@ export default function DailyClosePanel({
   const [superCompanyId, setSuperCompanyId] = useState('')
 
   const [date, setDate] = useState(() => initialDate ?? getTodayInHonduras())
+  const [onlyWithEvents, setOnlyWithEvents] = useState(true)
+  const [search, setSearch] = useState('')
+  const [departmentId, setDepartmentId] = useState('')
+  const [team, setTeam] = useState('')
+  const [roleFilter, setRoleFilter] = useState('')
+  const [sort, setSort] = useState<'name_asc' | 'name_desc'>('name_asc')
+  const [urlSynced, setUrlSynced] = useState(false)
+  const [departments, setDepartments] = useState<{ id: string; name: string }[]>([])
+  const [teams, setTeams] = useState<string[]>([])
   const [data, setData] = useState<DailyClosePayload | null>(null)
   const [loading, setLoading] = useState(false)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
@@ -88,12 +107,70 @@ export default function DailyClosePanel({
   const [editLunchStart, setEditLunchStart] = useState('')
   const [editLunchEnd, setEditLunchEnd] = useState('')
 
+  const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({})
+  const [bulkCheckOut, setBulkCheckOut] = useState('')
+  const [bulkLunchStart, setBulkLunchStart] = useState('')
+  const [bulkLunchEnd, setBulkLunchEnd] = useState('')
+
   const queryCompany = useMemo(() => {
     if (isSuper) return superCompanyId.trim() || undefined
     return undefined
   }, [isSuper, superCompanyId])
 
   const canLoad = !isSuper ? !!ctxCompanyId && !ctxLoading : superCompanyId.trim().length > 0
+
+  useEffect(() => {
+    if (!router.isReady || urlSynced) return
+    const q = router.query as Record<string, string | string[] | undefined>
+    const get = (k: string) => {
+      const v = q[k]
+      return Array.isArray(v) ? v[0] : v
+    }
+    const qDate = get('date')
+    if (qDate && /^\d{4}-\d{2}-\d{2}$/.test(qDate)) setDate(qDate)
+    const qOnly = get('only_with_events')
+    if (qOnly) setOnlyWithEvents(qOnly === 'true' || qOnly === '1')
+    const qSearch = get('search')
+    if (qSearch) setSearch(qSearch)
+    const qDept = get('department_id')
+    if (qDept) setDepartmentId(qDept)
+    const qTeam = get('team')
+    if (qTeam) setTeam(qTeam)
+    const qRole = get('role')
+    if (qRole) setRoleFilter(qRole)
+    const qSort = get('sort')
+    if (qSort === 'name_desc') setSort('name_desc')
+    setUrlSynced(true)
+  }, [router.isReady, router.query, urlSynced])
+
+  useEffect(() => {
+    if (!router.isReady || !urlSynced) return
+    const next: Record<string, string> = { date }
+    if (!onlyWithEvents) next.only_with_events = 'false'
+    if (search.trim()) next.search = search.trim()
+    if (departmentId) next.department_id = departmentId
+    if (team.trim()) next.team = team.trim()
+    if (roleFilter.trim()) next.role = roleFilter.trim()
+    if (sort !== 'name_asc') next.sort = sort
+    router.replace({ pathname: router.pathname, query: next }, undefined, { shallow: true })
+  }, [date, onlyWithEvents, search, departmentId, team, roleFilter, sort, router, urlSynced])
+
+  useEffect(() => {
+    fetch('/api/departments', { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (j?.departments && Array.isArray(j.departments)) {
+          setDepartments(j.departments.map((d: any) => ({ id: d.id, name: d.name })))
+        }
+      })
+      .catch(() => {})
+    fetch('/api/teams', { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (j?.success && Array.isArray(j.roles)) setTeams(j.roles)
+      })
+      .catch(() => {})
+  }, [])
 
   const fetchReport = useCallback(async () => {
     if (!canLoad) return
@@ -102,6 +179,12 @@ export default function DailyClosePanel({
     try {
       const q = new URLSearchParams({ date })
       if (queryCompany) q.set('company_id', queryCompany)
+      q.set('only_with_events', String(onlyWithEvents))
+      if (search.trim()) q.set('search', search.trim())
+      if (departmentId) q.set('department_id', departmentId)
+      if (team.trim()) q.set('team', team.trim())
+      if (roleFilter.trim()) q.set('role', roleFilter.trim())
+      if (sort) q.set('sort', sort)
       const res = await fetch(`/api/attendance/daily-close?${q}`, { credentials: 'include' })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || json.message || `HTTP ${res.status}`)
@@ -112,7 +195,7 @@ export default function DailyClosePanel({
     } finally {
       setLoading(false)
     }
-  }, [canLoad, date, queryCompany])
+  }, [canLoad, date, queryCompany, onlyWithEvents, search, departmentId, team, roleFilter, sort])
 
   useEffect(() => {
     void fetchReport()
@@ -123,6 +206,117 @@ export default function DailyClosePanel({
     if (queryCompany) b.company_id = queryCompany
     return b
   }, [date, queryCompany])
+
+  const selectedRecordIds = useMemo(() => Object.keys(selectedIds).filter((id) => selectedIds[id]), [selectedIds])
+
+  const toggleAllVisible = (checked: boolean) => {
+    if (!data?.items) return
+    const next = { ...selectedIds }
+    for (const it of data.items) {
+      const rid = (it.record as any)?.id as string | undefined
+      if (!rid) continue
+      next[rid] = checked
+    }
+    setSelectedIds(next)
+  }
+
+  const toggleOne = (rid: string, checked: boolean) => {
+    setSelectedIds((prev) => ({ ...prev, [rid]: checked }))
+  }
+
+  const applyBulk = async () => {
+    if (selectedRecordIds.length === 0) {
+      setMessage({ type: 'err', text: 'Seleccione al menos un registro.' })
+      return
+    }
+    setActionLoading('bulk')
+    setMessage(null)
+    try {
+      const payload: Record<string, unknown> = {
+        ...bodyBase,
+        record_ids: selectedRecordIds,
+      }
+      if (bulkCheckOut.trim() || bulkCheckOut === '') payload.check_out = datetimeLocalToIso(bulkCheckOut)
+      if (bulkLunchStart.trim() || bulkLunchStart === '') payload.lunch_start = datetimeLocalToIso(bulkLunchStart)
+      if (bulkLunchEnd.trim() || bulkLunchEnd === '') payload.lunch_end = datetimeLocalToIso(bulkLunchEnd)
+
+      const res = await fetch('/api/attendance/daily-close/bulk', {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || json.message || `HTTP ${res.status}`)
+      setMessage({ type: 'ok', text: `Cambios aplicados: ${json.updated ?? 0}` })
+      await fetchReport()
+    } catch (e) {
+      setMessage({ type: 'err', text: e instanceof Error ? e.message : 'Error al aplicar cambios' })
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const recalcSelected = async () => {
+    if (selectedRecordIds.length === 0) {
+      setMessage({ type: 'err', text: 'Seleccione al menos un registro.' })
+      return
+    }
+    setActionLoading('recalc')
+    setMessage(null)
+    try {
+      const res = await fetch('/api/attendance/daily-close/recalculate', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...bodyBase, record_ids: selectedRecordIds }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || json.message || `HTTP ${res.status}`)
+      setMessage({ type: 'ok', text: `Horas recalculadas en ${json.calculated ?? 0} registros.` })
+      await fetchReport()
+    } catch (e) {
+      setMessage({ type: 'err', text: e instanceof Error ? e.message : 'Error al recalcular' })
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const finalizeSelected = async () => {
+    if (selectedRecordIds.length === 0) {
+      setMessage({ type: 'err', text: 'Seleccione al menos un registro.' })
+      return
+    }
+    if (
+      !confirm(
+        `Finalizar ${selectedRecordIds.length} registros: marcar como cerrados y recalcular horas. ¿Continuar?`
+      )
+    ) {
+      return
+    }
+    setActionLoading('finalize_selected')
+    setMessage(null)
+    try {
+      const res = await fetch('/api/attendance/daily-close/finalize', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...bodyBase, record_ids: selectedRecordIds }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || json.message || `HTTP ${res.status}`)
+      setMessage({
+        type: 'ok',
+        text: `Finalizado: ${json.finalized ?? 0} registros; horas calculadas en ${json.calculated_hours_rows ?? 0} filas.`,
+      })
+      await fetchReport()
+      onAfterFinalize?.()
+    } catch (e) {
+      setMessage({ type: 'err', text: e instanceof Error ? e.message : 'Error al finalizar' })
+    } finally {
+      setActionLoading(null)
+    }
+  }
 
   const runClose = async () => {
     setActionLoading('run')
@@ -293,6 +487,81 @@ export default function DailyClosePanel({
                 className="bg-white/5 border-white/20 text-white w-44"
               />
             </div>
+            <div className="min-w-[220px]">
+              <label className="block text-xs text-gray-400 mb-1">Buscar (nombre / código)</label>
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Ej. Juan / EMP-01"
+                className="bg-white/5 border-white/20 text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Departamento</label>
+              <select
+                value={departmentId}
+                onChange={(e) => setDepartmentId(e.target.value)}
+                className="h-10 px-3 bg-white/5 border border-white/20 rounded-md text-white text-sm"
+              >
+                <option value="" className="bg-gray-900">
+                  Todos
+                </option>
+                {departments.map((d) => (
+                  <option key={d.id} value={d.id} className="bg-gray-900">
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Equipo</label>
+              <select
+                value={team}
+                onChange={(e) => setTeam(e.target.value)}
+                className="h-10 px-3 bg-white/5 border border-white/20 rounded-md text-white text-sm"
+              >
+                <option value="" className="bg-gray-900">
+                  Todos
+                </option>
+                {teams.map((t) => (
+                  <option key={t} value={t} className="bg-gray-900">
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Rol</label>
+              <Input
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value)}
+                placeholder="Ej. Supervisor"
+                className="bg-white/5 border-white/20 text-white w-40"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Orden</label>
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value as any)}
+                className="h-10 px-3 bg-white/5 border border-white/20 rounded-md text-white text-sm"
+              >
+                <option value="name_asc" className="bg-gray-900">
+                  A–Z
+                </option>
+                <option value="name_desc" className="bg-gray-900">
+                  Z–A
+                </option>
+              </select>
+            </div>
+            <label className="flex items-center gap-2 text-sm text-gray-300">
+              <input
+                type="checkbox"
+                checked={onlyWithEvents}
+                onChange={(e) => setOnlyWithEvents(e.target.checked)}
+              />
+              Solo con marcas
+            </label>
             <Button
               type="button"
               variant="outline"
@@ -342,6 +611,81 @@ export default function DailyClosePanel({
 
         {data && (
           <>
+            {selectedRecordIds.length > 0 && (
+              <Card variant="glass" className="border border-white/10">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base text-white">Acciones múltiples</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-wrap items-end gap-3">
+                  <div className="text-sm text-gray-300">
+                    Seleccionados: <span className="font-semibold text-white">{selectedRecordIds.length}</span>
+                  </div>
+                  <div className="min-w-[220px]">
+                    <label className="block text-xs text-gray-400 mb-1">Salida (aplicar)</label>
+                    <Input
+                      type="datetime-local"
+                      value={bulkCheckOut}
+                      onChange={(e) => setBulkCheckOut(e.target.value)}
+                      className="bg-white/5 border-white/20 text-white w-full"
+                    />
+                  </div>
+                  <div className="min-w-[220px]">
+                    <label className="block text-xs text-gray-400 mb-1">Inicio almuerzo</label>
+                    <Input
+                      type="datetime-local"
+                      value={bulkLunchStart}
+                      onChange={(e) => setBulkLunchStart(e.target.value)}
+                      className="bg-white/5 border-white/20 text-white w-full"
+                    />
+                  </div>
+                  <div className="min-w-[220px]">
+                    <label className="block text-xs text-gray-400 mb-1">Fin almuerzo</label>
+                    <Input
+                      type="datetime-local"
+                      value={bulkLunchEnd}
+                      onChange={(e) => setBulkLunchEnd(e.target.value)}
+                      className="bg-white/5 border-white/20 text-white w-full"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    className="bg-brand-600 hover:bg-brand-700 text-white"
+                    disabled={!!actionLoading}
+                    onClick={() => void applyBulk()}
+                  >
+                    {actionLoading === 'bulk' ? 'Aplicando…' : 'Aplicar cambios'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="border-white/20 text-white"
+                    disabled={!!actionLoading}
+                    onClick={() => void recalcSelected()}
+                  >
+                    {actionLoading === 'recalc' ? 'Recalculando…' : 'Recalcular horas'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="border-emerald-500/50 text-emerald-200"
+                    disabled={!!actionLoading}
+                    onClick={() => void finalizeSelected()}
+                  >
+                    {actionLoading === 'finalize_selected' ? 'Finalizando…' : 'Finalizar seleccionados'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="text-gray-300"
+                    disabled={!!actionLoading}
+                    onClick={() => setSelectedIds({})}
+                  >
+                    Limpiar selección
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <SummaryTile label="Modalidad" value={data.meta.biometric_mode} sub={data.meta.timezone} />
               <SummaryTile label="Empleados activos" value={String(data.summary.total_employees)} />
@@ -360,8 +704,17 @@ export default function DailyClosePanel({
                 <table className="w-full text-sm text-left min-w-[720px]">
                   <thead className="bg-white/5 text-gray-400">
                     <tr>
+                      <th className="p-3">
+                        <input
+                          type="checkbox"
+                          aria-label="Seleccionar todos"
+                          onChange={(e) => toggleAllVisible(e.target.checked)}
+                        />
+                      </th>
                       <th className="p-3">Empleado</th>
                       <th className="p-3">Estado</th>
+                      <th className="p-3">Horas</th>
+                      <th className="p-3">Extra</th>
                       <th className="p-3">Anomalías</th>
                       <th className="p-3">Marcas</th>
                       <th className="p-3">Registro</th>
@@ -379,11 +732,30 @@ export default function DailyClosePanel({
                       const f = recordFlags(row.record)
                       return (
                         <tr key={row.employee.id} className="border-t border-white/10 hover:bg-white/5">
-                          <td className="p-3 text-white font-medium">{row.employee.name}</td>
+                          <td className="p-3">
+                            {rec?.id ? (
+                              <input
+                                type="checkbox"
+                                checked={!!selectedIds[rec.id]}
+                                onChange={(e) => toggleOne(rec.id!, e.target.checked)}
+                                aria-label="Seleccionar"
+                              />
+                            ) : (
+                              <span className="text-gray-600">—</span>
+                            )}
+                          </td>
+                          <td className="p-3 text-white font-medium">
+                            {row.employee.name}
+                            {row.employee.employee_code ? (
+                              <span className="text-xs text-gray-400 ml-2">({row.employee.employee_code})</span>
+                            ) : null}
+                          </td>
                           <td className="p-3">
                             <span
                               className={
-                                row.bucket === 'anomaly'
+                                row.in_progress
+                                  ? 'text-sky-300'
+                                  : row.bucket === 'anomaly'
                                   ? 'text-amber-300'
                                   : f.close_state === 'finalized'
                                     ? 'text-emerald-300'
@@ -392,10 +764,22 @@ export default function DailyClosePanel({
                             >
                               {f.close_state === 'finalized'
                                 ? 'Finalizado'
-                                : row.bucket === 'anomaly'
+                                : row.in_progress
+                                  ? 'En curso'
+                                  : row.bucket === 'anomaly'
                                   ? 'Revisar'
                                   : 'OK'}
                             </span>
+                          </td>
+                          <td className="p-3 text-gray-200 tabular-nums">
+                            {typeof (row as any).hours?.total_hours === 'number'
+                              ? (row as any).hours.total_hours.toFixed(2)
+                              : '—'}
+                          </td>
+                          <td className="p-3 text-amber-200 tabular-nums">
+                            {typeof (row as any).hours?.overtime_hours === 'number'
+                              ? (row as any).hours.overtime_hours.toFixed(2)
+                              : '—'}
                           </td>
                           <td className="p-3 text-gray-300 text-xs max-w-[200px]">
                             {row.anomaly_types.length ? row.anomaly_types.join(', ') : '—'}
