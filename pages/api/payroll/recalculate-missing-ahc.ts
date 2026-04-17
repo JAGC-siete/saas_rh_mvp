@@ -117,7 +117,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .not('check_out', 'is', null)
 
     if (recErr) return res.status(500).json({ error: recErr.message })
-    const completeRecordIds = (completeRecords || []).map((r: any) => r.id).filter(Boolean)
+    const recordRows = (completeRecords || []) as { id: string | null | undefined }[]
+    const completeRecordIds = recordRows
+      .map((r) => r.id)
+      .filter((id): id is string => typeof id === 'string' && id.length > 0)
     if (completeRecordIds.length === 0) {
       return res.status(200).json({ success: true, calculated: 0, missing: 0, message: 'Sin registros completos (check_in/check_out)' })
     }
@@ -128,7 +131,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .in('attendance_record_id', completeRecordIds)
 
     if (ahcErr) return res.status(500).json({ error: ahcErr.message })
-    const existing = new Set((existingAhc || []).map((r: any) => r.attendance_record_id).filter(Boolean))
+    const ahcRows = (existingAhc || []) as { attendance_record_id: string | null | undefined }[]
+    const existing = new Set(
+      ahcRows
+        .map((r) => r.attendance_record_id)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0)
+    )
     const missingIds = completeRecordIds.filter((id) => !existing.has(id))
 
     if (missingIds.length === 0) {

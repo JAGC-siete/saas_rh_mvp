@@ -357,7 +357,9 @@ export const usePayrollManager = () => {
   }, [companyId, state.filters.year, state.filters.month, state.filters.quincena, state.filters.tipo])
 
   const recalculateMissingAhc = useCallback(async () => {
-    if (!companyId) return
+    if (!companyId) {
+      throw new Error('Company ID no encontrado')
+    }
     const res = await fetch('/api/payroll/recalculate-missing-ahc', {
       method: 'POST',
       credentials: 'include',
