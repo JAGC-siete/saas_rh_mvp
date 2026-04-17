@@ -1,11 +1,16 @@
 // Componente para mostrar tabla de empleados fijos (fixed)
-import React, { useState } from 'react'
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { Info } from 'lucide-react'
 import { formatCurrency } from '../lib/utils/currency'
 import { UnifiedRow } from '../lib/payroll-unified'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Textarea } from './ui/textarea'
 import { Icon } from './Icon'
+
+const HORAS_EXTRA_AHC_INFO =
+  'Suma de horas extra en AHC (período de nómina: diurna, nocturna y feriado). El salario proporcional de esta vista sigue calculándose por días; un ajuste de monto por extras se hace vía campos personalizados o la política de pago de horas extra, según corresponda.'
 
 interface PayrollFixedTableProps {
   rows: UnifiedRow[]
@@ -47,6 +52,74 @@ export default function PayrollFixedTable({
   const [daysInput, setDaysInput] = useState('')
   const [daysReason, setDaysReason] = useState('')
   const [daysSaving, setDaysSaving] = useState(false)
+  const [ahcInfoOpen, setAhcInfoOpen] = useState(false)
+  const [ahcPopoverPos, setAhcPopoverPos] = useState<{ top: number; left: number } | null>(null)
+  const ahcInfoBtnRef = useRef<HTMLButtonElement>(null)
+  const ahcPopoverRef = useRef<HTMLDivElement>(null)
+
+  const updateAhcPopoverPosition = useCallback(() => {
+    const el = ahcInfoBtnRef.current
+    if (!el) return
+    const r = el.getBoundingClientRect()
+    const vw = typeof window !== 'undefined' ? window.innerWidth : 400
+    const width = Math.min(288, vw - 16)
+    let left = r.left
+    if (left + width > vw - 8) left = Math.max(8, vw - 8 - width)
+    setAhcPopoverPos({ top: r.bottom + 6, left })
+  }, [])
+
+  const toggleAhcInfo = useCallback(() => {
+    setAhcInfoOpen((prev) => {
+      if (prev) {
+        setAhcPopoverPos(null)
+        return false
+      }
+      const el = ahcInfoBtnRef.current
+      if (el && typeof window !== 'undefined') {
+        const r = el.getBoundingClientRect()
+        const vw = window.innerWidth
+        const width = Math.min(288, vw - 16)
+        let left = r.left
+        if (left + width > vw - 8) left = Math.max(8, vw - 8 - width)
+        setAhcPopoverPos({ top: r.bottom + 6, left })
+      }
+      return true
+    })
+  }, [])
+
+  useLayoutEffect(() => {
+    if (!ahcInfoOpen) return
+    updateAhcPopoverPosition()
+    window.addEventListener('scroll', updateAhcPopoverPosition, true)
+    window.addEventListener('resize', updateAhcPopoverPosition)
+    return () => {
+      window.removeEventListener('scroll', updateAhcPopoverPosition, true)
+      window.removeEventListener('resize', updateAhcPopoverPosition)
+    }
+  }, [ahcInfoOpen, updateAhcPopoverPosition])
+
+  useEffect(() => {
+    if (!ahcInfoOpen) return
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as Node
+      if (ahcInfoBtnRef.current?.contains(t)) return
+      if (ahcPopoverRef.current?.contains(t)) return
+      setAhcInfoOpen(false)
+      setAhcPopoverPos(null)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setAhcInfoOpen(false)
+        setAhcPopoverPos(null)
+      }
+    }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [ahcInfoOpen])
 
   const openDaysModal = (row: UnifiedRow) => {
     const runLineId = row.line_id
@@ -127,8 +200,23 @@ export default function PayrollFixedTable({
               <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Empleado</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Salario Base Mensual</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Días Trabajados</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
-                Horas extra (AHC)
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider align-bottom">
+                <div className="inline-flex items-center gap-1">
+                  <span>Horas extra (AHC)</span>
+                  <button
+                    ref={ahcInfoBtnRef}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      toggleAhcInfo()
+                    }}
+                    className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/25 bg-white/10 text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-brand-400/80"
+                    aria-expanded={ahcInfoOpen}
+                    aria-label="Información sobre horas extra AHC"
+                  >
+                    <Info className="h-3.5 w-3.5" aria-hidden />
+                  </button>
+                </div>
               </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Salario Proporcional</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Deducciones</th>
@@ -177,10 +265,6 @@ export default function PayrollFixedTable({
                       {(row.extras?.horas ?? 0) > 0
                         ? `${(row.extras?.horas ?? 0).toFixed(2)} h`
                         : '—'}
-                    </div>
-                    <div className="mt-1 text-[11px] leading-snug text-gray-500 max-w-[11rem]">
-                      Suma de extras en AHC (período). El salario proporcional aquí sigue siendo por días; un ajuste de
-                      monto por extras sigue siendo por campos personalizados / política de nómina.
                     </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-green-300">
@@ -241,6 +325,27 @@ export default function PayrollFixedTable({
           </tbody>
         </table>
       </div>
+
+      {typeof document !== 'undefined' &&
+        ahcInfoOpen &&
+        ahcPopoverPos &&
+        createPortal(
+          <div
+            ref={ahcPopoverRef}
+            role="tooltip"
+            style={{
+              position: 'fixed',
+              top: ahcPopoverPos.top,
+              left: ahcPopoverPos.left,
+              width: 'min(18rem, calc(100vw - 2rem))',
+              zIndex: 9999,
+            }}
+            className="rounded-lg border border-white/20 bg-gray-900/98 px-3 py-2.5 text-left text-[11px] font-normal leading-snug text-gray-200 shadow-xl"
+          >
+            {HORAS_EXTRA_AHC_INFO}
+          </div>,
+          document.body
+        )}
 
       {daysModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">

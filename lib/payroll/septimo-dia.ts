@@ -33,7 +33,11 @@ const HORAS_SEPTIMO_DIA = 8
  * @returns Monto del Séptimo Día (0 si no aplica)
  */
 export function calculateSeptimoDia(input: SeptimoDiaInput): number {
-  const { hourlyRate, ordinaryHours, daysWorked, totalHours, semanalProration } = input
+  const { hourlyRate, semanalProration } = input
+  // AHC o bugs de datos pueden dejar ordinaryHours negativo; el CHECK en BD exige >= 0
+  const ordinaryHours = Math.max(0, Number(input.ordinaryHours) || 0)
+  const daysWorked = Math.max(0, Number(input.daysWorked) || 0)
+  const totalHours = Math.max(0, Number(input.totalHours) || 0)
 
   if (hourlyRate <= 0) return 0
 
@@ -42,12 +46,13 @@ export function calculateSeptimoDia(input: SeptimoDiaInput): number {
   if (semanalProration === 'proportional') {
     // (Total Horas Ordinarias / 48) * (8 * base_salary)
     const factor = Math.min(1, ordinaryHours / HORAS_PARA_SEPTIMO_COMPLETO)
-    return Math.round(factor * valorSeptimoCompleto * 100) / 100
+    const v = Math.round(factor * valorSeptimoCompleto * 100) / 100
+    return Math.max(0, v)
   }
 
   // Modo fixed: 100% si completó jornada (6 días o 44h)
   if (daysWorked >= 6 || totalHours >= 44) {
-    return Math.round(valorSeptimoCompleto * 100) / 100
+    return Math.max(0, Math.round(valorSeptimoCompleto * 100) / 100)
   }
 
   return 0
