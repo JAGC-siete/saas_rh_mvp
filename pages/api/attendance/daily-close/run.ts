@@ -50,7 +50,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     console.error('daily-close run:', e)
     return res.status(500).json({
-      error: 'Error al ejecutar cierre de día',
+      error: 'Error al ejecutar control de horas extras',
       message: e instanceof Error ? e.message : 'Error desconocido',
     })
   }

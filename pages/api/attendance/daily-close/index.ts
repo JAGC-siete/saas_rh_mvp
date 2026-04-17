@@ -66,7 +66,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     console.error('daily-close GET:', e)
     return res.status(500).json({
-      error: 'Error al armar cierre de día',
+      error: 'Error al armar control de horas extras',
       message: e instanceof Error ? e.message : 'Error desconocido',
     })
   }

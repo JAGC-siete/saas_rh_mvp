@@ -105,15 +105,15 @@ export default function HeaderBar({
             <button
               type="button"
               className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors shrink-0"
-              title="Las exportaciones reflejan registros consolidados (post-cierre). Las marcas crudas del reloj biométrico se revisan en Cierre de día."
-              aria-label="Información sobre exportaciones y cierre de día"
+              title="Las exportaciones reflejan registros consolidados (post-cierre). Las marcas crudas del reloj biométrico se revisan en Control de horas extras."
+              aria-label="Información sobre exportaciones y control de horas extras"
             >
               <InformationCircleIcon className="h-5 w-5" aria-hidden />
             </button>
           </div>
         </div>
         <p className="text-xs text-gray-500 max-w-md text-left sm:text-right leading-snug hidden sm:block">
-          Consolidado post-cierre. Marcas del reloj: revisar en Cierre de día.
+          Consolidado post-cierre. Marcas del reloj: revisar en Control de horas extras.
         </p>
       </div>
     </div>

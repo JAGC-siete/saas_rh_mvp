@@ -388,9 +388,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       }
     }
 
-    // Obtener attendance_hours_calculation para modo hourly (Capa 3: horas efectivas + normal_hours para Séptimo Día)
+    // attendance_hours_calculation: (1) overtime hours por empleado en el período — todos los pay_type (UX preview)
+    // (2) agregados hourly — solo si calculationMode === 'hourly' (bruto hourly + séptimo día)
     let ahcByEmployee: Record<string, { total_hours: number; normal_hours: number; by_record: Record<string, number> }> = {}
-    if (employeeIds.length > 0 && calculationMode === 'hourly') {
+    const ahcOvertimeByEmployee: Record<string, number> = {}
+    if (employeeIds.length > 0) {
       const { data: ahcData } = await supabase
         .from('attendance_hours_calculation')
         .select(`
@@ -412,17 +414,24 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           .gte('date', fechaInicio)
           .lte('date', fechaFin)
         const validArIds = new Set((arDates || []).map((r: any) => r.id))
+        const hourlyMode = calculationMode === 'hourly'
         for (const row of ahcData) {
           if (!validArIds.has(row.attendance_record_id)) continue
-          if (!ahcByEmployee[row.employee_id]) {
-            ahcByEmployee[row.employee_id] = { total_hours: 0, normal_hours: 0, by_record: {} }
+          const ot =
+            Number(row.overtime_diurno_hours || 0) +
+            Number(row.overtime_nocturno_hours || 0) +
+            Number(row.overtime_feriado_hours || 0)
+          const eid = row.employee_id as string
+          ahcOvertimeByEmployee[eid] = (ahcOvertimeByEmployee[eid] || 0) + ot
+          if (!hourlyMode) continue
+          if (!ahcByEmployee[eid]) {
+            ahcByEmployee[eid] = { total_hours: 0, normal_hours: 0, by_record: {} }
           }
           const h = Number(row.total_hours) || 0
-          const ot = Number(row.overtime_diurno_hours || 0) + Number(row.overtime_nocturno_hours || 0) + Number(row.overtime_feriado_hours || 0)
           const normalH = Number(row.normal_hours) ?? Math.max(0, h - ot)
-          ahcByEmployee[row.employee_id].total_hours += h
-          ahcByEmployee[row.employee_id].normal_hours += normalH
-          ahcByEmployee[row.employee_id].by_record[row.attendance_record_id] = h
+          ahcByEmployee[eid].total_hours += h
+          ahcByEmployee[eid].normal_hours += normalH
+          ahcByEmployee[eid].by_record[row.attendance_record_id] = h
         }
       }
     }
@@ -666,6 +675,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             monthly_salary: base_salary,
             days_worked: effH,
             days_absent: Math.max(0, diasPeriodo - effH),
+            horas_extras: Math.round((ahcOvertimeByEmployee[emp.id] || 0) * 100) / 100,
             total_earnings: Math.round(effBruto * 100) / 100,
             IHSS: Math.round(effIhss * 100) / 100,
             RAP: Math.round(effRap * 100) / 100,
@@ -831,6 +841,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           days_absent,
           days_extra: days_extra > 0 ? days_extra : undefined,
           notes_extra: days_extra > 0 ? `${days_extra} día(s) Extra/Especial (festivo/descanso)` : undefined,
+          horas_extras: Math.round((ahcOvertimeByEmployee[emp.id] || 0) * 100) / 100,
           total_earnings: Math.round(total_earnings * 100) / 100,
           IHSS: Math.round(IHSS * 100) / 100,
           RAP: Math.round(RAP * 100) / 100,
@@ -1091,6 +1102,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           monthly_salary: base_salary,
           days_worked,
           days_absent,
+          horas_extras: Math.round((ahcOvertimeByEmployee[emp.id] || 0) * 100) / 100,
           total_hours_worked: Math.round(total_hours_worked * 100) / 100,
           hourly_rate: Math.round(hourly_rate * 100) / 100,
           total_earnings: Math.round(total_earnings * 100) / 100,

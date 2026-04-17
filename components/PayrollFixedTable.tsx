@@ -127,6 +127,9 @@ export default function PayrollFixedTable({
               <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Empleado</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Salario Base Mensual</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Días Trabajados</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                Horas extra (AHC)
+              </th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Salario Proporcional</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Deducciones</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Neto a Pagar</th>
@@ -167,6 +170,17 @@ export default function PayrollFixedTable({
                           Editar días
                         </Button>
                       ) : null}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm align-top">
+                    <div className="tabular-nums font-medium text-amber-200/95">
+                      {(row.extras?.horas ?? 0) > 0
+                        ? `${(row.extras?.horas ?? 0).toFixed(2)} h`
+                        : '—'}
+                    </div>
+                    <div className="mt-1 text-[11px] leading-snug text-gray-500 max-w-[11rem]">
+                      Suma de extras en AHC (período). El salario proporcional aquí sigue siendo por días; un ajuste de
+                      monto por extras sigue siendo por campos personalizados / política de nómina.
                     </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-green-300">
@@ -219,7 +233,7 @@ export default function PayrollFixedTable({
               ))
             ) : (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
                   No hay empleados fijos para este período
                 </td>
               </tr>

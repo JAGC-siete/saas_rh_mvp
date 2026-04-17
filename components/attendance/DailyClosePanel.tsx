@@ -435,10 +435,10 @@ export default function DailyClosePanel({
     variant === 'page' ? (
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Cierre de día</h1>
+          <h1 className="text-2xl font-bold text-white">Control de horas extras</h1>
           <p className="text-gray-400 text-sm mt-1">
-            Consolida marcas biométricas en registros del día, corrige anomalías y finaliza cuando corresponda. La
-            finalización calcula horas solo si hay entrada y salida definidas.
+            Revisión del día: consolida marcas biométricas, valida horas normales y extras (AHC), corrige anomalías
+            y finaliza cuando corresponda. La finalización calcula horas solo si hay entrada y salida definidas.
           </p>
         </div>
         <Link href="/app/attendance/dashboard" className="text-sm text-brand-400 hover:text-brand-300">
@@ -447,9 +447,9 @@ export default function DailyClosePanel({
       </div>
     ) : (
       <div>
-        <h2 className="text-lg font-semibold text-white">Cierre del día</h2>
+        <h2 className="text-lg font-semibold text-white">Control de horas extras</h2>
         <p className="text-gray-400 text-sm mt-1">
-          Consolidación, edición de registros y finalización para la fecha seleccionada.
+          Consolidación, edición de registros y finalización para la fecha seleccionada (horas incluidas).
         </p>
       </div>
     )

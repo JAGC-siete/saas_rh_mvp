@@ -414,9 +414,9 @@ export default function AttendanceDashboardApp() {
                 href="/app/attendance/daily-close"
                 className="text-brand-400 font-medium hover:text-brand-300 underline-offset-2 hover:underline"
               >
-                Cierre de día
+                Control de horas extras
               </Link>
-              <span className="text-gray-500"> — revisar marcas del reloj y anomalías.</span>
+              <span className="text-gray-500"> — revisar marcas del reloj, horas y anomalías.</span>
             </p>
           </header>
 
@@ -431,7 +431,7 @@ export default function AttendanceDashboardApp() {
               <div className="px-4 py-3 sm:px-5 sm:py-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                 <div className="space-y-3 min-w-0">
                   <h2 className="text-sm font-semibold text-white">
-                    Cierre de día · {getTodayInHonduras()}
+                    Control de horas extras · {getTodayInHonduras()}
                   </h2>
                   <dl className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
                     <div>
@@ -456,7 +456,7 @@ export default function AttendanceDashboardApp() {
                   href="/app/attendance/daily-close"
                   className="inline-flex items-center justify-center shrink-0 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15 border border-white/20 text-sm font-medium text-white"
                 >
-                  Ir a cierre de día
+                  Ir a control de horas extras
                 </Link>
               </div>
             </div>

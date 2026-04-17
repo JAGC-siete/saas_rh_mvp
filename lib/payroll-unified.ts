@@ -17,6 +17,8 @@ export type PlanillaRow = {
   department?: string;
   line_id?: string;
   pay_type?: 'fixed' | 'hourly';
+  /** Horas extra (AHC diurno+nocturno+feriado) en el período — informativo en preview fijo */
+  horas_extras?: number;
   // Campos específicos para hourly
   total_hours_worked?: number;
   hourly_rate?: number;
@@ -98,14 +100,18 @@ export async function fetchUnifiedPayroll(
     console.log('🔍 DEBUG - Planilla data sample:', planilla.slice(0, 3));
 
     // Convert planilla data to unified format (base rows without metadata)
-    let rows: UnifiedRow[] = planilla.map(p => ({
-      ...p,
-      horas_trabajadas: (p as any).total_hours_worked || 0, // Para hourly, usar horas trabajadas
-      extras: { horas: 0, monto: 0 },
-      observaciones: '',
-      status: 'completo' as const,
-      pay_type: (p as any).pay_type || 'fixed' // Incluir pay_type
-    }));
+    let rows: UnifiedRow[] = planilla.map((p) => {
+      const hx = Number((p as any).horas_extras)
+      const extrasHoras = Number.isFinite(hx) ? hx : 0
+      return {
+        ...p,
+        horas_trabajadas: (p as any).total_hours_worked || 0, // Para hourly, usar horas trabajadas
+        extras: { horas: extrasHoras, monto: 0 },
+        observaciones: '',
+        status: 'completo' as const,
+        pay_type: (p as any).pay_type || 'fixed', // Incluir pay_type
+      }
+    })
 
     // If we have a run_id, fetch run lines to enrich rows with metadata
     if (planillaData.run_id) {

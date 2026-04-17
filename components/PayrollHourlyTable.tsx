@@ -62,6 +62,7 @@ export default function PayrollHourlyTable({
               <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Empleado</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Días Trabajados</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Total Horas Trabajadas</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Horas extra (AHC)</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Tarifa por Hora</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Salario Bruto</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">Deducciones</th>
@@ -88,6 +89,9 @@ export default function PayrollHourlyTable({
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">
                       {totalHours.toFixed(2)}h
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm tabular-nums text-amber-200/95">
+                      {(row.extras?.horas ?? 0) > 0 ? `${(row.extras?.horas ?? 0).toFixed(2)} h` : '—'}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">
                       {formatCurrency(hourlyRate)}
@@ -143,7 +147,7 @@ export default function PayrollHourlyTable({
               })
             ) : (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
+                <td colSpan={9} className="px-4 py-8 text-center text-gray-400">
                   No hay empleados por hora para este período
                 </td>
               </tr>
