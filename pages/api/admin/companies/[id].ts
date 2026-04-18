@@ -3,6 +3,11 @@ import { createAdminClient } from '../../../../lib/supabase/server'
 import { requireSuperAdmin } from '../../../../lib/auth/api-auth-fixed'
 import { logger } from '../../../../lib/logger'
 import { createSecureErrorResponse, createAuthErrorResponse } from '../../../../lib/security/error-handling'
+import {
+  COMMERCIAL_PLAN_TYPES,
+  COMMERCIAL_TO_INTERNAL,
+  normalizePlanType,
+} from '../../../../lib/billing/plans'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Ensure id is available in catch scope
@@ -92,6 +97,30 @@ async function getCompany(supabase: any, id: string, res: NextApiResponse) {
       }
     }
 
+    // Resolve effective features (plan mapping + per-company overrides) and raw overrides.
+    const [featuresRes, overridesRes] = await Promise.all([
+      supabase
+        .from('v_company_effective_features')
+        .select('feature_key, feature_name, is_enabled, has_override, override_reason')
+        .eq('company_id', id)
+        .order('feature_key'),
+      supabase
+        .from('company_feature_overrides')
+        .select('feature_key, is_enabled, reason, updated_at')
+        .eq('company_id', id),
+    ])
+
+    if (featuresRes.error) {
+      logger.warn('Error fetching effective features for company', { id, error: featuresRes.error.message })
+    }
+    if (overridesRes.error) {
+      logger.warn('Error fetching feature overrides for company', { id, error: overridesRes.error.message })
+    }
+
+    const commercialPlan = (company.plan_type || 'basic').toLowerCase()
+    const internalPlanKey =
+      COMMERCIAL_TO_INTERNAL[commercialPlan as keyof typeof COMMERCIAL_TO_INTERNAL] || 'basic'
+
     // Transform data
     const companyData = {
       ...company,
@@ -104,7 +133,13 @@ async function getCompany(supabase: any, id: string, res: NextApiResponse) {
         is_active: profile.is_active,
         created_at: profile.created_at,
         email: authUsersMap.get(profile.id) || ''
-      }))
+      })),
+      plan: {
+        commercial: commercialPlan,
+        internal_key: internalPlanKey,
+      },
+      effective_features: featuresRes.data || [],
+      overrides: overridesRes.data || [],
     }
 
     return res.status(200).json({
@@ -137,7 +172,16 @@ async function updateCompany(supabase: any, id: string, req: NextApiRequest, res
       }
       updateData.subdomain = subdomain
     }
-    if (plan_type !== undefined) updateData.plan_type = plan_type
+    if (plan_type !== undefined) {
+      const normalizedPlan = normalizePlanType(plan_type)
+      if (!normalizedPlan) {
+        return res.status(400).json({
+          error: 'Invalid plan_type',
+          message: `plan_type must be one of: ${COMMERCIAL_PLAN_TYPES.join(', ')}`
+        })
+      }
+      updateData.plan_type = normalizedPlan
+    }
     if (is_active !== undefined) updateData.is_active = is_active
     if (settings !== undefined) updateData.settings = settings
 

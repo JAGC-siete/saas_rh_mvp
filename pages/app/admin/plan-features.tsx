@@ -13,6 +13,13 @@ type PlanFeatureLink = { plan_key: string; feature_key: string }
 
 const PLAN_ORDER = ['free_trial', 'basic', 'pro', 'enterprise'] as const
 
+const COMMERCIAL_LABEL: Record<string, string> = {
+  free_trial: 'Trial (companies.plan_type = "trial")',
+  basic: 'Basic (companies.plan_type = "basic")',
+  pro: 'Premium (companies.plan_type = "premium")',
+  enterprise: 'Enterprise (companies.plan_type = "enterprise")',
+}
+
 export default function PlanFeaturesAdminPage() {
   const { addNotification } = useNotificationContext()
   const [loading, setLoading] = useState(true)
@@ -164,6 +171,9 @@ export default function PlanFeaturesAdminPage() {
                             <div className="flex flex-col items-center gap-1">
                               <span className="text-white">{p.name}</span>
                               <span className="text-[10px] font-mono text-white/50">{p.plan_key}</span>
+                              <span className="text-[10px] text-white/45 max-w-[180px] text-center">
+                                {COMMERCIAL_LABEL[p.plan_key]}
+                              </span>
                               <Button
                                 size="sm"
                                 variant="outline"
