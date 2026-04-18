@@ -29,6 +29,22 @@ export const COMMERCIAL_PLAN_LABELS: Record<CommercialPlanType, string> = {
   enterprise: 'Enterprise',
 }
 
+/** The single "non-paid" commercial plan. Everything else is considered paid. */
+export const TRIAL_PLAN_TYPE: CommercialPlanType = 'trial'
+
+/**
+ * Paid commercial plans = every COMMERCIAL_PLAN_TYPE that is not the trial.
+ * Derived at build time so adding a new plan only requires updating the master list.
+ */
+export const PAID_PLAN_TYPES: readonly CommercialPlanType[] = COMMERCIAL_PLAN_TYPES.filter(
+  (p) => p !== TRIAL_PLAN_TYPE
+)
+
+export function isPaidPlanType(v: unknown): v is CommercialPlanType {
+  const normalized = normalizePlanType(v)
+  return !!normalized && (PAID_PLAN_TYPES as readonly string[]).includes(normalized)
+}
+
 export function isCommercialPlanType(v: unknown): v is CommercialPlanType {
   return typeof v === 'string' && (COMMERCIAL_PLAN_TYPES as readonly string[]).includes(v)
 }

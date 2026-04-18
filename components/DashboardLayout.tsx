@@ -60,6 +60,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     affiliates: true // Show affiliates link to all users
   })
   const [loadingPermissions, setLoadingPermissions] = useState(true)
+  /**
+   * Feature flags derived from the company's plan + per-company overrides
+   * (resolved via has_feature() in the DB). `null` while loading so items with
+   * a mapped feature_key are shown optimistically and hidden only once we know
+   * the plan excludes them.
+   */
+  const [companyFeatures, setCompanyFeatures] = useState<Record<string, boolean> | null>(null)
   const router = useRouter()
   
   // Session expiry monitoring for 90-min idle timeout
@@ -220,53 +227,87 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     fetchUserPermissions()
   }, [user?.id, userProfile])
 
+  // Pull effective feature flags (plan + overrides) from the backend so the
+  // sidebar hides modules the company doesn't have access to.
+  useEffect(() => {
+    let cancelled = false
+    const fetchFeatures = async () => {
+      if (!user?.id) return
+      try {
+        const res = await fetch('/api/me/features', { credentials: 'include' })
+        if (!res.ok) {
+          if (!cancelled) setCompanyFeatures({})
+          return
+        }
+        const data = await res.json()
+        if (!cancelled) setCompanyFeatures(data?.features || {})
+      } catch (err) {
+        console.warn('Error fetching company features', err)
+        if (!cancelled) setCompanyFeatures({})
+      }
+    }
+    fetchFeatures()
+    return () => {
+      cancelled = true
+    }
+  }, [user?.id])
+
   const handleSignOut = async () => {
     await logout()
     router.push('/app/login')
   }
 
-  // Definir navegación con permisos
-  const navigationItems = [
-    { name: 'Dashboard', href: '/app/dashboard', icon: ChartBarIcon, permission: 'dashboard' },
-    { name: 'Empleados', href: '/app/employees', icon: UsersIcon, permission: 'employees' },
-    { name: 'Departamentos', href: '/app/departments', icon: UsersIcon, permission: 'departments' },
-    { name: 'Asistencia', href: '/app/attendance/dashboard', icon: ClockIcon, permission: 'attendance' },
-    { name: 'Permisos', href: '/app/leave', icon: UserIcon, permission: 'leave' },
-    { name: 'Nómina', href: '/app/payroll', icon: CurrencyDollarIcon, permission: 'payroll' },
-    { name: 'Cesantías', href: '/app/cesantias', icon: ScaleIcon, permission: 'payroll' },
-    { name: 'Deducciones', href: '/app/deducciones', icon: BanknotesIcon, permission: 'payroll' },
-    { name: '13 & 14 Salario', href: '/app/13-14-salario', icon: GiftIcon, permission: 'payroll' },
-    { name: 'Reportes', href: '/app/reports', icon: DocumentChartBarIcon, permission: 'reports' },
-    { name: 'Contabilidad', href: '/app/accounting', icon: CalculatorIcon, permission: 'settings' },
-    // { name: 'Gamificación', href: '/app/gamification', icon: TrophyIcon, permission: 'gamification' },
-    // { name: 'Programa de Afiliados', href: '/app/affiliates', icon: CurrencyDollarIcon, permission: 'affiliates' },
-    { name: 'Parametros', href: '/app/settings', icon: Cog6ToothIcon, permission: 'settings' },
+  // Navigation: `permission` gates by role (from user_profiles.permissions / canonical keys),
+  // `feature_key` gates by the company plan (via has_feature()). Leaving feature_key
+  // undefined means the item is always visible to users who have the permission.
+  const navigationItems: Array<{
+    name: string
+    href: string
+    icon: any
+    permission: keyof UserPermissions
+    feature_key?: string
+  }> = [
+    { name: 'Dashboard',        href: '/app/dashboard',            icon: ChartBarIcon,          permission: 'dashboard' },
+    { name: 'Empleados',        href: '/app/employees',            icon: UsersIcon,             permission: 'employees',  feature_key: 'employees' },
+    { name: 'Departamentos',    href: '/app/departments',          icon: UsersIcon,             permission: 'departments', feature_key: 'departments' },
+    { name: 'Asistencia',       href: '/app/attendance/dashboard', icon: ClockIcon,             permission: 'attendance',  feature_key: 'attendance' },
+    { name: 'Permisos',         href: '/app/leave',                icon: UserIcon,              permission: 'leave' },
+    { name: 'Nómina',           href: '/app/payroll',              icon: CurrencyDollarIcon,    permission: 'payroll',     feature_key: 'payroll' },
+    { name: 'Cesantías',        href: '/app/cesantias',            icon: ScaleIcon,             permission: 'payroll',     feature_key: 'cesantias' },
+    { name: 'Deducciones',      href: '/app/deducciones',          icon: BanknotesIcon,         permission: 'payroll',     feature_key: 'deducciones' },
+    { name: '13 & 14 Salario',  href: '/app/13-14-salario',        icon: GiftIcon,              permission: 'payroll',     feature_key: 'decimo_13_14' },
+    { name: 'Reportes',         href: '/app/reports',              icon: DocumentChartBarIcon,  permission: 'reports',     feature_key: 'reports' },
+    { name: 'Contabilidad',     href: '/app/accounting',           icon: CalculatorIcon,        permission: 'settings',    feature_key: 'contabilidad' },
+    // { name: 'Gamificación',  href: '/app/gamification',         icon: TrophyIcon,            permission: 'gamification' },
+    // { name: 'Programa de Afiliados', href: '/app/affiliates',   icon: CurrencyDollarIcon,    permission: 'affiliates' },
+    { name: 'Parametros',       href: '/app/settings',             icon: Cog6ToothIcon,         permission: 'settings' },
   ]
 
-  // Filtrar navegación basada en permisos
+  // Filtrar navegación basada en permisos (rol) + features (plan/overrides).
   const filteredNavigation = navigationItems.filter(item => {
     if (loadingPermissions) return true // Mostrar todo mientras carga
-    
+
     const hasPermission = userPermissions[item.permission as keyof UserPermissions]
-    
-    // CRÍTICO: Mostrar si es true, o si no está definido (asumir true por defecto)
-    // SOLO ocultar si es explícitamente false
-    const shouldShow = hasPermission !== false
-    
-    // Debug logging SOLO para items que se están filtrando
-    if (!shouldShow) {
-      console.log(`🚫 Filtering out: ${item.name}`, {
+    // Role-based gate: hide only on explicit false (undefined = show).
+    if (hasPermission === false) {
+      console.log(`🚫 Filtering out (role): ${item.name}`, {
         permission: item.permission,
         value: hasPermission,
-        type: typeof hasPermission,
         allPermissions: userPermissions
       })
-      // #region agent log
-      fetch('/api/__debug/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'25b418',runId:'pre-fix',hypothesisId:'H6',location:'components/DashboardLayout.tsx:filteredNavigation',message:'Navigation item filtered out',data:{itemName:item.name,permissionKey:item.permission,hasPermissionValue:hasPermission,settingsValue:userPermissions.settings,reportsValue:userPermissions.reports,adminValue:userPermissions.admin},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion agent log
+      return false
     }
-    
-    return shouldShow
+
+    // Plan-based gate via has_feature(). Skip while loading the matrix to avoid
+    // a flash of an empty sidebar.
+    if (item.feature_key && companyFeatures !== null) {
+      const enabled = companyFeatures[item.feature_key]
+      if (enabled === false) {
+        return false
+      }
+    }
+
+    return true
   })
   
   // Debug: mostrar navegación filtrada

@@ -1,5 +1,6 @@
 import { startOfMonth } from 'date-fns'
 import { createAdminClient } from '../supabase/server'
+import { PAID_PLAN_TYPES, TRIAL_PLAN_TYPE, normalizePlanType } from './plans'
 
 export type BillingAction = 'create_employee' | 'generate_payroll' | 'view_reports' | 'send_voucher'
 
@@ -54,8 +55,12 @@ export async function requirePlanAndQuota(
     throw new Error('PLAN_REQUIRED')
   }
 
+  // Normalize plan_type once (DB also has a CHECK constraint that enforces the
+  // commercial list defined in lib/billing/plans.ts).
+  const normalizedPlan = normalizePlanType(company.plan_type) ?? 'basic'
+
   // Determine subscription status
-  if (company.plan_type === 'trial') {
+  if (normalizedPlan === TRIAL_PLAN_TYPE) {
     status = 'trial'
     // Check trial end date from settings
     const settings = company.settings as any
@@ -83,11 +88,11 @@ export async function requirePlanAndQuota(
       }
     }
   } else if (company.subscription_status === 'inactive' || !company.subscription_status) {
-    // If plan_type is not trial but subscription is inactive, check if it's a paid plan
-    if (['basic', 'premium', 'enterprise'].includes(company.plan_type || '')) {
+    // Plan is not trial and subscription is inactive: any paid plan must have an active subscription.
+    if ((PAID_PLAN_TYPES as readonly string[]).includes(normalizedPlan)) {
       throw new Error('PLAN_REQUIRED')
     }
-    // Otherwise treat as trial
+    // Otherwise treat as trial (defensive fallback; shouldn't happen with the CHECK constraint).
     status = 'trial'
     inTrial = true
   } else {
@@ -145,7 +150,7 @@ export async function requirePlanAndQuota(
 
   return {
     status,
-    plan: company.plan_type || 'basic',
+    plan: normalizedPlan,
     trial_end: trialEnd,
     isActive,
     inTrial
