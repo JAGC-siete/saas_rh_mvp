@@ -163,14 +163,36 @@ async function updateCompany(supabase: any, id: string, req: NextApiRequest, res
     const updateData: any = {}
     if (name !== undefined) updateData.name = name
     if (subdomain !== undefined) {
-      // Validate subdomain format
-      if (!/^[a-z0-9-]+$/.test(subdomain)) {
+      // Allow clearing the subdomain (legacy rows have NULL/empty)
+      if (subdomain === null || subdomain === '') {
+        updateData.subdomain = null
+      } else if (typeof subdomain === 'string') {
+        // Validate format only when it actually changes; otherwise accept legacy
+        // values (uppercase, underscores, etc.) that predate the format check.
+        const { data: currentRow, error: currentErr } = await supabase
+          .from('companies')
+          .select('subdomain')
+          .eq('id', id)
+          .maybeSingle()
+
+        if (currentErr) {
+          logger.warn('Could not load current subdomain for validation', { id, error: currentErr.message })
+        }
+
+        const unchanged = (currentRow?.subdomain || '') === subdomain
+        if (!unchanged && !/^[a-z0-9-]+$/.test(subdomain)) {
+          return res.status(400).json({
+            error: 'Invalid subdomain',
+            message: 'Subdomain must contain only lowercase letters, numbers, and hyphens'
+          })
+        }
+        updateData.subdomain = subdomain
+      } else {
         return res.status(400).json({
           error: 'Invalid subdomain',
-          message: 'Subdomain must contain only lowercase letters, numbers, and hyphens'
+          message: 'Subdomain must be a string'
         })
       }
-      updateData.subdomain = subdomain
     }
     if (plan_type !== undefined) {
       const normalizedPlan = normalizePlanType(plan_type)

@@ -106,14 +106,28 @@ export default function CompanyDetailPage() {
   }, [company])
 
   const save = async () => {
-    if (!companyId) return
+    if (!companyId || !company) return
+    // Build a diff payload so untouched legacy values (e.g. subdomain with uppercase
+    // or underscore) don't trip the server-side validators.
+    const originalPlan = String(company.plan_type || 'basic').toLowerCase()
+    const payload: Record<string, unknown> = {}
+    if (form.name !== (company.name || '')) payload.name = form.name
+    if (form.subdomain !== (company.subdomain || '')) payload.subdomain = form.subdomain
+    if (form.plan_type !== originalPlan) payload.plan_type = form.plan_type
+    if (form.is_active !== !!company.is_active) payload.is_active = form.is_active
+
+    if (Object.keys(payload).length === 0) {
+      addNotification({ type: 'info', title: 'Sin cambios', message: 'No hay cambios por guardar' })
+      return
+    }
+
     try {
       setError(null)
       const res = await fetch(`/api/admin/companies/${companyId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data?.message || data?.error || 'Error actualizando')
