@@ -58,7 +58,7 @@ export default function VentasPage() {
     employees_count: 1,
     billing_modality: 'annual',
     terminals_count: 1,
-    tipo_establecimiento: '',
+    sector_rubro: '',
     coupon_code: '',
     consent_newsletter: true,
   })
@@ -114,7 +114,7 @@ export default function VentasPage() {
         employees_count: Number(formData.employees_count),
         billing_modality: formData.billing_modality || 'annual',
         terminals_count: formData.billing_modality === 'monthly' ? Number(formData.terminals_count) || 1 : 0,
-        tipo_establecimiento: formData.tipo_establecimiento?.trim() || '',
+        sector_rubro: formData.sector_rubro?.trim() || '',
         coupon_code: formData.coupon_code?.trim() || '',
         consent_newsletter: formData.consent_newsletter === true,
       }
@@ -394,19 +394,28 @@ export default function VentasPage() {
                     </div>
                     <div>
                       <label className="block text-white font-medium mb-2">
-                        Tipo de establecimiento <span className="text-cyan-300 text-sm">(opcional)</span>
+                        Sector o rubro <span className="text-cyan-300 text-sm">(opcional)</span>
                       </label>
                       <select
-                        name="tipo_establecimiento"
-                        value={formData.tipo_establecimiento || ''}
-                        onChange={(e) => handleInputChange('tipo_establecimiento', e.target.value)}
+                        name="sector_rubro"
+                        value={formData.sector_rubro || ''}
+                        onChange={(e) => handleInputChange('sector_rubro', e.target.value)}
                         className="w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all hover:border-cyan-400/30 hover:bg-white/10"
                       >
                         <option value="" className="bg-slate-800">Seleccionar...</option>
-                        <option value="restaurante" className="bg-slate-800">Restaurante tradicional</option>
-                        <option value="cafeteria" className="bg-slate-800">Cafetería / Bakery</option>
-                        <option value="qsr" className="bg-slate-800">QSR / Comida rápida</option>
-                        <option value="bar" className="bg-slate-800">Bar / Lounge</option>
+                        <option value="restaurante" className="bg-slate-800">Restaurante</option>
+                        <option value="comida_rapida" className="bg-slate-800">Comida rápida (QSR)</option>
+                        <option value="cafeteria_panaderia" className="bg-slate-800">Cafetería / Panadería</option>
+                        <option value="bar" className="bg-slate-800">Bar</option>
+                        <option value="hotel" className="bg-slate-800">Hotel</option>
+                        <option value="retail" className="bg-slate-800">Retail / Tienda</option>
+                        <option value="supermercado" className="bg-slate-800">Supermercado</option>
+                        <option value="logistica" className="bg-slate-800">Logística / Distribución</option>
+                        <option value="manufactura" className="bg-slate-800">Manufactura</option>
+                        <option value="salud" className="bg-slate-800">Clínica / Salud</option>
+                        <option value="educacion" className="bg-slate-800">Educación</option>
+                        <option value="call_center" className="bg-slate-800">Call Center</option>
+                        <option value="servicios" className="bg-slate-800">Servicios profesionales</option>
                         <option value="otro" className="bg-slate-800">Otro</option>
                       </select>
                     </div>
@@ -420,7 +429,7 @@ export default function VentasPage() {
                       value={formData.coupon_code || ''}
                       onChange={(e) => handleInputChange('coupon_code', e.target.value)}
                       className="w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all hover:border-cyan-400/30 hover:bg-white/10"
-                      placeholder="Ej: gastro2026"
+                      placeholder="Si tienes un cupón, introduce el código aquí"
                     />
                     <p className="text-brand-400 text-sm mt-2">(opcional)</p>
                   </div>

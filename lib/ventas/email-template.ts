@@ -23,6 +23,7 @@ export function generateVentasQuotationEmailHTML(params: {
     : 'Hola'
 
   const fmt = (n: number) => formatMoney(quote.currency, n)
+  const isMonthly = quote.billing_modality === 'monthly'
 
   return `
     <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; padding: 20px;">
@@ -42,38 +43,46 @@ export function generateVentasQuotationEmailHTML(params: {
               <td style="padding: 6px 0; color: #666;">Rango:</td>
               <td style="padding: 6px 0; text-align: right; color: #333;">${quote.tier.min_employees}–${quote.tier.max_employees} empleados</td>
             </tr>
-            <tr>
-              <td style="padding: 6px 0; color: #666;">Subtotal:</td>
-              <td style="padding: 6px 0; text-align: right; color: #333;">${fmt(quote.annual_subtotal)} / año</td>
-            </tr>
-            <tr>
-              <td style="padding: 6px 0; color: #666;">Descuento:</td>
-              <td style="padding: 6px 0; text-align: right; color: #333;">${quote.coupon_applied ? `-${fmt(quote.annual_discount_amount)}` : fmt(0)} / año</td>
-            </tr>
-            <tr>
-              <td style="padding: 6px 0; color: #666; font-weight: bold;">Total:</td>
-              <td style="padding: 6px 0; text-align: right; font-weight: bold; color: #2e7d32;">${fmt(quote.annual_total)} / año</td>
-            </tr>
-            <tr>
-              <td style="padding: 6px 0; color: #666;">Modalidad mensual:</td>
-              <td style="padding: 6px 0; text-align: right; color: #333;">${fmt(quote.monthly_total)} / mes</td>
-            </tr>
             ${
-              quote.billing_modality === 'monthly'
-                ? `<tr>
-                     <td style="padding: 6px 0; color: #666;">Incluye continuidad hardware:</td>
-                     <td style="padding: 6px 0; text-align: right; color: #333;">${fmt(quote.monthly_hardware_fee)} / mes (${quote.terminals_count} terminal${quote.terminals_count === 1 ? '' : 'es'})</td>
-                   </tr>`
-                : `<tr>
-                     <td style="padding: 6px 0; color: #666;">Terminales (anual):</td>
-                     <td style="padding: 6px 0; text-align: right; color: #333;">Primeras 2 terminales sin fee mensual</td>
-                   </tr>`
+              isMonthly
+                ? `
+                  <tr>
+                    <td style="padding: 6px 0; color: #666;">Software (mensual):</td>
+                    <td style="padding: 6px 0; text-align: right; color: #333;">${fmt(quote.monthly_software_total)} / mes</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0; color: #666;">Continuidad hardware:</td>
+                    <td style="padding: 6px 0; text-align: right; color: #333;">${fmt(quote.monthly_hardware_fee)} / mes (${quote.terminals_count} terminal${quote.terminals_count === 1 ? '' : 'es'})</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0; color: #666; font-weight: bold;">Total mensual:</td>
+                    <td style="padding: 6px 0; text-align: right; font-weight: bold; color: #2e7d32;">${fmt(quote.monthly_total)} / mes</td>
+                  </tr>
+                `
+                : `
+                  <tr>
+                    <td style="padding: 6px 0; color: #666;">Subtotal (anual):</td>
+                    <td style="padding: 6px 0; text-align: right; color: #333;">${fmt(quote.annual_subtotal)} / año</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0; color: #666;">Descuento:</td>
+                    <td style="padding: 6px 0; text-align: right; color: #333;">${quote.coupon_applied ? `-${fmt(quote.annual_discount_amount)}` : fmt(0)} / año</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0; color: #666; font-weight: bold;">Total anual:</td>
+                    <td style="padding: 6px 0; text-align: right; font-weight: bold; color: #2e7d32;">${fmt(quote.annual_total)} / año</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0; color: #666;">Terminales:</td>
+                    <td style="padding: 6px 0; text-align: right; color: #333;">Primeras 2 terminales sin fee mensual</td>
+                  </tr>
+                `
             }
           </table>
         </div>
 
         <div style="text-align: center; margin: 22px 0;">
-          <a href="${siteUrl}/activar"
+          <a href="${siteUrl}/app/login"
              style="background: #0b4fa1; color: white; padding: 12px 26px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: bold;">
             Activar gratis
           </a>

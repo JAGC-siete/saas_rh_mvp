@@ -27,7 +27,7 @@ export interface QuotationRequest {
   employees_count: number
   billing_modality?: 'annual' | 'monthly'
   terminals_count?: number
-  tipo_establecimiento?: string
+  sector_rubro?: string
   coupon_code?: string
   consent_newsletter?: boolean
 }

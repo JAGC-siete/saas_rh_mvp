@@ -10,6 +10,18 @@ import type { QuotationRequest, QuotationResponse, VentasPricingTier, CurrencyCo
 import { clampInt, normalizeCouponCode, resolveTierByEmployees, roundMoney } from '../../lib/ventas/pricing'
 import { generateVentasQuotationPDF } from '../../lib/ventas/pdf'
 import { generateVentasQuotationEmailHTML, generateVentasQuotationEmailSubject } from '../../lib/ventas/email-template'
+import { generateVentasActivationEmailHTML, generateVentasActivationEmailSubject } from '../../lib/ventas/activation-email'
+import {
+  generateVentasBankDetailsEmailHTML,
+  generateVentasBankDetailsEmailSubject,
+  getVentasBankDetailsFromEnv,
+} from '../../lib/ventas/bank-details-email'
+import { randomUUID } from 'crypto'
+import {
+  currencyForCountryCode,
+  ianaTimezoneForCountryCode,
+  type CountryCode,
+} from '../../lib/country/supported'
 
 const FALLBACK_CURRENCY: CurrencyCode = 'HNL'
 const FALLBACK_COUPON_CODE = 'gastro2026'
@@ -44,6 +56,7 @@ async function sendEmailWithResend(params: {
   to: string | string[]
   subject: string
   html: string
+  attachments?: { filename: string; contentBase64: string }[]
   pdfBuffer: Buffer
   filename: string
   apiKey: string
@@ -56,8 +69,107 @@ async function sendEmailWithResend(params: {
     to: params.to,
     subject: params.subject,
     html: params.html,
-    attachments: [{ filename: params.filename, content: params.pdfBuffer.toString('base64') }],
+    attachments: [
+      { filename: params.filename, content: params.pdfBuffer.toString('base64') },
+      ...(params.attachments || []).map((a) => ({ filename: a.filename, content: a.contentBase64 })),
+    ],
   })
+}
+
+async function sendEmailHtmlOnly(params: {
+  to: string | string[]
+  subject: string
+  html: string
+  apiKey: string
+  fromEmail: string
+}) {
+  const { Resend } = await import('resend')
+  const resend = new Resend(params.apiKey)
+  return await resend.emails.send({
+    from: params.fromEmail,
+    to: params.to,
+    subject: params.subject,
+    html: params.html,
+  })
+}
+
+async function createTrialEnvironmentFromQuote(supabase: any, params: {
+  contactEmail: string
+  contactName: string
+  companyName: string
+  employeesCount: number
+  quoteMeta: Record<string, any>
+}) {
+  const countryCode: CountryCode = 'HND'
+  const companyId = randomUUID()
+  const subdomain = `ventas-${Date.now().toString(36)}`
+  const tz = ianaTimezoneForCountryCode(countryCode)
+  const currency = currencyForCountryCode(countryCode)
+
+  const { error: companyError } = await supabase
+    .from('companies')
+    .insert([{
+      id: companyId,
+      name: params.companyName || 'Empresa',
+      subdomain,
+      plan_type: 'trial',
+      country_code: countryCode,
+      timezone: tz,
+      settings: {
+        trial_employee_limit: params.employeesCount,
+        currency,
+        language: 'es',
+        ventas_quote: params.quoteMeta,
+      },
+      is_active: true,
+    }])
+
+  if (companyError) {
+    throw new Error(`Error creando company: ${companyError.message}`)
+  }
+
+  const tempPassword = `SISU${Date.now().toString().slice(-6)}`
+  const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+    email: params.contactEmail,
+    password: tempPassword,
+    email_confirm: true,
+    user_metadata: {
+      company_id: companyId,
+      role: 'company_admin',
+      full_name: params.contactName || undefined,
+      source: 'ventas_quote',
+    },
+  })
+
+  if (authError || !authUser?.user) {
+    throw new Error(`Error creando usuario: ${authError?.message || 'unknown'}`)
+  }
+
+  const companyAdminPermissions = {
+    can_view_all: true,
+    can_manage_all: true,
+    manage_payroll: true,
+    manage_reports: true,
+    manage_settings: true,
+    manage_employees: true,
+    can_manage_employees: true,
+  }
+
+  const { error: profileError } = await supabase
+    .from('user_profiles')
+    .upsert({
+      id: authUser.user.id,
+      company_id: companyId,
+      role: 'company_admin',
+      permissions: companyAdminPermissions,
+      is_active: true,
+    }, { onConflict: 'id' })
+
+  if (profileError) {
+    throw new Error(`Error creando perfil: ${profileError.message}`)
+  }
+
+  return { companyId, userId: authUser.user.id, tempPassword }
 }
 
 async function handler(req: NextApiRequest, res: NextApiResponse<QuotationResponse | { error: string; message?: string }>) {
@@ -93,8 +205,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
 
   const contactName = typeof body.contact_name === 'string' ? body.contact_name.trim() : ''
   const companyName = typeof body.company_name === 'string' ? body.company_name.trim() : ''
-  const tipoEstablecimiento = typeof (body as any).tipo_establecimiento === 'string'
-    ? String((body as any).tipo_establecimiento).trim()
+  const sectorRubro = typeof (body as any).sector_rubro === 'string'
+    ? String((body as any).sector_rubro).trim()
     : ''
 
   try {
@@ -179,7 +291,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       source: 'ventas',
       user_agent: String(req.headers['user-agent'] || '').slice(0, 120),
       referer: String(req.headers['referer'] || '').slice(0, 200),
-      tipo_establecimiento: tipoEstablecimiento || undefined,
+      sector_rubro: sectorRubro || undefined,
       billing_modality: billingModality,
       terminals_count: terminalsCount,
       monthly_hardware_fee: monthlyHardwareFee || undefined,
@@ -262,6 +374,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       to: toList,
       subject,
       html,
+      attachments: [],
       pdfBuffer: pdf,
       filename,
       apiKey,
@@ -282,6 +395,64 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       .from('cotizaciones')
       .update({ status: 'sent', email_message_id: (result as any)?.id || null })
       .eq('id', quoteId)
+
+    // Activar entorno automáticamente (no romper cotización si falla).
+    try {
+      const quoteMetaForCompany = {
+        quote_id: quoteId,
+        billing_modality: billingModality,
+        terminals_count: terminalsCount,
+        employees_count: employeesCount,
+        sector_rubro: sectorRubro || undefined,
+        coupon_code_submitted: couponSubmittedNorm || undefined,
+        coupon_applied: isCouponValid,
+      }
+
+      const env = await createTrialEnvironmentFromQuote(supabase as any, {
+        contactEmail,
+        contactName,
+        companyName: companyName || `Empresa ${quoteId.slice(0, 6)}`,
+        employeesCount,
+        quoteMeta: quoteMetaForCompany,
+      })
+
+      const loginUrl = `${(process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net').replace(/\/$/, '')}/app/login`
+      const activationHtml = generateVentasActivationEmailHTML({
+        contactName,
+        companyName,
+        email: contactEmail,
+        password: env.tempPassword,
+        loginUrl,
+      })
+      const activationSubject = generateVentasActivationEmailSubject(companyName)
+
+      await sendEmailHtmlOnly({
+        to: contactEmail,
+        subject: activationSubject,
+        html: activationHtml,
+        apiKey,
+        fromEmail,
+      })
+
+      const bank = getVentasBankDetailsFromEnv()
+      if (bank) {
+        const bankHtml = generateVentasBankDetailsEmailHTML({ contactName, companyName, bank })
+        const bankSubject = generateVentasBankDetailsEmailSubject(companyName)
+        await sendEmailHtmlOnly({
+          to: contactEmail,
+          subject: bankSubject,
+          html: bankHtml,
+          apiKey,
+          fromEmail,
+        })
+      }
+    } catch (e: any) {
+      logger.warn('Activación automática falló (ventas)', {
+        quoteId,
+        email: maskEmail(contactEmail),
+        error: e?.message,
+      })
+    }
 
     const duration = Date.now() - startTime
     logger.info('Cotización enviada', {
