@@ -26,6 +26,7 @@ export interface QuotationRequest {
   phone?: string
   employees_count: number
   terminals_count?: number
+  tipo_establecimiento?: string
   coupon_code?: string
   consent_newsletter?: boolean
 }

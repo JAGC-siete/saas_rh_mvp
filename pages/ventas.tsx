@@ -42,6 +42,18 @@ export default function VentasPage() {
   const [errors, setErrors] = useState<ValidationErrors>({})
   const [quote, setQuote] = useState<QuotationQuote | null>(null)
 
+  const salesWhatsApp = (process.env.NEXT_PUBLIC_SALES_WHATSAPP || '').trim()
+  const whatsappUrl = useMemo(() => {
+    if (!salesWhatsApp) return ''
+    const normalized = salesWhatsApp.replace(/[^\d]/g, '')
+    if (!normalized) return ''
+    const msg = encodeURIComponent(
+      `Hola, soy ${formData.contact_name?.trim() || 'un prospecto'} de ${formData.company_name?.trim() || 'mi empresa'}. ` +
+      `Solicité mi cotización en SISU. ¿Me ayudas a confirmar el plan ideal para ${Number(formData.employees_count)} empleados?`
+    )
+    return `https://wa.me/${normalized}?text=${msg}`
+  }, [salesWhatsApp, formData.company_name, formData.contact_name, formData.employees_count])
+
   const [formData, setFormData] = useState<QuotationRequest>({
     contact_email: '',
     contact_name: '',
@@ -49,6 +61,7 @@ export default function VentasPage() {
     phone: '',
     employees_count: 1,
     terminals_count: 0,
+    tipo_establecimiento: '',
     coupon_code: '',
     consent_newsletter: true,
   })
@@ -90,7 +103,7 @@ export default function VentasPage() {
         company_name: formData.company_name?.trim() || '',
         phone: formData.phone?.trim() || '',
         employees_count: Number(formData.employees_count),
-        terminals_count: Number(formData.terminals_count) || 0,
+        tipo_establecimiento: formData.tipo_establecimiento?.trim() || '',
         coupon_code: formData.coupon_code?.trim() || '',
         consent_newsletter: formData.consent_newsletter === true,
       }
@@ -157,6 +170,28 @@ export default function VentasPage() {
               </Card>
             )}
 
+            {whatsappUrl && (
+              <Card variant="glass" className="mb-8 border-emerald-400/20">
+                <CardContent className="p-8">
+                  <h2 className="text-2xl font-bold text-white mb-2">Siguiente paso recomendado</h2>
+                  <p className="text-sm text-cyan-100/80 mb-6">
+                    Si quieres avanzar más rápido, te ayudamos a confirmar el flujo de asistencia y nómina y a aterrizar un plan de implementación.
+                  </p>
+                  <a
+                    href={whatsappUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="w-full inline-flex items-center justify-center rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-4 font-semibold transition-colors"
+                  >
+                    Escribir por WhatsApp (15 min)
+                  </a>
+                  <p className="text-xs text-white/60 text-center mt-3">
+                    También puedes responder al correo con tus dudas; el PDF ya está listo para compartir internamente.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
             <Link href="/" className="inline-flex items-center text-brand-300 hover:text-white transition-colors">
               <ArrowLeftIcon className="h-4 w-4 mr-2" />
               Volver a inicio
@@ -181,17 +216,38 @@ export default function VentasPage() {
           <CardContent className="p-6 sm:p-8 lg:p-12 relative z-10">
             <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-start">
               <div className="text-center lg:text-left">
-                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-4 leading-tight">
-                  Solicita tu cotización en minutos
+                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-4 leading-[1.05]">
+                  Reduce costos laborales y errores de planilla
+                  <br />
+                  en tu restaurante con <span className="text-emerald-400">SISU</span>
                 </h1>
-                <p className="text-lg md:text-xl text-cyan-100/90 mb-6">
-                  Completa los datos mínimos y te enviamos una cotización inmediata al correo.
+                <p className="text-xl md:text-2xl text-cyan-100/95 mb-8 max-w-2xl">
+                  Cotización personalizada + PDF profesional en <strong>menos de 1 minuto</strong>.
+                  <br />
+                  Incluye implementación guiada y un plan de mejoras operativas en 90 días.
                 </p>
-                <div className="bg-brand-500/10 border border-brand-500/30 rounded-lg p-4">
-                  <p className="text-white font-semibold mb-1">Incluye PDF adjunto</p>
-                  <p className="text-sm text-brand-300">
-                    Recibirás un resumen por email y un PDF para compartir internamente.
-                  </p>
+                <div className="flex flex-wrap gap-6 text-sm text-cyan-200 mb-6">
+                  <div className="flex items-center gap-2">
+                    <span className="text-emerald-400">🔒</span> Cálculo seguro en servidor
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-emerald-400">🛡️</span> Sin tarjeta • Sin compromiso
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-emerald-400">📄</span> PDF listo para presentar internamente
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-emerald-400">🇭🇳🇸🇻🇬🇹</span> Soporte regional (HN / SV / GT)
+                  </div>
+                </div>
+                <div className="bg-emerald-500/10 border border-emerald-400/30 rounded-2xl p-5">
+                  <p className="font-semibold text-emerald-300">Lo que recibes al solicitar tu cotización</p>
+                  <ul className="mt-3 space-y-2 text-sm text-cyan-100/90">
+                    <li>• Cotización exacta según tu tamaño real (1–200 empleados)</li>
+                    <li>• PDF profesional listo para presentar internamente</li>
+                    <li>• Recomendación de implementación según tu flujo (asistencia → nómina → reportes)</li>
+                    <li>• Seguimiento por WhatsApp si prefieres avanzar más rápido</li>
+                  </ul>
                 </div>
               </div>
 
@@ -201,7 +257,7 @@ export default function VentasPage() {
                     Información mínima necesaria
                   </CardTitle>
                   <p className="text-cyan-100/80 text-sm leading-relaxed">
-                    El cálculo del precio se realiza en el servidor. El cupón se valida automáticamente.
+                    Te lo enviamos por email al instante. Si prefieres, te contactamos directo por WhatsApp.
                   </p>
                 </div>
 
@@ -282,16 +338,22 @@ export default function VentasPage() {
                       {errors.employees_count && <p className="text-red-400 text-sm mt-2 font-medium">{errors.employees_count}</p>}
                     </div>
                     <div>
-                      <label className="block text-white font-medium mb-2">Terminales</label>
-                      <input
-                        name="terminals_count"
-                        type="number"
-                        min={0}
-                        value={Number(formData.terminals_count) || 0}
-                        onChange={(e) => handleInputChange('terminals_count', parseInt(e.target.value, 10) || 0)}
-                        className="w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all hover:border-cyan-400/30 hover:bg-white/10"
-                      />
-                      <p className="text-brand-400 text-sm mt-2">(opcional)</p>
+                      <label className="block text-white font-medium mb-2">
+                        Tipo de establecimiento <span className="text-cyan-300 text-sm">(opcional)</span>
+                      </label>
+                      <select
+                        name="tipo_establecimiento"
+                        value={formData.tipo_establecimiento || ''}
+                        onChange={(e) => handleInputChange('tipo_establecimiento', e.target.value)}
+                        className="w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all hover:border-cyan-400/30 hover:bg-white/10"
+                      >
+                        <option value="" className="bg-slate-800">Seleccionar...</option>
+                        <option value="restaurante" className="bg-slate-800">Restaurante tradicional</option>
+                        <option value="cafeteria" className="bg-slate-800">Cafetería / Bakery</option>
+                        <option value="qsr" className="bg-slate-800">QSR / Comida rápida</option>
+                        <option value="bar" className="bg-slate-800">Bar / Lounge</option>
+                        <option value="otro" className="bg-slate-800">Otro</option>
+                      </select>
                     </div>
                   </div>
 
@@ -320,7 +382,7 @@ export default function VentasPage() {
                       </>
                     ) : (
                       <>
-                        <PaperAirplaneIcon className="h-5 w-5 mr-2" /> Solicitar cotización
+                        <PaperAirplaneIcon className="h-5 w-5 mr-2" /> Recibir mi cotización + PDF
                       </>
                     )}
                   </button>

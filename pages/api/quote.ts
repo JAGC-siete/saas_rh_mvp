@@ -76,6 +76,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
 
   const contactName = typeof body.contact_name === 'string' ? body.contact_name.trim() : ''
   const companyName = typeof body.company_name === 'string' ? body.company_name.trim() : ''
+  const tipoEstablecimiento = typeof (body as any).tipo_establecimiento === 'string'
+    ? String((body as any).tipo_establecimiento).trim()
+    : ''
 
   try {
     const supabase = createAdminClient()
@@ -144,6 +147,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       source: 'ventas',
       user_agent: String(req.headers['user-agent'] || '').slice(0, 120),
       referer: String(req.headers['referer'] || '').slice(0, 200),
+      tipo_establecimiento: tipoEstablecimiento || undefined,
     }
 
     const { data: inserted, error: insertErr } = await (supabase as any)
