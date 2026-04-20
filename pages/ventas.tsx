@@ -35,7 +35,7 @@ interface ValidationErrors {
 function computeVentasErrors(fd: QuotationRequest): ValidationErrors {
   const e: ValidationErrors = {}
   const email = (fd.contact_email || '').trim()
-  if (!email) e.contact_email = 'Indique un correo. Ahí enviamos la cotización y el PDF.'
+  if (!email) e.contact_email = 'Indique un correo; ahí le enviamos la respuesta.'
   else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.contact_email = 'Correo no válido.'
 
   const company = (fd.company_name || '').trim()
@@ -48,7 +48,7 @@ function computeVentasErrors(fd: QuotationRequest): ValidationErrors {
 
   const cc = fd.country_code
   if (!cc || !isCountryCode(cc)) {
-    e.country_code = 'Seleccione el país donde opera la empresa (igual que en activar cuenta: nómina y zona horaria).'
+    e.country_code = 'Seleccione el país donde opera la empresa (Honduras, El Salvador o Guatemala).'
   }
 
   const t = Number(fd.terminals_count)
@@ -244,7 +244,7 @@ export default function VentasPage() {
                     Hablar con un asesor por WhatsApp
                   </a>
                   <p className="text-xs text-white/60 text-center mt-3">
-                    También puede responder al correo donde recibió el PDF.
+                    También puede responder al mismo correo donde llegó la cotización.
                   </p>
                 </CardContent>
               </Card>
@@ -284,7 +284,7 @@ export default function VentasPage() {
                 </h1>
 
                 <p className="text-lg text-cyan-100/90 mb-8 leading-relaxed">
-                  Indique país de operación (como en activar cuenta), plantilla y modalidad. Recibirá el desglose y el PDF en su correo; el país define reglas de nómina y zona horaria en el producto.
+                  Elija país, tamaño de plantilla y modalidad de pago. En minutos recibe por correo el detalle de montos para revisarlo y compartirlo internamente.
                 </p>
 
                 <div className="space-y-6 text-left mb-8">
@@ -327,8 +327,7 @@ export default function VentasPage() {
 
                 <div className="border-l-4 border-emerald-500/80 bg-white/5 p-5 rounded-r-xl">
                   <p className="text-sm text-cyan-100/85 leading-relaxed">
-                    El país seleccionado en el formulario es el mismo criterio que en <strong className="text-white">/activar</strong>:
-                    determina cómo el sistema aplica normativa de planilla y zona horaria en el entorno.
+                    El país ayuda a cotizar bien su caso: normativa laboral y horarios locales son distintos en cada uno.
                   </p>
                 </div>
               </div>
@@ -336,10 +335,10 @@ export default function VentasPage() {
               <div className="lg:col-span-6 bg-slate-900/50 rounded-3xl p-6 sm:p-8 border border-white/10 shadow-xl">
                 <div className="mb-8">
                   <CardTitle className="text-2xl font-bold text-white mb-2">
-                    Configure su cotización
+                    Solicitud de cotización
                   </CardTitle>
                   <p className="text-cyan-100/80 text-sm leading-relaxed">
-                    Complete los campos. El importe del software se calcula en servidor según lo indicado; recibirá correo con PDF adjunto.
+                    Complete los campos obligatorios. El monto se calcula de forma segura en servidor; recibirá la propuesta en el correo que indique.
                   </p>
                 </div>
 
@@ -362,7 +361,7 @@ export default function VentasPage() {
                       <option value="GTM" className="bg-slate-800">Guatemala</option>
                     </select>
                     <p className="text-xs text-brand-400 mt-2 leading-relaxed">
-                      Define reglas de nómina y zona horaria (misma lógica que al activar una cuenta).
+                      Use el país donde concentra su personal en planilla; así la propuesta refleja el marco aplicable.
                     </p>
                     {errors.country_code && (
                       <p className="text-red-400 text-xs mt-2">{errors.country_code}</p>
@@ -545,7 +544,7 @@ export default function VentasPage() {
                     ) : (
                       <>
                         <PaperAirplaneIcon className="h-5 w-5 mr-2" aria-hidden />
-                        Enviar cotización y recibir PDF
+                        Enviar cotización
                       </>
                     )}
                   </button>
