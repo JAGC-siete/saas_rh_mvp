@@ -280,7 +280,7 @@ export default function VentasPage() {
                 </div>
 
                 <h1 className="text-4xl sm:text-5xl font-bold text-white mb-6 leading-tight">
-                  Cotización de RRHH y nómina <span className="text-emerald-400">según su país</span>
+                  Cotización de <span className="text-emerald-400">Servicio</span>
                 </h1>
 
                 <p className="text-lg text-cyan-100/90 mb-8 leading-relaxed">
