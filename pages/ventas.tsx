@@ -11,6 +11,7 @@ interface ValidationErrors {
   contact_email?: string
   company_name?: string
   employees_count?: string
+  terminals_count?: string
   submit?: string
 }
 
@@ -28,6 +29,13 @@ function computeVentasErrors(fd: QuotationRequest): ValidationErrors {
   const emp = Number(fd.employees_count)
   if (!Number.isFinite(emp) || emp < 1 || emp > 200) e.employees_count = '👥 El número de empleados debe estar entre 1 y 200.'
 
+  const modality = (fd.billing_modality || 'annual') as any
+  if (modality === 'monthly') {
+    const t = Number(fd.terminals_count)
+    if (!Number.isFinite(t) || t < 1) e.terminals_count = '🖥️ En modalidad mensual, selecciona al menos 1 terminal.'
+    else if (t > 3) e.terminals_count = '🖥️ Para más de 3 terminales, manejamos cotización especial.'
+  }
+
   return e
 }
 
@@ -42,6 +50,19 @@ export default function VentasPage() {
   const [errors, setErrors] = useState<ValidationErrors>({})
   const [quote, setQuote] = useState<QuotationQuote | null>(null)
 
+  const [formData, setFormData] = useState<QuotationRequest>({
+    contact_email: '',
+    contact_name: '',
+    company_name: '',
+    phone: '',
+    employees_count: 1,
+    billing_modality: 'annual',
+    terminals_count: 1,
+    tipo_establecimiento: '',
+    coupon_code: '',
+    consent_newsletter: true,
+  })
+
   const salesWhatsApp = (process.env.NEXT_PUBLIC_SALES_WHATSAPP || '').trim()
   const whatsappUrl = useMemo(() => {
     if (!salesWhatsApp) return ''
@@ -53,18 +74,6 @@ export default function VentasPage() {
     )
     return `https://wa.me/${normalized}?text=${msg}`
   }, [salesWhatsApp, formData.company_name, formData.contact_name, formData.employees_count])
-
-  const [formData, setFormData] = useState<QuotationRequest>({
-    contact_email: '',
-    contact_name: '',
-    company_name: '',
-    phone: '',
-    employees_count: 1,
-    terminals_count: 0,
-    tipo_establecimiento: '',
-    coupon_code: '',
-    consent_newsletter: true,
-  })
 
   useEffect(() => {
     setErrors(computeVentasErrors(formData))
@@ -103,6 +112,8 @@ export default function VentasPage() {
         company_name: formData.company_name?.trim() || '',
         phone: formData.phone?.trim() || '',
         employees_count: Number(formData.employees_count),
+        billing_modality: formData.billing_modality || 'annual',
+        terminals_count: formData.billing_modality === 'monthly' ? Number(formData.terminals_count) || 1 : 0,
         tipo_establecimiento: formData.tipo_establecimiento?.trim() || '',
         coupon_code: formData.coupon_code?.trim() || '',
         consent_newsletter: formData.consent_newsletter === true,
@@ -156,14 +167,13 @@ export default function VentasPage() {
                       <strong>Rango:</strong> {quote.tier.min_employees}–{quote.tier.max_employees} empleados
                     </p>
                     <p>
-                      <strong>Subtotal:</strong> {formatMoney(quote.currency, quote.subtotal)}
+                      <strong>Software anual:</strong> {formatMoney(quote.currency, quote.annual_total)}
                     </p>
                     <p>
-                      <strong>Descuento:</strong>{' '}
-                      {quote.coupon_applied ? `-${formatMoney(quote.currency, quote.discount_amount)}` : formatMoney(quote.currency, 0)}
+                      <strong>Modalidad mensual:</strong> {formatMoney(quote.currency, quote.monthly_total)}
                     </p>
                     <p className="text-white text-lg">
-                      <strong>Total:</strong> {formatMoney(quote.currency, quote.total)}
+                      <strong>Total anual:</strong> {formatMoney(quote.currency, quote.annual_total)}
                     </p>
                   </div>
                 </CardContent>
@@ -262,6 +272,51 @@ export default function VentasPage() {
                 </div>
 
                 <div className="space-y-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-white font-medium mb-2">Modalidad</label>
+                      <select
+                        name="billing_modality"
+                        value={formData.billing_modality || 'annual'}
+                        onChange={(e) => handleInputChange('billing_modality', e.target.value)}
+                        className="w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all hover:border-cyan-400/30 hover:bg-white/10"
+                      >
+                        <option value="annual" className="bg-slate-800">Anual</option>
+                        <option value="monthly" className="bg-slate-800">Mensual</option>
+                      </select>
+                      <p className="text-brand-400 text-sm mt-2">
+                        En modalidad anual, las primeras 2 terminales no llevan fee mensual.
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-white font-medium mb-2">Terminales</label>
+                      <select
+                        name="terminals_count"
+                        value={Number(formData.terminals_count) || 1}
+                        onChange={(e) => handleInputChange('terminals_count', parseInt(e.target.value, 10) || 1)}
+                        disabled={(formData.billing_modality || 'annual') !== 'monthly'}
+                        className={`w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border text-white focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all hover:border-cyan-400/30 hover:bg-white/10 ${
+                          errors.terminals_count ? 'border-red-500/50 bg-red-500/5' : 'border-white/20'
+                        } disabled:opacity-50`}
+                      >
+                        <option value={1} className="bg-slate-800">1 terminal</option>
+                        <option value={2} className="bg-slate-800">2 terminales</option>
+                        <option value={3} className="bg-slate-800">3 terminales</option>
+                        <option value={4} className="bg-slate-800">Más de 3 (cotización especial)</option>
+                      </select>
+                      {(formData.billing_modality || 'annual') === 'monthly' ? (
+                        <p className="text-brand-400 text-sm mt-2">
+                          Fee mensual por continuidad de hardware. Mantenimiento y reemplazo inmediato.
+                        </p>
+                      ) : (
+                        <p className="text-brand-400 text-sm mt-2">(solo aplica en modalidad mensual)</p>
+                      )}
+                      {errors.terminals_count && (
+                        <p className="text-red-400 text-sm mt-2 font-medium">{errors.terminals_count}</p>
+                      )}
+                    </div>
+                  </div>
+
                   <div>
                     <label className="block text-white font-medium mb-2">Nombre de la empresa *</label>
                     <input

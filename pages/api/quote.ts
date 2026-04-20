@@ -21,6 +21,25 @@ const FALLBACK_TIERS: VentasPricingTier[] = [
   { min_employees: 101, max_employees: 200, price: 97450, is_active: true, sort_order: 40 },
 ]
 
+// Hardware continuity fee (solo modalidad mensual). Más de 3 terminales: cotización especial.
+const HARDWARE_FEES_MONTHLY: Record<number, number> = {
+  1: 958.33,
+  2: 1320.0,
+  3: 1624.7,
+}
+
+function normalizeBillingModality(v: unknown): 'annual' | 'monthly' {
+  const raw = typeof v === 'string' ? v.trim().toLowerCase() : ''
+  return raw === 'monthly' || raw === 'mensual' ? 'monthly' : 'annual'
+}
+
+function hardwareFeeMonthly(terminalsCount: number): { fee: number; special: boolean } {
+  if (terminalsCount <= 0) return { fee: 0, special: false }
+  const fee = HARDWARE_FEES_MONTHLY[terminalsCount]
+  if (typeof fee === 'number' && Number.isFinite(fee)) return { fee: roundMoney(fee), special: false }
+  return { fee: 0, special: true }
+}
+
 async function sendEmailWithResend(params: {
   to: string | string[]
   subject: string
@@ -64,11 +83,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
     return res.status(400).json({ error: 'El número de empleados debe estar entre 1 y 200.' })
   }
 
-  const terminalsCountRaw = body.terminals_count
-  const terminalsCount =
-    terminalsCountRaw === undefined || terminalsCountRaw === null
-      ? undefined
-      : clampInt(Number(terminalsCountRaw), 0, 10000)
+  const billingModality = normalizeBillingModality((body as any).billing_modality)
+  const terminalsCountRaw = (body as any).terminals_count
+  const terminalsCount = clampInt(Number(terminalsCountRaw ?? 0), 0, 10000)
 
   const phoneNorm = normalizeSoftPhone(body.phone)
   const couponSubmitted = typeof body.coupon_code === 'string' ? body.coupon_code : ''
@@ -126,20 +143,35 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
     }
     pricingTierId = (tier as any).id || null
 
-    const subtotal = roundMoney(Number(tier.price))
+    const annualSubtotal = roundMoney(Number(tier.price))
     const isCouponValid = !!couponSubmittedNorm && couponSubmittedNorm === couponCode
     const discountPctApplied = isCouponValid ? discountPct : 0
-    const discountAmount = roundMoney(subtotal * discountPctApplied)
-    const total = roundMoney(subtotal - discountAmount)
+    const annualDiscountAmount = roundMoney(annualSubtotal * discountPctApplied)
+    const annualTotal = roundMoney(annualSubtotal - annualDiscountAmount)
+
+    const monthlySoftwareTotal = roundMoney(annualTotal / 12)
+    const hw = billingModality === 'monthly' ? hardwareFeeMonthly(terminalsCount || 1) : { fee: 0, special: false }
+    if (billingModality === 'monthly' && hw.special) {
+      return res.status(400).json({
+        error: 'Para más de 3 terminales, manejamos una cotización especial. Déjanos tu solicitud y te contactamos por WhatsApp.',
+      })
+    }
+    const monthlyHardwareFee = billingModality === 'monthly' ? hw.fee : 0
+    const monthlyTotal = roundMoney(monthlySoftwareTotal + monthlyHardwareFee)
 
     const quote = {
       currency,
-      subtotal,
-      discount_amount: discountAmount,
-      total,
+      annual_subtotal: annualSubtotal,
+      annual_discount_amount: annualDiscountAmount,
+      annual_total: annualTotal,
+      monthly_software_total: monthlySoftwareTotal,
+      monthly_hardware_fee: monthlyHardwareFee,
+      monthly_total: monthlyTotal,
       coupon_applied: isCouponValid,
       discount_pct_applied: discountPctApplied,
-      tier: { min_employees: tier.min_employees, max_employees: tier.max_employees }
+      tier: { min_employees: tier.min_employees, max_employees: tier.max_employees },
+      billing_modality: billingModality,
+      terminals_count: terminalsCount,
     }
 
     // Persist lead
@@ -148,6 +180,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       user_agent: String(req.headers['user-agent'] || '').slice(0, 120),
       referer: String(req.headers['referer'] || '').slice(0, 200),
       tipo_establecimiento: tipoEstablecimiento || undefined,
+      billing_modality: billingModality,
+      terminals_count: terminalsCount,
+      monthly_hardware_fee: monthlyHardwareFee || undefined,
+      monthly_total: monthlyTotal || undefined,
     }
 
     const { data: inserted, error: insertErr } = await (supabase as any)
@@ -158,14 +194,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
         company_name: companyName || null,
         phone: phoneNorm || null,
         employees_count: employeesCount,
-        terminals_count: typeof terminalsCount === 'number' ? terminalsCount : null,
+        terminals_count: terminalsCount || null,
         coupon_code_submitted: couponSubmittedNorm || null,
         coupon_applied: isCouponValid,
         discount_pct_applied: discountPctApplied,
         currency,
-        subtotal,
-        discount_amount: discountAmount,
-        total,
+        subtotal: annualSubtotal,
+        discount_amount: annualDiscountAmount,
+        total: annualTotal,
         pricing_tier_id: pricingTierId,
         pricing_tier_snapshot: {
           min_employees: tier.min_employees,
@@ -196,7 +232,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       companyName,
       phone: phoneNorm || undefined,
       employeesCount,
-      terminalsCount,
+      terminalsCount: billingModality === 'monthly' ? terminalsCount : undefined,
       couponCodeSubmitted: couponSubmittedNorm || undefined,
     })
 

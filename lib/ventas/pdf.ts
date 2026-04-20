@@ -61,30 +61,51 @@ export async function generateVentasQuotationPDF(params: {
         .fontSize(10)
         .text(`Empleados (ingresado): ${employeesCount}`, 40, 224)
         .text(`Rango aplicado: ${quote.tier.min_employees}–${quote.tier.max_employees}`, 40, 240)
-        .text(`Terminales: ${typeof terminalsCount === 'number' ? terminalsCount : '—'}`, 40, 256)
-        .text(`Cupón: ${couponCodeSubmitted?.trim() ? couponCodeSubmitted.trim() : '—'}`, 40, 272)
+        .text(`Modalidad: ${quote.billing_modality === 'monthly' ? 'Mensual' : 'Anual'}`, 40, 256)
+        .text(
+          quote.billing_modality === 'monthly'
+            ? `Terminales (mensual): ${quote.terminals_count || terminalsCount || 1}`
+            : 'Terminales (anual): primeras 2 sin fee mensual',
+          40,
+          272
+        )
+        .text(`Cupón: ${couponCodeSubmitted?.trim() ? couponCodeSubmitted.trim() : '—'}`, 40, 288)
 
       // Totals box
-      const boxY = 312
+      const boxY = 328
       doc.roundedRect(40, boxY, doc.page.width - 80, 140, 12).stroke('#cbd5e1')
       doc.fontSize(12).text('RESUMEN', 56, boxY + 18)
 
       const lineY = (i: number) => boxY + 44 + i * 22
       doc.fontSize(10)
-      doc.text('Subtotal', 56, lineY(0))
-      doc.text(formatMoney(quote.currency, quote.subtotal), 0, lineY(0), { align: 'right', width: doc.page.width - 56 })
+      doc.text('Subtotal (software anual)', 56, lineY(0))
+      doc.text(formatMoney(quote.currency, quote.annual_subtotal) + ' / año', 0, lineY(0), { align: 'right', width: doc.page.width - 56 })
 
-      doc.text('Descuento', 56, lineY(1))
+      doc.text('Descuento (anual)', 56, lineY(1))
       const discountLabel = quote.coupon_applied
-        ? `-${formatMoney(quote.currency, quote.discount_amount)}`
+        ? `-${formatMoney(quote.currency, quote.annual_discount_amount)}`
         : formatMoney(quote.currency, 0)
-      doc.text(discountLabel, 0, lineY(1), { align: 'right', width: doc.page.width - 56 })
+      doc.text(discountLabel + ' / año', 0, lineY(1), { align: 'right', width: doc.page.width - 56 })
 
       doc.fontSize(12)
-      doc.text('Total', 56, lineY(2) + 2)
+      doc.text('Total (software anual)', 56, lineY(2) + 2)
       doc.fillColor('#166534')
-      doc.text(formatMoney(quote.currency, quote.total), 0, lineY(2) + 2, { align: 'right', width: doc.page.width - 56 })
+      doc.text(formatMoney(quote.currency, quote.annual_total) + ' / año', 0, lineY(2) + 2, { align: 'right', width: doc.page.width - 56 })
       doc.fillColor('#0f172a')
+
+      doc.fontSize(10)
+      doc.text('Total mensual', 56, lineY(3))
+      doc.text(formatMoney(quote.currency, quote.monthly_total) + ' / mes', 0, lineY(3), { align: 'right', width: doc.page.width - 56 })
+      if (quote.billing_modality === 'monthly') {
+        doc.fontSize(9).fillColor('#475569')
+        doc.text(
+          `Incluye continuidad de hardware: ${formatMoney(quote.currency, quote.monthly_hardware_fee)} / mes`,
+          56,
+          lineY(4),
+          { width: doc.page.width - 120 }
+        )
+        doc.fillColor('#0f172a')
+      }
 
       doc
         .fontSize(9)
@@ -92,7 +113,7 @@ export async function generateVentasQuotationPDF(params: {
         .text(
           'Nota: Esta cotización es automática y orientativa. Un asesor puede confirmar alcance y tiempos según tu operación.',
           40,
-          boxY + 160,
+          boxY + 182,
           { width: doc.page.width - 80 }
         )
 

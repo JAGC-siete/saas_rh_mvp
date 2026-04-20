@@ -13,10 +13,16 @@ export function generateVentasQuotationEmailHTML(params: {
 }) {
   const { quote, contactName, companyName } = params
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net').replace(/\/$/, '')
+  const salesWhatsApp = (process.env.NEXT_PUBLIC_SALES_WHATSAPP || '').trim()
+  const waNumber = salesWhatsApp.replace(/[^\d]/g, '')
+  const waText = encodeURIComponent('Hola, solicité mi cotización SISU. ¿Me ayudas a confirmar modalidad y terminales?')
+  const waUrl = waNumber ? `https://wa.me/${waNumber}?text=${waText}` : ''
 
   const greeting = contactName?.trim()
     ? `Hola, ${escapeHtml(contactName.trim())}`
     : 'Hola'
+
+  const fmt = (n: number) => formatMoney(quote.currency, n)
 
   return `
     <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; padding: 20px;">
@@ -38,16 +44,31 @@ export function generateVentasQuotationEmailHTML(params: {
             </tr>
             <tr>
               <td style="padding: 6px 0; color: #666;">Subtotal:</td>
-              <td style="padding: 6px 0; text-align: right; color: #333;">${formatMoney(quote.currency, quote.subtotal)}</td>
+              <td style="padding: 6px 0; text-align: right; color: #333;">${fmt(quote.annual_subtotal)} / año</td>
             </tr>
             <tr>
               <td style="padding: 6px 0; color: #666;">Descuento:</td>
-              <td style="padding: 6px 0; text-align: right; color: #333;">${quote.coupon_applied ? `-${formatMoney(quote.currency, quote.discount_amount)}` : formatMoney(quote.currency, 0)}</td>
+              <td style="padding: 6px 0; text-align: right; color: #333;">${quote.coupon_applied ? `-${fmt(quote.annual_discount_amount)}` : fmt(0)} / año</td>
             </tr>
             <tr>
               <td style="padding: 6px 0; color: #666; font-weight: bold;">Total:</td>
-              <td style="padding: 6px 0; text-align: right; font-weight: bold; color: #2e7d32;">${formatMoney(quote.currency, quote.total)}</td>
+              <td style="padding: 6px 0; text-align: right; font-weight: bold; color: #2e7d32;">${fmt(quote.annual_total)} / año</td>
             </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #666;">Modalidad mensual:</td>
+              <td style="padding: 6px 0; text-align: right; color: #333;">${fmt(quote.monthly_total)} / mes</td>
+            </tr>
+            ${
+              quote.billing_modality === 'monthly'
+                ? `<tr>
+                     <td style="padding: 6px 0; color: #666;">Incluye continuidad hardware:</td>
+                     <td style="padding: 6px 0; text-align: right; color: #333;">${fmt(quote.monthly_hardware_fee)} / mes (${quote.terminals_count} terminal${quote.terminals_count === 1 ? '' : 'es'})</td>
+                   </tr>`
+                : `<tr>
+                     <td style="padding: 6px 0; color: #666;">Terminales (anual):</td>
+                     <td style="padding: 6px 0; text-align: right; color: #333;">Primeras 2 terminales sin fee mensual</td>
+                   </tr>`
+            }
           </table>
         </div>
 
@@ -57,6 +78,18 @@ export function generateVentasQuotationEmailHTML(params: {
             Activar gratis
           </a>
         </div>
+
+        ${
+          waUrl
+            ? `<div style="text-align: center; margin: 10px 0 0 0;">
+                 <p style="color: #333; margin: 0 0 10px 0;">¿Quieres avanzar más rápido?</p>
+                 <a href="${waUrl}"
+                    style="background: #10b981; color: #052e2b; padding: 12px 22px; text-decoration: none; border-radius: 999px; display: inline-block; font-weight: bold;">
+                   Escribir por WhatsApp
+                 </a>
+               </div>`
+            : ''
+        }
 
         <p style="color: #666; font-size: 12px; margin-top: 18px;">
           Nota: Esta cotización es automática y orientativa. Un asesor puede confirmar alcance y tiempos según tus necesidades.

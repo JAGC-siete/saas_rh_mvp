@@ -25,6 +25,7 @@ export interface QuotationRequest {
   company_name?: string
   phone?: string
   employees_count: number
+  billing_modality?: 'annual' | 'monthly'
   terminals_count?: number
   tipo_establecimiento?: string
   coupon_code?: string
@@ -33,12 +34,23 @@ export interface QuotationRequest {
 
 export interface QuotationQuote {
   currency: CurrencyCode
-  subtotal: number
-  discount_amount: number
-  total: number
+  /** Precio anual del software (antes de descuento) */
+  annual_subtotal: number
+  /** Descuento aplicado al software (monto anual) */
+  annual_discount_amount: number
+  /** Total anual del software (después de descuento) */
+  annual_total: number
+  /** Total mensual del software (= annual_total/12) */
+  monthly_software_total: number
+  /** Fee mensual por continuidad de hardware (solo mensual) */
+  monthly_hardware_fee: number
+  /** Total mensual final (= monthly_software_total + monthly_hardware_fee) */
+  monthly_total: number
   coupon_applied: boolean
   discount_pct_applied: number
   tier: { min_employees: number; max_employees: number }
+  billing_modality: 'annual' | 'monthly'
+  terminals_count: number
 }
 
 export interface QuotationResponse {
