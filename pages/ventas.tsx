@@ -18,22 +18,22 @@ interface ValidationErrors {
 function computeVentasErrors(fd: QuotationRequest): ValidationErrors {
   const e: ValidationErrors = {}
   const email = (fd.contact_email || '').trim()
-  if (!email) e.contact_email = '✉️ Este campo es obligatorio. Enviaremos la cotización a este correo.'
-  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.contact_email = '✉️ El formato del email no es válido.'
+  if (!email) e.contact_email = 'Indique un correo. Ahí enviamos la cotización y el PDF.'
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.contact_email = 'Correo no válido.'
 
   const company = (fd.company_name || '').trim()
-  if (!company) e.company_name = '🏢 Este campo es obligatorio. Ingresa el nombre de tu empresa.'
-  else if (company.length < 2) e.company_name = '🏢 El nombre de la empresa debe tener al menos 2 caracteres.'
-  else if (company.length > 100) e.company_name = '🏢 El nombre de la empresa no puede tener más de 100 caracteres.'
+  if (!company) e.company_name = 'Nombre de empresa obligatorio.'
+  else if (company.length < 2) e.company_name = 'Nombre demasiado corto.'
+  else if (company.length > 100) e.company_name = 'Máximo 100 caracteres.'
 
   const emp = Number(fd.employees_count)
-  if (!Number.isFinite(emp) || emp < 1 || emp > 200) e.employees_count = '👥 El número de empleados debe estar entre 1 y 200.'
+  if (!Number.isFinite(emp) || emp < 1 || emp > 200) e.employees_count = 'Indique entre 1 y 200 empleados.'
 
   const t = Number(fd.terminals_count)
-  if (!Number.isFinite(t) || t < 1) e.terminals_count = '🖥️ Selecciona cuántos terminales usarás.'
+  if (!Number.isFinite(t) || t < 1) e.terminals_count = 'Indique cuántos terminales necesita.'
   else if (t > 3) {
     e.terminals_count =
-      '🖥️ Para más de 3 terminales cotizamos aparte según la tarifa de continuidad de hardware (como en modalidad mensual). Escríbenos por WhatsApp o indica menos de 4.'
+      'Más de tres terminales va cotización aparte (tarifa de hardware). Escríbanos o elija hasta 3.'
   }
 
   return e
@@ -69,8 +69,7 @@ export default function VentasPage() {
     const normalized = salesWhatsApp.replace(/[^\d]/g, '')
     if (!normalized) return ''
     const msg = encodeURIComponent(
-      `Hola, soy ${formData.contact_name?.trim() || 'un prospecto'} de ${formData.company_name?.trim() || 'mi empresa'}. ` +
-      `Solicité mi cotización en SISU. ¿Me ayudas a confirmar el plan ideal para ${Number(formData.employees_count)} empleados?`
+      `Hola. Solicité cotización en humanosisu.net (${formData.company_name?.trim() || 'mi empresa'}, ${Number(formData.employees_count)} empleados). Quiero revisar alcance e implementación.`
     )
     return `https://wa.me/${normalized}?text=${msg}`
   }, [salesWhatsApp, formData.company_name, formData.contact_name, formData.employees_count])
@@ -134,7 +133,7 @@ export default function VentasPage() {
       setQuote((data as QuotationResponse).quote || null)
       setIsSuccess(true)
     } catch (e) {
-      setErrors({ submit: '❌ Error de conexión. Por favor, verifica tu internet e intenta de nuevo.' })
+      setErrors({ submit: 'No se pudo enviar. Revise su conexión e intente de nuevo.' })
     } finally {
       setIsLoading(false)
     }
@@ -151,17 +150,17 @@ export default function VentasPage() {
                 <CheckCircleIcon className="h-12 w-12 text-green-400" />
               </div>
               <h1 className="text-4xl font-bold text-white mb-4">
-                Cotización enviada a su correo
+                Cotización enviada
               </h1>
               <p className="text-xl text-brand-300 mb-8">
-                Enviamos la cotización a <strong>{formData.contact_email}</strong>. Si no la ves en unos minutos, revisa spam.
+                Revise <strong>{formData.contact_email}</strong>, incluida la carpeta de spam si no ve el mensaje en minutos.
               </p>
             </div>
 
             {quote && (
               <Card variant="glass" className="mb-8">
                 <CardContent className="p-8">
-                  <h2 className="text-2xl font-bold text-white mb-4">Resumen</h2>
+                  <h2 className="text-2xl font-bold text-white mb-4">Detalle</h2>
                   <div className="space-y-2 text-brand-200">
                     <p>
                       <strong>Rango:</strong> {quote.tier.min_employees}–{quote.tier.max_employees} empleados
@@ -172,7 +171,7 @@ export default function VentasPage() {
                           <strong>Total mensual (estimado):</strong> {formatMoney(quote.currency, quote.monthly_total)}
                         </p>
                         <p className="text-sm text-cyan-100/70">
-                          Incluye software prorrateado + continuidad de hardware según terminales.
+                          Software mensual más continuidad de hardware según terminales elegidos.
                         </p>
                       </>
                     ) : (
@@ -181,8 +180,7 @@ export default function VentasPage() {
                           <strong>Total anual (software):</strong> {formatMoney(quote.currency, quote.annual_total)}
                         </p>
                         <p className="text-sm text-cyan-100/70">
-                          Hasta 3 terminales incluidas en modalidad anual. Indicaste{' '}
-                          <strong>{quote.terminals_count}</strong>{' '}
+                          Modalidad anual: hasta tres terminales cubiertas. Solicitaste {quote.terminals_count}{' '}
                           {quote.terminals_count === 1 ? 'terminal' : 'terminales'}.
                         </p>
                       </>
@@ -195,9 +193,9 @@ export default function VentasPage() {
             {whatsappUrl && (
               <Card variant="glass" className="mb-8 border-emerald-400/20">
                 <CardContent className="p-8">
-                  <h2 className="text-2xl font-bold text-white mb-2">Siguiente paso recomendado</h2>
+                  <h2 className="text-2xl font-bold text-white mb-2">¿Necesita afinar alcance?</h2>
                   <p className="text-sm text-cyan-100/80 mb-6">
-                    Si quieres avanzar más rápido, te ayudamos a confirmar el flujo de asistencia y nómina y a aterrizar un plan de implementación.
+                    Un asesor puede aclarar asistencia, nómina e implementación según su operación.
                   </p>
                   <a
                     href={whatsappUrl}
@@ -205,10 +203,10 @@ export default function VentasPage() {
                     rel="noreferrer"
                     className="w-full inline-flex items-center justify-center rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-4 font-semibold transition-colors"
                   >
-                    Escribir por WhatsApp (15 min)
+                    WhatsApp comercial
                   </a>
                   <p className="text-xs text-white/60 text-center mt-3">
-                    También puedes responder al correo con tus dudas; el PDF ya está listo para compartir internamente.
+                    También puede responder el correo con la cotización adjunta.
                   </p>
                 </CardContent>
               </Card>
@@ -239,36 +237,23 @@ export default function VentasPage() {
             <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-start">
               <div className="text-center lg:text-left">
                 <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-4 leading-[1.05]">
-                  Menos fricción en RRHH:
-                  <br />
-                  asistencia, nómina y reportes con <span className="text-emerald-400">SISU</span>
+                  Cotización <span className="text-emerald-400">SISU</span>
                 </h1>
-                <p className="text-xl md:text-2xl text-cyan-100/95 mb-8 max-w-2xl">
-                  Cotización clara para tu tamaño real (1–200 empleados) + PDF en <strong>menos de 1 minuto</strong>.
-                  <br />
-                  Pensado para operaciones en Honduras, El Salvador y Guatemala — sin depender del rubro de tu empresa.
+                <p className="text-lg md:text-xl text-cyan-100/95 mb-6 max-w-2xl leading-relaxed">
+                  Asistencia, nómina y reportes para empresas en <strong>Honduras, El Salvador y Guatemala</strong>.
+                  Indique plantilla aproximada y modalidad: le enviamos el desglose y el PDF al correo.
                 </p>
-                <div className="flex flex-wrap gap-6 text-sm text-cyan-200 mb-6">
-                  <div className="flex items-center gap-2">
-                    <span className="text-emerald-400">🔒</span> Cálculo seguro en servidor
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-emerald-400">🛡️</span> Sin tarjeta • Sin compromiso
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-emerald-400">📄</span> PDF listo para presentar internamente
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-emerald-400">🇭🇳🇸🇻🇬🇹</span> Soporte regional (HN / SV / GT)
-                  </div>
-                </div>
-                <div className="bg-emerald-500/10 border border-emerald-400/30 rounded-2xl p-5">
-                  <p className="font-semibold text-emerald-300">Lo que recibes al solicitar tu cotización</p>
-                  <ul className="mt-3 space-y-2 text-sm text-cyan-100/90">
-                    <li>• Precio calculado en servidor según empleados y modalidad</li>
-                    <li>• PDF profesional listo para presentar internamente</li>
-                    <li>• Recomendación de implementación según tu flujo (asistencia → nómina → reportes)</li>
-                    <li>• Seguimiento por WhatsApp si prefieres avanzar más rápido</li>
+                <ul className="text-sm text-cyan-200/95 space-y-2 mb-6 max-w-xl">
+                  <li className="flex gap-2"><span className="text-emerald-400 shrink-0">·</span> Monto según empleados y opciones que elija (no en el navegador).</li>
+                  <li className="flex gap-2"><span className="text-emerald-400 shrink-0">·</span> Sin pago por pedir la cotización.</li>
+                  <li className="flex gap-2"><span className="text-emerald-400 shrink-0">·</span> PDF para uso interno o gestión.</li>
+                </ul>
+                <div className="bg-white/5 border border-white/15 rounded-2xl p-5">
+                  <p className="font-medium text-white text-sm">Qué enviamos por correo</p>
+                  <ul className="mt-3 space-y-2 text-sm text-cyan-100/85">
+                    <li>Cotización con montos aplicables.</li>
+                    <li>PDF adjunto con el mismo detalle.</li>
+                    <li>Datos de contacto si quiere coordinar implementación.</li>
                   </ul>
                 </div>
               </div>
@@ -276,10 +261,10 @@ export default function VentasPage() {
               <div className="space-y-6">
                 <div className="border-t border-white/10 pt-6">
                   <CardTitle className="text-xl md:text-2xl font-bold text-white mb-3">
-                    Información mínima necesaria
+                    Datos para armar la cotización
                   </CardTitle>
                   <p className="text-cyan-100/80 text-sm leading-relaxed">
-                    Te lo enviamos por email al instante. Si prefieres, te contactamos directo por WhatsApp.
+                    Complete los campos. La respuesta llega al correo indicado; si hay cupón válido, se aplica al total.
                   </p>
                 </div>
 
@@ -297,8 +282,7 @@ export default function VentasPage() {
                         <option value="monthly" className="bg-slate-800">Mensual</option>
                       </select>
                       <p className="text-brand-400 text-sm mt-2">
-                        Anual: hasta <strong>3 terminales</strong> incluidas (sin fee mensual de continuidad). Más de 3:
-                        cotización especial según tarifa de hardware.
+                        <strong>Anual:</strong> hasta tres terminales cubiertas; más de tres, cotización aparte (hardware).
                       </p>
                     </div>
                     <div>
@@ -318,12 +302,13 @@ export default function VentasPage() {
                       </select>
                       {(formData.billing_modality || 'annual') === 'monthly' ? (
                         <p className="text-brand-400 text-sm mt-2">
-                          Mensual: aplica fee de continuidad de hardware por terminal (hasta 3). Más de 3: cotización
-                          especial.
+                          <strong>Mensual:</strong> suma continuidad de hardware por terminal (tabla hasta tres). Más de tres
+                          va aparte.
                         </p>
                       ) : (
                         <p className="text-brand-400 text-sm mt-2">
-                          Anual: elige 1–3 terminales cubiertas; si necesitas más, te cotizamos el excedente.
+                          Elija 1 a 3 si entran en el paquete anual; si necesita más, seleccione la opción especial o
+                          escríbanos.
                         </p>
                       )}
                       {errors.terminals_count && (
@@ -437,16 +422,15 @@ export default function VentasPage() {
                   </div>
 
                   <div>
-                    <label className="block text-white font-medium mb-2">Cupón de Descuento</label>
+                    <label className="block text-white font-medium mb-2">Cupón (opcional)</label>
                     <input
                       name="coupon_code"
                       type="text"
                       value={formData.coupon_code || ''}
                       onChange={(e) => handleInputChange('coupon_code', e.target.value)}
                       className="w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all hover:border-cyan-400/30 hover:bg-white/10"
-                      placeholder="Si tienes un cupón, introduce el código aquí"
+                      placeholder="Código, si cuenta con uno"
                     />
-                    <p className="text-brand-400 text-sm mt-2">(opcional)</p>
                   </div>
 
                   <button
@@ -457,11 +441,11 @@ export default function VentasPage() {
                     {isLoading ? (
                       <>
                         <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                        Enviando cotización...
+                        Enviando…
                       </>
                     ) : (
                       <>
-                        <PaperAirplaneIcon className="h-5 w-5 mr-2" /> Recibir mi cotización + PDF
+                        <PaperAirplaneIcon className="h-5 w-5 mr-2" /> Enviar cotización
                       </>
                     )}
                   </button>
@@ -474,7 +458,8 @@ export default function VentasPage() {
 
                   {!errors.submit && (
                     <p className="text-brand-400 text-xs text-center">
-                      Al enviar aceptas que te contactemos con la información de tu cotización. No se calcula el precio en tu navegador.
+                      Al enviar autoriza contacto comercial vinculado a esta solicitud. El importe lo calcula el sistema en
+                      servidor, no en el navegador.
                     </p>
                   )}
                 </div>
