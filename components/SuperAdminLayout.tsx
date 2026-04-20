@@ -50,6 +50,12 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
       description: 'Vista general del sistema'
     },
     {
+      name: 'Ventas',
+      href: '/app/admin/ventas-config',
+      icon: DollarSign,
+      description: 'Configurar /ventas'
+    },
+    {
       name: 'Afiliados',
       href: '/app/admin/affiliates',
       icon: Users,

@@ -1,9 +1,3 @@
--- Migration: Payroll AHC reconciliation (pragmatic cron)
--- Goal: Nightly self-healing to backfill missing attendance_hours_calculation rows
--- Notes:
--- - Uses calculate_attendance_hours_batch which is already idempotent (ON CONFLICT DO UPDATE).
--- - Attempts to schedule via pg_cron only if extension is present.
-
 CREATE SCHEMA IF NOT EXISTS app_private;
 
 CREATE OR REPLACE FUNCTION app_private.recalculate_missing_ahc_for_date(p_target_date DATE)
@@ -55,7 +49,6 @@ BEGIN
     FROM public.attendance_hours_calculation ahc
     WHERE ahc.attendance_record_id = ANY(v_record_ids);
 
-    -- Compute missing ids (record_ids - existing_ids)
     SELECT array_agg(x)
     INTO v_missing_ids
     FROM (
@@ -71,7 +64,6 @@ BEGIN
       CONTINUE;
     END IF;
 
-    -- Backfill missing AHC rows (idempotent)
     SELECT COUNT(*) INTO v_calculated_count
     FROM public.calculate_attendance_hours_batch(v_missing_ids, EXTRACT(YEAR FROM p_target_date)::INT);
 
@@ -88,7 +80,7 @@ END;
 $$;
 
 REVOKE ALL ON FUNCTION app_private.recalculate_missing_ahc_for_date(DATE) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION app_private.recalculate_missing_ahc_for_date(DATE) TO authenticated;
+GRANT EXECUTE ON FUNCTION app_private.recalculate_missing_ahc_for_date(DATE) TO service_role;
 
 COMMENT ON FUNCTION app_private.recalculate_missing_ahc_for_date(DATE) IS
   'Backfills attendance_hours_calculation rows for complete records (check_in/out) of a given date across all active companies.';
@@ -102,33 +94,34 @@ AS $$
 DECLARE
   v_date DATE;
 BEGIN
-  -- Default timezone for ops: Tegucigalpa (no DST).
   v_date := (now() AT TIME ZONE 'America/Tegucigalpa')::date - 1;
   RETURN app_private.recalculate_missing_ahc_for_date(v_date);
 END;
 $$;
 
 REVOKE ALL ON FUNCTION app_private.recalculate_missing_ahc_yesterday() FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION app_private.recalculate_missing_ahc_yesterday() TO authenticated;
+GRANT EXECUTE ON FUNCTION app_private.recalculate_missing_ahc_yesterday() TO service_role;
 
--- Optional: schedule via pg_cron if available (best-effort).
 DO $$
 BEGIN
-  IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
-    -- 02:30 Tegucigalpa time (server TZ may differ; schedule uses DB timezone).
+  IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron' AND installed_version IS NOT NULL) THEN
+    BEGIN
+      PERFORM cron.unschedule('recalculate_missing_ahc_yesterday');
+    EXCEPTION
+      WHEN OTHERS THEN
+        NULL;
+    END;
+
     PERFORM cron.schedule(
       'recalculate_missing_ahc_yesterday',
       '30 2 * * *',
-      $$SELECT app_private.recalculate_missing_ahc_yesterday();$$
+      $job$SELECT app_private.recalculate_missing_ahc_yesterday();$job$
     );
   END IF;
 EXCEPTION
   WHEN undefined_function THEN
-    -- pg_cron not installed or cron schema not available; skip.
     NULL;
   WHEN insufficient_privilege THEN
-    -- Cannot schedule in this environment; skip.
     NULL;
 END;
 $$;
-
