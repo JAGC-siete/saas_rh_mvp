@@ -33,7 +33,7 @@ const FALLBACK_TIERS: VentasPricingTier[] = [
   { min_employees: 101, max_employees: 200, price: 97450, is_active: true, sort_order: 40 },
 ]
 
-// Hardware continuity fee (solo modalidad mensual). Más de 3 terminales: cotización especial.
+// Tarifa de continuidad de hardware (modalidad mensual, 1–3 terminales). Más de 3: cotización especial (anual o mensual).
 const HARDWARE_FEES_MONTHLY: Record<number, number> = {
   1: 958.33,
   2: 1320.0,
@@ -262,13 +262,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
     const annualTotal = roundMoney(annualSubtotal - annualDiscountAmount)
 
     const monthlySoftwareTotal = roundMoney(annualTotal / 12)
-    const hw = billingModality === 'monthly' ? hardwareFeeMonthly(terminalsCount || 1) : { fee: 0, special: false }
-    if (billingModality === 'monthly' && hw.special) {
+    const terminalsForPricing = terminalsCount >= 1 ? terminalsCount : 1
+    const hwQuote = hardwareFeeMonthly(terminalsForPricing)
+    if (hwQuote.special) {
       return res.status(400).json({
-        error: 'Para más de 3 terminales, manejamos una cotización especial. Déjanos tu solicitud y te contactamos por WhatsApp.',
+        error:
+          'Para más de 3 terminales cotizamos aparte según la tarifa de continuidad de hardware (misma base que en modalidad mensual). Escríbenos y te confirmamos el monto.',
       })
     }
-    const monthlyHardwareFee = billingModality === 'monthly' ? hw.fee : 0
+    const monthlyHardwareFee = billingModality === 'monthly' ? hwQuote.fee : 0
     const monthlyTotal = roundMoney(monthlySoftwareTotal + monthlyHardwareFee)
 
     const quote = {
@@ -283,7 +285,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       discount_pct_applied: discountPctApplied,
       tier: { min_employees: tier.min_employees, max_employees: tier.max_employees },
       billing_modality: billingModality,
-      terminals_count: terminalsCount,
+      terminals_count: terminalsForPricing,
     }
 
     // Persist lead
@@ -293,7 +295,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       referer: String(req.headers['referer'] || '').slice(0, 200),
       sector_rubro: sectorRubro || undefined,
       billing_modality: billingModality,
-      terminals_count: terminalsCount,
+      terminals_count: terminalsForPricing,
       monthly_hardware_fee: monthlyHardwareFee || undefined,
       monthly_total: monthlyTotal || undefined,
     }
@@ -306,7 +308,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
         company_name: companyName || null,
         phone: phoneNorm || null,
         employees_count: employeesCount,
-        terminals_count: terminalsCount || null,
+        terminals_count: terminalsForPricing || null,
         coupon_code_submitted: couponSubmittedNorm || null,
         coupon_applied: isCouponValid,
         discount_pct_applied: discountPctApplied,
@@ -344,7 +346,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       companyName,
       phone: phoneNorm || undefined,
       employeesCount,
-      terminalsCount: billingModality === 'monthly' ? terminalsCount : undefined,
+      terminalsCount: terminalsForPricing,
       couponCodeSubmitted: couponSubmittedNorm || undefined,
     })
 

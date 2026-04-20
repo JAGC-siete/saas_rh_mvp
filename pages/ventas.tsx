@@ -29,11 +29,11 @@ function computeVentasErrors(fd: QuotationRequest): ValidationErrors {
   const emp = Number(fd.employees_count)
   if (!Number.isFinite(emp) || emp < 1 || emp > 200) e.employees_count = '👥 El número de empleados debe estar entre 1 y 200.'
 
-  const modality = (fd.billing_modality || 'annual') as any
-  if (modality === 'monthly') {
-    const t = Number(fd.terminals_count)
-    if (!Number.isFinite(t) || t < 1) e.terminals_count = '🖥️ En modalidad mensual, selecciona al menos 1 terminal.'
-    else if (t > 3) e.terminals_count = '🖥️ Para más de 3 terminales, manejamos cotización especial.'
+  const t = Number(fd.terminals_count)
+  if (!Number.isFinite(t) || t < 1) e.terminals_count = '🖥️ Selecciona cuántos terminales usarás.'
+  else if (t > 3) {
+    e.terminals_count =
+      '🖥️ Para más de 3 terminales cotizamos aparte según la tarifa de continuidad de hardware (como en modalidad mensual). Escríbenos por WhatsApp o indica menos de 4.'
   }
 
   return e
@@ -113,7 +113,7 @@ export default function VentasPage() {
         phone: formData.phone?.trim() || '',
         employees_count: Number(formData.employees_count),
         billing_modality: formData.billing_modality || 'annual',
-        terminals_count: formData.billing_modality === 'monthly' ? Number(formData.terminals_count) || 1 : 0,
+        terminals_count: Number(formData.terminals_count) || 1,
         sector_rubro: formData.sector_rubro?.trim() || '',
         coupon_code: formData.coupon_code?.trim() || '',
         consent_newsletter: formData.consent_newsletter === true,
@@ -166,15 +166,27 @@ export default function VentasPage() {
                     <p>
                       <strong>Rango:</strong> {quote.tier.min_employees}–{quote.tier.max_employees} empleados
                     </p>
-                    <p>
-                      <strong>Software anual:</strong> {formatMoney(quote.currency, quote.annual_total)}
-                    </p>
-                    <p>
-                      <strong>Modalidad mensual:</strong> {formatMoney(quote.currency, quote.monthly_total)}
-                    </p>
-                    <p className="text-white text-lg">
-                      <strong>Total anual:</strong> {formatMoney(quote.currency, quote.annual_total)}
-                    </p>
+                    {quote.billing_modality === 'monthly' ? (
+                      <>
+                        <p>
+                          <strong>Total mensual (estimado):</strong> {formatMoney(quote.currency, quote.monthly_total)}
+                        </p>
+                        <p className="text-sm text-cyan-100/70">
+                          Incluye software prorrateado + continuidad de hardware según terminales.
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p>
+                          <strong>Total anual (software):</strong> {formatMoney(quote.currency, quote.annual_total)}
+                        </p>
+                        <p className="text-sm text-cyan-100/70">
+                          Hasta 3 terminales incluidas en modalidad anual. Indicaste{' '}
+                          <strong>{quote.terminals_count}</strong>{' '}
+                          {quote.terminals_count === 1 ? 'terminal' : 'terminales'}.
+                        </p>
+                      </>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -227,14 +239,14 @@ export default function VentasPage() {
             <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-start">
               <div className="text-center lg:text-left">
                 <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-4 leading-[1.05]">
-                  Reduce costos laborales y errores de planilla
+                  Menos fricción en RRHH:
                   <br />
-                  en tu restaurante con <span className="text-emerald-400">SISU</span>
+                  asistencia, nómina y reportes con <span className="text-emerald-400">SISU</span>
                 </h1>
                 <p className="text-xl md:text-2xl text-cyan-100/95 mb-8 max-w-2xl">
-                  Cotización personalizada + PDF profesional en <strong>menos de 1 minuto</strong>.
+                  Cotización clara para tu tamaño real (1–200 empleados) + PDF en <strong>menos de 1 minuto</strong>.
                   <br />
-                  Incluye implementación guiada y un plan de mejoras operativas en 90 días.
+                  Pensado para operaciones en Honduras, El Salvador y Guatemala — sin depender del rubro de tu empresa.
                 </p>
                 <div className="flex flex-wrap gap-6 text-sm text-cyan-200 mb-6">
                   <div className="flex items-center gap-2">
@@ -253,7 +265,7 @@ export default function VentasPage() {
                 <div className="bg-emerald-500/10 border border-emerald-400/30 rounded-2xl p-5">
                   <p className="font-semibold text-emerald-300">Lo que recibes al solicitar tu cotización</p>
                   <ul className="mt-3 space-y-2 text-sm text-cyan-100/90">
-                    <li>• Cotización exacta según tu tamaño real (1–200 empleados)</li>
+                    <li>• Precio calculado en servidor según empleados y modalidad</li>
                     <li>• PDF profesional listo para presentar internamente</li>
                     <li>• Recomendación de implementación según tu flujo (asistencia → nómina → reportes)</li>
                     <li>• Seguimiento por WhatsApp si prefieres avanzar más rápido</li>
@@ -285,7 +297,8 @@ export default function VentasPage() {
                         <option value="monthly" className="bg-slate-800">Mensual</option>
                       </select>
                       <p className="text-brand-400 text-sm mt-2">
-                        En modalidad anual, las primeras 2 terminales no llevan fee mensual.
+                        Anual: hasta <strong>3 terminales</strong> incluidas (sin fee mensual de continuidad). Más de 3:
+                        cotización especial según tarifa de hardware.
                       </p>
                     </div>
                     <div>
@@ -294,10 +307,9 @@ export default function VentasPage() {
                         name="terminals_count"
                         value={Number(formData.terminals_count) || 1}
                         onChange={(e) => handleInputChange('terminals_count', parseInt(e.target.value, 10) || 1)}
-                        disabled={(formData.billing_modality || 'annual') !== 'monthly'}
                         className={`w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border text-white focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all hover:border-cyan-400/30 hover:bg-white/10 ${
                           errors.terminals_count ? 'border-red-500/50 bg-red-500/5' : 'border-white/20'
-                        } disabled:opacity-50`}
+                        }`}
                       >
                         <option value={1} className="bg-slate-800">1 terminal</option>
                         <option value={2} className="bg-slate-800">2 terminales</option>
@@ -306,10 +318,13 @@ export default function VentasPage() {
                       </select>
                       {(formData.billing_modality || 'annual') === 'monthly' ? (
                         <p className="text-brand-400 text-sm mt-2">
-                          Fee mensual por continuidad de hardware. Mantenimiento y reemplazo inmediato.
+                          Mensual: aplica fee de continuidad de hardware por terminal (hasta 3). Más de 3: cotización
+                          especial.
                         </p>
                       ) : (
-                        <p className="text-brand-400 text-sm mt-2">(solo aplica en modalidad mensual)</p>
+                        <p className="text-brand-400 text-sm mt-2">
+                          Anual: elige 1–3 terminales cubiertas; si necesitas más, te cotizamos el excedente.
+                        </p>
                       )}
                       {errors.terminals_count && (
                         <p className="text-red-400 text-sm mt-2 font-medium">{errors.terminals_count}</p>

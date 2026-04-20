@@ -65,7 +65,7 @@ export async function generateVentasQuotationPDF(params: {
         .text(
           quote.billing_modality === 'monthly'
             ? `Terminales (mensual): ${quote.terminals_count || terminalsCount || 1}`
-            : 'Terminales (anual): primeras 2 sin fee mensual',
+            : `Terminales (anual): ${quote.terminals_count || terminalsCount || 1} (hasta 3 incluidas; más de 3 cotización especial)`,
           40,
           272
         )
@@ -118,7 +118,12 @@ export async function generateVentasQuotationPDF(params: {
         doc.fillColor('#0f172a')
 
         doc.fontSize(9).fillColor('#475569')
-        doc.text('Terminales: primeras 2 sin fee mensual', 56, lineY(3), { width: doc.page.width - 120 })
+        doc.text(
+          `Terminales (modalidad anual): hasta 3 incluidas — indicaste ${quote.terminals_count || terminalsCount || 1}`,
+          56,
+          lineY(3),
+          { width: doc.page.width - 120 }
+        )
         doc.fillColor('#0f172a')
       }
 

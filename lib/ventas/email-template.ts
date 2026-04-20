@@ -73,8 +73,10 @@ export function generateVentasQuotationEmailHTML(params: {
                     <td style="padding: 6px 0; text-align: right; font-weight: bold; color: #2e7d32;">${fmt(quote.annual_total)} / año</td>
                   </tr>
                   <tr>
-                    <td style="padding: 6px 0; color: #666;">Terminales:</td>
-                    <td style="padding: 6px 0; text-align: right; color: #333;">Primeras 2 terminales sin fee mensual</td>
+                    <td style="padding: 6px 0; color: #666;">Terminales (anual):</td>
+                    <td style="padding: 6px 0; text-align: right; color: #333;">
+                      ${quote.terminals_count} terminal${quote.terminals_count === 1 ? '' : 'es'} · hasta 3 incluidas sin fee de continuidad
+                    </td>
                   </tr>
                 `
             }
