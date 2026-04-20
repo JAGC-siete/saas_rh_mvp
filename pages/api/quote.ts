@@ -20,6 +20,7 @@ import { randomUUID } from 'crypto'
 import {
   currencyForCountryCode,
   ianaTimezoneForCountryCode,
+  isCountryCode,
   type CountryCode,
 } from '../../lib/country/supported'
 
@@ -93,14 +94,21 @@ async function sendEmailHtmlOnly(params: {
   })
 }
 
+function operationCountryLabel(cc: CountryCode): string {
+  if (cc === 'SLV') return 'El Salvador'
+  if (cc === 'GTM') return 'Guatemala'
+  return 'Honduras'
+}
+
 async function createTrialEnvironmentFromQuote(supabase: any, params: {
   contactEmail: string
   contactName: string
   companyName: string
   employeesCount: number
   quoteMeta: Record<string, any>
+  countryCode: CountryCode
 }) {
-  const countryCode: CountryCode = 'HND'
+  const countryCode = params.countryCode
   const companyId = randomUUID()
   const subdomain = `ventas-${Date.now().toString(36)}`
   const tz = ianaTimezoneForCountryCode(countryCode)
@@ -209,6 +217,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
     ? String((body as any).sector_rubro).trim()
     : ''
 
+  const countryCodeRaw =
+    typeof (body as any).country_code === 'string' ? String((body as any).country_code).trim().toUpperCase() : ''
+  if (!isCountryCode(countryCodeRaw)) {
+    return res.status(400).json({
+      error: 'Seleccione el país donde opera la empresa (Honduras, El Salvador o Guatemala).',
+    })
+  }
+  const countryCode: CountryCode = countryCodeRaw
+  const countryLabel = operationCountryLabel(countryCode)
+
   try {
     const supabase = createAdminClient()
 
@@ -293,6 +311,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       source: 'ventas',
       user_agent: String(req.headers['user-agent'] || '').slice(0, 120),
       referer: String(req.headers['referer'] || '').slice(0, 200),
+      country_code: countryCode,
       sector_rubro: sectorRubro || undefined,
       billing_modality: billingModality,
       terminals_count: terminalsForPricing,
@@ -348,12 +367,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       employeesCount,
       terminalsCount: terminalsForPricing,
       couponCodeSubmitted: couponSubmittedNorm || undefined,
+      countryLabel,
     })
 
     const html = generateVentasQuotationEmailHTML({
       quote,
       contactName,
       companyName,
+      countryLabel,
     })
     const subject = generateVentasQuotationEmailSubject(companyName)
     const filename = `cotizacion-sisu-${quote.tier.min_employees}-${quote.tier.max_employees}.pdf`
@@ -403,8 +424,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       const quoteMetaForCompany = {
         quote_id: quoteId,
         billing_modality: billingModality,
-        terminals_count: terminalsCount,
+        terminals_count: terminalsForPricing,
         employees_count: employeesCount,
+        country_code: countryCode,
         sector_rubro: sectorRubro || undefined,
         coupon_code_submitted: couponSubmittedNorm || undefined,
         coupon_applied: isCouponValid,
@@ -416,6 +438,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
         companyName: companyName || `Empresa ${quoteId.slice(0, 6)}`,
         employeesCount,
         quoteMeta: quoteMetaForCompany,
+        countryCode,
       })
 
       const loginUrl = `${(process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net').replace(/\/$/, '')}/app/login`

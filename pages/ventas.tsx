@@ -1,17 +1,34 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
-import { CheckCircleIcon, ArrowLeftIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline'
+import {
+  CheckCircleIcon,
+  ArrowLeftIcon,
+  PaperAirplaneIcon,
+  ShieldCheckIcon,
+  ClockIcon,
+  DocumentTextIcon,
+  ChartBarIcon,
+} from '@heroicons/react/24/outline'
 import { Card, CardContent, CardTitle } from '../components/ui/card'
 import MainHeader from '../components/MainHeader'
 import type { QuotationQuote, QuotationRequest, QuotationResponse } from '../lib/ventas/types'
 import { formatMoney } from '../lib/ventas/pricing'
+import type { CountryCode } from '../lib/country/supported'
+import { isCountryCode } from '../lib/country/supported'
+
+const COUNTRY_LABEL: Record<CountryCode, string> = {
+  HND: 'Honduras',
+  SLV: 'El Salvador',
+  GTM: 'Guatemala',
+}
 
 interface ValidationErrors {
   contact_email?: string
   company_name?: string
   employees_count?: string
   terminals_count?: string
+  country_code?: string
   submit?: string
 }
 
@@ -28,6 +45,11 @@ function computeVentasErrors(fd: QuotationRequest): ValidationErrors {
 
   const emp = Number(fd.employees_count)
   if (!Number.isFinite(emp) || emp < 1 || emp > 200) e.employees_count = 'Indique entre 1 y 200 empleados.'
+
+  const cc = fd.country_code
+  if (!cc || !isCountryCode(cc)) {
+    e.country_code = 'Seleccione el país donde opera la empresa (igual que en activar cuenta: nómina y zona horaria).'
+  }
 
   const t = Number(fd.terminals_count)
   if (!Number.isFinite(t) || t < 1) e.terminals_count = 'Indique cuántos terminales necesita.'
@@ -55,6 +77,7 @@ export default function VentasPage() {
     contact_name: '',
     company_name: '',
     phone: '',
+    country_code: 'HND',
     employees_count: 1,
     billing_modality: 'annual',
     terminals_count: 1,
@@ -68,11 +91,14 @@ export default function VentasPage() {
     if (!salesWhatsApp) return ''
     const normalized = salesWhatsApp.replace(/[^\d]/g, '')
     if (!normalized) return ''
+    const pais = formData.country_code && isCountryCode(formData.country_code)
+      ? COUNTRY_LABEL[formData.country_code]
+      : ''
     const msg = encodeURIComponent(
-      `Hola. Solicité cotización en humanosisu.net (${formData.company_name?.trim() || 'mi empresa'}, ${Number(formData.employees_count)} empleados). Quiero revisar alcance e implementación.`
+      `Hola. Solicité cotización en humanosisu.net — ${formData.company_name?.trim() || 'mi empresa'}, ${Number(formData.employees_count)} empleados${pais ? `, ${pais}` : ''}. Quiero revisar alcance e implementación.`
     )
     return `https://wa.me/${normalized}?text=${msg}`
-  }, [salesWhatsApp, formData.company_name, formData.contact_name, formData.employees_count])
+  }, [salesWhatsApp, formData.company_name, formData.employees_count, formData.country_code])
 
   useEffect(() => {
     setErrors(computeVentasErrors(formData))
@@ -110,6 +136,7 @@ export default function VentasPage() {
         contact_name: formData.contact_name?.trim() || '',
         company_name: formData.company_name?.trim() || '',
         phone: formData.phone?.trim() || '',
+        country_code: isCountryCode(formData.country_code) ? formData.country_code : 'HND',
         employees_count: Number(formData.employees_count),
         billing_modality: formData.billing_modality || 'annual',
         terminals_count: Number(formData.terminals_count) || 1,
@@ -126,7 +153,7 @@ export default function VentasPage() {
 
       const data = (await resp.json()) as QuotationResponse | { error?: string }
       if (!resp.ok) {
-        setErrors({ submit: (data as any)?.error || 'Error al procesar tu solicitud. Intenta de nuevo.' })
+        setErrors({ submit: (data as any)?.error || 'No se pudo completar la solicitud. Intente de nuevo.' })
         return
       }
 
@@ -138,6 +165,11 @@ export default function VentasPage() {
       setIsLoading(false)
     }
   }
+
+  const countryNameSuccess =
+    formData.country_code && isCountryCode(formData.country_code)
+      ? COUNTRY_LABEL[formData.country_code]
+      : ''
 
   if (isSuccess) {
     return (
@@ -155,23 +187,28 @@ export default function VentasPage() {
               <p className="text-xl text-brand-300 mb-8">
                 Revise <strong>{formData.contact_email}</strong>, incluida la carpeta de spam si no ve el mensaje en minutos.
               </p>
+              {countryNameSuccess && (
+                <p className="text-sm text-brand-400 -mt-4 mb-8">
+                  País registrado en la solicitud: <strong className="text-cyan-100/90">{countryNameSuccess}</strong>
+                </p>
+              )}
             </div>
 
             {quote && (
               <Card variant="glass" className="mb-8">
                 <CardContent className="p-8">
-                  <h2 className="text-2xl font-bold text-white mb-4">Detalle</h2>
-                  <div className="space-y-2 text-brand-200">
+                  <h2 className="text-2xl font-bold text-white mb-4">Detalle de cotización</h2>
+                  <div className="space-y-2 text-brand-200 text-left">
                     <p>
-                      <strong>Rango:</strong> {quote.tier.min_employees}–{quote.tier.max_employees} empleados
+                      <strong>Rango tarifario:</strong> {quote.tier.min_employees}–{quote.tier.max_employees} empleados
                     </p>
                     {quote.billing_modality === 'monthly' ? (
                       <>
                         <p>
-                          <strong>Total mensual (estimado):</strong> {formatMoney(quote.currency, quote.monthly_total)}
+                          <strong>Total mensual estimado:</strong> {formatMoney(quote.currency, quote.monthly_total)}
                         </p>
                         <p className="text-sm text-cyan-100/70">
-                          Software mensual más continuidad de hardware según terminales elegidos.
+                          Incluye software mensual y continuidad de hardware según terminales indicadas.
                         </p>
                       </>
                     ) : (
@@ -180,7 +217,8 @@ export default function VentasPage() {
                           <strong>Total anual (software):</strong> {formatMoney(quote.currency, quote.annual_total)}
                         </p>
                         <p className="text-sm text-cyan-100/70">
-                          Modalidad anual: hasta tres terminales cubiertas. Solicitaste {quote.terminals_count}{' '}
+                          Modalidad anual: hasta tres terminales cubiertas en esta propuesta. Declaradas:{' '}
+                          <strong>{quote.terminals_count}</strong>{' '}
                           {quote.terminals_count === 1 ? 'terminal' : 'terminales'}.
                         </p>
                       </>
@@ -193,9 +231,9 @@ export default function VentasPage() {
             {whatsappUrl && (
               <Card variant="glass" className="mb-8 border-emerald-400/20">
                 <CardContent className="p-8">
-                  <h2 className="text-2xl font-bold text-white mb-2">¿Necesita afinar alcance?</h2>
+                  <h2 className="text-2xl font-bold text-white mb-2">¿Necesita afinar el alcance?</h2>
                   <p className="text-sm text-cyan-100/80 mb-6">
-                    Un asesor puede aclarar asistencia, nómina e implementación según su operación.
+                    Un asesor puede aclarar alcance de biometría, nómina e implementación según su operación.
                   </p>
                   <a
                     href={whatsappUrl}
@@ -203,10 +241,10 @@ export default function VentasPage() {
                     rel="noreferrer"
                     className="w-full inline-flex items-center justify-center rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-4 font-semibold transition-colors"
                   >
-                    WhatsApp comercial
+                    Hablar con un asesor por WhatsApp
                   </a>
                   <p className="text-xs text-white/60 text-center mt-3">
-                    También puede responder el correo con la cotización adjunta.
+                    También puede responder al correo donde recibió el PDF.
                   </p>
                 </CardContent>
               </Card>
@@ -214,7 +252,7 @@ export default function VentasPage() {
 
             <Link href="/" className="inline-flex items-center text-brand-300 hover:text-white transition-colors">
               <ArrowLeftIcon className="h-4 w-4 mr-2" />
-              Volver a inicio
+              Volver al inicio
             </Link>
           </div>
         </div>
@@ -231,67 +269,126 @@ export default function VentasPage() {
 
       <MainHeader enableScrollEffect={false} fixed={true} />
       <main className="flex-grow flex items-center justify-center p-4 sm:p-6 lg:p-8 pt-24 relative z-10">
-        <Card className="w-full max-w-5xl bg-slate-800/40 backdrop-blur-xl border-white/20 shadow-2xl relative overflow-hidden">
+        <Card className="w-full max-w-7xl bg-slate-800/40 backdrop-blur-xl border-white/20 shadow-2xl relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-purple-500/20 opacity-50 blur-xl"></div>
           <CardContent className="p-6 sm:p-8 lg:p-12 relative z-10">
-            <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-start">
-              <div className="text-center lg:text-left">
-                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-4 leading-[1.05]">
-                  Cotización <span className="text-emerald-400">SISU</span>
+            <div className="grid lg:grid-cols-12 gap-8 lg:gap-16 items-start">
+              <div className="lg:col-span-6 text-center lg:text-left">
+                <div className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-sm font-medium text-emerald-300 mb-6">
+                  <ShieldCheckIcon className="h-4 w-4 mr-2 shrink-0" aria-hidden />
+                  Honduras · El Salvador · Guatemala
+                </div>
+
+                <h1 className="text-4xl sm:text-5xl font-bold text-white mb-6 leading-tight">
+                  Cotización de RRHH y nómina <span className="text-emerald-400">según su país</span>
                 </h1>
-                <p className="text-lg md:text-xl text-cyan-100/95 mb-6 max-w-2xl leading-relaxed">
-                  Asistencia, nómina y reportes para empresas en <strong>Honduras, El Salvador y Guatemala</strong>.
-                  Indique plantilla aproximada y modalidad: le enviamos el desglose y el PDF al correo.
+
+                <p className="text-lg text-cyan-100/90 mb-8 leading-relaxed">
+                  Indique país de operación (como en activar cuenta), plantilla y modalidad. Recibirá el desglose y el PDF en su correo; el país define reglas de nómina y zona horaria en el producto.
                 </p>
-                <ul className="text-sm text-cyan-200/95 space-y-2 mb-6 max-w-xl">
-                  <li className="flex gap-2"><span className="text-emerald-400 shrink-0">·</span> Monto según empleados y opciones que elija (no en el navegador).</li>
-                  <li className="flex gap-2"><span className="text-emerald-400 shrink-0">·</span> Sin pago por pedir la cotización.</li>
-                  <li className="flex gap-2"><span className="text-emerald-400 shrink-0">·</span> PDF para uso interno o gestión.</li>
-                </ul>
-                <div className="bg-white/5 border border-white/15 rounded-2xl p-5">
-                  <p className="font-medium text-white text-sm">Qué enviamos por correo</p>
-                  <ul className="mt-3 space-y-2 text-sm text-cyan-100/85">
-                    <li>Cotización con montos aplicables.</li>
-                    <li>PDF adjunto con el mismo detalle.</li>
-                    <li>Datos de contacto si quiere coordinar implementación.</li>
-                  </ul>
+
+                <div className="space-y-6 text-left mb-8">
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center">
+                      <ClockIcon className="h-5 w-5 text-emerald-400" aria-hidden />
+                    </div>
+                    <div>
+                      <h3 className="text-white font-semibold mb-1">Asistencia y control</h3>
+                      <p className="text-sm text-cyan-100/70 leading-relaxed">
+                        Registro de marcadas, tolerancias y reportes para auditoría interna.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center">
+                      <ChartBarIcon className="h-5 w-5 text-emerald-400" aria-hidden />
+                    </div>
+                    <div>
+                      <h3 className="text-white font-semibold mb-1">Nómina según jurisdicción</h3>
+                      <p className="text-sm text-cyan-100/70 leading-relaxed">
+                        Motor alineado al país elegido (deducciones legales, calendario y reportes aplicables).
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center">
+                      <DocumentTextIcon className="h-5 w-5 text-emerald-400" aria-hidden />
+                    </div>
+                    <div>
+                      <h3 className="text-white font-semibold mb-1">Documentación y expediente</h3>
+                      <p className="text-sm text-cyan-100/70 leading-relaxed">
+                        Constancias, recibos y trazabilidad para gestión interna.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-l-4 border-emerald-500/80 bg-white/5 p-5 rounded-r-xl">
+                  <p className="text-sm text-cyan-100/85 leading-relaxed">
+                    El país seleccionado en el formulario es el mismo criterio que en <strong className="text-white">/activar</strong>:
+                    determina cómo el sistema aplica normativa de planilla y zona horaria en el entorno.
+                  </p>
                 </div>
               </div>
 
-              <div className="space-y-6">
-                <div className="border-t border-white/10 pt-6">
-                  <CardTitle className="text-xl md:text-2xl font-bold text-white mb-3">
-                    Datos para armar la cotización
+              <div className="lg:col-span-6 bg-slate-900/50 rounded-3xl p-6 sm:p-8 border border-white/10 shadow-xl">
+                <div className="mb-8">
+                  <CardTitle className="text-2xl font-bold text-white mb-2">
+                    Configure su cotización
                   </CardTitle>
                   <p className="text-cyan-100/80 text-sm leading-relaxed">
-                    Complete los campos. La respuesta llega al correo indicado; si hay cupón válido, se aplica al total.
+                    Complete los campos. El importe del software se calcula en servidor según lo indicado; recibirá correo con PDF adjunto.
                   </p>
                 </div>
 
                 <div className="space-y-5">
+                  <div>
+                    <label htmlFor="ventas-country" className="block text-white font-medium mb-2 text-sm">
+                      País de operación *
+                    </label>
+                    <select
+                      id="ventas-country"
+                      name="country_code"
+                      value={formData.country_code || 'HND'}
+                      onChange={(e) => handleInputChange('country_code', e.target.value as CountryCode)}
+                      className={`w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border text-white focus:outline-none focus:ring-2 focus:ring-emerald-400/50 transition-all hover:bg-white/10 ${
+                        errors.country_code ? 'border-red-500/50 bg-red-500/5' : 'border-white/20'
+                      }`}
+                    >
+                      <option value="HND" className="bg-slate-800">Honduras</option>
+                      <option value="SLV" className="bg-slate-800">El Salvador</option>
+                      <option value="GTM" className="bg-slate-800">Guatemala</option>
+                    </select>
+                    <p className="text-xs text-brand-400 mt-2 leading-relaxed">
+                      Define reglas de nómina y zona horaria (misma lógica que al activar una cuenta).
+                    </p>
+                    {errors.country_code && (
+                      <p className="text-red-400 text-xs mt-2">{errors.country_code}</p>
+                    )}
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-white font-medium mb-2">Modalidad</label>
+                      <label className="block text-white font-medium mb-2 text-sm">Modalidad de pago</label>
                       <select
                         name="billing_modality"
                         value={formData.billing_modality || 'annual'}
                         onChange={(e) => handleInputChange('billing_modality', e.target.value)}
-                        className="w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all hover:border-cyan-400/30 hover:bg-white/10"
+                        className="w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-emerald-400/50 transition-all hover:bg-white/10"
                       >
                         <option value="annual" className="bg-slate-800">Anual</option>
                         <option value="monthly" className="bg-slate-800">Mensual</option>
                       </select>
-                      <p className="text-brand-400 text-sm mt-2">
-                        <strong>Anual:</strong> hasta tres terminales cubiertas; más de tres, cotización aparte (hardware).
-                      </p>
                     </div>
                     <div>
-                      <label className="block text-white font-medium mb-2">Terminales</label>
+                      <label className="block text-white font-medium mb-2 text-sm">Terminales</label>
                       <select
                         name="terminals_count"
                         value={Number(formData.terminals_count) || 1}
                         onChange={(e) => handleInputChange('terminals_count', parseInt(e.target.value, 10) || 1)}
-                        className={`w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border text-white focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all hover:border-cyan-400/30 hover:bg-white/10 ${
+                        className={`w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border text-white focus:outline-none focus:ring-2 focus:ring-emerald-400/50 transition-all hover:bg-white/10 ${
                           errors.terminals_count ? 'border-red-500/50 bg-red-500/5' : 'border-white/20'
                         }`}
                       >
@@ -300,84 +397,85 @@ export default function VentasPage() {
                         <option value={3} className="bg-slate-800">3 terminales</option>
                         <option value={4} className="bg-slate-800">Más de 3 (cotización especial)</option>
                       </select>
-                      {(formData.billing_modality || 'annual') === 'monthly' ? (
-                        <p className="text-brand-400 text-sm mt-2">
-                          <strong>Mensual:</strong> suma continuidad de hardware por terminal (tabla hasta tres). Más de tres
-                          va aparte.
-                        </p>
-                      ) : (
-                        <p className="text-brand-400 text-sm mt-2">
-                          Elija 1 a 3 si entran en el paquete anual; si necesita más, seleccione la opción especial o
-                          escríbanos.
-                        </p>
-                      )}
-                      {errors.terminals_count && (
-                        <p className="text-red-400 text-sm mt-2 font-medium">{errors.terminals_count}</p>
-                      )}
                     </div>
                   </div>
 
+                  <div className="text-xs text-brand-300 bg-black/20 p-3 rounded-lg border border-white/10 leading-relaxed">
+                    {(formData.billing_modality || 'annual') === 'monthly' ? (
+                      <p>
+                        <strong>Mensual:</strong> se suma continuidad de hardware por terminal (tabla hasta tres). Más de tres: cotización aparte.
+                      </p>
+                    ) : (
+                      <p>
+                        <strong>Anual:</strong> hasta tres terminales incluidas en la propuesta; más de tres requiere cotización aparte.
+                      </p>
+                    )}
+                  </div>
+
                   <div>
-                    <label className="block text-white font-medium mb-2">Nombre de la empresa *</label>
+                    <label className="block text-white font-medium mb-2 text-sm">Nombre de la empresa *</label>
                     <input
                       name="company_name"
                       type="text"
                       value={formData.company_name || ''}
                       onChange={(e) => handleInputChange('company_name', e.target.value)}
-                      className={`w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all ${
+                      className={`w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/50 transition-all ${
                         errors.company_name ? 'border-red-500/50 bg-red-500/5' : 'border-white/20'
-                      } hover:border-cyan-400/30 hover:bg-white/10`}
-                      placeholder="Mi Empresa S.A."
+                      } hover:bg-white/10`}
+                      placeholder="Ej. Comercializadora del Norte S.A."
                     />
-                    {errors.company_name && <p className="text-red-400 text-sm mt-2 font-medium">{errors.company_name}</p>}
+                    {errors.company_name && <p className="text-red-400 text-xs mt-2">{errors.company_name}</p>}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-white font-medium mb-2 text-sm">
+                        Su nombre <span className="text-white/40 font-normal text-xs">(opcional)</span>
+                      </label>
+                      <input
+                        name="contact_name"
+                        type="text"
+                        value={formData.contact_name || ''}
+                        onChange={(e) => handleInputChange('contact_name', e.target.value)}
+                        className="w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border border-white/20 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/50 transition-all hover:bg-white/10"
+                        placeholder="Nombre y apellido"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-white font-medium mb-2 text-sm">
+                        Teléfono / WhatsApp <span className="text-white/40 font-normal text-xs">(opcional)</span>
+                      </label>
+                      <input
+                        name="phone"
+                        type="tel"
+                        value={formData.phone || ''}
+                        onChange={(e) => handleInputChange('phone', e.target.value)}
+                        className="w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border border-white/20 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/50 transition-all hover:bg-white/10"
+                        placeholder="+504 9999-9999"
+                        inputMode="tel"
+                      />
+                    </div>
                   </div>
 
                   <div>
-                    <label className="block text-white font-medium mb-2">Tu nombre</label>
-                    <input
-                      name="contact_name"
-                      type="text"
-                      value={formData.contact_name || ''}
-                      onChange={(e) => handleInputChange('contact_name', e.target.value)}
-                      className="w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all hover:border-cyan-400/30 hover:bg-white/10"
-                      placeholder="María González"
-                    />
-                    <p className="text-brand-400 text-sm mt-2">(opcional)</p>
-                  </div>
-
-                  <div>
-                    <label className="block text-white font-medium mb-2">Email *</label>
+                    <label className="block text-white font-medium mb-2 text-sm">Correo electrónico *</label>
                     <input
                       name="contact_email"
                       type="email"
                       value={formData.contact_email}
                       onChange={(e) => handleInputChange('contact_email', e.target.value)}
-                      className={`w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all ${
+                      className={`w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/50 transition-all ${
                         errors.contact_email ? 'border-red-500/50 bg-red-500/5' : 'border-white/20'
-                      } hover:border-cyan-400/30 hover:bg-white/10`}
+                      } hover:bg-white/10`}
                       placeholder="admin@miempresa.com"
                       required
                     />
-                    {errors.contact_email && <p className="text-red-400 text-sm mt-2 font-medium">{errors.contact_email}</p>}
-                  </div>
-
-                  <div>
-                    <label className="block text-white font-medium mb-2">Teléfono / WhatsApp</label>
-                    <input
-                      name="phone"
-                      type="tel"
-                      value={formData.phone || ''}
-                      onChange={(e) => handleInputChange('phone', e.target.value)}
-                      className="w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500/50 transition-all hover:border-brand-500/30 hover:bg-white/10"
-                      placeholder="+504 9999-9999"
-                      inputMode="tel"
-                    />
-                    <p className="text-brand-400 text-sm mt-2">(opcional)</p>
+                    {errors.contact_email && <p className="text-red-400 text-xs mt-2">{errors.contact_email}</p>}
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-white font-medium mb-2"># empleados *</label>
+                      <label className="block text-white font-medium mb-2 text-sm">Empleados (aprox.) *</label>
                       <input
                         name="employees_count"
                         type="number"
@@ -385,36 +483,36 @@ export default function VentasPage() {
                         max={200}
                         value={Number(formData.employees_count)}
                         onChange={(e) => handleInputChange('employees_count', parseInt(e.target.value, 10) || 1)}
-                        className={`w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all ${
+                        className={`w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border text-white focus:outline-none focus:ring-2 focus:ring-emerald-400/50 transition-all ${
                           errors.employees_count ? 'border-red-500/50 bg-red-500/5' : 'border-white/20'
-                        } hover:border-cyan-400/30 hover:bg-white/10`}
+                        } hover:bg-white/10`}
                         required
                       />
-                      {errors.employees_count && <p className="text-red-400 text-sm mt-2 font-medium">{errors.employees_count}</p>}
+                      {errors.employees_count && <p className="text-red-400 text-xs mt-2">{errors.employees_count}</p>}
                     </div>
                     <div>
-                      <label className="block text-white font-medium mb-2">
-                        Sector o rubro <span className="text-cyan-300 text-sm">(opcional)</span>
+                      <label className="block text-white font-medium mb-2 text-sm">
+                        Rubro <span className="text-white/40 font-normal text-xs">(opcional)</span>
                       </label>
                       <select
                         name="sector_rubro"
                         value={formData.sector_rubro || ''}
                         onChange={(e) => handleInputChange('sector_rubro', e.target.value)}
-                        className="w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all hover:border-cyan-400/30 hover:bg-white/10"
+                        className="w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-emerald-400/50 transition-all hover:bg-white/10"
                       >
-                        <option value="" className="bg-slate-800">Seleccionar...</option>
+                        <option value="" className="bg-slate-800">Seleccionar…</option>
                         <option value="restaurante" className="bg-slate-800">Restaurante</option>
-                        <option value="comida_rapida" className="bg-slate-800">Comida rápida (QSR)</option>
+                        <option value="comida_rapida" className="bg-slate-800">Comida rápida</option>
                         <option value="cafeteria_panaderia" className="bg-slate-800">Cafetería / Panadería</option>
                         <option value="bar" className="bg-slate-800">Bar</option>
                         <option value="hotel" className="bg-slate-800">Hotel</option>
-                        <option value="retail" className="bg-slate-800">Retail / Tienda</option>
+                        <option value="retail" className="bg-slate-800">Retail</option>
                         <option value="supermercado" className="bg-slate-800">Supermercado</option>
-                        <option value="logistica" className="bg-slate-800">Logística / Distribución</option>
+                        <option value="logistica" className="bg-slate-800">Logística</option>
                         <option value="manufactura" className="bg-slate-800">Manufactura</option>
-                        <option value="salud" className="bg-slate-800">Clínica / Salud</option>
+                        <option value="salud" className="bg-slate-800">Salud</option>
                         <option value="educacion" className="bg-slate-800">Educación</option>
-                        <option value="call_center" className="bg-slate-800">Call Center</option>
+                        <option value="call_center" className="bg-slate-800">Call center</option>
                         <option value="servicios" className="bg-slate-800">Servicios profesionales</option>
                         <option value="otro" className="bg-slate-800">Otro</option>
                       </select>
@@ -422,21 +520,22 @@ export default function VentasPage() {
                   </div>
 
                   <div>
-                    <label className="block text-white font-medium mb-2">Cupón (opcional)</label>
+                    <label className="block text-white font-medium mb-2 text-sm">Cupón (opcional)</label>
                     <input
                       name="coupon_code"
                       type="text"
                       value={formData.coupon_code || ''}
                       onChange={(e) => handleInputChange('coupon_code', e.target.value)}
-                      className="w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 transition-all hover:border-cyan-400/30 hover:bg-white/10"
-                      placeholder="Código, si cuenta con uno"
+                      className="w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border border-white/20 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-400/50 transition-all hover:bg-white/10"
+                      placeholder="Código si aplica"
                     />
                   </div>
 
                   <button
+                    type="button"
                     onClick={handleSubmit}
                     disabled={isLoading || Object.keys(errors).length > 0}
-                    className="w-full bg-brand-600 hover:bg-brand-700 text-white px-8 py-4 rounded-xl font-semibold inline-flex items-center justify-center transition-all shadow-lg shadow-black/20 disabled:opacity-50 disabled:cursor-not-allowed text-lg hover:scale-[1.02] active:scale-[0.98]"
+                    className="w-full mt-2 bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-xl font-semibold inline-flex items-center justify-center transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-lg"
                   >
                     {isLoading ? (
                       <>
@@ -445,21 +544,21 @@ export default function VentasPage() {
                       </>
                     ) : (
                       <>
-                        <PaperAirplaneIcon className="h-5 w-5 mr-2" /> Enviar cotización
+                        <PaperAirplaneIcon className="h-5 w-5 mr-2" aria-hidden />
+                        Enviar cotización y recibir PDF
                       </>
                     )}
                   </button>
 
                   {errors.submit && (
-                    <div className="error-message bg-red-500/10 border border-red-500/50 rounded-lg p-4">
+                    <div className="bg-red-500/10 border border-red-500/50 rounded-lg p-3">
                       <p className="text-red-400 text-sm font-medium text-center">{errors.submit}</p>
                     </div>
                   )}
 
                   {!errors.submit && (
-                    <p className="text-brand-400 text-xs text-center">
-                      Al enviar autoriza contacto comercial vinculado a esta solicitud. El importe lo calcula el sistema en
-                      servidor, no en el navegador.
+                    <p className="text-white/45 text-xs text-center leading-relaxed">
+                      Al enviar autoriza que lo contactemos en relación con esta solicitud. El importe no se calcula en el navegador.
                     </p>
                   )}
                 </div>
@@ -471,4 +570,3 @@ export default function VentasPage() {
     </div>
   )
 }
-

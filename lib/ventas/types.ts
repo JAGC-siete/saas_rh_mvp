@@ -1,3 +1,5 @@
+import type { CountryCode } from '../country/supported'
+
 export type CurrencyCode = 'HNL' | 'USD' | 'GTQ'
 
 export interface VentasPricingTier {
@@ -24,6 +26,8 @@ export interface QuotationRequest {
   contact_name?: string
   company_name?: string
   phone?: string
+  /** País de operación (misma semántica que /activar: nómina, festivos, zona horaria). */
+  country_code?: CountryCode
   employees_count: number
   billing_modality?: 'annual' | 'monthly'
   terminals_count?: number

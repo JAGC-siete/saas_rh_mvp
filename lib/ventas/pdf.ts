@@ -11,6 +11,8 @@ export async function generateVentasQuotationPDF(params: {
   employeesCount: number
   terminalsCount?: number
   couponCodeSubmitted?: string
+  /** Ej. Honduras */
+  countryLabel: string
 }): Promise<Buffer> {
   const {
     quote,
@@ -21,6 +23,7 @@ export async function generateVentasQuotationPDF(params: {
     employeesCount,
     terminalsCount,
     couponCodeSubmitted,
+    countryLabel,
   } = params
 
   return new Promise<Buffer>((resolve, reject) => {
@@ -30,9 +33,9 @@ export async function generateVentasQuotationPDF(params: {
         size: 'A4',
         margin: 40,
         info: {
-          Title: 'Cotización SISU',
+          Title: 'Cotización Humano SISU',
           Author: 'Humano SISU',
-          Subject: 'Cotización automática',
+          Subject: 'Cotización',
         },
       })
 
@@ -45,7 +48,7 @@ export async function generateVentasQuotationPDF(params: {
       doc.rect(0, 0, doc.page.width, 90).fill('#0b4fa1')
       doc.fillColor('white')
       doc.fontSize(22).text('Humano SISU', 40, 26)
-      doc.fontSize(12).text('Cotización automática', 40, 56)
+      doc.fontSize(12).text('Cotización', 40, 56)
 
       doc.fillColor('#0f172a')
       doc.fontSize(11).text('DATOS DE CONTACTO', 40, 110)
@@ -59,20 +62,21 @@ export async function generateVentasQuotationPDF(params: {
       doc.fontSize(11).text('PARÁMETROS', 40, 206)
       doc
         .fontSize(10)
-        .text(`Empleados (ingresado): ${employeesCount}`, 40, 224)
-        .text(`Rango aplicado: ${quote.tier.min_employees}–${quote.tier.max_employees}`, 40, 240)
-        .text(`Modalidad: ${quote.billing_modality === 'monthly' ? 'Mensual' : 'Anual'}`, 40, 256)
+        .text(`País de operación: ${countryLabel}`, 40, 224)
+        .text(`Empleados declarados: ${employeesCount}`, 40, 240)
+        .text(`Rango tarifario: ${quote.tier.min_employees}–${quote.tier.max_employees}`, 40, 256)
+        .text(`Modalidad de facturación: ${quote.billing_modality === 'monthly' ? 'Mensual' : 'Anual'}`, 40, 272)
         .text(
           quote.billing_modality === 'monthly'
-            ? `Terminales (mensual): ${quote.terminals_count || terminalsCount || 1}`
-            : `Terminales (anual): ${quote.terminals_count || terminalsCount || 1} (hasta 3 incluidas; más de 3 cotización especial)`,
+            ? `Terminales: ${quote.terminals_count || terminalsCount || 1}`
+            : `Terminales (anual): ${quote.terminals_count || terminalsCount || 1} · hasta 3 incluidas; más de 3: cotización aparte`,
           40,
-          272
+          288
         )
-        .text(`Cupón: ${couponCodeSubmitted?.trim() ? couponCodeSubmitted.trim() : '—'}`, 40, 288)
+        .text(`Cupón: ${couponCodeSubmitted?.trim() ? couponCodeSubmitted.trim() : '—'}`, 40, 304)
 
       // Totals box
-      const boxY = 328
+      const boxY = 344
       const isMonthly = quote.billing_modality === 'monthly'
       const boxHeight = isMonthly ? 132 : 132
       doc.roundedRect(40, boxY, doc.page.width - 80, boxHeight, 12).stroke('#cbd5e1')
@@ -119,7 +123,7 @@ export async function generateVentasQuotationPDF(params: {
 
         doc.fontSize(9).fillColor('#475569')
         doc.text(
-          `Terminales (modalidad anual): hasta 3 incluidas — indicaste ${quote.terminals_count || terminalsCount || 1}`,
+          `Terminales declaradas (anual): ${quote.terminals_count || terminalsCount || 1} · hasta tres sin cargo mensual de continuidad`,
           56,
           lineY(3),
           { width: doc.page.width - 120 }
@@ -131,7 +135,7 @@ export async function generateVentasQuotationPDF(params: {
         .fontSize(9)
         .fillColor('#475569')
         .text(
-          'Nota: Esta cotización es automática y orientativa. Un asesor puede confirmar alcance y tiempos según tu operación.',
+          'Nota: cotización orientativa. Confirman alcance, integraciones y vigencia un asesor comercial.',
           40,
           boxY + boxHeight + 18,
           { width: doc.page.width - 80 }
