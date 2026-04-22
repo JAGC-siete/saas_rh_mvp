@@ -182,14 +182,14 @@ export default function VentasPage() {
                 <CheckCircleIcon className="h-12 w-12 text-green-400" />
               </div>
               <h1 className="text-4xl font-bold text-white mb-4">
-                Cotización enviada
+                ¡Propuesta en camino!
               </h1>
               <p className="text-xl text-brand-300 mb-8">
-                Revise <strong>{formData.contact_email}</strong>, incluida la carpeta de spam si no ve el mensaje en minutos.
+                Revise la bandeja de <strong>{formData.contact_email}</strong> (incluyendo spam). Hemos enviado el detalle de su cotización en PDF.
               </p>
               {countryNameSuccess && (
                 <p className="text-sm text-brand-400 -mt-4 mb-8">
-                  País registrado en la solicitud: <strong className="text-cyan-100/90">{countryNameSuccess}</strong>
+                  Legislación aplicada: <strong className="text-cyan-100/90">{countryNameSuccess}</strong>
                 </p>
               )}
             </div>
@@ -197,7 +197,7 @@ export default function VentasPage() {
             {quote && (
               <Card variant="glass" className="mb-8">
                 <CardContent className="p-8">
-                  <h2 className="text-2xl font-bold text-white mb-4">Detalle de cotización</h2>
+                  <h2 className="text-2xl font-bold text-white mb-4">Resumen de Inversión</h2>
                   <div className="space-y-2 text-brand-200 text-left">
                     <p>
                       <strong>Rango tarifario:</strong> {quote.tier.min_employees}–{quote.tier.max_employees} empleados
@@ -231,9 +231,9 @@ export default function VentasPage() {
             {whatsappUrl && (
               <Card variant="glass" className="mb-8 border-emerald-400/20">
                 <CardContent className="p-8">
-                  <h2 className="text-2xl font-bold text-white mb-2">¿Necesita afinar el alcance?</h2>
+                  <h2 className="text-2xl font-bold text-white mb-2">¿Listo para dejar el trabajo manual?</h2>
                   <p className="text-sm text-cyan-100/80 mb-6">
-                    Un asesor puede aclarar alcance de biometría, nómina e implementación según su operación.
+                    Hablemos sobre cómo implementar la biometría y parametrizar la nómina según las particularidades de su operación.
                   </p>
                   <a
                     href={whatsappUrl}
@@ -244,7 +244,7 @@ export default function VentasPage() {
                     Hablar con un asesor por WhatsApp
                   </a>
                   <p className="text-xs text-white/60 text-center mt-3">
-                    También puede responder al mismo correo donde llegó la cotización.
+                    También puede responder directamente al correo donde llegó la propuesta.
                   </p>
                 </CardContent>
               </Card>
@@ -276,15 +276,15 @@ export default function VentasPage() {
               <div className="lg:col-span-6 text-center lg:text-left">
                 <div className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-sm font-medium text-emerald-300 mb-6">
                   <ShieldCheckIcon className="h-4 w-4 mr-2 shrink-0" aria-hidden />
-                  Honduras · El Salvador · Guatemala
+                  Normativa Local: Honduras · El Salvador · Guatemala
                 </div>
 
                 <h1 className="text-4xl sm:text-5xl font-bold text-white mb-6 leading-tight">
-                  Cotización de <span className="text-emerald-400">Servicio</span>
+                  El fin del <span className="text-emerald-400">trabajo manual</span> empieza aquí
                 </h1>
 
                 <p className="text-lg text-cyan-100/90 mb-8 leading-relaxed">
-                  Elija país, tamaño de plantilla y modalidad de pago. En minutos recibe por correo el detalle de montos para revisarlo y compartirlo internamente.
+                  Obtén un presupuesto exacto para tu empresa. Automatiza asistencia, deducciones y expedientes sin tener que contratar personal adicional solo para "pasar datos".
                 </p>
 
                 <div className="space-y-6 text-left mb-8">
@@ -293,9 +293,9 @@ export default function VentasPage() {
                       <ClockIcon className="h-5 w-5 text-emerald-400" aria-hidden />
                     </div>
                     <div>
-                      <h3 className="text-white font-semibold mb-1">Asistencia y control</h3>
+                      <h3 className="text-white font-semibold mb-1">Detén la fuga silenciosa</h3>
                       <p className="text-sm text-cyan-100/70 leading-relaxed">
-                        Registro de marcadas, tolerancias y reportes para auditoría interna.
+                        Biometría inteligente para un registro exacto. Evidencia la puntualidad de tu equipo y acaba con el robo de tiempo sin revisión manual.
                       </p>
                     </div>
                   </div>
@@ -305,9 +305,9 @@ export default function VentasPage() {
                       <ChartBarIcon className="h-5 w-5 text-emerald-400" aria-hidden />
                     </div>
                     <div>
-                      <h3 className="text-white font-semibold mb-1">Nómina según jurisdicción</h3>
+                      <h3 className="text-white font-semibold mb-1">Nómina "Cero Errores"</h3>
                       <p className="text-sm text-cyan-100/70 leading-relaxed">
-                        Motor alineado al país elegido (deducciones legales, calendario y reportes aplicables).
+                        Dile adiós al infierno de Excel. Cálculos y deducciones (IHSS, RAP, ISR) 100% automatizados según las leyes de tu país.
                       </p>
                     </div>
                   </div>
@@ -317,9 +317,9 @@ export default function VentasPage() {
                       <DocumentTextIcon className="h-5 w-5 text-emerald-400" aria-hidden />
                     </div>
                     <div>
-                      <h3 className="text-white font-semibold mb-1">Documentación y expediente</h3>
+                      <h3 className="text-white font-semibold mb-1">Autogestión de expedientes</h3>
                       <p className="text-sm text-cyan-100/70 leading-relaxed">
-                        Constancias, recibos y trazabilidad para gestión interna.
+                        Reemplaza el papeleo con constancias inmediatas, envío automático de vouchers y trazabilidad completa en la nube.
                       </p>
                     </div>
                   </div>
@@ -327,7 +327,7 @@ export default function VentasPage() {
 
                 <div className="border-l-4 border-emerald-500/80 bg-white/5 p-5 rounded-r-xl">
                   <p className="text-sm text-cyan-100/85 leading-relaxed">
-                    El país ayuda a cotizar bien su caso: normativa laboral y horarios locales son distintos en cada uno.
+                    Al seleccionar tu país de operación, parametrizamos la cotización basándonos en tu jurisdicción laboral local.
                   </p>
                 </div>
               </div>
@@ -335,10 +335,10 @@ export default function VentasPage() {
               <div className="lg:col-span-6 bg-slate-900/50 rounded-3xl p-6 sm:p-8 border border-white/10 shadow-xl">
                 <div className="mb-8">
                   <CardTitle className="text-2xl font-bold text-white mb-2">
-                    Solicitud de cotización
+                    Configura tu ecosistema
                   </CardTitle>
                   <p className="text-cyan-100/80 text-sm leading-relaxed">
-                    Complete los campos obligatorios. El monto se calcula de forma segura en servidor; recibirá la propuesta en el correo que indique.
+                    Nuestra plataforma calculará la inversión exacta y enviará un PDF listo para revisión gerencial.
                   </p>
                 </div>
 
@@ -360,9 +360,6 @@ export default function VentasPage() {
                       <option value="SLV" className="bg-slate-800">El Salvador</option>
                       <option value="GTM" className="bg-slate-800">Guatemala</option>
                     </select>
-                    <p className="text-xs text-brand-400 mt-2 leading-relaxed">
-                      Use el país donde concentra su personal en planilla; así la propuesta refleja el marco aplicable.
-                    </p>
                     {errors.country_code && (
                       <p className="text-red-400 text-xs mt-2">{errors.country_code}</p>
                     )}
@@ -377,12 +374,12 @@ export default function VentasPage() {
                         onChange={(e) => handleInputChange('billing_modality', e.target.value)}
                         className="w-full p-3.5 rounded-xl bg-white/5 backdrop-blur-sm border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-emerald-400/50 transition-all hover:bg-white/10"
                       >
-                        <option value="annual" className="bg-slate-800">Anual</option>
+                        <option value="annual" className="bg-slate-800">Anual (Recomendado)</option>
                         <option value="monthly" className="bg-slate-800">Mensual</option>
                       </select>
                     </div>
                     <div>
-                      <label className="block text-white font-medium mb-2 text-sm">Terminales</label>
+                      <label className="block text-white font-medium mb-2 text-sm">Terminales necesarias</label>
                       <select
                         name="terminals_count"
                         value={Number(formData.terminals_count) || 1}
@@ -402,11 +399,11 @@ export default function VentasPage() {
                   <div className="text-xs text-brand-300 bg-black/20 p-3 rounded-lg border border-white/10 leading-relaxed">
                     {(formData.billing_modality || 'annual') === 'monthly' ? (
                       <p>
-                        <strong>Mensual:</strong> se suma continuidad de hardware por terminal (tabla hasta tres). Más de tres: cotización aparte.
+                        <strong>Plan Mensual:</strong> Suma continuidad de hardware por terminal (hasta tres). Más de tres requiere ajuste especial.
                       </p>
                     ) : (
                       <p>
-                        <strong>Anual:</strong> hasta tres terminales incluidas en la propuesta; más de tres requiere cotización aparte.
+                        <strong>Plan Anual:</strong> Incluye hasta 3 terminales biométricas cubiertas en la propuesta inicial.
                       </p>
                     )}
                   </div>
@@ -457,7 +454,7 @@ export default function VentasPage() {
                   </div>
 
                   <div>
-                    <label className="block text-white font-medium mb-2 text-sm">Correo electrónico *</label>
+                    <label className="block text-white font-medium mb-2 text-sm">Correo corporativo *</label>
                     <input
                       name="contact_email"
                       type="email"
@@ -474,7 +471,7 @@ export default function VentasPage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-white font-medium mb-2 text-sm">Empleados (aprox.) *</label>
+                      <label className="block text-white font-medium mb-2 text-sm">Empleados en planilla *</label>
                       <input
                         name="employees_count"
                         type="number"
@@ -534,17 +531,17 @@ export default function VentasPage() {
                     type="button"
                     onClick={handleSubmit}
                     disabled={isLoading || Object.keys(errors).length > 0}
-                    className="w-full mt-2 bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-xl font-semibold inline-flex items-center justify-center transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-lg"
+                    className="w-full mt-2 bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-xl font-bold inline-flex items-center justify-center transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-lg"
                   >
                     {isLoading ? (
                       <>
                         <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                        Enviando…
+                        Calculando cotización…
                       </>
                     ) : (
                       <>
                         <PaperAirplaneIcon className="h-5 w-5 mr-2" aria-hidden />
-                        Enviar cotización
+                        Recibir propuesta en PDF
                       </>
                     )}
                   </button>
@@ -556,8 +553,8 @@ export default function VentasPage() {
                   )}
 
                   {!errors.submit && (
-                    <p className="text-white/45 text-xs text-center leading-relaxed">
-                      Al enviar autoriza que lo contactemos en relación con esta solicitud. El importe no se calcula en el navegador.
+                    <p className="text-white/45 text-xs text-center leading-relaxed mt-4">
+                      Al enviar, autorizas recibir la propuesta automatizada en tu correo. Todo el cálculo de deducciones y precios se ejecuta según el país seleccionado.
                     </p>
                   )}
                 </div>
