@@ -94,27 +94,24 @@ export default function LandingPage() {
           {/* Trust badges */}
           <div className="flex flex-wrap justify-center gap-2 sm:gap-3 md:gap-6 mb-6 sm:mb-8 animate-fade-up-subtle">
             <span className="px-3 py-1 bg-green-500/20 text-green-300 text-xs rounded-full border border-green-500/30">
-              Normativa laboral local
+              ✅ Adaptado a leyes de CA (HN, SV, GT)
             </span>
             <span className="px-3 py-1 bg-blue-500/20 text-blue-300 text-xs rounded-full border border-blue-500/30">
-              Configuración inicial rápida
+              ⚡ Implementación rápida
             </span>
             <span className="px-3 py-1 bg-purple-500/20 text-purple-300 text-xs rounded-full border border-purple-500/30">
-              Producto y soporte local (SV, GT, HN)
-            </span>
-            <span className="px-3 py-1 bg-orange-500/20 text-orange-300 text-xs rounded-full border border-orange-500/30">
-              Soporte local
+              🤝 Soporte local
             </span>
           </div>
 
           {/* Hero Title - Opción A (Paz Mental) */}
           <div className="text-center mb-6 sm:mb-8 px-2">
             <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight sm:leading-tight">
-              <span className="text-white block sm:inline">Control de asistencia y nómina en un solo lugar:</span>
-              <span className="text-brand-300 block text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl mt-2 sm:mt-1">Sin cálculos manuales, sin errores.</span>
+              <span className="text-white block sm:inline">Gestión de Capital Humano 100% Automatizada:</span>
+              <span className="text-brand-300 block text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl mt-2 sm:mt-1">Dejá el Excel y eliminá los errores en tu nómina.</span>
             </h1>
             <p className="text-lg sm:text-xl text-brand-200/90 max-w-3xl mx-auto mt-4 sm:mt-6">
-              Integra tus biométricos con nuestro software regional. Automatiza deducciones y nómina según normativa local mientras tu equipo se enfoca en crecer.
+              El cerebro digital que integra biometría y software. Detén la fuga silenciosa de tiempo y automatiza tus deducciones legales, para que tu equipo deje de hacer trabajo manual y se enfoque en hacer crecer la empresa.
             </p>
           </div>
 
@@ -130,7 +127,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto">
           <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-center text-white leading-tight sm:leading-tight mb-6 sm:mb-8 px-2 max-w-5xl mx-auto">
             <span className="text-white block sm:inline">Lo dicen nuestros clientes: </span>
-            <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">la ventaja competitiva es que integra el biométrico con el software</span>
+            <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">la verdadera ventaja es conectar la biometría directamente con la nómina</span>
           </h2>
 
           <div className="grid md:grid-cols-3 gap-6 sm:gap-8">

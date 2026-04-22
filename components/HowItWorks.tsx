@@ -3,16 +3,16 @@ import { CheckCircleIcon } from '@heroicons/react/24/outline'
 export default function HowItWorks() {
   const steps = [
     { 
-      title: '⏱️ El personal registra su hora de entrada.', 
-      desc: 'El dispositivo guarda registros, detecta patrones y genera reportes.' 
+      title: '⏱️ Biometría inteligente: tu equipo registra su entrada.', 
+      desc: 'El dispositivo captura el dato exacto, previniendo el robo de tiempo y alertando sobre patrones de tardanza.' 
     },
     { 
-      title: '🤖 El software hace la magia', 
-      desc: 'Convierte registros, en planillas con deducciones legales parametrizadas con IHSS, RAP e ISR.' 
+      title: '🤖 El cerebro digital procesa', 
+      desc: 'Cruza las horas reales y calcula deducciones al centavo (IHSS, RAP, ISR) sin que toqués una sola hoja de cálculo.' 
     },
     { 
-      title: '📑 El sistema genera la planilla y comprobantes instantáneos', 
-      desc: 'Un PDF para tu gerencia y comprobantes automáticos en email o WhatsApp para cada empleado.' 
+      title: '📑 Nómina y comprobantes al instante', 
+      desc: 'Con un clic, se genera la planilla para gerencia y se envían vouchers PDF por email o WhatsApp a cada colaborador.' 
     }
   ]
 
@@ -25,12 +25,12 @@ export default function HowItWorks() {
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-8">
           <div className="inline-block bg-gray-800/50 text-gray-300 text-sm font-medium px-4 py-2 rounded-full mb-6">
-            CÓMO FUNCIONA
+            CÓMO FUNCIONA SISU
           </div>
           <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight mb-6 sm:mb-8 px-2">
-            <span className="text-white block sm:inline">Automatizá el 80% de las tareas de tu Recursos Humanos</span>
+            <span className="text-white block sm:inline">El fin del trabajo manual:</span>
             <span className="hidden sm:inline"> </span>
-            <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">con un dispositivo biométrico de RRHH para tu operación local</span>
+            <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">así automatizamos el 80% de tus tareas de RRHH.</span>
           </h2>
         </div>
 

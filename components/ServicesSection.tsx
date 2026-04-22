@@ -15,21 +15,21 @@ export default function ServicesSection() {
 
       <header className="max-w-3xl mb-8 sm:mb-10 mx-auto text-center px-2">
         <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight">
-          <span className="text-white block sm:inline">Presentamos: Tu nuevo sistema todo-en-uno de</span>
+          <span className="text-white block sm:inline">Tu nuevo ecosistema de RRHH:</span>
           <span className="hidden sm:inline"> </span>
-          <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">Recursos Humanos</span>
+          <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">diseñado para escalar sin burocracia.</span>
         </h2>
         <p className="mt-3 text-sm sm:text-base text-brand-200 px-2">
-          Reemplazá tareas repetitivas y propensas a error con <span className="text-brand-400">automatización verificable</span>.
+          Dejá de contratar personal solo para pasar datos. Centralizá tu operación con tecnología y <span className="text-brand-400">trazabilidad</span>.
         </p>
       </header>
 
       {/* El Libro Rojo - Asistencia */}
       <div id="libro-rojo" className="mb-12 sm:mb-16">
         <h3 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight mb-4 sm:mb-6 text-center px-2">
-          <span className="text-white block sm:inline">Dispositivo</span>
+          <span className="text-white block sm:inline">Control de Asistencia</span>
           <span className="hidden sm:inline"> </span>
-          <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">biométrico</span>
+          <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">Biométrico</span>
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           {/* SOPORTE: Asistencia */}
@@ -40,14 +40,14 @@ export default function ServicesSection() {
               </div>
               <div className="min-w-0 flex-1">
                 <h3 className="text-lg sm:text-xl font-bold text-white">Asistencia en tiempo real</h3>
-                <p className="text-xs sm:text-sm text-brand-300/90">Checadas, tolerancias, alertas y bienestar</p>
+                <p className="text-xs sm:text-sm text-brand-300/90">Registro exacto + control operativo</p>
               </div>
             </div>
 
             <ul className="mt-3 sm:mt-4 space-y-2 sm:space-y-3">
-              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>Tolerancia configurada + justificación inteligente</span></li>
-              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>Antifraude: patrones de tardanza y ubicación</span></li>
-              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>Pulso laboral: semáforo aleatorio (R/A/V)</span></li>
+              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>Registro exacto y en tiempo real</span></li>
+              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>Detección de patrones de tardanza y justificación inteligente</span></li>
+              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>Alertas y visibilidad para gerencia</span></li>
             </ul>
 
           </article>
@@ -60,14 +60,14 @@ export default function ServicesSection() {
               </div>
               <div className="min-w-0 flex-1">
                 <h3 className="text-lg sm:text-xl font-bold text-white">Reportes ejecutivos</h3>
-                <p className="text-xs sm:text-sm text-brand-300/90">Dashboard interactivo y exportación automática</p>
+                <p className="text-xs sm:text-sm text-brand-300/90">Dashboard y alertas de puntualidad</p>
               </div>
             </div>
 
             <ul className="mt-3 sm:mt-4 space-y-2 sm:space-y-3">
-              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>Métricas en tiempo real</span></li>
-              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>Exportación Excel/PDF automática</span></li>
-              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>Alertas inteligentes y notificaciones</span></li>
+              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>Dashboard ejecutivo con alertas</span></li>
+              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>Métricas claras para tomar decisiones</span></li>
+              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>Exportación Excel/PDF</span></li>
             </ul>
 
           </article>
@@ -77,9 +77,9 @@ export default function ServicesSection() {
       {/* El Planillero - Nómina */}
       <div id="planillero" className="mb-12 sm:mb-16">
         <h3 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight mb-4 sm:mb-6 text-center px-2">
-          <span className="text-white block sm:inline">Software de</span>
+          <span className="text-white block sm:inline">Nómina</span>
           <span className="hidden sm:inline"> </span>
-          <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">Recursos Humanos</span>
+          <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">“Cero Errores”</span>
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           {/* SOPORTE: Nómina sin errores */}
@@ -90,14 +90,14 @@ export default function ServicesSection() {
               </div>
               <div className="min-w-0 flex-1">
                 <h3 className="text-lg sm:text-xl font-bold text-white">Nómina sin errores</h3>
-                <p className="text-xs sm:text-sm text-brand-300/90">IHSS, RAP, ISR; PDF + vouchers por email/WhatsApp</p>
+                <p className="text-xs sm:text-sm text-brand-300/90">Ley local + vouchers PDF por email/WhatsApp</p>
               </div>
             </div>
 
             <ul className="mt-3 sm:mt-4 space-y-2 sm:space-y-3">
-              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>Cálculo legal automático según tu país</span></li>
-              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>4 horas → 4 minutos</span></li>
-              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>Distribución Automatizada de recibos de pago</span></li>
+              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>Cálculos 100% parametrizados a la ley local (IHSS, RAP, ISR, INFOP)</span></li>
+              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>Gestión de horas extra y prestaciones (13°/14°, cesantías, etc.)</span></li>
+              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>Vouchers PDF masivos y envío automatizado</span></li>
             </ul>
 
           </article>
@@ -109,15 +109,15 @@ export default function ServicesSection() {
                 <CurrencyDollarIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-300" />
               </div>
               <div className="min-w-0 flex-1">
-                <h3 className="text-lg sm:text-xl font-bold text-white">Cálculo automático</h3>
-                <p className="text-xs sm:text-sm text-brand-300/90">IHSS, RAP, ISR automáticos según normativa local</p>
+                <h3 className="text-lg sm:text-xl font-bold text-white">Trazabilidad y cumplimiento</h3>
+                <p className="text-xs sm:text-sm text-brand-300/90">Auditoría clara para operar con confianza</p>
               </div>
             </div>
 
             <ul className="mt-3 sm:mt-4 space-y-2 sm:space-y-3">
-              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>Cumplimiento legal 100% automático</span></li>
-              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>Vouchers PDF + envío por email/WhatsApp</span></li>
               <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>Auditoría completa y trazabilidad</span></li>
+              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>Documentación lista para revisión interna</span></li>
+              <li className="flex gap-2 sm:gap-3 text-brand-200 text-sm sm:text-base"><CheckCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-brand-400 flex-shrink-0 mt-0.5" /> <span>Operación ordenada para crecer sin fricción</span></li>
             </ul>
 
           </article>

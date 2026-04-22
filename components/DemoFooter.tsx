@@ -104,7 +104,7 @@ const DemoFooter: React.FC = () => {
           <div>
             <h3 className="text-lg font-semibold text-gray-900 mb-4">SISU</h3>
             <p className="text-gray-600 text-sm mb-4">
-              Gestión de Recursos Humanos 100% digital, legal y sin complicaciones. Hecho para PYMEs.
+              Gestión de Recursos Humanos 100% digital, legal y automatizada. Diseñada para que las PyMEs de la región operen sin fricción.
             </p>
             <div className="text-sm text-gray-500">
               <p>© 2026 Humano SISU. Nómina y RRHH para El Salvador, Guatemala y Honduras.</p>
