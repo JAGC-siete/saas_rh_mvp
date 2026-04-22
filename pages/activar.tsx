@@ -51,6 +51,12 @@ const WHATSAPP_CALLING_CODES: { code: string; country: string }[] = [
   { code: '+34', country: 'España' },
 ]
 
+const COUNTRY_LABEL: Record<CountryCode, string> = {
+  HND: 'Honduras',
+  SLV: 'El Salvador',
+  GTM: 'Guatemala',
+}
+
 function defaultCallingCodeForPayrollCountry(cc: CountryCode): string {
   if (cc === 'SLV') return '+503'
   if (cc === 'GTM') return '+502'
@@ -228,6 +234,7 @@ export default function ActivarPage() {
   }
 
   const CloudBackground = dynamic(() => import('../components/CloudBackground'), { ssr: false })
+  const countryLabel = isCountryCode(formData.countryCode) ? COUNTRY_LABEL[formData.countryCode] : ''
   
   if (isSuccess) {
     return (
@@ -240,33 +247,33 @@ export default function ActivarPage() {
                 <CheckCircleIcon className="h-12 w-12 text-green-400" />
               </div>
               <h1 className="text-4xl font-bold text-white mb-4">
-                ¡Tu entorno está siendo creado, {formData.nombre || 'Equipo'}!
+                ¡Tu cerebro digital está listo, {formData.nombre || 'Equipo'}!
               </h1>
               <p className="text-xl text-brand-300 mb-8">
-                Estamos configurando automáticamente tu empresa <strong>{formData.empresa}</strong> con {formData.departamentos} departamento{formData.departamentos > 1 ? 's' : ''} y {formData.empleados} empleado{formData.empleados > 1 ? 's' : ''} de prueba. En unos segundos recibirás un email con tus credenciales de acceso para iniciar sesión inmediatamente.
+                Hemos inyectado las leyes laborales de <strong>{countryLabel || 'tu país'}</strong> y configurado tu empresa <strong>{formData.empresa}</strong> con {formData.departamentos} departamento{formData.departamentos > 1 ? 's' : ''} y {formData.empleados} empleado{formData.empleados > 1 ? 's' : ''} de prueba. Todo está listo para que veas la automatización en tiempo real.
               </p>
             </div>
 
             <Card variant="glass" className="mb-8">
               <CardContent className="p-8">
                 <h2 className="text-2xl font-bold text-white mb-4">
-                  ¿Qué recibirás en tu email?
+                  ¿Qué sigue ahora?
                 </h2>
                 <div className="space-y-3 mb-6">
                   <p className="text-lg text-brand-300">
-                    📧 <strong>Tu email de acceso:</strong> {formData.contactoEmail}
+                    📧 <strong>Revisa tu correo:</strong> ({formData.contactoEmail})
                   </p>
                   <p className="text-lg text-brand-300">
-                    🔑 <strong>Tu contraseña temporal:</strong> Se generará automáticamente y la recibirás en el correo
+                    🔑 <strong>Tus credenciales:</strong> Te hemos enviado una contraseña segura.
                   </p>
                   <p className="text-lg text-brand-300">
-                    🚀 <strong>Enlace directo:</strong> Para iniciar sesión inmediatamente
+                    🚀 <strong>Explora el sistema:</strong> Genera tu primera nómina sin errores en menos de 4 minutos.
                   </p>
                 </div>
                 <div className="bg-brand-500/10 border border-brand-500/30 rounded-lg p-4 mt-6">
-                  <p className="text-white font-semibold mb-2">Garantía: 24 horas o trabajo gratis</p>
+                  <p className="text-white font-semibold mb-2">🤝 Acompañamiento Local</p>
                   <p className="text-sm text-brand-300">
-                    Si necesitamos más ajustes, seguimos trabajando sin costo adicional hasta que tu proceso quede funcionando.
+                    ¿Quieres conectar tu propio reloj biométrico? Responde al correo y nuestro equipo de soporte regional te guiará paso a paso sin costo.
                   </p>
                 </div>
                 <div className="grid md:grid-cols-2 gap-4 max-w-md mx-auto">
@@ -280,7 +287,7 @@ export default function ActivarPage() {
                   </div>
                 </div>
                 <p className="text-sm text-brand-400 text-center mt-6">
-                  Revisa tu correo en los próximos minutos. Si no lo recibes, revisa spam o contáctanos.
+                  Revisa tu bandeja de entrada (y la de spam por si acaso). Tu ecosistema te espera.
                 </p>
               </CardContent>
             </Card>
@@ -327,21 +334,21 @@ export default function ActivarPage() {
                   <CpuChipIcon className="w-16 h-16 lg:w-20 lg:h-20 text-cyan-400 mx-auto lg:mx-0 drop-shadow-lg" />
                 </motion.div>
                 <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-white mb-4 lg:mb-6 leading-tight">
-                  Control de asistencia y nómina en un solo lugar: Sin cálculos manuales, sin errores.
+                  El fin del trabajo manual: <span className="text-cyan-300">Crea tu entorno automatizado en segundos.</span>
                 </h1>
                 <p className="text-lg md:text-xl text-cyan-100/90 mb-6 lg:mb-8">
-                  Integra tus biométricos con nuestro software regional. Automatiza deducciones y nómina local mientras tu equipo se enfoca en crecer. Activa en segundos, sin tarjeta.
+                  Comprueba cómo se siente cruzar tu biometría directamente con la nómina sin abrir Excel. Activa tu cuenta y explora el sistema con leyes locales ya parametrizadas. Cero fricción, sin tarjeta de crédito.
                 </p>
                 {/* Feature pills - alineados con mensajes ganadores de Google Ads */}
                 <div className="flex flex-wrap justify-center lg:justify-start gap-2 mb-6 lg:mb-8">
                   <span className="px-3 py-1 bg-green-500/20 text-green-300 text-xs sm:text-sm rounded-full border border-green-500/30">
-                    IHSS, RAP e ISR automático
+                    ✅ <strong>Nómina Cero Errores:</strong> Deducciones de ley locales automáticas.
                   </span>
                   <span className="px-3 py-1 bg-blue-500/20 text-blue-300 text-xs sm:text-sm rounded-full border border-blue-500/30">
-                    SV, GT y HN · Soporte local
+                    ✅ <strong>Cero “Pasa-datos”:</strong> Del registro biométrico al comprobante PDF.
                   </span>
                   <span className="px-3 py-1 bg-purple-500/20 text-purple-300 text-xs sm:text-sm rounded-full border border-purple-500/30">
-                    Del biométrico al comprobante en segundos
+                    ✅ <strong>Data de prueba lista:</strong> Empleados y horarios autogenerados.
                   </span>
                 </div>
               </motion.div>
@@ -355,10 +362,11 @@ export default function ActivarPage() {
               >
               <div className="border-t border-white/10 pt-6">
                 <CardTitle className="text-xl md:text-2xl font-bold text-white mb-3 flex items-center gap-2">
-                  <span className="text-cyan-400">⚡</span>
-                  Información mínima necesaria
+                  El sistema hace la magia por ti
                 </CardTitle>
-                <p className="text-cyan-100/80 text-sm leading-relaxed mb-6">Olvida las hojas de cálculo. Con esta información crearemos tu empresa, departamentos, horarios y empleados de prueba. Elegís el país y el trial queda con zona horaria, moneda y reglas de nómina alineadas a esa jurisdicción.</p>
+                <p className="text-cyan-100/80 text-sm leading-relaxed mb-6">
+                  Olvida las configuraciones complejas. Dinos tu país y el tamaño de tu equipo; nosotros crearemos tu empresa con departamentos y empleados ficticios para que veas cómo se automatiza la nómina al instante.
+                </p>
               </div>
 
               <div className="space-y-6">
@@ -412,7 +420,7 @@ export default function ActivarPage() {
                     <p className="text-red-400 text-sm mt-2 font-medium">{errors.countryCode}</p>
                   ) : (
                     <p className="text-brand-400 text-sm mt-2">
-                      Define moneda, parametros de planilla y legislacion laboral para el entorno de prueba.
+                      Crucial: esto calibra nuestro motor para aplicar exactamente la moneda y leyes laborales (ISR, IHSS, RAP) de tu jurisdicción.
                     </p>
                   )}
                 </div>
@@ -432,7 +440,7 @@ export default function ActivarPage() {
 
                 {/* WhatsApp */}
                 <div>
-                  <label className="block text-white font-medium mb-2">WhatsApp</label>
+                  <label className="block text-white font-medium mb-2">WhatsApp (opcional)</label>
                   <div className="grid grid-cols-1 sm:grid-cols-[160px_1fr] gap-3">
                     <select
                       name="whatsappCountryCallingCode"
@@ -466,14 +474,14 @@ export default function ActivarPage() {
                     </p>
                   ) : (
                     <p className="text-brand-400 text-sm mt-2">
-                      Incluye tu número local; el código de país se selecciona arriba. (opcional)
+                      Si deseas que un asesor te guíe en cómo conectar tu biométrico físico al sistema.
                     </p>
                   )}
                 </div>
 
                 {/* Email */}
                 <div>
-                  <label className="block text-white font-medium mb-2">Email  *</label>
+                  <label className="block text-white font-medium mb-2">Email corporativo *</label>
                   <input
                     type="email"
                     value={formData.contactoEmail}
@@ -490,13 +498,13 @@ export default function ActivarPage() {
                     </p>
                   )}
                   {!errors.contactoEmail && (
-                    <p className="text-brand-400 text-sm mt-2">Te enviaremos tu email y contraseña de acceso aquí</p>
+                    <p className="text-brand-400 text-sm mt-2">Aquí enviaremos la llave mágica: tus credenciales de acceso seguro.</p>
                   )}
                 </div>
 
                 {/* Employee Count */}
                 <div>
-                  <label className="block text-white font-medium mb-2 text-center"># empleados en planilla *</label>
+                  <label className="block text-white font-medium mb-2 text-center"># empleados de prueba *</label>
                   <div className="flex items-center justify-center space-x-4">
                     <button
                       onClick={() => handleEmpleadosChange(formData.empleados - 1)}
@@ -521,7 +529,9 @@ export default function ActivarPage() {
                       {errors.empleados ? (
                         <p className="text-red-400 text-xs mt-1 font-medium">{errors.empleados}</p>
                       ) : (
-                        <p className="text-brand-400 text-xs mt-1">Se crearán automáticamente con datos de ejemplo</p>
+                        <p className="text-brand-400 text-xs mt-1">
+                          Crearemos marcajes y salarios ficticios para que veas la nómina en acción real.
+                        </p>
                       )}
                     </div>
                     
@@ -561,7 +571,7 @@ export default function ActivarPage() {
                       {errors.departamentos ? (
                         <p className="text-red-400 text-xs mt-1 font-medium">{errors.departamentos}</p>
                       ) : (
-                        <p className="text-brand-400 text-xs mt-1">Se crearán automáticamente con nombres por defecto</p>
+                        <p className="text-brand-400 text-xs mt-1">Para organizar a tu equipo autogenerado.</p>
                       )}
                     </div>
                     
@@ -584,9 +594,9 @@ export default function ActivarPage() {
                     className="mt-1 w-5 h-5 text-brand-600 bg-white/10 border-brand-500/50 rounded focus:ring-brand-500 focus:ring-2 cursor-pointer"
                   />
                   <label htmlFor="acepta-trial" className="text-white text-sm leading-relaxed cursor-pointer">
-                    Deseo crear mi entorno de prueba ahora. Recibiré acceso inmediato con empleados y departamentos configurados.
+                    Quiero mi entorno ahora. Entiendo que se generará información ficticia para evaluar la automatización.
                   </label>
-                  <p className="text-brand-200/70 text-xs mt-2 ml-8">Trial de 30 días. Sin costo. Sin compromiso.</p>
+                  <p className="text-brand-200/70 text-xs mt-2 ml-8">30 días de prueba gratuita. Sin tarjeta. Sin compromisos ocultos.</p>
                 </div>
 
                 {/* Submit Button */}
@@ -598,11 +608,11 @@ export default function ActivarPage() {
                   {isLoading ? (
                     <>
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                      Creando tu entorno completo...
+                      ⚙️ Parametrizando leyes y creando empleados...
                     </>
                   ) : (
                     <>
-                      <RocketLaunchIcon className="h-5 w-5 mr-2" /> Activar gratis hoy — Sin tarjeta de crédito
+                      <RocketLaunchIcon className="h-5 w-5 mr-2" /> Generar mi ecosistema gratis
                     </>
                   )}
                 </button>
@@ -618,7 +628,7 @@ export default function ActivarPage() {
                 
                 {!errors.submit && (
                   <p className="text-brand-400 text-xs text-center">
-                    Activación inmediata. Recibirás credenciales por email. Tu entorno incluye empleados de prueba, departamentos y nómina con deducciones locales ya configuradas. Sin compromiso. Soporte en la región.
+                    Activación inmediata. Recibirás tus credenciales por email. Tu entorno incluirá empleados de prueba y nómina lista para ejecutarse según las normativas de tu país. Soporte técnico 100% regional.
                   </p>
                 )}
               </div>
