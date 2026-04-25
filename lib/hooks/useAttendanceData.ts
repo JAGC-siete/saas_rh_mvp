@@ -65,7 +65,15 @@ function isRangeValid(from?: string, to?: string): boolean {
   return diffDays <= MAX_RANGE_DAYS
 }
 
-export function useAttendanceData(preset: string, employeeId?: string, role?: string, from?: string, to?: string, departmentId?: string): AttendanceData {
+export function useAttendanceData(
+  preset: string,
+  employeeId?: string,
+  role?: string,
+  from?: string,
+  to?: string,
+  departmentId?: string,
+  refreshToken?: number
+): AttendanceData {
   const [kpis, setKpis] = useState<AttendanceKPIs>(DEFAULT_KPIS)
   const [absent, setAbsent] = useState<AttendanceRow[]>([])
   const [early, setEarly] = useState<AttendanceRow[]>([])
@@ -163,7 +171,7 @@ export function useAttendanceData(preset: string, employeeId?: string, role?: st
     }
 
     return () => ac.abort()
-  }, [preset, employeeId, role, from, to, departmentId])
+  }, [preset, employeeId, role, from, to, departmentId, refreshToken])
 
   useEffect(() => {
     fetchData()

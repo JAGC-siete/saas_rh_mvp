@@ -1,4 +1,4 @@
-# Opciones Alternativas de Despliegue para Hikvision Proxy
+# Opciones Alternativas de Despliegue para Integración Hikvision
 
 ## Opción 1: Integrar en Next.js (Recomendada - Más Simple) ⭐
 
@@ -13,11 +13,11 @@
 - ⚠️ Comparte recursos con el servicio principal
 - ⚠️ No escala independientemente
 
-**Implementación:** Convertir el proxy en API routes de Next.js en `/pages/api/hikvision/`
+**Implementación:** Usar el SDK integrado y API routes en `/pages/api/hikvision/` (ver `docs/HIKVISION_PROXY_INTEGRATED.md`).
 
 ---
 
-## Opción 2: Desplegar en Render.com
+## Opción 2: Desplegar un servicio proxy separado en Render.com (Legacy)
 
 **Ventajas:**
 - ✅ Más simple que Railway
@@ -30,16 +30,13 @@
 - ⚠️ Requiere servicio separado
 - ⚠️ Puede ser más lento que Railway
 
-**Pasos:**
-1. Conectar repositorio en Render
-2. Configurar build: `cd services/hikvision-proxy && npm install && npm run build`
-3. Start command: `npm start`
-4. Configurar variables de entorno
-5. Desplegar
+**Notas:**
+- Este enfoque solo aplica si se decide mantener `services/hikvision-proxy/` como servicio independiente.
+- En el estado recomendado actual del SaaS, **no es necesario**.
 
 ---
 
-## Opción 3: Desplegar en Fly.io
+## Opción 3: Desplegar un servicio proxy separado en Fly.io (Legacy)
 
 **Ventajas:**
 - ✅ Optimizado para aplicaciones con Docker
@@ -81,7 +78,7 @@
 
 ---
 
-## Opción 5: Workaround Temporal - Deshabilitar Type Checking
+## Opción 5: Workaround Temporal - Deshabilitar Type Checking (Legacy)
 
 **Ventajas:**
 - ✅ Solución inmediata
@@ -102,9 +99,7 @@ typescript: {
 
 ## Recomendación
 
-**Para solución rápida:** Opción 1 (Integrar en Next.js) o Opción 5 (Workaround temporal)
-
-**Para solución permanente:** Opción 2 (Render.com) es la más simple después de Next.js
+**Para solución rápida y permanente:** Opción 1 (Integrar en Next.js).
 
 **Para máximo control:** Opción 4 (VPS con Docker)
 

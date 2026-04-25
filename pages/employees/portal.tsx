@@ -17,7 +17,7 @@ import {
   Legend
 } from 'recharts'
 import { Button } from '../../components/ui/button'
-import { 
+import {
   UserIcon, 
   ClockIcon, 
   CurrencyDollarIcon, 
@@ -605,8 +605,9 @@ export default function EmployeePortal() {
   const [permissionsSummary, setPermissionsSummary] = useState<PermissionsSummary | null>(null)
   const [recentAttendance, setRecentAttendance] = useState<RecentAttendanceRow[]>([])
   const [vacationSummary, setVacationSummary] = useState<VacationSummary | null>(null)
+  const [performanceEvaluations, setPerformanceEvaluations] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'profile' | 'attendance' | 'permissions' | 'payroll'>('profile')
+  const [activeTab, setActiveTab] = useState<'profile' | 'attendance' | 'permissions' | 'payroll' | 'performance'>('profile')
   const [showPermissionForm, setShowPermissionForm] = useState(false)
   const [isSubmittingPermission, setIsSubmittingPermission] = useState(false)
   const [fabMenuOpen, setFabMenuOpen] = useState(false)
@@ -662,6 +663,19 @@ export default function EmployeePortal() {
           status: dashboardResponse.status,
           error: errorData
         })
+      }
+
+      // Performance evaluations (completed, read-only)
+      try {
+        const perfRes = await fetch('/api/employees/me/performance-evaluations', {
+          credentials: 'include'
+        })
+        if (perfRes.ok) {
+          const perfData = await perfRes.json()
+          setPerformanceEvaluations(perfData.evaluations || [])
+        }
+      } catch {
+        // Non-blocking
       }
 
     } catch (error) {
@@ -1224,7 +1238,8 @@ export default function EmployeePortal() {
             { id: 'profile', label: 'Perfil', icon: UserIcon },
             { id: 'attendance', label: 'Asistencia', icon: ClockIcon },
             { id: 'permissions', label: 'Permisos', icon: DocumentTextIcon },
-            { id: 'payroll', label: 'Recibos de pago', icon: CurrencyDollarIcon }
+            { id: 'payroll', label: 'Recibos de pago', icon: CurrencyDollarIcon },
+            { id: 'performance', label: 'Desempeño', icon: ChartBarIcon }
           ].map((tab) => (
             <button
               key={tab.id}
@@ -1471,6 +1486,53 @@ export default function EmployeePortal() {
                   employeeId={user?.user_metadata?.employee_id}
                   addNotification={addNotification}
                 />
+              </CardContent>
+            </Card>
+          )}
+
+          {activeTab === 'performance' && (
+            <Card className="glass-strong">
+              <CardHeader>
+                <CardTitle className="text-white">Desempeño</CardTitle>
+                <CardDescription className="text-gray-300">
+                  Evaluaciones finalizadas por ciclo (solo lectura).
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {performanceEvaluations.length === 0 ? (
+                  <div className="text-center py-8 text-gray-300">
+                    No hay evaluaciones de desempeño finalizadas.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {performanceEvaluations.map((ev: any) => (
+                      <div key={ev.id} className="rounded-lg border border-white/10 bg-white/5 p-4">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="text-white font-medium">
+                            {ev.cycle_start} → {ev.cycle_end}
+                          </div>
+                          <div className="text-sm text-gray-300">
+                            Score: {ev.overall_score == null ? '—' : Number(ev.overall_score).toFixed(3)}
+                          </div>
+                        </div>
+                        <div className="mt-3 space-y-2">
+                          {(ev.items || []).slice(0, 10).map((it: any) => (
+                            <div key={it.id} className="rounded-md bg-black/20 p-3">
+                              <div className="text-sm text-white">{it.function || '—'}</div>
+                              <div className="mt-1 text-xs text-gray-300">KR: {it.indicator || '—'}</div>
+                              <div className="mt-1 text-xs text-gray-300">
+                                Rating: {it.rating || '—'} {it.weight ? `· Peso ${it.weight}%` : ''}
+                              </div>
+                              {it.comment && (
+                                <div className="mt-2 text-xs text-gray-200">Comentario: {it.comment}</div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}

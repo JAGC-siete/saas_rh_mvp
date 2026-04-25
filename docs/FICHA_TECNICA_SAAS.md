@@ -28,11 +28,26 @@ SaaS multi-tenant para gestión de RRHH orientado al mercado hondureño. Cubre a
 | **Lenguaje** | TypeScript | 5.8 |
 | **Node** | >= 20.0.0 | — |
 
+### 2.1 Infraestructura (por qué Railway + Supabase)
+
+**Railway (deploy del SaaS)**
+
+- **Menor carga operativa**: despliegue tipo PaaS (build + runtime) con entornos separados (staging/producción).
+- **Seguridad a nivel plataforma** (según Railway): enforcement de 2FA, SSO SAML para equipos enterprise, RBAC y audit logs. Ver: `https://blog.railway.com/p/2fa-audit-logs-compliance`.
+- **Operación simple**: variables de entorno gestionadas por environment, logs centralizados y health checks (ver `docs/RAILWAY_STAGING_SETUP.md`).
+
+**Supabase (Postgres + plataforma de datos)**
+
+- **Seguridad multi-tenant**: aislamiento por empresa con **Postgres RLS** (políticas por `company_id`) como línea base.
+- **Auth integrado**: JWT/OAuth/OTP y soporte de **MFA**; claims en JWT (p.ej. `aal`) permiten endurecer reglas incluso en RLS. Ver: `https://supabase.com/docs/guides/auth/auth-mfa`.
+- **Compliance**: Supabase documenta SOC 2 Type 2 y un modelo de responsabilidad compartida. Ver: `https://supabase.com/docs/guides/security/soc-2-compliance`.
+- **Escalabilidad**: Supabase posiciona el uso de Postgres + connection pooling/read replicas/HA (según plan) para crecer sin re-arquitecturar. Ver: `https://supabase.com/solutions/b2b-saas`.
+
 ### Servicios auxiliares
 
 | Servicio | Descripción |
 |----------|-------------|
-| **hikvision-proxy** | Proxy Express para comunicación segura con dispositivos Hikvision (Node/TypeScript) |
+| **Hikvision (integración)** | SDK + API routes en Next.js para comunicación segura con dispositivos Hikvision (ver `docs/HIKVISION_PROXY_INTEGRATED.md`) |
 | **Supabase Edge Functions** | create-user-profile, process-payroll (payroll-calculation se invoca desde b2c-dashboard pero puede ejecutarse en API routes) |
 
 ---

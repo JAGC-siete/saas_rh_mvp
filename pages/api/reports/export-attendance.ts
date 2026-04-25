@@ -18,6 +18,7 @@ import { assertEmployeePortalEnabled } from '../../../lib/employee-portal/compan
 import { resolveReportConfig } from '../../../lib/reports/column-resolver'
 import type { ResolvedReportConfig } from '../../../lib/reports/column-resolver'
 import { renderAttendanceRows } from '../../../lib/reports/report-engine'
+import { getStandardColumns } from '../../../lib/reports/standard-columns'
 import { normalizeCountryCode } from '../../../lib/country/supported'
 import { reportFormatForCountry } from '../../../lib/country/payroll-labels'
 
@@ -39,6 +40,15 @@ async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse
     }
 
     let { startDate, endDate, formato, employee_id } = req.body
+    const columnIdsInput = Array.isArray(req.body?.column_ids)
+      ? req.body.column_ids.filter((x: unknown) => typeof x === 'string')
+      : []
+    const timeFormat =
+      req.body?.time_format === '12h' || req.body?.time_format === '24h' ? (req.body.time_format as '12h' | '24h') : undefined
+    const departmentId = typeof req.body?.department_id === 'string' ? req.body.department_id : undefined
+    const employeeIdsInput = Array.isArray(req.body?.employee_ids)
+      ? req.body.employee_ids.filter((x: unknown) => typeof x === 'string')
+      : []
 
     if (role === 'employee') {
       if (!userProfile?.employee_id) {
@@ -65,7 +75,7 @@ async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse
       'employees',
       companyId,
       'id, name, employee_code',
-      { status: 'active' }
+      { status: 'active', ...(departmentId ? { department_id: departmentId } : {}) }
     )
     
     if (empError) {
@@ -73,7 +83,11 @@ async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse
       return res.status(500).json({ error: 'Error obteniendo empleados' })
     }
     
-    const employeeIds = (employees || []).map((e: any) => e.id)
+    let employeeIds = (employees || []).map((e: any) => e.id)
+    if (employeeIdsInput.length > 0) {
+      const allow = new Set(employeeIdsInput)
+      employeeIds = employeeIds.filter((id: string) => allow.has(id))
+    }
 
     // Construir consulta de asistencia con filtros de seguridad
     let attendanceQuery = supabase
@@ -118,6 +132,16 @@ async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse
     }
 
     const resolvedConfig = await resolveReportConfig(companyId, 'attendance', supabase)
+    const standardCols = getStandardColumns('attendance')
+    const colById = new Map(standardCols.map((c) => [c.id, c]))
+    const selectedColumnIds = columnIdsInput.filter((id: string) => colById.has(id))
+    const selectedColumns: ResolvedReportConfig['columns'] =
+      selectedColumnIds.length > 0
+        ? selectedColumnIds.map((id: string) => {
+            const c = colById.get(id)!
+            return { id: c.id, label: c.label, sourceField: c.sourceField, source: 'standard' as const }
+          })
+        : resolvedConfig.columns
     const { data: companyRow } = await supabase
       .from('companies')
       .select('name, country_code')
@@ -128,9 +152,8 @@ async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse
 
     // 5. PROCESAR EXPORTACIÓN SEGURA
     if (formato === 'csv') {
-      const { columns } = resolvedConfig
-      const csvHeaders = columns.map((c) => c.label)
-      const csvRows = renderAttendanceRows(records || [], employees || [], columns, reportFmt)
+      const csvHeaders = selectedColumns.map((c) => c.label)
+      const csvRows = renderAttendanceRows(records || [], employees || [], selectedColumns, reportFmt, { timeFormat })
       const escapeCSV = (val: string | number) => {
         const s = String(val ?? '')
         if (s.includes(',') || s.includes('"') || s.includes('\n')) {
@@ -153,7 +176,16 @@ async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse
     }
 
     if (formato === 'excel') {
-      return exportToExcel(records || [], employees || [], startDate, endDate, res, resolvedConfig, reportFmt)
+      return exportToExcel(
+        records || [],
+        employees || [],
+        startDate,
+        endDate,
+        res,
+        { ...resolvedConfig, columns: selectedColumns },
+        reportFmt,
+        timeFormat
+      )
     }
 
     if (formato === 'pdf') {
@@ -163,9 +195,10 @@ async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse
         startDate,
         endDate,
         res,
-        resolvedConfig,
+        { ...resolvedConfig, columns: selectedColumns },
         companyDisplayName,
-        reportFmt
+        reportFmt,
+        timeFormat
       )
     }
 
@@ -203,7 +236,8 @@ async function exportToExcel(
   endDate: string,
   res: NextApiResponse,
   resolvedConfig: ResolvedReportConfig,
-  reportFmt: import('../../../lib/country/payroll-labels').ReportFormatContext
+  reportFmt: import('../../../lib/country/payroll-labels').ReportFormatContext,
+  timeFormat?: '24h' | '12h'
 ) {
   try {
     const columns = resolvedConfig.columns.length
@@ -219,7 +253,7 @@ async function exportToExcel(
           { id: 'justification', label: 'Justificación', sourceField: 'justification', source: 'standard' as const }
         ]
 
-    const rowMatrix = renderAttendanceRows(attendanceRecords, employeesForReport, columns, reportFmt)
+    const rowMatrix = renderAttendanceRows(attendanceRecords, employeesForReport, columns, reportFmt, { timeFormat })
 
     const totalRecords = attendanceRecords.length
     let totalHours = 0
@@ -325,7 +359,8 @@ async function exportToPDF(
   res: NextApiResponse,
   resolvedConfig: ResolvedReportConfig,
   companyDisplayName?: string | null,
-  reportFmt?: import('../../../lib/country/payroll-labels').ReportFormatContext
+  reportFmt?: import('../../../lib/country/payroll-labels').ReportFormatContext,
+  timeFormat?: '24h' | '12h'
 ) {
   try {
     // Preparar datos para PDF
@@ -404,7 +439,8 @@ async function exportToPDF(
       attendanceRecords,
       employeesForReport,
       tableColumns,
-      reportFmt
+      reportFmt,
+      { timeFormat }
     )
     const detailHeaders = tableColumns.map((c) => c.label)
     const primaryColor = resolvedConfig.branding?.primaryColor

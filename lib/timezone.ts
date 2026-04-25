@@ -469,7 +469,8 @@ export function formatDateOnlyForLocale(
 export function formatTimeDisplayInZone(
   timestamp: string | Date | null,
   locale: string,
-  timeZone: string
+  timeZone: string,
+  opts?: { hour12?: boolean }
 ): string {
   if (!timestamp) return '--:--'
   const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp
@@ -478,7 +479,7 @@ export function formatTimeDisplayInZone(
     timeZone,
     hour: '2-digit',
     minute: '2-digit',
-    hour12: false
+    hour12: opts?.hour12 ?? false
   })
 }
 

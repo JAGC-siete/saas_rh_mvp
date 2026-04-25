@@ -1,6 +1,7 @@
 import { createAdminClient, createClient } from '../../lib/supabase/server'
 import { getTodayInHonduras, getHondurasTime, nowInHonduras } from '../../lib/timezone'
 import { incrementUsage } from '../../lib/billing/enforce'
+import { resolveEffectiveWorkScheduleId } from '../../lib/attendance/effective-work-schedule'
 import { 
   getAchievementTypeByName, 
   validateAchievementRequirements, 
@@ -158,10 +159,17 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
 
     if (!existingRecord) {
       // Check-in
+      const eff = await resolveEffectiveWorkScheduleId({
+        supabase,
+        companyId: employee.company_id ?? '',
+        employeeId: employee.id,
+        date: today,
+        fallbackWorkScheduleId: employee.work_schedule_id
+      })
       const { data: schedule } = await supabase
         .from('work_schedules')
         .select('*')
-        .eq('id', employee.work_schedule_id ?? '')
+        .eq('id', eff.found ? eff.workScheduleId : (employee.work_schedule_id ?? ''))
         .single()
 
       // Get today's expected start time based on day of week
@@ -172,14 +180,18 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
       
       const currentTime = now.toTimeString().slice(0, 5)
       
-      // Calculate if late
+      const shiftType = ((schedule as Record<string, any>)?.shift_type as string | undefined) || 'normal'
+      const lateGrace = Number((schedule as Record<string, any>)?.late_grace_minutes ?? 5)
+
+      // Calculate if late (normal shift). Flexible shift doesn't penalize by clock time.
       const [expectedHour, expectedMin] = expectedCheckIn.split(':').map(Number)
       const [currentHour, currentMin] = currentTime.split(':').map(Number)
       const expectedMinutes = expectedHour * 60 + expectedMin
       const currentMinutes = currentHour * 60 + currentMin
-      const lateMinutes = Math.max(0, currentMinutes - expectedMinutes)
+      const rawLateMinutes = Math.max(0, currentMinutes - expectedMinutes)
+      const lateMinutes = shiftType === 'flex' ? 0 : rawLateMinutes
 
-      if (lateMinutes > 5 && !justification) {
+      if (shiftType !== 'flex' && lateMinutes > lateGrace && !justification) {
         return res.status(422).json({
           requireJustification: true,
           message: '⏰ You are late. Please provide justification.',
@@ -195,9 +207,9 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
           date: today,
           check_in: now.toISOString(),
           expected_check_in: expectedCheckIn,
-          late_minutes: lateMinutes,
+          late_minutes: shiftType === 'flex' ? null : lateMinutes,
           justification: justification || null,
-          status: lateMinutes > 5 ? 'late' : 'present'
+          status: shiftType === 'flex' ? 'present' : lateMinutes > lateGrace ? 'late' : 'present'
         })
         .select()
         .single()
@@ -313,10 +325,17 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
 
     } else if (!existingRecord.check_out) {
       // Check-out
+      const eff = await resolveEffectiveWorkScheduleId({
+        supabase,
+        companyId: employee.company_id ?? '',
+        employeeId: employee.id,
+        date: today,
+        fallbackWorkScheduleId: employee.work_schedule_id
+      })
       const { data: schedule } = await supabase
         .from('work_schedules')
         .select('*')
-        .eq('id', employee.work_schedule_id ?? '')
+        .eq('id', eff.found ? eff.workScheduleId : (employee.work_schedule_id ?? ''))
         .single()
 
       // Get today's expected end time based on day of week
@@ -327,12 +346,16 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
       
       const currentTime = now.toTimeString().slice(0, 5)
       
-      // Calculate early departure
+      const shiftType = ((schedule as Record<string, any>)?.shift_type as string | undefined) || 'normal'
+      const earlyGrace = Number((schedule as Record<string, any>)?.early_grace_minutes ?? 5)
+
+      // Calculate early departure (normal shift). Flexible shift doesn't penalize by clock time.
       const [expectedHour, expectedMin] = expectedCheckOut.split(':').map(Number)
       const [currentHour, currentMin] = currentTime.split(':').map(Number)
       const expectedMinutes = expectedHour * 60 + expectedMin
       const currentMinutes = currentHour * 60 + currentMin
-      const earlyDepartureMinutes = Math.max(0, expectedMinutes - currentMinutes)
+      const rawEarlyDepartureMinutes = Math.max(0, expectedMinutes - currentMinutes)
+      const earlyDepartureMinutes = shiftType === 'flex' ? 0 : rawEarlyDepartureMinutes
 
       // Update record with check-out
       const { data, error } = await supabase
@@ -340,7 +363,7 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
         .update({
           check_out: now.toISOString(),
           expected_check_out: expectedCheckOut,
-          early_departure_minutes: earlyDepartureMinutes,
+          early_departure_minutes: shiftType === 'flex' ? null : earlyDepartureMinutes,
           updated_at: now.toISOString()
         })
         .eq('id', existingRecord.id)
@@ -359,7 +382,7 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
         // Don't fail the request if usage tracking fails
       }
 
-      const message = earlyDepartureMinutes > 5
+      const message = shiftType !== 'flex' && earlyDepartureMinutes > earlyGrace
         ? '🔄 Early check-out recorded'
         : '✅ Check-out recorded successfully'
 

@@ -108,6 +108,10 @@ export default function AttendanceDashboardApp() {
   const [trendsError, setTrendsError] = useState<string | null>(null)
   const [trendsRetryTick, setTrendsRetryTick] = useState(0)
   const [showDistribution, setShowDistribution] = useState(false)
+  const [refreshTick, setRefreshTick] = useState(0)
+  const [recalcLoading, setRecalcLoading] = useState(false)
+  const [exportColumnIds, setExportColumnIds] = useState<string[]>([])
+  const [exportTimeFormat, setExportTimeFormat] = useState<'24h' | '12h'>('24h')
   const [dailyCloseHint, setDailyCloseHint] = useState<{
     withEvents: number
     anomalies: number
@@ -167,8 +171,15 @@ export default function AttendanceDashboardApp() {
     router,
   ])
 
-  const { kpis, absent, early, late, outsideSchedule, lastUpdated, loading, error } =
-    useAttendanceData(preset, selectedEmployeeId, selectedRole, from, to, selectedDepartmentId)
+  const { kpis, absent, early, late, outsideSchedule, lastUpdated, loading, error } = useAttendanceData(
+    preset,
+    selectedEmployeeId,
+    selectedRole,
+    from,
+    to,
+    selectedDepartmentId,
+    refreshTick
+  )
 
   const {
     total,
@@ -293,24 +304,32 @@ export default function AttendanceDashboardApp() {
     setSelectedEmployeeId(employeeId)
   }
 
-  const handleExport = async (format: string) => {
+  const handleExport = async (
+    format: string,
+    opts?: { columnIds?: string[]; timeFormat?: '24h' | '12h' }
+  ) => {
     try {
-      const searchParams = new URLSearchParams()
-      searchParams.set('preset', preset)
-      searchParams.set('formato', format === 'xlsx' ? 'excel' : format)
-      if (selectedEmployeeId) searchParams.set('employee_id', selectedEmployeeId)
-      if (selectedRole) searchParams.set('role', selectedRole)
-      if (selectedDepartmentId) searchParams.set('department_id', selectedDepartmentId)
+      const dateRange =
+        preset === 'custom' && from && to
+          ? { startDate: from.split('T')[0], endDate: to.split('T')[0] }
+          : (() => {
+              const r = getDateRange(preset)
+              return { startDate: r.from.split('T')[0], endDate: r.to.split('T')[0] }
+            })()
 
-      if (preset === 'custom' && from && to) {
-        searchParams.set('startDate', from.split('T')[0])
-        searchParams.set('endDate', to.split('T')[0])
+      const body: Record<string, unknown> = {
+        ...dateRange,
+        formato: format === 'xlsx' ? 'excel' : format,
       }
+      if (selectedEmployeeId) body.employee_id = selectedEmployeeId
+      if (selectedDepartmentId) body.department_id = selectedDepartmentId
+      if (opts?.columnIds && opts.columnIds.length > 0) body.column_ids = opts.columnIds
+      if (opts?.timeFormat) body.time_format = opts.timeFormat
 
-      const url = `/api/attendance/export?${searchParams.toString()}`
-
-      const response = await fetch(url, {
+      const response = await fetch('/api/reports/export-attendance', {
+        method: 'POST',
         credentials: 'include',
+        body: JSON.stringify(body),
         headers: {
           Accept:
             format === 'pdf'
@@ -318,6 +337,7 @@ export default function AttendanceDashboardApp() {
               : format === 'csv'
                 ? 'text/csv'
                 : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'Content-Type': 'application/json',
         },
       })
 
@@ -344,6 +364,34 @@ export default function AttendanceDashboardApp() {
     } catch (err: unknown) {
       const errorMessage = mapAttendanceError(err)
       addNotification({ type: 'error', title: 'Exportación', message: errorMessage })
+    }
+  }
+
+  const handleRecalculateNow = async () => {
+    if (preset !== 'today') return
+    const day = getTodayInHonduras()
+    setRecalcLoading(true)
+    try {
+      const res = await fetch('/api/attendance/daily-close/recalculate', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: day }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(typeof json?.error === 'string' ? json.error : typeof json?.message === 'string' ? json.message : `HTTP ${res.status}`)
+      }
+      addNotification({
+        type: 'success',
+        title: 'Recalcular',
+        message: `Listo. Calculados: ${json?.calculated ?? 0} (elegibles: ${json?.eligible ?? 0}).`,
+      })
+      setRefreshTick((n) => n + 1)
+    } catch (err: unknown) {
+      addNotification({ type: 'error', title: 'Recalcular', message: mapAttendanceError(err) })
+    } finally {
+      setRecalcLoading(false)
     }
   }
 
@@ -527,6 +575,12 @@ export default function AttendanceDashboardApp() {
             onDepartmentChange={setSelectedDepartmentId}
             lastUpdated={lastUpdated}
             onExport={handleExport}
+            exportColumnIds={exportColumnIds}
+            onExportColumnIdsChange={setExportColumnIds}
+            exportTimeFormat={exportTimeFormat}
+            onExportTimeFormatChange={setExportTimeFormat}
+            onRecalculateNow={handleRecalculateNow}
+            recalcLoading={recalcLoading}
             loading={loading}
             from={from}
             to={to}

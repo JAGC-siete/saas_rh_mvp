@@ -10,6 +10,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    const startedAt = new Date().toISOString()
     const { role, companyId: profileCid } = await requireCompanyAccess(req, res)
     if (!['super_admin', 'company_admin', 'hr_manager'].includes(role)) {
       return res.status(403).json({ error: 'Permisos insuficientes' })
@@ -30,12 +31,47 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'company_id requerido' })
     }
 
-    const recordIds = Array.isArray(body.record_ids) ? body.record_ids.filter((x: unknown) => typeof x === 'string') : []
-    if (recordIds.length === 0) {
-      return res.status(400).json({ error: 'record_ids requerido' })
-    }
+    const recordIdsInput = Array.isArray(body.record_ids)
+      ? body.record_ids.filter((x: unknown) => typeof x === 'string')
+      : []
 
     const admin = createAdminClient()
+
+    // Modo A (legacy/UI daily-close): record_ids explícitos.
+    // Modo B (dashboard quick action): recalcular todos los registros elegibles del día para la empresa.
+    const recordIds =
+      recordIdsInput.length > 0
+        ? recordIdsInput
+        : await (async () => {
+            const { data: empIds, error: empIdsErr } = await admin
+              .from('employees')
+              .select('id')
+              .eq('company_id', companyId)
+              .eq('status', 'active')
+            if (empIdsErr) throw new Error(empIdsErr.message)
+            const ids = (empIds || []).map((r: any) => r.id).filter(Boolean)
+            if (ids.length === 0) return []
+
+            const { data: recIds, error: recIdsErr } = await admin
+              .from('attendance_records')
+              .select('id')
+              .eq('date', date)
+              .in('employee_id', ids)
+            if (recIdsErr) throw new Error(recIdsErr.message)
+            return (recIds || []).map((r: any) => r.id).filter(Boolean)
+          })()
+
+    if (recordIds.length === 0) {
+      return res.status(200).json({
+        success: true,
+        startedAt,
+        finishedAt: new Date().toISOString(),
+        calculated: 0,
+        eligible: 0,
+        message: 'Sin registros para recalcular',
+      })
+    }
+
     const { data: recs, error: recErr } = await admin
       .from('attendance_records')
       .select('id, employee_id, check_in, check_out, date')
@@ -65,7 +101,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .map((r) => r.id)
 
     if (eligible.length === 0) {
-      return res.status(200).json({ success: true, calculated: 0, message: 'Sin registros completos (check_in/check_out)' })
+      return res.status(200).json({
+        success: true,
+        startedAt,
+        finishedAt: new Date().toISOString(),
+        calculated: 0,
+        eligible: 0,
+        totalConsidered: (recs as any[]).length,
+        message: 'Sin registros completos (check_in/check_out)',
+      })
     }
 
     const { data: results, error: rpcErr } = await admin.rpc('calculate_attendance_hours_batch', {
@@ -75,7 +119,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (rpcErr) return res.status(500).json({ error: rpcErr.message })
 
-    return res.status(200).json({ success: true, calculated: (results || []).length })
+    return res.status(200).json({
+      success: true,
+      startedAt,
+      finishedAt: new Date().toISOString(),
+      calculated: (results || []).length,
+      eligible: eligible.length,
+      totalConsidered: (recs as any[]).length,
+      lastUpdated: new Date().toISOString(),
+    })
   } catch (e) {
     if ((e as Error).message === 'UNAUTHORIZED' || (e as Error).message === 'PROFILE_REQUIRED') {
       return

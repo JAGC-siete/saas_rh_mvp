@@ -23,11 +23,13 @@ function getAttendanceRowValue(
   record: any,
   col: ResolvedColumn,
   employeeById: Map<string, any>,
-  ctx: ReportFormatContext
+  ctx: ReportFormatContext,
+  timeFormat?: '24h' | '12h'
 ): string | number {
   const emp = record.employees || employeeById.get(record.employee_id)
   const empName = emp?.name ?? record.employee_id
   const empCode = emp?.employee_code ?? ''
+  const hour12 = timeFormat === '12h'
 
   switch (col.sourceField) {
     case 'employee_code':
@@ -37,13 +39,13 @@ function getAttendanceRowValue(
     case 'date':
       return record.date ? formatDateOnlyForLocale(record.date, ctx.locale, ctx.timeZone) : ''
     case 'check_in':
-      return record.check_in ? formatTimeDisplayInZone(record.check_in, ctx.locale, ctx.timeZone) : ''
+      return record.check_in ? formatTimeDisplayInZone(record.check_in, ctx.locale, ctx.timeZone, { hour12 }) : ''
     case 'check_out':
-      return record.check_out ? formatTimeDisplayInZone(record.check_out, ctx.locale, ctx.timeZone) : ''
+      return record.check_out ? formatTimeDisplayInZone(record.check_out, ctx.locale, ctx.timeZone, { hour12 }) : ''
     case 'lunch_start':
-      return record.lunch_start ? formatTimeDisplayInZone(record.lunch_start, ctx.locale, ctx.timeZone) : ''
+      return record.lunch_start ? formatTimeDisplayInZone(record.lunch_start, ctx.locale, ctx.timeZone, { hour12 }) : ''
     case 'lunch_end':
-      return record.lunch_end ? formatTimeDisplayInZone(record.lunch_end, ctx.locale, ctx.timeZone) : ''
+      return record.lunch_end ? formatTimeDisplayInZone(record.lunch_end, ctx.locale, ctx.timeZone, { hour12 }) : ''
     case 'status':
       return record.status ?? ''
     case 'hours_worked': {
@@ -75,11 +77,12 @@ export function renderAttendanceRows(
   attendance: any[],
   employees: any[],
   columns: ResolvedColumn[],
-  fmt: ReportFormatContext = DEFAULT_REPORT_FMT
+  fmt: ReportFormatContext = DEFAULT_REPORT_FMT,
+  opts?: { timeFormat?: '24h' | '12h' }
 ): (string | number)[][] {
   const employeeById = new Map(employees.map((e) => [e.id, e]))
   return attendance.map((r) =>
-    columns.map((col) => getAttendanceRowValue(r, col, employeeById, fmt))
+    columns.map((col) => getAttendanceRowValue(r, col, employeeById, fmt, opts?.timeFormat))
   )
 }
 

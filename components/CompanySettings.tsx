@@ -8,12 +8,14 @@ import {
   ClockIcon,
   CalculatorIcon,
   DocumentChartBarIcon,
-  ClipboardDocumentListIcon
+  ClipboardDocumentListIcon,
+  ChartBarIcon
 } from '@heroicons/react/24/outline'
 import LeaveTypesSettings from './LeaveTypesSettings'
 import PayrollConfigEditor from './PayrollConfigEditor'
 import ReportParamsEditor from './reports/ReportParamsEditor'
 import { BIOMETRIC_MODES, type BiometricMode } from '../lib/attendance/attendance-metadata'
+import { DEFAULT_PERFORMANCE_SETTINGS, parsePerformanceSettings } from '../lib/performance/settings'
 
 interface Company {
   id: string
@@ -90,6 +92,10 @@ export default function CompanySettings() {
   const [biometricSaving, setBiometricSaving] = useState(false)
   const [biometricMsg, setBiometricMsg] = useState<string | null>(null)
 
+  const [perfSettings, setPerfSettings] = useState(() => DEFAULT_PERFORMANCE_SETTINGS)
+  const [perfSaving, setPerfSaving] = useState(false)
+  const [perfMsg, setPerfMsg] = useState<string | null>(null)
+
   // Sync error from company context
   useEffect(() => {
     if (companyError) {
@@ -126,7 +132,7 @@ export default function CompanySettings() {
         const supabaseClient = createClient() as any
         const { data, error } = await supabaseClient
           .from('company_metadata')
-          .select('attendance_metadata')
+          .select('attendance_metadata, employees_metadata')
           .eq('company_id', companyId)
           .maybeSingle()
         if (error) throw error
@@ -137,6 +143,8 @@ export default function CompanySettings() {
         } else {
           setBiometricMode('STRICT_2')
         }
+
+        setPerfSettings(parsePerformanceSettings(data?.employees_metadata || {}))
       } catch (e) {
         console.error('Error loading attendance_metadata:', e)
       }
@@ -167,6 +175,27 @@ export default function CompanySettings() {
       setBiometricMsg(e instanceof Error ? e.message : 'Error al guardar')
     } finally {
       setBiometricSaving(false)
+    }
+  }
+
+  const savePerformanceMetadata = async () => {
+    if (!companyId) return
+    setPerfSaving(true)
+    setPerfMsg(null)
+    try {
+      const res = await fetch('/api/company-metadata/employees', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(perfSettings)
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || 'No se pudo guardar')
+      setPerfSettings(parsePerformanceSettings(data?.employees_metadata || {}))
+      setPerfMsg('Parámetros de desempeño guardados.')
+    } catch (e) {
+      setPerfMsg(e instanceof Error ? e.message : 'Error al guardar')
+    } finally {
+      setPerfSaving(false)
     }
   }
 
@@ -319,6 +348,7 @@ export default function CompanySettings() {
     { id: 'payroll', name: 'Configuración Payroll', icon: CalculatorIcon },
     { id: 'reports', name: 'Parámetros de Reportes', icon: DocumentChartBarIcon },
     { id: 'leaveTypes', name: 'Parámetros de permisos', icon: ClipboardDocumentListIcon },
+    { id: 'performance', name: 'Desempeño', icon: ChartBarIcon },
   ]
 
   const days = [
@@ -658,6 +688,98 @@ export default function CompanySettings() {
             </CardContent>
           </Card>
         )
+      )}
+
+      {activeTab === 'performance' && (
+        <div className="space-y-6">
+          <Card variant="glass" className="p-5 border border-white/15">
+            <h4 className="text-md font-medium text-white mb-1">Evaluación de desempeño</h4>
+            <p className="text-xs text-gray-400 mb-4">
+              Estos parámetros controlan validaciones al finalizar evaluaciones y el peso relativo de “Supera”.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-sm text-white font-medium">Exigir calificar todo para finalizar</div>
+                    <div className="text-xs text-gray-300">
+                      Si está activo, no se puede marcar como “Finalizada” si hay criterios sin rating.
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={perfSettings.performance_require_all_rated_to_complete}
+                    onChange={(e) =>
+                      setPerfSettings((s) => ({
+                        ...s,
+                        performance_require_all_rated_to_complete: e.target.checked,
+                      }))
+                    }
+                    className="h-4 w-4"
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-sm text-white font-medium">Exigir comentario cuando es “No cumple”</div>
+                    <div className="text-xs text-gray-300">
+                      Si está activo, al finalizar se requiere comentario en todos los ítems con rating “No cumple”.
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={perfSettings.performance_require_comment_on_no_cumple}
+                    onChange={(e) =>
+                      setPerfSettings((s) => ({
+                        ...s,
+                        performance_require_comment_on_no_cumple: e.target.checked,
+                      }))
+                    }
+                    className="h-4 w-4"
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-white/10 bg-white/5 p-4 md:col-span-2">
+                <div className="flex flex-col gap-2">
+                  <div className="text-sm text-white font-medium">Multiplicador de “Supera”</div>
+                  <div className="text-xs text-gray-300">
+                    Define cuánto pesa “Supera” comparado con “Cumple” (1.0). Rango recomendado 1.1–1.5.
+                  </div>
+                  <Input
+                    type="number"
+                    step="0.05"
+                    min="1"
+                    max="2"
+                    value={perfSettings.performance_supera_multiplier}
+                    onChange={(e) =>
+                      setPerfSettings((s) => ({
+                        ...s,
+                        performance_supera_multiplier: Number(e.target.value),
+                      }))
+                    }
+                    className="input-glass text-white placeholder:text-white/70 max-w-[220px]"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 flex items-center gap-3">
+              <Button
+                type="button"
+                onClick={() => void savePerformanceMetadata()}
+                disabled={perfSaving || !companyId}
+                className="bg-brand-600 hover:bg-brand-700 text-white"
+              >
+                {perfSaving ? 'Guardando…' : 'Guardar parámetros'}
+              </Button>
+              {perfMsg && <p className="text-xs text-gray-300">{perfMsg}</p>}
+            </div>
+          </Card>
+        </div>
       )}
 
     </div>
