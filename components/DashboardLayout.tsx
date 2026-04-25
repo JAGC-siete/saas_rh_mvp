@@ -21,6 +21,7 @@ import {
   ScaleIcon
 } from '@heroicons/react/24/outline'
 import { TrophyIcon } from '@heroicons/react/24/solid'
+import { ClipboardList } from 'lucide-react'
 import NotificationBell from './ui/NotificationBell'
 import { normalizePermissionsToCanonical } from '../lib/security/canonical-permissions'
 
@@ -40,6 +41,7 @@ interface UserPermissions {
   settings?: boolean
   admin?: boolean
   affiliates?: boolean // Add affiliates permission
+  mtp?: boolean
 }
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
@@ -57,7 +59,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     gamification: true,
     settings: true, // Por defecto true, se ajustará según rol
     admin: true,    // Por defecto true, se ajustará según rol
-    affiliates: true // Show affiliates link to all users
+    affiliates: true, // Show affiliates link to all users
+    mtp: true
   })
   const [loadingPermissions, setLoadingPermissions] = useState(true)
   /**
@@ -120,7 +123,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             gamification: true,
             settings: canonical.can_view_settings,
             admin: isAdmin,
-            affiliates: true // Show affiliates link to all users
+            affiliates: true, // Show affiliates link to all users
+            mtp: true
           }
           // #region agent log
           fetch('/api/__debug/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'25b418',runId:'pre-fix',hypothesisId:'H3',location:'components/DashboardLayout.tsx:userProfileBranch(setUserPermissions)',message:'Setting UI permissions (userProfile branch)',data:{settings:permissions.settings,reports:permissions.reports,admin:permissions.admin},timestamp:Date.now()})}).catch(()=>{});
@@ -197,7 +201,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           // Canonical can_* keys decide UX visibility (backend remains source of truth)
           settings: canonical.can_view_settings,
           admin: isAdmin,
-          affiliates: true // Show affiliates link to all users
+          affiliates: true, // Show affiliates link to all users
+          mtp: true
         }
         // #region agent log
         fetch('/api/__debug/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'25b418',runId:'pre-fix',hypothesisId:'H5',location:'components/DashboardLayout.tsx:apiProfileBranch(setUserPermissions)',message:'Setting UI permissions (API profile branch)',data:{settings:permissions.settings,reports:permissions.reports,admin:permissions.admin},timestamp:Date.now()})}).catch(()=>{});
@@ -277,6 +282,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Deducciones',      href: '/app/deducciones',          icon: BanknotesIcon,         permission: 'payroll',     feature_key: 'deducciones' },
     { name: '13 & 14 Salario',  href: '/app/13-14-salario',        icon: GiftIcon,              permission: 'payroll',     feature_key: 'decimo_13_14' },
     { name: 'Reportes',         href: '/app/reports',              icon: DocumentChartBarIcon,  permission: 'reports',     feature_key: 'reports' },
+    { name: 'MTP Puestos',      href: '/app/mtp',                  icon: ClipboardList,         permission: 'mtp',         feature_key: 'mtp_job_descriptions' },
     { name: 'Contabilidad',     href: '/app/accounting',           icon: CalculatorIcon,        permission: 'settings',    feature_key: 'contabilidad' },
     // { name: 'Gamificación',  href: '/app/gamification',         icon: TrophyIcon,            permission: 'gamification' },
     // { name: 'Programa de Afiliados', href: '/app/affiliates',   icon: CurrencyDollarIcon,    permission: 'affiliates' },

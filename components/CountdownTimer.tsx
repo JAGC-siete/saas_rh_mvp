@@ -48,22 +48,24 @@ export default function CountdownTimer() {
         </p>
 
         <div className="mb-6">
-          <p className="text-xs sm:text-sm text-brand-200/70">
+          <p className="text-xs sm:text-sm text-brand-200/70 max-w-2xl mx-auto">
             Próximo cierre de planilla (referencia):{' '}
             <span className="text-brand-100 font-medium">{target.toLocaleDateString()}</span>
           </p>
-          <div className="mt-3 inline-flex items-center gap-2 rounded-xl border border-white/15 bg-black/20 px-4 py-2">
-            <span className="text-xs sm:text-sm text-brand-200/80">Faltan</span>
-            <span className="text-white font-semibold tabular-nums">
-              {remaining.days}d {remaining.hours}h {remaining.minutes}m {remaining.seconds}s
-            </span>
+          <div className="mt-3 flex justify-center">
+            <div className="inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-xl border border-white/15 bg-black/20 px-3 sm:px-4 py-2 max-w-full">
+              <span className="text-xs sm:text-sm text-brand-200/80">Faltan</span>
+              <span className="text-white font-semibold tabular-nums whitespace-nowrap">
+                {remaining.days}d {remaining.hours}h {remaining.minutes}m {remaining.seconds}s
+              </span>
+            </div>
           </div>
         </div>
 
         <Link
           href="/ventas"
           onClick={() => trackCTAClick('solicitar_cotizacion', 'services_section_cta')}
-          className="inline-flex items-center justify-center gap-2 rounded-xl px-8 py-3.5 text-base font-semibold bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-colors"
+          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl px-6 sm:px-8 py-3.5 text-base font-semibold bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-colors"
           data-analytics="cta_ventas_click"
         >
           Recibir propuesta en PDF
