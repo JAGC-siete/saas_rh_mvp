@@ -4,8 +4,10 @@ import { logger } from '../../../lib/logger'
 import { 
    toHN, overrideIfSaturdayHalfDay, decideCheckInRule, mapRule, distanceMeters, nowInHonduras, getHondurasTimestamp } from '../../../lib/timezone'
 import { CALL_CENTER_MESSAGES, generateContextualMessage } from '../../../lib/call-center-config'
+import { withAttendancePublicRateLimit } from '../../../lib/security/rate-limiting'
+import { getTrustedClientIp } from '../../../lib/security/trusted-client-ip'
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+async function handler(req: NextApiRequest, res: NextApiResponse) {
   
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST'])
@@ -13,7 +15,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   // 🔓 REGISTRO PÚBLICO - Sin autenticación requerida
-  console.log('🔓 Registro público de asistencia - sin autenticación requerida')
+  const clientIp = getTrustedClientIp(req)
+  const userAgent = (req.headers['user-agent'] || 'unknown').toString().substring(0, 120)
 
   try {
     const { 
@@ -33,13 +36,47 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       hasDni: !!dni,
       hasJustification: !!justification,
       hasLocation: !!(lat && lon),
-      source
+      source,
+      ip: clientIp
     })
 
     // Validación de parámetros de entrada
-    if (!last5 && !dni) {
+    const last5Str = typeof last5 === 'string' ? last5.trim() : ''
+    const dniStr = typeof dni === 'string' ? dni.trim() : ''
+    const companyIdStr = typeof company_id === 'string' ? company_id.trim() : ''
+
+    if (!last5Str && !dniStr) {
       logger.warn('Missing parameters for attendance registration')
       return res.status(400).json({ error: 'Debe enviar dni o last5' })
+    }
+
+    // Validaciones estrictas para endpoint público (anti-abuso)
+    const sourceStr = typeof source === 'string' ? source : 'public'
+    const isPublic = sourceStr === 'public'
+
+    if (isPublic) {
+      // Si se usa last5 (parcial), exigir company_id para evitar enumeración/multi-tenant leakage
+      if (last5Str && !dniStr && !companyIdStr) {
+        logger.warn('Attendance public request missing company_id for last5 flow', { ip: clientIp })
+        return res.status(400).json({
+          error: 'company_id es requerido cuando se usa last5',
+          hint: 'Envíe company_id para desambiguar empresa'
+        })
+      }
+
+      // Exigir geolocalización para controles de geofence en modo público
+      if (lat == null || lon == null) {
+        logger.warn('Attendance public request missing location', { ip: clientIp })
+        return res.status(400).json({ error: 'lat y lon son requeridos para registro público' })
+      }
+      if (typeof lat !== 'number' || typeof lon !== 'number' || Number.isNaN(lat) || Number.isNaN(lon)) {
+        return res.status(400).json({ error: 'lat y lon deben ser números' })
+      }
+
+      // Limitar tamaño de justificación para evitar payload abuse
+      if (typeof justification === 'string' && justification.length > 500) {
+        return res.status(400).json({ error: 'Justificación demasiado larga (máx 500 caracteres)' })
+      }
     }
 
     const supabase = createAdminClient()
@@ -60,17 +97,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     logger.debug('All required tables are available')
 
     // PASO 2: Validar existencia del empleado con soporte multi-cliente
-    console.log('🔍 Buscando empleado...', { dni, last5 })
+    logger.debug('Searching employee for attendance registration', {
+      hasDni: !!dniStr,
+      hasLast5: !!last5Str,
+      hasCompanyId: !!companyIdStr,
+      ip: clientIp
+    })
     let employeeQuery = supabase
       .from('employees')
       .select('id, work_schedule_id, dni, name, status, company_id, employee_code, role, departments:department_id(name)')
       .eq('status', 'active')
 
-    if (dni) {
-      employeeQuery = employeeQuery.eq('dni', dni)
+    if (dniStr) {
+      employeeQuery = employeeQuery.eq('dni', dniStr)
     } else {
       // Buscar por last5 (últimos 5 dígitos del DNI)
-      employeeQuery = employeeQuery.ilike('dni', `%${last5}`)
+      employeeQuery = employeeQuery.ilike('dni', `%${last5Str}`)
     }
 
     const { data: employeesData, error: empError } = await employeeQuery
@@ -92,17 +134,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       logger.warn('Multiple employees found with same credentials', { count: employees.length, company_id })
       
       // Si se proporcionó company_id, usar para filtrar
-      if (company_id) {
-        const filteredEmployees = employees.filter(e => e.company_id === company_id)
+      if (companyIdStr) {
+        const filteredEmployees = employees.filter(e => e.company_id === companyIdStr)
         
         if (filteredEmployees.length === 1) {
-          console.log('✅ Usando company_id para desambiguar:', { company_id, filteredCount: filteredEmployees.length })
+          logger.info('Using company_id to disambiguate employee match', { company_id: companyIdStr })
           // Continuar con el empleado filtrado reemplazando la lista
           employees = filteredEmployees
         } else if (filteredEmployees.length === 0) {
           return res.status(404).json({ 
             error: 'Empleado no encontrado en la empresa especificada',
-            company_id 
+            company_id: companyIdStr
           })
         } else {
           // Si aún hay múltiples, continuar con el filtrado
@@ -153,13 +195,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const employee = employees[0]
-    console.log('✅ Empleado encontrado:', { 
+    logger.info('Employee matched for attendance registration', { 
       id: employee.id, 
-      name: employee.name, 
-      dni: employee.dni, 
       company_id: employee.company_id,
       work_schedule_id: employee.work_schedule_id 
     })
+
+    // P0: No permitir continuar si el empleado no tiene company_id (evitar mezcla de tenants)
+    if (!employee.company_id) {
+      logger.error('Employee missing company_id; refusing public attendance registration', {
+        employeeId: employee.id,
+        ip: clientIp
+      })
+      // Best-effort audit insert (no fallar el request si audit falla)
+      try {
+        await supabase.from('audit_logs').insert({
+          user_id: 'anonymous',
+          company_id: null,
+          action: 'attendance_register_missing_company_id',
+          resource: 'attendance_register',
+          resource_id: employee.id,
+          details: { source: sourceStr, ip: clientIp, userAgent },
+          ip_address: clientIp,
+          user_agent: userAgent,
+          timestamp: new Date().toISOString(),
+          severity: 'critical'
+        } as any)
+      } catch {}
+      return res.status(500).json({
+        error: 'Empleado sin empresa asignada. Contacte a RRHH.',
+        code: 'EMPLOYEE_COMPANY_MISSING'
+      })
+    }
 
     // PASO 3: Obtener horario del empleado
     if (!employee.work_schedule_id) {
@@ -178,7 +245,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: 'Error al obtener horario de trabajo' })
     }
 
-    console.log('✅ Horario obtenido:', { scheduleId: schedule.id, name: schedule.name })
+    logger.debug('Work schedule loaded', { scheduleId: schedule.id })
 
     // PASO 4: Obtener geofence de la empresa
     const { data: company, error: compError } = await supabase
@@ -194,7 +261,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // PASO 5: Validar geofence (bloquear si falla en público)
     let geofence_ok = true
-    if (source === 'public' && lat && lon && company.geofence_center_lat && company.geofence_center_lon && company.geofence_radius_m) {
+    if (isPublic && lat && lon && company.geofence_center_lat && company.geofence_center_lon && company.geofence_radius_m) {
       const distance = distanceMeters(
         [lat, lon], 
         [company.geofence_center_lat, company.geofence_center_lon]
@@ -221,12 +288,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const nowUtc = nowInHonduras()
     const nowLocal = toHN(nowUtc)
     
-    console.log('🕐 Tiempo actual:', { 
-      utc: nowUtc.toISOString(), 
-      local: nowLocal.time, 
-      date: nowLocal.date, 
-      dow: nowLocal.dow 
-    })
+    logger.debug('Attendance registration time context', { date: nowLocal.date, dow: nowLocal.dow })
 
     // PASO 7: Obtener horario esperado para el día actual
     const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
@@ -238,11 +300,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const adjustedExpectedIn = overrideIfSaturdayHalfDay(expectedIn, schedule, nowLocal)
     const adjustedExpectedOut = nowLocal.dow === 6 ? '12:00' : expectedOut
 
-    console.log('📅 Horario esperado:', { 
-      day: todayName, 
-      expectedIn: adjustedExpectedIn, 
-      expectedOut: adjustedExpectedOut 
-    })
+    logger.debug('Expected schedule for today resolved', { day: todayName })
 
     // PASO 8: Validar ventanas duras según política Call Center
     // const checkInWindow = { 
@@ -288,7 +346,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.log('🎯 REGLA SECUNDARIA: Sin registro previo, evento es entrada')
     }
 
-              console.log('🎯 Acción detectada:', {
+    logger.info('Attendance action decision', {
       action,
       currentTime: nowLocal.time,
       hasExistingRecord: !!existingRecord,
@@ -318,7 +376,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const currentHourNum = parseInt(currentHour)
       
       if (currentHourNum > 11) {
-        console.log('⚠️ Intento de check-in fuera de horario, sugiriendo check-out')
+        logger.warn('Check-in attempted too late; suggesting check-out', { employeeId: employee.id, ip: clientIp })
         return res.status(400).json({
           error: 'Horario de check-in cerrado',
           currentTime: nowLocal.time,
@@ -340,11 +398,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (needJust && !justification) {
         const contextualMessage = getContextualMessage('check_in', msgKey, nowLocal.time, nowLocal.dow);
         
-        console.log('⚠️ Justificación requerida para check-in:', {
+        logger.warn('Justification required for check-in', {
           employeeId: employee.id,
           rule: rule,
           messageKey: msgKey,
-          currentTime: nowLocal.time
+          currentTime: nowLocal.time,
+          ip: clientIp
         });
         
         return res.status(422).json({
@@ -412,22 +471,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       // Aplicar puntos y rachas
-      const employeeCompanyId = employee.company_id || '00000000-0000-0000-0000-000000000001' // Paragon fallback
-      console.log('🏢 Company ID para score:', { 
-        original: employee.company_id, 
-        fallback: employeeCompanyId,
-        usedFallback: !employee.company_id 
-      })
-      
-      if (!employee.company_id) {
-        logger.warn('Employee missing company_id, using Paragon fallback', {
-          employeeId: employee.id,
-          employeeName: employee.name,
-          fallbackCompanyId: employeeCompanyId
-        })
-      }
-      
-      await applyPointsAndStreaks(employee.id, employeeCompanyId, rule, nowLocal, supabase)
+      await applyPointsAndStreaks(employee.id, employee.company_id, rule, nowLocal, supabase)
 
       const contextualMessage = getContextualMessage('check_in', msgKey, nowLocal.time, nowLocal.dow);
       
@@ -445,7 +489,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     } else { // check_out
       // CHECK-OUT SIMPLIFICADO: Solo registro, sin validaciones ni justificaciones
-      console.log('📤 Check-out simplificado: Solo registro de salida')
+      logger.info('Simplified check-out flow', { employeeId: employee.id })
       
       // No validamos ventanas ni reglas complejas para check-out
       // Solo registramos la hora de salida
@@ -464,7 +508,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // CASO 1: Orphan checkout (sin check-in previo) - Simplificado
       if (!existingRecord) {
-        console.log('⚠️ Orphan checkout detectado: Creando registro simple');
+        logger.warn('Orphan checkout detected; creating minimal record', { employeeId: employee.id });
         
         const { data: newRecord, error: insertError } = await supabase
           .from('attendance_records')
@@ -492,7 +536,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
         
         record = newRecord;
-        console.log('✅ Orphan checkout registrado exitosamente');
+        logger.info('Orphan checkout recorded', { employeeId: employee.id });
         
       } else {
         // CASO 2: Actualizar registro existente - Simplificado
@@ -545,9 +589,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
       
       // Log exitoso del check-out simplificado
-      console.log('✅ Check-out simplificado completado:', {
+      logger.info('Simplified check-out completed', {
         employeeId: employee.id,
-        employeeName: employee.name,
         recordId: record.id,
         timestamp: nowLocal.time
       });
@@ -688,3 +731,5 @@ async function applyPointsAndStreaks(employeeId: string, companyId: string, rule
     logger.error('Error applying points and streaks', error)
   }
 }
+
+export default withAttendancePublicRateLimit(['POST'])(handler)

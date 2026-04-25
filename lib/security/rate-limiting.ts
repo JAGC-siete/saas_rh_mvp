@@ -30,6 +30,13 @@ const RATE_LIMITS = {
     message: 'Demasiadas solicitudes. Intente más tarde.'
   },
 
+  // Registro público de asistencia (muy restrictivo; endpoint de alto abuso)
+  attendance_public: {
+    windowMs: 2 * 60 * 1000, // 2 minutos
+    max: 6, // 6 requests por ventana (por IP+UA)
+    message: 'Demasiados registros de asistencia. Espere un momento e intente de nuevo.'
+  },
+
   // Nómina: flujo intensivo (preview, draft, refresh tras autorizar)
   payroll: {
     windowMs: 5 * 60 * 1000, // 5 minutos
@@ -307,6 +314,9 @@ export const withReportsRateLimit = (methods?: string[]) => withRateLimit('repor
 
 // Rate limiting general
 export const withGeneralRateLimit = (methods?: string[]) => withRateLimit('general', methods)
+
+// Rate limiting para registro público de asistencia
+export const withAttendancePublicRateLimit = (methods?: string[]) => withRateLimit('attendance_public' as any, methods)
 
 // Rate limiting para nómina (límite más alto por flujo intensivo)
 export const withPayrollRateLimit = (methods?: string[]) => withRateLimit('payroll', methods)
