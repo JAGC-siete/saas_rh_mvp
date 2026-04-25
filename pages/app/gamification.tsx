@@ -6,6 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Button } from '../../components/ui/button'
 import GamificationLeaderboard from '../../components/RealtimeGamificationLeaderboard'
 import EmployeeAchievements from '../../components/RealtimeEmployeeAchievements'
+import AchievementTypesGrid from '../../components/AchievementTypesGrid'
+import PointHistoryPanel from '../../components/PointHistoryPanel'
 import { useCompanyContext } from '../../lib/useCompanyContext'
 
 interface GamificationStats {
@@ -173,6 +175,9 @@ export default function GamificationDashboard() {
             )}
           </div>
 
+          {/* Point history */}
+          <PointHistoryPanel leaderboard={[]} />
+
           {/* How It Works */}
           <Card variant="glass">
             <CardHeader>
@@ -208,43 +213,8 @@ export default function GamificationDashboard() {
             </CardContent>
           </Card>
 
-          {/* Achievement Types Info */}
-          <Card variant="glass">
-            <CardHeader>
-              <CardTitle className="text-white">Tipos de Logros Disponibles</CardTitle>
-              <CardDescription className="text-gray-300">
-                Logros que los empleados pueden obtener
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="p-4 bg-yellow-500/20 border border-yellow-400/30 rounded-lg text-white hover:bg-yellow-500/30 transition-all duration-200">
-                  <div className="text-2xl mb-2"></div>
-                  <h4 className="font-semibold">Perfect Week</h4>
-                  <p className="text-sm opacity-90">5 días puntual en una semana</p>
-                  <div className="text-lg font-bold mt-2">+50 pts</div>
-                </div>
-                <div className="p-4 bg-blue-500/20 border border-blue-400/30 rounded-lg text-white hover:bg-blue-500/30 transition-all duration-200">
-                  <div className="text-2xl mb-2"></div>
-                  <h4 className="font-semibold">Early Bird</h4>
-                  <p className="text-sm opacity-90">Llegar temprano 3 veces</p>
-                  <div className="text-lg font-bold mt-2">+30 pts</div>
-                </div>
-                <div className="p-4 bg-purple-500/20 border border-purple-400/30 rounded-lg text-white hover:bg-purple-500/30 transition-all duration-200">
-                  <div className="text-2xl mb-2"></div>
-                  <h4 className="font-semibold">Streak Master</h4>
-                  <p className="text-sm opacity-90">10 días consecutivos puntual</p>
-                  <div className="text-lg font-bold mt-2">+100 pts</div>
-                </div>
-                <div className="p-4 bg-cyan-500/20 border border-cyan-400/30 rounded-lg text-white hover:bg-cyan-500/30 transition-all duration-200">
-                  <div className="text-2xl mb-2"></div>
-                  <h4 className="font-semibold">Perfect Month</h4>
-                  <p className="text-sm opacity-90">Mes completo sin tardanzas</p>
-                  <div className="text-lg font-bold mt-2">+200 pts</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Achievement Types (DB-backed) */}
+          <AchievementTypesGrid />
             </>
           )}
         </div>

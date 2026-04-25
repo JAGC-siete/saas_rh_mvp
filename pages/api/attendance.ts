@@ -5,20 +5,8 @@ import { resolveEffectiveWorkScheduleId } from '../../lib/attendance/effective-w
 import { 
   getAchievementTypeByName, 
   validateAchievementRequirements, 
-  calculateAttendancePoints,
-  updateEmployeeScoreAtomic,
   evaluateAndAwardAchievements
 } from '../../lib/gamification-utils'
-
-// Legacy function - now using gamification-utils
-async function calculateAttendancePointsLegacy(employeeId: string, lateMinutes: number, isEarly: boolean): Promise<number> {
-  return calculateAttendancePoints(lateMinutes, isEarly, lateMinutes === 0)
-}
-
-// Legacy function - now using gamification-utils
-async function updateEmployeeScoreLegacy(employeeId: string, companyId: string, points: number, reason: string, actionType: string) {
-  return await updateEmployeeScoreAtomic(employeeId, companyId, points, reason, actionType)
-}
 
 async function checkForAchievements(employeeId: string, companyId: string): Promise<any[]> {
   const supabase = createAdminClient()
@@ -72,14 +60,14 @@ async function checkForAchievements(employeeId: string, companyId: string): Prom
           
           if (newAchievement) {
             achievements.push(newAchievement)
-            // Award bonus points using atomic update
-            await updateEmployeeScoreAtomic(
-              employeeId, 
-              companyId, 
-              perfectWeekType.points_reward, 
-              'Perfect Week Achievement', 
-              'achievement'
-            )
+            // Award bonus points (server-side helper)
+            await supabase.rpc('update_employee_score', {
+              p_employee_id: employeeId,
+              p_company_id: companyId,
+              p_points_to_add: perfectWeekType.points_reward,
+              p_reason: 'Perfect Week Achievement',
+              p_action_type: 'achievement'
+            })
           }
         }
       }
@@ -278,18 +266,17 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
       // Combine messages
       const finalFeedback = feedbackMessage + behavioralFeedback
 
-      // Calculate and award points for gamification
-      const isEarly = currentMinutes <= expectedMinutes - 5
-      const pointsEarned = await calculateAttendancePointsLegacy(employee.id, lateMinutes, isEarly)
-      
-      if (pointsEarned > 0) {
-        await updateEmployeeScoreLegacy(
-          employee.id, 
-          employee.company_id ?? '', 
-          pointsEarned,
-          `Check-in: ${punctualityStatus}`,
-          'check_in'
-        )
+      // Apply gamification using single server-side function
+      const rule =
+        punctualityStatus === 'early' ? 'early' : punctualityStatus === 'late' ? 'late' : 'on_time'
+      const { data: pointsEarned, error: gamErr } = await supabase.rpc('apply_attendance_gamification', {
+        p_employee_id: employee.id,
+        p_company_id: employee.company_id ?? '',
+        p_rule: rule,
+        p_late_minutes: lateMinutes
+      })
+      if (gamErr) {
+        console.warn('Failed to apply attendance gamification:', gamErr)
       }
 
       // Check for new achievements across all types
@@ -306,7 +293,7 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
         data, 
         lateMinutes,
         gamification: {
-          pointsEarned,
+          pointsEarned: typeof pointsEarned === 'number' ? pointsEarned : 0,
           newAchievements: newAchievements.length > 0 ? newAchievements : undefined
         },
         weeklyPattern: {

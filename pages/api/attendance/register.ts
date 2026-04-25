@@ -471,7 +471,25 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       }
 
       // Aplicar puntos y rachas
-      await applyPointsAndStreaks(employee.id, employee.company_id, rule, nowLocal, supabase)
+      try {
+        const { error: rpcError } = await supabase.rpc('apply_attendance_gamification', {
+          p_employee_id: employee.id,
+          p_company_id: employee.company_id,
+          p_rule: rule,
+          p_late_minutes: lateMinutes
+        })
+        if (rpcError) {
+          logger.error('Error applying attendance gamification via RPC', rpcError, {
+            employeeId: employee.id,
+            companyId: employee.company_id
+          })
+        }
+      } catch (e) {
+        logger.error('Unexpected error applying attendance gamification RPC', e as any, {
+          employeeId: employee.id,
+          companyId: employee.company_id
+        })
+      }
 
       const contextualMessage = getContextualMessage('check_in', msgKey, nowLocal.time, nowLocal.dow);
       
@@ -650,86 +668,6 @@ function getContextualMessage(
   const rule = ruleMap[messageKey] || messageKey;
   
   return generateContextualMessage(action, rule, currentTime, dayOfWeek);
-}
-
-// Función para aplicar puntos y rachas
-async function applyPointsAndStreaks(employeeId: string, companyId: string, rule: string, nowLocal: any, supabase: any) {
-  try {
-    // Obtener puntuación actual del empleado
-    const { data: score, error: scoreError } = await supabase
-      .from('employee_scores')
-      .select('*')
-      .eq('employee_id', employeeId)
-      .single()
-
-    if (scoreError && scoreError.code !== 'PGRST116') {
-      logger.error('Error fetching employee score', scoreError)
-      return
-    }
-
-    // Calcular puntos según la regla
-    let pointsToAdd = 0
-    switch (rule) {
-      case 'early':
-        pointsToAdd = 3
-        break
-      case 'on_time':
-        pointsToAdd = 2
-        break
-      case 'overtime':
-        pointsToAdd = 3
-        break
-      case 'late':
-        pointsToAdd = 0 // Sin puntos por tardanza
-        break
-      default:
-        pointsToAdd = 1 // Punto base
-    }
-
-    // Actualizar o crear puntuación
-    if (score) {
-      const { error: updateError } = await supabase
-        .from('employee_scores')
-        .update({
-          total_points: score.total_points + pointsToAdd,
-          weekly_points: score.weekly_points + pointsToAdd,
-          monthly_points: score.monthly_points + pointsToAdd,
-          early_arrival_count: score.early_arrival_count + (rule === 'early' ? 1 : 0),
-          updated_at: getHondurasTimestamp()
-        })
-        .eq('id', score.id)
-
-      if (updateError) {
-        logger.error('Error updating employee score', updateError)
-      }
-      } else {
-      console.log('🎯 Creando nuevo employee_score:', { 
-        employee_id: employeeId, 
-        company_id: companyId, 
-        points: pointsToAdd,
-        rule 
-      })
-      const { error: insertError } = await supabase
-        .from('employee_scores')
-        .insert({
-          employee_id: employeeId,
-          company_id: companyId,
-          total_points: pointsToAdd,
-          weekly_points: pointsToAdd,
-          monthly_points: pointsToAdd,
-          early_arrival_count: rule === 'early' ? 1 : 0,
-          punctuality_streak: rule === 'late' ? 0 : 1
-        })
-
-      if (insertError) {
-        logger.error('Error creating employee score', insertError)
-      } else {
-        console.log('✅ Employee score creado exitosamente')
-      }
-    }
-  } catch (error) {
-    logger.error('Error applying points and streaks', error)
-  }
 }
 
 export default withAttendancePublicRateLimit(['POST'])(handler)
