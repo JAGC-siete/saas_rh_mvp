@@ -206,7 +206,10 @@ export default function LeaveDashboard({
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={(v: number | undefined) => [v ?? 0, 'Solicitudes']}
+                    formatter={(value) => [
+                      typeof value === 'number' ? value : Number(value) || 0,
+                      'Solicitudes',
+                    ]}
                     contentStyle={{
                       backgroundColor: '#1e293b',
                       border: '1px solid #334155',
@@ -235,7 +238,10 @@ export default function LeaveDashboard({
                   <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 10 }} interval={0} angle={-25} textAnchor="end" height={56} />
                   <YAxis allowDecimals={false} tick={{ fill: '#94a3b8', fontSize: 11 }} width={32} />
                   <Tooltip
-                    formatter={(v: number | undefined) => [v ?? 0, 'Solicitudes']}
+                    formatter={(value) => [
+                      typeof value === 'number' ? value : Number(value) || 0,
+                      'Solicitudes',
+                    ]}
                     contentStyle={{
                       backgroundColor: '#1e293b',
                       border: '1px solid #334155',
