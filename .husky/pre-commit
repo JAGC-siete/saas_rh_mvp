@@ -1,3 +1,5 @@
 staged=$(git diff --name-only --cached)
-export LINT_STAGED="$staged"npm test
+export LINT_STAGED="$staged"
+
+npm test
 npx --no-install lint-staged
