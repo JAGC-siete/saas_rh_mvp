@@ -2,6 +2,14 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
 import { withGeneralRateLimit } from '../../../lib/security/rate-limiting'
 
+type DerivedConceptRow = {
+  id: string
+  code: string
+  label: string
+  has_employer_contrib: boolean
+  active: boolean
+}
+
 type SaveBody = {
   field_key: string
   concept_code: string | null
@@ -43,7 +51,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
       if (cErr) return res.status(500).json({ error: 'Error leyendo conceptos derivados', details: cErr.message })
 
-      const conceptById = new Map((concepts || []).map((c: any) => [c.id, c]))
+      const conceptRows = (concepts || []) as DerivedConceptRow[]
+      const conceptById = new Map<string, DerivedConceptRow>(conceptRows.map((c) => [c.id, c]))
 
       const { data: sources, error: sErr } = await supabase
         .from('payroll_derived_concept_sources')
@@ -57,8 +66,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         .map((s: any) => ({
           id: s.id,
           field_key: s.employee_source,
-          concept_code: conceptById.get(s.concept_id)?.code || null,
-          concept_label: conceptById.get(s.concept_id)?.label || null
+          concept_code: conceptById.get(String(s.concept_id))?.code || null,
+          concept_label: conceptById.get(String(s.concept_id))?.label || null
         }))
         .filter((m: any) => typeof m.field_key === 'string' && m.field_key.length > 0)
 
