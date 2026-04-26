@@ -6,6 +6,21 @@ import DashboardLayout from '../../../components/DashboardLayout'
 import { useCompanyContext } from '../../../lib/useCompanyContext'
 import { CalculatorIcon } from '@heroicons/react/24/outline'
 
+const PayrollDerivedConceptsTab = dynamic(
+  () =>
+    import('../../../components/accounting/PayrollDerivedConceptsTab').then(
+      (mod) => mod.PayrollDerivedConceptsTab
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-400" />
+      </div>
+    )
+  }
+)
+
 const AccountingMappingTable = dynamic(
   () =>
     import('../../../components/accounting/AccountingMappingTable').then(
@@ -24,6 +39,9 @@ const AccountingMappingTable = dynamic(
 export default function AccountingPage() {
   const { companyId, loading: companyLoading, error: companyError } =
     useCompanyContext()
+  const [activeTab, setActiveTab] = React.useState<'mappings' | 'derived'>(
+    'mappings'
+  )
 
   return (
     <ProtectedRoute>
@@ -57,15 +75,52 @@ export default function AccountingPage() {
           )}
 
           {!companyLoading && !companyError && (
-            <Suspense
-              fallback={
-                <div className="flex items-center justify-center min-h-[400px]">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-400" />
-                </div>
-              }
-            >
-              <AccountingMappingTable companyId={companyId ?? null} />
-            </Suspense>
+            <>
+              <div className="flex gap-2 border-b border-white/10 overflow-x-auto">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('mappings')}
+                  className={`
+                    flex items-center gap-2 px-6 py-3 font-medium transition-all whitespace-nowrap
+                    ${
+                      activeTab === 'mappings'
+                        ? 'text-brand-400 border-b-2 border-brand-400 bg-white/5'
+                        : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    }
+                  `}
+                >
+                  Mapeo contable
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('derived')}
+                  className={`
+                    flex items-center gap-2 px-6 py-3 font-medium transition-all whitespace-nowrap
+                    ${
+                      activeTab === 'derived'
+                        ? 'text-brand-400 border-b-2 border-brand-400 bg-white/5'
+                        : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    }
+                  `}
+                >
+                  Derivados de nómina
+                </button>
+              </div>
+
+              <Suspense
+                fallback={
+                  <div className="flex items-center justify-center min-h-[400px]">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-400" />
+                  </div>
+                }
+              >
+                {activeTab === 'mappings' ? (
+                  <AccountingMappingTable companyId={companyId ?? null} />
+                ) : (
+                  <PayrollDerivedConceptsTab />
+                )}
+              </Suspense>
+            </>
           )}
         </div>
       </DashboardLayout>

@@ -24,6 +24,7 @@ import {
 import { calculateSeptimoDia } from '../../../lib/payroll/septimo-dia'
 import { HONDURAS_LABOR_FACTOR, HORAS_PERIODO_MENSUAL, HORAS_PERIODO_QUINCENAL } from '../../../lib/payroll/constants'
 import { buildAuthorizedPayrollPreviewPayload } from '../../../lib/payroll/preview-authorized-readonly'
+import { calculateEmployerContributions } from '../../../lib/payroll/employer-contributions'
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -297,7 +298,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { data: employees, error: empError } = await supabase
       .from('employees')
       .select(`
-        id, name, dni, base_salary, bank_name, bank_account, status, department_id, pay_type, work_schedule_id,
+        id, name, dni, base_salary, bank_name, bank_account, status, department_id, pay_type, work_schedule_id, position, role,
         departments:department_id(name),
         work_schedules:work_schedule_id(monday_start, tuesday_start, wednesday_start, thursday_start, friday_start, saturday_start, sunday_start)
       `)
@@ -773,6 +774,24 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         }
 
         const lineMetadata = buildFixedLinePlanMetadata(yearNum, empPlans, {
+          base_salary_used: base_salary,
+          position_snapshot: String((emp as any).position || (emp as any).role || ''),
+          ihss_patronal:
+            countryCode === 'HND' && taxConstants
+              ? calculateEmployerContributions({
+                  monthlySalary: base_salary,
+                  taxConstants,
+                  factor2Pagos: tipoParam === '2PAGOS' ? 0.5 : 1
+                }).ihssPatronal
+              : 0,
+          rap_patronal:
+            countryCode === 'HND' && taxConstants
+              ? calculateEmployerContributions({
+                  monthlySalary: base_salary,
+                  taxConstants,
+                  factor2Pagos: tipoParam === '2PAGOS' ? 0.5 : 1
+                }).rapPatronal
+              : 0,
           ...(days_extra > 0
             ? {
                 days_extra,
@@ -1035,6 +1054,17 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         // Insertar línea en payroll_run_lines
         // Para hourly, guardamos horas en calc_hours. Metadata incluye septimo_dia si aplica.
         const lineMetadata: Record<string, unknown> = { tax_year: yearNum }
+        lineMetadata.base_salary_used = base_salary
+        lineMetadata.position_snapshot = String((emp as any).position || (emp as any).role || '')
+        if (countryCode === 'HND' && taxConstants) {
+          const empContr = calculateEmployerContributions({
+            monthlySalary: base_salary,
+            taxConstants,
+            factor2Pagos: tipoParam === '2PAGOS' ? 0.5 : 1
+          })
+          lineMetadata.ihss_patronal = empContr.ihssPatronal
+          lineMetadata.rap_patronal = empContr.rapPatronal
+        }
         if (septimoDia > 0) lineMetadata.septimo_dia = septimoDia
         if (total_hours_worked > 0) lineMetadata.total_hours_worked = total_hours_worked
         const planIdsHourly: string[] = []

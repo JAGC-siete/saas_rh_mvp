@@ -28,6 +28,8 @@ export default function ReportFilters({
   const [employees, setEmployees] = useState<{ id: string; name: string; code: string }[]>([])
   const [departments, setDepartments] = useState<{ id: string; name: string }[]>([])
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [payrollRuns, setPayrollRuns] = useState<{ id: string; label: string }[]>([])
+  const [derivedConcepts, setDerivedConcepts] = useState<{ code: string; label: string }[]>([])
 
   const loadFilterOptions = useCallback(async () => {
     setLoadError(null)
@@ -70,6 +72,33 @@ export default function ReportFilters({
   useEffect(() => {
     loadFilterOptions()
   }, [loadFilterOptions])
+
+  const loadPayrollDerivedOptions = useCallback(async () => {
+    try {
+      const [runsRes, conceptsRes] = await Promise.all([
+        fetch('/api/reports/payroll-runs?limit=50', { credentials: 'include' }),
+        fetch('/api/reports/payroll-derived-concepts', { credentials: 'include' })
+      ])
+
+      if (runsRes.ok) {
+        const j = await runsRes.json()
+        setPayrollRuns((j.runs || []).map((r: any) => ({ id: r.id, label: r.label })))
+      }
+
+      if (conceptsRes.ok) {
+        const j = await conceptsRes.json()
+        setDerivedConcepts((j.concepts || []).map((c: any) => ({ code: c.code, label: c.label })))
+      }
+    } catch (e) {
+      // Silent; user can retry by re-opening filters
+    }
+  }, [])
+
+  useEffect(() => {
+    if (reportType !== 'payroll') return
+    if ((filters.payrollView ?? 'lines') !== 'derived') return
+    loadPayrollDerivedOptions()
+  }, [reportType, filters.payrollView, loadPayrollDerivedOptions])
 
   const setDefaultDateRange = (periodicity: Periodicity) => {
     const now = nowInHonduras()
@@ -161,6 +190,8 @@ export default function ReportFilters({
       attendanceStatus: undefined,
       certificateDate: undefined,
       terminationDate: undefined,
+      payrollRunId: undefined,
+      payrollDerivedConcept: undefined,
       payrollType: filters.reportType === 'payroll' ? 'all' : filters.payrollType,
       from: '',
       to: ''
@@ -175,10 +206,13 @@ export default function ReportFilters({
     filters.attendanceStatus?.length ||
     filters.certificateDate ||
     filters.terminationDate ||
+    filters.payrollRunId ||
+    filters.payrollDerivedConcept ||
     (reportType === 'payroll' && filters.payrollType && filters.payrollType !== 'all')
   )
 
-  const showDateRange = reportNeedsDateRange(reportType)
+  const showDateRange =
+    reportNeedsDateRange(reportType) && !(reportType === 'payroll' && (filters.payrollView ?? 'lines') === 'derived')
   const showPeriodPresets = showDateRange
 
   return (
@@ -207,11 +241,111 @@ export default function ReportFilters({
       )}
 
       {reportType === 'payroll' && (
-        <p className="text-xs text-gray-400 mb-4 rounded-lg border border-white/10 bg-white/5 px-3 py-2">
-          El PDF consolidado de nómina se genera según la <strong className="text-gray-300">quincena</strong> inferida
-          de la <strong className="text-gray-300">fecha de inicio</strong> del rango (no es un PDF del mismo corte
-          que la tabla si el rango abarca varias quincenas).
-        </p>
+        <>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-300 mb-2">Vista</label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  onFiltersChange({
+                    ...filters,
+                    payrollView: 'lines',
+                    payrollRunId: undefined,
+                    payrollDerivedConcept: undefined
+                  })
+                }
+                disabled={loading}
+                className={`
+                  px-4 py-2 rounded-lg font-medium text-sm transition-all
+                  ${(filters.payrollView ?? 'lines') === 'lines'
+                    ? 'bg-brand-600 text-white shadow-lg'
+                    : 'bg-white/10 text-gray-300 hover:bg-white/20 hover:text-white'}
+                  disabled:opacity-50 disabled:cursor-not-allowed
+                `}
+              >
+                Nómina (líneas)
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  onFiltersChange({
+                    ...filters,
+                    payrollView: 'derived',
+                    payrollType: 'all',
+                    from: '',
+                    to: ''
+                  })
+                }
+                disabled={loading}
+                className={`
+                  px-4 py-2 rounded-lg font-medium text-sm transition-all
+                  ${(filters.payrollView ?? 'lines') === 'derived'
+                    ? 'bg-brand-600 text-white shadow-lg'
+                    : 'bg-white/10 text-gray-300 hover:bg-white/20 hover:text-white'}
+                  disabled:opacity-50 disabled:cursor-not-allowed
+                `}
+              >
+                Derivados de nómina
+              </button>
+            </div>
+          </div>
+
+          {(filters.payrollView ?? 'lines') === 'lines' && (
+            <p className="text-xs text-gray-400 mb-4 rounded-lg border border-white/10 bg-white/5 px-3 py-2">
+              El PDF consolidado de nómina se genera según la <strong className="text-gray-300">quincena</strong>{' '}
+              inferida de la <strong className="text-gray-300">fecha de inicio</strong> del rango (no es un PDF del
+              mismo corte que la tabla si el rango abarca varias quincenas).
+            </p>
+          )}
+        </>
+      )}
+
+      {reportType === 'payroll' && (filters.payrollView ?? 'lines') === 'derived' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Corrida ejecutada <span className="text-brand-400">*</span>
+            </label>
+            <select
+              value={filters.payrollRunId || ''}
+              onChange={(e) => onFiltersChange({ ...filters, payrollRunId: e.target.value || undefined })}
+              disabled={loading}
+              className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white text-sm font-medium cursor-pointer hover:bg-white/15 transition-all focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 disabled:opacity-50 appearance-none"
+            >
+              <option value="" className="bg-gray-800 text-gray-400">
+                Selecciona una corrida
+              </option>
+              {payrollRuns.map((r) => (
+                <option key={r.id} value={r.id} className="bg-gray-800">
+                  {r.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Concepto/Institución <span className="text-brand-400">*</span>
+            </label>
+            <select
+              value={filters.payrollDerivedConcept || ''}
+              onChange={(e) =>
+                onFiltersChange({ ...filters, payrollDerivedConcept: e.target.value || undefined })
+              }
+              disabled={loading}
+              className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white text-sm font-medium cursor-pointer hover:bg-white/15 transition-all focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 disabled:opacity-50 appearance-none"
+            >
+              <option value="" className="bg-gray-800 text-gray-400">
+                Selecciona un concepto
+              </option>
+              {derivedConcepts.map((c) => (
+                <option key={c.code} value={c.code} className="bg-gray-800">
+                  {c.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
       )}
 
       {reportType === 'employees' && (

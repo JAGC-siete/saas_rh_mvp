@@ -26,6 +26,7 @@ import {
 
 export type { ReportType }
 export type Periodicity = 'daily' | 'weekly' | 'fortnightly' | 'monthly' | 'custom'
+export type PayrollViewMode = 'lines' | 'derived'
 
 export interface ReportFilters {
   reportType: ReportType
@@ -36,6 +37,9 @@ export interface ReportFilters {
   departmentIds?: string[]
   attendanceStatus?: ('present' | 'absent' | 'late' | 'permission')[]
   payrollType?: 'all' | 'regular' | 'overtime'
+  payrollView?: PayrollViewMode
+  payrollRunId?: string
+  payrollDerivedConcept?: string
   employeeStatus?: 'active' | 'inactive' | 'all'
   certificateDate?: string
   terminationDate?: string
@@ -84,6 +88,7 @@ export default function ReportBuilder() {
     reportType: 'attendance',
     periodicity: 'fortnightly',
     payrollType: 'all',
+    payrollView: 'lines',
     employeeStatus: 'all'
   }))
   const [previewData, setPreviewData] = useState<PreviewData | null>(null)
@@ -95,9 +100,10 @@ export default function ReportBuilder() {
       ...prev,
       reportType: activeTab,
       periodicity: prev.periodicity || 'fortnightly',
-      payrollType: activeTab === 'payroll' ? prev.payrollType ?? 'all' : prev.payrollType
+      payrollType: activeTab === 'payroll' ? prev.payrollType ?? 'all' : prev.payrollType,
+      payrollView: activeTab === 'payroll' ? (prev.payrollView ?? 'lines') : prev.payrollView
     }))
-  }, [activeTab])
+  }, [activeTab, filters.payrollView])
 
   const exportCaps = useMemo(() => getReportExportCapabilities(activeTab), [activeTab])
 
@@ -166,6 +172,59 @@ export default function ReportBuilder() {
         }
 
         case 'payroll': {
+          const view = filters.payrollView ?? 'lines'
+          if (view === 'derived') {
+            const runId = filters.payrollRunId
+            const concept = filters.payrollDerivedConcept
+            if (!runId || !concept) {
+              setPreviewData(null)
+              break
+            }
+
+            const q = new URLSearchParams({ run_id: runId, concept })
+            const response = await fetch(`/api/reports/payroll-derivatives?${q.toString()}`, {
+              credentials: 'include'
+            })
+            if (!response.ok) {
+              const err = await response.json().catch(() => ({}))
+              throw new Error(err.error || 'Error al cargar derivados de nómina')
+            }
+            const json = await response.json()
+            const conceptUpper = String(json.concept || '').toUpperCase()
+            const showEmployer = ['IHSS', 'RAP', 'INFOP'].includes(conceptUpper)
+
+            const derivedRows = (json.rows || []).map((r: any) => [
+              r.employee_name,
+              r.dni,
+              r.position,
+              formatHnl(r.base_salary_used),
+              formatHnl(r.employee_amount),
+              ...(showEmployer ? [formatHnl(r.employer_amount || 0)] : [])
+            ])
+
+            setPreviewData({
+              headers: [
+                'Empleado',
+                'Identidad',
+                'Puesto',
+                'Salario base (usado)',
+                'Monto retenido (empleado)',
+                ...(showEmployer ? ['Aportación patronal'] : [])
+              ],
+              rows: derivedRows,
+              summary: {
+                corrida: `${json.run?.year}-${String(json.run?.month).padStart(2, '0')} Q${json.run?.quincena} (${json.run?.tipo})`,
+                totalEmpleado: formatHnl(json.totals?.total_employee),
+                ...(showEmployer ? { totalPatronal: formatHnl(json.totals?.total_employer) } : {}),
+                ...(conceptUpper === 'INFOP'
+                  ? { infopAplica: json.meta?.is_infop_liable ? 'Sí' : 'No' }
+                  : {})
+              },
+              totalCount: derivedRows.length
+            })
+            break
+          }
+
           params.append('payrollType', filters.payrollType ?? 'all')
           const response = await fetch(`/api/reports/payroll?${params}`, { credentials: 'include' })
           if (!response.ok) throw new Error('Error al cargar nómina')
@@ -360,7 +419,9 @@ export default function ReportBuilder() {
   useEffect(() => {
     if (!companyId || companyLoading) return
 
-    if (reportNeedsDateRange(filters.reportType)) {
+    const isPayrollDerived = filters.reportType === 'payroll' && (filters.payrollView ?? 'lines') === 'derived'
+
+    if (!isPayrollDerived && reportNeedsDateRange(filters.reportType)) {
       if (!filters.from || !filters.to) {
         setPreviewData(null)
         return
@@ -408,6 +469,41 @@ export default function ReportBuilder() {
         return
       }
 
+      if (filters.reportType === 'payroll' && (filters.payrollView ?? 'lines') === 'derived') {
+        const runId = filters.payrollRunId
+        const concept = filters.payrollDerivedConcept
+        if (!runId || !concept) throw new Error('Selecciona una corrida y un concepto')
+        if (format === 'pdf') throw new Error('PDF no disponible para Derivados. Usa Excel o CSV.')
+
+        const ext = format === 'excel' ? 'xlsx' : 'csv'
+        const filename = `derivados_${concept.toLowerCase()}_${runId.slice(0, 8)}.${ext}`
+        const accept =
+          format === 'excel'
+            ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            : 'text/csv'
+
+        const response = await fetch('/api/reports/export-payroll-derivatives', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json', Accept: accept },
+          body: JSON.stringify({ format: format === 'excel' ? 'excel' : 'csv', run_id: runId, concept })
+        })
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}))
+          throw new Error(err.error || `HTTP ${response.status}`)
+        }
+        const blob = await response.blob()
+        const downloadUrl = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = downloadUrl
+        link.download = filename
+        document.body.appendChild(link)
+        link.click()
+        window.URL.revokeObjectURL(downloadUrl)
+        document.body.removeChild(link)
+        return
+      }
+
       if (!previewData) return
 
       const startDate = filters.from || new Date().toISOString().split('T')[0]
@@ -438,9 +534,16 @@ export default function ReportBuilder() {
   )
 
   const emptyMessage = useMemo(() => {
+    const isPayrollDerived = activeTab === 'payroll' && (filters.payrollView ?? 'lines') === 'derived'
     switch (activeTab) {
       case 'attendance':
       case 'payroll':
+        if (isPayrollDerived) {
+          return {
+            title: 'Selecciona corrida y concepto',
+            body: 'Elige una corrida ejecutada y un concepto (IHSS/RAP/INFOP o custom) para generar el derivado.'
+          }
+        }
         return {
           title: 'Define un rango de fechas',
           body: 'Elige inicio y fin (o un preset de período) para generar la vista previa.'
@@ -530,11 +633,16 @@ export default function ReportBuilder() {
         <>
           <ReportKPIs summary={previewData.summary} reportType={activeTab} loading={loading} />
 
+          {/* Derivados: capabilities distintas (Excel + CSV) */}
           <ExportBar
             data={previewData}
             onExport={handleExport}
             disabled={loading || !!error}
-            capabilities={exportCaps}
+            capabilities={
+              activeTab === 'payroll' && (filters.payrollView ?? 'lines') === 'derived'
+                ? { excel: true, pdf: false, csv: true }
+                : exportCaps
+            }
             onExportError={(msg) => setError(msg)}
           />
 
