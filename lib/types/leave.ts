@@ -7,6 +7,19 @@ export interface LeaveType {
   requires_approval: boolean
   color: string
   created_at: string
+  employee_self_service?: boolean
+  is_statutory_art95?: boolean
+  /** Normativa laboral vs política interna de la empresa */
+  is_statutory?: boolean
+}
+
+/** Empleado tal como viene del join en GET /api/leave */
+export interface LeaveRequestEmployeeJoin {
+  id: string
+  name: string
+  email: string | null
+  dni: string
+  company_id: string | null
 }
 
 export interface LeaveRequest {
@@ -21,7 +34,7 @@ export interface LeaveRequest {
   duration_type: 'hours' | 'days'
   is_half_day?: boolean
   reason?: string
-  status: 'pending' | 'approved' | 'rejected'
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled'
   approved_by?: string
   approved_at?: string
   rejection_reason?: string
@@ -30,18 +43,13 @@ export interface LeaveRequest {
   attachment_name?: string
   created_at: string
   updated_at: string
-  
-  // Related data (populated by joins)
-  employee?: {
-    id: string
-    first_name: string
-    last_name: string
-    email: string
-    dni?: string
-    company_id: string
-  }
+
+  employee?: LeaveRequestEmployeeJoin
   leave_type?: LeaveType
 }
+
+/** Solicitud enriquecida desde API (joins employee + leave_type). */
+export type LeaveRequestWithRelations = LeaveRequest
 
 export interface CreateLeaveRequestData {
   employee_dni: string
@@ -60,12 +68,28 @@ export interface UpdateLeaveRequestData {
   rejection_reason?: string
 }
 
-export interface Employee {
+/** Resumen diario de asistencia en el rango de un permiso (GET /api/leave/[id]?attendance_summary=1) */
+export interface LeaveAttendanceDaySummary {
+  date: string
+  summary: 'sin_datos' | 'presente' | 'ausente'
+  has_check_in: boolean
+  record_status: string | null
+}
+
+export interface LeaveAttendanceSummaryPayload {
+  days: LeaveAttendanceDaySummary[]
+  employee_id: string
+  leave_request_id: string
+}
+
+/** Fila mínima de /api/employees para el formulario de permisos */
+export interface LeaveFormEmployeeOption {
   id: string
-  first_name: string
-  last_name: string
-  email: string
+  name: string
   dni: string
-  company_id: string
-  status: string
+  email: string | null
+  company_id: string | null
+  status?: string | null
+  /** Si viene de GET /api/employees (fila employees.*) */
+  department_id?: string | null
 }

@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+
+  /** pdfkit + dependencias usan require/fs; si Webpack los empaqueta mal, el PDF falla en runtime (500). */
+  serverExternalPackages: ['pdfkit'],
   
   // Configuración necesaria para Railway
   output: 'standalone',
@@ -8,6 +11,13 @@ const nextConfig = {
   // Configuración para permitir deploy con advertencias de ESLint
   eslint: {
     ignoreDuringBuilds: true,
+  },
+  
+  // Configuración de TypeScript
+  typescript: {
+    // Permitir build aunque haya errores de tipos (solo para desarrollo)
+    // En producción debería estar en false
+    ignoreBuildErrors: false,
   },
   
   // Environment variables configuration - Force injection for client
@@ -122,17 +132,73 @@ const nextConfig = {
       {
         source: '/(.*)',
         headers: [
+          // Frame protection
           {
             key: 'X-Frame-Options',
             value: 'DENY',
           },
+          // MIME sniffing protection
           {
             key: 'X-Content-Type-Options',
             value: 'nosniff',
           },
+          // Referrer policy
           {
             key: 'Referrer-Policy',
-            value: 'origin-when-cross-origin',
+            value: 'strict-origin-when-cross-origin',
+          },
+          // XSS protection (legacy)
+          {
+            key: 'X-XSS-Protection',
+            value: '1; mode=block',
+          },
+          // HTTPS enforcement
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=31536000; includeSubDomains; preload',
+          },
+          // Content Security Policy - Basic but effective
+          // Note: 'unsafe-inline' is needed for Schema.org JSON-LD scripts
+          {
+            key: 'Content-Security-Policy',
+            value:
+              "default-src 'self'; " +
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com; " +
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+              "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+              "img-src 'self' data: https:; " +
+              "font-src 'self' data: https://fonts.gstatic.com; " +
+              "connect-src 'self' https://*.supabase.co https://*.supabase.com https://www.googletagmanager.com https://www.google-analytics.com; " +
+              "frame-ancestors 'none';",
+          },
+          // Permissions policy (restricts browser features)
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+          },
+        ],
+      },
+      // Additional CSP for API routes
+      {
+        source: '/api/(.*)',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: "default-src 'none'; frame-ancestors 'none';",
+          },
+        ],
+      },
+      // Sitemap should be accessible without restrictive headers
+      {
+        source: '/sitemap.xml',
+        headers: [
+          {
+            key: 'Content-Type',
+            value: 'text/xml; charset=utf-8',
+          },
+          {
+            key: 'Cache-Control',
+            value: 'public, s-maxage=3600, stale-while-revalidate=86400',
           },
         ],
       },

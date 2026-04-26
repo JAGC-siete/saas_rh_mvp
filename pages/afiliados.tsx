@@ -1,22 +1,23 @@
 import Head from 'next/head'
-import Link from 'next/link'
 import { useState } from 'react'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
+import MainHeader from '../components/MainHeader'
+import DemoFooter from '../components/DemoFooter'
+import { getPageTitle } from '../lib/seo/title'
+import { getPageDescription } from '../lib/seo/description'
+import SchemaMarkup from '../components/SEO/SchemaMarkup'
+import { generateWebPageSchema } from '../lib/seo/schema'
 
 export default function AfiliadosPage() {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-  })
+  const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value })
+    setEmail(e.target.value)
   }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -26,17 +27,18 @@ export default function AfiliadosPage() {
     setSuccess(false)
 
     try {
-      const res = await fetch('/api/affiliates/register', {
+      const res = await fetch('/api/affiliates/request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ email }),
       })
+
+      const data = await res.json()
 
       if (res.ok) {
         setSuccess(true)
       } else {
-        const data = await res.json()
-        setError(data.error || 'Ocurrió un error al registrarse.')
+        setError(data.error || 'Ocurrió un error al enviar tu solicitud.')
       }
     } catch {
       setError('Ocurrió un error de red.')
@@ -45,33 +47,36 @@ export default function AfiliadosPage() {
     }
   }
 
-  return (
-    <div className="min-h-screen bg-gray-900 text-white flex flex-col">
-      <Head>
-        <title>Programa de Afiliados - Humano SISU</title>
-        <meta name="description" content="Únete a nuestro programa de afiliados y gana comisiones." />
-      </Head>
+  const pageTitle = getPageTitle('affiliates')
+  const pageDescription = getPageDescription('affiliates')
+  const webPageSchema = generateWebPageSchema({
+    url: '/afiliados',
+    title: pageTitle,
+    description: pageDescription
+  })
 
-      <header className="p-4 border-b border-gray-700">
-        <div className="container mx-auto flex justify-between items-center">
-          <Link href="/">
-            <a className="text-xl font-bold">Humano SISU</a>
-          </Link>
-          <nav>
-            <Link href="/login">
-              <a className="text-gray-300 hover:text-white">Iniciar Sesión</a>
-            </Link>
-          </nav>
-        </div>
-      </header>
+  return (
+    <div className="min-h-screen bg-app text-white flex flex-col pt-24 relative">
+      <Head>
+        <title>{pageTitle}</title>
+        <meta name="description" content={pageDescription} />
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={pageDescription} />
+        <meta property="og:url" content="https://humanosisu.net/afiliados" />
+        <link rel="canonical" href="https://humanosisu.net/afiliados" />
+      </Head>
+      <SchemaMarkup schema={webPageSchema} />
+
+      {/* Header */}
+      <MainHeader enableScrollEffect={false} fixed={true} />
 
       <main className="flex-grow container mx-auto px-4 py-8">
         <section className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
             Conviértete en Afiliado de Humano SISU
           </h1>
-          <p className="text-lg text-gray-400 max-w-2xl mx-auto">
-            Gana comisiones recurrentes por cada cliente que refieras. Ayúdanos a llevar la mejor solución de RRHH a más empresas en Honduras.
+          <p className="text-lg text-gray-400 max-w-2xl mx-auto mb-6">
+            Gana comisiones recurrentes por cada cliente que refieras. Ayúdanos a llevar la mejor solución de RRHH a más empresas en la región.
           </p>
         </section>
 
@@ -109,26 +114,37 @@ export default function AfiliadosPage() {
               </CardHeader>
               <CardContent>
                 {success ? (
-                  <div className="text-green-400">
-                    ¡Gracias por registrarte! Revisaremos tu solicitud y te contactaremos pronto.
+                  <div className="space-y-4">
+                    <div className="text-green-400 text-center">
+                      <p className="text-lg font-semibold mb-2">¡Solicitud Enviada!</p>
+                      <p className="text-sm">
+                        Hemos enviado un email a <strong>{email}</strong> con un cuestionario para completar tu solicitud de afiliación.
+                      </p>
+                      <p className="text-sm mt-4">
+                        Por favor revisa tu correo y completa el cuestionario para continuar con el proceso.
+                      </p>
+                    </div>
                   </div>
                 ) : (
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-2">
-                      <label htmlFor="name">Nombre Completo</label>
-                      <Input id="name" name="name" type="text" required onChange={handleChange} />
-                    </div>
-                    <div className="space-y-2">
                       <label htmlFor="email">Correo Electrónico</label>
-                      <Input id="email" name="email" type="email" required onChange={handleChange} />
-                    </div>
-                    <div className="space-y-2">
-                      <label htmlFor="password">Contraseña</label>
-                      <Input id="password" name="password" type="password" required onChange={handleChange} />
+                      <Input 
+                        id="email" 
+                        name="email" 
+                        type="email" 
+                        required 
+                        value={email}
+                        onChange={handleChange}
+                        placeholder="tu@email.com"
+                      />
+                      <p className="text-xs text-gray-400">
+                        Te enviaremos un cuestionario a este correo para completar tu solicitud.
+                      </p>
                     </div>
                     {error && <p className="text-red-500 text-sm">{error}</p>}
                     <Button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700">
-                      {loading ? 'Enviando...' : 'Unirse al Programa'}
+                      {loading ? 'Enviando...' : 'Solicitar Afiliación'}
                     </Button>
                   </form>
                 )}
@@ -138,11 +154,7 @@ export default function AfiliadosPage() {
         </section>
       </main>
 
-      <footer className="p-4 border-t border-gray-700">
-        <div className="container mx-auto text-center text-gray-500">
-          &copy; {new Date().getFullYear()} Humano SISU. Todos los derechos reservados.
-        </div>
-      </footer>
+      <DemoFooter />
     </div>
   )
 }

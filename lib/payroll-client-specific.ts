@@ -10,6 +10,7 @@
  */
 
 import { calculatePayrollFromConfig, getCustomFieldsFromDB, validateCustomFields } from './payroll-calculation-engine'
+import { HONDURAS_LABOR_FACTOR } from './payroll/constants'
 
 export interface ClientPayrollConfig {
   companyId: string
@@ -244,7 +245,7 @@ export function calculateProhalcaPayroll(baseSalary: number, metadata: any): {
   const otrasDeduccionesEfectivo = parseFloat(metadata?.otras_deducciones_efectivo || '0')
   
   // Calculation helpers
-  const valorHoraExtra = parseFloat(metadata?.valor_hora_extra || '0') || (baseSalary / 220) * 1.5
+  const valorHoraExtra = parseFloat(metadata?.valor_hora_extra || '0') || (baseSalary / HONDURAS_LABOR_FACTOR) * 1.5
   const descansoTurnoNoche = metadata?.descanso_por_turno_noche || false
   const dobleTurno = metadata?.doble_turno || false
   

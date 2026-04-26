@@ -1,5 +1,14 @@
+import type { GetServerSideProps } from 'next'
 import { useState, useEffect } from 'react'
 import Head from 'next/head'
+import { isServerDiagnosticsEnabled } from '../lib/server-diagnostics'
+
+export const getServerSideProps: GetServerSideProps = async () => {
+  if (!isServerDiagnosticsEnabled()) {
+    return { notFound: true }
+  }
+  return { props: {} }
+}
 
 interface RailwayEnvData {
   railway: {
@@ -41,7 +50,7 @@ export default function RailwayDebug() {
         } else {
           setError('Failed to fetch environment data')
         }
-      } catch (err) {
+      } catch {
         setError('Network error')
       } finally {
         setLoading(false)

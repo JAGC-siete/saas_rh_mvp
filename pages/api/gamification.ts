@@ -29,6 +29,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       
       case 'achievements':
         return await handleAchievements(req, res, supabase, companyId, employee_id as string)
+
+      case 'achievement-types':
+        return await handleAchievementTypes(req, res, supabase)
+
+      case 'point-history':
+        return await handlePointHistory(req, res, supabase, companyId, employee_id as string, parsedLimit)
       
       case 'employee-progress':
         if (!employee_id) {
@@ -40,7 +46,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         return await handleStats(req, res, supabase, companyId)
       
       default:
-        return res.status(400).json({ error: 'Invalid action. Use: leaderboard, achievements, employee-progress, or stats' })
+        return res.status(400).json({ error: 'Invalid action. Use: leaderboard, achievements, achievement-types, point-history, employee-progress, or stats' })
     }
   } catch (error: any) {
     console.error('Gamification API error:', error)
@@ -229,6 +235,66 @@ async function handleAchievements(req: NextApiRequest, res: NextApiResponse, sup
   } catch (error) {
     console.error('Achievements error:', error)
     res.status(500).json({ error: 'Internal server error' })
+  }
+}
+
+async function handleAchievementTypes(req: NextApiRequest, res: NextApiResponse, supabase: any) {
+  try {
+    const { data: types, error } = await supabase
+      .from('achievement_types')
+      .select('id, name, description, icon, points_reward, badge_color, requirements')
+      .order('id', { ascending: true })
+
+    if (error) {
+      console.error('Achievement types fetch error:', error)
+      return res.status(500).json({ error: 'Failed to fetch achievement types' })
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: types || [],
+      total: types?.length || 0
+    })
+  } catch (error) {
+    console.error('Achievement types error:', error)
+    return res.status(500).json({ error: 'Internal server error' })
+  }
+}
+
+async function handlePointHistory(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  supabase: any,
+  companyId: string,
+  employeeId?: string,
+  limit: number = 20
+) {
+  try {
+    let query = supabase
+      .from('point_history')
+      .select('*')
+      .eq('company_id', companyId)
+      .order('created_at', { ascending: false })
+      .limit(limit)
+
+    if (employeeId) {
+      query = query.eq('employee_id', employeeId)
+    }
+
+    const { data, error } = await query
+    if (error) {
+      console.error('Point history fetch error:', error)
+      return res.status(500).json({ error: 'Failed to fetch point history' })
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: data || [],
+      total: data?.length || 0
+    })
+  } catch (error) {
+    console.error('Point history error:', error)
+    return res.status(500).json({ error: 'Internal server error' })
   }
 }
 

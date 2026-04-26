@@ -211,7 +211,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // ✅ Solo redirigir si estamos en el cliente y tenemos window
         if (isClient && typeof window !== 'undefined') {
           if (event === 'SIGNED_IN' && window.location.pathname === '/app/login') {
-            window.location.href = '/dashboard' // ✅ Compatible con Edge Runtime
+            // Decide redirect using the user object stored on login response.
+            // Security is enforced server-side; this is UX only.
+            let redirectTo = '/app/dashboard'
+            try {
+              const raw = localStorage.getItem('user')
+              if (raw) {
+                const u = JSON.parse(raw)
+                const role = String(u?.role || '').trim().toLowerCase()
+                const companyId = u?.company_id || null
+                if (role === 'super_admin') redirectTo = '/app/admin'
+                else if (!companyId) redirectTo = '/onboarding'
+              }
+            } catch {
+              // ignore parse errors; fallback redirect applies
+            }
+
+            window.location.href = redirectTo // ✅ Compatible con Edge Runtime
           } else if (event === 'SIGNED_OUT' && window.location.pathname !== '/app/login' && window.location.pathname !== '/') {
             window.location.href = '/app/login' // ✅ Compatible con Edge Runtime
           }
@@ -226,12 +242,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true)
       setError(null)
-      console.log('🔐 Attempting login with:', email)
+      const normalizedEmail = (email ?? '').trim().toLowerCase()
+      const normalizedPassword = (password ?? '').replace(/[\u0009\u000A\u000D\u00A0\u200B\u200C\u200D\uFEFF]/g, '')
+      console.log('🔐 Attempting login with:', normalizedEmail)
 
       const response = await fetch('/api/auth/login-supabase', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email: normalizedEmail, password: normalizedPassword })
       })
 
       if (!response.ok) {

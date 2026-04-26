@@ -49,15 +49,10 @@ import { HikvisionSDK } from '../../../../lib/hikvision/sdk';
 
 #### ⚠️ Documentación
 - **Archivos con referencias:**
-  - `docs/RAILWAY_SERVICE_INTEGRATION_OPTIONS.md` (línea 49)
-  - `docs/DEPLOYMENT_QUICK_START.md` (línea 32)
-  - `docs/HIKVISION_PROXY_RAILWAY_STATUS.md` (líneas 111, 115)
-  - `docs/HIKVISION_PROXY_SETUP.md` (múltiples referencias)
-  - `docs/DEPLOY_PROXY_RENDER.md` (línea 46)
-  - `docs/RAILWAY_INTEGRATION_ANALYSIS.md` (línea 53)
+  - `docs/RAILWAY_SERVICE_INTEGRATION_OPTIONS.md` (actualizado)
+  - `docs/RAILWAY_INTEGRATION_ANALYSIS.md` (actualizado)
   - `DEPLOYMENT.md` (línea 44)
-  - `scripts/deploy-hikvision-proxy.sh` (línea 153)
-- **Acción requerida:** Actualizar o eliminar estas referencias
+- **Acción tomada:** Se eliminaron documentos y scripts desfasados que asumían `HIKVISION_PROXY_URL` y proxy separado. Ver índice: `docs/README.md`.
 
 ### 1.3 Actualizar documentación
 

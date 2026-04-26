@@ -1,7 +1,0 @@
-# Ignore directories that are not part of the main build
-SAAS 2.0/
-node_modules/
-.next/
-out/
-dist/
-*.min.js

@@ -2,49 +2,13 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { generateEmployeeReceiptPDF } from '../../../lib/payroll/receipt'
 import { getHondurasTimestamp } from '../../../lib/timezone'
-
-// CONSTANTES CORRECTAS HONDURAS 2025
-const HONDURAS_2025_CONSTANTS = {
-  SALARIO_MINIMO: 11903.13,
-  IHSS_TECHO: 11903.13,        // Techo IHSS 2025 (EM + IVM)
-  IHSS_PORCENTAJE_EMPLEADO: 0.05,  // 5% total (2.5% EM + 2.5% IVM)
-  RAP_PORCENTAJE: 0.015,       // 1.5% empleado
-} as const
-
-// CÁLCULO ISR CORRECTO 2025 - TABLA MENSUAL
-function calcularISR(salarioMensual: number): number {
-  const ISR_BRACKETS_MENSUAL = [
-    { limit: 21457.76, rate: 0.00, base: 0 },                    // Exento hasta L 21,457.76
-    { limit: 30969.88, rate: 0.15, base: 0 },                    // 15%
-    { limit: 67604.36, rate: 0.20, base: 1428.32 },             // 20%
-    { limit: Infinity, rate: 0.25, base: 8734.32 }              // 25%
-  ]
-  
-  for (const bracket of ISR_BRACKETS_MENSUAL) {
-    if (salarioMensual <= bracket.limit) {
-      if (bracket.rate === 0) return 0
-      
-      if (bracket.base === 0) {
-        return (salarioMensual - 21457.76) * bracket.rate
-      } else {
-        const limiteInferior = bracket.limit === 67604.36 ? 30969.88 : 67604.36
-        return bracket.base + (salarioMensual - limiteInferior) * bracket.rate
-      }
-    }
-  }
-  return 0
-}
-
-// CÁLCULO IHSS CORRECTO 2025
-function calcularIHSS(salarioBase: number): number {
-  const ihssBase = Math.min(salarioBase, HONDURAS_2025_CONSTANTS.IHSS_TECHO)
-  return ihssBase * HONDURAS_2025_CONSTANTS.IHSS_PORCENTAJE_EMPLEADO
-}
-
-// CÁLCULO RAP CORRECTO 2025
-function calcularRAP(salarioBase: number): number {
-  return Math.max(0, salarioBase - HONDURAS_2025_CONSTANTS.SALARIO_MINIMO) * HONDURAS_2025_CONSTANTS.RAP_PORCENTAJE
-}
+import { 
+  getTaxBracketsForYear, 
+  calculateISR, 
+  calculateIHSS, 
+  calculateRAP 
+} from '../../../lib/tax/honduras-tax'
+import { getBiweeklyPeriodDates } from '../../../lib/payroll/period-dates'
 
 interface VoucherData {
   employee_id: string
@@ -161,14 +125,42 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (dept) departmentName = dept.name
     }
 
-    // Calcular fechas del período
+    // Calcular fechas del período (usar config si existe)
     const [year, month] = periodo.split('-').map(Number)
     const ultimoDia = new Date(year, month, 0).getDate()
-    const fechaInicio = quincena === 1 ? `${periodo}-01` : `${periodo}-16`
-    const fechaFin = quincena === 1 ? `${periodo}-15` : `${periodo}-${ultimoDia}`
+    let fechaInicio: string
+    let fechaFin: string
+    let daysInQuincena: number
+    const { data: payrollConfig } = await supabase
+      .from('company_payroll_configs')
+      .select('metadata, quincena_config')
+      .eq('company_id', companyId)
+      .eq('is_active', true)
+      .maybeSingle()
+    const qcCol = payrollConfig?.quincena_config as { first_start?: number; first_end?: number; second_start?: number; second_end?: number } | null
+    const metaCutDates = payrollConfig?.metadata?.payment_cut_dates || {}
+    const hasCustom = qcCol && (qcCol.first_start != null || qcCol.first_end != null || qcCol.second_start != null || qcCol.second_end != null)
+    const cutDates = hasCustom || metaCutDates.biweekly_type === 'custom'
+      ? {
+          biweekly_first_start: qcCol?.first_start ?? metaCutDates.biweekly_first_start ?? 1,
+          biweekly_first_end: qcCol?.first_end ?? metaCutDates.biweekly_first_end ?? 15,
+          biweekly_second_start: qcCol?.second_start ?? metaCutDates.biweekly_second_start ?? 16,
+          biweekly_second_end: qcCol?.second_end ?? metaCutDates.biweekly_second_end ?? 30
+        }
+      : null
+    if (cutDates && cutDates.biweekly_first_start != null && cutDates.biweekly_first_end != null && cutDates.biweekly_second_start != null && cutDates.biweekly_second_end != null) {
+      const result = getBiweeklyPeriodDates(year, month, quincena as 1 | 2, cutDates)
+      fechaInicio = result.fechaInicio
+      fechaFin = result.fechaFin
+      daysInQuincena = result.diasPeriodo
+    } else {
+      fechaInicio = quincena === 1 ? `${periodo}-01` : `${periodo}-16`
+      fechaFin = quincena === 1 ? `${periodo}-15` : `${periodo}-${ultimoDia}`
+      daysInQuincena = quincena === 1 ? 15 : (ultimoDia - 15)
+    }
     
-    // Calcular días trabajados por quincena
-    const daysInQuincena = quincena === 1 ? 15 : (ultimoDia - 15)
+    // Obtener constantes fiscales para el año del período
+    const taxConstants = await getTaxBracketsForYear(year, 'HND')
     
     // Calcular salario bruto QUINCENAL (salario mensual ÷ 2)
     const grossSalary = employee.base_salary / 2
@@ -177,11 +169,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let ihss = 0, rap = 0, isr = 0, totalDeductions = 0
     
     if (incluirDeducciones) {
-      // APLICAR DEDUCCIONES SOLO UNA VEZ AL MES (en Q2)
+      // APLICAR DEDUCCIONES SOLO UNA VEZ AL MES (en Q2) - Usando tabla fiscal del año correspondiente
       if (quincena === 2) {
-        ihss = calcularIHSS(employee.base_salary)  // Deducción mensual completa
-        rap = calcularRAP(employee.base_salary)    // Deducción mensual completa
-        isr = calcularISR(employee.base_salary)    // Deducción mensual completa
+        ihss = calculateIHSS(employee.base_salary, taxConstants)  // Deducción mensual completa
+        rap = calculateRAP(employee.base_salary, taxConstants)    // Deducción mensual completa
+        isr = calculateISR(employee.base_salary, taxConstants.isr_brackets)    // Deducción mensual completa
       }
       totalDeductions = ihss + rap + isr
     }
@@ -276,6 +268,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           status: 'approved',
           notes_on_ingress: voucherPreview.note || '',
           notes_on_deductions: `Voucher individual generado con ajustes: Bono +${adj_bonus}, Descuento -${adj_discount}`,
+          metadata: { tax_year: year }, // Guardar año de tabla fiscal usada
           generated_by: user.id,
           generated_at: getHondurasTimestamp(),
           approved_at: getHondurasTimestamp(),

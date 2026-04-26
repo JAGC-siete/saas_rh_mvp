@@ -16,7 +16,8 @@ WORKDIR /app
 # Copy only package files first for better caching
 COPY package.json package-lock.json* ./
 # Install all dependencies (including devDependencies needed for build)
-RUN npm ci && npm cache clean --force
+# Use --prefer-offline to speed up installs
+RUN npm ci --prefer-offline --no-audit && npm cache clean --force
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -33,7 +34,8 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # Build the application with standalone output
-# Use --no-lint to speed up build during deployment
+# Skip linting and type checking to speed up build
+ENV SKIP_ENV_VALIDATION=1
 RUN npm run build
 
 # Production image, copy all the files and run next

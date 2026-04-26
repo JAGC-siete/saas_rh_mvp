@@ -1,23 +1,27 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
-import { getHondurasTimestamp, nowInHonduras } from '../../../lib/timezone'
+import { normalizeCountryCode } from '../../../lib/country/supported'
+import { statutoryDeductionLabels } from '../../../lib/country/payroll-labels'
+import { isPayrollCountryEngineEnabled } from '../../../lib/features/payroll-country-flags'
+import { computePayrollEmployeeStatutoryDeductions } from '../../../lib/payroll/statutory-deductions-compute'
+import {
+  assertNonHndStatutoryConfigParses,
+  payrollStatutoryErrorResponse,
+  payrollStatutoryYearUnavailable
+} from '../../../lib/payroll/statutory-api-guard'
+import { getHondurasTimestamp, isPayrollCalendarPeriodInFuture } from '../../../lib/timezone'
 import { requirePlanAndQuota, incrementUsage, getBillingErrorCode } from '../../../lib/billing/enforce'
 import { auditPayrollGenerated } from '../../../lib/audit'
-
-// CONSTANTES CORRECTAS HONDURAS 2025 (VERIFICACIÓN CRUZADA)
-const HONDURAS_2025_CONSTANTS = {
-  SALARIO_MINIMO: 11903.13,
-  IHSS_TECHO: 11903.13,        // Techo IHSS 2025 (EM + IVM)
-  IHSS_PORCENTAJE_EMPLEADO: 0.05,  // 5% total (2.5% EM + 2.5% IVM)
-  
-  // ISR 2025 - TABLA MENSUAL CORRECTA (derivada de anual SAR)
-  ISR_BRACKETS_MENSUAL: [
-    { limit: 21457.76, rate: 0.00, base: 0 },                    // Exento hasta L 21,457.76
-    { limit: 30969.88, rate: 0.15, base: 0 },                    // 15%
-    { limit: 67604.36, rate: 0.20, base: 1428.32 },             // 20%
-    { limit: Infinity, rate: 0.25, base: 8734.32 }              // 25%
-  ]
-}
+import { getTaxEngine } from '../../../lib/tax/registry'
+import { getIsrForPeriod } from '../../../lib/payroll/isr-ytd'
+import {
+  resolvePayrollPeriodContext,
+  type PreviewPaymentFrequency,
+  type PaymentCutDatesInput
+} from '../../../lib/payroll/fixed-line-recalc'
+import { calculatePeriodBaseSalary, normalizeFrequency } from '../../../lib/payroll/calculate-period-base-salary'
+import { calculateSeptimoDia } from '../../../lib/payroll/septimo-dia'
+import { HONDURAS_LABOR_FACTOR } from '../../../lib/payroll/constants'
 
 interface PlanillaItem {
   id: string
@@ -37,40 +41,9 @@ interface PlanillaItem {
   total: number
   notes_on_ingress: string
   notes_on_deductions: string
-}
-
-// CÁLCULO ISR CORRECTO 2025 - TABLA MENSUAL
-function calcularISR(salarioMensual: number): number {
-  // Aplicar tabla mensual directamente
-  for (const bracket of HONDURAS_2025_CONSTANTS.ISR_BRACKETS_MENSUAL) {
-    if (salarioMensual <= bracket.limit) {
-      if (bracket.rate === 0) return 0
-      
-      // Calcular correctamente el excedente del tramo
-      if (bracket.base === 0) {
-        // Primer tramo: aplicar tasa desde el inicio
-        return (salarioMensual - 21457.76) * bracket.rate
-      } else {
-        // Tramo con base: aplicar base + tasa sobre excedente
-        const limiteInferior = bracket.limit === 67604.36 ? 30969.88 : 67604.36
-        return bracket.base + (salarioMensual - limiteInferior) * bracket.rate
-      }
-    }
-  }
-  return 0
-}
-
-// CÁLCULO IHSS CORRECTO 2025
-function calcularIHSS(salarioBase: number): number {
-  // IHSS: 5% del empleado (2.5% EM + 2.5% IVM) con techo L 11,903.13
-  const ihssBase = Math.min(salarioBase, HONDURAS_2025_CONSTANTS.IHSS_TECHO)
-  return ihssBase * HONDURAS_2025_CONSTANTS.IHSS_PORCENTAJE_EMPLEADO
-}
-
-// CÁLCULO RAP CORRECTO 2025
-function calcularRAP(salarioBase: number): number {
-  // RAP: 1.5% sobre el excedente del salario mínimo L 11,903.13
-  return Math.max(0, salarioBase - HONDURAS_2025_CONSTANTS.SALARIO_MINIMO) * 0.015
+  total_hours_worked?: number
+  pay_type?: 'fixed' | 'hourly'
+  septimo_dia?: number
 }
 
 // Función para calcular tardanzas basada en horario de Paragon
@@ -102,7 +75,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // AUTENTICACIÓN ESTANDARIZADA - Usar requireCompanyAccess
-    const { supabase, companyId, role, user, userProfile } = await requireCompanyAccess(req, res)
+    const { supabase, companyId, role, user, userProfile, companyCountryCode, companyTimezone } =
+      await requireCompanyAccess(req, res)
     
     // Verificar roles específicos para generar nómina
     if (!['super_admin', 'company_admin', 'hr_manager'].includes(role)) {
@@ -117,6 +91,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ 
         error: 'Perfil de usuario incompleto',
         message: 'No se pudo obtener la información de la empresa'
+      })
+    }
+
+    const countryCode = normalizeCountryCode(companyCountryCode)
+    if (!isPayrollCountryEngineEnabled(countryCode)) {
+      return res.status(403).json({
+        error: 'Nómina no habilitada para este país',
+        message:
+          'El motor de nómina para la jurisdicción de la empresa no está activado. Contacte al administrador.',
+        code: 'PAYROLL_COUNTRY_DISABLED'
       })
     }
 
@@ -136,7 +120,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    const { periodo, quincena, tipoCalculo } = req.body || {}
+    const { periodo, quincena, tipoCalculo, tipo } = req.body || {}
     
     // Validaciones
     if (!periodo || !quincena) {
@@ -147,44 +131,82 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Periodo inválido (formato: YYYY-MM)' })
     }
     
-    if (![1, 2].includes(quincena)) {
-      return res.status(400).json({ error: 'Quincena inválida (debe ser 1 o 2)' })
+    const quincenaNum = Number(quincena)
+    if (!Number.isInteger(quincenaNum) || quincenaNum < 1) {
+      return res.status(400).json({
+        error: 'Quincena/semana inválida (entero ≥ 1; con nómina semanal use 1–4)'
+      })
     }
 
     // Validar que no sea un período futuro
     const [year, month] = periodo.split('-').map((n: any) => Number(n))
-    const currentDate = nowInHonduras()
-    const periodDate = new Date(year, month - 1, 1)
-    
-    if (periodDate > currentDate) {
+    const tz = companyTimezone || 'America/Tegucigalpa'
+    if (isPayrollCalendarPeriodInFuture(year, month, tz)) {
       return res.status(400).json({ 
         error: 'Período inválido',
         message: 'No se puede generar nómina para períodos futuros'
       })
     }
 
-    // Obtener configuración de payroll de la empresa (leer desde metadata)
-    const { data: payrollConfig, error: configError } = await supabase
+    const dedLabels = statutoryDeductionLabels(countryCode)
+    const yearCtx = await getTaxEngine(countryCode).loadYearContext(year)
+    const blocked = payrollStatutoryYearUnavailable(yearCtx, countryCode, year)
+    if (!blocked.ok) return res.status(blocked.status).json(blocked.body)
+    await assertNonHndStatutoryConfigParses(countryCode, year, supabase)
+    const hndTaxConstants = yearCtx.hndTaxConstants ?? undefined
+
+    // Configuración 3 capas: company_payroll_configs (Capa 2) > labor_laws (Capa 1)
+    const { data: payrollConfig } = await supabase
       .from('company_payroll_configs')
-      .select('metadata')
+      .select('metadata, payment_frequency, quincena_config')
       .eq('company_id', companyId)
       .eq('is_active', true)
       .single()
     
-    // Extraer parámetros desde metadata
     const payrollMetadata = payrollConfig?.metadata || {}
+    const quincenaConfig = payrollConfig?.quincena_config || {}
+    const metaCutDates = payrollMetadata?.payment_cut_dates || {}
     
-    // Usar valores por defecto si no hay configuración
-    const paymentFrequency = payrollMetadata.payment_frequency || 'biweekly'
-    const paymentCutDates = payrollMetadata.payment_cut_dates || {
-      biweekly_type: 'standard',
-      biweekly_first_start: 1,
-      biweekly_first_end: 15,
-      biweekly_second_start: 16,
-      biweekly_second_end: 30,
-      monthly_type: 'standard',
-      monthly_start: 1,
-      monthly_end: 30
+    // payment_frequency: nueva columna (Capa 2) o metadata legacy o default mensual
+    const pfRaw = payrollConfig?.payment_frequency || payrollMetadata.payment_frequency || 'mensual'
+    const mapPreviewFreq = (v: string): PreviewPaymentFrequency => {
+      const x = (v || '').toLowerCase()
+      if (x === 'mensual' || x === 'monthly') return 'monthly'
+      if (x === 'semanal' || x === 'weekly') return 'weekly'
+      if (x === 'quincenal' || x === 'biweekly') return 'biweekly'
+      return 'biweekly'
+    }
+    const previewPaymentFrequency = mapPreviewFreq(pfRaw as string)
+    const paymentFrequency =
+      pfRaw === 'quincenal' || (pfRaw as string).toLowerCase() === 'biweekly'
+        ? 'biweekly'
+        : pfRaw === 'semanal' || (pfRaw as string).toLowerCase() === 'weekly'
+          ? 'weekly'
+          : 'monthly'
+    const frequencyForCalc = normalizeFrequency(pfRaw)
+    const hasCustomQuincena = !!(quincenaConfig.first_start != null || quincenaConfig.first_end != null || 
+      quincenaConfig.second_start != null || quincenaConfig.second_end != null)
+    const biweeklyType: 'custom' | 'standard' =
+      metaCutDates.biweekly_type === 'custom' || hasCustomQuincena ? 'custom' : 'standard'
+    const paymentCutDates: PaymentCutDatesInput = {
+      biweekly_type: biweeklyType,
+      biweekly_first_start: quincenaConfig.first_start ?? metaCutDates.biweekly_first_start ?? 1,
+      biweekly_first_end: quincenaConfig.first_end ?? metaCutDates.biweekly_first_end ?? 15,
+      biweekly_second_start: quincenaConfig.second_start ?? metaCutDates.biweekly_second_start ?? 16,
+      biweekly_second_end: quincenaConfig.second_end ?? metaCutDates.biweekly_second_end ?? 30,
+      monthly_type: metaCutDates.monthly_type === 'custom' ? 'custom' : 'standard',
+      monthly_start: metaCutDates.monthly_start ?? 1,
+      monthly_end: metaCutDates.monthly_end ?? 30
+    }
+
+    if (previewPaymentFrequency === 'weekly') {
+      if (![1, 2, 3, 4].includes(quincenaNum)) {
+        return res.status(400).json({
+          error: 'Semana inválida (debe ser 1, 2, 3 o 4 para nómina semanal)'
+        })
+      }
+    } else if (![1, 2].includes(quincenaNum)) {
+      return res.status(400).json({ error: 'Quincena inválida (debe ser 1 o 2)' })
     }
     const legalDeductions = payrollMetadata.legal_deductions || {
       ihss: true,
@@ -193,72 +215,54 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       infop: false
     }
     const currency = payrollMetadata.currency || 'HNL'
+    // Semanal: 'proportional' = por días reales (days_worked/diasPeriodo); 'fixed' = monto fijo (mensual/4)
+    const semanalProration = payrollMetadata.semanal_proration || 'proportional'
+
+    const { data: companyRow } = await supabase
+      .from('companies')
+      .select('settings')
+      .eq('id', companyId)
+      .single()
+    const useIsrProjection = (companyRow?.settings as Record<string, unknown>)?.use_isr_projection === true
     
-    // Calcular fechas del período según configuración
-    const ultimoDia = new Date(year, month, 0).getDate()
-    let fechaInicio: string
-    let fechaFin: string
-    let diasPeriodo: number
-    
-    if (paymentFrequency === 'monthly') {
-      // Nómina mensual
-      const monthlyType = paymentCutDates?.monthly_type || 'standard'
-      if (monthlyType === 'custom' && paymentCutDates?.monthly_start && paymentCutDates?.monthly_end) {
-        fechaInicio = `${periodo}-${paymentCutDates.monthly_start.toString().padStart(2, '0')}`
-        fechaFin = `${periodo}-${Math.min(paymentCutDates.monthly_end, ultimoDia).toString().padStart(2, '0')}`
-        diasPeriodo = paymentCutDates.monthly_end - paymentCutDates.monthly_start + 1
-      } else {
-        // Standard: del 1 al último día del mes
-        fechaInicio = `${periodo}-01`
-        fechaFin = `${periodo}-${ultimoDia}`
-        diasPeriodo = ultimoDia
-      }
-    } else {
-      // Nómina quincenal (biweekly)
-      const biweeklyType = paymentCutDates?.biweekly_type || 'standard'
-      if (biweeklyType === 'custom' && paymentCutDates?.biweekly_first_start && paymentCutDates?.biweekly_first_end && 
-          paymentCutDates?.biweekly_second_start && paymentCutDates?.biweekly_second_end) {
-        if (quincena === 1) {
-          fechaInicio = `${periodo}-${paymentCutDates.biweekly_first_start.toString().padStart(2, '0')}`
-          fechaFin = `${periodo}-${Math.min(paymentCutDates.biweekly_first_end, ultimoDia).toString().padStart(2, '0')}`
-          diasPeriodo = paymentCutDates.biweekly_first_end - paymentCutDates.biweekly_first_start + 1
-        } else {
-          fechaInicio = `${periodo}-${paymentCutDates.biweekly_second_start.toString().padStart(2, '0')}`
-          fechaFin = `${periodo}-${Math.min(paymentCutDates.biweekly_second_end, ultimoDia).toString().padStart(2, '0')}`
-          diasPeriodo = paymentCutDates.biweekly_second_end - paymentCutDates.biweekly_second_start + 1
-        }
-      } else {
-        // Standard: 1-15 y 16-último día
-        if (quincena === 1) {
-          fechaInicio = `${periodo}-01`
-          fechaFin = `${periodo}-15`
-          diasPeriodo = 15
-        } else {
-          fechaInicio = `${periodo}-16`
-          fechaFin = `${periodo}-${ultimoDia}`
-          diasPeriodo = ultimoDia - 15
-        }
-      }
-    }
-    
-    // IMPORTANTE: Las deducciones se aplican SOLO UNA VEZ al mes (en Q2) o siempre en mensual
-    // Q1 (biweekly): solo salario bruto proporcional por días trabajados
-    // Q2 (biweekly) o mensual: salario bruto proporcional + deducciones mensuales completas
-    const aplicarDeducciones = paymentFrequency === 'monthly' || quincena === 2
+    // Fechas y días del período: misma lógica que preview / fixed-line-recalc (incl. semanal S1–S4)
+    const periodCtx = resolvePayrollPeriodContext(
+      year,
+      month,
+      quincenaNum,
+      previewPaymentFrequency,
+      paymentCutDates
+    )
+    const { fechaInicio, fechaFin, diasPeriodo } = periodCtx
+
+    // IMPORTANTE: Deducciones de ley
+    // - Mensual: siempre (salvo tipo SIN)
+    // - Quincenal: solo segunda quincena (Q2), como antes
+    // - Semanal: solo semana 4 (cierre del mes; análogo a Q2; semanas 1–3 solo bruto)
+    // tipo: CON=completas, 2PAGOS=mitad, SIN=ninguna
+    const aplicarDeducciones =
+      (paymentFrequency === 'monthly' ||
+        (paymentFrequency === 'biweekly' && quincenaNum === 2) ||
+        (paymentFrequency === 'weekly' && quincenaNum === 4)) &&
+      tipo !== 'SIN'
+    const tipoDeduccion = (tipo === '2PAGOS' ? '2PAGOS' : tipo === 'SIN' ? 'SIN' : 'CON') as 'CON' | 'SIN' | '2PAGOS'
 
     console.log('Generando nómina:', {
       periodo,
-      quincena,
+      quincena: quincenaNum,
+      previewPaymentFrequency,
       fechaInicio,
       fechaFin,
+      diasPeriodo,
       aplicarDeducciones,
-      tipoCalculo
+      tipoCalculo,
+      tipoDeduccion
     })
 
-    // Obtener empleados activos
+    // Obtener empleados activos (incluir pay_type para cálculo hourly)
     let employeesQuery = supabase
       .from('employees')
-      .select('id, name, dni, base_salary, bank_name, bank_account, status, department_id')
+      .select('id, name, dni, base_salary, bank_name, bank_account, status, department_id, pay_type')
       .eq('status', 'active')
       .order('name')
 
@@ -283,13 +287,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Obtener registros de asistencia del período
     const { data: attendanceRecords, error: attError } = await supabase
       .from('attendance_records')
-      .select('employee_id, date, check_in, check_out, status')
+      .select('id, employee_id, date, check_in, check_out, status')
       .gte('date', fechaInicio)
       .lte('date', fechaFin)
 
     if (attError) {
       console.error('Error obteniendo registros de asistencia:', attError)
       return res.status(500).json({ error: 'Error obteniendo registros de asistencia' })
+    }
+
+    // Obtener cálculos de horas (total_hours, normal_hours, overtime por tipo)
+    const recordIds = (attendanceRecords || []).map((r: any) => r.id).filter(Boolean)
+    let hoursCalculations: Record<string, { total_hours: number; normal_hours: number; overtime_diurno: number; overtime_nocturno: number; overtime_feriado: number }> = {}
+    if (recordIds.length > 0) {
+      const { data: ahcResults } = await supabase
+        .from('attendance_hours_calculation')
+        .select('attendance_record_id, total_hours, normal_hours, overtime_diurno_hours, overtime_nocturno_hours, overtime_feriado_hours')
+        .in('attendance_record_id', recordIds)
+      if (ahcResults) {
+        const recordToEmp = Object.fromEntries((attendanceRecords || []).map((r: any) => [r.id, r.employee_id]))
+        for (const ahc of ahcResults) {
+          const empId = recordToEmp[ahc.attendance_record_id]
+          if (empId) {
+            if (!hoursCalculations[empId]) hoursCalculations[empId] = { total_hours: 0, normal_hours: 0, overtime_diurno: 0, overtime_nocturno: 0, overtime_feriado: 0 }
+            hoursCalculations[empId].total_hours += Number(ahc.total_hours || 0)
+            const total = Number(ahc.total_hours || 0)
+            const ot = Number(ahc.overtime_diurno_hours || 0) + Number(ahc.overtime_nocturno_hours || 0) + Number(ahc.overtime_feriado_hours || 0)
+            hoursCalculations[empId].normal_hours += Number(ahc.normal_hours ?? Math.max(0, total - ot))
+            hoursCalculations[empId].overtime_diurno += Number(ahc.overtime_diurno_hours || 0)
+            hoursCalculations[empId].overtime_nocturno += Number(ahc.overtime_nocturno_hours || 0)
+            hoursCalculations[empId].overtime_feriado += Number(ahc.overtime_feriado_hours || 0)
+          }
+        }
+      }
     }
 
     // Filtrar empleados según criterio de asistencia
@@ -321,8 +351,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log(`Procesando nómina para ${empleadosParaNomina.length} empleados`)
 
-    // Calcular planilla con CÁLCULOS CORRECTOS 2025
-    const planilla: PlanillaItem[] = empleadosParaNomina.map((emp: any) => {
+    // Calcular planilla con CÁLCULOS 3 CAPAS
+    const planilla: PlanillaItem[] = await Promise.all(empleadosParaNomina.map(async (emp: any) => {
       const registros = attendanceRecords.filter((record: any) => 
         record.employee_id === emp.id && 
         record.check_in && 
@@ -333,17 +363,52 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const late_days = calcularTardanzas(registros)
       
       const base_salary = Number(emp.base_salary) || 0
-      
-      // CALCULAR SALARIO SEGÚN payment_frequency
+      const payType = emp.pay_type ?? 'fixed'
+      // base_salary siempre mensual. Tarifa horaria = base_salary / 240.
+      const hourlyRate = base_salary / HONDURAS_LABOR_FACTOR
+
+      // Horas extras desde attendance_hours_calculation (Capa 3) si existen
+      const overtime = hoursCalculations[emp.id] || { total_hours: 0, normal_hours: 0, overtime_diurno: 0, overtime_nocturno: 0, overtime_feriado: 0 }
+      const overtimePay =
+        overtime.overtime_diurno * hourlyRate * 1.25 +   // +25%
+        overtime.overtime_nocturno * hourlyRate * 1.50 + // +50%
+        overtime.overtime_feriado * hourlyRate * 1.75   // +75%
+
+      // CALCULAR SALARIO SEGÚN payment_frequency y pay_type (helper unificado)
+      // Hourly: salario_bruto = base_salary (tarifa/hora) * hours_worked
+      // Fixed: periodBase (mensual/2 o /4) * (days_worked/diasPeriodo)
       let total_earnings = 0
-      if (paymentFrequency === 'monthly') {
-        // Nómina mensual: usar salario completo proporcional a días trabajados
-        total_earnings = (base_salary / ultimoDia) * days_worked
+      let septimoDia = 0
+      if (payType === 'hourly') {
+        const hoursWorked = overtime.total_hours || 0
+        total_earnings = calculatePeriodBaseSalary(
+          { base_salary, pay_type: 'hourly' },
+          frequencyForCalc,
+          { hoursWorked }
+        )
+        // Séptimo Día (Art. 338-340): 1 día descanso por cada 6 trabajados. Solo horas ordinarias.
+        const otSum = (overtime.overtime_diurno || 0) + (overtime.overtime_nocturno || 0) + (overtime.overtime_feriado || 0)
+        const ordinaryHours = overtime.normal_hours ?? Math.max(0, (overtime.total_hours || 0) - otSum)
+        septimoDia = calculateSeptimoDia({
+          hourlyRate: base_salary / HONDURAS_LABOR_FACTOR,
+          ordinaryHours,
+          daysWorked: days_worked,
+          totalHours: overtime.total_hours || 0,
+          semanalProration: semanalProration
+        })
+        total_earnings += septimoDia
       } else {
-        // Nómina quincenal (biweekly): dividir salario mensual / 2 y ajustar por días trabajados
-        const salarioQuincenal = base_salary / 2
-        total_earnings = salarioQuincenal * (days_worked / diasPeriodo)
+        const periodBase = calculatePeriodBaseSalary(
+          { base_salary, pay_type: 'fixed' },
+          frequencyForCalc
+        )
+        // Semanal: validar si monto fijo (fixed) o días reales (proportional)
+        const useProportional = frequencyForCalc !== 'semanal' || semanalProration === 'proportional'
+        total_earnings = useProportional && diasPeriodo > 0
+          ? periodBase * (days_worked / diasPeriodo)
+          : periodBase
       }
+      total_earnings += overtimePay
       
       let IHSS = 0, RAP = 0, ISR = 0, total_deductions = 0, total = 0
       let notes_on_ingress = ''
@@ -351,33 +416,76 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // APLICAR DEDUCCIONES según configuración y legal_deductions
       if (aplicarDeducciones) {
-        // CÁLCULOS CORRECTOS 2025 - DEDUCCIONES MENSUALES COMPLETAS
-        // Aplicar solo si están habilitadas en legal_deductions
-        if (legalDeductions.ihss) {
-          IHSS = calcularIHSS(base_salary)  // Deducción mensual completa
-        }
-        
-        if (legalDeductions.rap) {
-          RAP = calcularRAP(base_salary)    // Deducción mensual completa
-        }
-        
-        if (legalDeductions.isr) {
-          ISR = calcularISR(base_salary)    // Deducción mensual completa
-        }
-        
+        // base_salary siempre mensual; usarlo directo como base para deducciones.
+        const baseParaDeducciones = base_salary
+        const factor2Pagos = tipoDeduccion === '2PAGOS' ? 0.5 : 1
+
+        const periodIncomeForIsr = payType === 'hourly' ? total_earnings : baseParaDeducciones
+
+        const statutory = await computePayrollEmployeeStatutoryDeductions({
+          countryCode,
+          year,
+          baseMonthlySalary: baseParaDeducciones,
+          factor2Pagos,
+          legalDeductions,
+          simpleIsrMonthlyBase: periodIncomeForIsr,
+          useIsrProjection: countryCode === 'HND' && useIsrProjection,
+          hndTaxConstants,
+          runIsrProjection:
+            countryCode === 'HND' && useIsrProjection && legalDeductions.isr && hndTaxConstants
+              ? () =>
+                  getIsrForPeriod({
+                    supabase,
+                    employeeId: emp.id,
+                    companyId,
+                    year,
+                    month,
+                    quincena: quincenaNum,
+                    periodIncome: periodIncomeForIsr,
+                    taxConstants: hndTaxConstants,
+                    factor2Pagos,
+                    useProjection: true,
+                    ...(paymentFrequency === 'weekly'
+                      ? { fractionOfMonthElapsed: quincenaNum / 4 }
+                      : {})
+                  })
+              : undefined,
+          supabase
+        })
+
+        IHSS = statutory.ihss
+        RAP = statutory.rap
+        ISR = statutory.isr
         total_deductions = IHSS + RAP + ISR
         total = total_earnings - total_deductions
-        
+
         const deduccionesAplicadas = []
-        if (legalDeductions.ihss) deduccionesAplicadas.push(`IHSS L.${IHSS.toFixed(2)}`)
-        if (legalDeductions.rap) deduccionesAplicadas.push(`RAP L.${RAP.toFixed(2)}`)
-        if (legalDeductions.isr) deduccionesAplicadas.push(`ISR L.${ISR.toFixed(2)}`)
+        if (legalDeductions.ihss) {
+          deduccionesAplicadas.push(`${dedLabels.primarySocial} ${currency} ${IHSS.toFixed(2)}`)
+        }
+        if (legalDeductions.rap && countryCode !== 'GTM') {
+          deduccionesAplicadas.push(`${dedLabels.secondarySocial} ${currency} ${RAP.toFixed(2)}`)
+        }
+        if (legalDeductions.isr) {
+          deduccionesAplicadas.push(`${dedLabels.incomeTax} ${currency} ${ISR.toFixed(2)}`)
+        }
         
-        notes_on_deductions = `Deducciones mensuales completas: ${deduccionesAplicadas.join(', ')}`
+        notes_on_deductions = tipoDeduccion === '2PAGOS'
+          ? `Deducciones en dos pagos (mitad): ${deduccionesAplicadas.join(', ')}`
+          : `Deducciones mensuales completas: ${deduccionesAplicadas.join(', ')}`
       } else {
-        // Q1 (biweekly): solo salario proporcional, sin deducciones
         total = total_earnings
-        notes_on_deductions = 'Primera quincena: solo salario proporcional (deducciones se aplican en Q2)'
+        if (tipo === 'SIN') {
+          notes_on_deductions = 'Tipo SIN: sin deducciones de ley.'
+        } else if (paymentFrequency === 'weekly') {
+          notes_on_deductions =
+            'Nómina semanal (semanas 1–3): solo salario proporcional; deducciones de ley en la semana 4.'
+        } else if (paymentFrequency === 'biweekly') {
+          notes_on_deductions =
+            'Primera quincena: solo salario proporcional (deducciones en la segunda quincena).'
+        } else {
+          notes_on_deductions = 'Sin deducciones de ley en este período.'
+        }
       }
 
       // Notas automáticas
@@ -406,16 +514,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         total_deductions: Math.round(total_deductions * 100) / 100,
         total: Math.round(total * 100) / 100,
         notes_on_ingress,
-        notes_on_deductions
+        notes_on_deductions,
+        total_hours_worked: payType === 'hourly' ? overtime.total_hours : undefined,
+        pay_type: payType,
+        septimo_dia: septimoDia > 0 ? septimoDia : undefined
       }
-    })
+    }))
 
     // Guardar en payroll_records
     const payrollRecords = planilla.map((item: PlanillaItem) => ({
       employee_id: empleadosParaNomina.find((e: any) => e.dni === item.id)?.id,
       period_start: fechaInicio,
       period_end: fechaFin,
-      period_type: 'biweekly',
+      period_type: frequencyForCalc === 'mensual' ? 'monthly' : frequencyForCalc === 'semanal' ? 'weekly' : 'biweekly',
       base_salary: item.monthly_salary,
       gross_salary: item.total_earnings,
       income_tax: item.ISR,
@@ -429,6 +540,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       status: 'draft',
       notes_on_ingress: item.notes_on_ingress,
       notes_on_deductions: item.notes_on_deductions,
+      seventh_day_pay: item.septimo_dia ?? 0,
+      metadata: {
+        tax_year: year,
+        country_code: countryCode,
+        ...(item.pay_type === 'hourly' && item.total_hours_worked != null && { total_hours_worked: item.total_hours_worked }),
+        ...(item.septimo_dia != null && item.septimo_dia > 0 && { septimo_dia: item.septimo_dia })
+      },
       generated_by: user.id || 'system',
       generated_at: getHondurasTimestamp()
     }))
@@ -474,6 +592,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       planilla
     })
   } catch (error) {
+    const stat = payrollStatutoryErrorResponse(error)
+    if (stat) return res.status(stat.status).json(stat.body)
     console.error('Error en cálculo de nómina:', error)
     return res.status(500).json({ 
       error: 'Error interno del servidor', 

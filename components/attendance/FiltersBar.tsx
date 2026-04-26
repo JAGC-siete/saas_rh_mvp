@@ -9,6 +9,11 @@ interface Employee {
   department?: string
 }
 
+interface Department {
+  id: string
+  name: string
+}
+
 interface FiltersBarProps {
   preset: string
   onPresetChange: (p: string) => void
@@ -16,20 +21,35 @@ interface FiltersBarProps {
   onEmployeeChange?: (employeeId: string) => void
   selectedRole?: string
   onRoleChange?: (role: string) => void
+  selectedDepartmentId?: string
+  onDepartmentChange?: (departmentId: string) => void
   loading?: boolean
-  // Date range support
   from?: string
   to?: string
   onRangeChange?: (from: string, to: string) => void
 }
 
 const presets = [
-  { label: 'Hoy', value: 'today', icon: '📅' },
-  { label: 'Esta Semana', value: 'week', icon: '📆' },
-  { label: 'Esta Quincena', value: 'fortnight', icon: '📋' },
-  { label: 'Este Mes', value: 'month', icon: '🗓️' },
-  { label: 'Este Año', value: 'year', icon: '📊' }
+  { label: 'Hoy', value: 'today' },
+  { label: 'Esta semana', value: 'week' },
+  { label: 'Esta quincena', value: 'fortnight' },
+  { label: 'Este mes', value: 'month' },
+  { label: 'Este año', value: 'year' },
 ]
+
+const MAX_RANGE_DAYS = 366
+
+function getRangeError(from?: string, to?: string): string | null {
+  if (!from || !to) return null
+  const fromDate = from.slice(0, 10)
+  const toDate = to.slice(0, 10)
+  if (fromDate > toDate) return "La fecha 'Desde' debe ser anterior a 'Hasta'"
+  const fromMs = new Date(fromDate).getTime()
+  const toMs = new Date(toDate).getTime()
+  const diffDays = Math.ceil((toMs - fromMs) / (24 * 60 * 60 * 1000))
+  if (diffDays > MAX_RANGE_DAYS) return 'El rango máximo es 1 año'
+  return null
+}
 
 export default function FiltersBar({
   preset,
@@ -38,18 +58,19 @@ export default function FiltersBar({
   onEmployeeChange,
   selectedRole = '',
   onRoleChange,
+  selectedDepartmentId = '',
+  onDepartmentChange,
   loading = false,
   from,
   to,
   onRangeChange
 }: FiltersBarProps) {
-  // Estado para empleados
   const [employees, setEmployees] = useState<Employee[]>([])
   const [loadingEmployees, setLoadingEmployees] = useState(false)
-  
-  // Estado para roles/equipos
   const [roles, setRoles] = useState<string[]>([])
   const [loadingRoles, setLoadingRoles] = useState(false)
+  const [departments, setDepartments] = useState<Department[]>([])
+  const [loadingDepartments, setLoadingDepartments] = useState(false)
 
   // Cargar lista de empleados activos
   useEffect(() => {
@@ -95,6 +116,25 @@ export default function FiltersBar({
     loadRoles()
   }, [])
 
+  useEffect(() => {
+    const loadDepartments = async () => {
+      try {
+        setLoadingDepartments(true)
+        const response = await fetch('/api/departments')
+        if (response.ok) {
+          const data = await response.json()
+          setDepartments(data.departments || [])
+        }
+      } catch (error) {
+        console.error('Error loading departments:', error)
+        setDepartments([])
+      } finally {
+        setLoadingDepartments(false)
+      }
+    }
+    loadDepartments()
+  }, [])
+
   const handleEmployeeChange = (employeeId: string) => {
     onEmployeeChange && onEmployeeChange(employeeId)
   }
@@ -103,12 +143,18 @@ export default function FiltersBar({
     onRoleChange && onRoleChange(role)
   }
 
+  const handleDepartmentChange = (departmentId: string) => {
+    onDepartmentChange && onDepartmentChange(departmentId)
+  }
+
   const clearFilters = () => {
     if (onEmployeeChange) onEmployeeChange('')
     if (onRoleChange) onRoleChange('')
+    if (onDepartmentChange) onDepartmentChange('')
   }
 
-  const hasActiveFilters = selectedEmployeeId || selectedRole
+  const hasActiveFilters = selectedEmployeeId || selectedRole || selectedDepartmentId
+  const rangeError = preset === 'custom' ? getRangeError(from, to) : null
 
   return (
     <div className="bg-white/5 rounded-xl p-4 border border-white/10 backdrop-blur-sm">
@@ -143,10 +189,12 @@ export default function FiltersBar({
             >
               {presets.map((p) => (
                 <option key={p.value} value={p.value} className="bg-gray-800">
-                  {p.icon} {p.label}
+                  {p.label}
                 </option>
               ))}
-              <option value="custom" className="bg-gray-800">🗓️ Rango personalizado</option>
+              <option value="custom" className="bg-gray-800">
+                Rango personalizado
+              </option>
             </select>
             <ChevronDownIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
           </div>
@@ -160,7 +208,7 @@ export default function FiltersBar({
               <input
                 type="date"
                 value={(from || '').slice(0, 10)}
-                onChange={(e) => onRangeChange && onRangeChange(e.target.value, to || e.target.value)}
+                onChange={(e) => onRangeChange && onRangeChange(e.target.value, to ?? '')}
                 className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
               />
             </div>
@@ -169,10 +217,15 @@ export default function FiltersBar({
               <input
                 type="date"
                 value={(to || '').slice(0, 10)}
-                onChange={(e) => onRangeChange && onRangeChange(from || e.target.value, e.target.value)}
+                onChange={(e) => onRangeChange && onRangeChange(from ?? '', e.target.value)}
                 className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm"
               />
             </div>
+            {rangeError && (
+              <div className="md:col-span-2 flex items-center">
+                <p className="text-xs text-amber-400">{rangeError}</p>
+              </div>
+            )}
           </>
         )}
 
@@ -187,7 +240,9 @@ export default function FiltersBar({
                 disabled={loadingEmployees || loading}
                 className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm font-medium cursor-pointer hover:bg-white/15 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 appearance-none pr-8 disabled:opacity-50"
               >
-                <option value="" className="bg-gray-800">👤 Todos los empleados</option>
+                <option value="" className="bg-gray-800">
+                  Todos los empleados
+                </option>
                 {employees.map((employee) => (
                   <option key={employee.id} value={employee.id} className="bg-gray-800">
                     {employee.name} {employee.employee_code ? `(${employee.employee_code})` : ''}
@@ -202,7 +257,7 @@ export default function FiltersBar({
           </div>
         )}
 
-        {/* Team/Role Filter */}
+        {/* Team/Role Filter - filtra por employees.role */}
         {onRoleChange && (
           <div>
             <label className="block text-xs font-medium text-gray-400 mb-2">Equipo</label>
@@ -213,7 +268,9 @@ export default function FiltersBar({
                 disabled={loadingRoles || loading}
                 className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm font-medium cursor-pointer hover:bg-white/15 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 appearance-none pr-8 disabled:opacity-50"
               >
-                <option value="" className="bg-gray-800">👥 Todos los equipos</option>
+                <option value="" className="bg-gray-800">
+                  Todos los equipos
+                </option>
                 {roles.map(role => (
                   <option key={role} value={role} className="bg-gray-800">{role}</option>
                 ))}
@@ -221,6 +278,32 @@ export default function FiltersBar({
               <ChevronDownIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
             </div>
             {loadingRoles && (
+              <div className="text-xs text-gray-500 mt-1">Cargando...</div>
+            )}
+          </div>
+        )}
+
+        {/* Department Filter */}
+        {onDepartmentChange && (
+          <div>
+            <label className="block text-xs font-medium text-gray-400 mb-2">Departamento</label>
+            <div className="relative">
+              <select
+                value={selectedDepartmentId}
+                onChange={(e) => handleDepartmentChange(e.target.value)}
+                disabled={loadingDepartments || loading}
+                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm font-medium cursor-pointer hover:bg-white/15 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 appearance-none pr-8 disabled:opacity-50"
+              >
+                <option value="" className="bg-gray-800">
+                  Todos los departamentos
+                </option>
+                {departments.map((dept) => (
+                  <option key={dept.id} value={dept.id} className="bg-gray-800">{dept.name}</option>
+                ))}
+              </select>
+              <ChevronDownIcon className="absolute right-2 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+            </div>
+            {loadingDepartments && (
               <div className="text-xs text-gray-500 mt-1">Cargando...</div>
             )}
           </div>
@@ -247,6 +330,17 @@ export default function FiltersBar({
                 Equipo: {selectedRole}
                 <button 
                   onClick={() => handleRoleChange('')}
+                  className="hover:text-brand-100"
+                >
+                  <XMarkIcon className="h-3 w-3" />
+                </button>
+              </span>
+            )}
+            {selectedDepartmentId && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-brand-500/20 text-brand-300 text-xs rounded-full">
+                Depto: {departments.find(d => d.id === selectedDepartmentId)?.name || selectedDepartmentId}
+                <button 
+                  onClick={() => handleDepartmentChange('')}
                   className="hover:text-brand-100"
                 >
                   <XMarkIcon className="h-3 w-3" />

@@ -22,6 +22,7 @@ async function attendanceTrendsHandler(req: NextApiRequest, res: NextApiResponse
     const preset = normalizeParam(req.query.preset) || 'today'
     const roleFilter = normalizeParam(req.query.role)
     const employee_id = normalizeParam(req.query.employee_id)
+    const department_id = normalizeParam(req.query.department_id)
     const from = normalizeParam(req.query.from)
     const to = normalizeParam(req.query.to)
     
@@ -33,8 +34,8 @@ async function attendanceTrendsHandler(req: NextApiRequest, res: NextApiResponse
       userEmail: user.email
     })
     
-    // Validar preset
-    const validPresets = ['today', 'week', 'fortnight', 'month', 'year']
+    // Validar preset (custom requiere from y to)
+    const validPresets = ['today', 'week', 'fortnight', 'month', 'year', 'custom']
     if (!validPresets.includes(preset)) {
       return res.status(400).json({
         error: 'Preset inválido',
@@ -42,11 +43,17 @@ async function attendanceTrendsHandler(req: NextApiRequest, res: NextApiResponse
         received: preset
       })
     }
+    if (preset === 'custom' && (!from || !to)) {
+      return res.status(400).json({
+        error: 'Rango requerido',
+        message: 'Para preset "custom" se requieren los parámetros from y to'
+      })
+    }
 
     // 📅 CALCULAR RANGO DE FECHAS O USAR PERSONALIZADO
     const range = (preset === 'custom' && from && to)
       ? { from, to }
-      : getDateRange(preset)
+      : getDateRange(preset, undefined, from, to)
     const startDate = range.from.split('T')[0]
     const endDate = range.to.split('T')[0]
     
@@ -66,7 +73,7 @@ async function attendanceTrendsHandler(req: NextApiRequest, res: NextApiResponse
       })
     }
     
-    const trends = await getAttendanceTrends(supabase, companyId, startDate, endDate, roleFilter || undefined, employee_id || undefined)
+    const trends = await getAttendanceTrends(supabase, companyId, startDate, endDate, roleFilter || undefined, employee_id || undefined, department_id || undefined)
 
     return res.status(200).json({
       success: true,
@@ -74,7 +81,7 @@ async function attendanceTrendsHandler(req: NextApiRequest, res: NextApiResponse
       meta: {
         preset,
         dateRange: { startDate, endDate },
-        filters: { role: roleFilter, employee_id }
+        filters: { role: roleFilter, employee_id, department_id }
       }
     })
 
@@ -87,30 +94,26 @@ async function attendanceTrendsHandler(req: NextApiRequest, res: NextApiResponse
   }
 }
 
-async function getAttendanceTrends(supabase: any, companyId: string, startDate: string, endDate: string, role?: string, employeeId?: string) {
+async function getAttendanceTrends(supabase: any, companyId: string, startDate: string, endDate: string, role?: string, employeeId?: string, departmentId?: string) {
   try {
     console.log('📊 Getting attendance trends:', {
       companyId,
       startDate,
       endDate,
       role,
-      employeeId
+      employeeId,
+      departmentId
     })
 
-    // Obtener empleados filtrados por company_id y role
     let employeesQuery = supabase
       .from('employees')
       .select('id, name, role')
       .eq('company_id', companyId)
       .eq('status', 'active')
 
-    if (role) {
-      employeesQuery = employeesQuery.eq('role', role)
-    }
-
-    if (employeeId) {
-      employeesQuery = employeesQuery.eq('id', employeeId)
-    }
+    if (role) employeesQuery = employeesQuery.eq('role', role)
+    if (employeeId) employeesQuery = employeesQuery.eq('id', employeeId)
+    if (departmentId) employeesQuery = employeesQuery.eq('department_id', departmentId)
 
     const { data: employees, error: employeesError } = await employeesQuery
 

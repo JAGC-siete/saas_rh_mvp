@@ -32,6 +32,18 @@ const carouselImages: CarouselImage[] = [
     alt: 'Vouchers de pago automáticos y personalizados',
     title: 'Vouchers Automáticos',
     description: 'PDFs personalizados con datos del empleado, enviados por email/WhatsApp'
+  },
+  {
+    src: '/5.png',
+    alt: 'Dispositivo biométrico Hikvision - Vista frontal',
+    title: 'Dispositivo Biométrico Hikvision',
+    description: 'Terminal de reconocimiento facial con tecnología avanzada para registro preciso de asistencia'
+  },
+  {
+    src: '/6.png',
+    alt: 'Dispositivo biométrico Hikvision - Vista posterior',
+    title: 'Hardware Profesional',
+    description: 'Equipo certificado y robusto para control de acceso y asistencia en tiempo real'
   }
 ];
 

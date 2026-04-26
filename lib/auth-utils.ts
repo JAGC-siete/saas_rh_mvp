@@ -19,7 +19,8 @@ const ROLE_PERMISSIONS: RolePermissions = {
   'company_admin': [
     'can_view_employees',
     'can_manage_employees',
-    'can_view_payroll', 
+    'can_approve_leave',
+    'can_view_payroll',
     'can_manage_attendance',
     'can_manage_departments',
     'can_view_reports'
@@ -27,13 +28,15 @@ const ROLE_PERMISSIONS: RolePermissions = {
   'hr_manager': [
     'can_view_employees',
     'can_manage_employees',
+    'can_approve_leave',
     'can_view_payroll',
-    'can_manage_attendance', 
+    'can_manage_attendance',
     'can_view_reports'
   ],
   'manager': [
     'can_view_employees',
     'can_manage_attendance',
+    'can_approve_leave',
     'can_view_reports'
   ],
   'employee': [
@@ -66,7 +69,7 @@ export async function authenticateUser(
     // Obtener perfil del usuario
     const { data: userProfile, error: profileError } = await supabase
       .from('user_profiles')
-      .select('role, permissions, company_id, is_active')
+      .select('id, role, permissions, company_id, is_active, employee_id')
       .eq('id', user.id)
       .single()
 

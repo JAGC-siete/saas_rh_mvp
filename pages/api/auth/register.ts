@@ -1,5 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../lib/supabase/server'
+import { logger } from '../../../lib/logger'
+import { validateAdminPassword } from '../../../lib/auth/password-policy'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -10,7 +12,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { email, password, fullName, companyName } = req.body
 
     if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' })
+      return res.status(400).json({ error: 'Email y contraseña son requeridos' })
+    }
+
+    const pw = validateAdminPassword(password)
+    if (!pw.ok) {
+      return res.status(400).json({ error: pw.message })
     }
 
     const supabase = createClient(req, res)
@@ -28,8 +35,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
 
     if (authError) {
-      console.error('Registration error:', authError)
-      return res.status(400).json({ error: authError.message })
+      logger.warn('Registration failed', { code: authError.status })
+      return res.status(400).json({
+        error:
+          'No se pudo completar el registro. Verifica los datos o inicia sesión si ya tienes cuenta.'
+      })
     }
 
     if (!authData.user) {

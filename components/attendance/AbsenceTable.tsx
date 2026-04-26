@@ -2,12 +2,14 @@ import { useMemo, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card'
 import { formatTimeDisplay } from '../../lib/timezone'
 import { UserCircleIcon } from '@heroicons/react/24/outline'
+import { AttendanceRecordFlagsBadges, type AttendanceListFlags } from './AttendanceRecordFlagsBadges'
 
 interface AbsenceRow {
   id: string
   name: string
   team?: string
   check_in_time?: string
+  flags?: AttendanceListFlags
 }
 
 interface AbsenceTableProps {
@@ -60,6 +62,7 @@ export default function AbsenceTable({ data, title, onSelect, pageSize = 10 }: A
                   {row.team && (
                     <div className="text-xs text-gray-400 truncate">{row.team}</div>
                   )}
+                  <AttendanceRecordFlagsBadges flags={row.flags} />
                 </div>
               </div>
               {row.check_in_time ? (

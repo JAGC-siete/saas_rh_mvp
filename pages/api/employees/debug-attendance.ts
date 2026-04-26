@@ -1,10 +1,15 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../lib/supabase/server'
 import { logger } from '../../../lib/logger'
+import { isServerDiagnosticsEnabled } from '../../../lib/server-diagnostics'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' })
+  }
+
+  if (!isServerDiagnosticsEnabled()) {
+    return res.status(404).json({ error: 'Not found' })
   }
 
   try {
@@ -19,8 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     // Get employee_id from user_metadata (primary) or user_profiles (fallback)
     let employeeId = user.user_metadata?.employee_id
-    let companyId = user.user_metadata?.company_id
-    
+
     // Fallback: buscar en user_profiles si no está en user_metadata
     if (!employeeId) {
       const { data: userProfile, error: profileError } = await supabase
@@ -28,13 +32,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         .select('employee_id, company_id, role')
         .eq('id', user.id)
         .single()
-      
+
       if (profileError || !userProfile?.employee_id) {
         return res.status(404).json({ error: 'Perfil de empleado no encontrado' })
       }
-      
+
       employeeId = userProfile.employee_id
-      companyId = userProfile.company_id
     }
 
     // Get current month dates

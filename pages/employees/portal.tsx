@@ -1,11 +1,23 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/router'
 import EmployeePasswordLogin from '../../components/employee-portal/EmployeePasswordLogin'
 import { useAuth } from '../../lib/auth'
-// import { useNotificationContext } from '../../components/NotificationProvider'
+import { useNotificationContext, type NotificationContextType } from '../../components/NotificationProvider'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
+import {
+  PieChart,
+  Pie,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend
+} from 'recharts'
 import { Button } from '../../components/ui/button'
-import { 
+import {
   UserIcon, 
   ClockIcon, 
   CurrencyDollarIcon, 
@@ -17,6 +29,8 @@ import {
 import { clientLogger } from '../../lib/logger-client'
 import EmployeePermissionForm from '../../components/employee-portal/EmployeePermissionForm'
 import EmployeePermissionHistory from '../../components/employee-portal/EmployeePermissionHistory'
+import { formatTimeDisplay, parseDateOnlyAsHonduras, formatDateOnlyForHonduras, HONDURAS_TIMEZONE } from '../../lib/timezone'
+import NotificationBell from '../../components/ui/NotificationBell'
 
 // Component for attendance records list
 function AttendanceRecordsList({ employeeId }: { employeeId?: string }) {
@@ -51,16 +65,8 @@ function AttendanceRecordsList({ employeeId }: { employeeId?: string }) {
 
   const formatTime = (timeString: string) => {
     if (!timeString) return 'N/A'
-    try {
-      const date = new Date(timeString)
-      return date.toLocaleTimeString('es-HN', { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        hour12: true 
-      })
-    } catch {
-      return timeString
-    }
+    // Usar formatTimeDisplay que maneja correctamente la conversión de UTC a hora de Honduras
+    return formatTimeDisplay(timeString)
   }
 
   const calculateHours = (checkIn: string, checkOut: string) => {
@@ -109,17 +115,31 @@ function AttendanceRecordsList({ employeeId }: { employeeId?: string }) {
               <div className="flex justify-between items-start mb-2">
                 <div>
                   <p className="text-white font-medium">
-                    {new Date(record.date).toLocaleDateString('es-HN', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
+                    {(() => {
+                      const d = parseDateOnlyAsHonduras(record.date)
+                      return isNaN(d.getTime()) ? record.date : d.toLocaleDateString('es-HN', {
+                        timeZone: HONDURAS_TIMEZONE,
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })
+                    })()}
                   </p>
-                  <div className="flex items-center space-x-4 mt-1">
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
                     {record.check_in && (
                       <span className="text-sm text-gray-400">
                         Entrada: <span className="text-green-400">{formatTime(record.check_in)}</span>
+                      </span>
+                    )}
+                    {(record as any).lunch_start && (
+                      <span className="text-sm text-gray-400">
+                        Inicio almuerzo: <span className="text-amber-400">{formatTime((record as any).lunch_start)}</span>
+                      </span>
+                    )}
+                    {(record as any).lunch_end && (
+                      <span className="text-sm text-gray-400">
+                        Fin almuerzo: <span className="text-amber-400">{formatTime((record as any).lunch_end)}</span>
                       </span>
                     )}
                     {record.check_out && (
@@ -193,10 +213,15 @@ function AttendanceRecordsList({ employeeId }: { employeeId?: string }) {
 }
 
 // Component for payroll section
-function PayrollSection({ employeeId }: { employeeId?: string }) {
+function PayrollSection({
+  employeeId,
+  addNotification
+}: {
+  employeeId?: string
+  addNotification: NotificationContextType['addNotification']
+}) {
   const [payrollData, setPayrollData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  // eslint-disable-next-line no-unused-vars
   const [generatingPDF, setGeneratingPDF] = useState(false)
 
   useEffect(() => {
@@ -225,11 +250,48 @@ function PayrollSection({ employeeId }: { employeeId?: string }) {
     fetchPayroll()
   }, [employeeId])
 
-  // eslint-disable-next-line no-unused-vars
   const generatePDF = async (periodo: string, quincena: number) => {
-    // Mostrar mensaje de funcionalidad en desarrollo
-    alert('🚧 Funcionalidad en desarrollo\n\nLa generación de recibos de nómina en PDF estará disponible próximamente.')
-    return
+    setGeneratingPDF(true)
+    try {
+      const response = await fetch('/api/employees/me/payroll-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ periodo, quincena })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error((errorData as { error?: string }).error || 'Error al generar el recibo')
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `recibo-nomina-${periodo}-q${quincena}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(url)
+
+      addNotification({
+        type: 'success',
+        title: 'Recibo de nómina',
+        message: 'PDF descargado correctamente',
+        module: 'payroll'
+      })
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Inténtalo nuevamente'
+      addNotification({
+        type: 'error',
+        title: 'Error al descargar PDF',
+        message,
+        module: 'payroll'
+      })
+    } finally {
+      setGeneratingPDF(false)
+    }
   }
 
   if (loading) {
@@ -290,9 +352,9 @@ function PayrollSection({ employeeId }: { employeeId?: string }) {
           <h4 className="text-white font-medium">Registros de Nómina</h4>
           <div className="space-y-2">
             {payrollData.records.map((record: any, index: number) => {
-              // Calcular período y quincena para el PDF
-              const periodStart = new Date(record.period_start)
-              const periodo = `${periodStart.getFullYear()}-${String(periodStart.getMonth() + 1).padStart(2, '0')}`                                            
+              // Calcular período y quincena para el PDF (usar parseDateOnlyAsHonduras para evitar bug UTC)
+              const periodStart = parseDateOnlyAsHonduras(record.period_start)
+              const periodo = `${periodStart.getFullYear()}-${String(periodStart.getMonth() + 1).padStart(2, '0')}`
               const quincena = periodStart.getDate() <= 15 ? 1 : 2
               
               return (
@@ -300,8 +362,7 @@ function PayrollSection({ employeeId }: { employeeId?: string }) {
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <div className="text-white font-medium">
-                        {new Date(record.period_start).toLocaleDateString('es-HN')} - 
-                        {new Date(record.period_end).toLocaleDateString('es-HN')}
+                        {formatDateOnlyForHonduras(record.period_start)} - {formatDateOnlyForHonduras(record.period_end)}
                       </div>
                       <div className="text-sm text-gray-400">
                         {record.days_worked} días trabajados
@@ -360,8 +421,8 @@ function PayrollSection({ employeeId }: { employeeId?: string }) {
                 <div className="mt-4 flex justify-end">
                   <button
                     onClick={() => generatePDF(
-                      `${new Date(record.period_start).getFullYear()}-${String(new Date(record.period_start).getMonth() + 1).padStart(2, '0')}`,
-                      new Date(record.period_start).getDate() <= 15 ? 1 : 2
+                      `${periodStart.getFullYear()}-${String(periodStart.getMonth() + 1).padStart(2, '0')}`,
+                      periodStart.getDate() <= 15 ? 1 : 2
                     )}
                     className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded"
                   >
@@ -520,16 +581,38 @@ interface PermissionsSummary {
   }
 }
 
+interface RecentAttendanceRow {
+  id: string
+  date: string
+  check_in: string | null
+  check_out: string | null
+  status: string | null
+}
+
+interface VacationSummary {
+  entitledDays: number
+  usedDaysThisYear: number
+  remainingDays: number
+  source: 'leave_types' | 'default'
+}
+
 export default function EmployeePortal() {
   // Use same auth system as admin portal
   const { user, session, logout } = useAuth()
+  const { addNotification } = useNotificationContext()
   const [profile, setProfile] = useState<EmployeeProfile | null>(null)
   const [attendanceSummary, setAttendanceSummary] = useState<AttendanceSummary | null>(null)
   const [permissionsSummary, setPermissionsSummary] = useState<PermissionsSummary | null>(null)
+  const [recentAttendance, setRecentAttendance] = useState<RecentAttendanceRow[]>([])
+  const [vacationSummary, setVacationSummary] = useState<VacationSummary | null>(null)
+  const [performanceEvaluations, setPerformanceEvaluations] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'profile' | 'attendance' | 'permissions' | 'payroll'>('profile')
+  const [activeTab, setActiveTab] = useState<'profile' | 'attendance' | 'permissions' | 'payroll' | 'performance'>('profile')
   const [showPermissionForm, setShowPermissionForm] = useState(false)
   const [isSubmittingPermission, setIsSubmittingPermission] = useState(false)
+  const [fabMenuOpen, setFabMenuOpen] = useState(false)
+  const [fabBusy, setFabBusy] = useState(false)
+  const fabWrapRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
   
   // Check if user is employee
@@ -570,6 +653,9 @@ export default function EmployeePortal() {
         
         // Set permissions summary with proper structure
         setPermissionsSummary(dashboardData.permissions_summary)
+
+        setRecentAttendance(dashboardData.recent_attendance || [])
+        setVacationSummary(dashboardData.vacation_summary || null)
         
       } else {
         const errorData = await dashboardResponse.text()
@@ -577,6 +663,19 @@ export default function EmployeePortal() {
           status: dashboardResponse.status,
           error: errorData
         })
+      }
+
+      // Performance evaluations (completed, read-only)
+      try {
+        const perfRes = await fetch('/api/employees/me/performance-evaluations', {
+          credentials: 'include'
+        })
+        if (perfRes.ok) {
+          const perfData = await perfRes.json()
+          setPerformanceEvaluations(perfData.evaluations || [])
+        }
+      } catch {
+        // Non-blocking
       }
 
     } catch (error) {
@@ -607,6 +706,8 @@ export default function EmployeePortal() {
     setProfile(null)
     setAttendanceSummary(null)
     setPermissionsSummary(null)
+    setRecentAttendance([])
+    setVacationSummary(null)
   }, [])
 
   const handleLogout = useCallback(async () => {
@@ -622,8 +723,170 @@ export default function EmployeePortal() {
     }
   }, [logout, router, clearSession])
 
+  const closeFabMenu = useCallback(() => setFabMenuOpen(false), [])
+
+  useEffect(() => {
+    if (!fabMenuOpen) return
+    const onDoc = (e: MouseEvent) => {
+      const el = fabWrapRef.current
+      if (el && !el.contains(e.target as Node)) closeFabMenu()
+    }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [fabMenuOpen, closeFabMenu])
+
+  const getHondurasMonthRange = useCallback(() => {
+    const hondurasDateStr = new Date().toLocaleDateString('en-CA', { timeZone: HONDURAS_TIMEZONE })
+    const [y, m] = hondurasDateStr.split('-').map((v) => parseInt(v, 10))
+    const lastDay = new Date(y, m, 0).getDate()
+    const mm = String(m).padStart(2, '0')
+    const startDate = `${y}-${mm}-01`
+    const endDate = `${y}-${mm}-${String(lastDay).padStart(2, '0')}`
+    return { startDate, endDate }
+  }, [])
+
+  const handleFabConstancia = useCallback(async () => {
+    const employeeId = user?.user_metadata?.employee_id as string | undefined
+    if (!employeeId) {
+      addNotification({
+        type: 'error',
+        title: 'Constancia',
+        message: 'No se encontró el empleado vinculado a su cuenta.',
+        module: 'system',
+      })
+      setFabMenuOpen(false)
+      return
+    }
+    setFabBusy(true)
+    try {
+      const response = await fetch('/api/reports/export-work-certificate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/pdf' },
+        credentials: 'include',
+        body: JSON.stringify({
+          employeeId,
+          format: 'pdf',
+          purpose: 'Constancia de trabajo',
+          certificateType: 'general',
+          includeDeductions: true,
+        }),
+      })
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}))
+        throw new Error(
+          (err as { message?: string }).message ||
+            (err as { error?: string }).error ||
+            'No se pudo generar el PDF'
+        )
+      }
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `constancia_trabajo_${employeeId.slice(0, 8)}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(url)
+      addNotification({
+        type: 'success',
+        title: 'Constancia',
+        message: 'PDF descargado correctamente.',
+        module: 'system',
+      })
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Inténtelo de nuevo.'
+      addNotification({ type: 'error', title: 'Constancia', message, module: 'system' })
+    } finally {
+      setFabBusy(false)
+      setFabMenuOpen(false)
+    }
+  }, [user, addNotification])
+
+  const handleFabAttendanceReport = useCallback(async () => {
+    const employeeId = user?.user_metadata?.employee_id as string | undefined
+    if (!employeeId) {
+      addNotification({
+        type: 'error',
+        title: 'Reporte',
+        message: 'No se encontró el empleado vinculado a su cuenta.',
+        module: 'system',
+      })
+      setFabMenuOpen(false)
+      return
+    }
+    const { startDate, endDate } = getHondurasMonthRange()
+    setFabBusy(true)
+    try {
+      const response = await fetch('/api/reports/export-attendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          startDate,
+          endDate,
+          formato: 'pdf',
+          employee_id: employeeId,
+        }),
+      })
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}))
+        throw new Error(
+          (err as { message?: string }).message ||
+            (err as { error?: string }).error ||
+            'No se pudo generar el reporte'
+        )
+      }
+      const blob = await response.blob()
+      const cd = response.headers.get('Content-Disposition')
+      let filename = `reporte-asistencia-${startDate}-${endDate}.pdf`
+      const m = cd && cd.match(/filename="?([^";]+)"?/i)
+      if (m?.[1]) filename = m[1].trim()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(url)
+      addNotification({
+        type: 'success',
+        title: 'Reporte de asistencia',
+        message: 'PDF descargado correctamente.',
+        module: 'attendance',
+      })
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Inténtelo de nuevo.'
+      addNotification({
+        type: 'error',
+        title: 'Reporte de asistencia',
+        message,
+        module: 'attendance',
+      })
+    } finally {
+      setFabBusy(false)
+      setFabMenuOpen(false)
+    }
+  }, [user, addNotification, getHondurasMonthRange])
+
+  const handleFabVoucherNav = useCallback(() => {
+    setActiveTab('payroll')
+    setShowPermissionForm(false)
+    setFabMenuOpen(false)
+  }, [])
+
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'No especificado'
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+      const d = parseDateOnlyAsHonduras(dateString)
+      return isNaN(d.getTime()) ? dateString : d.toLocaleDateString('es-HN', {
+        timeZone: HONDURAS_TIMEZONE,
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })
+    }
     return new Date(dateString).toLocaleDateString('es-HN', {
       year: 'numeric',
       month: 'long',
@@ -636,29 +899,77 @@ export default function EmployeePortal() {
     return Math.round((attendanceSummary.summary.presentDays / attendanceSummary.summary.totalDays) * 100)
   }
 
+  /** Últimos hasta 5 días con registro en el mes (orden cronológico para el gráfico). */
+  const attendanceBarData = useMemo(() => {
+    const slice = [...recentAttendance].slice(0, 5)
+    return slice
+      .reverse()
+      .map((r) => {
+        let hours = 0
+        if (r.check_in && r.check_out) {
+          const diff =
+            (new Date(r.check_out).getTime() - new Date(r.check_in).getTime()) / (1000 * 60 * 60)
+          hours = Math.round(Math.max(0, diff) * 10) / 10
+        }
+        const d = parseDateOnlyAsHonduras(r.date)
+        const dayLabel = isNaN(d.getTime())
+          ? r.date
+          : d.toLocaleDateString('es-HN', {
+              timeZone: HONDURAS_TIMEZONE,
+              weekday: 'short'
+            })
+        return { day: dayLabel, hours, date: r.date }
+      })
+  }, [recentAttendance])
+
+  const vacationEntitled = vacationSummary?.entitledDays ?? 15
+  const vacationRemaining = vacationSummary?.remainingDays ?? 15
+  const vacationProgressPct = vacationEntitled > 0
+    ? Math.min(100, Math.round((vacationRemaining / vacationEntitled) * 100))
+    : 0
+
   const handlePermissionSubmit = async (formData: any) => {
     try {
       setIsSubmittingPermission(true)
-      
+
+      let body: string | FormData
+      const headers: Record<string, string> = {}
+      if (formData.attachment) {
+        const fd = new FormData()
+        fd.append('leave_type_id', formData.leave_type_id)
+        fd.append('start_date', formData.start_date)
+        fd.append('end_date', formData.end_date)
+        fd.append('reason', formData.reason)
+        if (formData.duration_hours) {
+          fd.append('duration_hours', formData.duration_hours.toString())
+        }
+        fd.append('attachment', formData.attachment)
+        body = fd
+      } else {
+        headers['Content-Type'] = 'application/json'
+        body = JSON.stringify({
+          leave_type_id: formData.leave_type_id,
+          start_date: formData.start_date,
+          end_date: formData.end_date,
+          reason: formData.reason,
+          duration_hours: formData.duration_hours
+        })
+      }
+
       const response = await fetch('/api/employees/me/permissions', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         credentials: 'include',
-        body: JSON.stringify(formData)
+        body
       })
 
       if (response.ok) {
-        // Refresh dashboard data to update permissions summary
         await fetchEmployeeData()
         setShowPermissionForm(false)
-        
-        // Show success message (you could add a toast notification here)
-        alert('✅ Permiso registrado exitosamente')
+        alert('✅ Solicitud enviada. Se notificará cuando sea aprobada o rechazada.')
       } else {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Error al registrar el permiso')
+        throw new Error(errorData.error || 'Error al enviar la solicitud')
       }
     } catch (error) {
       console.error('Error submitting permission:', error)
@@ -697,6 +1008,7 @@ export default function EmployeePortal() {
             </div>
             
             <div className="flex items-center space-x-4">
+              <NotificationBell className="hidden sm:block" />
               <div className="text-right">
                 <p className="text-sm font-medium text-white">{user?.user_metadata?.full_name || 'Empleado'}</p>
                 <p className="text-xs text-gray-300">{user?.user_metadata?.role || 'employee'}</p>
@@ -794,13 +1106,140 @@ export default function EmployeePortal() {
           </Card>
         </div>
 
+        {/* === MEJORA 4: MINI GRÁFICOS RECHARTS === */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <Card className="glass-strong">
+            <CardHeader>
+              <CardTitle className="text-lg">Distribución de Asistencia (mes)</CardTitle>
+            </CardHeader>
+            <CardContent className="h-72 pt-2">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={[
+                      { name: 'Presente', value: attendanceSummary?.summary.presentDays || 0, fill: '#10b981' },
+                      { name: 'Ausente', value: attendanceSummary?.summary.absentDays || 0, fill: '#ef4444' },
+                      { name: 'Tardanza', value: attendanceSummary?.summary.lateDays || 0, fill: '#eab308' }
+                    ]}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={55}
+                    outerRadius={90}
+                    dataKey="value"
+                  />
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-strong">
+            <CardHeader>
+              <CardTitle className="text-lg">Horas trabajadas (días recientes)</CardTitle>
+              <CardDescription className="text-gray-400">
+                Hasta 5 días con registro en el mes actual
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="h-72 pt-2">
+              {attendanceBarData.length === 0 ? (
+                <div className="flex h-full min-h-[200px] items-center justify-center text-sm text-gray-400">
+                  Sin registros de asistencia recientes en el mes
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={attendanceBarData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                    <XAxis dataKey="day" stroke="#9ca3af" />
+                    <YAxis stroke="#9ca3af" />
+                    <Tooltip />
+                    <Bar dataKey="hours" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* === MEJORA 1: BALANCES GRANDES (datos del dashboard) === */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+          <Card className="glass-strong border-emerald-400/30">
+            <CardContent className="p-6 text-center">
+              <div className="flex justify-between items-start">
+                <div className="text-left flex-1 min-w-0">
+                  <p className="text-sm text-emerald-300">Vacaciones restantes</p>
+                  <p className="text-5xl font-bold text-emerald-400 mt-2">
+                    {vacationRemaining}
+                  </p>
+                  <p className="text-xs text-emerald-400">
+                    de {vacationEntitled} días · usados {vacationSummary?.usedDaysThisYear ?? 0} este año
+                  </p>
+                  {vacationSummary?.source === 'default' && (
+                    <p className="text-xs text-emerald-200/70 mt-2">
+                      Sin tipo «Vacaciones» en la empresa; se muestra cupo referencia.
+                    </p>
+                  )}
+                  <div className="mt-3 h-2 bg-white/10 rounded-full overflow-hidden">
+                    <div
+                      className="h-2 bg-emerald-400 rounded-full transition-all"
+                      style={{ width: `${vacationProgressPct}%` }}
+                    />
+                  </div>
+                </div>
+                <CalendarDaysIcon className="h-10 w-10 text-emerald-400/30 shrink-0 ml-2" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-strong border-orange-400/30">
+            <CardContent className="p-6 text-center">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-sm text-orange-300">Permisos usados este mes</p>
+                  <p className="text-5xl font-bold text-orange-400 mt-2">
+                    {permissionsSummary?.summary.permissionsThisMonth || 0}
+                  </p>
+                </div>
+                <DocumentTextIcon className="h-10 w-10 text-orange-400/30" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-strong border-blue-400/30">
+            <CardContent className="p-6 text-center">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-sm text-blue-300">% Asistencia</p>
+                  <p className="text-5xl font-bold text-blue-400 mt-2">
+                    {getAttendancePercentage()}%
+                  </p>
+                </div>
+                <ChartBarIcon className="h-10 w-10 text-blue-400/30" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-strong border-purple-400/30">
+            <CardContent className="p-6 text-center">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-sm text-purple-300">Próximo pago</p>
+                  <p className="text-3xl font-bold text-purple-400 mt-2">15 Mayo</p>
+                </div>
+                <CurrencyDollarIcon className="h-10 w-10 text-purple-400/30" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Navigation Tabs */}
         <div className="flex space-x-1 mb-8">
           {[
-            { id: 'profile', label: 'Mi Perfil', icon: UserIcon },
-            { id: 'attendance', label: 'Mi Asistencia', icon: ClockIcon },
-            { id: 'permissions', label: 'Mi Permisos', icon: DocumentTextIcon },
-            { id: 'payroll', label: 'Mi Nómina', icon: CurrencyDollarIcon }
+            { id: 'profile', label: 'Perfil', icon: UserIcon },
+            { id: 'attendance', label: 'Asistencia', icon: ClockIcon },
+            { id: 'permissions', label: 'Permisos', icon: DocumentTextIcon },
+            { id: 'payroll', label: 'Recibos de pago', icon: CurrencyDollarIcon },
+            { id: 'performance', label: 'Desempeño', icon: ChartBarIcon }
           ].map((tab) => (
             <button
               key={tab.id}
@@ -911,7 +1350,7 @@ export default function EmployeePortal() {
           {activeTab === 'attendance' && (
             <Card className="glass-strong">
               <CardHeader>
-                <CardTitle className="text-white">Mi Asistencia</CardTitle>
+                <CardTitle className="text-white">Asistencia</CardTitle>
                 <CardDescription className="text-gray-300">
                   Registro de asistencia del mes actual
                 </CardDescription>
@@ -970,7 +1409,7 @@ export default function EmployeePortal() {
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <div>
-                    <CardTitle className="text-white">Mi Permisos</CardTitle>
+                    <CardTitle className="text-white">Permisos</CardTitle>
                     <CardDescription className="text-gray-300">
                       Registre permisos pre-autorizados y consulte su historial
                     </CardDescription>
@@ -1037,16 +1476,121 @@ export default function EmployeePortal() {
           {activeTab === 'payroll' && (
             <Card className="glass-strong">
               <CardHeader>
-                <CardTitle className="text-white">Mi Nómina</CardTitle>
+                <CardTitle className="text-white">Recibos de pago</CardTitle>
                 <CardDescription className="text-gray-300">
                   Información sobre sus pagos y deducciones
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <PayrollSection employeeId={user?.user_metadata?.employee_id} />
+                <PayrollSection
+                  employeeId={user?.user_metadata?.employee_id}
+                  addNotification={addNotification}
+                />
               </CardContent>
             </Card>
           )}
+
+          {activeTab === 'performance' && (
+            <Card className="glass-strong">
+              <CardHeader>
+                <CardTitle className="text-white">Desempeño</CardTitle>
+                <CardDescription className="text-gray-300">
+                  Evaluaciones finalizadas por ciclo (solo lectura).
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {performanceEvaluations.length === 0 ? (
+                  <div className="text-center py-8 text-gray-300">
+                    No hay evaluaciones de desempeño finalizadas.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {performanceEvaluations.map((ev: any) => (
+                      <div key={ev.id} className="rounded-lg border border-white/10 bg-white/5 p-4">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="text-white font-medium">
+                            {ev.cycle_start} → {ev.cycle_end}
+                          </div>
+                          <div className="text-sm text-gray-300">
+                            Score: {ev.overall_score == null ? '—' : Number(ev.overall_score).toFixed(3)}
+                          </div>
+                        </div>
+                        <div className="mt-3 space-y-2">
+                          {(ev.items || []).slice(0, 10).map((it: any) => (
+                            <div key={it.id} className="rounded-md bg-black/20 p-3">
+                              <div className="text-sm text-white">{it.function || '—'}</div>
+                              <div className="mt-1 text-xs text-gray-300">KR: {it.indicator || '—'}</div>
+                              <div className="mt-1 text-xs text-gray-300">
+                                Rating: {it.rating || '—'} {it.weight ? `· Peso ${it.weight}%` : ''}
+                              </div>
+                              {it.comment && (
+                                <div className="mt-2 text-xs text-gray-200">Comentario: {it.comment}</div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Menú rápido: documentos y reportes (la solicitud de permiso sigue en la pestaña Permisos) */}
+        <div
+          ref={fabWrapRef}
+          className="fixed bottom-8 right-8 z-50 flex flex-col items-end gap-2 md:bottom-10 md:right-10"
+        >
+          {fabMenuOpen && (
+            <div
+              role="menu"
+              className="mb-1 min-w-[14rem] rounded-xl border border-white/15 bg-slate-950/95 py-1 shadow-2xl backdrop-blur-md"
+            >
+              <button
+                type="button"
+                role="menuitem"
+                disabled={fabBusy}
+                onClick={() => void handleFabConstancia()}
+                className="flex w-full items-center px-4 py-3 text-left text-sm text-white hover:bg-white/10 disabled:opacity-50"
+              >
+                Constancia de trabajo
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                disabled={fabBusy}
+                onClick={handleFabVoucherNav}
+                className="flex w-full items-center px-4 py-3 text-left text-sm text-white hover:bg-white/10 disabled:opacity-50"
+              >
+                Voucher de pago
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                disabled={fabBusy}
+                onClick={() => void handleFabAttendanceReport()}
+                className="flex w-full items-center px-4 py-3 text-left text-sm text-white hover:bg-white/10 disabled:opacity-50"
+              >
+                Reporte de asistencia
+              </button>
+            </div>
+          )}
+          <Button
+            type="button"
+            onClick={() => setFabMenuOpen((o) => !o)}
+            className="h-14 w-14 rounded-2xl bg-brand-600 hover:bg-brand-700 shadow-2xl flex items-center justify-center text-white text-3xl"
+            aria-label={fabMenuOpen ? 'Cerrar menú de acciones' : 'Abrir menú de acciones'}
+            aria-expanded={fabMenuOpen}
+            aria-haspopup="menu"
+          >
+            {fabBusy ? (
+              <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-white border-t-transparent" />
+            ) : (
+              '+'
+            )}
+          </Button>
         </div>
       </div>
     </div>

@@ -3,6 +3,39 @@ import { authenticateUser } from '../../../lib/auth-utils'
 import { createClient } from '../../../lib/supabase/server'
 import { logger } from '../../../lib/logger'
 import { getHondurasTimestamp, nowInHonduras } from '../../../lib/timezone'
+import { fetchLeaveAttendanceSummaryForRange } from '../../../lib/leave/leave-attendance-summary'
+
+const leaveEmployeeGateSelect = `
+  id,
+  company_id,
+  department_id,
+  departments!employees_department_id_fkey(manager_id)
+`
+
+function departmentManagerId(employee: {
+  departments?: { manager_id: string | null } | { manager_id: string | null }[] | null
+}): string | null {
+  const d = employee.departments
+  if (!d) return null
+  const row = Array.isArray(d) ? d[0] : d
+  return row?.manager_id ?? null
+}
+
+function canAccessLeaveRequestForId(
+  userProfile: { role: string; company_id: string | null; employee_id: string | null },
+  employee: { company_id: string; departments?: { manager_id: string | null } | { manager_id: string | null }[] | null }
+): boolean {
+  const role = userProfile.role
+  if (role === 'super_admin') return true
+  if (role === 'company_admin' || role === 'hr_manager') {
+    return employee.company_id === userProfile.company_id
+  }
+  if (role === 'manager') {
+    const mid = departmentManagerId(employee)
+    return !!mid && !!userProfile.employee_id && mid === userProfile.employee_id
+  }
+  return false
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const startTime = nowInHonduras().getTime()
@@ -22,8 +55,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Invalid leave request ID' })
     }
 
-    // Authenticate user
-    const authResult = await authenticateUser(req, res, ['can_manage_employees'])
+    // Authenticate user (managers con can_approve_leave alineado a RLS de leave_requests)
+    const authResult = await authenticateUser(req, res, ['can_approve_leave'])
     if (!authResult.success) {
       logger.warn('Leave API authentication failed', {
         error: authResult.error,
@@ -45,12 +78,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
 
     switch (req.method) {
+      case 'GET': {
+        const wantSummary =
+          req.query.attendance_summary === '1' ||
+          req.query.attendance_summary === 'true'
+        if (wantSummary) {
+          return await handleGetLeaveAttendanceSummary(req, res, supabase, userProfile, id)
+        }
+        logger.warn('Leave API method not allowed', { method: req.method, leaveRequestId: id })
+        return res.status(405).json({ error: 'Method not allowed' })
+      }
+
       case 'PUT':
         return await handleUpdateLeaveRequest(req, res, supabase, userProfile, id)
-      
+
       case 'DELETE':
         return await handleDeleteLeaveRequest(req, res, supabase, userProfile, id)
-      
+
       default:
         logger.warn('Leave API method not allowed', { method: req.method, leaveRequestId: id })
         return res.status(405).json({ error: 'Method not allowed' })
@@ -69,6 +113,52 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       error: 'Internal server error',
       message: 'Ocurrió un error procesando la solicitud'
     })
+  }
+}
+
+async function handleGetLeaveAttendanceSummary(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  supabase: any,
+  userProfile: { role: string; company_id: string | null; employee_id: string | null },
+  leaveRequestId: string
+) {
+  try {
+    const { data: currentRequest, error: fetchError } = await supabase
+      .from('leave_requests')
+      .select(`
+        id,
+        employee_id,
+        start_date,
+        end_date,
+        employee:employees(${leaveEmployeeGateSelect})
+      `)
+      .eq('id', leaveRequestId)
+      .single()
+
+    if (fetchError || !currentRequest) {
+      return res.status(404).json({ error: 'Leave request not found' })
+    }
+
+    if (!canAccessLeaveRequestForId(userProfile, currentRequest.employee)) {
+      return res.status(403).json({ error: 'Access denied' })
+    }
+
+    const result = await fetchLeaveAttendanceSummaryForRange(supabase, {
+      leave_request_id: leaveRequestId,
+      employee_id: currentRequest.employee_id,
+      start_date: currentRequest.start_date,
+      end_date: currentRequest.end_date,
+    })
+
+    if (!result.ok) {
+      return res.status(result.status).json({ error: result.error })
+    }
+
+    return res.status(200).json({ data: result.data })
+  } catch (error) {
+    logger.error('Error in handleGetLeaveAttendanceSummary', error)
+    return res.status(500).json({ error: 'Internal server error' })
   }
 }
 
@@ -95,11 +185,7 @@ async function handleUpdateLeaveRequest(
       .from('leave_requests')
       .select(`
         *,
-        employee:employees(
-          id,
-          company_id,
-          department_id
-        )
+        employee:employees(${leaveEmployeeGateSelect})
       `)
       .eq('id', leaveRequestId)
       .single()
@@ -108,24 +194,7 @@ async function handleUpdateLeaveRequest(
       return res.status(404).json({ error: 'Leave request not found' })
     }
 
-    // Verify permissions based on role
-    let hasPermission = false
-
-    if (userProfile.role === 'super_admin') {
-      hasPermission = true
-    } else if (userProfile.role === 'company_admin' || userProfile.role === 'hr_manager') {
-      // Check if employee belongs to user's company
-      if (currentRequest.employee.company_id === userProfile.company_id) {
-        hasPermission = true
-      }
-    } else if (userProfile.role === 'manager') {
-      // Check if user is manager of the employee's department
-      if (currentRequest.employee.department_id === userProfile.employee_id) {
-        hasPermission = true
-      }
-    }
-
-    if (!hasPermission) {
+    if (!canAccessLeaveRequestForId(userProfile, currentRequest.employee)) {
       logger.warn('Permission denied for leave request update', {
         userId: userProfile.id,
         userRole: userProfile.role,
@@ -143,7 +212,8 @@ async function handleUpdateLeaveRequest(
     }
 
     if (status === 'approved') {
-      updateData.approved_by = userProfile.employee_id || userProfile.id
+      // FK leave_requests_approved_by_fkey → employees.id (no usar auth user id)
+      updateData.approved_by = userProfile.employee_id ?? null
       updateData.approved_at = getHondurasTimestamp()
       updateData.rejection_reason = null
     } else if (status === 'rejected') {
@@ -152,12 +222,18 @@ async function handleUpdateLeaveRequest(
       updateData.approved_at = null
     }
 
-    // Update leave request
+    const leaveSelectEnriched = `
+      *,
+      employee:employees!leave_requests_employee_id_fkey(id, name, email, dni, company_id),
+      leave_type:leave_types(id, name, color, is_paid, requires_approval)
+    `
+
+    // Update leave request (misma forma enriquecida que GET /api/leave para el cliente)
     const { data, error } = await supabase
       .from('leave_requests')
       .update(updateData)
       .eq('id', leaveRequestId)
-      .select()
+      .select(leaveSelectEnriched)
       .single()
 
     if (error) {

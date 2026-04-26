@@ -1,7 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
-import { getHondurasTimestamp, formatDateForHonduras, nowInHonduras } from '../../../lib/timezone'
+import { getHondurasTimestamp, formatDateForHonduras, nowInHonduras, parseDateOnlyAsHonduras } from '../../../lib/timezone'
 import { createAdminClient } from '../../../lib/supabase/server'
+import { assertEmployeePortalEnabled } from '../../../lib/employee-portal/company-settings'
 
 interface WorkCertificateData {
   employee: {
@@ -33,15 +34,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // Autenticación y autorización usando el mismo método que payroll
-    const { supabase, companyId, role, user, userProfile } = await requireCompanyAccess(req, res)
-    
-    // Verificar permisos (solo admins y HR managers pueden generar constancias)
-    if (!['super_admin', 'company_admin', 'hr_manager'].includes(role)) {
-      return res.status(403).json({ 
-        error: 'Permisos insuficientes',
-        message: 'No tiene permisos para generar constancias laborales'
-      })
-    }
+    const { supabase, companyId, role, userProfile } = await requireCompanyAccess(req, res)
 
     const { 
       employeeId, 
@@ -54,6 +47,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (!employeeId) {
       return res.status(400).json({ error: 'ID de empleado requerido' })
+    }
+
+    const adminRoles = ['super_admin', 'company_admin', 'hr_manager']
+    const isEmployeeSelf =
+      role === 'employee' &&
+      Boolean(userProfile?.employee_id) &&
+      employeeId === userProfile.employee_id
+
+    if (!adminRoles.includes(role) && !isEmployeeSelf) {
+      return res.status(403).json({
+        error: 'Permisos insuficientes',
+        message: 'No tiene permisos para generar constancias laborales',
+      })
+    }
+
+    if (isEmployeeSelf) {
+      if (!(await assertEmployeePortalEnabled(supabase, companyId, res))) {
+        return
+      }
     }
 
     if (!['pdf', 'csv'].includes(format)) {
@@ -340,16 +352,20 @@ function generateWorkCertificatePDF(res: NextApiResponse, certificateData: WorkC
        .font('Helvetica')
     
     // Construir el texto principal según el formato exacto
-    const hireDate = new Date(certificateData.employee.hire_date)
+    const hireDate = /^\d{4}-\d{2}-\d{2}$/.test(certificateData.employee.hire_date)
+      ? parseDateOnlyAsHonduras(certificateData.employee.hire_date)
+      : new Date(certificateData.employee.hire_date)
     const hireDateFormatted = formatDateInWords(hireDate)
-    
+
     // Determinar período: si está activo "hasta la fecha", si no está activo mostrar fecha fin
     const isActive = certificateData.employee.status === 'active'
     let periodText = ''
     if (isActive) {
       periodText = `desde el ${hireDateFormatted} de ${hireDate.getFullYear()} hasta la fecha`
     } else if (certificateData.employee.termination_date) {
-      const terminationDate = new Date(certificateData.employee.termination_date)
+      const terminationDate = /^\d{4}-\d{2}-\d{2}$/.test(certificateData.employee.termination_date)
+        ? parseDateOnlyAsHonduras(certificateData.employee.termination_date)
+        : new Date(certificateData.employee.termination_date)
       const terminationDateFormatted = formatDateInWords(terminationDate)
       periodText = `desde el ${hireDateFormatted} de ${hireDate.getFullYear()} hasta el ${terminationDateFormatted} de ${terminationDate.getFullYear()}`
     } else {
@@ -412,6 +428,13 @@ function generateWorkCertificatePDF(res: NextApiResponse, certificateData: WorkC
       doc.moveDown(2)
     }
 
+    // Tras la tabla, PDFKit deja `doc.x` al final de la última celda de valor; el siguiente `.text()`
+    // sin x explícito continúa desde ahí y desplaza el párrafo hacia la derecha.
+    const marginLeft = doc.page.margins.left
+    const marginRight = doc.page.margins.right
+    const textWidth = pageWidth - marginLeft - marginRight
+    doc.x = marginLeft
+
     // Información de emisión
     const currentDate = nowInHonduras()
     const day = currentDate.getDate()
@@ -425,7 +448,12 @@ function generateWorkCertificatePDF(res: NextApiResponse, certificateData: WorkC
 
     doc.fontSize(11)
        .font('Helvetica')
-       .text(`Esta constancia se emite a solicitud del interesado para los fines que estime convenientes. Extendida en Tegucigalpa, M.D.C., ${dayPrefix} ${dayInWords} ${daySuffix} del mes de ${monthInWords} del año ${yearInWords}.`, { align: 'justify' })
+       .text(
+         `Esta constancia se emite a solicitud del interesado para los fines que estime convenientes. Extendida en Tegucigalpa, M.D.C., ${dayPrefix} ${dayInWords} ${daySuffix} del mes de ${monthInWords} del año ${yearInWords}.`,
+         marginLeft,
+         doc.y,
+         { width: textWidth, align: 'justify' }
+       )
 
     // Footer SISU
     doc.fontSize(8).fillColor('#64748b')
@@ -511,13 +539,17 @@ function generateWorkCertificateCSV(res: NextApiResponse, certificateData: WorkC
     csvContent += `Modalidad de contrato,contrato permanente\n`
     
     // Período de empleo
-    const hireDate = new Date(certificateData.employee.hire_date)
+    const hireDate = /^\d{4}-\d{2}-\d{2}$/.test(certificateData.employee.hire_date)
+      ? parseDateOnlyAsHonduras(certificateData.employee.hire_date)
+      : new Date(certificateData.employee.hire_date)
     const isActive = certificateData.employee.status === 'active'
     let periodText = ''
     if (isActive) {
       periodText = `desde el ${formatDateInWords(hireDate)} de ${hireDate.getFullYear()} hasta la fecha`
     } else if (certificateData.employee.termination_date) {
-      const terminationDate = new Date(certificateData.employee.termination_date)
+      const terminationDate = /^\d{4}-\d{2}-\d{2}$/.test(certificateData.employee.termination_date)
+        ? parseDateOnlyAsHonduras(certificateData.employee.termination_date)
+        : new Date(certificateData.employee.termination_date)
       periodText = `desde el ${formatDateInWords(hireDate)} de ${hireDate.getFullYear()} hasta el ${formatDateInWords(terminationDate)} de ${terminationDate.getFullYear()}`
     } else {
       periodText = `desde el ${formatDateInWords(hireDate)} de ${hireDate.getFullYear()} hasta la fecha`

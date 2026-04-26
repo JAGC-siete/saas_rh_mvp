@@ -6,6 +6,7 @@ import { withExportRateLimit } from '../../../lib/security/rate-limiting'
 import { getDateRange } from '../../../lib/attendance'
 import ExcelJS from 'exceljs'
 import { generateAttendancePDF } from '../../../lib/pdf/attendance-pdf-generator'
+import { formatTimeDisplay, formatDateOnlyForHonduras, getWeekdayForDateOnly } from '../../../lib/timezone'
 
 // Aplicar rate limiting
 const handlerWithSecurity = withExportRateLimit()(attendanceExportHandler)
@@ -18,15 +19,20 @@ async function attendanceExportHandler(req: NextApiRequest, res: NextApiResponse
     const { supabase, companyId, role, user } = await requireCompanyAccess(req, res)
     
     // Verificar roles específicos para exportar asistencia (como payroll)
-    if (!['super_admin', 'company_admin', 'hr_manager', 'manager'].includes(role)) {
+    // admin es alias usado en producción (equivalente a company_admin)
+    if (!['super_admin', 'company_admin', 'hr_manager', 'manager', 'admin'].includes(role)) {
       return res.status(403).json({ 
         error: 'Permisos insuficientes',
         message: 'No tiene permisos para exportar datos de asistencia'
       })
     }
 
-    // VALIDACIÓN DE PARÁMETROS DE QUERY (como payroll)
-    const { preset, formato, role: roleFilter, employee_id } = req.query
+    const normalizeParam = (p: string | string[] | undefined) => (Array.isArray(p) ? p[0] : p)
+    const preset = normalizeParam(req.query.preset)
+    const formato = normalizeParam(req.query.formato)
+    const roleFilter = normalizeParam(req.query.role)
+    const employee_id = normalizeParam(req.query.employee_id)
+    const department_id = normalizeParam(req.query.department_id)
     
     // Validar formato requerido
     if (!formato || typeof formato !== 'string') {
@@ -55,7 +61,8 @@ async function attendanceExportHandler(req: NextApiRequest, res: NextApiResponse
           endDate: req.query.endDate,
           formato: formato || 'excel',
           role: roleFilter || null,
-          employee_id: employee_id || null
+          employee_id: employee_id || null,
+          department_id: department_id || null
         }
       } else {
         const range = getDateRange(preset)
@@ -64,7 +71,8 @@ async function attendanceExportHandler(req: NextApiRequest, res: NextApiResponse
           endDate: range.to.split('T')[0],
           formato: formato || 'excel',
           role: roleFilter || null,
-          employee_id: employee_id || null
+          employee_id: employee_id || null,
+          department_id: department_id || null
         }
       }
     } else {
@@ -81,7 +89,8 @@ async function attendanceExportHandler(req: NextApiRequest, res: NextApiResponse
       exportData = {
         ...validation.data!,
         role: roleFilter || null,
-        employee_id: employee_id || null
+        employee_id: employee_id || null,
+        department_id: department_id || null
       }
     }
 
@@ -204,10 +213,10 @@ async function exportToExcel(attendanceRecords: any[], startDate: string, endDat
         'Nombre': record.employees?.name || '',
         'Departamento': record.employees?.role || '',
         'Posición': record.employees?.role || '',
-        'Fecha': new Date(record.date).toLocaleDateString('es-HN'),
-        'Día de la Semana': new Date(record.date).toLocaleDateString('es-HN', { weekday: 'long' }),
-        'Hora de Entrada': checkIn ? checkIn.toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
-        'Hora de Salida': checkOut ? checkOut.toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
+        'Fecha': formatDateOnlyForHonduras(record.date),
+        'Día de la Semana': getWeekdayForDateOnly(record.date),
+        'Hora de Entrada': checkIn ? formatTimeDisplay(checkIn.toISOString()) : 'N/A',
+        'Hora de Salida': checkOut ? formatTimeDisplay(checkOut.toISOString()) : 'N/A',
         'Horas Trabajadas': hoursWorked.toFixed(2),
         'Estado': record.status === 'present' ? 'Presente' : record.status === 'late' ? 'Tardanza' : 'Ausente',
         'Minutos de Tardanza': lateMinutes,
@@ -361,10 +370,10 @@ async function exportToCSV(attendanceRecords: any[], startDate: string, endDate:
       record.employees?.name || '',
       record.employees?.role || '',
       record.employees?.role || '',
-      new Date(record.date).toLocaleDateString('es-HN'),
-      new Date(record.date).toLocaleDateString('es-HN', { weekday: 'long' }),
-      checkIn ? checkIn.toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
-      checkOut ? checkOut.toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
+      formatDateOnlyForHonduras(record.date),
+      getWeekdayForDateOnly(record.date),
+      checkIn ? formatTimeDisplay(checkIn.toISOString()) : 'N/A',
+      checkOut ? formatTimeDisplay(checkOut.toISOString()) : 'N/A',
       hoursWorked.toFixed(2),
       record.status === 'present' ? 'Presente' : record.status === 'late' ? 'Tardanza' : 'Ausente',
       lateMinutes,

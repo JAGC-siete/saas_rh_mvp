@@ -6,23 +6,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const { supabase, companyId } = await requireCompanyAccess(req, res)
     
-    const { preset = 'today', type = 'absent', role, employee_id, from, to } = req.query
+    const { preset = 'today', type = 'absent', role, employee_id, department_id, from, to } = req.query
   
-  // Use standardized preset parameter (remove scope compatibility)
   const finalPreset = preset
-  
-  // Calcular fechas igual que KPIs para sincronización
   const range = typeof from === 'string' && typeof to === 'string'
     ? { from, to }
-    : getDateRange(finalPreset as string)
+    : getDateRange(finalPreset as string, undefined, typeof from === 'string' ? from : undefined, typeof to === 'string' ? to : undefined)
   
-  // Use standardized RPC parameters for consistency
   const rpcArgs = {
     p_employee_id: (typeof employee_id === 'string' && employee_id.trim() !== '') ? employee_id.trim() : null,
     p_from: range.from,
     p_to: range.to,
     p_type: type as string,
     p_role: (typeof role === 'string' && role.trim() !== '') ? role.trim() : null,
+    p_department_id: (typeof department_id === 'string' && department_id.trim() !== '') ? department_id.trim() : null,
     p_company_id: companyId
   }
 
@@ -36,7 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: error.message })
   }
   
-    // Map RPC field team_out -> team and check_in -> check_in_time to match UI expectation
+    // Map RPC fields for UI. Response includes lunch_start, lunch_end, check_out, date for "Ver detalle" (4-marks).
     const mapped = Array.isArray(data)
       ? data.map((row: any) => ({ 
           ...row, 

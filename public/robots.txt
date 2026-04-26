@@ -1,6 +1,24 @@
-# Humano SISU
+# Humano SISU - Robots.txt
+# https://humanosisu.net/robots.txt
+
 User-agent: *
 Allow: /
+Disallow: /app/
+Disallow: /api/
+Disallow: /auth/
+Disallow: /employees/
+Disallow: /attendance/
+Disallow: /onboarding
+Disallow: /trial/
+Disallow: /debug-env
+Disallow: /test-client-env
+Disallow: /railway-debug
+
+# Sitemap location
+Sitemap: https://humanosisu.net/sitemap.xml
+
+# Crawl-delay (optional, adjust if needed)
+# Crawl-delay: 1
 
 # Note: emergency.humanosisu.net blocked via X-Robots-Tag header (not here)
 

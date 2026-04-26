@@ -7,19 +7,40 @@ import { Button } from './ui/button'
 import { Icon, IconName } from './Icon'
 import { formatCurrency } from '../lib/utils/currency'
 import { UnifiedRow, UnifiedResumen } from '../lib/payroll-unified'
-import { extractCustomFields, calculatePayroll } from '../lib/payroll-client-specific'
+import {
+  resolveStatutoryDeductionColumns,
+  type CustomFieldConfigEntry
+} from '../lib/payroll/statutory-deduction-columns'
+// // import { extractCustomFields, calculatePayroll } from '../lib/payroll-client-specific'
 import { createClient } from '../lib/supabase/client'
 import { Pagination } from './ui/pagination'
+import PayrollFixedTable from './PayrollFixedTable'
+import PayrollHourlyTable from './PayrollHourlyTable'
+import type { PayrollPdfGroupBy } from '../lib/payroll/pdf-layout'
+
+export type IncompleteRecordAlert = { employee_id: string; employee_name: string; dates: string[] }
 
 interface UnifiedPayrollTableProps {
   rows: UnifiedRow[]
   resumen: UnifiedResumen
-  onGenerateVoucher: (lineId: string) => void
+  incompleteRecordsAlert?: IncompleteRecordAlert[]
+  // eslint-disable-next-line no-unused-vars
+  onGenerateVoucher: (_lineId: string) => void
   onPreAuthorize?: () => void
   onAuthorize: () => void
-  onGeneratePDF: () => void
+  // eslint-disable-next-line no-unused-vars
+  onGeneratePDF: (_groupBy: PayrollPdfGroupBy) => void | Promise<void>
   onSendEmail: () => void
-  onEditCustomFields?: (lineId: string, metadata: any, baseSalary: number) => void
+  // eslint-disable-next-line no-unused-vars
+  onEditCustomFields?: (_lineId: string, _metadata: any, _baseSalary: number, _employeeId?: string) => void
+  canAdjustFixedDays?: boolean
+  payrollRunStatus?: string
+  // eslint-disable-next-line no-unused-vars
+  onAdjustFixedDays?: (_payload: {
+    run_line_id: string
+    days_worked: number
+    reason?: string
+  }) => Promise<void>
   loading?: boolean
   canAuthorize?: boolean
   canSend?: boolean
@@ -31,33 +52,49 @@ interface UnifiedPayrollTableProps {
     quincena: number
   }
   companyId?: string
+  payrollApiConfig?: {
+    legal_deductions?: { ihss?: boolean; rap?: boolean; isr?: boolean }
+    custom_fields?: Record<string, unknown>
+  } | null
 }
 
 export default function UnifiedPayrollTable({
   rows,
   resumen,
+  incompleteRecordsAlert = [],
   onGenerateVoucher,
   onPreAuthorize,
   onAuthorize,
   onGeneratePDF,
   onSendEmail,
   onEditCustomFields,
+  canAdjustFixedDays = false,
+  payrollRunStatus,
+  onAdjustFixedDays,
   loading = false,
-  canAuthorize = false,
-  canSend = false,
+  // eslint-disable-next-line no-unused-vars
+  canAuthorize: _canAuthorize = false,
+  // eslint-disable-next-line no-unused-vars
+  canSend: _canSend = false,
   runId,
   status,
   period,
-  companyId
+  companyId,
+  payrollApiConfig = null
 }: UnifiedPayrollTableProps) {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
-  const [currentPage, setCurrentPage] = useState(1)
+  const [currentPageFixed, setCurrentPageFixed] = useState(1)
+  const [currentPageHourly, setCurrentPageHourly] = useState(1)
   const [itemsPerPage] = useState(10)
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [sortBy, setSortBy] = useState<'name' | 'department'>('name')
   const [departmentFilter, setDepartmentFilter] = useState<string>('all')
   const [hasCustom, setHasCustom] = useState(false)
-  const [payrollConfig, setPayrollConfig] = useState<any>(null)
+  const [pdfModalOpen, setPdfModalOpen] = useState(false)
+  const [pdfGroupBy, setPdfGroupBy] = useState<PayrollPdfGroupBy>('none')
+  const [pdfDownloading, setPdfDownloading] = useState(false)
+  // eslint-disable-next-line no-unused-vars
+  const [_payrollConfig, setPayrollConfig] = useState<any>(null)
   
   // Load payroll configuration async
   useEffect(() => {
@@ -100,6 +137,16 @@ export default function UnifiedPayrollTable({
     }
   }, [companyId])
 
+  const statutoryDeductionColumns = useMemo(
+    () =>
+      resolveStatutoryDeductionColumns(
+        payrollApiConfig?.legal_deductions ?? null,
+        (payrollApiConfig?.custom_fields as Record<string, CustomFieldConfigEntry> | undefined) ??
+          null
+      ),
+    [payrollApiConfig]
+  )
+
   // Get unique departments for filter
   const departments = useMemo(() => {
     const depts = new Set<string>()
@@ -111,9 +158,26 @@ export default function UnifiedPayrollTable({
     return Array.from(depts).sort()
   }, [rows])
 
-  // Filter and sort employees
-  const filteredAndSortedRows = useMemo(() => {
-    let filtered = [...rows]
+  // Separate rows by pay_type
+  const { fixedRows, hourlyRows } = useMemo(() => {
+    const fixed: typeof rows = []
+    const hourly: typeof rows = []
+    
+    rows.forEach(row => {
+      const payType = (row as any).pay_type || 'fixed'
+      if (payType === 'hourly') {
+        hourly.push(row)
+      } else {
+        fixed.push(row)
+      }
+    })
+    
+    return { fixedRows: fixed, hourlyRows: hourly }
+  }, [rows])
+
+  // Filter and sort employees (separate for fixed and hourly)
+  const filteredAndSortedFixedRows = useMemo(() => {
+    let filtered = [...fixedRows]
 
     // Filter by department
     if (departmentFilter !== 'all') {
@@ -141,17 +205,77 @@ export default function UnifiedPayrollTable({
     })
 
     return sorted
-  }, [rows, departmentFilter, sortBy, sortOrder])
+  }, [fixedRows, departmentFilter, sortBy, sortOrder])
 
-  // Paginate results
-  const paginatedRows = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage
+  const filteredAndSortedHourlyRows = useMemo(() => {
+    let filtered = [...hourlyRows]
+
+    // Filter by department
+    if (departmentFilter !== 'all') {
+      filtered = filtered.filter(row => row.department === departmentFilter)
+    }
+
+    // Sort
+    const sorted = [...filtered].sort((a, b) => {
+      let compareA: string
+      let compareB: string
+
+      if (sortBy === 'department') {
+        compareA = a.department?.toLowerCase() || ''
+        compareB = b.department?.toLowerCase() || ''
+      } else {
+        compareA = a.name?.toLowerCase() || ''
+        compareB = b.name?.toLowerCase() || ''
+      }
+
+      if (sortOrder === 'asc') {
+        return compareA.localeCompare(compareB)
+      } else {
+        return compareB.localeCompare(compareA)
+      }
+    })
+
+    return sorted
+  }, [hourlyRows, departmentFilter, sortBy, sortOrder])
+
+  // Calculate summaries separately (used in PayrollFixedTable and PayrollHourlyTable components)
+  // eslint-disable-next-line no-unused-vars
+  const _fixedSummary = useMemo(() => {
+    return filteredAndSortedFixedRows.reduce((acc, r) => {
+      acc.totalBruto += r.total_earnings || 0
+      acc.totalDeducciones += r.total_deducciones || 0
+      acc.totalNeto += r.total || 0
+      return acc
+    }, { totalBruto: 0, totalDeducciones: 0, totalNeto: 0 })
+  }, [filteredAndSortedFixedRows])
+
+  // eslint-disable-next-line no-unused-vars
+  const _hourlySummary = useMemo(() => {
+    return filteredAndSortedHourlyRows.reduce((acc, r) => {
+      acc.totalBruto += r.total_earnings || 0
+      acc.totalDeducciones += r.total_deducciones || 0
+      acc.totalNeto += r.total || 0
+      acc.totalHoras += (r as any).total_hours_worked || 0
+      return acc
+    }, { totalBruto: 0, totalDeducciones: 0, totalNeto: 0, totalHoras: 0 })
+  }, [filteredAndSortedHourlyRows])
+
+  // Paginate results separately with independent pagination
+  const paginatedFixedRows = useMemo(() => {
+    const startIndex = (currentPageFixed - 1) * itemsPerPage
     const endIndex = startIndex + itemsPerPage
-    return filteredAndSortedRows.slice(startIndex, endIndex)
-  }, [filteredAndSortedRows, currentPage, itemsPerPage])
+    return filteredAndSortedFixedRows.slice(startIndex, endIndex)
+  }, [filteredAndSortedFixedRows, currentPageFixed, itemsPerPage])
 
-  // Calculate total pages
-  const totalPages = Math.ceil(filteredAndSortedRows.length / itemsPerPage)
+  const paginatedHourlyRows = useMemo(() => {
+    const startIndex = (currentPageHourly - 1) * itemsPerPage
+    const endIndex = startIndex + itemsPerPage
+    return filteredAndSortedHourlyRows.slice(startIndex, endIndex)
+  }, [filteredAndSortedHourlyRows, currentPageHourly, itemsPerPage])
+
+  // Calculate total pages independently
+  const totalPagesFixed = Math.ceil(filteredAndSortedFixedRows.length / itemsPerPage)
+  const totalPagesHourly = Math.ceil(filteredAndSortedHourlyRows.length / itemsPerPage)
 
   const toggleSortOrder = () => {
     setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')
@@ -161,57 +285,18 @@ export default function UnifiedPayrollTable({
     setSortBy(prev => prev === 'name' ? 'department' : 'name')
   }
 
-  const toggleRow = (employeeId: string) => {
+  // eslint-disable-next-line no-unused-vars
+  const _toggleRow = (_employeeId: string) => {
+    // Function kept for potential future use with expandable rows
     const newExpanded = new Set(expandedRows)
-    if (newExpanded.has(employeeId)) {
-      newExpanded.delete(employeeId)
+    if (newExpanded.has(_employeeId)) {
+      newExpanded.delete(_employeeId)
     } else {
-      newExpanded.add(employeeId)
+      newExpanded.add(_employeeId)
     }
     setExpandedRows(newExpanded)
   }
 
-  // Función para mostrar el estado de la corrida (no el estado individual de la fila)
-  const getRunStatusBadge = (runStatus?: string) => {
-    // Si no hay estado de corrida, mostrar "Sin Estado"
-    if (!runStatus) {
-      return (
-        <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-500/30 text-gray-200 border border-gray-500/20">
-          Sin Estado
-        </span>
-      )
-    }
-
-    const variants: Record<string, string> = {
-      draft: 'bg-blue-500/30 text-blue-200 border border-blue-500/20',
-      edited: 'bg-yellow-500/30 text-yellow-200 border border-yellow-500/20',
-      authorized: 'bg-green-500/30 text-green-200 border border-green-500/20',
-      distributed: 'bg-purple-500/30 text-purple-200 border border-purple-500/20',
-      // Mantener compatibilidad con estados antiguos
-      completo: 'bg-green-500/30 text-green-200 border border-green-500/20',
-      sin_planilla: 'bg-yellow-500/30 text-yellow-200 border border-yellow-500/20',
-      sin_asistencia: 'bg-orange-500/30 text-orange-200 border border-orange-500/20'
-    }
-    
-    const labels: Record<string, string> = {
-      draft: 'Borrador',
-      edited: 'Editado',
-      authorized: 'Autorizado',
-      distributed: 'Distribuido',
-      // Mantener compatibilidad con estados antiguos
-      completo: 'Completo',
-      sin_planilla: 'Sin Planilla',
-      sin_asistencia: 'Sin Asistencia'
-    }
-
-    return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-        variants[runStatus] || 'bg-gray-500/30 text-gray-200 border border-gray-500/20'
-      }`}>
-        {labels[runStatus] || runStatus}
-      </span>
-    )
-  }
 
   // Función para determinar el estado del botón de autorización
   const getAuthorizationButtonState = (): {
@@ -222,7 +307,7 @@ export default function UnifiedPayrollTable({
     showAnimation: boolean;
     showSuccessEffect: boolean;
   } => {
-    const isAuthorized = status === 'authorized'
+    const isAuthorized = status === 'authorized' || status === 'distributed'
     const isAuthorizing = loading && status === 'authorizing'
     const canAuth = (status === 'draft' || status === 'edited') && !!runId && !loading
     
@@ -269,13 +354,35 @@ export default function UnifiedPayrollTable({
           Nómina — Detalle por Empleado
         </CardTitle>
         <CardDescription className="text-gray-200 text-base">
-          {resumen.empleados} empleados • 
+          {fixedRows.length} empleados fijos • {hourlyRows.length} empleados por hora • 
           Total Bruto: {formatCurrency(resumen.total_bruto)} • 
           Total Neto: {formatCurrency(resumen.total_neto)} • 
           Período: {monthName} {period.year} Q{period.quincena}
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {/* Alerta de marcas incompletas (check-in sin check-out) */}
+        {incompleteRecordsAlert.length > 0 && (
+          <div className="mb-4 p-4 bg-amber-500/20 border border-amber-500/50 rounded-lg">
+            <div className="flex items-start gap-2">
+              <Icon name="alert" className="h-5 w-5 text-amber-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="font-semibold text-amber-200">Marcas huérfanas (sin check-out)</h4>
+                <p className="text-sm text-amber-100/90 mt-1">
+                  Los siguientes empleados tienen registros con entrada pero sin salida. Las horas de esos registros no se incluyeron en el cálculo (o se usó el valor por defecto configurado).
+                </p>
+                <ul className="mt-2 space-y-1 text-sm text-amber-100/90">
+                  {incompleteRecordsAlert.map((a) => (
+                    <li key={a.employee_id}>
+                      <strong>{a.employee_name}</strong>: {a.dates.join(', ')}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Summary Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div className="text-center p-4 bg-blue-500/30 rounded-lg border border-blue-500/20">
@@ -310,7 +417,8 @@ export default function UnifiedPayrollTable({
               value={departmentFilter}
               onChange={(e) => {
                 setDepartmentFilter(e.target.value)
-                setCurrentPage(1)
+                setCurrentPageFixed(1)
+                setCurrentPageHourly(1)
               }}
               className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
             >
@@ -354,270 +462,70 @@ export default function UnifiedPayrollTable({
 
           {/* Results count */}
           <div className="flex items-center text-sm text-gray-300 sm:ml-auto">
-            Mostrando {filteredAndSortedRows.length} de {rows.length} empleados
+            {fixedRows.length} fijos • {hourlyRows.length} por hora
           </div>
         </div>
 
-        {/* Unified Table */}
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-white/30">
-            <thead className="bg-white/20">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
-                  Empleado
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
-                  Estado
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
-                  Salario Base
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
-                  Días Trab.
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
-                  Horas Extras
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
-                  Salario Quincenal
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
-                  Deducciones
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
-                  Salario Neto
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
-                  Acciones
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-transparent divide-y divide-white/20">
-              {Array.isArray(paginatedRows) && paginatedRows.length > 0 ? (
-                paginatedRows.map((row, index) => (
-                  <React.Fragment key={row.employee_id}>
-                    <tr className="hover:bg-white/10 transition-colors duration-200">
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <button
-                            onClick={() => toggleRow(row.employee_id)}
-                            className="mr-2 text-white hover:text-gray-300"
-                          >
-                            {expandedRows.has(row.employee_id) ? (
-                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                              </svg>
-                            ) : (
-                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                              </svg>
-                            )}
-                          </button>
-                          <div>
-                            <div className="text-sm font-medium text-white">{row.name}</div>
-                            <div className="text-xs text-gray-300">{row.department || 'N/A'}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        {getRunStatusBadge(status)}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">
-                        {formatCurrency(row.base_salary || 0)}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">
-                        {row.days_worked || 0}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">
-                        {row.extras?.horas || 0}h
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-green-300">
-                        {formatCurrency(row.total_earnings || 0)}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-red-300">
-                        {formatCurrency(row.total_deducciones || 0)}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-white">
-                        {formatCurrency(row.total || 0)}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-200">
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => onGenerateVoucher(row.line_id || row.employee_id)}
-                            disabled={loading}
-                            className="bg-white/10 border-white/30 text-white hover:bg-white/20"
-                            title="Descargar comprobante"
-                          >
-                            <Icon name="download" className="h-4 w-4" />
-                          </Button>
-                          {hasCustom && onEditCustomFields && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => onEditCustomFields?.(row.line_id || row.employee_id, (row as any).metadata, row.base_salary || 0)}
-                              disabled={loading}
-                              className="bg-white/10 border-white/30 text-white hover:bg-white/20"
-                              title="Editar campos personalizados"
-                            >
-                              <Icon name="edit" className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                    
-                    {/* Expanded Row Details */}
-                    {expandedRows.has(row.employee_id) && (
-                      <tr className="bg-white/5">
-                        <td colSpan={9} className="px-4 py-4">
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            {/* Deducciones Breakdown */}
-                            <div>
-                              <h4 className="text-sm font-semibold text-white mb-2">Desglose de Deducciones</h4>
-                              <div className="space-y-1 text-sm">
-                                <div className="flex justify-between text-gray-200">
-                                  <span>IHSS:</span>
-                                  <span className="text-red-300">{formatCurrency(row.IHSS || 0)}</span>
-                                </div>
-                                <div className="flex justify-between text-gray-200">
-                                  <span>RAP:</span>
-                                  <span className="text-red-300">{formatCurrency(row.RAP || 0)}</span>
-                                </div>
-                                <div className="flex justify-between text-gray-200">
-                                  <span>ISR:</span>
-                                  <span className="text-red-300">{formatCurrency(row.ISR || 0)}</span>
-                                </div>
-                                <div className="flex justify-between text-gray-200">
-                                  <span>Otros:</span>
-                                  <span className="text-red-300">
-                                    {formatCurrency((row.total_deducciones || 0) - (row.IHSS || 0) - (row.RAP || 0) - (row.ISR || 0))}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Asistencia Details */}
-                            <div>
-                              <h4 className="text-sm font-semibold text-white mb-2">Detalles de Asistencia</h4>
-                              <div className="space-y-1 text-sm text-gray-200">
-                                <div>Días trabajados: {row.days_worked || 0}</div>
-                                <div>Días ausentes: {row.days_absent || 0}</div>
-                                <div>Días tarde: {row.late_days || 0}</div>
-                                <div>Horas extras: {row.extras?.horas || 0}h</div>
-                              </div>
-                            </div>
-
-                            {/* Observaciones */}
-                            <div>
-                              <h4 className="text-sm font-semibold text-white mb-2">Observaciones</h4>
-                              <p className="text-sm text-gray-200">
-                                {row.observaciones || 'Sin observaciones'}
-                              </p>
-                            </div>
-                          </div>
-                          
-                          {/* Custom Fields (Client-specific) */}
-                          {hasCustom && payrollConfig && (() => {
-                            const metadata = (row as any).metadata
-                            if (!metadata || Object.keys(metadata).length === 0) {
-                              return (
-                                <div className="mt-4 pt-4 border-t border-white/10">
-                                  <p className="text-sm text-gray-400">No hay campos adicionales</p>
-                                </div>
-                              )
-                            }
-                            
-                            // Display metadata fields directly
-                            const earningsFields = ['horas_extras', 'feriado_trabajado', 'estipendio_transporte', 'incapacidad']
-                            const helperFields = ['valor_hora_extra', 'descanso_por_turno_noche', 'doble_turno', 'pausa_almuerzo', 'dias_faltados']
-                            
-                            const earnings: Array<{key: string, label: string, value: number}> = []
-                            const deductions: Array<{key: string, label: string, value: number}> = []
-                            
-                            if (payrollConfig.customFields) {
-                              Object.keys(payrollConfig.customFields).forEach(fieldName => {
-                                const value = parseFloat(metadata[fieldName] || '0')
-                                const fieldDef = payrollConfig.customFields![fieldName]
-                                const label = typeof fieldDef === 'string' ? fieldDef : (fieldDef as any)?.label || fieldName
-                                
-                                // Skip helper fields
-                                if (helperFields.includes(fieldName)) {
-                                  return
-                                }
-                                
-                                // Categorize
-                                if (earningsFields.includes(fieldName)) {
-                                  if (value > 0 || metadata[fieldName] !== undefined) {
-                                    earnings.push({ key: fieldName, label, value })
-                                  }
-                                } else {
-                                  if (value > 0 || metadata[fieldName] !== undefined) {
-                                    deductions.push({ key: fieldName, label, value })
-                                  }
-                                }
-                              })
-                            }
-                            
-                            return (
-                              <div className="mt-4 pt-4 border-t border-white/10">
-                                <h4 className="text-sm font-semibold text-white mb-2">Campos Específicos de {payrollConfig.companyName || 'Cliente'}</h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  {/* Earnings */}
-                                  {earnings.length > 0 && (
-                                    <div className="col-span-full">
-                                      <h5 className="text-xs font-semibold text-green-300 mb-2">Ingresos Adicionales</h5>
-                                    </div>
-                                  )}
-                                  {earnings.map(({ key, label, value }) => (
-                                    <div key={key} className="flex justify-between text-sm text-gray-200">
-                                      <span>{label}:</span>
-                                      <span className="text-green-300">{formatCurrency(value)}</span>
-                                    </div>
-                                  ))}
-                                  
-                                  {/* Deductions */}
-                                  {deductions.length > 0 && (
-                                    <div className="col-span-full mt-2">
-                                      <h5 className="text-xs font-semibold text-red-300 mb-2">Deducciones Adicionales</h5>
-                                    </div>
-                                  )}
-                                  {deductions.map(({ key, label, value }) => (
-                                    <div key={key} className="flex justify-between text-sm text-gray-200">
-                                      <span>{label}:</span>
-                                      <span className="text-red-300">{formatCurrency(value)}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )
-                          })()}
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-gray-400 text-lg">
-                    {!Array.isArray(rows) ? 'Error cargando datos' : 'Sin registros de nómina para el período seleccionado'}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={filteredAndSortedRows.length}
-            itemsPerPage={itemsPerPage}
-            onPageChange={setCurrentPage}
+        {/* Sección 1: Nómina — Empleados Fijos (fixed) */}
+        {fixedRows.length > 0 && (
+          <>
+          <PayrollFixedTable
+            rows={paginatedFixedRows}
+            onGenerateVoucher={onGenerateVoucher}
+            onEditCustomFields={onEditCustomFields}
+            canAdjustFixedDays={canAdjustFixedDays}
+            payrollRunStatus={status}
+            onAdjustFixedDays={onAdjustFixedDays}
+            loading={loading}
+            hasCustom={hasCustom}
+            statutoryDeductions={statutoryDeductionColumns}
           />
+            {/* Paginación independiente para empleados fijos */}
+            {totalPagesFixed > 1 && (
+              <div className="mb-6">
+                <Pagination
+                  currentPage={currentPageFixed}
+                  totalPages={totalPagesFixed}
+                  totalItems={filteredAndSortedFixedRows.length}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={setCurrentPageFixed}
+                />
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Sección 2: Nómina — Detalle por Empleado (hourly) */}
+        {hourlyRows.length > 0 && (
+          <>
+          <PayrollHourlyTable
+            rows={paginatedHourlyRows}
+            onGenerateVoucher={onGenerateVoucher}
+            onEditCustomFields={onEditCustomFields}
+            loading={loading}
+            hasCustom={hasCustom}
+            statutoryDeductions={statutoryDeductionColumns}
+          />
+            {/* Paginación independiente para empleados por hora */}
+            {totalPagesHourly > 1 && (
+              <div className="mb-6">
+                <Pagination
+                  currentPage={currentPageHourly}
+                  totalPages={totalPagesHourly}
+                  totalItems={filteredAndSortedHourlyRows.length}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={setCurrentPageHourly}
+                />
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Mensaje si no hay empleados */}
+        {fixedRows.length === 0 && hourlyRows.length === 0 && (
+          <div className="text-center py-8 text-gray-400">
+            No hay empleados para este período
+          </div>
         )}
 
         {/* Action Buttons */}
@@ -653,11 +561,15 @@ export default function UnifiedPayrollTable({
 
           {/* Generate PDF - Only enabled after authorization */}
           <Button
-            onClick={onGeneratePDF}
-            disabled={!runId || loading || status !== 'authorized'}
+            onClick={() => setPdfModalOpen(true)}
+            disabled={!runId || loading || (status !== 'authorized' && status !== 'distributed')}
             variant="outline"
             className="flex items-center gap-2 bg-white/10 border-white/30 text-white hover:bg-white/20 disabled:opacity-50"
-            title={status !== 'authorized' ? 'Autorice la nómina primero para generar PDF' : 'Generar PDF consolidado'}
+            title={
+              status !== 'authorized' && status !== 'distributed'
+                ? 'Autorice la nómina primero para generar PDF'
+                : 'Generar PDF consolidado'
+            }
           >
             <Icon name="document" className="h-4 w-4" />
             Generar PDF
@@ -666,16 +578,71 @@ export default function UnifiedPayrollTable({
           {/* Send Email - Only enabled after PDF generation (tracked separately) */}
           <Button
             onClick={onSendEmail}
-            disabled={!runId || loading || status !== 'authorized'}
+            disabled={!runId || loading || (status !== 'authorized' && status !== 'distributed')}
             variant="outline"
             className="flex items-center gap-2 bg-white/10 border-white/30 text-white hover:bg-white/20 disabled:opacity-50"
-            title={status !== 'authorized' ? 'Autorice y genere PDF primero' : 'Enviar recibos por email'}
+            title={
+              status !== 'authorized' && status !== 'distributed'
+                ? 'Autorice y genere PDF primero'
+                : 'Enviar recibos por email'
+            }
           >
             <Icon name="envelope" className="h-4 w-4" />
             Enviar por Email
           </Button>
         </div>
       </CardContent>
+
+      {pdfModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-lg border border-white/20 bg-gray-900 p-6 text-white shadow-xl">
+            <h3 className="text-lg font-semibold">Descargar planilla en PDF</h3>
+            <p className="mt-2 text-sm text-gray-300">
+              Elija cómo organizar las tablas de empleados fijos y por hora en el documento.
+            </p>
+            <label htmlFor="pdf-group-by" className="mt-4 block text-sm font-medium text-gray-200">
+              Agrupar por
+            </label>
+            <select
+              id="pdf-group-by"
+              value={pdfGroupBy}
+              onChange={(e) => setPdfGroupBy(e.target.value as PayrollPdfGroupBy)}
+              className="mt-2 w-full rounded-md border border-white/20 bg-white/10 px-3 py-2 text-sm text-white"
+            >
+              <option value="none">Una sola tabla (todos los empleados)</option>
+              <option value="department">Departamento</option>
+              <option value="team">Equipo</option>
+              <option value="position">Posición</option>
+            </select>
+            <div className="mt-6 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setPdfModalOpen(false)}
+                disabled={pdfDownloading}
+                className="border-white/30 bg-white/10 text-white hover:bg-white/20"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                onClick={async () => {
+                  setPdfDownloading(true)
+                  try {
+                    await onGeneratePDF(pdfGroupBy)
+                    setPdfModalOpen(false)
+                  } finally {
+                    setPdfDownloading(false)
+                  }
+                }}
+                disabled={pdfDownloading}
+              >
+                {pdfDownloading ? 'Descargando…' : 'Descargar'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </Card>
   )
 }

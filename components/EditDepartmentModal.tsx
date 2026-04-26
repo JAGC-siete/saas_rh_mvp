@@ -11,11 +11,14 @@ interface Employee {
   email: string
 }
 
+type CostCenterType = 'ventas' | 'administracion' | 'produccion' | null
+
 interface Department {
   id: string
   name: string
   description?: string
   manager_id?: string
+  cost_center_type?: CostCenterType
 }
 
 interface EditDepartmentModalProps {
@@ -34,7 +37,8 @@ export default function EditDepartmentModal({
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    manager_id: ''
+    manager_id: '',
+    cost_center_type: '' as CostCenterType | ''
   })
   const [employees, setEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(false)
@@ -48,7 +52,8 @@ export default function EditDepartmentModal({
       setFormData({
         name: department.name || '',
         description: department.description || '',
-        manager_id: department.manager_id || ''
+        manager_id: department.manager_id || '',
+        cost_center_type: department.cost_center_type || ''
       })
     }
   }, [department])
@@ -125,7 +130,8 @@ export default function EditDepartmentModal({
       const departmentData = {
         name: formData.name.trim(),
         description: formData.description.trim() || null,
-        manager_id: formData.manager_id || null
+        manager_id: formData.manager_id || null,
+        cost_center_type: formData.cost_center_type || null
       }
 
       const response = await fetch(`/api/departments/${department.id}`, {
@@ -243,6 +249,33 @@ export default function EditDepartmentModal({
               />
               <div className="text-xs text-gray-400 mt-1">
                 {formData.description.length}/500 caracteres
+              </div>
+            </div>
+
+            {/* Centro de Costo */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">
+                Centro de Costo (Contabilidad)
+              </label>
+              <select
+                value={formData.cost_center_type ?? ''}
+                onChange={(e) =>
+                  handleFormChange(
+                    'cost_center_type',
+                    e.target.value || ''
+                  )
+                }
+                disabled={loading}
+                className="w-full px-3 py-2 bg-gray-800/50 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-white"
+              >
+                <option value="">Sin asignar</option>
+                <option value="ventas">Ventas</option>
+                <option value="administracion">Administración</option>
+                <option value="produccion">Producción</option>
+              </select>
+              <div className="text-xs text-gray-400 mt-1">
+                Para asignar gastos de sueldos por centro de costo en asientos
+                contables
               </div>
             </div>
 

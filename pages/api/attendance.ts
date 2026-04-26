@@ -1,23 +1,12 @@
 import { createAdminClient, createClient } from '../../lib/supabase/server'
 import { getTodayInHonduras, getHondurasTime, nowInHonduras } from '../../lib/timezone'
 import { incrementUsage } from '../../lib/billing/enforce'
+import { resolveEffectiveWorkScheduleId } from '../../lib/attendance/effective-work-schedule'
 import { 
   getAchievementTypeByName, 
   validateAchievementRequirements, 
-  calculateAttendancePoints,
-  updateEmployeeScoreAtomic,
   evaluateAndAwardAchievements
 } from '../../lib/gamification-utils'
-
-// Legacy function - now using gamification-utils
-async function calculateAttendancePointsLegacy(employeeId: string, lateMinutes: number, isEarly: boolean): Promise<number> {
-  return calculateAttendancePoints(lateMinutes, isEarly, lateMinutes === 0)
-}
-
-// Legacy function - now using gamification-utils
-async function updateEmployeeScoreLegacy(employeeId: string, companyId: string, points: number, reason: string, actionType: string) {
-  return await updateEmployeeScoreAtomic(employeeId, companyId, points, reason, actionType)
-}
 
 async function checkForAchievements(employeeId: string, companyId: string): Promise<any[]> {
   const supabase = createAdminClient()
@@ -71,14 +60,14 @@ async function checkForAchievements(employeeId: string, companyId: string): Prom
           
           if (newAchievement) {
             achievements.push(newAchievement)
-            // Award bonus points using atomic update
-            await updateEmployeeScoreAtomic(
-              employeeId, 
-              companyId, 
-              perfectWeekType.points_reward, 
-              'Perfect Week Achievement', 
-              'achievement'
-            )
+            // Award bonus points (server-side helper)
+            await supabase.rpc('update_employee_score', {
+              p_employee_id: employeeId,
+              p_company_id: companyId,
+              p_points_to_add: perfectWeekType.points_reward,
+              p_reason: 'Perfect Week Achievement',
+              p_action_type: 'achievement'
+            })
           }
         }
       }
@@ -125,6 +114,7 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
         .single()
       
       if (error || !data) {
+        console.warn('Employee not found by last5', { last5, body: req.body })
         return res.status(404).json({ error: 'Employee not found' })
       }
       employee = data
@@ -136,6 +126,7 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
         .single()
       
       if (error || !data) {
+        console.warn('Employee not found by employee_id', { employee_id, body: req.body })
         return res.status(404).json({ error: 'Employee not found' })
       }
       employee = data
@@ -156,10 +147,17 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
 
     if (!existingRecord) {
       // Check-in
+      const eff = await resolveEffectiveWorkScheduleId({
+        supabase,
+        companyId: employee.company_id ?? '',
+        employeeId: employee.id,
+        date: today,
+        fallbackWorkScheduleId: employee.work_schedule_id
+      })
       const { data: schedule } = await supabase
         .from('work_schedules')
         .select('*')
-        .eq('id', employee.work_schedule_id ?? '')
+        .eq('id', eff.found ? eff.workScheduleId : (employee.work_schedule_id ?? ''))
         .single()
 
       // Get today's expected start time based on day of week
@@ -170,14 +168,18 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
       
       const currentTime = now.toTimeString().slice(0, 5)
       
-      // Calculate if late
+      const shiftType = ((schedule as Record<string, any>)?.shift_type as string | undefined) || 'normal'
+      const lateGrace = Number((schedule as Record<string, any>)?.late_grace_minutes ?? 5)
+
+      // Calculate if late (normal shift). Flexible shift doesn't penalize by clock time.
       const [expectedHour, expectedMin] = expectedCheckIn.split(':').map(Number)
       const [currentHour, currentMin] = currentTime.split(':').map(Number)
       const expectedMinutes = expectedHour * 60 + expectedMin
       const currentMinutes = currentHour * 60 + currentMin
-      const lateMinutes = Math.max(0, currentMinutes - expectedMinutes)
+      const rawLateMinutes = Math.max(0, currentMinutes - expectedMinutes)
+      const lateMinutes = shiftType === 'flex' ? 0 : rawLateMinutes
 
-      if (lateMinutes > 5 && !justification) {
+      if (shiftType !== 'flex' && lateMinutes > lateGrace && !justification) {
         return res.status(422).json({
           requireJustification: true,
           message: '⏰ You are late. Please provide justification.',
@@ -193,9 +195,9 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
           date: today,
           check_in: now.toISOString(),
           expected_check_in: expectedCheckIn,
-          late_minutes: lateMinutes,
+          late_minutes: shiftType === 'flex' ? null : lateMinutes,
           justification: justification || null,
-          status: lateMinutes > 5 ? 'late' : 'present'
+          status: shiftType === 'flex' ? 'present' : lateMinutes > lateGrace ? 'late' : 'present'
         })
         .select()
         .single()
@@ -264,18 +266,17 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
       // Combine messages
       const finalFeedback = feedbackMessage + behavioralFeedback
 
-      // Calculate and award points for gamification
-      const isEarly = currentMinutes <= expectedMinutes - 5
-      const pointsEarned = await calculateAttendancePointsLegacy(employee.id, lateMinutes, isEarly)
-      
-      if (pointsEarned > 0) {
-        await updateEmployeeScoreLegacy(
-          employee.id, 
-          employee.company_id ?? '', 
-          pointsEarned,
-          `Check-in: ${punctualityStatus}`,
-          'check_in'
-        )
+      // Apply gamification using single server-side function
+      const rule =
+        punctualityStatus === 'early' ? 'early' : punctualityStatus === 'late' ? 'late' : 'on_time'
+      const { data: pointsEarned, error: gamErr } = await supabase.rpc('apply_attendance_gamification', {
+        p_employee_id: employee.id,
+        p_company_id: employee.company_id ?? '',
+        p_rule: rule,
+        p_late_minutes: lateMinutes
+      })
+      if (gamErr) {
+        console.warn('Failed to apply attendance gamification:', gamErr)
       }
 
       // Check for new achievements across all types
@@ -292,7 +293,7 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
         data, 
         lateMinutes,
         gamification: {
-          pointsEarned,
+          pointsEarned: typeof pointsEarned === 'number' ? pointsEarned : 0,
           newAchievements: newAchievements.length > 0 ? newAchievements : undefined
         },
         weeklyPattern: {
@@ -311,10 +312,17 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
 
     } else if (!existingRecord.check_out) {
       // Check-out
+      const eff = await resolveEffectiveWorkScheduleId({
+        supabase,
+        companyId: employee.company_id ?? '',
+        employeeId: employee.id,
+        date: today,
+        fallbackWorkScheduleId: employee.work_schedule_id
+      })
       const { data: schedule } = await supabase
         .from('work_schedules')
         .select('*')
-        .eq('id', employee.work_schedule_id ?? '')
+        .eq('id', eff.found ? eff.workScheduleId : (employee.work_schedule_id ?? ''))
         .single()
 
       // Get today's expected end time based on day of week
@@ -325,12 +333,16 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
       
       const currentTime = now.toTimeString().slice(0, 5)
       
-      // Calculate early departure
+      const shiftType = ((schedule as Record<string, any>)?.shift_type as string | undefined) || 'normal'
+      const earlyGrace = Number((schedule as Record<string, any>)?.early_grace_minutes ?? 5)
+
+      // Calculate early departure (normal shift). Flexible shift doesn't penalize by clock time.
       const [expectedHour, expectedMin] = expectedCheckOut.split(':').map(Number)
       const [currentHour, currentMin] = currentTime.split(':').map(Number)
       const expectedMinutes = expectedHour * 60 + expectedMin
       const currentMinutes = currentHour * 60 + currentMin
-      const earlyDepartureMinutes = Math.max(0, expectedMinutes - currentMinutes)
+      const rawEarlyDepartureMinutes = Math.max(0, expectedMinutes - currentMinutes)
+      const earlyDepartureMinutes = shiftType === 'flex' ? 0 : rawEarlyDepartureMinutes
 
       // Update record with check-out
       const { data, error } = await supabase
@@ -338,7 +350,7 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
         .update({
           check_out: now.toISOString(),
           expected_check_out: expectedCheckOut,
-          early_departure_minutes: earlyDepartureMinutes,
+          early_departure_minutes: shiftType === 'flex' ? null : earlyDepartureMinutes,
           updated_at: now.toISOString()
         })
         .eq('id', existingRecord.id)
@@ -357,7 +369,7 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
         // Don't fail the request if usage tracking fails
       }
 
-      const message = earlyDepartureMinutes > 5
+      const message = shiftType !== 'flex' && earlyDepartureMinutes > earlyGrace
         ? '🔄 Early check-out recorded'
         : '✅ Check-out recorded successfully'
 

@@ -13,7 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     switch (req.method) {
       case 'PUT':
-        const { name, description, manager_id } = req.body
+        const { name, description, manager_id, cost_center_type } = req.body
         
         if (!name || !name.trim()) {
           return res.status(400).json({ error: 'El nombre del departamento es requerido' })
@@ -73,12 +73,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }
         }
 
+        const validCostCenter =
+          cost_center_type &&
+          ['ventas', 'administracion', 'produccion'].includes(cost_center_type)
+            ? cost_center_type
+            : null
+
         const { data: updatedDept, error: updateError } = await supabase
           .from('departments')
           .update({ 
             name: trimmedName, 
             description: description?.trim() || null,
-            manager_id: manager_id || null
+            manager_id: manager_id || null,
+            cost_center_type: validCostCenter
           })
           .eq('id', id)
           .eq('company_id', companyId)

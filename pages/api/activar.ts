@@ -3,6 +3,13 @@ import { createAdminClient } from '../../lib/supabase/server'
 import { getHondurasTimestamp, nowInHonduras } from '../../lib/timezone'
 import { randomUUID } from 'crypto'
 import { TRIAL_CONFIG } from '../../lib/config/trial'
+import {
+  currencyForCountryCode,
+  ianaTimezoneForCountryCode,
+  isCountryCode,
+  type CountryCode,
+} from '../../lib/country/supported'
+import { normalizeSoftPhone } from '../../lib/privacy'
 
 export const config = {
   api: {
@@ -18,6 +25,8 @@ interface ActivationData {
   contactoEmail: string
   departamentos: number
   aceptaTrial: boolean
+  /** ISO 3166-1 alpha-3: HND | SLV | GTM — determina nómina, festivos y zona horaria de la empresa trial */
+  countryCode: string
   referralCode?: string // Add referral code
 }
 
@@ -43,10 +52,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       contactoEmail,
       departamentos,
       aceptaTrial,
+      countryCode: countryCodeRaw,
       referralCode // Destructure referral code
     }: ActivationData = req.body
 
-    console.log('📝 Datos recibidos:', { empleados, empresa, nombre, contactoWhatsApp, contactoEmail, departamentos, aceptaTrial, referralCode })
+    const countryCandidate =
+      typeof countryCodeRaw === 'string' ? countryCodeRaw.trim().toUpperCase() : ''
+    if (!isCountryCode(countryCandidate)) {
+      return res.status(400).json({
+        error: 'Seleccioná un país válido: Honduras (HND), El Salvador (SLV) o Guatemala (GTM).',
+      })
+    }
+    const countryCode: CountryCode = countryCandidate
+
+    console.log('📝 Datos recibidos:', {
+      empleados,
+      empresa,
+      nombre,
+      contactoWhatsApp,
+      contactoEmail,
+      departamentos,
+      aceptaTrial,
+      countryCode,
+      referralCode,
+    })
 
     // Validar campos requeridos
     if (!contactoEmail) {
@@ -67,12 +96,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    // Validar formato de WhatsApp solo si se proporciona
+    // Validación suave de WhatsApp (global): permitir cualquier código de país y formato razonable
     if (contactoWhatsApp && contactoWhatsApp.trim()) {
-      const whatsappRegex = /^(\+504|504)?[0-9]{8}$/
-      if (!whatsappRegex.test(contactoWhatsApp.replace(/[-\s]/g, ''))) {
-        return res.status(400).json({ 
-          error: '📱 Formato de WhatsApp inválido. Usa formato hondureño: 9999-9999 o +50499999999' 
+      const normalized = normalizeSoftPhone(contactoWhatsApp)
+      if (!normalized) {
+        return res.status(400).json({
+          error: '📱 Número de WhatsApp inválido. Incluye el código de país y al menos 7 dígitos.',
         })
       }
     }
@@ -100,17 +129,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Validar email duplicado
-    console.log('🔍 Verificando si el email ya tiene un trial activo...')
     const validacionEmail = await verificarEmailDuplicado(supabase, contactoEmail)
     
     if (!validacionEmail.puedeContinuar) {
-      console.log('⚠️ Email duplicado detectado:', validacionEmail.razon)
       return res.status(409).json({ 
         error: validacionEmail.razon || 'Este email ya tiene un trial activo. Por favor, utiliza otro email o espera a que expire tu trial actual.'
       })
     }
-
-    console.log('✅ Validaciones pasadas exitosamente')
 
     // Generar tenant_id único
     const tenant_id = `tnt_${nowInHonduras().getTime()}_${Math.random().toString(36).substr(2, 9)}`
@@ -143,7 +168,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         departamentos: { total: departamentos },
         monto: null, // Ya no se calcula en el trial
         comprobante: null, // Ya no se sube en el trial
-        notas: `Trial activado automáticamente. Empleados: ${empleados}, Departamentos: ${departamentos}`
+        notas: `Trial activado automáticamente. País: ${countryCode}. Empleados: ${empleados}, Departamentos: ${departamentos}`,
       }])
       .select()
 
@@ -163,6 +188,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       contactoEmail,
       empleados,
       departamentos,
+      countryCode,
       referralCode // Pass referral code
     })
 
@@ -182,7 +208,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       contactoEmail,
       empleados,
       tenant_id,
-      status: 'trial_pending_data'
+      status: 'trial_pending_data',
+      country_code: countryCode,
+    })
+
+    // Enviar email de resumen con vCard
+    console.log('📧 Enviando email de resumen con vCard...')
+    await enviarEmailResumenRegistro({
+      nombre: nombre || 'Contacto no especificado',
+      empresa: empresa || 'Empresa no especificada',
+      email: contactoEmail,
+      whatsapp: contactoWhatsApp || null,
+      empleados,
+      tenant_id,
+      country_code: countryCode,
     })
 
     console.log('🎉 Activación completada exitosamente')
@@ -329,10 +368,11 @@ async function crearEntornoTrial(supabase: any, data: {
   contactoEmail: string
   empleados: number
   departamentos: number
+  countryCode: CountryCode
   referralCode?: string // Add referral code to function signature
 }) {
   try {
-    console.log('🏗️ Creando entorno completo de trial para:', data.empresa)
+    console.log('🏗️ Creando entorno completo de trial para:', data.empresa, 'país:', data.countryCode)
     
     // 0. Check for referral code
     let affiliateId: string | null = null
@@ -353,11 +393,13 @@ async function crearEntornoTrial(supabase: any, data: {
       }
     }
 
-    // 1. Crear company única
+    // 1. Crear company única (country_code + timezone alimentan nómina, labor_laws y asistencia por país)
     console.log('📦 Paso 1: Creando company...')
     const companyId = randomUUID()
     const subdomain = `trial-${Date.now().toString(36)}`
-    
+    const tz = ianaTimezoneForCountryCode(data.countryCode)
+    const currency = currencyForCountryCode(data.countryCode)
+
     const { data: newCompany, error: companyError } = await supabase
         .from('companies')
         .insert([{
@@ -365,10 +407,14 @@ async function crearEntornoTrial(supabase: any, data: {
         name: data.empresa,
         subdomain,
           plan_type: 'trial',
+          country_code: data.countryCode,
+          timezone: tz,
           settings: {
             trial_activated_at: getHondurasTimestamp(),
           trial_employee_limit: data.empleados,
-            timezone: 'America/Tegucigalpa'
+            timezone: tz,
+            currency,
+            language: 'es',
           },
           is_active: true,
           referred_by_affiliate_id: affiliateId // Set affiliate ID
@@ -410,7 +456,7 @@ async function crearEntornoTrial(supabase: any, data: {
       checkin_close: addMinutes(h.start, 90),
       checkout_open: subtractMinutes(h.end, 90),
       checkout_close: addMinutes(h.end, 60),
-      timezone: 'America/Tegucigalpa'
+      timezone: tz
     }))
 
     const { data: schedules, error: schedulesError } = await supabase
@@ -507,10 +553,8 @@ async function crearEntornoTrial(supabase: any, data: {
         console.error('⚠️ Error creando/actualizando perfil de usuario:', profileError)
         console.error('⚠️ Detalles del error:', JSON.stringify(profileError, null, 2))
       } else {
+        // Log exitoso sin exponer información sensible
         console.log('✅ Perfil de usuario creado/actualizado correctamente')
-        console.log('✅ Company ID asignado:', companyId)
-        console.log('✅ Rol asignado: company_admin')
-        console.log('✅ Permisos asignados:', JSON.stringify(companyAdminPermissions, null, 2))
       }
 
       // Enviar correo de bienvenida
@@ -661,7 +705,7 @@ async function enviarCorreoBienvenida(data: {
         <head>
           <meta charset="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-          <title>Bienvenido a SISU</title>
+          <title>Acceso Exclusivo a SISU</title>
           <style>
             :root {
               color-scheme: light;
@@ -839,13 +883,13 @@ async function enviarCorreoBienvenida(data: {
           <div class="outer">
             <div class="card">
               <div class="hero">
-                <div class="badge">Trial Activado</div>
-                <h1>¡Tu entorno SISU ya está vivo!</h1>
-                <p>${data.empresa} quedó configurada con toda la demo lista para tu equipo.</p>
+                <div class="badge">Acceso Exclusivo</div>
+                <h1>¡Has sido seleccionado para explorar SISU!</h1>
+                <p>${data.nombre || 'Equipo'}, te damos la bienvenida a SISU, el sistema regional de recursos humanos para El Salvador, Guatemala y Honduras, diseñado para transformar la forma en que gestionás tu equipo. Has recibido este acceso limitado y gratuito por 7 días para descubrir cómo SISU elimina tareas repetitivas y libera tiempo valioso para lo que realmente importa.</p>
               </div>
               <div class="content">
                 <div class="pill">
-                  ${data.nombre || 'Equipo'}: ya puedes ingresar, validar horarios, planilla legal hondureña y dashboards de talento en un mismo lugar.
+                  SISU convierte horas de trabajo operativo en minutos: asistencia automática, nómina precisa, portal para empleados y dashboards inteligentes. Todo en una plataforma segura y fácil de usar, con reglas nacionales según tu país.
                 </div>
 
                 <div class="section-title">Credenciales seguras</div>
@@ -865,41 +909,41 @@ async function enviarCorreoBienvenida(data: {
                   <p>Si el botón no funciona, copia este enlace en tu navegador: ${data.loginUrl}</p>
                 </div>
 
-                <div class="section-title">Lo que ya tienes listo</div>
+                <div class="section-title">Explora SISU: Tu entorno exclusivo ya está listo</div>
                 <div class="grid">
                   <div>
-                    <h4>📊 Panel inteligente</h4>
-                    <p>Asistencia, planilla y reportes conectados con roles y auditoría.</p>
+                    <h4>🚀 Asistencia sin fricciones</h4>
+                    <p>Registro por DNI, huella, rostro o tarjeta. Detecta retrasos y genera reportes automáticos.</p>
                   </div>
                   <div>
-                    <h4>👥 Equipo demo</h4>
-                    <p>${data.empresa} incluye empleados de ejemplo y departamentos para hacer pruebas.</p>
+                    <h4>👥 Empleados y Nómina</h4>
+                    <p>Fichas completas, cálculos IHSS/RAP/ISR exactos, ajustes y envíos automáticos de comprobantes.</p>
                   </div>
                   <div>
-                    <h4>⚙️ Entorno seguro</h4>
-                    <p>Tenant aislado con cifrado, logs de acceso y timezone Tegucigalpa.</p>
+                    <h4>📊 Portal y Productividad</h4>
+                    <p>Acceso self-service para empleados, dashboards ejecutivos y exportaciones precisas para decisiones rápidas.</p>
                   </div>
                 </div>
 
                 <div class="warning">
-                  ⚠️ Por seguridad cambia la contraseña al ingresar. Tu trial dura ${TRIAL_CONFIG.DURATION_DAYS} día${TRIAL_CONFIG.DURATION_DAYS > 1 ? 's' : ''}.
+                  ⚠️ Este es un acceso exclusivo y limitado: tu prueba gratuita dura 7 días. Por seguridad, cambia la contraseña al ingresar. Explora cómo SISU reduce errores legales, da transparencia en tiempo real y libera a tu equipo para enfocarse en lo que mueve tu empresa.
                 </div>
 
-                <div class="section-title">Estamos atentos</div>
+                <div class="section-title">Para contratar</div>
                 <div class="grid">
                   <div>
                     <h4>📱 WhatsApp</h4>
-                    <p>+504 9470-7007 • Respuesta en horario laboral.</p>
+                    <p>+504 3222-6773 • Respuesta en horario laboral.</p>
                   </div>
                   <div>
                     <h4>📧 Email</h4>
-                    <p>Responde este mensaje y llegas directo a soporte.</p>
+                    <p>Escribe a contrataciones@humanosisu.net para contactar a ventas.</p>
                   </div>
                 </div>
               </div>
               <div class="footer">
                 <hr />
-                SISU · Plataforma hondureña de Recursos Humanos. Si tú no solicitaste este acceso, puedes ignorar el correo.
+                SISU · Plataforma de Recursos Humanos (El Salvador, Guatemala y Honduras). Si tú no solicitaste este acceso, podés ignorar el correo.
               </div>
             </div>
           </div>
@@ -951,6 +995,7 @@ async function dispararWebhookActivaciones(data: {
   empleados: number
   tenant_id: string
   status: string
+  country_code: CountryCode
 }) {
   try {
     const webhookUrl = process.env.ACTIVACIONES_WEBHOOK_URL
@@ -968,6 +1013,7 @@ async function dispararWebhookActivaciones(data: {
       employees: data.empleados,
       tenant_id: data.tenant_id,
       status: data.status,
+      country_code: data.country_code,
       submitted_at: getHondurasTimestamp()
     }
 
@@ -989,5 +1035,201 @@ async function dispararWebhookActivaciones(data: {
   } catch (error) {
     console.error('Error disparando webhook:', error)
     // No fallar todo el proceso si el webhook falla
+  }
+}
+
+// Función para generar vCard (formato de contacto)
+function generarVCard(data: {
+  nombre: string
+  empresa: string
+  email: string
+  whatsapp: string | null
+  countryCode?: CountryCode
+}): string {
+  const vcard = [
+    'BEGIN:VCARD',
+    'VERSION:3.0',
+    `FN:${data.nombre}`,
+    `ORG:${data.empresa}`,
+    `EMAIL;TYPE=INTERNET:${data.email}`,
+  ]
+
+  if (data.whatsapp) {
+    const phone = data.whatsapp.replace(/[-\s]/g, '')
+    const cc = data.countryCode || 'HND'
+    const calling =
+      cc === 'SLV' ? '503' : cc === 'GTM' ? '502' : '504'
+    const formattedPhone = phone.startsWith('+')
+      ? phone
+      : phone.startsWith(calling)
+        ? `+${phone}`
+        : `+${calling}${phone}`
+    vcard.push(`TEL;TYPE=CELL:${formattedPhone}`)
+  }
+
+  vcard.push('END:VCARD')
+  return vcard.join('\n')
+}
+
+// Función para enviar email de resumen con vCard adjunto
+async function enviarEmailResumenRegistro(data: {
+  nombre: string
+  empresa: string
+  email: string
+  whatsapp: string | null
+  empleados: number
+  tenant_id: string
+  country_code: CountryCode
+}) {
+  try {
+    const apiKey = process.env.RESEND_API_KEY
+    const emailDestino = process.env.REGISTRO_NOTIFICATION_EMAIL || 'jorge7gomez@gmail.com'
+    
+    if (!apiKey) {
+      console.log('⚠️ RESEND_API_KEY no configurado, saltando envío de email de resumen')
+      return
+    }
+
+    const { Resend } = await import('resend')
+    const resend = new Resend(apiKey)
+
+    // Generar vCard
+    const vcardContent = generarVCard({
+      nombre: data.nombre,
+      empresa: data.empresa,
+      email: data.email,
+      whatsapp: data.whatsapp,
+      countryCode: data.country_code,
+    })
+
+    // Convertir vCard a buffer para adjuntarlo
+    const vcardBuffer = Buffer.from(vcardContent, 'utf-8')
+
+    const emailHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <title>Nuevo Registro - SISU</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 20px;
+            }
+            .header {
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: white;
+              padding: 30px;
+              text-align: center;
+              border-radius: 8px 8px 0 0;
+            }
+            .content {
+              background: #f8f9fa;
+              padding: 30px;
+              border-radius: 0 0 8px 8px;
+            }
+            .info-box {
+              background: white;
+              border-left: 4px solid #667eea;
+              padding: 20px;
+              margin: 20px 0;
+              border-radius: 4px;
+            }
+            .info-row {
+              margin: 10px 0;
+            }
+            .label {
+              font-weight: bold;
+              color: #555;
+            }
+            .value {
+              color: #333;
+            }
+            .vcard-note {
+              background: #fff3cd;
+              border-left: 4px solid #ffc107;
+              padding: 15px;
+              margin: 20px 0;
+              border-radius: 4px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>📋 Nuevo Registro en SISU</h1>
+            <p>Se ha registrado un nuevo usuario para trial</p>
+          </div>
+          <div class="content">
+            <div class="info-box">
+              <div class="info-row">
+                <span class="label">👤 Nombre:</span>
+                <span class="value">${data.nombre}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">🏢 Empresa:</span>
+                <span class="value">${data.empresa}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">📧 Email:</span>
+                <span class="value">${data.email}</span>
+              </div>
+              ${data.whatsapp ? `
+              <div class="info-row">
+                <span class="label">📱 WhatsApp:</span>
+                <span class="value">${data.whatsapp}</span>
+              </div>
+              ` : ''}
+              <div class="info-row">
+                <span class="label">👥 Empleados:</span>
+                <span class="value">${data.empleados}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">🌎 País (nómina):</span>
+                <span class="value">${data.country_code}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">🆔 Tenant ID:</span>
+                <span class="value">${data.tenant_id}</span>
+              </div>
+            </div>
+            <div class="vcard-note">
+              <strong>📎 Archivo vCard adjunto</strong>
+              <p>Se ha adjuntado un archivo de contacto (.vcf) que puedes descargar e importar directamente a tu libreta de contactos en el celular.</p>
+              <p><strong>Para importar en iPhone:</strong> Abre el archivo adjunto y toca "Agregar a contactos"</p>
+              <p><strong>Para importar en Android:</strong> Descarga el archivo y ábrelo con la app de Contactos</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `
+
+    const result = await resend.emails.send({
+      from: process.env.RESEND_FROM || 'SISU <noreply@humanosisu.net>',
+      to: emailDestino,
+      subject: `📋 Nuevo Registro: ${data.empresa} - ${data.nombre}`,
+      html: emailHtml,
+      attachments: [
+        {
+          filename: `${data.nombre.replace(/[^a-z0-9]/gi, '_')}_${data.empresa.replace(/[^a-z0-9]/gi, '_')}.vcf`,
+          content: vcardBuffer.toString('base64'),
+        }
+      ]
+    })
+
+    if ((result as any)?.error) {
+      console.error('❌ Error enviando email de resumen:', (result as any).error)
+      return
+    }
+
+    console.log('✅ Email de resumen con vCard enviado exitosamente:', (result as any)?.id)
+
+  } catch (error) {
+    console.error('❌ Error enviando email de resumen:', error)
+    // No fallar todo el proceso si el email falla
   }
 }

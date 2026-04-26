@@ -1,7 +1,11 @@
+import { createClient as createSupabaseJsClient } from '@supabase/supabase-js'
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient, createAdminClient } from '../../../../lib/supabase/server'
 import { logger } from '../../../../lib/logger'
 import { createSecureErrorResponse, createAuthErrorResponse } from '../../../../lib/security/error-handling'
+import { env } from '../../../../lib/env'
+import { logSuperAdminAction } from '../../../../lib/security/audit-logger'
+import { validateAdminPassword } from '../../../../lib/auth/password-policy'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
@@ -36,12 +40,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       case 'PATCH':
         return await updateUser(supabase, id, req, res)
       case 'POST':
-        // Custom actions via ?action=
-        return await postActions(supabase, id, req, res)
+        return await postActions(supabase, id, req, res, user.id)
       case 'DELETE':
         return await deleteUser(supabase, id, res)
       default:
-        res.setHeader('Allow', ['GET', 'PATCH', 'DELETE'])
+        res.setHeader('Allow', ['GET', 'PATCH', 'POST', 'DELETE'])
         return res.status(405).json({ error: 'Method not allowed' })
     }
   } catch (error) {
@@ -66,7 +69,9 @@ async function getUser(supabase: any, id: string, res: NextApiResponse) {
         created_at,
         updated_at,
         company_id,
-        companies:companies(name, subdomain)
+        employee_id,
+        companies:companies(name, subdomain),
+        employees(name, email)
       `)
       .eq('id', id)
       .single()
@@ -78,9 +83,18 @@ async function getUser(supabase: any, id: string, res: NextApiResponse) {
       throw error
     }
 
-    // Get email from auth.users
-    const { data: authUsers } = await adminClient.auth.admin.listUsers()
-    const authUser = authUsers?.users?.find((u: any) => u.id === id)
+    let authUser: { email?: string | null; last_sign_in_at?: string | null } | null = null
+    try {
+      const { data: authData, error: authErr } = await adminClient.auth.admin.getUserById(id)
+      if (!authErr && authData?.user) {
+        authUser = {
+          email: authData.user.email,
+          last_sign_in_at: authData.user.last_sign_in_at ?? null
+        }
+      }
+    } catch (authError: any) {
+      logger.warn('Error fetching auth user', { userId: id, error: authError?.message || String(authError) })
+    }
 
     // Transform data
     const companies = userProfile.companies as any
@@ -90,10 +104,19 @@ async function getUser(supabase: any, id: string, res: NextApiResponse) {
     const companySubdomain = companies
       ? (Array.isArray(companies) ? companies[0]?.subdomain : companies.subdomain)
       : null
+    
+    const employee = userProfile.employees as any
+    const employeeName = employee 
+      ? (Array.isArray(employee) ? employee[0]?.name : employee.name)
+      : null
+    const employeeEmail = employee 
+      ? (Array.isArray(employee) ? employee[0]?.email : employee.email)
+      : null
 
     const userData = {
       id: userProfile.id,
-      email: authUser?.email || '',
+      email: authUser?.email || employeeEmail || '',
+      name: employeeName,
       role: userProfile.role,
       is_active: userProfile.is_active,
       permissions: userProfile.permissions,
@@ -104,7 +127,12 @@ async function getUser(supabase: any, id: string, res: NextApiResponse) {
         id: userProfile.company_id,
         name: companyName,
         subdomain: companySubdomain
-      }
+      },
+      employee: userProfile.employee_id ? {
+        id: userProfile.employee_id,
+        name: employeeName,
+        email: employeeEmail
+      } : null
     }
 
     return res.status(200).json({
@@ -303,33 +331,109 @@ async function deleteUser(supabase: any, id: string, res: NextApiResponse) {
   }
 }
 
-async function postActions(supabase: any, id: string, req: NextApiRequest, res: NextApiResponse) {
+async function postActions(
+  supabase: any,
+  id: string,
+  req: NextApiRequest,
+  res: NextApiResponse,
+  actorUserId: string
+) {
   try {
     const action = (req.query.action as string) || ''
-    if (action === 'reset-password') {
-      const { new_password } = req.body as { new_password: string }
-      if (!new_password || new_password.length < 8) {
-        return res.status(400).json({ 
-          error: 'New password must be at least 8 characters',
-          message: 'La contraseña debe tener al menos 8 caracteres'
+    if (action === 'send-recovery-link') {
+      if (!env.NEXT_PUBLIC_SUPABASE_URL || !env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+        return res.status(503).json({
+          error: 'Service unavailable',
+          message: 'Recuperación por correo no está configurada (Supabase URL/anon key).'
         })
       }
 
-      // Use admin client with SERVICE_ROLE_KEY to update password
-      // This allows password reset without requiring user email access
       const adminClient = createAdminClient()
-      const { error } = await adminClient.auth.admin.updateUserById(id, { 
-        password: new_password 
-      })
-      
-      if (error) {
-        logger.error('Error resetting password', { userId: id, error })
-        throw error
+      const { data: authRow, error: getUserError } = await adminClient.auth.admin.getUserById(id)
+      if (getUserError || !authRow?.user?.email) {
+        return res.status(404).json({
+          error: 'User not found',
+          message: 'No se encontró el usuario o no tiene correo en Auth'
+        })
       }
 
-      logger.info('Password reset successfully', { userId: id })
-      return res.status(200).json({ 
-        success: true, 
+      const siteUrl = env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '')
+      const redirectTo = `${siteUrl}/auth/update-password?next=${encodeURIComponent('/app/login')}`
+
+      const pub = createSupabaseJsClient(
+        env.NEXT_PUBLIC_SUPABASE_URL,
+        env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+        { auth: { persistSession: false, autoRefreshToken: false } }
+      )
+
+      const { error: resetErr } = await pub.auth.resetPasswordForEmail(authRow.user.email, {
+        redirectTo
+      })
+
+      if (resetErr) {
+        logger.warn('send-recovery-link: resetPasswordForEmail error (still returning success to client)', {
+          userId: id,
+          message: resetErr.message
+        })
+      }
+
+      await logSuperAdminAction(actorUserId, 'user_recovery_email_sent', 'user', id, {})
+
+      return res.status(200).json({
+        success: true,
+        message: 'Si el servicio de correo está activo, el usuario recibirá un enlace para restablecer la contraseña.'
+      })
+    }
+
+    if (action === 'reset-password') {
+      // Require SERVICE_ROLE_KEY - auth.admin.updateUserById only works with it
+      if (!env.SUPABASE_SERVICE_ROLE_KEY) {
+        logger.error('Password reset failed: SUPABASE_SERVICE_ROLE_KEY not configured')
+        return res.status(503).json({
+          error: 'Service unavailable',
+          message: 'El reseteo de contraseña no está configurado correctamente. Contacte al administrador.'
+        })
+      }
+
+      const body = req.body as { new_password?: string } | undefined
+      const new_password = body?.new_password
+      const pwCheck = validateAdminPassword(new_password)
+      if (!pwCheck.ok) {
+        return res.status(400).json({
+          error: 'Weak password',
+          message: pwCheck.message
+        })
+      }
+
+      const adminClient = createAdminClient()
+
+      // Verify user exists in auth.users before attempting update
+      const { data: authUser, error: getUserError } = await adminClient.auth.admin.getUserById(id)
+      if (getUserError || !authUser?.user) {
+        logger.error('Password reset failed: user not found in auth', { userId: id, error: getUserError })
+        return res.status(404).json({
+          error: 'User not found',
+          message: 'El usuario no existe en el sistema de autenticación'
+        })
+      }
+
+      const { error } = await adminClient.auth.admin.updateUserById(id, {
+        password: new_password
+      })
+
+      if (error) {
+        logger.error('Error resetting password', { userId: id, error })
+        return res.status(400).json({
+          error: 'Password update failed',
+          message: 'No se pudo actualizar la contraseña. Intenta de nuevo o contacta soporte.'
+        })
+      }
+
+      await logSuperAdminAction(actorUserId, 'user_password_reset_by_admin', 'user', id, {})
+
+      logger.info('Password reset successfully', { userId: id, actorUserId })
+      return res.status(200).json({
+        success: true,
         message: 'Password reset successfully',
         user: { id }
       })

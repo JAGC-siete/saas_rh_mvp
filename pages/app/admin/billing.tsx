@@ -217,6 +217,7 @@ export default function BillingPage() {
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '-'
     return new Date(dateStr).toLocaleDateString('es-HN', {
+      timeZone: 'America/Tegucigalpa',
       year: 'numeric',
       month: 'short',
       day: 'numeric'
@@ -256,8 +257,8 @@ export default function BillingPage() {
                       onClick={() => setActiveTab(tab.id)}
                       className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 transition-colors ${
                         activeTab === tab.id
-                          ? 'border-brand-400 text-white'
-                          : 'border-transparent text-gray-300 hover:text-white hover:border-white/30'
+                          ? 'border-amber-400 text-white'
+                          : 'border-transparent text-white/60 hover:text-white hover:border-white/30'
                       }`}
                     >
                       <Icon className="h-5 w-5" />
@@ -373,6 +374,7 @@ export default function BillingPage() {
                           size="sm"
                           onClick={() => setMetersPage(prev => Math.max(1, prev - 1))}
                           disabled={metersPage === 1}
+                          className="border-white/30 text-white hover:bg-white/10"
                         >
                           Anterior
                         </Button>
@@ -382,6 +384,7 @@ export default function BillingPage() {
                           size="sm"
                           onClick={() => setMetersPage(prev => prev + 1)}
                           disabled={meters.length < 20}
+                          className="border-white/30 text-white hover:bg-white/10"
                         >
                           Siguiente
                         </Button>
@@ -400,10 +403,13 @@ export default function BillingPage() {
                   <CardHeader>
                     <div className="flex justify-between items-center">
                       <CardTitle className="text-white">Filtros</CardTitle>
-                      <Button onClick={() => setShowPaymentForm(true)}>
-                        <CreditCard className="h-4 w-4 mr-2" />
-                        Nuevo Pago
-                      </Button>
+                        <Button 
+                          onClick={() => setShowPaymentForm(true)}
+                          className="border-white/30 text-white hover:bg-white/10"
+                        >
+                          <CreditCard className="h-4 w-4 mr-2" />
+                          Nuevo Pago
+                        </Button>
                     </div>
                   </CardHeader>
                   <CardContent>
@@ -503,10 +509,15 @@ export default function BillingPage() {
                             variant="outline"
                             onClick={() => setShowPaymentForm(false)}
                             disabled={submittingPayment}
+                            className="border-white/30 text-white hover:bg-white/10"
                           >
                             Cancelar
                           </Button>
-                          <Button type="submit" disabled={submittingPayment}>
+                          <Button 
+                            type="submit" 
+                            disabled={submittingPayment}
+                            className="bg-amber-500 hover:bg-amber-600 text-white"
+                          >
                             {submittingPayment ? 'Creando...' : 'Crear Pago'}
                           </Button>
                         </div>
@@ -559,7 +570,7 @@ export default function BillingPage() {
                                     variant="outline"
                                     size="sm"
                                     onClick={() => handleDeletePayment(payment.id)}
-                                    className="text-red-400 hover:text-red-300"
+                                    className="border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300"
                                   >
                                     Eliminar
                                   </Button>
@@ -579,6 +590,7 @@ export default function BillingPage() {
                           size="sm"
                           onClick={() => setPaymentsPage(prev => Math.max(1, prev - 1))}
                           disabled={paymentsPage === 1}
+                          className="border-white/30 text-white hover:bg-white/10"
                         >
                           Anterior
                         </Button>
@@ -588,6 +600,7 @@ export default function BillingPage() {
                           size="sm"
                           onClick={() => setPaymentsPage(prev => prev + 1)}
                           disabled={payments.length < 20}
+                          className="border-white/30 text-white hover:bg-white/10"
                         >
                           Siguiente
                         </Button>

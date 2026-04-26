@@ -1,5 +1,11 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient } from '../../../lib/supabase/server'
+import {
+  currencyForCountryCode,
+  ianaTimezoneForCountryCode,
+  isCountryCode,
+  type CountryCode,
+} from '../../../lib/country/supported'
 import { requireSuperAdmin } from '../../../lib/auth/api-auth-fixed'
 import { logger } from '../../../lib/logger'
 import { createSecureErrorResponse } from '../../../lib/security/error-handling'
@@ -42,6 +48,8 @@ interface SetupCompanyRequest {
     name: string
     subdomain: string
     plan_type: 'trial' | 'basic' | 'premium' | 'enterprise'
+    /** ISO 3166-1 alpha-3: HND | SLV | GTM */
+    country_code?: string
     settings?: Record<string, any>
   }
   admin: {
@@ -117,6 +125,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // 2. Create company
+    const rawCc = (companyData.country_code || 'HND').toUpperCase()
+    const countryCode: CountryCode = isCountryCode(rawCc) ? rawCc : 'HND'
+    const defaultTz = ianaTimezoneForCountryCode(countryCode)
+
     const { data: company, error: companyError } = await adminClient
       .from('companies')
       .insert({
@@ -124,9 +136,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         subdomain: companyData.subdomain,
         plan_type: companyData.plan_type || 'premium',
         is_active: true,
+        country_code: countryCode,
+        timezone: defaultTz,
         settings: {
-          currency: 'HNL',
-          timezone: 'America/Tegucigalpa',
+          currency: currencyForCountryCode(countryCode),
+          timezone: defaultTz,
           language: 'es',
           ...companyData.settings
         }

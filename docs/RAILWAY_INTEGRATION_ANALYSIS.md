@@ -49,12 +49,9 @@ Tu servicio Next.js actual:
 Endpoint de provision actual:
   /pages/api/admin/devices/provision.ts
   
-  Cambiaría de:
-    fetch(`${HIKVISION_PROXY_URL}/api/v1/hik/provision`)
-  
-  A:
-    // Llamada interna, sin fetch externo
-    // O usar las funciones directamente
+  Implementación deseada:
+    - No hay llamadas HTTP a un servicio externo
+    - Los handlers usan directamente `lib/hikvision/sdk.ts`
 ```
 
 ---
@@ -78,7 +75,7 @@ Endpoint de provision actual:
    - ❌ Configurar Dockerfile separado
    - ❌ Variables de entorno separadas
    - ❌ Obtener URL del nuevo servicio
-   - ❌ Configurar `HIKVISION_PROXY_URL` en servicio principal
+   - ❌ Mantener dos servicios y su networking/observabilidad
 
 3. **Más puntos de fallo:**
    - ❌ Dos servicios que pueden fallar independientemente
@@ -139,18 +136,9 @@ Es la mejor opción porque:
 
 ### Próximos Pasos
 
-**¿Quieres que lo implemente?**
+La implementación recomendada ya está documentada en:
 
-Puedo convertir el proxy Express en API routes de Next.js ahora mismo:
-
-1. Crear `/pages/api/hikvision/provision.ts`
-2. Crear `/pages/api/hikvision/status/[deviceId].ts`
-3. Crear `/pages/api/hikvision/health.ts`
-4. Mover la lógica del proxy a estos archivos
-5. Actualizar el endpoint `/pages/api/admin/devices/provision.ts` para usar las funciones internas
-6. Eliminar la necesidad de `HIKVISION_PROXY_URL`
-
-**Tiempo estimado:** 15-20 minutos
+- `docs/HIKVISION_PROXY_INTEGRATED.md`
 
 ---
 

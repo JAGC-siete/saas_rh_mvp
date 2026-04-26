@@ -1,6 +1,12 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../lib/supabase/server'
 import { logger } from '../../../lib/logger'
+import { normalizeCountryCode } from '../../../lib/country/supported'
+import {
+  completedFullYearsOfService,
+  statutoryVacationDaysForEmployee,
+} from '../../../lib/leave/honduras-labor-reference'
+import { assertEmployeePortalEnabled } from '../../../lib/employee-portal/company-settings'
 
 interface EmployeeDashboardResponse {
   employee: {
@@ -48,6 +54,14 @@ interface EmployeeDashboardResponse {
     check_out: string | null
     status: string | null
   }>
+  vacation_summary: {
+    entitledDays: number
+    usedDaysThisYear: number
+    remainingDays: number
+    source: 'leave_types' | 'default'
+    tenureCompletedYears?: number
+    statutoryMinimumDays?: number
+  }
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -96,6 +110,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       employeeId = userProfile.employee_id
       companyId = userProfile.company_id
+    }
+
+    if (!(await assertEmployeePortalEnabled(supabase, companyId ?? undefined, res))) {
+      return
     }
     
     logger.info('Employee dashboard access', {
@@ -156,6 +174,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Add related data to employee object
     employeeDetails.departments = department
     employeeDetails.work_schedules = workSchedule
+
+    let companyCountryCode = normalizeCountryCode(undefined)
+    if (employeeDetails.company_id) {
+      const { data: companyRow } = await supabase
+        .from('companies')
+        .select('country_code')
+        .eq('id', employeeDetails.company_id as string)
+        .maybeSingle()
+      companyCountryCode = normalizeCountryCode(companyRow?.country_code)
+    }
 
     // Get attendance data for current month (dates already calculated above)
 
@@ -298,6 +326,74 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const totalPermissions = totalPermissionsRecords?.length || 0
 
+    const DEFAULT_VACATION_ENTITLEMENT_NON_HN = 15
+    const calendarYear = currentDate.getFullYear()
+    const tenureYears = completedFullYearsOfService(
+      employeeDetails.hire_date as string | null | undefined,
+      currentDate
+    )
+    const statutoryVacationDays = statutoryVacationDaysForEmployee(
+      employeeDetails.hire_date as string | null | undefined,
+      currentDate
+    )
+    const isHonduras = companyCountryCode === 'HND'
+
+    let vacationSummary: EmployeeDashboardResponse['vacation_summary'] = {
+      entitledDays: isHonduras ? statutoryVacationDays : DEFAULT_VACATION_ENTITLEMENT_NON_HN,
+      usedDaysThisYear: 0,
+      remainingDays: isHonduras ? statutoryVacationDays : DEFAULT_VACATION_ENTITLEMENT_NON_HN,
+      source: 'default',
+      tenureCompletedYears: tenureYears,
+      statutoryMinimumDays: isHonduras ? statutoryVacationDays : undefined,
+    }
+
+    if (employeeDetails.company_id) {
+      const { data: leaveTypesRows } = await supabase
+        .from('leave_types')
+        .select('id, name, max_days_per_year')
+        .eq('company_id', employeeDetails.company_id as string)
+
+      const types = leaveTypesRows || []
+      const vacationMatches = types.filter((t) => /vacaci[oó]n|vacation/i.test((t.name || '').trim()))
+      let entitledDays = isHonduras ? statutoryVacationDays : DEFAULT_VACATION_ENTITLEMENT_NON_HN
+      const vacationIds: string[] = vacationMatches.map((t) => t.id)
+
+      if (vacationMatches.length > 0) {
+        const caps = vacationMatches
+          .map((t) => Number(t.max_days_per_year))
+          .filter((n) => !Number.isNaN(n) && n > 0)
+        const mx = caps.length ? Math.max(...caps) : 0
+        const fromTypes = mx > 0 ? mx : isHonduras ? statutoryVacationDays : DEFAULT_VACATION_ENTITLEMENT_NON_HN
+        entitledDays = isHonduras ? Math.max(fromTypes, statutoryVacationDays) : fromTypes
+      }
+
+      let usedYtd = 0
+      if (vacationIds.length > 0) {
+        const { data: vacUsed, error: vacErr } = await supabase
+          .from('leave_requests')
+          .select('days_requested')
+          .eq('employee_id', employeeId)
+          .eq('status', 'approved')
+          .in('leave_type_id', vacationIds)
+          .gte('start_date', `${calendarYear}-01-01`)
+          .lte('start_date', `${calendarYear}-12-31`)
+
+        if (!vacErr && vacUsed) {
+          usedYtd = vacUsed.reduce((s, r) => s + Number(r.days_requested || 0), 0)
+        }
+      }
+
+      const remaining = Math.max(0, entitledDays - usedYtd)
+      vacationSummary = {
+        entitledDays,
+        usedDaysThisYear: Math.round(usedYtd * 10) / 10,
+        remainingDays: Math.round(remaining * 10) / 10,
+        source: vacationMatches.length > 0 ? 'leave_types' : 'default',
+        tenureCompletedYears: tenureYears,
+        statutoryMinimumDays: isHonduras ? statutoryVacationDays : undefined,
+      }
+    }
+
     // Mask sensitive information
     const dniMasked = employeeDetails.dni?.length > 9 
       ? `${employeeDetails.dni.substring(0, 4)}****${employeeDetails.dni.slice(-5)}`
@@ -368,7 +464,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         check_in: record.check_in,
         check_out: record.check_out,
         status: record.status,
-      }))
+      })),
+      vacation_summary: vacationSummary
     }
 
     return res.status(200).json(response)

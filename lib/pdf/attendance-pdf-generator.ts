@@ -1,5 +1,6 @@
 import PDFDocument from 'pdfkit'
 import { getDateRange } from '../attendance'
+import { formatDateOnlyForHonduras } from '../timezone'
 
 // Types for type safety and elegance
 interface AttendanceRecord {
@@ -395,7 +396,10 @@ export class AttendancePDFGenerator {
 
   private formatDate(dateString: string): string {
     try {
-      return new Date(dateString).toLocaleDateString('es-HN', { 
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        return formatDateOnlyForHonduras(dateString)
+      }
+      return new Date(dateString).toLocaleDateString('es-HN', {
         timeZone: PDF_CONFIG.timezone,
         year: 'numeric',
         month: '2-digit',

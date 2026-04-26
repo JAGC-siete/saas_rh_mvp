@@ -1,9 +1,10 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { nowInHonduras } from './timezone'
+import { getTrustedClientIp } from './security/trusted-client-ip'
 
 
 
-interface RateLimitConfig {
+export interface RateLimitConfig {
   windowMs: number // Ventana de tiempo en milisegundos
   max: number // Máximo número de requests por ventana
   message?: string
@@ -72,12 +73,7 @@ export function rateLimit(config: RateLimitConfig) {
  * Obtiene la clave única del cliente
  */
 function getClientKey(req: NextApiRequest): string {
-  // Usar IP del cliente
-  const ip = req.headers['x-forwarded-for'] || 
-             req.headers['x-real-ip'] || 
-             req.connection.remoteAddress || 
-             req.socket.remoteAddress || 
-             'unknown'
+  const ip = getTrustedClientIp(req)
   
   // Si hay usuario autenticado, incluir su ID
   const userId = (req as any).user?.id || 'anonymous'
@@ -123,6 +119,22 @@ export const RATE_LIMITS = {
     windowMs: 10 * 60 * 1000, // 10 minutos
     max: 5, // 5 exportaciones por 10 minutos
     message: 'Demasiadas exportaciones. Intente de nuevo en 10 minutos.'
+  },
+  
+  // Rate limit para calculadora pública de deducciones
+  PUBLIC_CALCULATOR: {
+    windowMs: 5 * 60 * 1000, // 5 minutos
+    max: 20, // 20 cálculos por 5 minutos
+    message: 'Demasiados cálculos. Intente de nuevo en 5 minutos.',
+    statusCode: 429
+  },
+  
+  // Rate limit para envío de emails de reportes (más restrictivo)
+  PUBLIC_EMAIL: {
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 3, // 3 emails por 15 minutos (prevenir spam)
+    message: 'Demasiados envíos de reportes. Intente de nuevo en 15 minutos.',
+    statusCode: 429
   }
 }
 

@@ -79,7 +79,6 @@ export const CALL_CENTER_MESSAGES = {
   oor_out: "Salida fuera del horario autorizado. Se requiere justificación obligatoria:",
   
   // === SYSTEM MESSAGES ===
-  closed_day: "Hoy no es un día laboral. El sistema de registro está cerrado.",
   closed_window: "La ventana de registro está cerrada. Intenta en el horario correspondiente.",
   three_lates_notice: "Atención: Esta es tu 3ra tardanza de la semana. Se notificará a RR.HH.",
   

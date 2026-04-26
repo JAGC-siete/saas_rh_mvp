@@ -1,7 +1,9 @@
+import { getTrustedClientIp } from '../security/trusted-client-ip'
+
 /**
  * Railway Configuration
  * Based on Railway limitations: no sticky sessions, proxy terminates TLS
- * 
+ *
  * References:
  * - https://station.railway.com/feedback/sticky-sessions-fa65efc4
  * - https://expressjs.com/en/guide/behind-proxies.html
@@ -45,24 +47,11 @@ export function getCookieOptionsForRailway(): {
 }
 
 /**
- * Get client IP from request (respects X-Forwarded-For)
- * Based on: https://station.railway.com/questions/edge-proxy-x-forwarded-for-c5a50049
- * 
- * Note: Railway warns that X-Forwarded-For may not be trustworthy for security
+ * Client IP behind Railway / other proxies.
+ * Delegates to {@link getTrustedClientIp} (rightmost XFF when TRUST_PROXY is on).
  */
 export function getClientIp(req: any): string {
-  // Trust proxy is set, so X-Forwarded-For is respected
-  const forwarded = req.headers['x-forwarded-for']
-  
-  if (forwarded) {
-    // Take first IP (original client)
-    const ips = forwarded.split(',')
-    return ips[0].trim()
-  }
-  
-  return req.connection?.remoteAddress || 
-         req.socket?.remoteAddress || 
-         'unknown'
+  return getTrustedClientIp(req)
 }
 
 /**

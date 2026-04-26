@@ -8,12 +8,13 @@ import { useToast } from '../toast'
 import { fetchUnifiedPayroll, getCurrentPeriod, UnifiedRow, UnifiedResumen } from '../payroll-unified'
 import { usePayrollMetrics } from './usePayrollMetrics'
 import { payrollApi, mapPayrollError } from '../payroll-api'
+import type { PayrollPdfGroupBy } from '../payroll/pdf-layout'
 import { PayrollFilters, UIRunStatus } from '../../types/payroll'
 
 // Unified State Interface
 export interface PayrollManagerState {
   // Data
-  unifiedData: { rows: UnifiedRow[]; resumen: UnifiedResumen; runId?: string; status?: string } | null
+  unifiedData: { rows: UnifiedRow[]; resumen: UnifiedResumen; runId?: string; status?: string; incompleteRecordsAlert?: { employee_id: string; employee_name: string; dates: string[] }[] } | null
   currentPeriod: { year: number; month: number; quincena: 1 | 2 }
   
   // UI State
@@ -27,18 +28,31 @@ export interface PayrollManagerState {
   // Legacy compatibility (will be removed)
   runId?: string
   hasLoadedInitialData: boolean
+
+  // AHC preflight (attendance_hours_calculation completeness)
+  ahcPreflight?: {
+    status: 'GREEN' | 'YELLOW' | 'RED'
+    missingAHC: number
+    completeRecords: number
+    ahcRecords: number
+    totalRecords: number
+    recommendedAction?: string
+  } | null
+  ahcPreflightLoading?: boolean
 }
 
 // Action Types
 export type PayrollManagerAction =
   | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_DATA'; payload: { rows: UnifiedRow[]; resumen: UnifiedResumen } }
+  | { type: 'SET_DATA'; payload: { rows: UnifiedRow[]; resumen: UnifiedResumen; runId?: string; status?: string; incompleteRecordsAlert?: { employee_id: string; employee_name: string; dates: string[] }[] } }
   | { type: 'SET_ERROR'; payload: string | null }
   | { type: 'SET_STATUS'; payload: UIRunStatus }
   | { type: 'SET_FILTERS'; payload: Partial<PayrollFilters> }
   | { type: 'SET_PERIOD'; payload: { year: number; month: number; quincena: 1 | 2 } }
   | { type: 'SET_RUN_ID'; payload: string | undefined }
   | { type: 'SET_LOADED_INITIAL'; payload: boolean }
+  | { type: 'SET_AHC_PREFLIGHT'; payload: PayrollManagerState['ahcPreflight'] }
+  | { type: 'SET_AHC_PREFLIGHT_LOADING'; payload: boolean }
   | { type: 'CLEAR_ERROR' }
   | { type: 'RESET_STATE' }
 
@@ -61,7 +75,9 @@ const getInitialState = (): PayrollManagerState => {
       tipo: 'CON'
     },
     runId: undefined,
-    hasLoadedInitialData: false
+    hasLoadedInitialData: false,
+    ahcPreflight: null,
+    ahcPreflightLoading: false
   }
 }
 
@@ -77,7 +93,13 @@ const payrollManagerReducer = (
     case 'SET_DATA':
       return { 
         ...state, 
-        unifiedData: action.payload, 
+        unifiedData: {
+          rows: action.payload.rows,
+          resumen: action.payload.resumen,
+          runId: (action.payload as any).runId ?? state.unifiedData?.runId,
+          status: (action.payload as any).status ?? state.unifiedData?.status,
+          incompleteRecordsAlert: (action.payload as any).incompleteRecordsAlert
+        },
         loading: false,
         error: null
       }
@@ -111,6 +133,12 @@ const payrollManagerReducer = (
     
     case 'SET_LOADED_INITIAL':
       return { ...state, hasLoadedInitialData: action.payload }
+
+    case 'SET_AHC_PREFLIGHT':
+      return { ...state, ahcPreflight: action.payload }
+
+    case 'SET_AHC_PREFLIGHT_LOADING':
+      return { ...state, ahcPreflightLoading: action.payload }
     
     case 'CLEAR_ERROR':
       return { ...state, error: null }
@@ -296,6 +324,68 @@ export const usePayrollManager = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [companyId, state.currentPeriod.year, state.currentPeriod.month, state.currentPeriod.quincena, state.filters.tipo])
 
+  const loadAhcPreflight = useCallback(async () => {
+    if (!companyId) return
+    dispatch({ type: 'SET_AHC_PREFLIGHT_LOADING', payload: true })
+    try {
+      const q = new URLSearchParams({
+        year: String(state.filters.year),
+        month: String(state.filters.month),
+        quincena: String(state.filters.quincena),
+        tipo: String(state.filters.tipo || 'CON'),
+      })
+      const res = await fetch(`/api/payroll/preflight?${q.toString()}`, { credentials: 'include' })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        dispatch({ type: 'SET_AHC_PREFLIGHT', payload: null })
+        return
+      }
+      dispatch({
+        type: 'SET_AHC_PREFLIGHT',
+        payload: {
+          status: json.status,
+          missingAHC: json.missingAHC ?? 0,
+          completeRecords: json.completeRecords ?? 0,
+          ahcRecords: json.ahcRecords ?? 0,
+          totalRecords: json.totalRecords ?? 0,
+          recommendedAction: json.recommendedAction,
+        },
+      })
+    } finally {
+      dispatch({ type: 'SET_AHC_PREFLIGHT_LOADING', payload: false })
+    }
+  }, [companyId, state.filters.year, state.filters.month, state.filters.quincena, state.filters.tipo])
+
+  const recalculateMissingAhc = useCallback(async () => {
+    if (!companyId) {
+      throw new Error('Company ID no encontrado')
+    }
+    const res = await fetch('/api/payroll/recalculate-missing-ahc', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        year: state.filters.year,
+        month: state.filters.month,
+        quincena: state.filters.quincena,
+        tipo: state.filters.tipo || 'CON',
+      }),
+    })
+    const json = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      const msg = json?.error || json?.message || `Error ${res.status}`
+      throw new Error(msg)
+    }
+    return json as { success: boolean; missing: number; calculated: number }
+  }, [companyId, state.filters.year, state.filters.month, state.filters.quincena, state.filters.tipo])
+
+  // Refresh preflight after preview loads
+  useEffect(() => {
+    if (!companyId) return
+    if (!state.unifiedData) return
+    void loadAhcPreflight()
+  }, [companyId, state.unifiedData, loadAhcPreflight])
+
   // Legacy API Actions (for compatibility during migration)
   const generatePreview = useCallback(async () => {
     console.log('🚀 DEBUG - generatePreview INICIADO')
@@ -355,7 +445,16 @@ export const usePayrollManager = () => {
         })
         
         // Actualizar estado inmediatamente
-        dispatch({ type: 'SET_DATA', payload: { rows, resumen } })
+        dispatch({
+          type: 'SET_DATA',
+          payload: {
+            rows,
+            resumen,
+            runId: response.run_id,
+            status: response.status ?? 'draft',
+            incompleteRecordsAlert: response.incompleteRecordsAlert
+          }
+        })
         console.log('✅ Tabla actualizada inmediatamente con datos del preview')
       } else {
         console.error('❌ No se encontraron datos de planilla en la respuesta')
@@ -373,6 +472,12 @@ export const usePayrollManager = () => {
           'Sin Registros de Asistencia',
           `${response.noAttendanceWarning.message} ${response.noAttendanceWarning.detail}`,
           10000
+        )
+      } else if (response?.incompleteRecordsAlert?.length) {
+        toast.warning(
+          'Marcas incompletas detectadas',
+          `${response.incompleteRecordsAlert.length} empleado(s) con registros sin check-out. Revise la alerta en la tabla.`,
+          8000
         )
       } else {
         toast.success(
@@ -466,7 +571,11 @@ export const usePayrollManager = () => {
         
         // Actualizar los datos unificados con el runId si está disponible
         dispatch({ type: 'SET_DATA', payload: refreshedData })
-        
+
+        if (refreshedData.status) {
+          dispatch({ type: 'SET_STATUS', payload: refreshedData.status as UIRunStatus })
+        }
+
         if (refreshedData.runId) {
           dispatch({ type: 'SET_RUN_ID', payload: refreshedData.runId })
           console.log('🔍 DEBUG - Run ID actualizado:', refreshedData.runId)
@@ -536,28 +645,91 @@ export const usePayrollManager = () => {
     }
   }, [state.runId, setStatus, setLoading, clearError, setError, toast])
 
-  const generatePDF = useCallback(async () => {
-    if (!state.runId) {
-      toast.error('Error', 'No hay una corrida de nómina activa', 4000)
-      return
-    }
-    
-    try {
-      const response = await payrollApi.generatePDF(state.runId)
-      
-      // Trigger direct download
-      const link = document.createElement('a')
-      link.href = response.url
-      link.download = `planilla_${state.currentPeriod.year}-${state.currentPeriod.month.toString().padStart(2, '0')}.pdf`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      
-      toast.success('PDF Generado', 'El PDF se ha descargado correctamente', 4000)
-    } catch (error: any) {
-      toast.error('Error Generando PDF', 'No se pudo generar el PDF', 6000)
-    }
-  }, [state.runId, state.currentPeriod, toast])
+  const generatePDF = useCallback(
+    async (groupBy: PayrollPdfGroupBy = 'none') => {
+      if (!state.runId) {
+        toast.error('Error', 'No hay una corrida de nómina activa', 4000)
+        return
+      }
+
+      const defaultFilename = `planilla_${state.currentPeriod.year}-${String(state.currentPeriod.month).padStart(2, '0')}_q${state.currentPeriod.quincena}.pdf`
+
+      const filenameFromContentDisposition = (cd: string | null): string | null => {
+        if (!cd) return null
+        const m =
+          cd.match(/filename\*=UTF-8''([^;]+)/i)?.[1] ||
+          cd.match(/filename="([^"]+)"/)?.[1] ||
+          cd.match(/filename=([^;]+)/)?.[1]
+        if (!m) return null
+        const raw = m.trim().replace(/^["']|["']$/g, '')
+        try {
+          return decodeURIComponent(raw)
+        } catch {
+          return raw
+        }
+      }
+
+      const triggerDownload = (blob: Blob, filename: string) => {
+        const blobUrl = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = blobUrl
+        link.download = filename
+        link.rel = 'noopener'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.setTimeout(() => URL.revokeObjectURL(blobUrl), 120_000)
+      }
+
+      try {
+        const { url } = await payrollApi.generatePDF(state.runId, {
+          groupBy: groupBy === 'none' ? undefined : groupBy
+        })
+        const res = await fetch(url, { credentials: 'include' })
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => ({} as { message?: string; error?: string }))
+          throw new Error(errBody.message || errBody.error || `Error ${res.status}`)
+        }
+
+        const buf = await res.arrayBuffer()
+        const bytes = new Uint8Array(buf)
+        const looksPdf =
+          bytes.length >= 4 &&
+          bytes[0] === 0x25 &&
+          bytes[1] === 0x50 &&
+          bytes[2] === 0x44 &&
+          bytes[3] === 0x46
+        const contentType = (res.headers.get('Content-Type') || '').toLowerCase()
+        const typedAsPdf = contentType.includes('application/pdf')
+
+        if (!looksPdf && !typedAsPdf) {
+          const text = new TextDecoder().decode(bytes.slice(0, 4096))
+          let parsed: { message?: string; error?: string } | null = null
+          try {
+            parsed = JSON.parse(text) as { message?: string; error?: string }
+          } catch {
+            parsed = null
+          }
+          const fromJson = parsed?.message || parsed?.error
+          throw new Error(fromJson || 'El servidor no devolvió un PDF válido')
+        }
+
+        if (bytes.length === 0) {
+          throw new Error('El PDF recibido está vacío')
+        }
+
+        const filename =
+          filenameFromContentDisposition(res.headers.get('Content-Disposition')) || defaultFilename
+        const blob = new Blob([buf], { type: 'application/pdf' })
+        triggerDownload(blob, filename)
+        toast.success('PDF Generado', 'El PDF se ha descargado correctamente', 4000)
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'No se pudo generar el PDF'
+        toast.error('Error Generando PDF', message, 6000)
+      }
+    },
+    [state.runId, state.currentPeriod, toast]
+  )
 
   const generateVoucher = useCallback(async (runLineId: string) => {
     try {
@@ -640,7 +812,8 @@ export const usePayrollManager = () => {
   const canPreview = state.status === 'idle' || state.status === 'draft' || state.status === 'error'
   const canEdit = state.status === 'draft' && !!state.runId
   const canAuthorize = (state.status === 'draft' || state.status === 'edited') && !!state.runId
-  const canSend = state.status === 'authorized' && !!state.runId
+  const canSend =
+    (state.status === 'authorized' || state.status === 'distributed') && !!state.runId
   const canReset = state.status !== 'idle'
   
   // DEBUG: Log current state for debugging
@@ -676,6 +849,8 @@ export const usePayrollManager = () => {
     sendEmail,
     generatePDF,
     generateVoucher,
+    loadAhcPreflight,
+    recalculateMissingAhc,
     
     // Filter Management
     updateFilter,

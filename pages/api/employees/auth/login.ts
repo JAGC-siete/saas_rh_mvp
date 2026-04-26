@@ -3,6 +3,10 @@ import { createClient, createAdminClient } from '../../../../lib/supabase/server
 import { logger } from '../../../../lib/logger'
 import { sendOtp, verifyOtp } from '../../../../lib/employee-otp'
 import { createSessionOnLogin } from '../../../../lib/middleware/session-manager'
+import {
+  EMPLOYEE_OTP_SEND_NEUTRAL_MESSAGE,
+  EMPLOYEE_OTP_VERIFY_NEUTRAL_ERROR
+} from '../../../../lib/auth/public-auth-messages'
 
 interface LoginRequest {
   email: string
@@ -58,21 +62,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
         .single()
 
       if (employeeError || !employee) {
-        logger.warn('Employee not found', { email, error: employeeError?.message })
-        return res.status(400).json({
-          success: false,
-          error: 'Email no encontrado o empleado inactivo'
+        logger.warn('Employee OTP request: no active match (neutral response)', {
+          error: employeeError?.message
+        })
+        return res.status(200).json({
+          success: true,
+          step: 'send_code',
+          message: EMPLOYEE_OTP_SEND_NEUTRAL_MESSAGE
         })
       }
 
-      // Enviar OTP usando el sistema que ya funcionaba
       const otpResult = await sendOtp(email, employee.id, employee.name)
-      
-      return res.status(otpResult.success ? 200 : 500).json({
-        success: otpResult.success,
+
+      if (!otpResult.success) {
+        logger.error('Failed to send employee OTP', { error: otpResult.error })
+        return res.status(500).json({
+          success: false,
+          error: 'No se pudo enviar el código. Intenta más tarde.',
+          step: 'send_code'
+        })
+      }
+
+      return res.status(200).json({
+        success: true,
         step: 'send_code',
-        message: otpResult.message,
-        error: otpResult.error
+        message: EMPLOYEE_OTP_SEND_NEUTRAL_MESSAGE
       })
     }
 
@@ -95,10 +109,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       .single()
 
     if (employeeError || !employee) {
-      logger.error('Employee not found after OTP verification', { email, error: employeeError })
-      return res.status(404).json({
+      logger.error('Employee not found after OTP verification', { error: employeeError?.message })
+      return res.status(400).json({
         success: false,
-        error: 'Empleado no encontrado'
+        error: EMPLOYEE_OTP_VERIFY_NEUTRAL_ERROR
       })
     }
 

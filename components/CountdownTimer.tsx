@@ -1,95 +1,77 @@
-import React, { useEffect, useMemo, useState } from "react";
+import Link from 'next/link'
+import { useEffect, useMemo, useState } from 'react'
+import { ArrowRightIcon } from '@heroicons/react/24/outline'
+import { trackCTAClick } from '../lib/analytics/googleAds'
 import { nowInHonduras } from '../lib/timezone'
 
+/** CTA hacia cotización formal en /ventas (reemplazo del countdown + email trial). */
 export default function CountdownTimer() {
-  // Countdown to next quincena (15 o último día del mes)
-  const [now, setNow] = useState(nowInHonduras());
+  const getNextPayrollClose = () => {
+    const now = nowInHonduras()
+    const y = now.getFullYear()
+    const m = now.getMonth()
+    const day = now.getDate()
+
+    const fifteenth = new Date(y, m, 15, 23, 59, 59)
+    const lastOfMonth = new Date(y, m + 1, 0, 23, 59, 59)
+
+    return day <= 15 ? fifteenth : lastOfMonth
+  }
+
+  const target = useMemo(() => getNextPayrollClose(), [])
+  const [nowMs, setNowMs] = useState(() => nowInHonduras().getTime())
 
   useEffect(() => {
-    const t = setInterval(() => setNow(nowInHonduras()), 1000); // update cada segundo
-    return () => clearInterval(t);
-  }, []);
+    const id = window.setInterval(() => setNowMs(nowInHonduras().getTime()), 1000)
+    return () => window.clearInterval(id)
+  }, [])
 
-  const { daysLeft, hoursLeft, minutesLeft, secondsLeft } = useMemo(() => {
-    const d = new Date(now);
-    const y = d.getFullYear();
-    const m = d.getMonth(); // 0-11
-    const day = d.getDate();
-
-    // Definimos quincenas: 15 y último día del mes
-    const fifteenth = new Date(y, m, 15, 23, 59, 59);
-    const lastOfMonth = new Date(y, m + 1, 0, 23, 59, 59); // 0 => último día del mes anterior
-
-    const target = day <= 15 ? fifteenth : lastOfMonth;
-    const diffMs = target.getTime() - d.getTime();
-    
-    // Calcular días, horas, minutos y segundos
-    const diffDays = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
-    const diffHours = Math.max(0, Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)));
-    const diffMinutes = Math.max(0, Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60)));
-    const diffSeconds = Math.max(0, Math.floor((diffMs % (1000 * 60)) / 1000));
-
-    return { 
-      daysLeft: diffDays, 
-      hoursLeft: diffHours, 
-      minutesLeft: diffMinutes, 
-      secondsLeft: diffSeconds,
-      nextPayday: target 
-    };
-  }, [now]);
+  const remainingMs = Math.max(0, target.getTime() - nowMs)
+  const remaining = useMemo(() => {
+    const totalSeconds = Math.floor(remainingMs / 1000)
+    const days = Math.floor(totalSeconds / (24 * 60 * 60))
+    const hours = Math.floor((totalSeconds % (24 * 60 * 60)) / (60 * 60))
+    const minutes = Math.floor((totalSeconds % (60 * 60)) / 60)
+    const seconds = totalSeconds % 60
+    const pad2 = (n: number) => String(n).padStart(2, '0')
+    return { days, hours: pad2(hours), minutes: pad2(minutes), seconds: pad2(seconds) }
+  }, [remainingMs])
 
   return (
     <div className="text-center mb-12">
-      <div className="bg-gradient-to-r from-blue-500/20 to-orange-500/20 border border-black-400/30 rounded-2xl p-6 backdrop-blur-sm shadow-xl max-w-4xl mx-auto">
-        <div className="text-center mb-4">
-          <h3 className="text-lg font-semibold text-red-100 mb-2">TU PROXIMA FECHA DE PAGO ES EN</h3>
-          <div className="flex items-center justify-center gap-3 text-3xl font-bold text-white">
-            <div className="bg-white/20 rounded-xl px-4 py-2 min-w-[80px]">
-              <span className="block text-4xl">{daysLeft}</span>
-              <span className="text-sm text-red-100">DÍAS</span>
-            </div>
-            <span className="text-red-300">:</span>
-            <div className="bg-white/20 rounded-xl px-4 py-2 min-w-[80px]">
-              <span className="block text-4xl">{hoursLeft.toString().padStart(2, '0')}</span>
-              <span className="text-sm text-red-100">HORAS</span>
-            </div>
-            <span className="text-red-300">:</span>
-            <div className="bg-white/20 rounded-xl px-4 py-2 min-w-[80px]">
-              <span className="block text-4xl">{minutesLeft.toString().padStart(2, '0')}</span>
-              <span className="text-sm text-red-100">MIN</span>
-            </div>
-            <span className="text-red-300">:</span>
-            <div className="bg-white/20 rounded-xl px-4 py-2 min-w-[80px]">
-              <span className="block text-4xl">{secondsLeft.toString().padStart(2, '0')}</span>
-              <span className="text-sm text-red-100">SEG</span>
+      <div className="rounded-2xl border border-white/15 bg-white/5 p-6 sm:p-8 backdrop-blur-sm shadow-xl max-w-4xl mx-auto">
+        <h3 className="text-xl sm:text-2xl font-bold text-white leading-tight mb-2">
+          Tu propuesta a la medida en segundos
+        </h3>
+        <p className="text-sm sm:text-base text-brand-200/90 mb-5 max-w-2xl mx-auto leading-relaxed">
+          El sistema calcula la inversión exacta según el tamaño de tu plantilla y tu país. Recibe de inmediato un PDF detallado, listo para tu revisión gerencial.
+        </p>
+
+        <div className="mb-6">
+          <p className="text-xs sm:text-sm text-brand-200/70 max-w-2xl mx-auto">
+            Próximo cierre de planilla (referencia):{' '}
+            <span className="text-brand-100 font-medium">{target.toLocaleDateString()}</span>
+          </p>
+          <div className="mt-3 flex justify-center">
+            <div className="inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-xl border border-white/15 bg-black/20 px-3 sm:px-4 py-2 max-w-full">
+              <span className="text-xs sm:text-sm text-brand-200/80">Faltan</span>
+              <span className="text-white font-semibold tabular-nums whitespace-nowrap">
+                {remaining.days}d {remaining.hours}h {remaining.minutes}m {remaining.seconds}s
+              </span>
             </div>
           </div>
         </div>
-        <div className="text-center mt-8">
-          {/* Email CTA Section */}
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-              <input
-                type="email"
-                placeholder="Tu email"
-                className="flex-1 px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-red-100/70 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent"
-              />
-              <button
-                onClick={() => window.location.href = '/activar'}
-                className="inline-flex items-center justify-center rounded-xl px-6 py-3 text-base font-semibold shadow-lg bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all duration-300 hover:-translate-y-0.5 whitespace-nowrap"
-                data-analytics="cta_countdown_click"
-              >
-                Probalo HOY
-              </button>
-            </div>
-            
-            {/* Features text below CTA */}
-            <div className="text-sm text-red-100/80">
-              <p>Usalo gratis 30 días. Empleados ilimitados.</p>
-            </div>
-          </div>
-        </div>
+
+        <Link
+          href="/ventas"
+          onClick={() => trackCTAClick('solicitar_cotizacion', 'services_section_cta')}
+          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl px-6 sm:px-8 py-3.5 text-base font-semibold bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-colors"
+          data-analytics="cta_ventas_click"
+        >
+          Recibir propuesta en PDF
+          <ArrowRightIcon className="h-5 w-5" aria-hidden />
+        </Link>
       </div>
     </div>
-  );
+  )
 }

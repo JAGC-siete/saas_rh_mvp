@@ -25,8 +25,8 @@ export default function AttendanceRegisterPage() {
   return (
     <>
       <Head>
-        <title>Registro de Asistencia | Sistema Hondureño de Recursos Humanos</title>
-        <meta name="description" content="Plataforma de entrada y salida desarrollada en Honduras para empresas hondureñas" />
+        <title>Registro de Asistencia | Humano SISU</title>
+        <meta name="description" content="Plataforma de entrada y salida para empresas en El Salvador, Guatemala y Honduras" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
 
@@ -49,10 +49,10 @@ export default function AttendanceRegisterPage() {
             </div>
             
             <h1 className="text-4xl font-bold text-white mb-3 tracking-tight">
-              Sistema Hondureño
+              Humano SISU
             </h1>
             <h2 className="text-3xl font-bold text-white mb-3 tracking-tight">
-              de Recursos Humanos
+              Registro de asistencia
             </h2>
             
             <p className="text-brand-100 text-lg font-medium mb-4">
@@ -67,7 +67,7 @@ export default function AttendanceRegisterPage() {
             </div>
             
             <p className="text-sm text-blue-200 mt-4 font-medium">
-              Cumple con IHSS, RAP, STSS — Hecho en Honduras 🇭🇳
+              Deducciones y normativa local (SV, GT, HN) — Soporte regional
             </p>
           </div>
 
@@ -107,7 +107,7 @@ export default function AttendanceRegisterPage() {
           {/* Footer */}
           <div className="text-center">
             <p className="text-blue-100 text-xs font-medium">
-              © 2025 Sistema Hondureño de Recursos Humanos
+              © 2026 Humano SISU
             </p>
             <p className="text-blue-200/80 text-xs mt-1">
               Desarrollado por Humano SISU

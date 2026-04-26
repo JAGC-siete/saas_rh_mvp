@@ -1,25 +1,32 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Card } from '../ui/card'
-import { Button } from '../ui/button'
 import ReportFilters from './ReportFilters'
 import ReportPreview from './ReportPreview'
 import ReportKPIs from './ReportKPIs'
 import ExportBar from './ExportBar'
-import { nowInHonduras } from '../../lib/timezone'
+import { formatTimeDisplay, parseDateOnlyAsHonduras, HONDURAS_TIMEZONE } from '../../lib/timezone'
 import { useCompanyContext } from '../../lib/useCompanyContext'
 import { useReportsExport } from '../../lib/hooks/useReportsExport'
-import { 
-  Calendar, 
-  Clock, 
-  FileText, 
-  Users, 
-  DollarSign, 
+import { downloadPreviewAsCsv } from '../../lib/reports/download-preview-csv'
+import {
+  Calendar,
+  Clock,
+  FileText,
+  Users,
+  DollarSign,
   ClipboardList,
-  TrendingUp 
+  TrendingUp
 } from 'lucide-react'
+import { REPORT_TYPE_OPTIONS, type ReportType } from '../../lib/reports/report-config-schema'
+import {
+  getReportExportCapabilities,
+  reportNeedsDateRange,
+  reportSubtitle
+} from '../../lib/reports/report-ui-capabilities'
 
-export type ReportType = 'attendance' | 'payroll' | 'employees' | 'work_certificate' | 'severance'
+export type { ReportType }
 export type Periodicity = 'daily' | 'weekly' | 'fortnightly' | 'monthly' | 'custom'
+export type PayrollViewMode = 'lines' | 'derived'
 
 export interface ReportFilters {
   reportType: ReportType
@@ -27,12 +34,15 @@ export interface ReportFilters {
   from?: string
   to?: string
   employeeIds?: string[]
-  teamIds?: string[]
   departmentIds?: string[]
-  // Context-specific filters
   attendanceStatus?: ('present' | 'absent' | 'late' | 'permission')[]
   payrollType?: 'all' | 'regular' | 'overtime'
+  payrollView?: PayrollViewMode
+  payrollRunId?: string
+  payrollDerivedConcept?: string
   employeeStatus?: 'active' | 'inactive' | 'all'
+  certificateDate?: string
+  terminationDate?: string
 }
 
 export interface PreviewData {
@@ -42,35 +52,70 @@ export interface PreviewData {
   totalCount?: number
 }
 
-const TAB_CONFIG = [
-  { id: 'attendance', label: 'Asistencia', icon: Clock, color: 'text-blue-400' },
-  { id: 'payroll', label: 'Nómina', icon: DollarSign, color: 'text-green-400' },
-  { id: 'employees', label: 'Empleados', icon: Users, color: 'text-purple-400' },
-  { id: 'work_certificate', label: 'Constancias', icon: FileText, color: 'text-yellow-400' },
-  { id: 'severance', label: 'Liquidación', icon: ClipboardList, color: 'text-orange-400' }
-] as const
+const TAB_ICONS: Record<ReportType, typeof Clock> = {
+  attendance: Clock,
+  payroll: DollarSign,
+  employees: Users,
+  work_certificate: FileText,
+  severance: ClipboardList
+}
+
+const TAB_COLORS: Record<ReportType, string> = {
+  attendance: 'text-blue-400',
+  payroll: 'text-green-400',
+  employees: 'text-purple-400',
+  work_certificate: 'text-yellow-400',
+  severance: 'text-orange-400'
+}
+
+const TAB_CONFIG = REPORT_TYPE_OPTIONS.map(({ value: id, label }) => ({
+  id,
+  label,
+  icon: TAB_ICONS[id],
+  color: TAB_COLORS[id]
+}))
+
+function formatHnl(n: number | string | null | undefined): string {
+  const num = Number(n)
+  if (Number.isNaN(num)) return '—'
+  return `L ${num.toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
 
 export default function ReportBuilder() {
   const { companyId, loading: companyLoading } = useCompanyContext()
   const [activeTab, setActiveTab] = useState<ReportType>('attendance')
   const [filters, setFilters] = useState<ReportFilters>(() => ({
     reportType: 'attendance',
-    periodicity: 'fortnightly'
+    periodicity: 'fortnightly',
+    payrollType: 'all',
+    payrollView: 'lines',
+    employeeStatus: 'all'
   }))
   const [previewData, setPreviewData] = useState<PreviewData | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Update filters when tab changes
   useEffect(() => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
       reportType: activeTab,
-      periodicity: prev.periodicity || 'fortnightly'
+      periodicity: prev.periodicity || 'fortnightly',
+      payrollType: activeTab === 'payroll' ? prev.payrollType ?? 'all' : prev.payrollType,
+      payrollView: activeTab === 'payroll' ? (prev.payrollView ?? 'lines') : prev.payrollView
     }))
-  }, [activeTab])
+  }, [activeTab, filters.payrollView])
 
-  // Generate preview data based on filters
+  const exportCaps = useMemo(() => getReportExportCapabilities(activeTab), [activeTab])
+
+  const buildListParams = useCallback(() => {
+    const params = new URLSearchParams()
+    if (filters.from) params.append('from', filters.from)
+    if (filters.to) params.append('to', filters.to)
+    if (filters.employeeIds?.length) params.append('employeeIds', filters.employeeIds.join(','))
+    if (filters.departmentIds?.length) params.append('departmentIds', filters.departmentIds.join(','))
+    return params
+  }, [filters.from, filters.to, filters.employeeIds, filters.departmentIds])
+
   const generatePreview = useCallback(async () => {
     if (!companyId || companyLoading) {
       setError('Cargando información de empresa...')
@@ -79,101 +124,175 @@ export default function ReportBuilder() {
 
     setLoading(true)
     setError(null)
-    
-    try {
-      let response
-      let summaryResponse
 
-      // Build query params
-      const params = new URLSearchParams()
-      if (filters.from) params.append('from', filters.from)
-      if (filters.to) params.append('to', filters.to)
-      if (filters.employeeIds?.length) params.append('employeeIds', filters.employeeIds.join(','))
-      if (filters.departmentIds?.length) params.append('departmentIds', filters.departmentIds.join(','))
+    try {
+      const params = buildListParams()
 
       switch (filters.reportType) {
-        case 'attendance':
-          // Fetch data
-          response = await fetch(`/api/reports/attendance?${params}`, { credentials: 'include' })
-          if (!response.ok) throw new Error('Error fetching attendance data')
+        case 'attendance': {
+          if (filters.attendanceStatus?.length) {
+            params.append('status', filters.attendanceStatus.join(','))
+          }
+          const response = await fetch(`/api/reports/attendance?${params}`, { credentials: 'include' })
+          if (!response.ok) throw new Error('Error al cargar asistencia')
           const attendanceData = await response.json()
-          
-          // Fetch summary
-          summaryResponse = await fetch(`/api/reports/attendance-summary?${params}`, { credentials: 'include' })
-          if (!summaryResponse.ok) throw new Error('Error fetching attendance summary')
+
+          const summaryResponse = await fetch(`/api/reports/attendance-summary?${params}`, {
+            credentials: 'include'
+          })
+          if (!summaryResponse.ok) throw new Error('Error al cargar resumen de asistencia')
           const attendanceSummary = await summaryResponse.json()
-          
-          // Transform to PreviewData format
+
           const attendanceRows = (attendanceData.data || []).map((row: any) => [
             row.employee_name,
             row.date,
-            row.check_in ? new Date(row.check_in).toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' }) : '--',
-            row.check_out ? new Date(row.check_out).toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' }) : '--',
+            row.check_in ? formatTimeDisplay(row.check_in) : '--',
+            row.check_out ? formatTimeDisplay(row.check_out) : '--',
             row.status,
-            row.hours_worked ? `${row.hours_worked.toFixed(1)}h` : '0h',
-            row.late_minutes !== null ? `${row.late_minutes} min` : '--'
+            row.hours_worked ? `${Number(row.hours_worked).toFixed(1)}h` : '0h',
+            row.late_minutes !== null && row.late_minutes !== undefined ? `${row.late_minutes} min` : '--'
           ])
 
           setPreviewData({
             headers: ['Empleado', 'Fecha', 'Check-in', 'Check-out', 'Estado', 'Horas', 'Tardanza'],
             rows: attendanceRows,
-            summary: attendanceSummary.summary ? {
-              totalRegistros: attendanceSummary.summary.total_records,
-              presentes: attendanceSummary.summary.present_count,
-              ausentes: attendanceSummary.summary.absent_count,
-              tardes: attendanceSummary.summary.late_count,
-              asistenciaPct: attendanceSummary.summary.attendance_rate,
-              puntualidadPct: attendanceSummary.summary.punctuality_rate
-            } : undefined,
+            summary: attendanceSummary.summary
+              ? {
+                  totalRegistros: attendanceSummary.summary.total_records,
+                  presentes: attendanceSummary.summary.present_count,
+                  ausentes: attendanceSummary.summary.absent_count,
+                  tardes: attendanceSummary.summary.late_count,
+                  asistenciaPct: attendanceSummary.summary.attendance_rate,
+                  puntualidadPct: attendanceSummary.summary.punctuality_rate
+                }
+              : undefined,
             totalCount: attendanceRows.length
           })
           break
+        }
 
-        case 'payroll':
-          if (filters.payrollType) params.append('payrollType', filters.payrollType)
-          
-          response = await fetch(`/api/reports/payroll?${params}`, { credentials: 'include' })
-          if (!response.ok) throw new Error('Error fetching payroll data')
+        case 'payroll': {
+          const view = filters.payrollView ?? 'lines'
+          if (view === 'derived') {
+            const runId = filters.payrollRunId
+            const concept = filters.payrollDerivedConcept
+            if (!runId || !concept) {
+              setPreviewData(null)
+              break
+            }
+
+            const q = new URLSearchParams({ run_id: runId, concept })
+            const response = await fetch(`/api/reports/payroll-derivatives?${q.toString()}`, {
+              credentials: 'include'
+            })
+            if (!response.ok) {
+              const err = await response.json().catch(() => ({}))
+              throw new Error(err.error || 'Error al cargar derivados de nómina')
+            }
+            const json = await response.json()
+            const conceptUpper = String(json.concept || '').toUpperCase()
+            const showEmployer = ['IHSS', 'RAP', 'INFOP'].includes(conceptUpper)
+
+            const derivedRows = (json.rows || []).map((r: any) => [
+              r.employee_name,
+              r.dni,
+              r.position,
+              formatHnl(r.base_salary_used),
+              formatHnl(r.employee_amount),
+              ...(showEmployer ? [formatHnl(r.employer_amount || 0)] : [])
+            ])
+
+            setPreviewData({
+              headers: [
+                'Empleado',
+                'Identidad',
+                'Puesto',
+                'Salario base (usado)',
+                'Monto retenido (empleado)',
+                ...(showEmployer ? ['Aportación patronal'] : [])
+              ],
+              rows: derivedRows,
+              summary: {
+                corrida: `${json.run?.year}-${String(json.run?.month).padStart(2, '0')} Q${json.run?.quincena} (${json.run?.tipo})`,
+                totalEmpleado: formatHnl(json.totals?.total_employee),
+                ...(showEmployer ? { totalPatronal: formatHnl(json.totals?.total_employer) } : {}),
+                ...(conceptUpper === 'INFOP'
+                  ? { infopAplica: json.meta?.is_infop_liable ? 'Sí' : 'No' }
+                  : {})
+              },
+              totalCount: derivedRows.length
+            })
+            break
+          }
+
+          params.append('payrollType', filters.payrollType ?? 'all')
+          const response = await fetch(`/api/reports/payroll?${params}`, { credentials: 'include' })
+          if (!response.ok) throw new Error('Error al cargar nómina')
           const payrollData = await response.json()
-          
-          summaryResponse = await fetch(`/api/reports/payroll-summary?${params}`, { credentials: 'include' })
-          if (!summaryResponse.ok) throw new Error('Error fetching payroll summary')
+
+          const summaryResponse = await fetch(`/api/reports/payroll-summary?${params}`, {
+            credentials: 'include'
+          })
+          if (!summaryResponse.ok) throw new Error('Error al cargar resumen de nómina')
           const payrollSummary = await summaryResponse.json()
-          
+
           const payrollRows = (payrollData.data || []).map((row: any) => [
             row.employee_name,
-            `${new Date(row.period_start).toLocaleDateString('es-HN', { month: 'short', day: 'numeric' })} - ${new Date(row.period_end).toLocaleDateString('es-HN', { month: 'short', day: 'numeric' })}`,
-            `L ${row.gross_salary.toFixed(2)}`,
-            `L ${row.total_deductions.toFixed(2)}`,
-            `L ${row.net_salary.toFixed(2)}`,
+            `${parseDateOnlyAsHonduras(row.period_start).toLocaleDateString('es-HN', {
+              timeZone: HONDURAS_TIMEZONE,
+              month: 'short',
+              day: 'numeric'
+            })} - ${parseDateOnlyAsHonduras(row.period_end).toLocaleDateString('es-HN', {
+              timeZone: HONDURAS_TIMEZONE,
+              month: 'short',
+              day: 'numeric'
+            })}`,
+            formatHnl(row.gross_salary),
+            formatHnl(row.total_deductions),
+            formatHnl(row.net_salary),
             row.status === 'paid' ? 'Pagado' : row.status === 'approved' ? 'Aprobado' : 'Borrador'
           ])
 
           setPreviewData({
             headers: ['Empleado', 'Período', 'Devengado', 'Deducciones', 'Neto', 'Estado'],
             rows: payrollRows,
-            summary: payrollSummary.summary ? {
-              totalDevengado: payrollSummary.summary.total_gross_salary,
-              totalDeducciones: payrollSummary.summary.total_deductions,
-              totalNeto: payrollSummary.summary.total_net_salary,
-              empleados: payrollSummary.summary.total_employees,
-              pagosPendientes: payrollSummary.summary.pending_count + payrollSummary.summary.draft_count
-            } : undefined,
+            summary: payrollSummary.summary
+              ? {
+                  totalDevengado: formatHnl(payrollSummary.summary.total_gross_salary),
+                  totalDeducciones: formatHnl(payrollSummary.summary.total_deductions),
+                  totalNeto: formatHnl(payrollSummary.summary.total_net_salary),
+                  empleados: payrollSummary.summary.total_employees,
+                  pagosPendientes:
+                    (payrollSummary.summary.pending_count || 0) +
+                    (payrollSummary.summary.draft_count || 0)
+                }
+              : undefined,
             totalCount: payrollRows.length
           })
           break
+        }
 
-        case 'employees':
-          if (filters.employeeStatus) params.append('status', filters.employeeStatus)
-          
-          response = await fetch(`/api/reports/employees?${params}`, { credentials: 'include' })
-          if (!response.ok) throw new Error('Error fetching employees data')
+        case 'employees': {
+          const empParams = new URLSearchParams()
+          if (filters.employeeStatus) empParams.append('status', filters.employeeStatus)
+          if (filters.departmentIds?.length) {
+            empParams.append('departmentIds', filters.departmentIds.join(','))
+          }
+
+          const response = await fetch(`/api/reports/employees?${empParams}`, { credentials: 'include' })
+          if (!response.ok) throw new Error('Error al cargar empleados')
           const employeesData = await response.json()
-          
-          summaryResponse = await fetch(`/api/reports/employees-summary?${params}`, { credentials: 'include' })
-          if (!summaryResponse.ok) throw new Error('Error fetching employees summary')
+
+          const summaryParams = new URLSearchParams()
+          if (filters.departmentIds?.length) {
+            summaryParams.append('departmentIds', filters.departmentIds.join(','))
+          }
+          const summaryResponse = await fetch(`/api/reports/employees-summary?${summaryParams}`, {
+            credentials: 'include'
+          })
+          if (!summaryResponse.ok) throw new Error('Error al cargar resumen de empleados')
           const employeesSummary = await summaryResponse.json()
-          
+
           const employeesRows = (employeesData.data || []).map((row: any) => [
             row.employee_code || 'N/A',
             row.name,
@@ -184,120 +303,302 @@ export default function ReportBuilder() {
           ])
 
           setPreviewData({
-            headers: ['Código', 'Nombre', 'Cargo', 'Departamento', 'Estado', 'Fecha Ingreso'],
+            headers: ['Código', 'Nombre', 'Cargo', 'Departamento', 'Estado', 'Fecha ingreso'],
             rows: employeesRows,
-            summary: employeesSummary.summary ? {
-              totalEmpleados: employeesSummary.summary.total_employees,
-              activos: employeesSummary.summary.active_employees,
-              inactivos: employeesSummary.summary.inactive_employees,
-              nuevosEsteMes: employeesSummary.summary.new_this_month
-            } : undefined,
+            summary: employeesSummary.summary
+              ? {
+                  totalEmpleados: employeesSummary.summary.total_employees,
+                  activos: employeesSummary.summary.active_employees,
+                  inactivos: employeesSummary.summary.inactive_employees,
+                  nuevosEsteMes: employeesSummary.summary.new_this_month
+                }
+              : undefined,
             totalCount: employeesRows.length
           })
           break
+        }
 
-        case 'work_certificate':
-          // For now, show mock data - requires employee selection
-          const workCertificateMock = generateWorkCertificateMock()
-          setPreviewData(workCertificateMock)
-          break
+        case 'work_certificate': {
+          const empId = filters.employeeIds?.[0]
+          if (!empId) {
+            setPreviewData(null)
+            break
+          }
+          const q = new URLSearchParams({ employeeId: empId })
+          if (filters.certificateDate) q.append('date', filters.certificateDate)
+          const response = await fetch(`/api/reports/work-certificate?${q}`, { credentials: 'include' })
+          if (!response.ok) {
+            const err = await response.json().catch(() => ({}))
+            throw new Error(err.message || err.error || 'No se pudo cargar la constancia')
+          }
+          const json = await response.json()
+          const d = json.data
+          const tenureLabel =
+            d.years_tenure != null || d.months_tenure != null
+              ? `${d.years_tenure ?? 0}a ${d.months_tenure ?? 0}m`
+              : '—'
 
-        case 'severance':
-          // For now, show mock data - requires employee selection
-          const severanceMock = generateSeveranceMock()
-          setPreviewData(severanceMock)
+          setPreviewData({
+            headers: ['Campo', 'Valor'],
+            rows: [
+              ['Empleado', d.employee_name],
+              ['DNI', d.dni],
+              ['Cargo', d.position],
+              ['Departamento', d.department_name],
+              ['Fecha ingreso', d.hire_date],
+              ['Salario base', formatHnl(d.base_salary)],
+              ['Empresa', d.company_name],
+              ['Antigüedad (aprox.)', tenureLabel],
+              ['Fecha constancia', d.certificate_date]
+            ],
+            summary: {
+              totalConstancias: 1,
+              generadasEsteMes: '—',
+              pendientes: '—'
+            },
+            totalCount: 1
+          })
           break
+        }
+
+        case 'severance': {
+          const empId = filters.employeeIds?.[0]
+          const term = filters.terminationDate
+          if (!empId || !term) {
+            setPreviewData(null)
+            break
+          }
+          const response = await fetch('/api/reports/severance', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ employeeId: empId, terminationDate: term })
+          })
+          if (!response.ok) {
+            const err = await response.json().catch(() => ({}))
+            throw new Error(err.message || err.error || 'Error al calcular liquidación')
+          }
+          const json = await response.json()
+          const d = json.data
+
+          setPreviewData({
+            headers: ['Concepto', 'Valor'],
+            rows: [
+              ['Empleado', d.employee_name],
+              ['DNI', d.dni],
+              ['Fecha ingreso', d.hire_date],
+              ['Fecha terminación', d.termination_date],
+              ['Años servicio', d.years_tenure],
+              ['Salario promedio', formatHnl(d.average_salary)],
+              ['Cesantía', formatHnl(d.severance_amount)],
+              ['Vacaciones', formatHnl(d.vacation_balance)],
+              ['Total liquidación', formatHnl(d.total_settlement)]
+            ],
+            summary: {
+              totalLiquidaciones: 1,
+              montoTotal: formatHnl(d.total_settlement),
+              periodoCalculado: term
+            },
+            totalCount: 1
+          })
+          break
+        }
 
         default:
           setPreviewData({ headers: [], rows: [] })
       }
     } catch (err) {
       console.error('Error generating preview:', err)
-      setError(err instanceof Error ? err.message : 'Error al generar preview')
+      setError(err instanceof Error ? err.message : 'Error al generar vista previa')
       setPreviewData(null)
-      
-      // Fallback to mock data on error
-      try {
-        const mockData = generateMockData(filters)
-        setPreviewData(mockData)
-      } catch (mockErr) {
-        // If mock also fails, leave previewData as null
-      }
     } finally {
       setLoading(false)
     }
-  }, [filters, companyId, companyLoading])
+  }, [filters, companyId, companyLoading, buildListParams])
 
-  // Auto-generate on filter change
   useEffect(() => {
-    if (filters.from && filters.to) {
-      generatePreview()
+    if (!companyId || companyLoading) return
+
+    const isPayrollDerived = filters.reportType === 'payroll' && (filters.payrollView ?? 'lines') === 'derived'
+
+    if (!isPayrollDerived && reportNeedsDateRange(filters.reportType)) {
+      if (!filters.from || !filters.to) {
+        setPreviewData(null)
+        return
+      }
     }
-  }, [filters, generatePreview])
 
-  // Usar hook de exportación (similar a payroll)
-  const { exportAttendance, exportPayroll, exportEmployees } = useReportsExport()
+    if (filters.reportType === 'work_certificate' && !filters.employeeIds?.length) {
+      setPreviewData(null)
+      return
+    }
 
-  const handleExport = useCallback(async (format: 'excel' | 'pdf') => {
-    if (!previewData || !companyId) return
-    
-    try {
-      setLoading(true)
-      
-      // Convertir formatos de fecha
+    if (
+      filters.reportType === 'severance' &&
+      (!filters.employeeIds?.length || !filters.terminationDate)
+    ) {
+      setPreviewData(null)
+      return
+    }
+
+    generatePreview()
+  }, [filters, companyId, companyLoading, generatePreview])
+
+  const { exportAttendance, exportPayroll, exportEmployees, exportWorkCertificate } = useReportsExport()
+
+  const handleExport = useCallback(
+    async (format: 'excel' | 'pdf' | 'csv') => {
+      if (!companyId) return
+      setError(null)
+
+      if (format === 'csv' && filters.reportType === 'severance') {
+        if (!previewData?.headers?.length) return
+        downloadPreviewAsCsv(
+          previewData.headers,
+          previewData.rows,
+          `liquidacion_${filters.terminationDate || 'fecha'}.csv`
+        )
+        return
+      }
+
+      if (filters.reportType === 'work_certificate') {
+        const id = filters.employeeIds?.[0]
+        if (!id) throw new Error('Selecciona un empleado')
+        if (format === 'excel') return
+        await exportWorkCertificate(id, format === 'pdf' ? 'pdf' : 'csv')
+        return
+      }
+
+      if (filters.reportType === 'payroll' && (filters.payrollView ?? 'lines') === 'derived') {
+        const runId = filters.payrollRunId
+        const concept = filters.payrollDerivedConcept
+        if (!runId || !concept) throw new Error('Selecciona una corrida y un concepto')
+        if (format === 'pdf') throw new Error('PDF no disponible para Derivados. Usa Excel o CSV.')
+
+        const ext = format === 'excel' ? 'xlsx' : 'csv'
+        const filename = `derivados_${concept.toLowerCase()}_${runId.slice(0, 8)}.${ext}`
+        const accept =
+          format === 'excel'
+            ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            : 'text/csv'
+
+        const response = await fetch('/api/reports/export-payroll-derivatives', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json', Accept: accept },
+          body: JSON.stringify({ format: format === 'excel' ? 'excel' : 'csv', run_id: runId, concept })
+        })
+        if (!response.ok) {
+          const err = await response.json().catch(() => ({}))
+          throw new Error(err.error || `HTTP ${response.status}`)
+        }
+        const blob = await response.blob()
+        const downloadUrl = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = downloadUrl
+        link.download = filename
+        document.body.appendChild(link)
+        link.click()
+        window.URL.revokeObjectURL(downloadUrl)
+        document.body.removeChild(link)
+        return
+      }
+
+      if (!previewData) return
+
       const startDate = filters.from || new Date().toISOString().split('T')[0]
       const endDate = filters.to || new Date().toISOString().split('T')[0]
-      
+
       if (filters.reportType === 'attendance') {
         await exportAttendance(format, startDate, endDate)
       } else if (filters.reportType === 'payroll') {
         await exportPayroll(format, startDate, endDate)
       } else if (filters.reportType === 'employees') {
+        if (format === 'csv') {
+          throw new Error('CSV no disponible en este flujo; usa Excel o PDF.')
+        }
         await exportEmployees(format)
       } else {
-        throw new Error('Tipo de reporte no soportado')
+        throw new Error('Exportación no disponible para este reporte')
       }
-      
-    } catch (err: any) {
-      console.error('Export error:', err)
-      setError(`Error al exportar ${format}: ${err.message || err}`)
-    } finally {
-      setLoading(false)
-    }
-  }, [filters, previewData, companyId, exportAttendance, exportPayroll, exportEmployees])
+    },
+    [
+      filters,
+      previewData,
+      companyId,
+      exportAttendance,
+      exportPayroll,
+      exportEmployees,
+      exportWorkCertificate
+    ]
+  )
 
-  const activeTabConfig = TAB_CONFIG.find(tab => tab.id === activeTab)
+  const emptyMessage = useMemo(() => {
+    const isPayrollDerived = activeTab === 'payroll' && (filters.payrollView ?? 'lines') === 'derived'
+    switch (activeTab) {
+      case 'attendance':
+      case 'payroll':
+        if (isPayrollDerived) {
+          return {
+            title: 'Selecciona corrida y concepto',
+            body: 'Elige una corrida ejecutada y un concepto (IHSS/RAP/INFOP o custom) para generar el derivado.'
+          }
+        }
+        return {
+          title: 'Define un rango de fechas',
+          body: 'Elige inicio y fin (o un preset de período) para generar la vista previa.'
+        }
+      case 'employees':
+        return {
+          title: 'Sin datos en vista previa',
+          body: 'Ajusta estado o departamento, o verifica permisos si la lista sale vacía.'
+        }
+      case 'work_certificate':
+        return {
+          title: 'Selecciona un empleado',
+          body: 'La constancia es por persona. Elige un empleado activo para ver datos y exportar PDF o CSV.'
+        }
+      case 'severance':
+        return {
+          title: 'Empleado y fecha de terminación',
+          body: 'Selecciona empleado e indica la fecha de terminación para calcular y exportar la liquidación (CSV).'
+        }
+      default:
+        return {
+          title: 'Configura los filtros',
+          body: ''
+        }
+    }
+  }, [activeTab])
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-white flex items-center gap-3">
             <TrendingUp className="h-8 w-8 text-brand-400" />
-            Reportes y Análisis
+            Reportes y análisis
           </h1>
-          <p className="text-gray-300 mt-1">
-            Genera reportes detallados de asistencia, nómina y empleados
-          </p>
+          <p className="text-gray-300 mt-1 max-w-3xl">{reportSubtitle(activeTab)}</p>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2 border-b border-white/10">
+      <div className="flex gap-2 border-b border-white/10 overflow-x-auto">
         {TAB_CONFIG.map((tab) => {
           const Icon = tab.icon
           const isActive = activeTab === tab.id
-          
+
           return (
             <button
               key={tab.id}
+              type="button"
               onClick={() => setActiveTab(tab.id as ReportType)}
               className={`
-                flex items-center gap-2 px-6 py-3 font-medium transition-all
-                ${isActive 
-                  ? 'text-brand-400 border-b-2 border-brand-400 bg-white/5' 
-                  : 'text-gray-400 hover:text-white hover:bg-white/5'
+                flex items-center gap-2 px-6 py-3 font-medium transition-all whitespace-nowrap
+                ${
+                  isActive
+                    ? 'text-brand-400 border-b-2 border-brand-400 bg-white/5'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }
               `}
             >
@@ -308,7 +609,6 @@ export default function ReportBuilder() {
         })}
       </div>
 
-      {/* Filters */}
       <Card variant="glass" className="border border-white/10">
         <ReportFilters
           reportType={activeTab}
@@ -318,171 +618,47 @@ export default function ReportBuilder() {
         />
       </Card>
 
-      {/* Error State */}
       {error && (
         <Card variant="glass" className="border-red-500/50 bg-red-500/10">
           <div className="p-4 flex items-center gap-2 text-red-300">
-            <span className="text-xl">⚠️</span>
+            <span className="text-xl" aria-hidden>
+              ⚠️
+            </span>
             <span>{error}</span>
           </div>
         </Card>
       )}
 
-      {/* Preview Area */}
       {previewData && (
         <>
-          {/* KPIs en la parte superior */}
-          <ReportKPIs
-            summary={previewData.summary}
-            reportType={activeTab}
-            loading={loading}
-          />
+          <ReportKPIs summary={previewData.summary} reportType={activeTab} loading={loading} />
 
+          {/* Derivados: capabilities distintas (Excel + CSV) */}
           <ExportBar
             data={previewData}
             onExport={handleExport}
             disabled={loading || !!error}
+            capabilities={
+              activeTab === 'payroll' && (filters.payrollView ?? 'lines') === 'derived'
+                ? { excel: true, pdf: false, csv: true }
+                : exportCaps
+            }
+            onExportError={(msg) => setError(msg)}
           />
-          
-          <ReportPreview
-            data={previewData}
-            loading={loading}
-            reportType={activeTab}
-          />
+
+          <ReportPreview data={previewData} loading={loading} reportType={activeTab} />
         </>
       )}
 
-      {/* Empty State */}
       {!previewData && !loading && !error && (
         <Card variant="glass" className="border border-white/10">
           <div className="p-12 text-center">
             <Calendar className="h-16 w-16 text-gray-600 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-white mb-2">
-              Selecciona filtros para generar tu reporte
-            </h3>
-            <p className="text-gray-400">
-              Configura el rango de fechas, empleados y otros filtros arriba para ver tu reporte
-            </p>
+            <h3 className="text-xl font-semibold text-white mb-2">{emptyMessage.title}</h3>
+            <p className="text-gray-400 max-w-md mx-auto">{emptyMessage.body}</p>
           </div>
         </Card>
       )}
     </div>
   )
 }
-
-// Mock data generator for preview
-function generateMockData(filters: ReportFilters): PreviewData {
-  const { reportType, periodicity, from, to } = filters
-  
-  switch (reportType) {
-    case 'attendance':
-      return generateAttendanceMock()
-    case 'payroll':
-      return generatePayrollMock()
-    case 'employees':
-      return generateEmployeesMock()
-    case 'work_certificate':
-      return generateWorkCertificateMock()
-    case 'severance':
-      return generateSeveranceMock()
-    default:
-      return { headers: [], rows: [] }
-  }
-}
-
-function generateAttendanceMock(): PreviewData {
-  return {
-    headers: ['Empleado', 'Fecha', 'Check-in', 'Check-out', 'Estado', 'Horas', 'Tardanza'],
-    rows: [
-      ['Juan Pérez', '2025-01-15', '07:55', '16:45', 'Presente', '8.0h', '0 min'],
-      ['María González', '2025-01-15', '08:05', '16:50', 'Presente', '8.0h', '5 min'],
-      ['Carlos López', '2025-01-15', '08:15', '17:00', 'Presente', '8.0h', '15 min'],
-      ['Ana Martínez', '2025-01-15', '--', '--', 'Ausente', '0h', '--'],
-      ['Pedro Rodríguez', '2025-01-15', '08:02', '16:48', 'Presente', '8.0h', '2 min'],
-    ],
-    summary: {
-      totalRegistros: 50,
-      presentes: 45,
-      ausentes: 5,
-      tardes: 8,
-      asistenciaPct: 90,
-      puntualidadPct: 82
-    },
-    totalCount: 50
-  }
-}
-
-function generatePayrollMock(): PreviewData {
-  return {
-    headers: ['Empleado', 'Período', 'Devengado', 'Deducciones', 'Neto', 'Estado'],
-    rows: [
-      ['Juan Pérez', 'Ene 2025 (1)', 'L 15,000', 'L 2,500', 'L 12,500', 'Pagado'],
-      ['María González', 'Ene 2025 (1)', 'L 18,000', 'L 2,900', 'L 15,100', 'Pagado'],
-      ['Carlos López', 'Ene 2025 (1)', 'L 12,000', 'L 2,000', 'L 10,000', 'Pendiente'],
-      ['Ana Martínez', 'Ene 2025 (1)', 'L 20,000', 'L 3,200', 'L 16,800', 'Pagado'],
-      ['Pedro Rodríguez', 'Ene 2025 (1)', 'L 16,500', 'L 2,700', 'L 13,800', 'Pagado'],
-    ],
-    summary: {
-      totalDevengado: 'L 250,000',
-      totalDeducciones: 'L 42,000',
-      totalNeto: 'L 208,000',
-      empleados: 25,
-      pagosPendientes: 3
-    },
-    totalCount: 25
-  }
-}
-
-function generateEmployeesMock(): PreviewData {
-  return {
-    headers: ['Código', 'Nombre', 'Cargo', 'Departamento', 'Estado', 'Fecha Ingreso'],
-    rows: [
-      ['EMP-001', 'Juan Pérez', 'Desarrollador Senior', 'TI', 'Activo', '2023-01-15'],
-      ['EMP-002', 'María González', 'Analista de RH', 'RRHH', 'Activo', '2022-06-01'],
-      ['EMP-003', 'Carlos López', 'Contador', 'Finanzas', 'Activo', '2023-03-20'],
-      ['EMP-004', 'Ana Martínez', 'Gerente de Ventas', 'Ventas', 'Inactivo', '2021-11-10'],
-      ['EMP-005', 'Pedro Rodríguez', 'Asistente Administrativo', 'Admin', 'Activo', '2023-08-05'],
-    ],
-    summary: {
-      totalEmpleados: 45,
-      activos: 42,
-      inactivos: 3,
-      nuevosEsteMes: 2
-    },
-    totalCount: 45
-  }
-}
-
-function generateWorkCertificateMock(): PreviewData {
-  return {
-    headers: ['Empleado', 'Cargo', 'Antigüedad', 'Salario', 'Generado', 'Acciones'],
-    rows: [
-      ['Juan Pérez', 'Desarrollador Senior', '2 años', 'L 15,000', '2025-01-10', 'Ver PDF'],
-      ['María González', 'Analista de RH', '2.5 años', 'L 18,000', '2025-01-08', 'Ver PDF'],
-      ['Carlos López', 'Contador', '1.8 años', 'L 12,000', '2025-01-05', 'Ver PDF'],
-    ],
-    summary: {
-      totalConstancias: 12,
-      generadasEsteMes: 5,
-      pendientes: 2
-    },
-    totalCount: 12
-  }
-}
-
-function generateSeveranceMock(): PreviewData {
-  return {
-    headers: ['Empleado', 'Fecha Ingreso', 'Fecha Salida', 'Antigüedad', 'Salario Base', 'Liquidación'],
-    rows: [
-      ['Ana Martínez', '2021-11-10', '2025-01-31', '3.25 años', 'L 20,000', 'L 78,000'],
-      ['Luis Sánchez', '2020-05-15', '2025-01-31', '4.7 años', 'L 22,000', 'L 103,400'],
-    ],
-    summary: {
-      totalLiquidaciones: 5,
-      montoTotal: 'L 450,000',
-      periodoCalculado: 'Ene 2025'
-    },
-    totalCount: 5
-  }
-}
-

@@ -21,7 +21,7 @@ BEGIN
         SELECT 
             e.id,
             e.name,
-            e.department,
+            d.name as department,
             COALESCE(ws.monday_start, '08:00') as expected_start,
             COALESCE(ws.monday_end, '17:00') as expected_end,
             ar.check_in,
@@ -33,11 +33,12 @@ BEGIN
                 ELSE 'absent'
             END as attendance_status
         FROM employees e
+        LEFT JOIN departments d ON e.department_id = d.id
         LEFT JOIN work_schedules ws ON e.work_schedule_id = ws.id
         LEFT JOIN attendance_records ar ON e.id = ar.employee_id 
             AND ar.date BETWEEN p_from::DATE AND p_to::DATE
         WHERE e.status = 'active'
-            AND (p_role IS NULL OR e.department = p_role)
+            AND (p_role IS NULL OR d.name = p_role)
             AND (p_employee_id IS NULL OR e.id = p_employee_id)
     )
     SELECT 
@@ -95,18 +96,19 @@ BEGIN
         e.name,
         e.dni,
         e.employee_code,
-        e.department,
+        d.name as department,
         ar.check_in,
         ar.check_out,
         ar.late_minutes,
         ar.status,
         ar.date,
-        e.department as team
+        d.name as team
     FROM employees e
+    LEFT JOIN departments d ON e.department_id = d.id
     LEFT JOIN attendance_records ar ON e.id = ar.employee_id 
         AND ar.date BETWEEN v_from AND v_to
     WHERE e.status = 'active'
-        AND (p_role IS NULL OR e.department = p_role)
+        AND (p_role IS NULL OR d.name = p_role)
         AND (p_employee_id IS NULL OR e.id = p_employee_id)
         AND (
             CASE p_type

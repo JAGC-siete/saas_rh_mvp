@@ -2,6 +2,10 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 // import { createClient } from '../../../lib/supabase/server'
 import { requireUser } from '../../../lib/auth/requireUser'
 import { generateConsolidatedPayrollPDF, type PlanillaItem } from '../../../lib/payroll/report'
+import {
+  parsePayrollPdfGroupByQuery,
+  payrollPdfGroupByFilenameSuffix
+} from '../../../lib/payroll/pdf-layout'
 import { requirePlanAndQuota, incrementUsage } from '../../../lib/billing/enforce'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -19,7 +23,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    const { periodo, quincena, draftData } = req.body
+    const { periodo, quincena, draftData, group_by } = req.body || {}
+    const pdfGroupBy = parsePayrollPdfGroupByQuery(group_by)
 
     if (!periodo || !/^[0-9]{4}-[0-9]{2}$/.test(periodo)) {
       return res.status(400).json({ error: 'Periodo inválido (YYYY-MM)' })
@@ -36,11 +41,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Check plan and quota before processing
     await requirePlanAndQuota(supabase, companyId, 'generate_payroll')
 
-    // Obtener información de empleados para completar los datos
+    // Obtener información de empleados para completar los datos (incluyendo pay_type)
     const employeeIds = draftData.rows.map((row: any) => row.employee_id)
     const { data: employees, error: empError } = await supabase
       .from('employees')
-      .select('id, name, employee_code, department, position, bank_name, bank_account')
+      .select(
+        `id, name, employee_code, bank_name, bank_account, pay_type, team, role,
+         departments!employees_department_id_fkey(name)`
+      )
       .in('id', employeeIds)
       .eq('company_id', companyId)
 
@@ -55,12 +63,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Mapear datos del draft a estructura de PlanillaItem
     const planilla: PlanillaItem[] = draftData.rows.map((row: any) => {
       const employee = employees.find((e: any) => e.id === row.employee_id)
+      const payType = employee?.pay_type || 'fixed'
+      const totalHours = Number(row.total_hours_worked) || (Number(row.days_worked) || 0) * 8
+      const hourlyRate = payType === 'hourly' && totalHours > 0 
+        ? (Number(row.gross_salary) || 0) / totalHours 
+        : 0
+      
       return {
         id: employee?.employee_code || row.employee_code || '',
         name: employee?.name || row.name || '',
         bank: employee?.bank_name || 'No especificado',
         bank_account: employee?.bank_account || 'No especificado',
-        department: employee?.department || 'Sin Departamento',
+        department: (employee as { departments?: { name?: string } })?.departments?.name || 'Sin Departamento',
+        team: (employee as { team?: string | null })?.team ?? null,
+        position: (employee as { role?: string | null })?.role ?? null,
+        role: (employee as { role?: string | null })?.role ?? null,
         monthly_salary: Number(row.base_salary) || 0,
         days_worked: Number(row.days_worked) || 0,
         days_absent: Number(row.days_absent) || 0,
@@ -72,57 +89,95 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         total_deductions: Number(row.total_deductions) || 0,
         total: Number(row.net_salary) || 0,
         notes_on_ingress: row.adj_bonus ? `Bono: L. ${row.adj_bonus.toFixed(2)}` : '',
-        notes_on_deductions: row.adj_discount ? `Descuento: L. ${row.adj_discount.toFixed(2)}` : ''
+        notes_on_deductions: row.adj_discount ? `Descuento: L. ${row.adj_discount.toFixed(2)}` : '',
+        pay_type: payType,
+        total_hours_worked: payType === 'hourly' ? totalHours : undefined,
+        hourly_rate: payType === 'hourly' ? hourlyRate : undefined
       }
     })
 
     console.log(`Generando PDF desde draft: ${planilla.length} empleados para ${periodo} Q${quincena}`)
 
-    // Obtener configuración de payroll (metadata con parámetros)
+    // Obtener configuración de payroll (quincena_config como fuente primaria, metadata legacy)
     const { data: payrollConfig } = await supabase
       .from('company_payroll_configs')
-      .select('metadata')
+      .select('metadata, payment_frequency, quincena_config, custom_fields')
       .eq('company_id', companyId)
       .eq('is_active', true)
       .single()
     
-    // Extraer parámetros desde metadata
     const payrollMetadata = payrollConfig?.metadata || {}
+    const qcCol = payrollConfig?.quincena_config as { first_start?: number; first_end?: number; second_start?: number; second_end?: number } | null
+    const metaCutDates = payrollMetadata?.payment_cut_dates || {}
+    const hasCustomQuincena = !!(qcCol && (qcCol.first_start != null || qcCol.first_end != null || qcCol.second_start != null || qcCol.second_end != null))
+    const paymentCutDates = hasCustomQuincena
+      ? {
+          biweekly_type: 'custom' as const,
+          biweekly_first_start: qcCol?.first_start ?? metaCutDates?.biweekly_first_start ?? 1,
+          biweekly_first_end: qcCol?.first_end ?? metaCutDates?.biweekly_first_end ?? 15,
+          biweekly_second_start: qcCol?.second_start ?? metaCutDates?.biweekly_second_start ?? 16,
+          biweekly_second_end: qcCol?.second_end ?? metaCutDates?.biweekly_second_end ?? 30,
+          monthly_type: metaCutDates?.monthly_type || 'standard',
+          monthly_start: metaCutDates?.monthly_start ?? 1,
+          monthly_end: metaCutDates?.monthly_end ?? 30
+        }
+      : metaCutDates?.biweekly_first_start != null
+        ? metaCutDates
+        : {
+            biweekly_type: 'standard' as const,
+            biweekly_first_start: 1,
+            biweekly_first_end: 15,
+            biweekly_second_start: 16,
+            biweekly_second_end: 30,
+            monthly_type: 'standard' as const,
+            monthly_start: 1,
+            monthly_end: 30
+          }
     const currency = payrollMetadata.currency || 'HNL'
-    const paymentFrequency = payrollMetadata.payment_frequency || 'biweekly'
-    const paymentCutDates = payrollMetadata.payment_cut_dates || {
-      biweekly_type: 'standard',
-      biweekly_first_start: 1,
-      biweekly_first_end: 15,
-      biweekly_second_start: 16,
-      biweekly_second_end: 30,
-      monthly_type: 'standard',
-      monthly_start: 1,
-      monthly_end: 30
+    const pfRaw = payrollConfig?.payment_frequency ?? payrollMetadata.payment_frequency ?? 'biweekly'
+    const paymentFrequency = pfRaw === 'mensual' ? 'monthly' : pfRaw === 'quincenal' ? 'biweekly' : pfRaw === 'semanal' ? 'weekly' : pfRaw
+
+    let pdfCustomFieldsForPdf: Record<string, any> | undefined
+    if (payrollConfig?.custom_fields && typeof payrollConfig.custom_fields === 'object') {
+      pdfCustomFieldsForPdf = payrollConfig.custom_fields as Record<string, any>
     }
 
-    // Preparar configuración de payroll para el PDF
-    const pdfPayrollConfig = {
-      currency,
-      payment_frequency: paymentFrequency,
-      payment_cut_dates: paymentCutDates
+    const legalDeductions = payrollMetadata.legal_deductions || {
+      ihss: true,
+      rap: true,
+      isr: true
     }
 
-    // Generar PDF consolidado
     const { data: company } = await supabase
       .from('companies')
-      .select('name')
+      .select('name, country_code')
       .eq('id', companyId)
       .single()
 
+    const pdfPayrollConfig = {
+      currency,
+      payment_frequency: paymentFrequency,
+      payment_cut_dates: paymentCutDates,
+      legal_deductions: legalDeductions,
+      country_code: company?.country_code || 'HND'
+    }
+
+    // Separate fixed and hourly employees
+    const planillaFixed = planilla.filter(p => (p as any).pay_type !== 'hourly')
+    const planillaHourly = planilla.filter(p => (p as any).pay_type === 'hourly')
+
     const pdf = await generateConsolidatedPayrollPDF(
-      planilla, 
-      periodo, 
-      Number(quincena), 
-      user?.email, 
+      planillaFixed,
+      planillaHourly,
+      periodo,
+      Number(quincena),
+      user?.email,
       company?.name,
-      undefined, // customFieldsConfig (no disponible en este endpoint legacy)
-      pdfPayrollConfig
+      pdfCustomFieldsForPdf,
+      pdfPayrollConfig,
+      undefined,
+      undefined,
+      { groupBy: pdfGroupBy }
     )
     
     // Increment usage meter for PDF generation
@@ -134,7 +189,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     
     res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', `attachment; filename=planilla_${periodo}_q${quincena}.pdf`)
+    const groupSuffix = payrollPdfGroupByFilenameSuffix(pdfGroupBy)
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=planilla_${periodo}_q${quincena}${groupSuffix}.pdf`
+    )
     return res.send(pdf)
 
   } catch (error: any) {

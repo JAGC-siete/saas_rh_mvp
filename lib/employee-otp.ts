@@ -2,7 +2,8 @@ import { Resend } from 'resend'
 import { logger } from './logger'
 
 // Store OTP codes temporarily (in production, use Redis or database)
-const otpStore = new Map<string, { code: string, expires: number, attempts: number }>()
+// Rate limiting for send/verify is enforced in API routes via lib/security/rate-limiting
+const otpStore = new Map<string, { code: string; expires: number }>()
 
 // Clean expired OTPs every 5 minutes
 setInterval(() => {
@@ -17,24 +18,13 @@ setInterval(() => {
 
 export async function sendOtp(email: string, employeeId: string, employeeName: string) {
   try {
-    // Check rate limiting (max 3 attempts per 15 minutes)
-    const existing = otpStore.get(email)
-    if (existing && existing.attempts >= 3 && existing.expires > Date.now()) {
-      return {
-        success: false,
-        error: 'Demasiados intentos. Intente nuevamente en 15 minutos.'
-      }
-    }
-
     // Generate 6-digit OTP code
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString()
     const expiresAt = Date.now() + (10 * 60 * 1000) // 10 minutes
-    
-    // Store OTP
-    otpStore.set(email, {
+
+    otpStore.set(email.trim().toLowerCase(), {
       code: otpCode,
-      expires: expiresAt,
-      attempts: (existing?.attempts || 0) + 1
+      expires: expiresAt
     })
 
     // Send email using Resend
@@ -122,8 +112,7 @@ export async function sendOtp(email: string, employeeId: string, employeeName: s
 }
 
 export function verifyOtp(email: string, code: string) {
-  // Verify OTP from store
-  const storedOtp = otpStore.get(email)
+  const storedOtp = otpStore.get(email.trim().toLowerCase())
   
   if (!storedOtp) {
     return {
@@ -133,7 +122,7 @@ export function verifyOtp(email: string, code: string) {
   }
 
   if (storedOtp.expires < Date.now()) {
-    otpStore.delete(email)
+    otpStore.delete(email.trim().toLowerCase())
     return {
       success: false,
       error: 'Código expirado'
@@ -147,8 +136,7 @@ export function verifyOtp(email: string, code: string) {
     }
   }
 
-  // OTP verified successfully, clear from store
-  otpStore.delete(email)
+  otpStore.delete(email.trim().toLowerCase())
   
   return {
     success: true

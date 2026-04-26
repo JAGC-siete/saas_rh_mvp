@@ -17,6 +17,9 @@ interface CustomField {
   category: 'earnings' | 'deductions' | 'calculation_helper'
   required: boolean
   default: any
+  formula?: string
+  parameters?: Array<{ key: string; label: string; type: 'number' | 'string'; default: number | string }>
+  track_plazos?: boolean
 }
 
 export interface PayrollCalculationResult {
@@ -93,7 +96,7 @@ export async function calculatePayrollFromConfig(
   }
   
   // 3. SIEMPRE aplicar campos personalizados automáticamente (sumar/restar según categoría)
-  const customFieldsResult = applyCustomFields(customFields, metadata)
+  const customFieldsResult = applyCustomFields(customFields, metadata, baseSalary)
   
   return {
     totalIngresosAdicionales: result.totalIngresosAdicionales + customFieldsResult.totalIngresosAdicionales,
@@ -420,11 +423,13 @@ function executeCalculationScript(
 
 /**
  * Aplicar campos personalizados automáticamente: sumar earnings, restar deductions
- * Esta función se aplica SIEMPRE, independientemente del tipo de cálculo
+ * Esta función se aplica SIEMPRE, independientemente del tipo de cálculo.
+ * Si el campo tiene formula, evalúa la fórmula con metadata como contexto.
  */
 function applyCustomFields(
   customFieldsDefinitions: Record<string, CustomField> | undefined,
-  metadata: Record<string, any>
+  metadata: Record<string, any>,
+  baseSalary: number = 0
 ): PayrollCalculationResult {
   let totalIngresosAdicionales = 0
   let totalDeduccionesAdicionales = 0
@@ -438,6 +443,8 @@ function applyCustomFields(
     }
   }
 
+  const context: CalculationContext = { baseSalary, metadata, calculatedFields }
+
   // Iterar sobre todos los campos personalizados definidos
   for (const [fieldName, fieldDef] of Object.entries(customFieldsDefinitions)) {
     // Solo procesar campos con categoría earnings o deductions
@@ -445,31 +452,36 @@ function applyCustomFields(
       continue
     }
 
-    // Obtener el valor del campo desde metadata
-    const value = metadata[fieldName]
-    
-    // Si el valor existe y no es null/undefined
-    if (value !== undefined && value !== null) {
-      // Convertir a número (si es string, parsear; si es boolean, convertir a 0/1)
-      let numericValue = 0
-      
-      if (typeof value === 'number') {
-        numericValue = value
-      } else if (typeof value === 'boolean') {
-        numericValue = value ? 1 : 0
-      } else if (typeof value === 'string') {
-        numericValue = parseFloat(value) || 0
+    let numericValue = 0
+
+    if (fieldDef.formula) {
+      // Campo con fórmula: evaluar usando metadata como parámetros
+      try {
+        numericValue = evaluateFormula(fieldDef.formula, context)
+        if (!isFinite(numericValue) || isNaN(numericValue)) numericValue = 0
+      } catch {
+        numericValue = 0
       }
-      
-      // Guardar el valor procesado
-      calculatedFields[fieldName] = numericValue
-      
-      // Sumar o restar según la categoría
-      if (fieldDef.category === 'earnings') {
-        totalIngresosAdicionales += numericValue
-      } else if (fieldDef.category === 'deductions') {
-        totalDeduccionesAdicionales += numericValue
+    } else {
+      // Campo simple: valor directo desde metadata
+      const value = metadata[fieldName]
+      if (value !== undefined && value !== null) {
+        if (typeof value === 'number') {
+          numericValue = value
+        } else if (typeof value === 'boolean') {
+          numericValue = value ? 1 : 0
+        } else if (typeof value === 'string') {
+          numericValue = parseFloat(value) || 0
+        }
       }
+    }
+
+    calculatedFields[fieldName] = numericValue
+
+    if (fieldDef.category === 'earnings') {
+      totalIngresosAdicionales += numericValue
+    } else if (fieldDef.category === 'deductions') {
+      totalDeduccionesAdicionales += numericValue
     }
   }
 

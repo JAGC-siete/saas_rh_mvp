@@ -1,5 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
-import Image from 'next/image'
+import { useState, useEffect, useCallback, useMemo, Fragment } from 'react'
 import { createClient } from '../lib/supabase/client'
 import { Button } from './ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
@@ -9,8 +8,22 @@ import { useCompanyContext } from '../lib/useCompanyContext'
 import { Employee } from '../lib/types/employee'
 import AddEmployeeForm from './AddEmployeeForm'
 import WorkCertificateModal from './WorkCertificateModal'
-import { PlusIcon, PencilIcon, TrashIcon, EyeIcon, MagnifyingGlassIcon, FunnelIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, ChevronDownIcon, DocumentTextIcon, UserCircleIcon, ChatBubbleBottomCenterTextIcon } from '@heroicons/react/24/outline'
-import { getHondurasTimestamp, formatTimeDisplay } from '../lib/timezone'
+import EmployeeFileUpload from './EmployeeFileUpload'
+import { PlusIcon, PencilIcon, TrashIcon, EyeIcon, MagnifyingGlassIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, ChevronDownIcon, DocumentTextIcon, UserCircleIcon, ChatBubbleBottomCenterTextIcon } from '@heroicons/react/24/outline'
+import { Download } from 'lucide-react'
+import { ExportFormatButtons } from './ui/ExportFormatButtons'
+import { getHondurasTimestamp, formatTimeDisplay, formatDateOnlyForHonduras, parseDateOnlyAsHonduras, HONDURAS_TIMEZONE } from '../lib/timezone'
+import {
+  TERMINATION_REASON_OPTIONS,
+  getTerminationReasonLabel
+} from '../lib/employees/termination-reasons'
+import {
+  groupKeyForRow,
+  type PlanillaRowForGrouping,
+  type PayrollPdfGroupBy
+} from '../lib/payroll/pdf-layout'
+
+type EmployeeListSortBy = 'name' | Exclude<PayrollPdfGroupBy, 'none'>
 
 interface Department {
   id: string
@@ -33,6 +46,8 @@ const INITIAL_FORM_DATA = {
   department_id: '',
   work_schedule_id: '',
   base_salary: '',
+  pay_type: 'fixed', // Default: fixed (administrativo/permanente)
+  payment_frequency: '', // vacío = usa default de empresa (Capa 2)
   hire_date: '',
   termination_date: '',
   status: 'active',
@@ -42,11 +57,10 @@ const INITIAL_FORM_DATA = {
   emergency_contact_phone: '',
   address: '',
   metadata: '',
-  profile_image_path: ''
+  termination_reason_code: '',
+  termination_reason_detail: ''
 }
 
-const PROFILE_PHOTO_BUCKET = 'HR_BUCKET'
-const PROFILE_PHOTO_SIGNED_URL_EXPIRATION = 60 * 60 // 1 hour
 const HNL_CURRENCY_FORMATTER = new Intl.NumberFormat('es-HN', {
   style: 'currency',
   currency: 'HNL'
@@ -56,8 +70,16 @@ const EMPLOYEE_DETAIL_TABS = [
   { id: 'contract', label: 'Información Contractual' },
   { id: 'attendance', label: 'Asistencia' },
   { id: 'discipline', label: 'Medidas Disciplinarias' },
-  { id: 'emergency', label: 'Contacto de Emergencia' }
+  { id: 'emergency', label: 'Contacto de Emergencia' },
+  { id: 'files', label: 'Archivos del Empleado' }
 ] as const
+const DOCUMENT_CATEGORY_LABELS: Record<string, string> = {
+  contrato: 'Contrato',
+  identidad: 'Identidad',
+  certificado: 'Certificado',
+  diploma: 'Diploma',
+  otro: 'Otro'
+}
 const ATTENDANCE_STATUS_LABEL: Record<'present' | 'absent' | 'late' | 'not_registered' | 'unknown', string> = {
   present: 'Presente',
   absent: 'Ausente',
@@ -73,6 +95,15 @@ const formatCurrency = (value?: number | null) => {
 
 const formatDateDisplay = (value?: string | null) => {
   if (!value) return 'No especificada'
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const d = parseDateOnlyAsHonduras(value)
+    return isNaN(d.getTime()) ? value : d.toLocaleDateString('es-HN', {
+      timeZone: HONDURAS_TIMEZONE,
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
+  }
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) {
     return value
@@ -129,6 +160,23 @@ const formatAddress = (address: Employee['address']) => {
   return values.length ? values.join(', ') : 'No especificada'
 }
 
+const EMPLOYEE_SORT_CYCLE: EmployeeListSortBy[] = ['name', 'department', 'team', 'position']
+
+function employeeToPlanillaRow(emp: Employee): PlanillaRowForGrouping {
+  return {
+    department: emp.departments?.name,
+    team: emp.team,
+    role: emp.role,
+    position: emp.role,
+  }
+}
+
+function employeeSectionHeading(sortBy: Exclude<EmployeeListSortBy, 'name'>, gkey: string): string {
+  if (sortBy === 'department') return `Departamento: ${gkey}`
+  if (sortBy === 'team') return `Equipo: ${gkey}`
+  return `Posición: ${gkey}`
+}
+
 export default function EmployeeManager({ companyId: propCompanyId }: { companyId?: string }) {
   const { user, loading: sessionLoading, userProfile } = useAuth()
   const { companyId: contextCompanyId, loading: companyLoading } = useCompanyContext()
@@ -152,23 +200,35 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
   const [showDeactivateModal, setShowDeactivateModal] = useState(false)
   const [employeeToDeactivate, setEmployeeToDeactivate] = useState<Employee | null>(null)
   const [terminationDate, setTerminationDate] = useState('')
+  const [terminationReasonCode, setTerminationReasonCode] = useState('')
+  const [terminationReasonDetail, setTerminationReasonDetail] = useState('')
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
   const [showCertificateModal, setShowCertificateModal] = useState(false)
   const [employeeForCertificate, setEmployeeForCertificate] = useState<Employee | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+  const [departmentFilter, setDepartmentFilter] = useState('all')
+  const [sortBy, setSortBy] = useState<EmployeeListSortBy>('name')
   const [currentPage, setCurrentPage] = useState(1)
-  const [profileImageFile, setProfileImageFile] = useState<File | null>(null)
-  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null)
-  const [profileImageUploading, setProfileImageUploading] = useState(false)
+  const [uploadedProfileImagePath, setUploadedProfileImagePath] = useState<string | null>(null)
   const [profileImageError, setProfileImageError] = useState<string | null>(null)
-  const [existingProfileImagePath, setExistingProfileImagePath] = useState<string | null>(null)
-  const [removeExistingProfileImage, setRemoveExistingProfileImage] = useState(false)
   const [selectedEmployeeImageUrl, setSelectedEmployeeImageUrl] = useState<string | null>(null)
   const [selectedEmployeeImageLoading, setSelectedEmployeeImageLoading] = useState(false)
   const [selectedEmployeeImageError, setSelectedEmployeeImageError] = useState<string | null>(null)
   const [detailsActiveTab, setDetailsActiveTab] = useState<(typeof EMPLOYEE_DETAIL_TABS)[number]['id']>('personal')
+  const [employeeFiles, setEmployeeFiles] = useState<Array<{ id: string; file_name: string; file_type: string; document_category?: string; file_size_bytes: number; signed_url?: string }>>([])
+  const [filesLoading, setFilesLoading] = useState(false)
+  const [filesError, setFilesError] = useState<string | null>(null)
+  const [documentCategoryForUpload, setDocumentCategoryForUpload] = useState<'contrato' | 'identidad' | 'certificado' | 'diploma' | 'otro'>('contrato')
+  const [showExportModal, setShowExportModal] = useState(false)
+  const [exportFormat, setExportFormat] = useState<'pdf' | 'excel' | 'csv' | null>(null)
+  const [exportFilters, setExportFilters] = useState({
+    status: [] as string[],
+    departmentIds: [] as string[],
+    employeeIds: [] as string[]
+  })
+  const [isExporting, setIsExporting] = useState(false)
 
   const canSendInstantMessage = userProfile?.role === 'company_admin'
 
@@ -185,13 +245,6 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
     return `https://wa.me/${digits}?text=${message}`
   }, [userProfile?.name])
 
-  useEffect(() => {
-    return () => {
-      if (profileImagePreview && profileImagePreview.startsWith('blob:')) {
-        URL.revokeObjectURL(profileImagePreview)
-      }
-    }
-  }, [profileImagePreview])
   const itemsPerPage = 25
 
   const getErrorMessage = useCallback((error: unknown) => {
@@ -209,143 +262,15 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
     return 'Error inesperado. Por favor, verifica tu conexión e intenta nuevamente.'
   }, [])
 
-  const getSignedProfileImageUrl = useCallback(async (path: string | null) => {
-    if (!path) return null
-    try {
-      const supabaseClient = createClient()
-      const { data, error } = await supabaseClient.storage
-        .from(PROFILE_PHOTO_BUCKET)
-        .createSignedUrl(path, PROFILE_PHOTO_SIGNED_URL_EXPIRATION)
-      if (error) {
-        console.error('Error creating signed URL for profile image:', error)
-        return null
-      }
-      return data?.signedUrl ?? null
-    } catch (err) {
-      console.error('Unexpected error generating signed URL for profile image:', err)
-      return null
-    }
+  const handleProfileImageUploaded = useCallback((fileId: string, storagePath: string) => {
+    setUploadedProfileImagePath(storagePath)
+    setProfileImageError(null)
+    // Profile images are now managed through employee_files table, not formData
   }, [])
 
-  const handleProfileImageSelected = useCallback((file: File | null) => {
-    if (profileImagePreview && profileImagePreview.startsWith('blob:')) {
-      URL.revokeObjectURL(profileImagePreview)
-    }
-
-    if (!file) {
-      setProfileImageFile(null)
-      setProfileImagePreview(null)
-      setProfileImageError(null)
-      return
-    }
-
-    if (!file.type.startsWith('image/')) {
-      setProfileImageError('Por favor selecciona un archivo de imagen válido.')
-      setProfileImageFile(null)
-      setProfileImagePreview(null)
-      return
-    }
-
-    const maxSizeBytes = 5 * 1024 * 1024 // 5 MB
-    if (file.size > maxSizeBytes) {
-      setProfileImageError('La imagen debe pesar menos de 5 MB.')
-      setProfileImageFile(null)
-      setProfileImagePreview(null)
-      return
-    }
-
-    setProfileImageError(null)
-    setProfileImageFile(file)
-    setRemoveExistingProfileImage(false)
-    setProfileImagePreview(URL.createObjectURL(file))
-  }, [profileImagePreview])
-
-  const handleProfileImageToggle = useCallback(() => {
-    if (removeExistingProfileImage) {
-      setRemoveExistingProfileImage(false)
-      if (!profileImagePreview && existingProfileImagePath) {
-        getSignedProfileImageUrl(existingProfileImagePath)
-          .then((url) => setProfileImagePreview(url))
-          .catch((err) => {
-            console.error('Error restoring profile image preview:', err)
-            setProfileImagePreview(null)
-          })
-      }
-      return
-    }
-
-    if (profileImagePreview && profileImagePreview.startsWith('blob:')) {
-      URL.revokeObjectURL(profileImagePreview)
-    }
-
-    setProfileImageFile(null)
-    setProfileImagePreview(null)
-    setProfileImageError(null)
-
-    if (editingEmployee?.profile_image_path) {
-      setRemoveExistingProfileImage(true)
-    } else {
-      setExistingProfileImagePath(null)
-    }
-  }, [
-    removeExistingProfileImage,
-    profileImagePreview,
-    existingProfileImagePath,
-    editingEmployee,
-    getSignedProfileImageUrl
-  ])
-
-  const uploadProfileImageIfNeeded = useCallback(async () => {
-    if (!profileImageFile) return null
-
-    setProfileImageUploading(true)
-    setProfileImageError(null)
-
-    try {
-      const supabaseClient = createClient()
-      const safeFileName = profileImageFile.name.trim().replace(/\s+/g, '-').toLowerCase()
-      const uniqueId =
-        typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-          ? crypto.randomUUID()
-          : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-      const baseSegments = [
-        companyId || 'company',
-        editingEmployee?.id || 'new-employee',
-        uniqueId
-      ]
-      const objectPath = `${baseSegments.join('/')}-${safeFileName}`
-
-      const { error: uploadError } = await supabaseClient.storage
-        .from(PROFILE_PHOTO_BUCKET)
-        .upload(objectPath, profileImageFile, {
-          cacheControl: '3600',
-          upsert: true,
-          contentType: profileImageFile.type || undefined
-        })
-
-      if (uploadError) {
-        console.error('Supabase storage upload error:', uploadError)
-        throw uploadError
-      }
-
-      const meta = {
-        bucket: PROFILE_PHOTO_BUCKET,
-        path: objectPath,
-        size: profileImageFile.size,
-        mime_type: profileImageFile.type,
-        original_name: profileImageFile.name,
-        uploaded_at: new Date().toISOString()
-      }
-
-      return { path: objectPath, meta }
-    } catch (err) {
-      console.error('Error uploading profile image:', err)
-      setProfileImageError('No se pudo subir la foto de perfil. Intenta nuevamente.')
-      return null
-    } finally {
-      setProfileImageUploading(false)
-    }
-  }, [profileImageFile, companyId, editingEmployee])
+  const handleProfileImageError = useCallback((error: string) => {
+    setProfileImageError(error)
+  }, [])
 
   const fetchEmployees = useCallback(async () => {
     if (!user?.id) return
@@ -414,6 +339,22 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
     }
   }, [])
 
+  const fetchEmployeeFiles = useCallback(async (employeeId: string) => {
+    setFilesLoading(true)
+    setFilesError(null)
+    try {
+      const res = await fetch(`/api/employees/files/${employeeId}`, { credentials: 'include' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Error al cargar archivos')
+      setEmployeeFiles(data.files || [])
+    } catch (err) {
+      setFilesError(err instanceof Error ? err.message : 'Error al cargar archivos')
+      setEmployeeFiles([])
+    } finally {
+      setFilesLoading(false)
+    }
+  }, [])
+
   const fetchWorkSchedules = useCallback(async () => {
     setSchedulesLoading(true)
     setSchedulesError(null)
@@ -457,15 +398,9 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
     setEmployeesError(null)
     setDepartmentsError(null)
     setSchedulesError(null)
-    if (profileImagePreview && profileImagePreview.startsWith('blob:')) {
-      URL.revokeObjectURL(profileImagePreview)
-    }
-    setProfileImageFile(null)
-    setProfileImagePreview(null)
+    setUploadedProfileImagePath(null)
     setProfileImageError(null)
-    setExistingProfileImagePath(null)
-    setRemoveExistingProfileImage(false)
-  }, [profileImagePreview])
+  }, [])
 
   const handleFormChange = useCallback((field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -477,18 +412,87 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
     try {
       setIsSubmitting(true)
 
-      const uploadedImage = await uploadProfileImageIfNeeded()
-      if (profileImageFile && !uploadedImage) {
-        // Error uploading image; abort submit
-        return
-      }
-
-      const shouldRemoveExisting =
-        !profileImageFile &&
-        removeExistingProfileImage &&
-        !!editingEmployee?.profile_image_path
-
       const sanitizedFormData: any = { ...formData }
+      // Normalizar tipos para evitar fallos silenciosos en la API/DB
+      if (typeof sanitizedFormData.base_salary === 'string') {
+        const trimmed = sanitizedFormData.base_salary.trim()
+        const parsed = trimmed === '' ? NaN : Number.parseFloat(trimmed)
+        if (Number.isNaN(parsed)) {
+          throw new Error('Salario base inválido. Por favor ingresa un número.')
+        }
+        sanitizedFormData.base_salary = parsed
+      }
+      // UUIDs opcionales: enviar null en vez de string vacío
+      for (const key of ['department_id', 'work_schedule_id'] as const) {
+        if (sanitizedFormData[key] === '') sanitizedFormData[key] = null
+      }
+      // Fechas opcionales: enviar null en vez de string vacío
+      for (const key of ['hire_date', 'termination_date'] as const) {
+        if (sanitizedFormData[key] === '') sanitizedFormData[key] = null
+      }
+      // Status: la tabla solo permite 'active' | 'inactive'
+      if (typeof sanitizedFormData.status === 'string') {
+        const rawStatus = sanitizedFormData.status.trim()
+        if (rawStatus === '') {
+          sanitizedFormData.status = null
+        } else if (rawStatus !== 'active' && rawStatus !== 'inactive') {
+          // Valores legacy del UI: 'terminated', 'on_leave' → mapear a 'inactive'
+          sanitizedFormData.status = 'inactive'
+        }
+      }
+      if (sanitizedFormData.status === 'active') {
+        sanitizedFormData.termination_date = null
+        sanitizedFormData.termination_reason_code = null
+        sanitizedFormData.termination_reason_detail = null
+      } else if (sanitizedFormData.status === 'inactive') {
+        const trc = String(sanitizedFormData.termination_reason_code || '').trim()
+        if (!trc) {
+          throw new Error('Seleccione el motivo de baja para empleados inactivos.')
+        }
+        sanitizedFormData.termination_reason_code = trc
+        const trd = String(sanitizedFormData.termination_reason_detail || '').trim()
+        sanitizedFormData.termination_reason_detail = trd || null
+      }
+      // pay_type: constraint permite 'fixed' | 'hourly'
+      if (typeof sanitizedFormData.pay_type === 'string') {
+        const rawPayType = sanitizedFormData.pay_type.trim()
+        if (rawPayType === '') {
+          sanitizedFormData.pay_type = null
+        } else if (rawPayType !== 'fixed' && rawPayType !== 'hourly') {
+          sanitizedFormData.pay_type = 'fixed'
+        }
+      }
+      // payment_frequency: vacío = usa default de empresa (Capa 2)
+      if (typeof sanitizedFormData.payment_frequency === 'string') {
+        const pf = sanitizedFormData.payment_frequency.trim()
+        if (pf === '') {
+          sanitizedFormData.payment_frequency = null
+        } else if (pf !== 'quincenal' && pf !== 'mensual' && pf !== 'semanal') {
+          sanitizedFormData.payment_frequency = null
+        }
+      }
+      // Campos JSONB: normalizar a objeto o null
+      for (const key of ['address', 'metadata'] as const) {
+        const value = sanitizedFormData[key]
+        if (value === '' || value === null || value === undefined) {
+          sanitizedFormData[key] = null
+          continue
+        }
+        if (typeof value === 'string') {
+          const trimmed = value.trim()
+          if (!trimmed) {
+            sanitizedFormData[key] = null
+            continue
+          }
+          try {
+            sanitizedFormData[key] = JSON.parse(trimmed)
+          } catch {
+            throw new Error(`El campo ${key === 'address' ? 'Dirección' : 'Metadatos'} debe ser JSON válido.`)
+          }
+        }
+      }
+      // Seguridad: no enviar campos que no existen en la tabla `employees`
+      // Profile images are managed through employee_files table, not employees table
       delete sanitizedFormData.profile_image_path
 
       const url = editingEmployee 
@@ -500,51 +504,18 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       const payload = editingEmployee 
         ? { id: editingEmployee.id, ...sanitizedFormData }
         : sanitizedFormData
-
-      const requestBody = {
-        ...payload,
-        ...(uploadedImage
-          ? {
-              profile_image_path: uploadedImage.path,
-              profile_image_meta: uploadedImage.meta
-            }
-          : {}),
-        ...(shouldRemoveExisting
-          ? {
-              profile_image_path: null,
-              profile_image_meta: null
-            }
-          : {})
-      }
       
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify(payload),
       })
 
       if (!response.ok) {
         const errorText = await response.text()
         throw new Error(`Error ${editingEmployee ? 'updating' : 'creating'} employee: ${response.status} - ${errorText}`)
-      }
-
-      const previousPath = editingEmployee?.profile_image_path
-      const newPath = uploadedImage?.path ?? null
-
-      if (
-        previousPath &&
-        (shouldRemoveExisting || (newPath && previousPath !== newPath))
-      ) {
-        try {
-          const supabaseClient = createClient()
-          await supabaseClient.storage
-            .from(PROFILE_PHOTO_BUCKET)
-            .remove([previousPath])
-        } catch (storageError) {
-          console.warn('No se pudo eliminar la foto anterior:', storageError)
-        }
       }
 
       // Reset form and refresh employees
@@ -560,10 +531,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
     formData,
     editingEmployee,
     resetForm,
-    fetchEmployees,
-    uploadProfileImageIfNeeded,
-    profileImageFile,
-    removeExistingProfileImage
+    fetchEmployees
   ])
 
   const handleCancel = useCallback(() => {
@@ -571,6 +539,9 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
   }, [resetForm])
 
   const handleEdit = useCallback((employee: Employee) => {
+    // IMPORTANTE: no activar el loading global de empleados aquí.
+    // `employeesLoading` se usa para fetchEmployees() y controla el "Cargando empleados...".
+    // Si lo ponemos en true en modo edición y no lo apagamos, la UI queda bloqueada.
     setEditingEmployee(employee)
     setFormData({
       employee_code: employee.employee_code || '',
@@ -583,6 +554,8 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       department_id: employee.department_id || '',
       work_schedule_id: employee.work_schedule_id || '',
       base_salary: employee.base_salary?.toString() || '',
+      pay_type: (employee as any).pay_type || 'fixed',
+      payment_frequency: (employee as any).payment_frequency || '',
       hire_date: employee.hire_date || '',
       termination_date: employee.termination_date || '',
       status: employee.status || 'active',
@@ -592,54 +565,123 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       emergency_contact_phone: employee.emergency_contact_phone || '',
       address: typeof employee.address === 'string' ? employee.address : JSON.stringify(employee.address || {}),
       metadata: typeof employee.metadata === 'object' ? JSON.stringify(employee.metadata || {}) : (employee.metadata || ''),
-      profile_image_path: employee.profile_image_path || ''
+      termination_reason_code: employee.termination_reason_code || '',
+      termination_reason_detail: employee.termination_reason_detail || ''
+      // profile_image_path no está en INITIAL_FORM_DATA ni en el schema de DB, se maneja separadamente
     })
     setShowForm(true)
-    setProfileImageFile(null)
-    if (profileImagePreview && profileImagePreview.startsWith('blob:')) {
-      URL.revokeObjectURL(profileImagePreview)
-    }
+    setUploadedProfileImagePath(null)
     setProfileImageError(null)
-    setRemoveExistingProfileImage(false)
-    setExistingProfileImagePath(employee.profile_image_path || null)
-    if (employee.profile_image_path) {
-      getSignedProfileImageUrl(employee.profile_image_path)
-        .then((url) => setProfileImagePreview(url))
-        .catch((err) => {
-          console.error('Error loading profile image preview for edit:', err)
-          setProfileImagePreview(null)
+    
+    // Scroll suave al formulario después de un pequeño delay para permitir que el DOM se actualice
+    setTimeout(() => {
+      const formElement = document.querySelector('[data-employee-form]')
+      if (formElement) {
+        formElement.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start',
+          inline: 'nearest'
         })
-    } else {
-      setProfileImagePreview(null)
-    }
-  }, [profileImagePreview, getSignedProfileImageUrl])
+      }
+    }, 100)
+  }, [])
 
   const handleDeactivate = useCallback((employee: Employee) => {
     setEmployeeToDeactivate(employee)
+    setTerminationDate('')
+    setTerminationReasonCode('')
+    setTerminationReasonDetail('')
     setShowDeactivateModal(true)
   }, [])
 
-  const handleViewDetails = useCallback((employee: Employee) => {
+  const handleExportClick = useCallback((format: 'pdf' | 'excel' | 'csv') => {
+    setExportFormat(format)
+    setShowExportModal(true)
+  }, [])
+
+  const handleExportConfirm = useCallback(async () => {
+    if (!exportFormat) return
+
+    setIsExporting(true)
+    try {
+      const response = await fetch('/api/reports/export-employees', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ 
+          format: exportFormat,
+          ...(exportFilters.status.length > 0 || exportFilters.departmentIds.length > 0 || exportFilters.employeeIds.length > 0 ? {
+            filters: {
+              ...(exportFilters.status.length > 0 && { status: exportFilters.status }),
+              ...(exportFilters.departmentIds.length > 0 && { departmentIds: exportFilters.departmentIds }),
+              ...(exportFilters.employeeIds.length > 0 && { employeeIds: exportFilters.employeeIds })
+            }
+          } : {})
+        })
+      })
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Error al exportar' }))
+        throw new Error(error.error || `Error HTTP ${response.status}`)
+      }
+
+      // Obtener el blob
+      const blob = await response.blob()
+      
+      // Crear URL temporal y descargar
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      
+      // Determinar extensión del archivo
+      const extension = exportFormat === 'excel' ? 'xlsx' : exportFormat
+      const filename = `reporte_empleados_${new Date().toISOString().split('T')[0]}.${extension}`
+      
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+
+      // Cerrar modal y resetear
+      setShowExportModal(false)
+      setExportFormat(null)
+      setExportFilters({ status: [], departmentIds: [], employeeIds: [] })
+    } catch (error) {
+      console.error('Error exporting employees:', error)
+      setEmployeesError(error instanceof Error ? error.message : 'Error al exportar empleados')
+    } finally {
+      setIsExporting(false)
+    }
+  }, [exportFormat, exportFilters])
+
+  const loadProfileImageForHeader = useCallback(async (employeeId: string) => {
+    try {
+      const res = await fetch(`/api/employees/files/${employeeId}?file_type=profile_photo`, { credentials: 'include' })
+      const data = await res.json()
+      const profileFile = data.files?.[0]
+      if (profileFile?.signed_url) {
+        setSelectedEmployeeImageUrl(profileFile.signed_url)
+      }
+      setSelectedEmployeeImageError(null)
+    } catch (err) {
+      console.error('Error loading employee profile image:', err)
+      setSelectedEmployeeImageError('No se pudo cargar la foto de perfil.')
+    }
+  }, [])
+
+  const handleViewDetails = useCallback(async (employee: Employee) => {
     setSelectedEmployee(employee)
     setShowDetailsModal(true)
     setDetailsActiveTab('personal')
     setSelectedEmployeeImageUrl(null)
     setSelectedEmployeeImageError(null)
-    if (employee.profile_image_path) {
-      setSelectedEmployeeImageLoading(true)
-      getSignedProfileImageUrl(employee.profile_image_path)
-        .then((url) => {
-          setSelectedEmployeeImageUrl(url)
-        })
-        .catch((err) => {
-          console.error('Error loading employee profile image:', err)
-          setSelectedEmployeeImageError('No se pudo cargar la foto de perfil.')
-        })
-        .finally(() => setSelectedEmployeeImageLoading(false))
-    } else {
-      setSelectedEmployeeImageLoading(false)
-    }
-  }, [getSignedProfileImageUrl])
+    setSelectedEmployeeImageLoading(true)
+    await loadProfileImageForHeader(employee.id)
+    setSelectedEmployeeImageLoading(false)
+  }, [loadProfileImageForHeader])
 
   const handleOpenCertificateModal = useCallback((employee: Employee) => {
     setEmployeeForCertificate(employee)
@@ -657,8 +699,15 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
   const confirmDeactivate = useCallback(async () => {
     if (!employeeToDeactivate) return
 
+    const reason = terminationReasonCode.trim()
+    if (!reason) {
+      setEmployeesError('Seleccione el motivo de baja.')
+      return
+    }
+
     try {
       setIsSubmitting(true)
+      setEmployeesError(null)
       
       // Usar fecha seleccionada o fecha actual
       const finalTerminationDate = terminationDate || getHondurasTimestamp().split('T')[0]
@@ -671,7 +720,9 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
         body: JSON.stringify({ 
           id: employeeToDeactivate.id,
           status: 'inactive',
-          termination_date: finalTerminationDate
+          termination_date: finalTerminationDate,
+          termination_reason_code: terminationReasonCode.trim(),
+          termination_reason_detail: terminationReasonDetail.trim() || null
         }),
         credentials: 'include'
       })
@@ -683,7 +734,9 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
 
       setShowDeactivateModal(false)
       setEmployeeToDeactivate(null)
-      setTerminationDate('') // Resetear fecha
+      setTerminationDate('')
+      setTerminationReasonCode('')
+      setTerminationReasonDetail('')
       fetchEmployees()
     } catch (error) {
       console.error('Error deactivating employee:', error)
@@ -691,7 +744,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
     } finally {
       setIsSubmitting(false)
     }
-  }, [employeeToDeactivate, fetchEmployees, terminationDate])
+  }, [employeeToDeactivate, fetchEmployees, terminationDate, terminationReasonCode, terminationReasonDetail])
 
   const shouldFetch = useMemo(() => !!user?.id && !sessionLoading, [user?.id, sessionLoading])
   const selectedEmployeeMetadata = useMemo(() => {
@@ -757,15 +810,22 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
     return typeof raw === 'string' && raw.trim() ? raw.trim() : null
   }, [selectedEmployeeMetadata])
 
+  const departmentFilterOptions = useMemo(() => {
+    const set = new Set<string>()
+    for (const emp of employees) {
+      const d = emp.departments?.name
+      set.add(d && String(d).trim() ? String(d).trim() : 'Sin Departamento')
+    }
+    return [...set].sort((a, b) => a.localeCompare(b, 'es'))
+  }, [employees])
+
   // Filter and sort employees
   const filteredAndSortedEmployees = useMemo(() => {
-    // Start with a copy to avoid mutating the original array
     let filtered = [...employees]
 
-    // Filter by search term
     if (searchTerm.trim()) {
       const search = searchTerm.toLowerCase()
-      filtered = filtered.filter(emp => 
+      filtered = filtered.filter(emp =>
         emp.name?.toLowerCase().includes(search) ||
         emp.employee_code?.toLowerCase().includes(search) ||
         emp.dni?.toLowerCase().includes(search) ||
@@ -776,20 +836,37 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       )
     }
 
-    // Sort alphabetically - create a new sorted array
+    if (departmentFilter !== 'all') {
+      filtered = filtered.filter(emp => {
+        const name = (emp.departments?.name && String(emp.departments.name).trim())
+          ? String(emp.departments.name).trim()
+          : 'Sin Departamento'
+        return name === departmentFilter
+      })
+    }
+
     const sorted = [...filtered].sort((a, b) => {
       const nameA = a.name?.toLowerCase() || ''
       const nameB = b.name?.toLowerCase() || ''
-      
-      if (sortOrder === 'asc') {
-        return nameA.localeCompare(nameB)
-      } else {
-        return nameB.localeCompare(nameA)
+
+      if (sortBy === 'name') {
+        return sortOrder === 'asc'
+          ? nameA.localeCompare(nameB, 'es')
+          : nameB.localeCompare(nameA, 'es')
       }
+
+      const keyA = groupKeyForRow(employeeToPlanillaRow(a), sortBy)
+      const keyB = groupKeyForRow(employeeToPlanillaRow(b), sortBy)
+      const primary =
+        sortOrder === 'asc'
+          ? keyA.localeCompare(keyB, 'es')
+          : keyB.localeCompare(keyA, 'es')
+      if (primary !== 0) return primary
+      return nameA.localeCompare(nameB, 'es')
     })
 
     return sorted
-  }, [employees, searchTerm, sortOrder])
+  }, [employees, searchTerm, sortOrder, departmentFilter, sortBy])
 
   // Paginate results
   const paginatedEmployees = useMemo(() => {
@@ -801,13 +878,19 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
   // Calculate total pages
   const totalPages = Math.ceil(filteredAndSortedEmployees.length / itemsPerPage)
 
-  // Reset to page 1 when search term changes
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchTerm])
+  }, [searchTerm, departmentFilter, sortBy])
 
   const toggleSortOrder = () => {
     setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')
+  }
+
+  const cycleSortBy = () => {
+    setSortBy(prev => {
+      const i = EMPLOYEE_SORT_CYCLE.indexOf(prev)
+      return EMPLOYEE_SORT_CYCLE[(i + 1) % EMPLOYEE_SORT_CYCLE.length]
+    })
   }
 
   useEffect(() => {
@@ -817,6 +900,12 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       fetchWorkSchedules()
     }
   }, [shouldFetch, fetchEmployees, fetchDepartments, fetchWorkSchedules])
+
+  useEffect(() => {
+    if (detailsActiveTab === 'files' && selectedEmployee?.id) {
+      fetchEmployeeFiles(selectedEmployee.id)
+    }
+  }, [detailsActiveTab, selectedEmployee?.id, fetchEmployeeFiles])
 
   const isLoading = sessionLoading || employeesLoading || departmentsLoading || schedulesLoading
   const hasErrors = employeesError || departmentsError || schedulesError
@@ -898,23 +987,52 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
   return (
     <div className="space-y-6">
       {showForm ? (
-        <AddEmployeeForm
-          formData={formData}
-          onFormChange={handleFormChange}
-          onSubmit={handleSubmit}
-          onCancel={handleCancel}
-          departments={departments}
-          workSchedules={workSchedules}
-          loading={isSubmitting}
-          isEditing={!!editingEmployee}
-          profileImagePreview={profileImagePreview}
-          profileImageUploading={profileImageUploading}
-          profileImageError={profileImageError}
-          onProfileImageChange={handleProfileImageSelected}
-          onToggleProfileImage={handleProfileImageToggle}
-          canRemoveProfileImage={Boolean(profileImagePreview || editingEmployee?.profile_image_path)}
-          isProfileImageMarkedForRemoval={removeExistingProfileImage}
-        />
+        <div 
+          data-employee-form 
+          className="transition-all duration-300 ease-in-out animate-in fade-in slide-in-from-top-4"
+        >
+          {editingEmployee && (
+            <div className="mb-4 p-4 bg-blue-500/20 border border-blue-500/30 rounded-lg flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+              <div className="flex-shrink-0">
+                <div className="h-10 w-10 rounded-full bg-blue-500/30 flex items-center justify-center">
+                  <PencilIcon className="h-5 w-5 text-blue-400" />
+                </div>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-blue-300">
+                  Editando empleado: <span className="text-white font-semibold">{editingEmployee.name}</span>
+                </p>
+                <p className="text-xs text-blue-400/80 mt-1">
+                  {editingEmployee.employee_code || 'Sin código'} • {editingEmployee.dni}
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleCancel}
+                className="bg-white/5 border-white/20 text-white hover:bg-white/10"
+                title="Cancelar edición"
+              >
+                ✕
+              </Button>
+            </div>
+          )}
+          <AddEmployeeForm
+            formData={formData}
+            onFormChange={handleFormChange}
+            onSubmit={handleSubmit}
+            onCancel={handleCancel}
+            departments={departments}
+            workSchedules={workSchedules}
+            // El formulario solo debe bloquearse al enviar (crear/actualizar),
+            // no cuando el listado está recargando empleados.
+            loading={isSubmitting}
+            isEditing={!!editingEmployee}
+            employeeId={editingEmployee?.id}
+            onProfileImageUploaded={handleProfileImageUploaded}
+            onProfileImageError={handleProfileImageError}
+          />
+        </div>
       ) : (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
@@ -931,32 +1049,72 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
             </Button>
           </div>
 
-          {/* Search and Sort Controls */}
-          <div className="flex gap-3 items-center">
-            <div className="flex-1 relative">
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <Input
-                type="text"
-                placeholder="Buscar por nombre, código, DNI, email..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-white/10 border-white/20 text-white placeholder-gray-400"
-              />
+          {/* Search, department filter, and sort (aligned with nómina / PDF grouping) */}
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+              <div className="flex-1 relative min-w-0">
+                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <Input
+                  type="text"
+                  placeholder="Buscar por nombre, código, DNI, email..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 bg-white/10 border-white/20 text-white placeholder-gray-400"
+                />
+              </div>
             </div>
-            <Button
-              onClick={toggleSortOrder}
-              variant="outline"
-              className="flex items-center gap-2 bg-white/10 border-white/20 text-white hover:bg-white/20"
-            >
-              {sortOrder === 'asc' ? (
-                <ChevronUpIcon className="h-4 w-4" />
-              ) : (
-                <ChevronDownIcon className="h-4 w-4" />
-              )}
-              <span className="text-sm">
-                {sortOrder === 'asc' ? 'A-Z' : 'Z-A'}
-              </span>
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 sm:items-center sm:flex-wrap">
+              <div className="flex items-center gap-2 min-w-0">
+                <label htmlFor="employee-dept-filter" className="text-sm font-medium text-white shrink-0">
+                  Departamento:
+                </label>
+                <select
+                  id="employee-dept-filter"
+                  value={departmentFilter}
+                  onChange={(e) => setDepartmentFilter(e.target.value)}
+                  className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 min-w-0 flex-1 sm:flex-none sm:min-w-[11rem]"
+                >
+                  <option value="all" className="bg-gray-800">
+                    Todos
+                  </option>
+                  {departmentFilterOptions.map((dept) => (
+                    <option key={dept} value={dept} className="bg-gray-800">
+                      {dept}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-medium text-white">Ordenar por:</span>
+                <Button
+                  type="button"
+                  onClick={cycleSortBy}
+                  variant="outline"
+                  className="px-3 py-2 h-auto bg-white/10 border-white/20 text-white hover:bg-white/20 text-sm"
+                >
+                  {sortBy === 'name'
+                    ? 'Nombre'
+                    : sortBy === 'department'
+                      ? 'Departamento'
+                      : sortBy === 'team'
+                        ? 'Equipo'
+                        : 'Posición'}
+                </Button>
+                <Button
+                  type="button"
+                  onClick={toggleSortOrder}
+                  variant="outline"
+                  className="flex items-center gap-2 bg-white/10 border-white/20 text-white hover:bg-white/20"
+                >
+                  {sortOrder === 'asc' ? (
+                    <ChevronUpIcon className="h-4 w-4" />
+                  ) : (
+                    <ChevronDownIcon className="h-4 w-4" />
+                  )}
+                  <span className="text-sm">{sortOrder === 'asc' ? 'A-Z' : 'Z-A'}</span>
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -987,12 +1145,22 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
 
       <Card variant="glass">
         <CardHeader>
-          <CardTitle className="text-white">
-            Lista de Empleados ({filteredAndSortedEmployees.length}{searchTerm && ` de ${employees.length}`})
-          </CardTitle>
-          <CardDescription className="text-gray-300">
-            Empleados registrados en el sistema {totalPages > 1 && `- Página ${currentPage} de ${totalPages}`}
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-white">
+                Lista de Empleados ({filteredAndSortedEmployees.length}{searchTerm && ` de ${employees.length}`})
+              </CardTitle>
+              <CardDescription className="text-gray-300">
+                Empleados registrados en el sistema {totalPages > 1 && `- Página ${currentPage} de ${totalPages}`}
+              </CardDescription>
+            </div>
+            <ExportFormatButtons
+              formats={['pdf', 'excel', 'csv']}
+              onExport={(format) => handleExportClick(format)}
+              disabled={isExporting}
+              variant="outline"
+            />
+          </div>
         </CardHeader>
         <CardContent>
           {filteredAndSortedEmployees.length === 0 ? (
@@ -1002,11 +1170,38 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
           ) : (
             <>
             <div className="space-y-4">
-              {paginatedEmployees.map((employee) => {
+              {paginatedEmployees.map((employee, pageIndex) => {
                 const whatsappLink = getWhatsAppLink(employee.phone, employee.name)
+                const globalIdx = (currentPage - 1) * itemsPerPage + pageIndex
+                const gkey =
+                  sortBy !== 'name'
+                    ? groupKeyForRow(employeeToPlanillaRow(employee), sortBy)
+                    : ''
+                const prevEmp = globalIdx > 0 ? filteredAndSortedEmployees[globalIdx - 1] : null
+                const prevGkey =
+                  prevEmp && sortBy !== 'name'
+                    ? groupKeyForRow(employeeToPlanillaRow(prevEmp), sortBy)
+                    : null
+                const showSectionHeader =
+                  sortBy !== 'name' && (globalIdx === 0 || gkey !== prevGkey)
 
                 return (
-                  <div key={employee.id} className="border border-white/10 rounded-lg p-4 bg-white/5 hover:bg-white/10 transition-colors">
+                  <Fragment key={employee.id}>
+                    {showSectionHeader && (
+                      <div
+                        className="pt-1 pb-0 text-sm font-semibold text-blue-200 border-b border-white/15"
+                        role="presentation"
+                      >
+                        {employeeSectionHeading(sortBy, gkey)}
+                      </div>
+                    )}
+                  <div 
+                    className={`border rounded-lg p-4 transition-all duration-200 ${
+                      editingEmployee?.id === employee.id 
+                        ? 'border-blue-500/50 bg-blue-500/10 shadow-lg shadow-blue-500/20' 
+                        : 'border-white/10 bg-white/5 hover:bg-white/10'
+                    }`}
+                  >
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
@@ -1107,10 +1302,18 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                           size="sm"
                           variant="outline"
                           onClick={() => handleEdit(employee)}
-                          className="flex items-center gap-1 bg-white/5 border-white/20 text-white hover:bg-white/10"
+                          className="flex items-center gap-1 bg-blue-500/20 border-blue-500/30 text-blue-400 hover:bg-blue-500/30 transition-all"
+                          title={`Editar ${employee.name}`}
+                          disabled={employeesLoading}
                         >
-                          <PencilIcon className="h-4 w-4" />
-                          <span className="hidden sm:inline">Editar</span>
+                          {employeesLoading && editingEmployee?.id === employee.id ? (
+                            <div className="h-4 w-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <PencilIcon className="h-4 w-4" />
+                          )}
+                          <span className="hidden sm:inline">
+                            {employeesLoading && editingEmployee?.id === employee.id ? 'Cargando...' : 'Editar'}
+                          </span>
                         </Button>
                         
                         {employee.status === 'active' && (
@@ -1128,7 +1331,9 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                     </div>
                   </div>
                 </div>
-              )})}
+                  </Fragment>
+                )
+              })}
             </div>
 
             {/* Pagination Controls */}
@@ -1220,11 +1425,9 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                   {selectedEmployeeImageLoading ? (
                     <div className="h-8 w-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
                   ) : selectedEmployeeImageUrl ? (
-                    <Image
+                    <img
                       src={selectedEmployeeImageUrl}
                       alt={`Foto de ${selectedEmployee.name}`}
-                      width={112}
-                      height={112}
                       className="h-28 w-28 object-cover"
                     />
                   ) : (
@@ -1363,6 +1566,24 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                             : 'Contrato vigente'}
                         </div>
                       </div>
+                      {selectedEmployee.status === 'inactive' && (
+                        <>
+                          <div>
+                            <label className="text-sm font-medium text-gray-400">Motivo de baja</label>
+                            <div className="text-white font-medium">
+                              {getTerminationReasonLabel(selectedEmployee.termination_reason_code)}
+                            </div>
+                          </div>
+                          {(selectedEmployee.termination_reason_detail || '').trim() ? (
+                            <div className="md:col-span-2">
+                              <label className="text-sm font-medium text-gray-400">Detalle del motivo</label>
+                              <div className="text-white text-sm leading-relaxed whitespace-pre-wrap">
+                                {selectedEmployee.termination_reason_detail}
+                              </div>
+                            </div>
+                          ) : null}
+                        </>
+                      )}
                       <div>
                         <label className="text-sm font-medium text-gray-400">Salario Base</label>
                         <div className="text-green-400 font-medium">{formatCurrency(selectedEmployee.base_salary)}</div>
@@ -1433,6 +1654,22 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                                   {record.check_in ? formatDateTimeDisplay(record.check_in) : 'Sin registro'}
                                 </span>
                               </div>
+                              {(record as any).lunch_start != null && (
+                                <div>
+                                  <span className="text-gray-400 block text-xs uppercase tracking-wider">Inicio almuerzo</span>
+                                  <span className="text-white">
+                                    {formatDateTimeDisplay((record as any).lunch_start)}
+                                  </span>
+                                </div>
+                              )}
+                              {(record as any).lunch_end != null && (
+                                <div>
+                                  <span className="text-gray-400 block text-xs uppercase tracking-wider">Fin almuerzo</span>
+                                  <span className="text-white">
+                                    {formatDateTimeDisplay((record as any).lunch_end)}
+                                  </span>
+                                </div>
+                              )}
                               <div>
                                 <span className="text-gray-400 block text-xs uppercase tracking-wider">Salida</span>
                                 <span className="text-white">
@@ -1569,6 +1806,121 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                     )}
                   </div>
                 )}
+
+                {detailsActiveTab === 'files' && selectedEmployee && (
+                  <div className="space-y-6">
+                    {['super_admin', 'company_admin', 'hr_manager'].includes(userProfile?.role || '') && (
+                      <>
+                      <div>
+                        <h6 className="text-sm font-medium text-gray-300 mb-3">Foto de perfil</h6>
+                        <EmployeeFileUpload
+                          employeeId={selectedEmployee.id}
+                          fileType="profile_photo"
+                          variant="dark"
+                          onUploadComplete={() => {
+                            if (selectedEmployee?.id) {
+                              fetchEmployeeFiles(selectedEmployee.id)
+                              loadProfileImageForHeader(selectedEmployee.id)
+                            }
+                          }}
+                          onUploadError={(err) => setFilesError(err)}
+                        />
+                      </div>
+                      <div>
+                        <h6 className="text-sm font-medium text-gray-300 mb-3">Subir documento</h6>
+                        <div className="mb-4">
+                          <label className="block text-xs text-gray-400 mb-1">Categoría</label>
+                          <select
+                            value={documentCategoryForUpload}
+                            onChange={(e) => setDocumentCategoryForUpload(e.target.value as typeof documentCategoryForUpload)}
+                            className="w-full max-w-xs px-3 py-2 bg-white/5 border border-white/10 rounded-md text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            {(['contrato', 'identidad', 'certificado', 'diploma', 'otro'] as const).map((cat) => (
+                              <option key={cat} value={cat} className="bg-gray-800 text-white">
+                                {DOCUMENT_CATEGORY_LABELS[cat]}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <EmployeeFileUpload
+                          employeeId={selectedEmployee.id}
+                          fileType="document"
+                          documentCategory={documentCategoryForUpload}
+                          variant="dark"
+                          onUploadComplete={() => selectedEmployee?.id && fetchEmployeeFiles(selectedEmployee.id)}
+                          onUploadError={(err) => setFilesError(err)}
+                        />
+                      </div>
+                      </>
+                    )}
+                    <div>
+                      <h6 className="text-sm font-medium text-gray-300 mb-3">Archivos del empleado</h6>
+                      {filesLoading ? (
+                        <p className="text-sm text-gray-400">Cargando archivos...</p>
+                      ) : filesError ? (
+                        <p className="text-sm text-red-400">{filesError}</p>
+                      ) : employeeFiles.length === 0 ? (
+                        <p className="text-sm text-gray-400">No hay archivos cargados.</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {employeeFiles.map((file) => (
+                            <div
+                              key={file.id}
+                              className="flex items-center justify-between gap-4 border border-white/10 rounded-lg p-3 bg-white/5"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-white truncate">{file.file_name}</p>
+                                <p className="text-xs text-gray-400">
+                                  {file.file_type === 'document' && file.document_category
+                                    ? DOCUMENT_CATEGORY_LABELS[file.document_category] || file.document_category
+                                    : 'Foto de perfil'}
+                                  {' · '}
+                                  {(file.file_size_bytes / 1024).toFixed(1)} KB
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                {file.signed_url && (
+                                  <a
+                                    href={file.signed_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="p-2 rounded-md bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white transition"
+                                    title="Descargar"
+                                  >
+                                    <Download className="h-4 w-4" />
+                                  </a>
+                                )}
+                                {['super_admin', 'company_admin', 'hr_manager'].includes(userProfile?.role || '') && (
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      if (!confirm('¿Eliminar este archivo?')) return
+                                      try {
+                                        const res = await fetch(`/api/employees/files/delete/${file.id}`, {
+                                          method: 'DELETE',
+                                          credentials: 'include'
+                                        })
+                                        const data = await res.json()
+                                        if (!res.ok) throw new Error(data.error || 'Error al eliminar')
+                                        selectedEmployee?.id && fetchEmployeeFiles(selectedEmployee.id)
+                                      } catch (err) {
+                                        setFilesError(err instanceof Error ? err.message : 'Error al eliminar')
+                                      }
+                                    }}
+                                    className="p-2 rounded-md bg-white/5 text-gray-300 hover:bg-red-500/20 hover:text-red-400 transition"
+                                    title="Eliminar"
+                                  >
+                                    <TrashIcon className="h-4 w-4" />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             
@@ -1636,11 +1988,46 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                 Deja vacío para usar la fecha actual
               </p>
             </div>
+
+            <div className="mb-4">
+              <label htmlFor="termination-reason" className="block text-sm font-medium text-gray-300 mb-2">
+                Motivo de baja <span className="text-red-400">*</span>
+              </label>
+              <select
+                id="termination-reason"
+                value={terminationReasonCode}
+                onChange={(e) => setTerminationReasonCode(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-800 border border-white/20 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent"
+              >
+                <option value="">Seleccione un motivo…</option>
+                {TERMINATION_REASON_OPTIONS.map((opt) => (
+                  <option key={opt.code} value={opt.code}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="mb-6">
+              <label htmlFor="termination-reason-detail" className="block text-sm font-medium text-gray-300 mb-2">
+                Detalle (opcional)
+              </label>
+              <textarea
+                id="termination-reason-detail"
+                value={terminationReasonDetail}
+                onChange={(e) => setTerminationReasonDetail(e.target.value)}
+                rows={3}
+                maxLength={2000}
+                placeholder="Referencias, acuerdos, número de acta…"
+                className="w-full px-3 py-2 bg-gray-800 border border-white/20 rounded-md text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent resize-y min-h-[4.5rem]"
+              />
+              <p className="text-xs text-gray-400 mt-1">Máximo 2000 caracteres</p>
+            </div>
             
             <div className="flex gap-3">
               <Button
                 onClick={confirmDeactivate}
-                disabled={isSubmitting}
+                disabled={isSubmitting || !terminationReasonCode.trim()}
                 variant="destructive"
                 className="flex-1 bg-red-500/20 border-red-500/30 text-red-400 hover:bg-red-500/30"
               >
@@ -1650,7 +2037,10 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                 onClick={() => {
                   setShowDeactivateModal(false)
                   setEmployeeToDeactivate(null)
-                  setTerminationDate('') // Resetear fecha
+                  setTerminationDate('')
+                  setTerminationReasonCode('')
+                  setTerminationReasonDetail('')
+                  setEmployeesError(null)
                 }}
                 variant="outline"
                 className="flex-1 bg-white/5 border-white/20 text-white hover:bg-white/10"
@@ -1671,6 +2061,204 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
         }}
         employee={employeeForCertificate}
       />
+
+      {/* Modal de Filtros de Exportación */}
+      {showExportModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 border border-white/20 rounded-lg p-6 max-w-2xl w-full mx-4 backdrop-blur-sm max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold text-white">
+                Opciones de Exportación - {exportFormat?.toUpperCase()}
+              </h3>
+              <Button
+                onClick={() => {
+                  setShowExportModal(false)
+                  setExportFormat(null)
+                  setExportFilters({ status: [], departmentIds: [], employeeIds: [] })
+                }}
+                variant="outline"
+                size="sm"
+                className="bg-white/5 border-white/20 text-white hover:bg-white/10"
+                disabled={isExporting}
+              >
+                ✕
+              </Button>
+            </div>
+
+            <div className="space-y-6">
+              {/* Resumen de filtros */}
+              {(exportFilters.status.length > 0 || exportFilters.departmentIds.length > 0 || exportFilters.employeeIds.length > 0) && (
+                <div className="bg-brand-500/20 border border-brand-500/30 rounded-lg p-4">
+                  <p className="text-sm font-medium text-brand-300 mb-2">Filtros aplicados:</p>
+                  <div className="text-xs text-brand-200 space-y-1">
+                    {exportFilters.status.length > 0 && (
+                      <p>• Estados: {exportFilters.status.map(s => s === 'active' ? 'Activos' : s === 'inactive' ? 'Inactivos' : 'Terminados').join(', ')}</p>
+                    )}
+                    {exportFilters.departmentIds.length > 0 && (
+                      <p>• Departamentos: {exportFilters.departmentIds.length} seleccionado(s)</p>
+                    )}
+                    {exportFilters.employeeIds.length > 0 && (
+                      <p>• Empleados: {exportFilters.employeeIds.length} seleccionado(s)</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Filtro por Estado */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-3">
+                  Estado de Empleados
+                </label>
+                <div className="space-y-2">
+                  {['active', 'inactive', 'terminated'].map((status) => (
+                    <label key={status} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={exportFilters.status.includes(status)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setExportFilters(prev => ({
+                              ...prev,
+                              status: [...prev.status, status]
+                            }))
+                          } else {
+                            setExportFilters(prev => ({
+                              ...prev,
+                              status: prev.status.filter(s => s !== status)
+                            }))
+                          }
+                        }}
+                        className="w-4 h-4 rounded border-white/20 bg-white/10 text-brand-600 focus:ring-brand-500 focus:ring-offset-0"
+                        disabled={isExporting}
+                      />
+                      <span className="text-white">
+                        {status === 'active' ? 'Activos' : status === 'inactive' ? 'Inactivos' : 'Terminados'}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-400 mt-2">
+                  Si no seleccionas ningún estado, se exportarán todos los empleados
+                </p>
+              </div>
+
+              {/* Filtro por Departamentos */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-3">
+                  Departamentos
+                </label>
+                {departments.length === 0 ? (
+                  <p className="text-sm text-gray-400">No hay departamentos disponibles</p>
+                ) : (
+                  <div className="max-h-48 overflow-y-auto space-y-2 border border-white/10 rounded-lg p-3 bg-white/5">
+                    {departments.map((dept) => (
+                      <label key={dept.id} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={exportFilters.departmentIds.includes(dept.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setExportFilters(prev => ({
+                                ...prev,
+                                departmentIds: [...prev.departmentIds, dept.id]
+                              }))
+                            } else {
+                              setExportFilters(prev => ({
+                                ...prev,
+                                departmentIds: prev.departmentIds.filter(id => id !== dept.id)
+                              }))
+                            }
+                          }}
+                          className="w-4 h-4 rounded border-white/20 bg-white/10 text-brand-600 focus:ring-brand-500 focus:ring-offset-0"
+                          disabled={isExporting}
+                        />
+                        <span className="text-white">{dept.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+                <p className="text-xs text-gray-400 mt-2">
+                  Si no seleccionas ningún departamento, se exportarán empleados de todos los departamentos
+                </p>
+              </div>
+
+              {/* Filtro por Empleados Específicos */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-3">
+                  Empleados Específicos
+                </label>
+                {employees.length === 0 ? (
+                  <p className="text-sm text-gray-400">No hay empleados disponibles</p>
+                ) : (
+                  <div className="max-h-48 overflow-y-auto space-y-2 border border-white/10 rounded-lg p-3 bg-white/5">
+                    {employees.map((emp) => (
+                      <label key={emp.id} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={exportFilters.employeeIds.includes(emp.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setExportFilters(prev => ({
+                                ...prev,
+                                employeeIds: [...prev.employeeIds, emp.id]
+                              }))
+                            } else {
+                              setExportFilters(prev => ({
+                                ...prev,
+                                employeeIds: prev.employeeIds.filter(id => id !== emp.id)
+                              }))
+                            }
+                          }}
+                          className="w-4 h-4 rounded border-white/20 bg-white/10 text-brand-600 focus:ring-brand-500 focus:ring-offset-0"
+                          disabled={isExporting}
+                        />
+                        <span className="text-white">
+                          {emp.name} {emp.employee_code && `(${emp.employee_code})`}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+                <p className="text-xs text-gray-400 mt-2">
+                  Si no seleccionas ningún empleado, se exportarán todos los empleados que cumplan los otros filtros
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6 pt-4 border-t border-white/10">
+              <Button
+                onClick={() => {
+                  setShowExportModal(false)
+                  setExportFormat(null)
+                  setExportFilters({ status: [], departmentIds: [], employeeIds: [] })
+                }}
+                variant="outline"
+                className="flex-1 bg-white/5 border-white/20 text-white hover:bg-white/10"
+                disabled={isExporting}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleExportConfirm}
+                className="flex-1 bg-brand-600 hover:bg-brand-700"
+                disabled={isExporting}
+              >
+                {isExporting ? (
+                  <>
+                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                    Exportando...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4 mr-2" />
+                    Exportar
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

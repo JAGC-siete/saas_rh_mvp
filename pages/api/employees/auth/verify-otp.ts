@@ -2,6 +2,8 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient, createAdminClient } from '../../../../lib/supabase/server'
 import { logger } from '../../../../lib/logger'
 import { verifyOtp } from '../../../../lib/employee-otp'
+import { EMPLOYEE_OTP_VERIFY_NEUTRAL_ERROR } from '../../../../lib/auth/public-auth-messages'
+import { enforceAuthRateLimits } from '../../../../lib/security/rate-limiting'
 
 interface VerifyOtpRequest {
   email: string
@@ -43,6 +45,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       })
     }
 
+    if (!enforceAuthRateLimits(req, res, 'auth_otp_verify', email)) {
+      return
+    }
+
     const adminSupabase = createAdminClient()
     
     // Verificar que el empleado existe - usar maybeSingle para evitar errores de múltiples filas
@@ -64,10 +70,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     }
 
     if (!employee) {
-      logger.warn('Employee not found for OTP verification', { email })
+      logger.warn('Employee not found for OTP verification (neutral error)')
       return res.status(400).json({
         success: false,
-        error: 'Email no encontrado o empleado inactivo'
+        error: EMPLOYEE_OTP_VERIFY_NEUTRAL_ERROR
       })
     }
 

@@ -65,18 +65,50 @@ railway login
 ```
 
 ### 3. Configure Environment Variables
+
+#### For Production
 ```bash
 # Use the setup script
 ./scripts/setup-railway-vars.sh
 
 # Or configure manually
+railway environment use production  # Switch to production environment
 railway variables set NEXT_PUBLIC_SUPABASE_URL="your_url"
 railway variables set NEXT_PUBLIC_SUPABASE_ANON_KEY="your_key"
 # ... (add all secret variables)
 ```
 
-### 4. Deploy
+#### For Staging
+Para configurar un entorno de staging separado, consulta la guía completa:
 ```bash
+# Configurar staging automáticamente
+./scripts/setup-railway-staging.sh
+
+# O ver la documentación completa
+cat docs/RAILWAY_STAGING_SETUP.md
+```
+
+### 4. Deploy
+
+#### Production Deployment
+```bash
+# Desde la rama main
+git checkout main
+./scripts/deploy-railway.sh --production
+
+# O directamente
+railway environment use production
+railway up
+```
+
+#### Staging Deployment
+```bash
+# Desde la rama develop
+git checkout develop
+./scripts/deploy-railway.sh --staging
+
+# O directamente
+railway environment use staging
 railway up
 ```
 
@@ -111,9 +143,36 @@ https://your-domain.com/railway-debug
 4. **Use different secrets for dev/staging/prod**
 5. **Monitor for exposed secrets in logs**
 
+## 🌍 Multiple Environments (Staging & Production)
+
+Este proyecto soporta múltiples environments en Railway:
+
+- **Production**: Environment de producción (`main` branch)
+- **Staging**: Environment de pruebas (`develop` branch)
+
+Para configurar staging, consulta la documentación completa:
+- [Guía de Configuración de Staging](./docs/RAILWAY_STAGING_SETUP.md)
+
+### Cambiar entre Environments
+
+```bash
+# Ver environments disponibles
+railway environment list
+
+# Cambiar a staging
+railway environment use staging
+
+# Cambiar a production
+railway environment use production
+
+# Ver variables del environment actual
+railway variables
+```
+
 ## 📞 Support
 
 If you encounter issues:
 1. Check Railway logs: `railway logs`
 2. Verify environment variables: `./scripts/check-railway-env.sh`
 3. Check debug endpoints: `/api/railway-env-check`, `/railway-debug`
+4. For staging issues: See [RAILWAY_STAGING_SETUP.md](./docs/RAILWAY_STAGING_SETUP.md)

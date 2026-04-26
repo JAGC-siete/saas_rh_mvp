@@ -1,4 +1,5 @@
 import React from 'react'
+import TrackedWhatsAppLink from './TrackedWhatsAppLink'
 
 const DemoFooter: React.FC = () => {
   return (
@@ -23,9 +24,15 @@ const DemoFooter: React.FC = () => {
                 <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                 </svg>
-                <a href="https://wa.me/50494707007" target="_blank" rel="noopener noreferrer" className="hover:text-green-600">
-                  WhatsApp: (+504)94707007
-                </a>
+                <TrackedWhatsAppLink
+                  href="https://wa.me/50432226773"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-green-600"
+                  trackingContext="footer_contact"
+                >
+                  WhatsApp: 504 32226773
+                </TrackedWhatsAppLink>
               </div>
             </div>
           </div>
@@ -95,13 +102,38 @@ const DemoFooter: React.FC = () => {
 
           {/* About */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Humano SISU</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">SISU</h3>
             <p className="text-gray-600 text-sm mb-4">
-              Tu RH 100% digital, legal y sin complicaciones. Hecho para PYMEs como la tuya.
+              Gestión de Recursos Humanos 100% digital, legal y automatizada. Diseñada para que las PyMEs de la región operen sin fricción.
             </p>
             <div className="text-sm text-gray-500">
-              <p>© 2025 Humano SISU</p>
-              <p>Sistema de Recursos Humanos</p>
+              <p>© 2026 Humano SISU. Nómina y RRHH para El Salvador, Guatemala y Honduras.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Privacy Notice */}
+        <div className="border-t border-gray-200 mt-8 pt-8">
+          <div className="text-center">
+            <p className="text-sm text-gray-600 mb-3">
+              Protegemos tu información. <strong>Solo será utilizada para contactarte</strong>.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 justify-center items-center text-xs text-gray-500">
+              <a 
+                href="/politicadeprivacidad" 
+                className="text-gray-600 hover:text-gray-900 transition-colors underline decoration-gray-400/30 hover:decoration-gray-600"
+              >
+                Política de Privacidad
+              </a>
+              <span className="hidden sm:inline">•</span>
+              <a
+                href="/terminos-de-servicio"
+                className="text-gray-600 hover:text-gray-900 transition-colors underline decoration-gray-400/30 hover:decoration-gray-600"
+              >
+                Términos de servicio
+              </a>
+              <span className="hidden sm:inline">•</span>
+              <span>© 2026 Humano SISU. Todos los derechos reservados.</span>
             </div>
           </div>
         </div>

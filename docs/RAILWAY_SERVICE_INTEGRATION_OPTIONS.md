@@ -35,7 +35,7 @@ Convertir el proxy Express en API routes de Next.js en `/pages/api/hikvision/`
 ### Desventajas:
 - ❌ Requiere crear otro servicio en Railway
 - ❌ Necesita configuración de variables de entorno separada
-- ❌ Requiere configurar URL del proxy como variable de entorno
+- ❌ Requiere configurar URL/credenciales y coordinar comunicación entre servicios
 - ❌ Más complejidad de despliegue
 - ❌ Posibles problemas de conectividad entre servicios
 - ❌ Problemas de build adicionales (como el que estás experimentando)
@@ -46,7 +46,7 @@ Convertir el proxy Express en API routes de Next.js en `/pages/api/hikvision/`
 3. Configurar Dockerfile del proxy
 4. Configurar variables de entorno separadas
 5. Obtener URL del nuevo servicio
-6. Configurar `HIKVISION_PROXY_URL` en el servicio principal
+6. Actualizar el SaaS para apuntar a ese servicio (si se decidiera mantener proxy separado)
 
 ---
 
@@ -115,5 +115,5 @@ pages/api/hikvision/
   └── health.ts         # GET /api/hikvision/health
 ```
 
-**¿Quieres que lo implemente?** Puedo convertir el proxy Express en API routes de Next.js ahora mismo.
+Implementación documentada en `docs/HIKVISION_PROXY_INTEGRATED.md`.
 

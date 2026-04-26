@@ -237,7 +237,7 @@ export default function TrialDashboard() {
             <div className="flex justify-between items-center">
               <div>
                 <h1 className="text-2xl font-bold text-white">👋 Bienvenido a SISU — Tu RH Automatizado en 24 h o Menos</h1>
-                <p className="text-gray-300">Convertí tu planilla manual en un sistema automático que cumple la ley hondureña y se maneja solo</p>
+                <p className="text-gray-300">Convertí tu planilla manual en un sistema automático alineado a normativa local y que se maneja solo</p>
               </div>
               <div className="text-right">
                 <p className="text-sm text-gray-400">Trial activado para</p>
@@ -439,7 +439,7 @@ export default function TrialDashboard() {
                 <div>
                   <h4 className="font-semibold text-white mb-2">💬 WhatsApp</h4>
                   <a 
-                    href="https://wa.me/50494707007?text=Hola%20Jorge,%20ya%20vi%20el%20demo%20de%20SISU.%0A%0AQuiero%20dejar%20de%20hacer%20planillas%20manuales%20y%20tener%20todo%20automatizado%20antes%20de%20mañana.%0A%0ADecime%20qué%20necesitás%20para%20arrancar." 
+                    href="https://wa.me/50432226773?text=Hola%20Jorge,%20ya%20vi%20el%20demo%20de%20SISU.%0A%0AQuiero%20dejar%20de%20hacer%20planillas%20manuales%20y%20tener%20todo%20automatizado%20antes%20de%20mañana.%0A%0ADecime%20qué%20necesitás%20para%20arrancar." 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-green-400 hover:text-green-300 transition-colors"
