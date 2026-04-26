@@ -15,7 +15,20 @@ function toIsoStringOrDate(dateTime: DateTime): string {
   )
 }
 
-export function getDateRange(preset: string, today: DateTime = DateTime.now().setZone('America/Tegucigalpa')): DateRange {
+export function getDateRange(
+  preset: string,
+  today: DateTime = DateTime.now().setZone('America/Tegucigalpa'),
+  customFrom?: string,
+  customTo?: string
+): DateRange {
+  if (preset === 'custom' && customFrom && customTo) {
+    return { from: customFrom, to: customTo }
+  }
+  if (preset === 'custom') {
+    const from = today.startOf('week')
+    const to = from.plus({ weeks: 1 })
+    return { from: toIsoStringOrDate(from), to: toIsoStringOrDate(to) }
+  }
   switch (preset) {
     case 'today': {
       const from = today.startOf('day')

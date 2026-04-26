@@ -6,6 +6,8 @@ import { usePayrollManager } from '../lib/hooks/usePayrollManager'
 import UnifiedPayrollTable from './UnifiedPayrollTable'
 import ConfigNomina from './ConfigNomina'
 import CustomPayrollFieldsForm from './CustomPayrollFieldsForm'
+import DeductionPlansDashboard from './DeductionPlansDashboard'
+import { PayrollAccountingTab } from './accounting/PayrollAccountingTab'
 import { calculatePayroll } from '../lib/payroll-client-specific'
 import { createClient } from '../lib/supabase/client'
 
@@ -18,6 +20,7 @@ interface CustomFieldData {
 
 interface ModalState {
   lineId: string
+  employeeId?: string
   metadata: Record<string, unknown> | null
   baseSalary: number
 }
@@ -33,12 +36,55 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
   // Local state for preview-only custom fields changes (not persisted until authorization)
   const [previewCustomFields, setPreviewCustomFields] = useState<Record<string, CustomFieldData>>({})
   
+  // Payment frequency from company config (para mostrar "Deducción en dos pagos" solo cuando es quincenal)
+  const [paymentFrequency, setPaymentFrequency] = useState<string | null>(null)
+  const [payrollApiConfig, setPayrollApiConfig] = useState<{
+    legal_deductions?: { ihss?: boolean; rap?: boolean; isr?: boolean }
+    custom_fields?: Record<string, unknown>
+  } | null>(null)
+
+  // Tab: Planilla | Partida Contable
+  const [activeTab, setActiveTab] = useState<'planilla' | 'contabilidad'>('planilla')
+  
   // Debug logging para verificar el companyId (only in development)
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
       console.log('🔍 PayrollManagerNew - companyId from context:', payroll.companyId, 'loading:', payroll.companyLoading)
     }
   }, [payroll.companyId, payroll.companyLoading])
+
+  // Fetch payment frequency for conditional 2PAGOS visibility
+  useEffect(() => {
+    if (!payroll.companyId) return
+    fetch('/api/payroll/config')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        const cfg = data?.config
+        const pf = cfg?.payment_frequency
+        setPaymentFrequency(pf ?? null)
+        setPayrollApiConfig(
+          cfg
+            ? {
+                legal_deductions: cfg.legal_deductions,
+                custom_fields: cfg.custom_fields
+              }
+            : null
+        )
+      })
+      .catch(() => {
+        setPaymentFrequency(null)
+        setPayrollApiConfig(null)
+      })
+  }, [payroll.companyId])
+
+  // Si frecuencia es mensual/semanal (no quincenal) y tipo es 2PAGOS, resetear a CON
+  useEffect(() => {
+    const notQuincenal = paymentFrequency === 'mensual' || paymentFrequency === 'monthly' ||
+      paymentFrequency === 'semanal' || paymentFrequency === 'weekly'
+    if (notQuincenal && payroll.filters.tipo === '2PAGOS') {
+      payroll.updateFilter('tipo', 'CON')
+    }
+  }, [paymentFrequency, payroll.filters.tipo, payroll.updateFilter])
 
   // Memoize total deducciones calculation to avoid recalculating on every render
   const totalDeducciones = useMemo(() => {
@@ -51,13 +97,44 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
     await payroll.updateFilter(key as keyof typeof payroll.filters, value)
   }, [payroll])
 
+  const handleGenerateJournalEntries = useCallback(async () => {
+    if (!payroll.runId || !payroll.companyId) return
+    const res = await fetch('/api/accounting/generate-journal-entries', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ run_id: payroll.runId }),
+      credentials: 'include'
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      const msg =
+        (data as { error?: string; message?: string }).error ||
+        (data as { message?: string }).message ||
+        'Error generando asientos'
+      throw new Error(msg)
+    }
+  }, [payroll.runId, payroll.companyId])
+
   // Handle unified preview - now single handler (memoized)
   const handlePreview = useCallback(async () => {
     try {
       await payroll.generatePreview()
+      await payroll.loadAhcPreflight()
     } catch (error: unknown) {
       // Error handling is done in the hook
       console.error('Error in handlePreview:', error)
+    }
+  }, [payroll])
+
+  const handleRecalculateMissingAhc = useCallback(async () => {
+    try {
+      const r = await payroll.recalculateMissingAhc()
+      alert(`Recalculo completado.\n\nPendientes: ${r.missing}\nCalculados: ${r.calculated}`)
+      await payroll.loadUnifiedData()
+      await payroll.loadAhcPreflight()
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Error desconocido'
+      alert(`Error recalculando horas pendientes: ${msg}`)
     }
   }, [payroll])
 
@@ -179,14 +256,32 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
   }, [payroll, previewCustomFields])
 
   // Handle edit custom fields (memoized)
-  const handleEditCustomFields = useCallback((lineId: string, metadata: Record<string, unknown> | null, baseSalary: number) => {
+  const handleEditCustomFields = useCallback((lineId: string, metadata: Record<string, unknown> | null, baseSalary: number, employeeId?: string) => {
     setModalState({
       lineId,
+      employeeId,
       metadata,
       baseSalary: baseSalary || 0
     })
     setShowCustomFieldsModal(true)
   }, [])
+
+  const handleAdjustFixedDays = useCallback(
+    async (payload: { run_line_id: string; days_worked: number; reason?: string }) => {
+      const res = await fetch('/api/payroll/adjust-fixed-days', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload)
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data.message || data.error || 'Error al ajustar días')
+      }
+      await payroll.loadUnifiedData()
+    },
+    [payroll]
+  )
 
   // Handle save custom fields - ONLY UPDATE PREVIEW (not persisted until authorization) (memoized)
   const handleSaveCustomFields = useCallback(async (metadata: Record<string, unknown>) => {
@@ -493,6 +588,11 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
         </Card>
       </div>
 
+      {/* Planes de deducción activos */}
+      {payroll.companyId && (
+        <DeductionPlansDashboard companyId={payroll.companyId} />
+      )}
+
       {/* Configuración de Nómina */}
       <ConfigNomina
         year={payroll.currentPeriod.year}
@@ -507,19 +607,121 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
         onReset={payroll.resetFilters}
         loading={payroll.loading}
         canPreview={payroll.canPreview}
+        paymentFrequency={paymentFrequency as 'quincenal' | 'mensual' | 'semanal' | null}
       />
 
+      {/* Preflight AHC (overtime readiness) */}
+      {payroll.unifiedData && payroll.ahcPreflight && (
+        <Card
+          variant="glass"
+          className={`border ${
+            payroll.ahcPreflight.status === 'GREEN'
+              ? 'border-emerald-500/30 bg-emerald-500/10'
+              : 'border-amber-500/35 bg-amber-500/10'
+          }`}
+        >
+          <CardContent className="pt-5 pb-5 flex flex-wrap items-start justify-between gap-4">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span
+                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${
+                    payroll.ahcPreflight.status === 'GREEN'
+                      ? 'bg-emerald-500/20 text-emerald-200'
+                      : 'bg-amber-500/20 text-amber-200'
+                  }`}
+                >
+                  {payroll.ahcPreflight.status === 'GREEN'
+                    ? 'Horas calculadas'
+                    : 'Faltan horas por calcular'}
+                </span>
+                <span className="text-sm text-gray-200 font-medium">
+                  Horas desde asistencia (incluye extras para nómina)
+                </span>
+              </div>
+              <p className="text-xs text-gray-300">
+                Marcas completas (entrada/salida):{' '}
+                <span className="font-semibold">{payroll.ahcPreflight.completeRecords}</span> · Ya calculadas:{' '}
+                <span className="font-semibold">{payroll.ahcPreflight.ahcRecords}</span> · Por calcular:{' '}
+                <span className="font-semibold">{payroll.ahcPreflight.missingAHC}</span>
+              </p>
+              {payroll.ahcPreflight.recommendedAction && (
+                <p className="text-xs text-gray-400">{payroll.ahcPreflight.recommendedAction}</p>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="border-white/20 text-white"
+                disabled={payroll.ahcPreflightLoading || payroll.loading}
+                onClick={() => payroll.loadAhcPreflight()}
+              >
+                {payroll.ahcPreflightLoading ? 'Verificando…' : 'Actualizar estado'}
+              </Button>
+              {payroll.ahcPreflight.missingAHC > 0 && (
+                <Button
+                  type="button"
+                  className="bg-brand-600 hover:bg-brand-700 text-white"
+                  disabled={payroll.loading}
+                  onClick={() => void handleRecalculateMissingAhc()}
+                >
+                  Recalcular pendientes
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Tabs: Planilla | Partida Contable */}
+      {payroll.unifiedData && payroll.runId && (
+        <div className="flex gap-2 border-b border-white/20 pb-2">
+          <Button
+            variant={activeTab === 'planilla' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setActiveTab('planilla')}
+            className={
+              activeTab === 'planilla'
+                ? 'bg-brand-600 text-white'
+                : 'text-white/70 hover:text-white hover:bg-white/10'
+            }
+          >
+            Planilla
+          </Button>
+          <Button
+            variant={activeTab === 'contabilidad' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setActiveTab('contabilidad')}
+            className={
+              activeTab === 'contabilidad'
+                ? 'bg-brand-600 text-white'
+                : 'text-white/70 hover:text-white hover:bg-white/10'
+            }
+          >
+            Partida Contable
+          </Button>
+        </div>
+      )}
+
+      {/* Tab content: Planilla */}
+      {activeTab === 'planilla' && (
+      <>
       {/* Unified Payroll Table */}
       {payroll.unifiedData && (
         <UnifiedPayrollTable
           rows={payroll.unifiedData.rows}
           resumen={payroll.unifiedData.resumen}
+          incompleteRecordsAlert={payroll.unifiedData.incompleteRecordsAlert}
           onGenerateVoucher={payroll.generateVoucher}
           onPreAuthorize={handlePreAuthorize}
           onAuthorize={payroll.authorizeRun}
           onGeneratePDF={payroll.generatePDF}
           onSendEmail={() => payroll.sendEmail()}
           onEditCustomFields={handleEditCustomFields}
+          canAdjustFixedDays={
+            !!payroll.runId && (payroll.status === 'draft' || payroll.status === 'edited')
+          }
+          onAdjustFixedDays={handleAdjustFixedDays}
           loading={payroll.loading}
           canAuthorize={payroll.canAuthorize}
           canSend={payroll.canSend}
@@ -527,6 +729,19 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
           status={payroll.status}
           period={payroll.currentPeriod}
           companyId={payroll.companyId}
+          payrollApiConfig={payrollApiConfig}
+        />
+      )}
+      </>
+      )}
+
+      {/* Tab content: Partida Contable */}
+      {activeTab === 'contabilidad' && (
+        <PayrollAccountingTab
+          runId={payroll.runId}
+          status={payroll.status}
+          companyId={payroll.companyId}
+          onGenerate={handleGenerateJournalEntries}
         />
       )}
 
@@ -567,6 +782,7 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
               <CustomPayrollFieldsForm
                 companyId={payroll.companyId || ''}
                 runLineId={modalState?.lineId || ''}
+                employeeId={modalState?.employeeId}
                 currentMetadata={modalState?.metadata || null}
                 baseSalary={modalState?.baseSalary || 0}
                 onSave={handleSaveCustomFields}

@@ -13,7 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // Authentication
-    const { supabase, companyId, role } = await requireCompanyAccess(req, res)
+    const { supabase, companyId, role, user } = await requireCompanyAccess(req, res)
     
     // Check permissions
     if (!['super_admin', 'company_admin', 'hr_manager'].includes(role)) {
@@ -109,6 +109,56 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         error: 'Error actualizando campos personalizados',
         details: updateError.message
       })
+    }
+
+    // Insert payroll_adjustments for historial and automatic snapshots (bruto, neto + custom keys)
+    const adjustmentsToInsert: Array<{ run_line_id: string; company_id: string; field: string; old_value: number | null; new_value: number; user_id: string }> = []
+    const oldEffBruto = Number(existingLine.eff_bruto) || 0
+    const oldEffNeto = Number(existingLine.eff_neto) || 0
+    if (oldEffBruto !== newEffBruto) {
+      adjustmentsToInsert.push({
+        run_line_id,
+        company_id: companyId,
+        field: 'bruto',
+        old_value: oldEffBruto,
+        new_value: newEffBruto,
+        user_id: user.id
+      })
+    }
+    if (oldEffNeto !== newEffNeto) {
+      adjustmentsToInsert.push({
+        run_line_id,
+        company_id: companyId,
+        field: 'neto',
+        old_value: oldEffNeto,
+        new_value: newEffNeto,
+        user_id: user.id
+      })
+    }
+    const allKeys = new Set([...Object.keys(existingMetadata), ...Object.keys(mergedMetadata)])
+    for (const key of allKeys) {
+      if (key === '_deduction_plan_ids') continue
+      const oldVal = existingMetadata[key]
+      const newVal = mergedMetadata[key]
+      const oldNum = typeof oldVal === 'number' ? oldVal : (typeof oldVal === 'string' && !isNaN(parseFloat(oldVal)) ? parseFloat(oldVal) : null)
+      const newNum = typeof newVal === 'number' ? newVal : (typeof newVal === 'string' && !isNaN(parseFloat(newVal)) ? parseFloat(newVal) : null)
+      if (newNum !== null && oldNum !== newNum && /^[a-z0-9_]+$/.test(key) && key.length <= 64) {
+        adjustmentsToInsert.push({
+          run_line_id,
+          company_id: companyId,
+          field: key,
+          old_value: oldNum,
+          new_value: newNum,
+          user_id: user.id
+        })
+      }
+    }
+    if (adjustmentsToInsert.length > 0) {
+      const { error: adjError } = await supabase.from('payroll_adjustments').insert(adjustmentsToInsert)
+      if (adjError) {
+        console.error('Error inserting payroll_adjustments:', adjError)
+        // Do not fail the request - line was updated successfully
+      }
     }
 
     console.log('✅ Custom fields updated for line:', run_line_id)

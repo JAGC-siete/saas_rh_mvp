@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useSupabaseSession } from '../lib/hooks/useSession'
 import { useCompanyContext } from '../lib/useCompanyContext'
 import { Button } from './ui/button'
 import { Card } from './ui/card'
 import { nowInHonduras } from '../lib/timezone'
 import { useReportsExport } from '../lib/hooks/useReportsExport'
+import { ExportFormatButtons } from './ui/ExportFormatButtons'
 
 // Iconos simples como placeholders
 const UsersIcon = ({ className }: { className?: string }) => (
@@ -42,6 +44,74 @@ const DocumentChartBarIcon = ({ className }: { className?: string }) => (
   </svg>
 )
 
+function QualityControlExport() {
+  const [periodo, setPeriodo] = useState(() => {
+    const n = nowInHonduras()
+    return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`
+  })
+  const [quincena, setQuincena] = useState<1 | 2>(1)
+  const [loading, setLoading] = useState(false)
+  const [loadingFormat, setLoadingFormat] = useState<'csv' | 'excel' | null>(null)
+
+  async function download(format: 'csv' | 'excel') {
+    setLoading(true)
+    setLoadingFormat(format)
+    try {
+      const res = await fetch('/api/reports/quality/attendance-vs-payroll', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ periodo, quincena, format })
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || `HTTP ${res.status}`)
+      }
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `control_calidad_${periodo}_q${quincena}.${format === 'excel' ? 'xlsx' : 'csv'}`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (e) {
+      console.error('Error exportando control de calidad:', e)
+      alert((e as Error).message)
+    } finally {
+      setLoading(false)
+      setLoadingFormat(null)
+    }
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <input
+        type="month"
+        value={periodo}
+        onChange={(e) => setPeriodo(e.target.value)}
+        className="rounded border border-white/20 bg-white/5 px-2 py-1 text-sm text-white"
+      />
+      <select
+        value={quincena}
+        onChange={(e) => setQuincena(Number(e.target.value) as 1 | 2)}
+        className="rounded border border-white/20 bg-white/5 px-2 py-1 text-sm text-white"
+      >
+        <option value={1}>Quincena 1</option>
+        <option value={2}>Quincena 2</option>
+      </select>
+      <ExportFormatButtons
+        formats={['csv', 'excel']}
+        onExport={(format) => download(format as 'csv' | 'excel')}
+        disabled={loading}
+        loadingFormat={loadingFormat}
+        variant="outline"
+      />
+    </div>
+  )
+}
+
 interface DashboardStats {
   totalEmployees: number
   activeEmployees: number
@@ -64,6 +134,7 @@ interface AttendanceTrend {
 }
 
 export default function ReportsAndAnalytics() {
+  const { session } = useSupabaseSession()
   const { companyId, loading: companyLoading } = useCompanyContext()
   
   // Debug logging para verificar el companyId
@@ -182,12 +253,12 @@ export default function ReportsAndAnalytics() {
 
   // Cargar datos iniciales
   useEffect(() => {
-    if (companyId && !companyLoading) {
+    if (session?.user && companyId && !companyLoading) {
       console.log('Refreshing dashboard for company:', companyId)
       fetchDashboardStats()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [companyId, companyLoading])
+  }, [session?.user, companyId, companyLoading])
 
   // Actualizar datos cuando cambie el rango de fechas
   // Tendencias removidas de este módulo
@@ -359,34 +430,12 @@ export default function ReportsAndAnalytics() {
               <ClockIcon className="h-5 w-5" />
               <span>Reporte de Asistencia</span>
             </h4>
-            <div className="flex space-x-2">
-              <Button
-                onClick={() => exportReport('attendance', 'csv')}
-                variant="outline"
-                size="sm"
-                className="bg-white/5 border-white/20 text-white hover:bg-white/10"
-              >
-                CSV
-              </Button>
-              {/* Excel no soportado actualmente por el backend */}
-              <Button
-                onClick={() => exportReport('attendance', 'excel' as any)}
-                variant="outline"
-                size="sm"
-                className="bg-white/5 border-white/20 text-white hover:bg-white/10"
-              >
-                Excel
-              </Button>
-              {/* PDF no soportado actualmente por el backend */}
-              <Button
-                onClick={() => exportReport('attendance', 'pdf')}
-                variant="outline"
-                size="sm"
-                className="bg-white/5 border-white/20 text-white hover:bg-white/10"
-              >
-                PDF
-              </Button>
-            </div>
+            <ExportFormatButtons
+              formats={['csv', 'excel', 'pdf']}
+              onExport={(format) => exportReport('attendance', format)}
+              disabled={loading}
+              variant="outline"
+            />
           </div>
 
           {/* Reporte de Nómina */}
@@ -395,16 +444,12 @@ export default function ReportsAndAnalytics() {
               <CurrencyDollarIcon className="h-5 w-5" />
               <span>Reporte de Nómina</span>
             </h4>
-            <div className="flex space-x-2">
-              <Button
-                onClick={() => exportReport('payroll', 'csv')}
-                variant="outline"
-                size="sm"
-                className="bg-white/5 border-white/20 text-white hover:bg-white/10"
-              >
-                CSV
-              </Button>
-            </div>
+            <ExportFormatButtons
+              formats={['csv', 'excel', 'pdf']}
+              onExport={(format) => exportReport('payroll', format)}
+              disabled={loading}
+              variant="outline"
+            />
           </div>
 
           {/* Reporte de Empleados */}
@@ -413,16 +458,22 @@ export default function ReportsAndAnalytics() {
               <UsersIcon className="h-5 w-5" />
               <span>Reporte de Empleados</span>
             </h4>
-            <div className="flex space-x-2">
-              <Button
-                onClick={() => exportReport('employees', 'csv')}
-                variant="outline"
-                size="sm"
-                className="bg-white/5 border-white/20 text-white hover:bg-white/10"
-              >
-                CSV
-              </Button>
-            </div>
+            <ExportFormatButtons
+              formats={['csv', 'excel', 'pdf']}
+              onExport={(format) => exportReport('employees', format)}
+              disabled={loading}
+              variant="outline"
+            />
+          </div>
+
+          {/* Control de calidad: Asistencia vs Nómina */}
+          <div className="space-y-2">
+            <h4 className="text-md font-medium text-white flex items-center space-x-2">
+              <ChartBarIcon className="h-5 w-5" />
+              <span>Control de calidad (Asistencia vs Nómina)</span>
+            </h4>
+            <p className="text-sm text-gray-400">Compara horas de asistencia con horas pagadas en nómina por período</p>
+            <QualityControlExport />
           </div>
         </div>
       </Card>

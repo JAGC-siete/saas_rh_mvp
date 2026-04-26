@@ -26,7 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!targetCompanyId) {
       return res.status(400).json({
         error: 'Perfil de usuario incompleto',
-        message: 'No se pudo obtener la información de la empresa'
+        message: 'No se pudo obtener la informaci?n de la empresa'
       })
     }
 
@@ -40,17 +40,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       case 'POST':
       case 'PUT':
         // Solo admins pueden modificar configuraciones
-        if (!['super_admin', 'company_admin'].includes(role)) {
+        if (!['super_admin', 'company_admin', 'admin'].includes(role)) {
           return res.status(403).json({
             error: 'Permisos insuficientes',
             message: 'Solo administradores pueden modificar configuraciones de payroll'
           })
         }
         // Verificar que company_admin solo puede modificar su propia empresa
-        if (role === 'company_admin' && companyId && companyId !== targetCompanyId) {
+        if (['company_admin', 'admin'].includes(role) && companyId && companyId !== targetCompanyId) {
           return res.status(403).json({
             error: 'Permisos insuficientes',
-            message: 'Solo puede modificar la configuración de su propia empresa'
+            message: 'Solo puede modificar la configuraci?n de su propia empresa'
           })
         }
         return await upsertPayrollConfig(dbClient, targetCompanyId, req.body, res)
@@ -82,7 +82,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 /**
- * Obtener configuración de payroll de una empresa
+ * Obtener configuraci?n de payroll de una empresa
  */
 async function getPayrollConfig(
   supabase: any,
@@ -98,57 +98,85 @@ async function getPayrollConfig(
       .single()
 
     if (error) {
-      // Si no existe configuración, retornar null (no es error)
+      // Si no existe configuraci?n, retornar null (no es error)
       if (error.code === 'PGRST116') {
         return res.status(200).json({
           config: null,
-          message: 'No hay configuración personalizada para esta empresa'
+          message: 'No hay configuraci?n personalizada para esta empresa'
         })
       }
 
       throw error
     }
 
-    // Extraer parámetros de configuración desde metadata y exponerlos en el nivel superior
+    // Exponer configuraci?n: columnas nuevas (Capa 2) > metadata legacy
     const metadata = data.metadata || {}
+    const pfCol = data.payment_frequency
+    const qcCol = data.quincena_config
+    const paymentFrequency = pfCol ?? metadata.payment_frequency ?? 'biweekly'
+    const mapFreqToFrontend = (v: string) =>
+      v === 'mensual' ? 'monthly' : v === 'quincenal' ? 'biweekly' : v === 'semanal' ? 'weekly' : v
+    const fs = (qcCol as any)?.first_start ?? 1
+    const fe = (qcCol as any)?.first_end ?? 15
+    const ss = (qcCol as any)?.second_start ?? 16
+    const se = (qcCol as any)?.second_end ?? 30
+    const isStandardQuincena = fs === 1 && fe === 15 && ss === 16 && se === 30
+    const paymentCutDates = qcCol
+      ? {
+          biweekly_type: (isStandardQuincena ? 'standard' : 'custom') as 'standard' | 'custom',
+          biweekly_first_start: fs,
+          biweekly_first_end: fe,
+          biweekly_second_start: ss,
+          biweekly_second_end: se,
+          monthly_type: metadata.payment_cut_dates?.monthly_type || 'standard',
+          monthly_start: metadata.payment_cut_dates?.monthly_start ?? 1,
+          monthly_end: metadata.payment_cut_dates?.monthly_end ?? 30
+        }
+      : metadata.payment_cut_dates || {
+          biweekly_type: 'standard',
+          biweekly_first_start: 1,
+          biweekly_first_end: 15,
+          biweekly_second_start: 16,
+          biweekly_second_end: 30,
+          monthly_type: 'standard',
+          monthly_start: 1,
+          monthly_end: 30
+        }
     const configResponse = {
       ...data,
-      // Exponer parámetros de configuración desde metadata
-      payment_frequency: metadata.payment_frequency || 'biweekly',
+      payment_frequency: mapFreqToFrontend(paymentFrequency),
       currency: metadata.currency || 'HNL',
+      calculation_mode: data.calculation_mode ?? metadata.calculation_mode ?? 'daily',
+      incomplete_record_default_hours: data.incomplete_record_default_hours ?? metadata.incomplete_record_default_hours ?? null,
+      semanal_proration: metadata.semanal_proration || 'proportional',
       legal_deductions: metadata.legal_deductions || {
         ihss: true,
         rap: true,
         isr: true,
         infop: false
       },
-      payment_cut_dates: metadata.payment_cut_dates || {
-        biweekly_type: 'standard',
-        biweekly_first_start: 1,
-        biweekly_first_end: 15,
-        biweekly_second_start: 16,
-        biweekly_second_end: 30,
-        monthly_type: 'standard',
-        monthly_start: 1,
-        monthly_end: 30
-      }
+      payment_cut_dates: paymentCutDates,
+      earning_impact_rules:
+        metadata.earning_impact_rules && typeof metadata.earning_impact_rules === 'object'
+          ? metadata.earning_impact_rules
+          : {}
     }
 
     return res.status(200).json({
       config: configResponse,
-      message: 'Configuración obtenida exitosamente'
+      message: 'Configuraci?n obtenida exitosamente'
     })
   } catch (error: any) {
     console.error('Error getting payroll config:', error)
     return res.status(500).json({
-      error: 'Error obteniendo configuración',
+      error: 'Error obteniendo configuraci?n',
       details: error.message
     })
   }
 }
 
 /**
- * Crear o actualizar configuración de payroll
+ * Crear o actualizar configuraci?n de payroll
  */
 async function upsertPayrollConfig(
   supabase: any,
@@ -163,18 +191,22 @@ async function upsertPayrollConfig(
       calculation_config = {},
       calculation_script = null,
       metadata = {},
-      // Extraer parámetros de configuración de payroll
+      earning_impact_rules,
+      // Extraer par?metros de configuraci?n de payroll
       payment_frequency,
       currency,
+      calculation_mode = 'daily',
+      incomplete_record_default_hours = null,
       legal_deductions,
-      payment_cut_dates
+      payment_cut_dates,
+      semanal_proration = 'proportional'
     } = body
 
     // Validar calculation_type
     const validTypes = ['standard', 'formula_based', 'custom']
     if (!validTypes.includes(calculation_type)) {
       return res.status(400).json({
-        error: 'Tipo de cálculo inválido',
+        error: 'Tipo de c?lculo inv?lido',
         message: `calculation_type debe ser uno de: ${validTypes.join(', ')}`
       })
     }
@@ -182,7 +214,7 @@ async function upsertPayrollConfig(
     // Validar que si es 'custom', debe tener calculation_script
     if (calculation_type === 'custom' && !calculation_script) {
       return res.status(400).json({
-        error: 'Script de cálculo requerido',
+        error: 'Script de c?lculo requerido',
         message: 'calculation_script es requerido cuando calculation_type es "custom"'
       })
     }
@@ -195,7 +227,7 @@ async function upsertPayrollConfig(
           // Validar estructura del campo
           if (!def.label || !def.type || !def.category) {
             return res.status(400).json({
-              error: 'Estructura de campo inválida',
+              error: 'Estructura de campo inv?lida',
               message: `El campo "${fieldName}" debe tener: label, type, category`
             })
           }
@@ -203,7 +235,7 @@ async function upsertPayrollConfig(
           const validTypes = ['number', 'string', 'boolean']
           if (!validTypes.includes(def.type)) {
             return res.status(400).json({
-              error: 'Tipo de campo inválido',
+              error: 'Tipo de campo inv?lido',
               message: `El tipo del campo "${fieldName}" debe ser uno de: ${validTypes.join(', ')}`
             })
           }
@@ -211,16 +243,32 @@ async function upsertPayrollConfig(
           const validCategories = ['earnings', 'deductions', 'calculation_helper']
           if (!validCategories.includes(def.category)) {
             return res.status(400).json({
-              error: 'Categoría de campo inválida',
-              message: `La categoría del campo "${fieldName}" debe ser una de: ${validCategories.join(', ')}`
+              error: 'Categor?a de campo inv?lida',
+              message: `La categor?a del campo "${fieldName}" debe ser una de: ${validCategories.join(', ')}`
             })
           }
         }
       }
     }
 
-    // Construir metadata con los parámetros de configuración de payroll
-    // Mantener metadata existente y agregar/actualizar parámetros de configuración
+    const cutDates = payment_cut_dates || {
+      biweekly_type: 'standard',
+      biweekly_first_start: 1,
+      biweekly_first_end: 15,
+      biweekly_second_start: 16,
+      biweekly_second_end: 30,
+      monthly_type: 'standard',
+      monthly_start: 1,
+      monthly_end: 30
+    }
+    const mapFreqToDb = (v: string) =>
+      v === 'monthly' ? 'mensual' : v === 'biweekly' ? 'quincenal' : v === 'weekly' ? 'semanal' : (v || 'quincenal')
+    const quincenaConfig = {
+      first_start: cutDates.biweekly_first_start ?? 1,
+      first_end: cutDates.biweekly_first_end ?? 15,
+      second_start: cutDates.biweekly_second_start ?? 16,
+      second_end: cutDates.biweekly_second_end ?? 30
+    }
     const payrollMetadata = {
       ...metadata,
       payment_frequency: payment_frequency || 'biweekly',
@@ -231,19 +279,23 @@ async function upsertPayrollConfig(
         isr: true,
         infop: false
       },
-      payment_cut_dates: payment_cut_dates || {
-        biweekly_type: 'standard',
-        biweekly_first_start: 1,
-        biweekly_first_end: 15,
-        biweekly_second_start: 16,
-        biweekly_second_end: 30,
-        monthly_type: 'standard',
-        monthly_start: 1,
-        monthly_end: 30
-      }
+      payment_cut_dates: cutDates,
+      semanal_proration: semanal_proration || 'proportional',
+      ...(earning_impact_rules != null && typeof earning_impact_rules === 'object'
+        ? { earning_impact_rules }
+        : {})
     }
 
-    // Upsert configuración
+    // Validar calculation_mode
+    const validCalcModes = ['daily', 'hourly']
+    if (calculation_mode && !validCalcModes.includes(calculation_mode)) {
+      return res.status(400).json({
+        error: 'Modo de c?lculo inv?lido',
+        message: `calculation_mode debe ser uno de: ${validCalcModes.join(', ')}`
+      })
+    }
+
+    // Upsert: columnas nuevas (Capa 2) + metadata legacy
     const { data, error } = await supabase
       .from('company_payroll_configs')
       .upsert({
@@ -253,6 +305,10 @@ async function upsertPayrollConfig(
         calculation_config: calculation_config || {},
         calculation_script: calculation_script || null,
         metadata: payrollMetadata,
+        payment_frequency: mapFreqToDb(payment_frequency || 'biweekly'),
+        quincena_config: quincenaConfig,
+        calculation_mode: calculation_mode || 'daily',
+        incomplete_record_default_hours: incomplete_record_default_hours ?? null,
         is_active: true,
         updated_at: new Date().toISOString()
       }, {
@@ -266,46 +322,59 @@ async function upsertPayrollConfig(
       throw error
     }
 
-    // Extraer parámetros de configuración desde metadata y exponerlos en el nivel superior
-    // (igual que en getPayrollConfig para mantener consistencia)
+    // Exponer con misma l?gica que getPayrollConfig
+    const meta = data.metadata || {}
+    const pfCol = data.payment_frequency
+    const qcCol = data.quincena_config
+    const pfRes = pfCol ?? meta.payment_frequency ?? 'biweekly'
+    const mapFreq = (v: string) => (v === 'mensual' ? 'monthly' : v === 'quincenal' ? 'biweekly' : v === 'semanal' ? 'weekly' : v)
+    const cutDatesRes = qcCol
+      ? {
+          biweekly_type: 'custom' as const,
+          biweekly_first_start: (qcCol as any).first_start ?? 1,
+          biweekly_first_end: (qcCol as any).first_end ?? 15,
+          biweekly_second_start: (qcCol as any).second_start ?? 16,
+          biweekly_second_end: (qcCol as any).second_end ?? 30,
+          monthly_type: meta.payment_cut_dates?.monthly_type || 'standard',
+          monthly_start: meta.payment_cut_dates?.monthly_start ?? 1,
+          monthly_end: meta.payment_cut_dates?.monthly_end ?? 30
+        }
+      : meta.payment_cut_dates || {
+          biweekly_type: 'standard',
+          biweekly_first_start: 1,
+          biweekly_first_end: 15,
+          biweekly_second_start: 16,
+          biweekly_second_end: 30,
+          monthly_type: 'standard',
+          monthly_start: 1,
+          monthly_end: 30
+        }
     const configResponse = {
       ...data,
-      // Exponer parámetros de configuración desde metadata
-      payment_frequency: data.metadata?.payment_frequency || 'biweekly',
-      currency: data.metadata?.currency || 'HNL',
-      legal_deductions: data.metadata?.legal_deductions || {
-        ihss: true,
-        rap: true,
-        isr: true,
-        infop: false
-      },
-      payment_cut_dates: data.metadata?.payment_cut_dates || {
-        biweekly_type: 'standard',
-        biweekly_first_start: 1,
-        biweekly_first_end: 15,
-        biweekly_second_start: 16,
-        biweekly_second_end: 30,
-        monthly_type: 'standard',
-        monthly_start: 1,
-        monthly_end: 30
-      }
+      payment_frequency: mapFreq(pfRes),
+      currency: meta.currency || 'HNL',
+      calculation_mode: data.calculation_mode ?? meta.calculation_mode ?? 'daily',
+      incomplete_record_default_hours: data.incomplete_record_default_hours ?? meta.incomplete_record_default_hours ?? null,
+      legal_deductions: meta.legal_deductions || { ihss: true, rap: true, isr: true, infop: false },
+      payment_cut_dates: cutDatesRes,
+      semanal_proration: meta.semanal_proration || 'proportional'
     }
 
     return res.status(200).json({
       config: configResponse,
-      message: 'Configuración guardada exitosamente'
+      message: 'Configuraci?n guardada exitosamente'
     })
   } catch (error: any) {
     console.error('Error upserting payroll config:', error)
     return res.status(500).json({
-      error: 'Error guardando configuración',
+      error: 'Error guardando configuraci?n',
       details: error.message
     })
   }
 }
 
 /**
- * Desactivar configuración de payroll (soft delete)
+ * Desactivar configuraci?n de payroll (soft delete)
  */
 async function deactivatePayrollConfig(
   supabase: any,
@@ -327,7 +396,7 @@ async function deactivatePayrollConfig(
       // Si no existe, no es error
       if (error.code === 'PGRST116') {
         return res.status(200).json({
-          message: 'No existe configuración para desactivar'
+          message: 'No existe configuraci?n para desactivar'
         })
       }
       throw error
@@ -335,12 +404,12 @@ async function deactivatePayrollConfig(
 
     return res.status(200).json({
       config: data,
-      message: 'Configuración desactivada exitosamente'
+      message: 'Configuraci?n desactivada exitosamente'
     })
   } catch (error: any) {
     console.error('Error deactivating payroll config:', error)
     return res.status(500).json({
-      error: 'Error desactivando configuración',
+      error: 'Error desactivando configuraci?n',
       details: error.message
     })
   }

@@ -3,6 +3,7 @@ import { createAdminClient } from '../../../lib/supabase/server'
 import { requireSuperAdmin } from '../../../lib/auth/api-auth-fixed'
 import { logger } from '../../../lib/logger'
 import { createSecureErrorResponse, createAuthErrorResponse } from '../../../lib/security/error-handling'
+import { COMMERCIAL_PLAN_TYPES, normalizePlanType } from '../../../lib/billing/plans'
 
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -87,6 +88,15 @@ async function createCompany(supabase: any, req: NextApiRequest, res: NextApiRes
       })
     }
 
+    // Validate plan_type against the allowed commercial list
+    const normalizedPlan = normalizePlanType(plan_type ?? 'basic')
+    if (!normalizedPlan) {
+      return res.status(400).json({
+        error: 'Invalid plan_type',
+        message: `plan_type must be one of: ${COMMERCIAL_PLAN_TYPES.join(', ')}`
+      })
+    }
+
     // Check if subdomain already exists
     const { data: existingCompany } = await supabase
       .from('companies')
@@ -107,7 +117,7 @@ async function createCompany(supabase: any, req: NextApiRequest, res: NextApiRes
       .insert({
         name,
         subdomain,
-        plan_type: plan_type || 'basic',
+        plan_type: normalizedPlan,
         is_active: true,
         settings: {
           currency: 'HNL',

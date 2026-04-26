@@ -2,6 +2,8 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { getHondurasTimestamp } from '../../../lib/timezone'
 import { withExportRateLimit } from '../../../lib/security/rate-limiting'
+import { updateEmployeeIsrYtdOnAuthorize } from '../../../lib/payroll/isr-ytd'
+import { parsePayrollPdfGroupByQuery } from '../../../lib/payroll/pdf-layout'
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -64,10 +66,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       })
     }
 
-    // Obtener líneas de la corrida para verificar que estén completas
+    // Obtener líneas de la corrida para verificar que estén completas (incluir metadata para deduction plans)
     const { data: lines, error: linesError } = await supabase
       .from('payroll_run_lines')
-      .select('id, employee_id, eff_hours, eff_bruto, eff_ihss, eff_rap, eff_isr, eff_neto, edited')
+      .select('id, employee_id, eff_hours, eff_bruto, eff_ihss, eff_rap, eff_isr, eff_neto, edited, metadata')
       .eq('run_id', run_id)
       .eq('company_id', companyId)
 
@@ -106,6 +108,79 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       return res.status(500).json({ error: 'Error actualizando estado de corrida' })
     }
 
+    // Actualizar employee_isr_ytd para proyección ISR (solo si NO estaba ya autorizada)
+    if (run.status !== 'authorized') {
+      try {
+        const runCompanyId = run.company_id ?? companyId
+        if (runCompanyId) {
+          await updateEmployeeIsrYtdOnAuthorize(
+            supabase,
+            runCompanyId,
+          run.year,
+            (lines || []).map((l: any) => ({
+              employee_id: l.employee_id,
+              eff_bruto: Number(l.eff_bruto) || 0,
+              eff_isr: Number(l.eff_isr) || 0
+            }))
+          )
+        }
+      } catch (ytdErr) {
+        console.warn('Error actualizando employee_isr_ytd (no crítico):', ytdErr)
+      }
+    }
+
+    // Incrementar plazos_aplicados en employee_deduction_plans (solo si NO estaba ya autorizada)
+    if (run.status !== 'authorized') {
+      const planIdsToIncrement: { planId: string; employeeId: string }[] = []
+      for (const line of lines || []) {
+        const meta = (line as any).metadata as Record<string, unknown> | null
+        const ids = meta?._deduction_plan_ids as string[] | undefined
+        if (Array.isArray(ids) && ids.length > 0 && line.employee_id) {
+          for (const planId of ids) {
+            if (planId && typeof planId === 'string') {
+              planIdsToIncrement.push({ planId, employeeId: line.employee_id })
+            }
+          }
+        }
+      }
+      for (const { planId, employeeId: empId } of planIdsToIncrement) {
+        const line = lines.find((l: any) => l.employee_id === empId)
+        if (!line) continue
+        const { data: plan, error: planErr } = await supabase
+          .from('employee_deduction_plans')
+          .select('id, employee_id, company_id, plazos_aplicados, plazos_totales, monto_por_plazo')
+          .eq('id', planId)
+          .eq('company_id', companyId)
+          .eq('employee_id', empId)
+          .single()
+        if (planErr || !plan) continue
+        const newApplied = (plan.plazos_aplicados || 0) + 1
+        const updatePayload: Record<string, unknown> = {
+          plazos_aplicados: newApplied,
+          updated_at: getHondurasTimestamp()
+        }
+        if (newApplied >= (plan.plazos_totales || 0)) {
+          updatePayload.activo = false
+          updatePayload.fecha_fin = new Date().toISOString().split('T')[0]
+        }
+        await supabase
+          .from('employee_deduction_plans')
+          .update(updatePayload)
+          .eq('id', planId)
+          .eq('company_id', companyId)
+          .eq('employee_id', empId)
+        const montoPorPlazo = Number(plan.monto_por_plazo) || 0
+        await supabase.from('deduction_plan_applications').insert({
+          deduction_plan_id: planId,
+          run_line_id: line.id,
+          company_id: companyId,
+          plazo_numero: newApplied,
+          monto_aplicado: montoPorPlazo,
+          run_id
+        })
+      }
+    }
+
     // Registrar en audit_logs
     const { error: auditError } = await supabase
       .from('audit_logs')
@@ -124,9 +199,18 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       // No fallar por error de auditoría
     }
 
-    // Generar PDF consolidado usando la vista efectiva
-    // TODO: Implementar generación de PDF usando v_payroll_lines_effective
-    const pdfUrl = `/api/payroll/generate-pdf-from-run?run_id=${run_id}`
+    const { data: payrollConfigRow } = await supabase
+      .from('company_payroll_configs')
+      .select('metadata')
+      .eq('company_id', companyId)
+      .eq('is_active', true)
+      .maybeSingle()
+
+    const payrollMeta = (payrollConfigRow?.metadata || {}) as Record<string, unknown>
+    const pdfGroupBy = parsePayrollPdfGroupByQuery(payrollMeta.payroll_pdf_group_by)
+    const groupQs = pdfGroupBy !== 'none' ? `&group_by=${encodeURIComponent(pdfGroupBy)}` : ''
+
+    const pdfUrl = `/api/payroll/generate-pdf-from-run?run_id=${run_id}${groupQs}`
 
     // Generar vouchers individuales
     const vouchers = lines.map((line: any) => ({

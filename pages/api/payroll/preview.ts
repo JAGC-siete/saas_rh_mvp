@@ -1,7 +1,30 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
-import { nowInHonduras } from '../../../lib/timezone'
-import { withGeneralRateLimit } from '../../../lib/security/rate-limiting'
+import { normalizeCountryCode } from '../../../lib/country/supported'
+import { isPayrollCountryEngineEnabled } from '../../../lib/features/payroll-country-flags'
+import { computePayrollEmployeeStatutoryDeductions } from '../../../lib/payroll/statutory-deductions-compute'
+import {
+  assertNonHndStatutoryConfigParses,
+  payrollStatutoryErrorResponse,
+  payrollStatutoryYearUnavailable
+} from '../../../lib/payroll/statutory-api-guard'
+import { isPayrollCalendarPeriodInFuture } from '../../../lib/timezone'
+import { withPayrollRateLimit } from '../../../lib/security/rate-limiting'
+import { secureLog, secureErrorLog } from '../../../lib/security/safe-logging'
+import { getTaxEngine } from '../../../lib/tax/registry'
+import { getIsrForPeriod } from '../../../lib/payroll/isr-ytd'
+import { getHolidayDatesInRange } from '../../../lib/attendance/holiday-check'
+import {
+  resolvePayrollPeriodContext,
+  computeFixedGrossFromDays,
+  computeFixedLineDeductionsAndNet,
+  buildFixedLinePlanMetadata,
+  type PreviewPaymentFrequency
+} from '../../../lib/payroll/fixed-line-recalc'
+import { calculateSeptimoDia } from '../../../lib/payroll/septimo-dia'
+import { HONDURAS_LABOR_FACTOR, HORAS_PERIODO_MENSUAL, HORAS_PERIODO_QUINCENAL } from '../../../lib/payroll/constants'
+import { buildAuthorizedPayrollPreviewPayload } from '../../../lib/payroll/preview-authorized-readonly'
+import { calculateEmployerContributions } from '../../../lib/payroll/employer-contributions'
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -10,27 +33,40 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   try {
     // Use the new authentication method that handles company context properly
-    const { supabase, companyId, user } = await requireCompanyAccess(req, res)
+    const { supabase, companyId, user, companyCountryCode, companyTimezone } = await requireCompanyAccess(req, res)
     
     if (!companyId) {
       return res.status(400).json({ error: 'Company ID is required' })
     }
 
-    console.log('Usuario autenticado para preview de nómina:', { 
+    const countryCode = normalizeCountryCode(companyCountryCode)
+    if (!isPayrollCountryEngineEnabled(countryCode)) {
+      return res.status(403).json({
+        error: 'Nómina no habilitada para este país',
+        code: 'PAYROLL_COUNTRY_DISABLED'
+      })
+    }
+
+    secureLog('Usuario autenticado para preview de nómina', { 
       companyId: companyId 
     })
-    
-    // DEBUG: Verificar qué company_id está usando
-    console.log('🔍 DEBUG - Company ID del usuario:', companyId)
 
     const { year, month, quincena, tipo } = req.query
     
-    // DEBUG: Verificar parámetros recibidos
-    console.log('🔍 DEBUG - Parámetros recibidos:', { year, month, quincena, tipo })
+    secureLog('Parámetros recibidos para preview', { 
+      hasYear: !!year, 
+      hasMonth: !!month, 
+      hasQuincena: !!quincena, 
+      tipo: tipo 
+    })
     
     // Validaciones
     if (!year || !month || !quincena) {
-      return res.status(400).json({ error: 'year, month, y quincena son requeridos' })
+      console.error('❌ ERROR - Parámetros faltantes:', { year, month, quincena, tipo })
+      return res.status(400).json({ 
+        error: 'year, month, y quincena son requeridos',
+        received: { year, month, quincena, tipo }
+      })
     }
     
     const yearNum = parseInt(year as string)
@@ -38,154 +74,174 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const quincenaNum = parseInt(quincena as string)
     const tipoParam = tipo as string || 'CON'
     
-    if (![1, 2].includes(quincenaNum)) {
-      return res.status(400).json({ error: 'Quincena inválida (debe ser 1 o 2)' })
+    if (isNaN(yearNum) || isNaN(monthNum) || isNaN(quincenaNum)) {
+      console.error('❌ ERROR - Parámetros inválidos (NaN):', { yearNum, monthNum, quincenaNum })
+      return res.status(400).json({ 
+        error: 'Parámetros numéricos inválidos',
+        received: { year, month, quincena },
+        parsed: { yearNum, monthNum, quincenaNum }
+      })
     }
-
-    if (!['CON', 'SIN'].includes(tipoParam)) {
-      return res.status(400).json({ error: 'Tipo inválido (debe ser CON o SIN)' })
-    }
-
-    // Validar que no sea un período futuro
-    const currentDate = nowInHonduras()
-    const periodDate = new Date(yearNum, monthNum - 1, 1)
     
-    if (periodDate > currentDate) {
+    if (!['CON', 'SIN', '2PAGOS'].includes(tipoParam)) {
+      console.error('❌ ERROR - Tipo inválido:', tipoParam)
+      return res.status(400).json({ 
+        error: 'Tipo inválido (debe ser CON, SIN o 2PAGOS)',
+        received: tipoParam
+      })
+    }
+
+    const tz = companyTimezone || 'America/Tegucigalpa'
+    if (isPayrollCalendarPeriodInFuture(yearNum, monthNum, tz)) {
       return res.status(400).json({ 
         error: 'Período inválido',
         message: 'No se puede generar nómina para períodos futuros'
       })
     }
 
-    // Obtener configuración de payroll de la empresa (leer desde metadata)
-    const { data: payrollConfig } = await supabase
+    // Obtener configuración de payroll (Capa 2: quincena_config + metadata + calculation_mode)
+    const { data: payrollConfig, error: configError } = await supabase
       .from('company_payroll_configs')
-      .select('metadata')
+      .select('metadata, payment_frequency, quincena_config, calculation_mode, incomplete_record_default_hours')
       .eq('company_id', companyId)
       .eq('is_active', true)
-      .single()
+      .maybeSingle()
     
-    // Extraer parámetros desde metadata
-    const payrollMetadata = payrollConfig?.metadata || {}
-    
-    // Usar valores por defecto si no hay configuración
-    const paymentFrequency = payrollMetadata.payment_frequency || 'biweekly'
-    const paymentCutDates = payrollMetadata.payment_cut_dates || {
-      biweekly_type: 'standard',
-      biweekly_first_start: 1,
-      biweekly_first_end: 15,
-      biweekly_second_start: 16,
-      biweekly_second_end: 30,
-      monthly_type: 'standard',
-      monthly_start: 1,
-      monthly_end: 30
+    if (configError) {
+      console.error('Error obteniendo configuración de payroll:', configError)
     }
+    
+    const payrollMetadata = payrollConfig?.metadata || {}
+    const qcCol = payrollConfig?.quincena_config as { first_start?: number; first_end?: number; second_start?: number; second_end?: number } | null
+    const metaCutDates = payrollMetadata?.payment_cut_dates || {}
+    const mapFreq = (v: string) => {
+      const x = (v || '').toLowerCase()
+      if (x === 'mensual' || x === 'monthly') return 'monthly'
+      if (x === 'semanal' || x === 'weekly') return 'weekly'
+      if (x === 'quincenal' || x === 'biweekly') return 'biweekly'
+      return 'biweekly'
+    }
+    const paymentFrequency = mapFreq(payrollConfig?.payment_frequency || payrollMetadata.payment_frequency || 'quincenal')
+    const hasCustomQuincena = !!(qcCol && (qcCol.first_start != null || qcCol.first_end != null || qcCol.second_start != null || qcCol.second_end != null))
+    const paymentCutDates = qcCol
+      ? {
+          biweekly_type: (metaCutDates.biweekly_type === 'custom' || hasCustomQuincena) ? 'custom' as const : 'standard' as const,
+          biweekly_first_start: qcCol.first_start ?? metaCutDates.biweekly_first_start ?? 1,
+          biweekly_first_end: qcCol.first_end ?? metaCutDates.biweekly_first_end ?? 15,
+          biweekly_second_start: qcCol.second_start ?? metaCutDates.biweekly_second_start ?? 16,
+          biweekly_second_end: qcCol.second_end ?? metaCutDates.biweekly_second_end ?? 30,
+          monthly_type: metaCutDates.monthly_type || 'standard',
+          monthly_start: metaCutDates.monthly_start ?? 1,
+          monthly_end: metaCutDates.monthly_end ?? 30
+        }
+      : {
+          biweekly_type: metaCutDates.biweekly_type || 'standard',
+          biweekly_first_start: metaCutDates.biweekly_first_start ?? 1,
+          biweekly_first_end: metaCutDates.biweekly_first_end ?? 15,
+          biweekly_second_start: metaCutDates.biweekly_second_start ?? 16,
+          biweekly_second_end: metaCutDates.biweekly_second_end ?? 30,
+          monthly_type: metaCutDates.monthly_type || 'standard',
+          monthly_start: metaCutDates.monthly_start ?? 1,
+          monthly_end: metaCutDates.monthly_end ?? 30
+        }
     const legalDeductions = payrollMetadata.legal_deductions || {
       ihss: true,
       rap: true,
       isr: true,
       infop: false
     }
-    
-    // Calcular fechas del período según configuración
-    const ultimoDia = new Date(yearNum, monthNum, 0).getDate()
-    let fechaInicio: string
-    let fechaFin: string
-    let diasPeriodo: number
-    
-    if (paymentFrequency === 'monthly') {
-      // Nómina mensual
-      const monthlyType = paymentCutDates?.monthly_type || 'standard'
-      if (monthlyType === 'custom' && paymentCutDates?.monthly_start && paymentCutDates?.monthly_end) {
-        fechaInicio = `${yearNum}-${monthNum.toString().padStart(2, '0')}-${paymentCutDates.monthly_start.toString().padStart(2, '0')}`
-        fechaFin = `${yearNum}-${monthNum.toString().padStart(2, '0')}-${Math.min(paymentCutDates.monthly_end, ultimoDia).toString().padStart(2, '0')}`
-        diasPeriodo = paymentCutDates.monthly_end - paymentCutDates.monthly_start + 1
-      } else {
-        // Standard: del 1 al último día del mes
-        fechaInicio = `${yearNum}-${monthNum.toString().padStart(2, '0')}-01`
-        fechaFin = `${yearNum}-${monthNum.toString().padStart(2, '0')}-${ultimoDia}`
-        diasPeriodo = ultimoDia
+    const calculationMode = (payrollConfig as any)?.calculation_mode ?? payrollMetadata?.calculation_mode ?? 'daily'
+    const incompleteRecordDefaultHours = (payrollConfig as any)?.incomplete_record_default_hours ?? payrollMetadata?.incomplete_record_default_hours ?? null
+    const semanalProration = (payrollMetadata?.semanal_proration || 'proportional') as 'proportional' | 'fixed'
+
+    if (paymentFrequency === 'weekly') {
+      if (![1, 2, 3, 4].includes(quincenaNum)) {
+        console.error('❌ ERROR - Semana inválida:', quincenaNum)
+        return res.status(400).json({
+          error: 'Semana inválida (debe ser 1, 2, 3 o 4 para nómina semanal)',
+          received: quincenaNum
+        })
       }
-    } else {
-      // Nómina quincenal (biweekly)
-      const biweeklyType = paymentCutDates?.biweekly_type || 'standard'
-      if (biweeklyType === 'custom' && paymentCutDates?.biweekly_first_start && paymentCutDates?.biweekly_first_end && 
-          paymentCutDates?.biweekly_second_start && paymentCutDates?.biweekly_second_end) {
-        if (quincenaNum === 1) {
-          fechaInicio = `${yearNum}-${monthNum.toString().padStart(2, '0')}-${paymentCutDates.biweekly_first_start.toString().padStart(2, '0')}`
-          fechaFin = `${yearNum}-${monthNum.toString().padStart(2, '0')}-${Math.min(paymentCutDates.biweekly_first_end, ultimoDia).toString().padStart(2, '0')}`
-          diasPeriodo = paymentCutDates.biweekly_first_end - paymentCutDates.biweekly_first_start + 1
-        } else {
-          fechaInicio = `${yearNum}-${monthNum.toString().padStart(2, '0')}-${paymentCutDates.biweekly_second_start.toString().padStart(2, '0')}`
-          fechaFin = `${yearNum}-${monthNum.toString().padStart(2, '0')}-${Math.min(paymentCutDates.biweekly_second_end, ultimoDia).toString().padStart(2, '0')}`
-          diasPeriodo = paymentCutDates.biweekly_second_end - paymentCutDates.biweekly_second_start + 1
-        }
-      } else {
-        // Standard: 1-15 y 16-último día
-        if (quincenaNum === 1) {
-          fechaInicio = `${yearNum}-${monthNum.toString().padStart(2, '0')}-01`
-          fechaFin = `${yearNum}-${monthNum.toString().padStart(2, '0')}-15`
-          diasPeriodo = 15
-        } else {
-          fechaInicio = `${yearNum}-${monthNum.toString().padStart(2, '0')}-16`
-          fechaFin = `${yearNum}-${monthNum.toString().padStart(2, '0')}-${ultimoDia}`
-          diasPeriodo = ultimoDia - 15
-        }
-      }
+    } else if (![1, 2].includes(quincenaNum)) {
+      console.error('❌ ERROR - Quincena inválida:', quincenaNum)
+      return res.status(400).json({
+        error: 'Quincena inválida (debe ser 1 o 2)',
+        received: quincenaNum
+      })
+    }
+
+    const { data: companyRow } = await supabase
+      .from('companies')
+      .select('settings')
+      .eq('id', companyId)
+      .single()
+    const useIsrProjection = (companyRow?.settings as Record<string, unknown>)?.use_isr_projection === true
+    
+    const periodCtx = resolvePayrollPeriodContext(
+      yearNum,
+      monthNum,
+      quincenaNum,
+      paymentFrequency as PreviewPaymentFrequency,
+      paymentCutDates
+    )
+    const { fechaInicio, fechaFin, diasPeriodo, ultimoDiaCalendario } = periodCtx
+
+    if (!ultimoDiaCalendario || ultimoDiaCalendario < 1 || ultimoDiaCalendario > 31) {
+      console.error(
+        `❌ ERROR - ultimoDiaCalendario inválido: ${ultimoDiaCalendario} para año ${yearNum}, mes ${monthNum}`
+      )
+      return res.status(400).json({
+        error: 'Período inválido',
+        message: `No se pudo calcular el último día del mes ${monthNum} del año ${yearNum}`
+      })
     }
 
     // Verificar si ya existe una corrida para este período
     const { data: existingRun, error: checkError } = await supabase
       .from('payroll_runs')
-      .select('id, status')
+      .select('id, status, year, month, quincena, tipo')
       .eq('company_id', companyId)
       .eq('year', yearNum)
       .eq('month', monthNum)
       .eq('quincena', quincenaNum)
       .eq('tipo', tipoParam)
-      .single()
+      .maybeSingle()
+
+    if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows found, which is OK
+      console.error('Error verificando corrida existente:', checkError)
+      return res.status(500).json({ 
+        error: 'Error verificando corrida existente',
+        details: checkError.message 
+      })
+    }
 
     console.log('🔍 DEBUG - Existing run check:', { existingRun, checkError })
 
     let runId: string
 
     if (existingRun) {
-      // Si ya existe una corrida, verificar su estado y manejar según el caso
       console.log('🔍 DEBUG - Existing run found:', { id: existingRun.id, status: existingRun.status })
-      
-      if (existingRun.status === 'authorized') {
-        console.log('⚠️ WARNING - Regenerating preview for authorized run')
-        // UPSERT LOGIC: En lugar de error, permitir regenerar con advertencia
-        // Cambiar estado a 'draft' para permitir ediciones
-        const { error: resetError } = await supabase
-          .from('payroll_runs')
-          .update({ 
-            status: 'draft',
-            updated_at: nowInHonduras().toISOString()
+
+      // Corrida cerrada: devolver datos persistidos sin mutar estado ni líneas.
+      // (Antes: se pasaba a draft y se borraban líneas en cada GET → contabilidad veía draft.)
+      if (existingRun.status === 'authorized' || existingRun.status === 'distributed') {
+        try {
+          const payload = await buildAuthorizedPayrollPreviewPayload(supabase, companyId, {
+            id: existingRun.id,
+            year: existingRun.year,
+            month: existingRun.month,
+            quincena: existingRun.quincena,
+            tipo: existingRun.tipo,
+            status: existingRun.status
           })
-          .eq('id', existingRun.id)
-          .eq('company_id', companyId)
-
-        if (resetError) {
-          console.error('Error resetting run status:', resetError)
-          return res.status(500).json({ error: 'Error actualizando estado de corrida' })
+          return res.status(200).json(payload)
+        } catch (e: unknown) {
+          const msg = e instanceof Error ? e.message : 'Error leyendo planilla autorizada'
+          console.error('Error en preview solo lectura (autorizada):', e)
+          return res.status(500).json({ error: msg })
         }
-
-        // Eliminar líneas existentes para regenerar
-        const { error: deleteError } = await supabase
-          .from('payroll_run_lines')
-          .delete()
-          .eq('run_id', existingRun.id)
-          .eq('company_id', companyId)
-
-        if (deleteError) {
-          console.error('Error deleting existing lines:', deleteError)
-          return res.status(500).json({ error: 'Error eliminando líneas existentes' })
-        }
-
-        console.log('✅ Run reset to draft and lines cleared for regeneration')
       }
-      
+
       runId = existingRun.id
     } else {
       // Crear nueva corrida
@@ -210,17 +266,41 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         return res.status(500).json({ error: 'Error creando nueva corrida de planilla' })
       }
 
+      if (!newRun || !newRun.id) {
+        console.error('❌ ERROR - No se pudo obtener el ID de la nueva corrida')
+        return res.status(500).json({ 
+          error: 'Error creando nueva corrida de planilla',
+          message: 'No se pudo obtener el ID de la corrida creada'
+        })
+      }
+
       runId = newRun.id
+    }
+
+    // Validar que runId existe antes de continuar
+    if (!runId) {
+      console.error('❌ ERROR - runId es null/undefined después de crear/obtener corrida')
+      return res.status(500).json({ 
+        error: 'Error interno: runId no disponible',
+        message: 'No se pudo obtener o crear el ID de la corrida'
+      })
     }
 
     console.log('🔍 DEBUG - Final RunId:', runId, 'Type:', typeof runId)
 
-    // Obtener empleados activos con información de departamento
+    const yearCtx = await getTaxEngine(countryCode).loadYearContext(yearNum)
+    const blocked = payrollStatutoryYearUnavailable(yearCtx, countryCode, yearNum)
+    if (!blocked.ok) return res.status(blocked.status).json(blocked.body)
+    await assertNonHndStatutoryConfigParses(countryCode, yearNum, supabase)
+    const taxConstants = yearCtx.hndTaxConstants ?? undefined
+
+    // Obtener empleados activos con información de departamento, pay_type y horario (Capa 3: días Extra/Especial)
     const { data: employees, error: empError } = await supabase
       .from('employees')
       .select(`
-        id, name, dni, base_salary, bank_name, bank_account, status, department_id,
-        departments!employees_department_id_fkey(name)
+        id, name, dni, base_salary, bank_name, bank_account, status, department_id, pay_type, work_schedule_id, position, role,
+        departments:department_id(name),
+        work_schedules:work_schedule_id(monday_start, tuesday_start, wednesday_start, thursday_start, friday_start, saturday_start, sunday_start)
       `)
       .eq('status', 'active')
       .eq('company_id', companyId)
@@ -228,51 +308,205 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
     if (empError) {
       console.error('Error obteniendo empleados:', empError)
-      return res.status(500).json({ error: 'Error obteniendo empleados' })
+      console.error('Error details:', JSON.stringify(empError, null, 2))
+      return res.status(500).json({ 
+        error: 'Error obteniendo empleados',
+        details: empError.message || String(empError),
+        code: empError.code
+      })
     }
 
     if (!employees || employees.length === 0) {
+      secureLog('No hay empleados activos para preview', { companyId })
       return res.status(400).json({ 
         error: 'No hay empleados activos',
         message: 'No se encontraron empleados activos para generar la nómina'
       })
     }
     
-    // DEBUG: Verificar cuántos empleados se encontraron
-    console.log('🔍 DEBUG - Empleados encontrados:', employees.length)
-    console.log('🔍 DEBUG - Company ID usado:', companyId)
+    secureLog('Empleados encontrados para preview', { 
+      employeesCount: employees.length,
+      companyId 
+    })
     console.log('🔍 DEBUG - Primeros 3 empleados:', employees.slice(0, 3))
     console.log('🔍 DEBUG - Primeros 3 empleados:', employees.slice(0, 3).map((emp: any) => ({
       name: emp.name,
       status: emp.status
     })))
 
-    // Obtener registros de asistencia del período
-    const { data: attendanceRecords, error: attError } = await supabase
-      .from('attendance_records')
-      .select('employee_id, date, check_in, check_out, status')
-      .gte('date', fechaInicio)
-      .lte('date', fechaFin)
+    // Capa 3: Fechas festivas en el período (para días Extra/Especial)
+    const holidayDates = await getHolidayDatesInRange(fechaInicio, fechaFin, companyId, supabase)
 
-    if (attError) {
-      console.error('Error obteniendo registros de asistencia:', attError)
-      return res.status(500).json({ error: 'Error obteniendo registros de asistencia' })
+    // Obtener registros de asistencia del período (incluir flags para horario_no_detectado)
+    // Filtrar solo por empleados de esta empresa usando los IDs ya obtenidos
+    const employeeIds = employees.map((emp: any) => emp.id)
+    
+    console.log('🔍 DEBUG - Buscando registros de asistencia:', {
+      totalEmployees: employeeIds.length,
+      fechaInicio,
+      fechaFin,
+      primeros3EmployeeIds: employeeIds.slice(0, 3)
+    });
+    
+    let attendanceRecords: any[] = [];
+    if (employeeIds.length > 0) {
+      const { data: attData, error: attError } = await supabase
+        .from('attendance_records')
+        .select('employee_id, date, check_in, check_out, status, flags')
+        .in('employee_id', employeeIds)
+        .gte('date', fechaInicio)
+        .lte('date', fechaFin)
+
+      if (attError) {
+        console.error('Error obteniendo registros de asistencia:', attError)
+        console.error('Error details:', JSON.stringify(attError, null, 2))
+        return res.status(500).json({ 
+          error: 'Error obteniendo registros de asistencia',
+          details: attError.message || String(attError),
+          code: attError.code
+        })
+      }
+      
+      attendanceRecords = attData || []
+
+      // DEBUG: Verificar si hay registros pero no coinciden con employee_ids
+      if (attendanceRecords.length === 0) {
+        console.warn('⚠️ WARNING - No se encontraron registros de asistencia en el rango de fechas')
+        console.log('🔍 DEBUG - Verificando si hay registros fuera del rango...')
+        const { data: attDataAnyDate, error: attErrorAnyDate } = await supabase
+          .from('attendance_records')
+          .select('employee_id, date, check_in, check_out, status')
+          .in('employee_id', employeeIds.slice(0, 5))
+          .order('date', { ascending: false })
+          .limit(10)
+        if (!attErrorAnyDate && attDataAnyDate && attDataAnyDate.length > 0) {
+          console.log('🔍 DEBUG - Se encontraron registros de asistencia fuera del rango:', {
+            totalRegistrosFueraRango: attDataAnyDate.length,
+            fechasEncontradas: [...new Set(attDataAnyDate.map((r: any) => r.date))],
+            rangoBuscado: { fechaInicio, fechaFin }
+          })
+        }
+      }
     }
 
-    // Filtrar empleados según criterio de asistencia
+    // attendance_hours_calculation: (1) overtime hours por empleado en el período — todos los pay_type (UX preview)
+    // (2) agregados hourly — solo si calculationMode === 'hourly' (bruto hourly + séptimo día)
+    let ahcByEmployee: Record<string, { total_hours: number; normal_hours: number; by_record: Record<string, number> }> = {}
+    const ahcOvertimeByEmployee: Record<string, number> = {}
+    if (employeeIds.length > 0) {
+      const { data: ahcData } = await supabase
+        .from('attendance_hours_calculation')
+        .select(`
+          employee_id,
+          attendance_record_id,
+          total_hours,
+          normal_hours,
+          overtime_diurno_hours,
+          overtime_nocturno_hours,
+          overtime_feriado_hours
+        `)
+        .in('employee_id', employeeIds)
+      if (ahcData && ahcData.length > 0) {
+        const arIds = [...new Set(ahcData.map((r: any) => r.attendance_record_id))]
+        const { data: arDates } = await supabase
+          .from('attendance_records')
+          .select('id, date')
+          .in('id', arIds)
+          .gte('date', fechaInicio)
+          .lte('date', fechaFin)
+        const validArIds = new Set((arDates || []).map((r: any) => r.id))
+        const hourlyMode = calculationMode === 'hourly'
+        for (const row of ahcData) {
+          if (!validArIds.has(row.attendance_record_id)) continue
+          const ot =
+            Number(row.overtime_diurno_hours || 0) +
+            Number(row.overtime_nocturno_hours || 0) +
+            Number(row.overtime_feriado_hours || 0)
+          const eid = row.employee_id as string
+          ahcOvertimeByEmployee[eid] = (ahcOvertimeByEmployee[eid] || 0) + ot
+          if (!hourlyMode) continue
+          if (!ahcByEmployee[eid]) {
+            ahcByEmployee[eid] = { total_hours: 0, normal_hours: 0, by_record: {} }
+          }
+          const h = Number(row.total_hours) || 0
+          const normalH = Number(row.normal_hours) ?? Math.max(0, h - ot)
+          ahcByEmployee[eid].total_hours += h
+          ahcByEmployee[eid].normal_hours += normalH
+          ahcByEmployee[eid].by_record[row.attendance_record_id] = h
+        }
+      }
+    }
+
+    // DEBUG: Log información de asistencia antes del filtro
+    console.log('🔍 DEBUG - Total registros de asistencia encontrados:', attendanceRecords.length)
+    console.log('🔍 DEBUG - Rango de fechas buscado:', { fechaInicio, fechaFin })
+    if (attendanceRecords.length > 0) {
+      console.log('🔍 DEBUG - Primeros 5 registros de asistencia:', attendanceRecords.slice(0, 5).map((r: any) => ({
+        employee_id: r.employee_id,
+        date: r.date,
+        check_in: r.check_in ? 'SI' : 'NO',
+        check_out: r.check_out ? 'SI' : 'NO',
+        status: r.status
+      })))
+    }
+    console.log('🔍 DEBUG - Total empleados activos antes del filtro:', employees.length)
+    console.log('🔍 DEBUG - IDs de empleados activos:', employees.map((e: any) => ({ id: e.id, name: e.name, pay_type: e.pay_type })))
+
+    // Filtrar empleados según criterio de asistencia (diferente por pay_type)
     let empleadosParaNomina = employees
     let noAttendanceWarning = null
     
-    // Si hay registros de asistencia, filtrar por empleados con asistencia
-    // Si no hay registros de asistencia, incluir todos los empleados activos
+    // Si hay registros de asistencia, filtrar según tipo de pago
     if (attendanceRecords.length > 0) {
-      empleadosParaNomina = employees.filter((emp: any) =>
-        attendanceRecords.some((record: any) => 
-          record.employee_id === emp.id && 
-          record.check_in && 
-          record.check_out &&
-          record.status !== 'absent')
-      )
+      empleadosParaNomina = employees.filter((emp: any) => {
+        // Buscar TODOS los registros del empleado (sin filtrar por check_in todavía)
+        const allEmpRecords = attendanceRecords.filter((record: any) => 
+          record.employee_id === emp.id
+        );
+        
+        console.log(`🔍 DEBUG - Empleado ${emp.name} (${emp.id}):`, {
+          pay_type: emp.pay_type,
+          totalRecords: allEmpRecords.length,
+          records: allEmpRecords.map((r: any) => ({
+            date: r.date,
+            check_in: r.check_in,
+            check_out: r.check_out,
+            status: r.status
+          }))
+        });
+        
+        // Filtrar registros válidos (con check_in y no ausentes)
+        const empRecords = allEmpRecords.filter((record: any) => 
+          record.check_in &&
+          record.status !== 'absent'
+        );
+
+        if (empRecords.length === 0) {
+          console.log(`❌ DEBUG - Empleado ${emp.name} rechazado: sin registros válidos`)
+          return false;
+        }
+
+        // Resolución: employees.pay_type > company calculation_mode
+        const effectivePayType = emp.pay_type ?? (calculationMode === 'hourly' ? 'hourly' : 'fixed')
+
+        if (effectivePayType === 'fixed') {
+          // Administrativos: requieren check_in (check_out opcional para MVP)
+          // Aceptar si tiene al menos check_in
+          const hasValidRecord = empRecords.some((record: any) => record.check_in);
+          console.log(`✅ DEBUG - Empleado ${emp.name} (fixed): ${hasValidRecord ? 'ACEPTADO' : 'RECHAZADO'}`)
+          return hasValidRecord;
+        } else if (effectivePayType === 'hourly') {
+          // Por hora: aceptar si tiene check_in (completo o incompleto; los incompletos se alertan)
+          const hasValidRecord = empRecords.some((record: any) => record.check_in);
+          console.log(`✅ DEBUG - Empleado ${emp.name} (hourly): ${hasValidRecord ? 'ACEPTADO' : 'RECHAZADO'}`)
+          return hasValidRecord;
+        }
+
+        // Default: aceptar si tiene check_in
+        const hasValidRecord = empRecords.some((record: any) => record.check_in);
+        console.log(`✅ DEBUG - Empleado ${emp.name} (default): ${hasValidRecord ? 'ACEPTADO' : 'RECHAZADO'}`)
+        return hasValidRecord;
+      });
     } else {
       // Si no hay registros de asistencia, incluir todos los empleados activos
       empleadosParaNomina = employees
@@ -284,143 +518,638 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     if (empleadosParaNomina.length === 0) {
-      return res.status(400).json({ 
-        error: 'No hay empleados disponibles',
-        message: 'No se encontraron empleados activos para generar la nómina'
+      console.warn('⚠️ WARNING - No hay empleados disponibles después del filtro de asistencia')
+      console.log('🔍 DEBUG - Total empleados activos:', employees.length)
+      console.log('🔍 DEBUG - Total registros de asistencia:', attendanceRecords.length)
+      console.log('🔍 DEBUG - Rango de fechas:', { fechaInicio, fechaFin })
+      
+      // En lugar de retornar error 400, retornar datos vacíos (comportamiento estándar)
+      // Esto permite que la UI muestre "0 empleados" en lugar de un error
+      return res.status(200).json({
+        message: 'No hay empleados con asistencia para el período seleccionado',
+        run_id: runId,
+        status: 'draft',
+        year: yearNum,
+        month: monthNum,
+        quincena: quincenaNum,
+        tipo: tipoParam,
+        empleados: 0,
+        empleados_fixed: 0,
+        empleados_hourly: 0,
+        totalBruto: 0,
+        totalDeducciones: 0,
+        totalNeto: 0,
+        totalBrutoFixed: 0,
+        totalDeduccionesFixed: 0,
+        totalNetoFixed: 0,
+        totalBrutoHourly: 0,
+        totalDeduccionesHourly: 0,
+        totalNetoHourly: 0,
+        planilla_fixed: [],
+        planilla_hourly: [],
+        planilla: [],
+        warning: attendanceRecords.length === 0 
+          ? 'No se encontraron registros de asistencia para el período seleccionado'
+          : 'No se encontraron empleados con asistencia válida para el período seleccionado',
+        incompleteRecordsAlert: undefined,
+        noAttendanceWarning: attendanceRecords.length === 0 ? {
+          message: 'No se encontraron registros de asistencia para el período seleccionado.',
+          detail: 'Se incluirán todos los empleados activos en la nómina.',
+          action: 'confirm'
+        } : null
       })
     }
 
     console.log(`Procesando preview de nómina para ${empleadosParaNomina.length} empleados`)
+
+    // Auto-aplicar planes de deducción activos (employee_deduction_plans)
+    const empIdsForPlans = empleadosParaNomina.map((e: any) => e.id)
+    let plansByEmployee: Record<string, any[]> = {}
+    if (empIdsForPlans.length > 0) {
+      const { data: plansData } = await supabase
+        .from('employee_deduction_plans')
+        .select('id, employee_id, field_key, monto_por_plazo, plazos_aplicados, plazos_totales')
+        .in('employee_id', empIdsForPlans)
+        .eq('company_id', companyId)
+        .eq('activo', true)
+      if (plansData && plansData.length > 0) {
+        for (const p of plansData) {
+          if (p.plazos_aplicados < p.plazos_totales) {
+            if (!plansByEmployee[p.employee_id]) plansByEmployee[p.employee_id] = []
+            plansByEmployee[p.employee_id].push(p)
+          }
+        }
+      }
+    }
     
           // DEBUG: Verificar el filtro de asistencia
       console.log('🔍 DEBUG - Tipo de nómina:', tipoParam)
       console.log('🔍 DEBUG - Total registros de asistencia:', attendanceRecords.length)
       console.log('🔍 DEBUG - Empleados después del filtro de asistencia:', empleadosParaNomina.length)
-      console.log('🔍 DEBUG - Lógica de deducciones: tipo=' + tipoParam + ' → deducciones=' + (tipoParam === 'CON' ? 'SÍ' : 'NO'))
+      console.log('🔍 DEBUG - Lógica de deducciones: tipo=' + tipoParam + ' → deducciones=' + (tipoParam === 'CON' || tipoParam === '2PAGOS' ? 'SÍ' : 'NO'))
 
     // Calcular planilla con CÁLCULOS CORRECTOS 2025
-    const planilla: any[] = []
+    // Separar en dos arrays: fixed y hourly
+    const planilla_fixed: any[] = []
+    const planilla_hourly: any[] = []
     
+    // Función auxiliar para calcular horas trabajadas desde registros
+    const calculateHoursWorked = (registros: any[]): number => {
+      let totalHours = 0
+      for (const record of registros) {
+        if (record.check_in && record.check_out) {
+          const checkIn = new Date(record.check_in)
+          const checkOut = new Date(record.check_out)
+          const diffMs = checkOut.getTime() - checkIn.getTime()
+          const hours = diffMs / (1000 * 60 * 60) // Convertir a horas
+          totalHours += Math.max(0, hours) // Evitar horas negativas
+        }
+      }
+      return totalHours
+    }
+    
+    const incompleteRecordsAlert: { employee_id: string; employee_name: string; dates: string[] }[] = []
+
+    const { data: existingRunLinesForSkip } = await supabase
+      .from('payroll_run_lines')
+      .select(
+        'id, employee_id, metadata, eff_hours, eff_bruto, eff_ihss, eff_rap, eff_isr, eff_neto'
+      )
+      .eq('run_id', runId)
+      .eq('company_id', companyId)
+
+    const existingLineByEmployee: Record<string, any> = {}
+    for (const row of existingRunLinesForSkip || []) {
+      if (row.employee_id) existingLineByEmployee[row.employee_id] = row
+    }
+
     for (const emp of empleadosParaNomina) {
-      const registros = attendanceRecords.filter((record: any) => 
-        record.employee_id === emp.id && 
-        record.check_in && 
-        record.check_out)
-      
-      // Si hay registros de asistencia, usar la cantidad real
-      // Si no hay registros, asumir que trabajó todos los días del período
-      const days_worked = registros.length > 0 ? registros.length : diasPeriodo
-      const days_absent = diasPeriodo - days_worked
+      const payType = emp.pay_type ?? (calculationMode === 'hourly' ? 'hourly' : 'fixed')
+
+      // Filtrar registros según tipo de pago
+      let registros: any[];
+      if (payType === 'fixed') {
+        // Administrativos: contar días con check_in (check_out opcional)
+        registros = attendanceRecords.filter((record: any) => 
+          record.employee_id === emp.id && 
+          record.check_in
+        );
+      } else {
+        // Por hora: registros con check_in (completos o incompletos)
+        registros = attendanceRecords.filter((record: any) => 
+          record.employee_id === emp.id && record.check_in
+        )
+      }
       
       const base_salary = Number(emp.base_salary) || 0
       
-      // CALCULAR SALARIO SEGÚN payment_frequency
-      let total_earnings = 0
-      if (paymentFrequency === 'monthly') {
-        // Nómina mensual: usar salario completo proporcional a días trabajados
-        total_earnings = (base_salary / ultimoDia) * days_worked
-      } else {
-        // Nómina quincenal (biweekly): dividir salario mensual / 2 y ajustar por días trabajados
-        const salarioQuincenal = base_salary / 2
-        total_earnings = salarioQuincenal * (days_worked / diasPeriodo)
+      // Manejar el caso donde departments puede ser null o un array
+      let departmentName = 'Sin Departamento'
+      if (emp.departments) {
+        if (Array.isArray(emp.departments) && emp.departments.length > 0) {
+          departmentName = emp.departments[0]?.name || 'Sin Departamento'
+        } else if (typeof emp.departments === 'object' && emp.departments.name) {
+          departmentName = emp.departments.name
+        }
       }
-      
-      let IHSS = 0, RAP = 0, ISR = 0, total_deductions = 0, total = 0
 
-      // APLICAR DEDUCCIONES SEGÚN legal_deductions (solo si tipoParam === 'CON')
-      if (tipoParam === 'CON') {
-        // CÁLCULOS CORRECTOS 2025 - DEDUCCIONES MENSUALES COMPLETAS
-        // Aplicar solo si están habilitadas en legal_deductions
-        if (legalDeductions.ihss) {
-          IHSS = Math.min(base_salary, 11903.13) * 0.05  // Deducción mensual completa
+      if (payType === 'fixed') {
+        // ========== EMPLEADOS FIJOS (FIXED) ==========
+        const prevLine = existingLineByEmployee[emp.id]
+        const prevMeta = prevLine?.metadata as Record<string, unknown> | null | undefined
+        if (prevMeta != null && prevMeta.days_adjusted_at != null && prevLine) {
+          const effH = Number(prevLine.eff_hours) || 0
+          const effBruto = Number(prevLine.eff_bruto) || 0
+          const effIhss = Number(prevLine.eff_ihss) || 0
+          const effRap = Number(prevLine.eff_rap) || 0
+          const effIsr = Number(prevLine.eff_isr) || 0
+          const effNeto = Number(prevLine.eff_neto) || 0
+          const totalDed = effBruto - effNeto
+          planilla_fixed.push({
+            employee_id: emp.id,
+            id: emp.dni || emp.id,
+            name: emp?.name || 'Sin nombre',
+            bank: emp.bank_name || 'No especificado',
+            bank_account: emp.bank_account || 'No especificado',
+            department: departmentName,
+            base_salary: base_salary,
+            monthly_salary: base_salary,
+            days_worked: effH,
+            days_absent: Math.max(0, diasPeriodo - effH),
+            horas_extras: Math.round((ahcOvertimeByEmployee[emp.id] || 0) * 100) / 100,
+            total_earnings: Math.round(effBruto * 100) / 100,
+            IHSS: Math.round(effIhss * 100) / 100,
+            RAP: Math.round(effRap * 100) / 100,
+            ISR: Math.round(effIsr * 100) / 100,
+            total_deducciones: Math.round(Math.max(0, totalDed) * 100) / 100,
+            total: Math.round(effNeto * 100) / 100,
+            line_id: prevLine.id,
+            pay_type: 'fixed',
+            metadata: prevLine.metadata
+          })
+          continue
+        }
+
+        const days_worked = registros.length > 0 ? registros.length : diasPeriodo
+        const days_absent = diasPeriodo - days_worked
+
+        // Capa 3: Días Extra/Especial (festivo o descanso con asistencia)
+        const schedule = emp.work_schedules as Record<string, string | null> | null
+        const dayCols: Record<number, string> = {
+          0: 'sunday_start', 1: 'monday_start', 2: 'tuesday_start', 3: 'wednesday_start',
+          4: 'thursday_start', 5: 'friday_start', 6: 'saturday_start',
+        }
+        let days_extra = 0
+        for (const r of registros) {
+          const isHoliday = holidayDates.has(r.date)
+          const d = new Date(r.date + 'T12:00:00')
+          const dow = d.getDay()
+          const col = dayCols[dow]
+          const isRestDay = schedule && col && !schedule[col]
+          if (isHoliday || isRestDay) days_extra++
         }
         
-        if (legalDeductions.rap) {
-          RAP = Math.max(0, base_salary - 11903.13) * 0.015    // Deducción mensual completa
+        let total_earnings = computeFixedGrossFromDays({
+          baseSalary: base_salary,
+          daysWorked: days_worked,
+          paymentFrequency: paymentFrequency as PreviewPaymentFrequency,
+          diasPeriodo,
+          ultimoDiaCalendario: periodCtx.ultimoDiaCalendario,
+          isMonthlyCalendarStandard: periodCtx.isMonthlyCalendarStandard,
+          semanalProration
+        })
+
+        if (!isFinite(total_earnings) || isNaN(total_earnings)) {
+          console.error(`❌ ERROR - total_earnings inválido para empleado ${emp.name}:`, total_earnings)
+          total_earnings = 0
+        }
+
+        const empPlans = plansByEmployee[emp.id] || []
+        const ded = await computeFixedLineDeductionsAndNet({
+          supabase,
+          companyId,
+          employeeId: emp.id,
+          year: yearNum,
+          month: monthNum,
+          quincena: quincenaNum,
+          paymentFrequency: paymentFrequency as PreviewPaymentFrequency,
+          tipoParam: tipoParam as 'CON' | 'SIN' | '2PAGOS',
+          legalDeductions,
+          useIsrProjection,
+          taxConstants,
+          countryCode,
+          totalEarnings: total_earnings,
+          baseSalary: base_salary,
+          empPlans
+        })
+        const { IHSS, RAP, ISR, totalDeductions: total_deductions, total } = ded
+
+        // Validar que runId existe antes de insertar
+        if (!runId) {
+          console.error(`❌ ERROR - runId es null/undefined para empleado ${emp.name}`)
+          return res.status(500).json({ 
+            error: 'Error interno: runId no disponible',
+            message: `No se pudo obtener el ID de la corrida para insertar la línea del empleado ${emp.name}`
+          })
+        }
+
+        // Validar que todos los valores numéricos sean válidos antes de insertar
+        const numericValues = {
+          days_worked,
+          total_earnings,
+          IHSS,
+          RAP,
+          ISR,
+          total
         }
         
-        if (legalDeductions.isr) {
-          // ISR según tabla MENSUAL de Honduras 2025
-          if (base_salary > 21457.76) {
-            if (base_salary <= 30969.88) {
-              ISR = (base_salary - 21457.76) * 0.15
-            } else if (base_salary <= 67604.36) {
-              ISR = 1428.32 + (base_salary - 30969.88) * 0.20
-            } else {
-              ISR = 8734.32 + (base_salary - 67604.36) * 0.25
-            }
+        for (const [key, value] of Object.entries(numericValues)) {
+          if (!isFinite(value) || isNaN(value)) {
+            console.error(`❌ ERROR - Valor inválido ${key} para empleado ${emp.name}:`, value)
+            return res.status(500).json({ 
+              error: 'Error en cálculo de nómina',
+              message: `Valor inválido ${key} para el empleado ${emp.name}: ${value}`
+            })
           }
         }
-        
-        // INFOP (si está configurado, aunque no es común en Honduras)
-        // if (legalDeductions.infop) {
-        //   INFOP = calcularINFOP(base_salary)
-        // }
-        
-        total_deductions = IHSS + RAP + ISR
-        total = total_earnings - total_deductions
-      } else {
-        // Tipo 'SIN': solo salario proporcional, sin deducciones
-        total = total_earnings
-      }
 
-      // Insertar línea en payroll_run_lines para que la autorización funcione
-      const { data: insertedLine, error: lineError } = await supabase
-        .from('payroll_run_lines')
-        .upsert({
-          run_id: runId,
-          company_id: companyId,
+        const lineMetadata = buildFixedLinePlanMetadata(yearNum, empPlans, {
+          base_salary_used: base_salary,
+          position_snapshot: String((emp as any).position || (emp as any).role || ''),
+          ihss_patronal:
+            countryCode === 'HND' && taxConstants
+              ? calculateEmployerContributions({
+                  monthlySalary: base_salary,
+                  taxConstants,
+                  factor2Pagos: tipoParam === '2PAGOS' ? 0.5 : 1
+                }).ihssPatronal
+              : 0,
+          rap_patronal:
+            countryCode === 'HND' && taxConstants
+              ? calculateEmployerContributions({
+                  monthlySalary: base_salary,
+                  taxConstants,
+                  factor2Pagos: tipoParam === '2PAGOS' ? 0.5 : 1
+                }).rapPatronal
+              : 0,
+          ...(days_extra > 0
+            ? {
+                days_extra,
+                notes_extra: `${days_extra} día(s) Extra/Especial (festivo/descanso)`
+              }
+            : {})
+        })
+
+        // Insertar línea en payroll_run_lines
+        const { data: insertedLine, error: lineError } = await supabase
+          .from('payroll_run_lines')
+          .upsert({
+            run_id: runId,
+            company_id: companyId,
+            employee_id: emp.id,
+            calc_hours: days_worked,
+            calc_bruto: total_earnings,
+            calc_ihss: IHSS,
+            calc_rap: RAP,
+            calc_isr: ISR,
+            calc_neto: total,
+            eff_hours: days_worked,
+            eff_bruto: total_earnings,
+            eff_ihss: IHSS,
+            eff_rap: RAP,
+            eff_isr: ISR,
+            eff_neto: total,
+            edited: false,
+            tax_year: yearNum,
+            metadata: lineMetadata,
+          }, {
+            onConflict: 'run_id,employee_id',
+            ignoreDuplicates: false
+          })
+          .select('id')
+          .maybeSingle()
+          
+        if (lineError) {
+          console.error(`❌ ERROR insertando línea para empleado ${emp.name}:`, lineError)
+          return res.status(500).json({ 
+            error: 'Error insertando línea de nómina',
+            message: `No se pudo insertar la línea para el empleado ${emp.name}: ${lineError.message}`,
+            details: lineError,
+            code: lineError.code
+          })
+        }
+        
+        if (!insertedLine) {
+          console.error(`❌ ERROR - No se retornó línea insertada para empleado ${emp.name}`)
+          return res.status(500).json({ 
+            error: 'Error insertando línea de nómina',
+            message: `No se pudo obtener el ID de la línea insertada para el empleado ${emp.name}`
+          })
+        }
+
+        planilla_fixed.push({
           employee_id: emp.id,
-          calc_hours: days_worked,
-          calc_bruto: total_earnings,
-          calc_ihss: IHSS,
-          calc_rap: RAP,
-          calc_isr: ISR,
-          calc_neto: total,
-          eff_hours: days_worked,
-          eff_bruto: total_earnings,
-          eff_ihss: IHSS,
-          eff_rap: RAP,
-          eff_isr: ISR,
-          eff_neto: total,
-          edited: false
-        }, {
-          onConflict: 'run_id,employee_id',
-          ignoreDuplicates: false
+          id: emp.dni || emp.id,
+          name: emp?.name || 'Sin nombre',
+          bank: emp.bank_name || 'No especificado',
+          bank_account: emp.bank_account || 'No especificado',
+          department: departmentName,
+          base_salary: base_salary,
+          monthly_salary: base_salary,
+          days_worked,
+          days_absent,
+          days_extra: days_extra > 0 ? days_extra : undefined,
+          notes_extra: days_extra > 0 ? `${days_extra} día(s) Extra/Especial (festivo/descanso)` : undefined,
+          horas_extras: Math.round((ahcOvertimeByEmployee[emp.id] || 0) * 100) / 100,
+          total_earnings: Math.round(total_earnings * 100) / 100,
+          IHSS: Math.round(IHSS * 100) / 100,
+          RAP: Math.round(RAP * 100) / 100,
+          ISR: Math.round(ISR * 100) / 100,
+          total_deducciones: Math.round(total_deductions * 100) / 100,
+          total: Math.round(total * 100) / 100,
+          line_id: insertedLine.id,
+          pay_type: 'fixed',
+          metadata: lineMetadata
         })
-        .select('id')
-        .single()
         
-      if (lineError) {
-        return res.status(500).json({ 
-          error: 'Error insertando línea de nómina',
-          message: `No se pudo insertar la línea para el empleado ${emp.name}: ${lineError.message}`,
-          details: lineError
+      } else {
+        // ========== EMPLEADOS POR HORA (HOURLY) ==========
+        const completeRegistros = registros.filter((r: any) => r.check_in && r.check_out)
+        const incompleteRegistros = registros.filter((r: any) => r.check_in && !r.check_out)
+
+        if (incompleteRegistros.length > 0) {
+          incompleteRecordsAlert.push({
+            employee_id: emp.id,
+            employee_name: emp.name || 'Sin nombre',
+            dates: incompleteRegistros.map((r: any) => r.date)
+          })
+        }
+
+        let total_hours_worked: number
+        const ahcEmp = ahcByEmployee[emp.id]
+        if (ahcEmp && ahcEmp.total_hours > 0) {
+          total_hours_worked = ahcEmp.total_hours
+          if (incompleteRecordDefaultHours != null && incompleteRecordDefaultHours > 0 && incompleteRegistros.length > 0) {
+            total_hours_worked += incompleteRecordDefaultHours * incompleteRegistros.length
+          }
+        } else {
+          total_hours_worked = calculateHoursWorked(completeRegistros)
+          if (incompleteRecordDefaultHours != null && incompleteRecordDefaultHours > 0 && incompleteRegistros.length > 0) {
+            total_hours_worked += incompleteRecordDefaultHours * incompleteRegistros.length
+          }
+        }
+
+        const days_worked = registros.length
+        const days_absent = diasPeriodo - days_worked
+
+        // base_salary siempre mensual (post-migración). Tarifa horaria = base_salary / 240.
+        const hourly_rate = base_salary / HONDURAS_LABOR_FACTOR
+
+        // Calcular salario bruto del período basado en horas trabajadas
+        let total_earnings = total_hours_worked * hourly_rate
+
+        // Séptimo Día (Art. 338-340): solo para pay_type === 'hourly'
+        let septimoDia = 0
+        if (emp.pay_type === 'hourly' && hourly_rate > 0) {
+          const ahcEmp = ahcByEmployee[emp.id]
+          const ordinaryHours = ahcEmp?.normal_hours ?? Math.max(0, total_hours_worked)
+          septimoDia = calculateSeptimoDia({
+            hourlyRate: hourly_rate,
+            ordinaryHours,
+            daysWorked: days_worked,
+            totalHours: total_hours_worked,
+            semanalProration
+          })
+          total_earnings += septimoDia
+        }
+        
+        // Validar que total_earnings sea un número válido
+        if (!isFinite(total_earnings) || isNaN(total_earnings)) {
+          console.error(`❌ ERROR - total_earnings inválido para empleado ${emp.name}:`, total_earnings)
+          total_earnings = 0
+        }
+        
+        let IHSS = 0, RAP = 0, ISR = 0, total_deductions = 0, total = 0
+
+        const fractionOpt =
+          paymentFrequency === 'weekly' && quincenaNum >= 1 && quincenaNum <= 4
+            ? quincenaNum / 4
+            : undefined
+
+        if (tipoParam === 'CON') {
+          const horasPeriodo = paymentFrequency === 'monthly' ? HORAS_PERIODO_MENSUAL : HORAS_PERIODO_QUINCENAL
+          const deductionFactor = horasPeriodo > 0 ? total_hours_worked / horasPeriodo : 0
+
+          const st = await computePayrollEmployeeStatutoryDeductions({
+            countryCode,
+            year: yearNum,
+            baseMonthlySalary: base_salary,
+            factor2Pagos: 1,
+            legalDeductions,
+            simpleIsrMonthlyBase: total_earnings,
+            useIsrProjection: countryCode === 'HND' && useIsrProjection,
+            hndTaxConstants: taxConstants,
+            runIsrProjection:
+              countryCode === 'HND' && useIsrProjection && legalDeductions.isr && taxConstants
+                ? () =>
+                    getIsrForPeriod({
+                      supabase,
+                      employeeId: emp.id,
+                      companyId,
+                      year: yearNum,
+                      month: monthNum,
+                      quincena: quincenaNum,
+                      periodIncome: total_earnings,
+                      taxConstants,
+                      factor2Pagos: 1,
+                      useProjection: true,
+                      ...(fractionOpt != null ? { fractionOfMonthElapsed: fractionOpt } : {})
+                    })
+                : undefined,
+            supabase
+          })
+          IHSS = st.ihss * deductionFactor
+          RAP = st.rap * deductionFactor
+          ISR = st.isr * deductionFactor
+          total_deductions = IHSS + RAP + ISR
+          total = total_earnings - total_deductions
+        } else if (tipoParam === '2PAGOS') {
+          const st = await computePayrollEmployeeStatutoryDeductions({
+            countryCode,
+            year: yearNum,
+            baseMonthlySalary: base_salary,
+            factor2Pagos: 0.5,
+            legalDeductions,
+            simpleIsrMonthlyBase: base_salary,
+            useIsrProjection: countryCode === 'HND' && useIsrProjection,
+            hndTaxConstants: taxConstants,
+            runIsrProjection:
+              countryCode === 'HND' && useIsrProjection && legalDeductions.isr && taxConstants
+                ? () =>
+                    getIsrForPeriod({
+                      supabase,
+                      employeeId: emp.id,
+                      companyId,
+                      year: yearNum,
+                      month: monthNum,
+                      quincena: quincenaNum,
+                      periodIncome: base_salary,
+                      taxConstants,
+                      factor2Pagos: 0.5,
+                      useProjection: true,
+                      ...(fractionOpt != null ? { fractionOfMonthElapsed: fractionOpt } : {})
+                    })
+                : undefined,
+            supabase
+          })
+          IHSS = st.ihss
+          RAP = st.rap
+          ISR = st.isr
+          total_deductions = IHSS + RAP + ISR
+          total = total_earnings - total_deductions
+        } else {
+          total = total_earnings
+        }
+
+        // Sincronizar con módulo Deducciones: planes activos se aplican siempre (CON, SIN o 2PAGOS)
+        const empPlansHourly = plansByEmployee[emp.id] || []
+        let customDeductionsHourly = 0
+        for (const plan of empPlansHourly) {
+          customDeductionsHourly += Number(plan.monto_por_plazo) || 0
+        }
+        total_deductions += customDeductionsHourly
+        total = total_earnings - total_deductions
+
+        // Validar que runId existe antes de insertar
+        if (!runId) {
+          console.error(`❌ ERROR - runId es null/undefined para empleado ${emp.name}`)
+          return res.status(500).json({ 
+            error: 'Error interno: runId no disponible',
+            message: `No se pudo obtener el ID de la corrida para insertar la línea del empleado ${emp.name}`
+          })
+        }
+
+        // Validar que todos los valores numéricos sean válidos antes de insertar
+        const numericValues = {
+          days_worked,
+          total_hours_worked,
+          hourly_rate,
+          total_earnings,
+          IHSS,
+          RAP,
+          ISR,
+          total
+        }
+        
+        for (const [key, value] of Object.entries(numericValues)) {
+          if (!isFinite(value) || isNaN(value)) {
+            console.error(`❌ ERROR - Valor inválido ${key} para empleado ${emp.name}:`, value)
+            return res.status(500).json({ 
+              error: 'Error en cálculo de nómina',
+              message: `Valor inválido ${key} para el empleado ${emp.name}: ${value}`
+            })
+          }
+        }
+
+        // Insertar línea en payroll_run_lines
+        // Para hourly, guardamos horas en calc_hours. Metadata incluye septimo_dia si aplica.
+        const lineMetadata: Record<string, unknown> = { tax_year: yearNum }
+        lineMetadata.base_salary_used = base_salary
+        lineMetadata.position_snapshot = String((emp as any).position || (emp as any).role || '')
+        if (countryCode === 'HND' && taxConstants) {
+          const empContr = calculateEmployerContributions({
+            monthlySalary: base_salary,
+            taxConstants,
+            factor2Pagos: tipoParam === '2PAGOS' ? 0.5 : 1
+          })
+          lineMetadata.ihss_patronal = empContr.ihssPatronal
+          lineMetadata.rap_patronal = empContr.rapPatronal
+        }
+        if (septimoDia > 0) lineMetadata.septimo_dia = septimoDia
+        if (total_hours_worked > 0) lineMetadata.total_hours_worked = total_hours_worked
+        const planIdsHourly: string[] = []
+        for (const plan of empPlansHourly) {
+          lineMetadata[plan.field_key] = plan.monto_por_plazo
+          planIdsHourly.push(plan.id)
+        }
+        if (planIdsHourly.length > 0) lineMetadata._deduction_plan_ids = planIdsHourly
+
+        const { data: insertedLine, error: lineError } = await supabase
+          .from('payroll_run_lines')
+          .upsert({
+            run_id: runId,
+            company_id: companyId,
+            employee_id: emp.id,
+            calc_hours: total_hours_worked, // Horas trabajadas para hourly
+            calc_bruto: total_earnings,
+            calc_ihss: IHSS,
+            calc_rap: RAP,
+            calc_isr: ISR,
+            calc_neto: total,
+            eff_hours: total_hours_worked,
+            eff_bruto: total_earnings,
+            eff_ihss: IHSS,
+            eff_rap: RAP,
+            eff_isr: ISR,
+            eff_neto: total,
+            edited: false,
+            tax_year: yearNum,
+            seventh_day_pay: septimoDia,
+            metadata: lineMetadata
+          }, {
+            onConflict: 'run_id,employee_id',
+            ignoreDuplicates: false
+          })
+          .select('id')
+          .maybeSingle()
+          
+        if (lineError) {
+          console.error(`❌ ERROR insertando línea para empleado ${emp.name}:`, lineError)
+          return res.status(500).json({ 
+            error: 'Error insertando línea de nómina',
+            message: `No se pudo insertar la línea para el empleado ${emp.name}: ${lineError.message}`,
+            details: lineError,
+            code: lineError.code
+          })
+        }
+        
+        if (!insertedLine) {
+          console.error(`❌ ERROR - No se retornó línea insertada para empleado ${emp.name}`)
+          return res.status(500).json({ 
+            error: 'Error insertando línea de nómina',
+            message: `No se pudo obtener el ID de la línea insertada para el empleado ${emp.name}`
+          })
+        }
+
+        planilla_hourly.push({
+          employee_id: emp.id,
+          id: emp.dni || emp.id,
+          name: emp?.name || 'Sin nombre',
+          bank: emp.bank_name || 'No especificado',
+          bank_account: emp.bank_account || 'No especificado',
+          department: departmentName,
+          base_salary: base_salary,
+          monthly_salary: base_salary,
+          days_worked,
+          days_absent,
+          horas_extras: Math.round((ahcOvertimeByEmployee[emp.id] || 0) * 100) / 100,
+          total_hours_worked: Math.round(total_hours_worked * 100) / 100,
+          hourly_rate: Math.round(hourly_rate * 100) / 100,
+          total_earnings: Math.round(total_earnings * 100) / 100,
+          IHSS: Math.round(IHSS * 100) / 100,
+          RAP: Math.round(RAP * 100) / 100,
+          ISR: Math.round(ISR * 100) / 100,
+          total_deducciones: Math.round(total_deductions * 100) / 100,
+          total: Math.round(total * 100) / 100,
+          line_id: insertedLine.id,
+          pay_type: 'hourly',
+          metadata: lineMetadata
         })
       }
-
-      planilla.push({
-        employee_id: emp.id,
-        id: emp.dni,
-        name: emp?.name,
-        bank: emp.bank_name || 'No especificado',
-        bank_account: emp.bank_account || 'No especificado',
-        department: emp.departments?.name || 'Sin Departamento',
-        base_salary: base_salary,
-        monthly_salary: base_salary,
-        days_worked,
-        days_absent,
-        total_earnings,
-        IHSS: Math.round(IHSS * 100) / 100,
-        RAP: Math.round(RAP * 100) / 100,
-        ISR: Math.round(ISR * 100) / 100,
-        total_deducciones: Math.round(total_deductions * 100) / 100,
-        total: Math.round(total * 100) / 100,
-        line_id: insertedLine?.id || null // ID de la línea insertada
-      })
     }
 
-    console.log(`Preview de nómina generado exitosamente para ${planilla.length} empleados`)
+    const totalEmpleados = planilla_fixed.length + planilla_hourly.length
+    console.log(`Preview de nómina generado exitosamente: ${planilla_fixed.length} empleados fijos, ${planilla_hourly.length} empleados por hora`)
     console.log('🔍 DEBUG - RunId generado:', runId)
     console.log('🔍 DEBUG - Tipo procesado:', tipoParam)
 
@@ -429,7 +1158,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       .from('payroll_runs')
       .select('status, authorized_by, authorized_at')
       .eq('id', runId)
-      .single()
+      .maybeSingle()
 
     if (statusError) {
       console.error('Error obteniendo estado de corrida:', statusError)
@@ -441,6 +1170,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // Determinar si es una regeneración
     const isRegeneration = existingRun && existingRun.status === 'authorized'
     
+    // Calcular totales separados
+    const totalBrutoFixed = planilla_fixed.reduce((sum: number, row: any) => sum + row.total_earnings, 0)
+    const totalDeduccionesFixed = planilla_fixed.reduce((sum: number, row: any) => sum + row.total_deducciones, 0)
+    const totalNetoFixed = planilla_fixed.reduce((sum: number, row: any) => sum + row.total, 0)
+    
+    const totalBrutoHourly = planilla_hourly.reduce((sum: number, row: any) => sum + row.total_earnings, 0)
+    const totalDeduccionesHourly = planilla_hourly.reduce((sum: number, row: any) => sum + row.total_deducciones, 0)
+    const totalNetoHourly = planilla_hourly.reduce((sum: number, row: any) => sum + row.total, 0)
+    
     return res.status(200).json({
       message: isRegeneration 
         ? 'Preview regenerado - se actualizó el registro existente'
@@ -451,21 +1189,42 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       month: monthNum,
       quincena: quincenaNum,
       tipo: tipoParam,
-      empleados: planilla.length,
-      totalBruto: planilla.reduce((sum: number, row: any) => sum + row.total_earnings, 0),
-      totalDeducciones: planilla.reduce((sum: number, row: any) => sum + row.total_deducciones, 0),
-      totalNeto: planilla.reduce((sum: number, row: any) => sum + row.total, 0),
-      planilla,
+      empleados: totalEmpleados,
+      empleados_fixed: planilla_fixed.length,
+      empleados_hourly: planilla_hourly.length,
+      // Totales generales (compatibilidad hacia atrás)
+      totalBruto: totalBrutoFixed + totalBrutoHourly,
+      totalDeducciones: totalDeduccionesFixed + totalDeduccionesHourly,
+      totalNeto: totalNetoFixed + totalNetoHourly,
+      // Totales separados por tipo
+      totalBrutoFixed,
+      totalDeduccionesFixed,
+      totalNetoFixed,
+      totalBrutoHourly,
+      totalDeduccionesHourly,
+      totalNetoHourly,
+      // Planillas separadas
+      planilla_fixed,
+      planilla_hourly,
+      // Compatibilidad hacia atrás: mantener planilla combinada
+      planilla: [...planilla_fixed, ...planilla_hourly],
       warning: isRegeneration ? 'Ya existía un registro generado para el período seleccionado. Esta acción actualizó el registro.' : null,
-      noAttendanceWarning
+      noAttendanceWarning,
+      incompleteRecordsAlert: incompleteRecordsAlert.length > 0 ? incompleteRecordsAlert : undefined
     })
 
   } catch (error: any) {
+    const stat = payrollStatutoryErrorResponse(error)
+    if (stat) return res.status(stat.status).json(stat.body)
     console.error('Payroll Preview API error:', error)
+    console.error('Error stack:', error.stack)
+    console.error('Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2))
     return res.status(error.message === 'UNAUTHORIZED' ? 401 : 500).json({
-      error: error.message || 'Internal server error'
+      error: error.message || 'Internal server error',
+      details: error.stack || String(error),
+      type: error.constructor?.name || typeof error
     })
   }
 }
 
-export default withGeneralRateLimit(['GET'])(handler)
+export default withPayrollRateLimit(['GET'])(handler)

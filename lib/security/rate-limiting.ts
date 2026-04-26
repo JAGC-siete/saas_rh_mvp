@@ -1,4 +1,6 @@
+import crypto from 'crypto'
 import { NextApiRequest, NextApiResponse } from 'next'
+import { getTrustedClientIp } from './trusted-client-ip'
 
 /**
  * SISTEMA DE RATE LIMITING PARA PROTEGER CONTRA ATAQUES DE FUERZA BRUTA
@@ -26,21 +28,80 @@ const RATE_LIMITS = {
     windowMs: 5 * 60 * 1000, // 5 minutos
     max: 20, // máximo 20 requests por ventana
     message: 'Demasiadas solicitudes. Intente más tarde.'
+  },
+
+  // Registro público de asistencia (muy restrictivo; endpoint de alto abuso)
+  attendance_public: {
+    windowMs: 2 * 60 * 1000, // 2 minutos
+    max: 6, // 6 requests por ventana (por IP+UA)
+    message: 'Demasiados registros de asistencia. Espere un momento e intente de nuevo.'
+  },
+
+  // Nómina: flujo intensivo (preview, draft, refresh tras autorizar)
+  payroll: {
+    windowMs: 5 * 60 * 1000, // 5 minutos
+    max: 50, // máximo 50 requests por ventana (carga + cambios de período + refresh)
+    message: 'Demasiadas solicitudes de nómina. Espere unos minutos.'
+  },
+
+  // Operaciones de setup (seed, inicialización) - bucket separado, más permisivo
+  setup: {
+    windowMs: 5 * 60 * 1000, // 5 minutos
+    max: 10, // máximo 10 por ventana (bucket independiente de general)
+    message: 'Demasiados intentos de inicialización. Espere unos minutos.'
+  },
+
+  /** Login B2B / empleado por IP + email (fuerza bruta por cuenta) */
+  auth_login: {
+    windowMs: 15 * 60 * 1000,
+    max: 8,
+    message: 'Demasiados intentos de inicio de sesión. Espere unos minutos.'
+  },
+  /** Mismo bucket pero solo por IP (muchas cuentas desde una IP) */
+  auth_login_ip: {
+    windowMs: 15 * 60 * 1000,
+    max: 40,
+    message: 'Demasiados intentos de inicio de sesión desde esta red. Espere unos minutos.'
+  },
+  /** Recuperación contraseña: abuso de envío de correo */
+  auth_forgot_password: {
+    windowMs: 60 * 60 * 1000,
+    max: 3,
+    message: 'Demasiadas solicitudes de recuperación. Intente más tarde.'
+  },
+  auth_forgot_password_ip: {
+    windowMs: 60 * 60 * 1000,
+    max: 12,
+    message: 'Demasiadas solicitudes de recuperación desde esta red. Intente más tarde.'
+  },
+  /** OTP empleado: envío */
+  auth_otp_send: {
+    windowMs: 15 * 60 * 1000,
+    max: 3,
+    message: 'Demasiados envíos de código. Intente en unos minutos.'
+  },
+  auth_otp_send_ip: {
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    message: 'Demasiados envíos de código desde esta red. Espere unos minutos.'
+  },
+  /** OTP empleado: verificación (adivinanza de código) */
+  auth_otp_verify: {
+    windowMs: 15 * 60 * 1000,
+    max: 12,
+    message: 'Demasiados intentos de verificación. Espere unos minutos.'
+  },
+  auth_otp_verify_ip: {
+    windowMs: 15 * 60 * 1000,
+    max: 40,
+    message: 'Demasiados intentos de verificación desde esta red. Espere unos minutos.'
   }
 }
 
 // Almacén en memoria para rate limiting (en producción usar Redis)
 const requestCounts = new Map<string, { count: number; resetTime: number }>()
 
-// Obtener IP del cliente
-const getClientIP = (req: NextApiRequest): string => {
-  const forwarded = req.headers['x-forwarded-for']
-  const ip = forwarded 
-    ? (Array.isArray(forwarded) ? forwarded[0] : forwarded.split(',')[0])
-    : req.connection.remoteAddress || 'unknown'
-  
-  return ip.trim()
-}
+const getClientIP = (req: NextApiRequest): string => getTrustedClientIp(req)
 
 // Limpiar entradas expiradas del almacén
 const cleanupExpiredEntries = () => {
@@ -95,8 +156,95 @@ const checkRateLimit = (key: string, limit: { windowMs: number; max: number }): 
   }
 }
 
+export type AuthRateLimitKind = 'auth_login' | 'auth_forgot_password' | 'auth_otp_send' | 'auth_otp_verify'
+
+const AUTH_RATE_PRIMARY: Record<AuthRateLimitKind, keyof typeof RATE_LIMITS> = {
+  auth_login: 'auth_login',
+  auth_forgot_password: 'auth_forgot_password',
+  auth_otp_send: 'auth_otp_send',
+  auth_otp_verify: 'auth_otp_verify'
+}
+
+const AUTH_RATE_IP: Record<AuthRateLimitKind, keyof typeof RATE_LIMITS> = {
+  auth_login: 'auth_login_ip',
+  auth_forgot_password: 'auth_forgot_password_ip',
+  auth_otp_send: 'auth_otp_send_ip',
+  auth_otp_verify: 'auth_otp_verify_ip'
+}
+
+/** Normaliza email para huella (no reversible en logs sin diccionario). */
+export function emailFingerprint(email: string): string {
+  return crypto.createHash('sha256').update(email.trim().toLowerCase()).digest('hex').slice(0, 24)
+}
+
+function setAuthRateLimitHeaders(
+  res: NextApiResponse,
+  limit: { max: number; windowMs: number; message: string },
+  result: { allowed: boolean; remaining: number; resetTime: number }
+) {
+  res.setHeader('X-RateLimit-Limit', limit.max.toString())
+  res.setHeader('X-RateLimit-Remaining', Math.max(0, result.remaining).toString())
+  res.setHeader('X-RateLimit-Reset', new Date(result.resetTime).toISOString())
+  if (!result.allowed) {
+    res.setHeader('Retry-After', Math.ceil((result.resetTime - Date.now()) / 1000).toString())
+  }
+}
+
+/**
+ * Rate limit por IP+email y por IP para rutas de autenticación.
+ * Si `email` falta, solo aplica el bucket por IP (clave única `anonymous`).
+ */
+export function enforceAuthRateLimits(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  kind: AuthRateLimitKind,
+  email?: string | null
+): boolean {
+  cleanupExpiredEntries()
+  const ip = getClientIP(req)
+  const emailTag =
+    email && typeof email === 'string' && email.includes('@') ? emailFingerprint(email) : 'anonymous'
+
+  const primaryLimit = RATE_LIMITS[AUTH_RATE_PRIMARY[kind]]
+  const ipBucketLimit = RATE_LIMITS[AUTH_RATE_IP[kind]]
+
+  const primaryKey = `${ip}:${kind}:${emailTag}`
+  const ipOnlyKey = `${ip}:${kind}:ip`
+
+  const primaryResult = checkRateLimit(primaryKey, primaryLimit)
+  if (!primaryResult.allowed) {
+    setAuthRateLimitHeaders(res, primaryLimit, primaryResult)
+    res.status(429).json({
+      error: 'Demasiadas solicitudes',
+      message: primaryLimit.message,
+      retryAfter: Math.ceil((primaryResult.resetTime - Date.now()) / 1000)
+    })
+    return false
+  }
+
+  const ipResult = checkRateLimit(ipOnlyKey, ipBucketLimit)
+  if (!ipResult.allowed) {
+    setAuthRateLimitHeaders(res, ipBucketLimit, ipResult)
+    res.status(429).json({
+      error: 'Demasiadas solicitudes',
+      message: ipBucketLimit.message,
+      retryAfter: Math.ceil((ipResult.resetTime - Date.now()) / 1000)
+    })
+    return false
+  }
+
+  const stricterRemaining = Math.min(primaryResult.remaining, ipResult.remaining)
+  res.setHeader('X-RateLimit-Limit', String(Math.min(primaryLimit.max, ipBucketLimit.max)))
+  res.setHeader('X-RateLimit-Remaining', String(Math.max(0, stricterRemaining)))
+  res.setHeader(
+    'X-RateLimit-Reset',
+    new Date(Math.max(primaryResult.resetTime, ipResult.resetTime)).toISOString()
+  )
+  return true
+}
+
 // Middleware de rate limiting
-export const withRateLimit = (endpointType: 'export' | 'reports' | 'general' = 'general', allowedMethods: string[] = ['GET', 'POST', 'PUT', 'DELETE']) => {
+export const withRateLimit = (endpointType: 'export' | 'reports' | 'general' | 'payroll' | 'setup' = 'general', allowedMethods: string[] = ['GET', 'POST', 'PUT', 'DELETE']) => {
   return (handler: any) => {
     return async (req: NextApiRequest, res: NextApiResponse) => {
       // Validar método HTTP permitido ANTES de verificar rate limit
@@ -167,13 +315,23 @@ export const withReportsRateLimit = (methods?: string[]) => withRateLimit('repor
 // Rate limiting general
 export const withGeneralRateLimit = (methods?: string[]) => withRateLimit('general', methods)
 
+// Rate limiting para registro público de asistencia
+export const withAttendancePublicRateLimit = (methods?: string[]) => withRateLimit('attendance_public' as any, methods)
+
+// Rate limiting para nómina (límite más alto por flujo intensivo)
+export const withPayrollRateLimit = (methods?: string[]) => withRateLimit('payroll', methods)
+
+// Rate limiting para operaciones de setup (seed, inicialización) - bucket independiente
+export const withSetupRateLimit = (methods?: string[]) => withRateLimit('setup', methods)
+
 // Función para verificar rate limit sin middleware
-export const checkRateLimitStatus = (req: NextApiRequest, endpointType: 'export' | 'reports' | 'general' = 'general') => {
+export const checkRateLimitStatus = (req: NextApiRequest, endpointType: 'export' | 'reports' | 'general' | 'payroll' | 'setup' = 'general') => {
   const clientIP = getClientIP(req)
   const userAgent = req.headers['user-agent'] || 'unknown'
   const rateLimitKey = `${clientIP}:${endpointType}:${userAgent.substring(0, 50)}`
-  const limit = RATE_LIMITS[endpointType]
-  
+  const limit = RATE_LIMITS[endpointType as keyof typeof RATE_LIMITS]
+  if (!limit) return { allowed: true, remaining: 999, resetTime: Date.now() }
+
   return checkRateLimit(rateLimitKey, limit)
 }
 
@@ -199,6 +357,7 @@ export const getRateLimitStats = () => {
       
       if (key.includes(':export:')) stats.byType.export++
       else if (key.includes(':reports:')) stats.byType.reports++
+      else if (key.includes(':setup:')) (stats.byType as any).setup = ((stats.byType as any).setup || 0) + 1
       else if (key.includes(':general:')) stats.byType.general++
     }
   }

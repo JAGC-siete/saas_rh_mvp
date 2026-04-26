@@ -1,7 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { generateConsolidatedPayrollPDF, type PlanillaItem } from '../../../lib/payroll/report'
-import { getCustomFields } from '../../../lib/payroll-client-specific'
 import { calculatePayroll } from '../../../lib/payroll-client-specific'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -46,7 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(404).json({ error: 'No hay corrida de nómina para el período indicado' })
     }
 
-    // Get payroll lines with employee data
+    // Get payroll lines with employee data (including pay_type)
     const { data: payrollLines, error: linesError } = await supabase
       .from('payroll_run_lines')
       .select(`
@@ -58,6 +57,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           base_salary,
           bank_name,
           bank_account,
+          pay_type,
           departments!employees_department_id_fkey(name)
         )
       `)
@@ -74,7 +74,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Mapear a estructura de PlanillaItem con campos personalizados
-    const planilla: PlanillaItem[] = await Promise.all(
+    const planillaAll: PlanillaItem[] = await Promise.all(
       payrollLines.map(async (line: any) => {
         // Calculate custom deductions from metadata
         let customDeductions = 0
@@ -119,6 +119,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const statutoryDeductions = (Number(line.eff_ihss) || 0) + (Number(line.eff_rap) || 0) + (Number(line.eff_isr) || 0)
         const totalDeductions = statutoryDeductions + customDeductions
 
+        const payType = line.employees?.pay_type || 'fixed'
+        const totalHours = Number(line.eff_hours) || 0
+        const hourlyRate = payType === 'hourly' && totalHours > 0 
+          ? (Number(line.eff_bruto) || 0) / totalHours 
+          : 0
+
         return {
           id: line.employees?.dni || line.employees?.employee_code || '',
           name: line.employees?.name || '',
@@ -126,7 +132,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           bank_account: line.employees?.bank_account || 'No especificado',
           department: line.employees?.departments?.name || 'Sin Departamento',
           monthly_salary: Number(line.employees?.base_salary) || 0,
-          days_worked: (Number(line.eff_hours) || 0) / 8,
+          days_worked: payType === 'hourly' ? (totalHours / 8) : (totalHours / 8),
           days_absent: 0,
           late_days: 0,
           total_earnings: Number(line.eff_bruto) || 0,
@@ -137,7 +143,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           total: Number(line.eff_neto) || 0,
           notes_on_ingress: line.edited ? 'Editado' : '',
           notes_on_deductions: deductionsNotes,
-          metadata: line.metadata || {} // Include metadata for custom fields display
+          metadata: line.metadata || {}, // Include metadata for custom fields display
+          pay_type: payType, // Include pay_type for separation
+          total_hours_worked: payType === 'hourly' ? totalHours : undefined,
+          hourly_rate: payType === 'hourly' ? hourlyRate : undefined
         }
       })
     )
@@ -148,33 +157,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq('id', companyId)
       .single()
 
-    // Get custom fields configuration for PDF columns (validar companyId no sea null)
     let pdfCustomFieldsConfig: Record<string, any> | undefined = undefined
+    let pdfPayrollConfig: { legal_deductions: { ihss?: boolean; rap?: boolean; isr?: boolean } } | undefined = undefined
     if (companyId) {
-      const customFieldsConfig = await getCustomFields(companyId, supabase)
-      
-      // Get full config from DB to get category information
-      if (customFieldsConfig) {
-        const { data: payrollConfig } = await supabase
-          .from('company_payroll_configs')
-          .select('custom_fields')
-          .eq('company_id', companyId)
-          .eq('is_active', true)
-          .single()
-        
-        if (payrollConfig?.custom_fields) {
-          pdfCustomFieldsConfig = payrollConfig.custom_fields as Record<string, any>
-        }
+      const { data: payrollConfigRow } = await supabase
+        .from('company_payroll_configs')
+        .select('custom_fields, metadata')
+        .eq('company_id', companyId)
+        .eq('is_active', true)
+        .maybeSingle()
+
+      const meta = payrollConfigRow?.metadata || {}
+      if (payrollConfigRow?.custom_fields) {
+        pdfCustomFieldsConfig = payrollConfigRow.custom_fields as Record<string, any>
+      }
+      pdfPayrollConfig = {
+        legal_deductions: meta.legal_deductions || { ihss: true, rap: true, isr: true }
       }
     }
 
+    // Separate fixed and hourly employees
+    const planillaFixed = planillaAll.filter(p => (p as any).pay_type !== 'hourly')
+    const planillaHourly = planillaAll.filter(p => (p as any).pay_type === 'hourly')
+
     const pdf = await generateConsolidatedPayrollPDF(
-      planilla, 
+      planillaFixed,
+      planillaHourly,
       periodo, 
       Number(quincena), 
       user.email, 
       company?.name,
-      pdfCustomFieldsConfig
+      pdfCustomFieldsConfig,
+      pdfPayrollConfig
     )
     res.setHeader('Content-Type', 'application/pdf')
     res.setHeader('Content-Disposition', `attachment; filename=planilla_${periodo}_q${quincena}.pdf`)

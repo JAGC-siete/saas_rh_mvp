@@ -33,10 +33,10 @@ export default function AWSCertificationsSection() {
           </h2>
           
           <p className="text-brand-200/90 max-w-4xl mx-auto mb-8 text-lg">
-            Hecho con la misma tecnología que usan Netflix y Airbnb, ahora para tu MIPYMES en Honduras
+            Hecho con la misma tecnología que usan Netflix y Airbnb, ahora para tu MIPYME local
             <br />
             <span className="text-brand-400 font-medium">
-              Optimizado para que tu empresa en Honduras tenga la seguridad y escalabilidad de un gigante, sin pagar como uno.
+              Optimizado para que tu empresa tenga la seguridad y escalabilidad de un gigante, sin pagar como uno.
             </span>
             <br />
             <span className="text-white font-semibold">

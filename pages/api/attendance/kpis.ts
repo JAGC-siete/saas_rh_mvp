@@ -6,18 +6,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const { supabase, companyId } = await requireCompanyAccess(req, res)
     
-    const { preset = 'today', from, to, role, employee_id } = req.query
+    const { preset = 'today', from, to, role, employee_id, department_id } = req.query
     const range = typeof from === 'string' && typeof to === 'string'
       ? { from, to }
-      : getDateRange(preset as string)
+      : getDateRange(preset as string, undefined, typeof from === 'string' ? from : undefined, typeof to === 'string' ? to : undefined)
   
-  // CORREGIR: Orden de parámetros según definición del RPC
-  // attendance_kpis_filtered(p_employee_id, p_from, p_to, p_role, p_company_id)
   const rpcArgs = {
     p_employee_id: (typeof employee_id === 'string' && employee_id.trim() !== '') ? employee_id.trim() : null,
     p_from: range.from,
     p_to: range.to,
     p_role: (typeof role === 'string' && role.trim() !== '') ? role : null,
+    p_department_id: (typeof department_id === 'string' && department_id.trim() !== '') ? department_id.trim() : null,
     p_company_id: companyId
   }
 

@@ -1,117 +1,84 @@
 /**
- * Script temporal para resetear contraseña de usuario
- * Usa SERVICE_ROLE_KEY para actualizar contraseña directamente
+ * Reset de contraseña vía Supabase Admin (service role).
+ * Uso:
+ *   USER_ID=<uuid> NEW_PASSWORD='<contraseña>' node scripts/reset-password-temp.js
+ * o:
+ *   node scripts/reset-password-temp.js <uuid>   # NEW_PASSWORD obligatorio en env
+ *
+ * Variables: NEXT_PUBLIC_SUPABASE_URL (o SUPABASE_URL), SUPABASE_SERVICE_ROLE_KEY.
+ * Opcional: variables desde `railway variables` si está enlazado el proyecto.
  */
 
 const { execSync } = require('child_process')
 const { createClient } = require('@supabase/supabase-js')
 
-// Función para obtener variables de Railway
 function getRailwayEnv() {
   try {
     const railwayVars = execSync('railway variables', { encoding: 'utf-8' })
     const vars = {}
-    railwayVars.split('\n').forEach(line => {
+    railwayVars.split('\n').forEach((line) => {
       const match = line.match(/^(\w+)=(.+)$/)
       if (match) {
         vars[match[1]] = match[2]
       }
     })
     return vars
-  } catch (error) {
-    console.warn('⚠️  No se pudieron obtener variables de Railway, usando variables del sistema')
+  } catch {
+    console.warn('⚠️  No se pudieron leer variables de Railway; se usan solo env del proceso.')
     return {}
   }
 }
 
-// Intentar cargar .env si existe
 try {
   require('dotenv').config()
-} catch (e) {
-  // Ignorar si no existe dotenv
+} catch {
+  // sin dotenv
 }
 
-// Obtener variables de Railway si están disponibles
 const railwayEnv = getRailwayEnv()
+const SUPABASE_URL =
+  railwayEnv.NEXT_PUBLIC_SUPABASE_URL ||
+  process.env.NEXT_PUBLIC_SUPABASE_URL ||
+  process.env.SUPABASE_URL
+const SERVICE_ROLE_KEY =
+  railwayEnv.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
 
-// Leer variables de entorno (prioridad: Railway > .env > sistema)
-const SUPABASE_URL = railwayEnv.NEXT_PUBLIC_SUPABASE_URL || 
-                     process.env.NEXT_PUBLIC_SUPABASE_URL || 
-                     process.env.SUPABASE_URL
-const SERVICE_ROLE_KEY = railwayEnv.SUPABASE_SERVICE_ROLE_KEY || 
-                         process.env.SUPABASE_SERVICE_ROLE_KEY
+const userId = String(process.argv[2] || process.env.USER_ID || '').trim()
+const newPassword = String(process.argv[3] || process.env.NEW_PASSWORD || '').trim()
+
+if (!userId || !newPassword) {
+  console.error('Uso: USER_ID=<uuid> NEW_PASSWORD=\'…\' node scripts/reset-password-temp.js')
+  console.error('  o: node scripts/reset-password-temp.js <uuid>  (con NEW_PASSWORD en env)')
+  process.exit(1)
+}
 
 if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
-  console.error('❌ Faltan variables de entorno:')
-  console.error('   NEXT_PUBLIC_SUPABASE_URL:', SUPABASE_URL ? '✓' : '✗')
-  console.error('   SUPABASE_SERVICE_ROLE_KEY:', SERVICE_ROLE_KEY ? '✓' : '✗')
-  console.error('\n💡 Sugerencia: Asegúrate de tener las variables configuradas en Railway o en .env')
+  console.error('Faltan NEXT_PUBLIC_SUPABASE_URL / SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY')
   process.exit(1)
 }
 
 const adminClient = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
   auth: {
     autoRefreshToken: false,
-    persistSession: false
-  }
+    persistSession: false,
+  },
 })
 
-async function resetPassword(userId, newPassword) {
-  try {
-    console.log(`\n🔍 Reseteando contraseña para usuario ID: ${userId}`)
-    
-    // Verificar que el usuario existe primero
-    console.log(`   Verificando usuario...`)
-    const { data: userData, error: getUserError } = await adminClient.auth.admin.getUserById(userId)
-    
-    if (getUserError || !userData) {
-      throw new Error(`Usuario no encontrado: ${getUserError?.message || 'Usuario no existe'}`)
-    }
-    
-    console.log(`✅ Usuario encontrado:`)
-    console.log(`   ID: ${userData.user.id}`)
-    console.log(`   Email: ${userData.user.email}`)
-    console.log(`   Creado: ${userData.user.created_at}`)
-    
-    // Actualizar contraseña
-    console.log(`\n🔐 Actualizando contraseña...`)
-    const { data, error } = await adminClient.auth.admin.updateUserById(userId, {
-      password: newPassword
-    })
-    
-    if (error) {
-      console.error('Error completo al actualizar:', JSON.stringify(error, null, 2))
-      throw new Error(`Error actualizando contraseña: ${error.message || JSON.stringify(error)}`)
-    }
-    
-    console.log(`\n✅ Contraseña actualizada exitosamente`)
-    console.log(`   Usuario ID: ${userId}`)
-    console.log(`   Email: ${userData.user.email}`)
-    console.log(`   Nueva contraseña: ${newPassword}`)
-    
-    return { success: true, user: { id: userId, email: userData.user.email } }
-    
-  } catch (error) {
-    console.error(`\n❌ Error: ${error.message}`)
-    if (error.stack) {
-      console.error('Stack:', error.stack)
-    }
-    throw error
+async function resetPassword(uid, password) {
+  const { data: userData, error: getUserError } = await adminClient.auth.admin.getUserById(uid)
+  if (getUserError || !userData) {
+    throw new Error(getUserError?.message || 'Usuario no encontrado')
   }
+  const { error } = await adminClient.auth.admin.updateUserById(uid, { password })
+  if (error) {
+    throw new Error(error.message || JSON.stringify(error))
+  }
+  console.log('Contraseña actualizada para:', userData.user.email)
 }
 
-// Ejecutar
-const userId = '8c49be71-c48f-4fee-9935-44a168eb2dfe'
-// Usar una contraseña más segura que no esté en la base de datos de contraseñas comprometidas
-const newPassword = 'HumanoSISU2025!AdminSecure'
-
 resetPassword(userId, newPassword)
-  .then(() => {
-    console.log('\n✅ Proceso completado')
-    process.exit(0)
-  })
-  .catch((error) => {
-    console.error('\n❌ Proceso falló:', error.message)
+  .then(() => process.exit(0))
+  .catch((err) => {
+    console.error(err.message || err)
     process.exit(1)
   })
-

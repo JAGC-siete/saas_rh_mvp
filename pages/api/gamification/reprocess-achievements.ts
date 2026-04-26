@@ -1,6 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createAdminClient } from '../../../lib/supabase/server'
+import { createAdminClient, createClient } from '../../../lib/supabase/server'
 import { evaluateAndAwardAchievements } from '../../../lib/gamification-utils'
+import { requireSuperAdmin } from '../../../lib/auth/api-auth-fixed'
+import { logSuperAdminAction } from '../../../lib/security/audit-logger'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -8,11 +10,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { employee_id, company_id, days_back = 60, admin_key } = req.body
+    // Super admin only (no admin_key in body)
+    const auth = await requireSuperAdmin(req, res)
+    const supabase = createClient(req, res)
+    const actorUserId = auth.user?.id || 'unknown'
 
-    // Verificación simple con clave admin
-    if (admin_key !== 'jorgegoku07sisu') {
-      return res.status(401).json({ error: 'Invalid admin key' })
+    const { employee_id, company_id } = req.body as {
+      employee_id?: string
+      company_id?: string
+      days_back?: number
     }
 
     if (!employee_id && !company_id) {
@@ -21,12 +27,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    const supabase = createAdminClient()
+    const adminSupabase = createAdminClient()
     let employees: any[] = []
 
     if (employee_id) {
       // Procesar empleado específico
-      const { data: employee, error } = await supabase
+      const { data: employee, error } = await adminSupabase
         .from('employees')
         .select('id, company_id, name')
         .eq('id', employee_id)
@@ -38,7 +44,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       employees = [employee]
     } else if (company_id) {
       // Procesar todos los empleados de la empresa
-      const { data: companyEmployees, error } = await supabase
+      const { data: companyEmployees, error } = await adminSupabase
         .from('employees')
         .select('id, company_id, name')
         .eq('company_id', company_id)
@@ -84,6 +90,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         })
       }
     }
+
+    // Audit (best effort)
+    try {
+      await logSuperAdminAction(actorUserId, 'gamification_reprocess_achievements', 'gamification', company_id || employee_id, {
+        company_id: company_id || null,
+        employee_id: employee_id || null,
+        employees_processed: employees.length,
+        total_achievements_awarded: totalAchievementsAwarded
+      })
+    } catch {}
 
     return res.status(200).json({
       success: true,

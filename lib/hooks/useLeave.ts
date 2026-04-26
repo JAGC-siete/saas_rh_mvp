@@ -2,6 +2,12 @@ import { useState, useCallback } from 'react'
 import { logger } from '../logger'
 import { LeaveRequest, LeaveType, CreateLeaveRequestData, UpdateLeaveRequestData } from '../types/leave'
 
+function apiErrorMessage(errorData: { message?: string; error?: string } | null, fallback: string): string {
+  if (!errorData) return fallback
+  const m = errorData.message || errorData.error
+  return typeof m === 'string' && m.trim() ? m.trim() : fallback
+}
+
 interface UseLeaveReturn {
   // State
   leaveRequests: LeaveRequest[]
@@ -30,6 +36,10 @@ export function useLeave(): UseLeaveReturn {
     setError(null)
   }, [])
 
+  /**
+   * Las solicitudes de permiso se consumen enriquecidas: `employee` y `leave_type`
+   * vienen del join en GET /api/leave; no duplicar resolución con listas locales salvo en el formulario de alta.
+   */
   const fetchLeaveRequests = useCallback(async () => {
     try {
       setIsLoading(true)
@@ -37,8 +47,8 @@ export function useLeave(): UseLeaveReturn {
       
       const response = await fetch('/api/leave')
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Error fetching leave requests')
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(apiErrorMessage(errorData, 'Error fetching leave requests'))
       }
       
       const { data } = await response.json()
@@ -63,8 +73,8 @@ export function useLeave(): UseLeaveReturn {
       
       const response = await fetch('/api/leave/types')
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Error fetching leave types')
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(apiErrorMessage(errorData, 'Error fetching leave types'))
       }
       
       const { data } = await response.json()
@@ -110,8 +120,8 @@ export function useLeave(): UseLeaveReturn {
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Error creating leave request')
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(apiErrorMessage(errorData, 'Error creating leave request'))
       }
 
       const { data: createdRequest } = await response.json()
@@ -149,8 +159,8 @@ export function useLeave(): UseLeaveReturn {
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Error updating leave request')
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(apiErrorMessage(errorData, 'Error updating leave request'))
       }
 
       const { data: updatedRequest } = await response.json()
@@ -188,8 +198,8 @@ export function useLeave(): UseLeaveReturn {
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Error deleting leave request')
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(apiErrorMessage(errorData, 'Error deleting leave request'))
       }
 
       // Update local state

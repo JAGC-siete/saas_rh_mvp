@@ -65,6 +65,7 @@ next-env.d.ts
 # IDE
 .vscode/
 .idea/
+.cursor/
 
 # SECURITY: SQL Scripts with credentials (DO NOT COMMIT)
 # Only allow Supabase migrations and seed files

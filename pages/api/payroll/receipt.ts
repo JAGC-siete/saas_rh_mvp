@@ -42,7 +42,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           name,
           employee_code,
           department,
-          position,
+          role,
           bank_name,
           bank_account,
           company_id
@@ -65,7 +65,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       employee_code: record.employees?.employee_code,
       employee_name: record.employees?.name,
       department: record.employees?.department,
-      position: record.employees?.position,
+      position: (record.employees as { role?: string | null })?.role ?? undefined,
       period_start: record.period_start,
       period_end: record.period_end,
       days_worked: Number(record.days_worked) || 0,

@@ -117,6 +117,23 @@ npm install -g vercel
 vercel --prod
 ```
 
+### 🧪 Configurar Staging
+
+Para configurar un entorno de staging separado para pruebas:
+
+```bash
+# Configuración rápida (5 minutos)
+npm run staging:setup
+
+# Verificar configuración
+npm run staging:check
+
+# Desplegar a staging
+npm run staging:deploy
+```
+
+📚 **Documentación completa**: Ver [STAGING_QUICK_START.md](./STAGING_QUICK_START.md) para guía detallada.
+
 ## 📱 Uso del Sistema
 
 ### Para Administradores

@@ -175,11 +175,51 @@ export type Database = {
         }
         Relationships: []
       }
+      mail_list_subscriptions: {
+        Row: {
+          confirmation_token: string
+          confirmed_at: string | null
+          created_at: string
+          email: string
+          id: string
+          metadata: Json | null
+          source: string | null
+          status: Database["public"]["Enums"]["mail_list_status"]
+          unsubscribed_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          confirmation_token: string
+          confirmed_at?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          metadata?: Json | null
+          source?: string | null
+          status?: Database["public"]["Enums"]["mail_list_status"]
+          unsubscribed_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          confirmation_token?: string
+          confirmed_at?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          metadata?: Json | null
+          source?: string | null
+          status?: Database["public"]["Enums"]["mail_list_status"]
+          unsubscribed_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       attendance_events: {
         Row: {
           device_id: string | null
           employee_id: string
           event_type: string
+          event_uid: string | null
           flags: Json | null
           geofence_ok: boolean | null
           id: string
@@ -187,6 +227,7 @@ export type Database = {
           justification: string | null
           justification_category: string | null
           lat: number | null
+          local_date: string | null
           lon: number | null
           ref_record_id: string | null
           rule_applied: string | null
@@ -200,6 +241,7 @@ export type Database = {
           device_id?: string | null
           employee_id: string
           event_type: string
+          event_uid?: string | null
           flags?: Json | null
           geofence_ok?: boolean | null
           id?: string
@@ -207,6 +249,7 @@ export type Database = {
           justification?: string | null
           justification_category?: string | null
           lat?: number | null
+          local_date?: string | null
           lon?: number | null
           ref_record_id?: string | null
           rule_applied?: string | null
@@ -220,6 +263,7 @@ export type Database = {
           device_id?: string | null
           employee_id?: string
           event_type?: string
+          event_uid?: string | null
           flags?: Json | null
           geofence_ok?: boolean | null
           id?: string
@@ -227,6 +271,7 @@ export type Database = {
           justification?: string | null
           justification_category?: string | null
           lat?: number | null
+          local_date?: string | null
           lon?: number | null
           ref_record_id?: string | null
           rule_applied?: string | null
@@ -273,11 +318,14 @@ export type Database = {
           expected_check_in: string | null
           expected_check_out: string | null
           flags: Json | null
+          event_uid: string | null
           id: string
           justification: string | null
           justification_category: string | null
           late_minutes: number | null
           local_date: string | null
+          lunch_end: string | null
+          lunch_start: string | null
           rule_applied_in: string | null
           rule_applied_out: string | null
           status: string | null
@@ -297,11 +345,14 @@ export type Database = {
           expected_check_in?: string | null
           expected_check_out?: string | null
           flags?: Json | null
+          event_uid?: string | null
           id?: string
           justification?: string | null
           justification_category?: string | null
           late_minutes?: number | null
           local_date?: string | null
+          lunch_end?: string | null
+          lunch_start?: string | null
           rule_applied_in?: string | null
           rule_applied_out?: string | null
           status?: string | null
@@ -321,11 +372,14 @@ export type Database = {
           expected_check_in?: string | null
           expected_check_out?: string | null
           flags?: Json | null
+          event_uid?: string | null
           id?: string
           justification?: string | null
           justification_category?: string | null
           late_minutes?: number | null
           local_date?: string | null
+          lunch_end?: string | null
+          lunch_start?: string | null
           rule_applied_in?: string | null
           rule_applied_out?: string | null
           status?: string | null
@@ -804,6 +858,7 @@ export type Database = {
           name: string
           password_encrypted: string
           port: number | null
+          serial_number: string | null
           settings: Json | null
           status: string | null
           updated_at: string | null
@@ -822,6 +877,7 @@ export type Database = {
           name: string
           password_encrypted: string
           port?: number | null
+          serial_number?: string | null
           settings?: Json | null
           status?: string | null
           updated_at?: string | null
@@ -840,6 +896,7 @@ export type Database = {
           name?: string
           password_encrypted?: string
           port?: number | null
+          serial_number?: string | null
           settings?: Json | null
           status?: string | null
           updated_at?: string | null
@@ -852,6 +909,79 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_files: {
+        Row: {
+          id: string
+          employee_id: string
+          company_id: string
+          file_type: string
+          document_category: string | null
+          storage_path: string
+          file_name: string
+          file_size_bytes: number
+          mime_type: string
+          uploaded_by: string
+          is_active: boolean
+          metadata: Json | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          employee_id: string
+          company_id: string
+          file_type: string
+          document_category?: string | null
+          storage_path: string
+          file_name: string
+          file_size_bytes: number
+          mime_type: string
+          uploaded_by: string
+          is_active?: boolean
+          metadata?: Json | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          employee_id?: string
+          company_id?: string
+          file_type?: string
+          document_category?: string | null
+          storage_path?: string
+          file_name?: string
+          file_size_bytes?: number
+          mime_type?: string
+          uploaded_by?: string
+          is_active?: boolean
+          metadata?: Json | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_files_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_files_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_files_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1281,6 +1411,8 @@ export type Database = {
           bank_account: string | null
           bank_name: string | null
           base_salary: number
+          /** GENERATED: base_salary / 240. Tarifa horaria de referencia. */
+          hourly_rate_reference?: number
           company_id: string | null
           created_at: string | null
           department_id: string | null
@@ -1300,6 +1432,8 @@ export type Database = {
           status: string | null
           team: string | null
           termination_date: string | null
+          termination_reason_code: string | null
+          termination_reason_detail: string | null
           updated_at: string | null
           work_schedule_id: string | null
         }
@@ -1327,6 +1461,8 @@ export type Database = {
           status?: string | null
           team?: string | null
           termination_date?: string | null
+          termination_reason_code?: string | null
+          termination_reason_detail?: string | null
           updated_at?: string | null
           work_schedule_id?: string | null
         }
@@ -1354,6 +1490,8 @@ export type Database = {
           status?: string | null
           team?: string | null
           termination_date?: string | null
+          termination_reason_code?: string | null
+          termination_reason_detail?: string | null
           updated_at?: string | null
           work_schedule_id?: string | null
         }
@@ -1527,8 +1665,10 @@ export type Database = {
           color: string | null
           company_id: string
           created_at: string | null
+          employee_self_service: boolean
           id: string
           is_paid: boolean | null
+          is_statutory_art95: boolean
           max_days_per_year: number | null
           name: string
           requires_approval: boolean | null
@@ -1537,8 +1677,10 @@ export type Database = {
           color?: string | null
           company_id: string
           created_at?: string | null
+          employee_self_service?: boolean
           id?: string
           is_paid?: boolean | null
+          is_statutory_art95?: boolean
           max_days_per_year?: number | null
           name: string
           requires_approval?: boolean | null
@@ -1547,8 +1689,10 @@ export type Database = {
           color?: string | null
           company_id?: string
           created_at?: string | null
+          employee_self_service?: boolean
           id?: string
           is_paid?: boolean | null
+          is_statutory_art95?: boolean
           max_days_per_year?: number | null
           name?: string
           requires_approval?: boolean | null
@@ -2321,6 +2465,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      recursos: {
+        Row: {
+          id: string
+          slug: string
+          title: string
+          description: string
+          content: string
+          date_published: string
+          date_modified: string | null
+          image: string | null
+          author: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          slug: string
+          title: string
+          description?: string
+          content?: string
+          date_published?: string
+          date_modified?: string | null
+          image?: string | null
+          author?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          slug?: string
+          title?: string
+          description?: string
+          content?: string
+          date_published?: string
+          date_modified?: string | null
+          image?: string | null
+          author?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       supervisor_teams: {
         Row: {
@@ -3478,6 +3664,7 @@ export type Database = {
     Enums: {
       affiliate_status: "pending" | "approved" | "rejected"
       commission_status: "pending" | "paid" | "cancelled"
+      mail_list_status: "pending" | "confirmed" | "unsubscribed"
       paragon_role: "gerente_general" | "supervisor" | "empleado"
     }
     CompositeTypes: {
@@ -3608,6 +3795,7 @@ export const Constants = {
     Enums: {
       affiliate_status: ["pending", "approved", "rejected"],
       commission_status: ["pending", "paid", "cancelled"],
+      mail_list_status: ["pending", "confirmed", "unsubscribed"],
       paragon_role: ["gerente_general", "supervisor", "empleado"],
     },
   },

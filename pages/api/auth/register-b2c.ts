@@ -1,5 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient, createAdminClient } from '../../../lib/supabase/server'
+import { logger } from '../../../lib/logger'
+import { validateAdminPassword } from '../../../lib/auth/password-policy'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -9,7 +11,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { email, password, fullName } = req.body
 
   if (!email || !password || !fullName) {
-    return res.status(400).json({ error: 'Email, password, and full name are required' })
+    return res.status(400).json({ error: 'Email, contraseña y nombre completo son requeridos' })
+  }
+
+  const pw = validateAdminPassword(password)
+  if (!pw.ok) {
+    return res.status(400).json({ error: pw.message })
   }
 
   try {
@@ -27,7 +34,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
 
     if (authError || !user) {
-      return res.status(400).json({ error: authError?.message || 'Failed to create user' })
+      logger.warn('B2C registration failed', { code: authError?.status })
+      return res.status(400).json({
+        error:
+          'No se pudo completar el registro. Verifica los datos o inicia sesión si ya tienes cuenta.'
+      })
     }
 
     // Use admin client similar to authenticateUser

@@ -94,6 +94,31 @@ export function useReportsExport() {
     })
   }
 
-  return { exportAttendance, exportPayroll, exportEmployees }
+  async function exportWorkCertificate(
+    employeeId: string,
+    format: 'pdf' | 'csv',
+    options?: { purpose?: string; certificateType?: string; includeDeductions?: boolean }
+  ) {
+    const ext = format === 'pdf' ? 'pdf' : 'csv'
+    const filename = `constancia_laboral_${employeeId.slice(0, 8)}_${new Date().toISOString().split('T')[0]}.${ext}`
+    const accept = format === 'pdf' ? 'application/pdf' : 'text/csv'
+
+    await downloadBlob('/api/reports/export-work-certificate', filename, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: accept
+      },
+      body: JSON.stringify({
+        employeeId,
+        format,
+        purpose: options?.purpose ?? 'Constancia de trabajo',
+        certificateType: options?.certificateType ?? 'general',
+        includeDeductions: options?.includeDeductions ?? true
+      })
+    })
+  }
+
+  return { exportAttendance, exportPayroll, exportEmployees, exportWorkCertificate }
 }
 

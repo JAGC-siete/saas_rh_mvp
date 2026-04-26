@@ -2,6 +2,8 @@ import { ReactNode, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/router'
 import { useAuth } from '../lib/auth'
 
+const guardDebug = process.env.NODE_ENV === 'development'
+
 interface SuperAdminGuardProps {
   children: ReactNode
   redirectPath?: string
@@ -27,18 +29,22 @@ export default function SuperAdminGuard({ children, redirectPath }: SuperAdminGu
       const userData = localStorage.getItem('user')
       if (userData) {
         const parsed = JSON.parse(userData)
-        console.log('🔍 SuperAdminGuard: Found user in localStorage', {
-          email: parsed.email,
-          role: parsed.role,
-          id: parsed.id
-        })
+        if (guardDebug) {
+          console.log('🔍 SuperAdminGuard: Found user in localStorage', {
+            email: parsed.email,
+            role: parsed.role,
+            id: parsed.id
+          })
+        }
         setLocalProfile(parsed)
         setProfileChecked(true)
       } else {
         setProfileChecked(true)
       }
     } catch (e) {
-      console.error('❌ SuperAdminGuard: Error reading localStorage', e)
+      if (guardDebug) {
+        console.error('❌ SuperAdminGuard: Error reading localStorage', e)
+      }
       setProfileChecked(true)
     }
   }, [profileChecked])
@@ -48,13 +54,17 @@ export default function SuperAdminGuard({ children, redirectPath }: SuperAdminGu
 
     // If still loading auth, wait
     if (loading) {
-      console.log('⏳ SuperAdminGuard: Auth still loading...')
+      if (guardDebug) {
+        console.log('⏳ SuperAdminGuard: Auth still loading...')
+      }
       return
     }
 
     // If no user at all, redirect to login
     if (!user) {
-      console.log('❌ SuperAdminGuard: No user, redirecting to login')
+      if (guardDebug) {
+        console.log('❌ SuperAdminGuard: No user, redirecting to login')
+      }
       router.replace(`/app/login?redirect=${encodeURIComponent(target)}`)
       return
     }
@@ -65,7 +75,9 @@ export default function SuperAdminGuard({ children, redirectPath }: SuperAdminGu
     // If we have user but no profile yet, wait a bit more (max 3 seconds)
     if (!effectiveProfile && user) {
       const timeout = setTimeout(() => {
-        console.warn('⚠️ SuperAdminGuard: Profile not loaded after timeout, checking localStorage')
+        if (guardDebug) {
+          console.warn('⚠️ SuperAdminGuard: Profile not loaded after timeout, checking localStorage')
+        }
         // Try one more time to get from localStorage
         if (typeof window !== 'undefined') {
           try {
@@ -73,7 +85,9 @@ export default function SuperAdminGuard({ children, redirectPath }: SuperAdminGu
             if (userData) {
               const parsed = JSON.parse(userData)
               if (parsed.role === 'super_admin') {
-                console.log('✅ SuperAdminGuard: Using localStorage profile as fallback')
+                if (guardDebug) {
+                  console.log('✅ SuperAdminGuard: Using localStorage profile as fallback')
+                }
                 // Don't redirect, let it render with localStorage data
                 return
               }
@@ -82,7 +96,9 @@ export default function SuperAdminGuard({ children, redirectPath }: SuperAdminGu
             // Ignore
           }
         }
-        console.error('❌ SuperAdminGuard: No profile found, redirecting to login')
+        if (guardDebug) {
+          console.error('❌ SuperAdminGuard: No profile found, redirecting to login')
+        }
         router.replace(`/app/login?redirect=${encodeURIComponent(target)}`)
       }, 3000)
 
@@ -91,23 +107,27 @@ export default function SuperAdminGuard({ children, redirectPath }: SuperAdminGu
 
     // If profile loaded but not super_admin, redirect
     if (effectiveProfile && effectiveProfile.role !== 'super_admin') {
-      console.log('❌ SuperAdminGuard: User is not super_admin, redirecting', {
-        role: effectiveProfile.role,
-        userId: effectiveProfile.id,
-        email: effectiveProfile.email
-      })
+      if (guardDebug) {
+        console.log('❌ SuperAdminGuard: User is not super_admin, redirecting', {
+          role: effectiveProfile.role,
+          userId: effectiveProfile.id,
+          email: effectiveProfile.email
+        })
+      }
       router.replace('/app/dashboard')
       return
     }
 
     // If we have super_admin profile, log success
     if (effectiveProfile && effectiveProfile.role === 'super_admin') {
-      console.log('✅ SuperAdminGuard: Access granted', {
-        role: effectiveProfile.role,
-        userId: effectiveProfile.id,
-        email: effectiveProfile.email,
-        source: userProfile ? 'useAuth' : 'localStorage'
-      })
+      if (guardDebug) {
+        console.log('✅ SuperAdminGuard: Access granted', {
+          role: effectiveProfile.role,
+          userId: effectiveProfile.id,
+          email: effectiveProfile.email,
+          source: userProfile ? 'useAuth' : 'localStorage'
+        })
+      }
     }
   }, [userProfile, loading, router, target, user, localProfile, profileChecked])
 

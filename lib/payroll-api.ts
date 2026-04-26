@@ -12,6 +12,7 @@ import {
   SendResponse,
   PayrollError
 } from '../types/payroll'
+import type { PayrollPdfGroupBy } from './payroll/pdf-layout'
 
 // Generic API function with timeout and error handling
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
@@ -72,11 +73,14 @@ export const payrollApi = {
       body: JSON.stringify(body)
     }),
 
-  // Generate PDF from run
-  generatePDF: (runId: string): Promise<{ url: string }> => {
-    // Return the URL directly for download
-    const url = `/api/payroll/generate-pdf-from-run?run_id=${runId}`
-    return Promise.resolve({ url })
+  // Generate PDF from run (URL para fetch con credentials; group_by opcional)
+  generatePDF: (runId: string, options?: { groupBy?: PayrollPdfGroupBy }): Promise<{ url: string }> => {
+    const params = new URLSearchParams({ run_id: runId })
+    const gb = options?.groupBy
+    if (gb && gb !== 'none') {
+      params.set('group_by', gb)
+    }
+    return Promise.resolve({ url: `/api/payroll/generate-pdf-from-run?${params.toString()}` })
   },
 
   // Generate voucher from run_line_id

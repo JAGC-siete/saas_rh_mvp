@@ -24,6 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       limit = '20',
       status = 'active',
       department_id,
+      employee_id,
       sort_by = 'name',
       sort_order = 'asc'
     } = req.query
@@ -64,7 +65,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         departments!employees_department_id_fkey(name),
         work_schedules(name, monday_start, monday_end),
         employee_scores(total_points, weekly_points, monthly_points),
-        attendance_records!attendance_records_employee_id_fkey(check_in, check_out, status)
+        attendance_records!attendance_records_employee_id_fkey(check_in, check_out, lunch_start, lunch_end, status)
       `, { count: 'exact' })
       .eq('status', status)
       .eq('company_id', companyId)
@@ -84,6 +85,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Add department filter if provided
     if (department_id) {
       query = query.eq('department_id', department_id)
+    }
+
+    // Fetch single employee by id (for payroll_defaults, etc.)
+    if (employee_id && typeof employee_id === 'string') {
+      query = query.eq('id', employee_id)
     }
 
     // Add sorting

@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../../lib/supabase/server'
 import { logger } from '../../../../lib/logger'
+import { assertEmployeePortalEnabled } from '../../../../lib/employee-portal/company-settings'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -40,11 +41,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       companyId = userProfile.company_id
     }
 
-    // Get permission types for the company
+    if (!(await assertEmployeePortalEnabled(supabase, companyId ?? undefined, res))) {
+      return
+    }
+
+    // Get permission types for the company (employee_self_service = true tras migración)
     const { data: permissionTypes, error: typesError } = await supabase
       .from('leave_types')
-      .select('id, name, color, is_paid, requires_approval, max_days_per_year')
+      .select('id, name, color, is_paid, requires_approval, max_days_per_year, employee_self_service')
       .eq('company_id', companyId)
+      .eq('employee_self_service', true)
       .order('name')
 
     if (typesError) {
@@ -55,13 +61,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: 'Error al obtener tipos de permisos' })
     }
 
-    // Filter to show only relevant permission types for employees
-    const employeePermissionTypes = permissionTypes?.filter((type: any) => 
-      // Show permission types that are suitable for employee self-registration
-      type.name.includes('Permiso') || 
-      type.name.includes('Personal') ||
-      type.name.includes('Emergencia')
-    ) || []
+    const employeePermissionTypes = permissionTypes || []
 
     logger.info('Employee permission types fetched', {
       companyId,

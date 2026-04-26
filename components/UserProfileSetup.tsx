@@ -15,7 +15,8 @@ export default function UserProfileSetup({ onComplete }: UserProfileSetupProps) 
   const [error, setError] = useState('')
   const [formData, setFormData] = useState({
     company_name: '',
-    employee_id: ''
+    employee_id: '',
+    country_code: 'HND' as 'HND' | 'SLV' | 'GTM'
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -29,6 +30,7 @@ export default function UserProfileSetup({ onComplete }: UserProfileSetupProps) 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           company_name: formData.company_name,
+          country_code: formData.country_code,
           employee_id: formData.employee_id || null,
           role: 'hr_manager', // Fixed role
           is_active: true
@@ -57,6 +59,12 @@ export default function UserProfileSetup({ onComplete }: UserProfileSetupProps) 
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
+  }
+
+  const handleCountryChange = (value: string) => {
+    if (value === 'HND' || value === 'SLV' || value === 'GTM') {
+      setFormData(prev => ({ ...prev, country_code: value }))
+    }
   }
 
   return (
@@ -89,6 +97,31 @@ export default function UserProfileSetup({ onComplete }: UserProfileSetupProps) 
               />
               <p className="text-xs text-gray-300 mt-1">
                 Crearemos automáticamente tu empresa en el sistema
+              </p>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-white mb-2 block">
+                País de la empresa
+              </label>
+              <select
+                value={formData.country_code}
+                onChange={(e) => handleCountryChange(e.target.value)}
+                disabled={loading}
+                className="input-glass h-12 w-full rounded-md border border-white/20 bg-white/5 px-3 text-white"
+              >
+                <option value="HND" className="bg-slate-900">
+                  Honduras
+                </option>
+                <option value="SLV" className="bg-slate-900">
+                  El Salvador
+                </option>
+                <option value="GTM" className="bg-slate-900">
+                  Guatemala
+                </option>
+              </select>
+              <p className="text-xs text-gray-300 mt-1">
+                Define la jurisdicción laboral y fiscal. No se puede cambiar luego sin soporte.
               </p>
             </div>
 

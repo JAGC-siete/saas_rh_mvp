@@ -69,7 +69,17 @@ export const MIDDLEWARE_CONFIG = {
       '/features',
       '/about',
       '/trial-dashboard',
-      '/politicadeprivacidad'
+      '/politicadeprivacidad',
+      '/terminos-de-servicio',
+      '/calculadora-deducciones',
+      '/alternativa-odoo-honduras',
+      '/sistema-biometrico-nomina',
+      '/implementacion-48-horas',
+      '/deducciones-honduras-ihss-rap-isr',
+      '/afiliados',
+      '/suscripcion',
+      '/recursos',
+      '/sitemap.xml'
     ],
     
     // Demo routes (PIN required)
@@ -81,8 +91,11 @@ export const MIDDLEWARE_CONFIG = {
     // Authenticated routes (login required)
     authenticated: [
       '/app/dashboard',
+      '/app/attendance',
       '/app/employees',
       '/app/payroll',
+      '/app/deducciones',
+      '/app/13-14-salario',
       '/app/reports',
       '/app/settings',
       '/app/departments',
@@ -146,7 +159,17 @@ export function getAllPublicRoutes(): string[] {
     '/api/demo/verify-pin',
     '/api/health',
     '/api/env',
-    '/api/cron/*'
+    '/api/cron/*',
+    '/api/public/calculate-deductions',
+    '/api/public/send-deduction-report',
+    // SEO pages
+    '/alternativa-odoo-honduras',
+    '/sistema-biometrico-nomina',
+    '/implementacion-48-horas',
+    '/deducciones-honduras-ihss-rap-isr',
+    '/recursos',
+    '/recursos/*',
+    '/sitemap.xml'
   ]
 }
 

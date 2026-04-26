@@ -170,3 +170,42 @@ storybook-static/
 # Temporary folders
 tmp/
 temp/
+
+# Large SDK files and directories
+WebSDK V3.3.1/
+Hikvision/
+Proxy/
+
+# Import data (not needed in production)
+import-data/
+
+# Kubernetes configs (not needed in production)
+k8s/
+
+# Large documentation files (reduce upload size)
+*.md
+!README.md
+!CHANGELOG.md
+
+# Analysis and diagnostic files
+ANALISIS_*.md
+DIAGNOSTIC_*.md
+DIAGNOSTICO_*.md
+FIX_*.md
+IMPLEMENTATION_*.md
+PASOS_*.md
+PAYROLL_*.md
+PLAN_*.md
+SOLUCION_*.md
+STAGING_*.md
+DEPLOYMENT*.md
+DOCUMENTATION.md
+
+# Supabase migrations (not needed at runtime, only for setup)
+supabase/migrations/
+
+# Scripts not needed in production
+scripts/
+
+# Services (separate microservices)
+services/

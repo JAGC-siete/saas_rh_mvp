@@ -3,6 +3,8 @@
  * Simplifies role checking logic across the application
  */
 
+import { normalizeRole, type RoleId } from './role-access'
+
 export interface UserProfile {
   id: string
   role: string
@@ -10,16 +12,18 @@ export interface UserProfile {
   is_active: boolean
 }
 
-export type RoleLevel = 'super_admin' | 'company_admin' | 'hr_manager' | 'employee'
+export type RoleLevel = RoleId
 
 /**
  * Role hierarchy levels (higher number = more permissions)
  */
 export const ROLE_LEVELS: Record<RoleLevel, number> = {
-  super_admin: 4,
+  super_admin: 5,
+  admin: 4,
   company_admin: 3,
   hr_manager: 2,
-  employee: 1
+  manager: 2,
+  employee: 1,
 }
 
 /**
@@ -27,7 +31,7 @@ export const ROLE_LEVELS: Record<RoleLevel, number> = {
  */
 export function hasRole(userProfile: UserProfile | null, requiredRole: RoleLevel): boolean {
   if (!userProfile || !userProfile.is_active) return false
-  return userProfile.role === requiredRole
+  return normalizeRole(userProfile.role) === requiredRole
 }
 
 /**
@@ -35,7 +39,9 @@ export function hasRole(userProfile: UserProfile | null, requiredRole: RoleLevel
  */
 export function hasAnyRole(userProfile: UserProfile | null, requiredRoles: RoleLevel[]): boolean {
   if (!userProfile || !userProfile.is_active) return false
-  return requiredRoles.includes(userProfile.role as RoleLevel)
+  const role = normalizeRole(userProfile.role)
+  if (!role) return false
+  return requiredRoles.includes(role)
 }
 
 /**
@@ -44,7 +50,8 @@ export function hasAnyRole(userProfile: UserProfile | null, requiredRoles: RoleL
 export function hasRoleLevel(userProfile: UserProfile | null, requiredLevel: RoleLevel): boolean {
   if (!userProfile || !userProfile.is_active) return false
   
-  const userLevel = ROLE_LEVELS[userProfile.role as RoleLevel] || 0
+  const normalized = normalizeRole(userProfile.role)
+  const userLevel = (normalized ? ROLE_LEVELS[normalized] : 0) || 0
   const requiredLevelValue = ROLE_LEVELS[requiredLevel]
   
   return userLevel >= requiredLevelValue
@@ -54,7 +61,7 @@ export function hasRoleLevel(userProfile: UserProfile | null, requiredLevel: Rol
  * Check if a user can access admin functions
  */
 export function canAccessAdmin(userProfile: UserProfile | null): boolean {
-  return hasAnyRole(userProfile, ['super_admin', 'company_admin', 'hr_manager'])
+  return hasAnyRole(userProfile, ['super_admin', 'admin', 'company_admin', 'hr_manager', 'manager'])
 }
 
 /**
@@ -71,10 +78,11 @@ export function canAccessCompanyAdmin(userProfile: UserProfile | null, companyId
   if (!userProfile || !userProfile.is_active) return false
   
   // Super admin can access any company
-  if (userProfile.role === 'super_admin') return true
+  if (normalizeRole(userProfile.role) === 'super_admin') return true
   
   // Company admin and HR manager need matching company_id
-  if (['company_admin', 'hr_manager'].includes(userProfile.role)) {
+  const role = normalizeRole(userProfile.role)
+  if (role && ['admin', 'company_admin', 'hr_manager', 'manager'].includes(role)) {
     return companyId ? userProfile.company_id === companyId : !!userProfile.company_id
   }
   
@@ -122,7 +130,7 @@ export function getRequiredRolesForPath(pathname: string): {
   
   if (requiresAdmin) {
     return {
-      roles: ['super_admin', 'company_admin', 'hr_manager'],
+      roles: ['super_admin', 'admin', 'company_admin', 'hr_manager', 'manager'],
       isSuperAdminOnly: false,
       requiresCompanyAccess: !pathname.includes('/admin/')
     }
@@ -130,7 +138,7 @@ export function getRequiredRolesForPath(pathname: string): {
   
   // Default: any authenticated user
   return {
-    roles: ['super_admin', 'company_admin', 'hr_manager', 'employee'],
+    roles: ['super_admin', 'admin', 'company_admin', 'hr_manager', 'manager', 'employee'],
     isSuperAdminOnly: false,
     requiresCompanyAccess: true
   }

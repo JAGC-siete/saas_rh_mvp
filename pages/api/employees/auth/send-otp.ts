@@ -2,6 +2,8 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient, createAdminClient } from '../../../../lib/supabase/server'
 import { logger } from '../../../../lib/logger'
 import { sendOtp } from '../../../../lib/employee-otp'
+import { EMPLOYEE_OTP_SEND_NEUTRAL_MESSAGE } from '../../../../lib/auth/public-auth-messages'
+import { enforceAuthRateLimits } from '../../../../lib/security/rate-limiting'
 
 interface SendOtpRequest {
   email: string
@@ -32,6 +34,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       })
     }
 
+    if (!enforceAuthRateLimits(req, res, 'auth_otp_send', email)) {
+      return
+    }
+
     const adminSupabase = createAdminClient()
     
     // Verificar que el empleado existe - usar maybeSingle para evitar errores de múltiples filas
@@ -45,7 +51,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       .maybeSingle()
 
     if (employeeError) {
-      logger.error('Error querying employee for OTP recovery', { email, error: employeeError?.message })
+      logger.error('Error querying employee for OTP recovery', { error: employeeError?.message })
       return res.status(500).json({
         success: false,
         error: 'Error interno del servidor al buscar empleado'
@@ -53,33 +59,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     }
 
     if (!employee) {
-      logger.warn('Employee not found for OTP recovery', { email })
-      return res.status(400).json({
-        success: false,
-        error: 'Email no encontrado o empleado inactivo'
+      logger.warn('OTP recovery request: no active employee (neutral response)')
+      return res.status(200).json({
+        success: true,
+        message: EMPLOYEE_OTP_SEND_NEUTRAL_MESSAGE
       })
     }
 
-    // Enviar OTP usando el sistema existente
     const otpResult = await sendOtp(email, employee.id, employee.name)
-    
+
     if (!otpResult.success) {
-      logger.error('Failed to send OTP for password recovery', { email, error: otpResult.error })
+      logger.error('Failed to send OTP for password recovery', { error: otpResult.error })
       return res.status(500).json({
         success: false,
-        error: otpResult.error || 'Error enviando código de recuperación'
+        error: 'No se pudo enviar el código. Intenta más tarde.'
       })
     }
 
-    logger.info('OTP sent for password recovery', {
-      email,
-      employeeId: employee.id,
-      employeeName: employee.name
-    })
+    logger.info('OTP sent for password recovery', { employeeId: employee.id })
 
     return res.status(200).json({
       success: true,
-      message: 'Código de recuperación enviado a su email'
+      message: EMPLOYEE_OTP_SEND_NEUTRAL_MESSAGE
     })
 
   } catch (error) {

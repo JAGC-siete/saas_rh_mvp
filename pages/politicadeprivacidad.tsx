@@ -1,5 +1,6 @@
 import Head from 'next/head'
 import Link from 'next/link'
+import DemoFooter from '../components/DemoFooter'
 
 export default function PoliticaPrivacidad() {
   return (
@@ -7,7 +8,8 @@ export default function PoliticaPrivacidad() {
       <Head>
         <title>Política de Privacidad - Humano SISU</title>
         <meta name="description" content="Política de privacidad y manejo de datos de Humano SISU" />
-        <meta name="robots" content="noindex, nofollow" />
+        <meta name="robots" content="index, follow" />
+        <link rel="canonical" href="https://humanosisu.net/politicadeprivacidad" />
       </Head>
 
       <div className="min-h-screen bg-slate-900 text-white">
@@ -32,9 +34,9 @@ export default function PoliticaPrivacidad() {
             <section className="mb-8">
               <h2 className="text-2xl font-semibold text-white mb-4">1) Responsable</h2>
               <p className="text-slate-300">
-                <strong>Humano SISU</strong> (&quot;nosotros&quot;), <strong>Honduras</strong>.
+                <strong>Humano SISU</strong> (&quot;nosotros&quot;), con operación en <strong>El Salvador, Guatemala y Honduras</strong>.
                 <br />
-                Contacto: <strong>jorgearturo@humanosisu.net</strong> | <strong>+504 9470-7007</strong>
+                Contacto: <strong>jorgearturo@humanosisu.net</strong> | <strong>504 32226773</strong>
               </p>
             </section>
 
@@ -102,7 +104,7 @@ export default function PoliticaPrivacidad() {
                 Podés ejercer <strong>acceso, rectificación, supresión, oposición, limitación y portabilidad</strong>, además de <strong>retirar tu consentimiento</strong> en cualquier momento, escribiendo a <strong>jorgearturo@humanosisu.net</strong> con el asunto &quot;Derechos de datos – [tu nombre]&quot;.
               </p>
               <p className="text-slate-300">
-                También podés reclamar ante la autoridad de control competente conforme a las <strong>leyes aplicables de protección de datos de Honduras y/o Guatemala</strong>.
+                También podés reclamar ante la autoridad de control competente conforme a las <strong>leyes aplicables de protección de datos de El Salvador, Guatemala y/o Honduras</strong>.
               </p>
             </section>
 
@@ -120,47 +122,10 @@ export default function PoliticaPrivacidad() {
               </p>
             </section>
 
-            <hr className="border-white/20 my-8" />
-
-            <section className="mb-8">
-              <h2 className="text-2xl font-semibold text-white mb-4">Aviso corto (para el formulario)</h2>
-              <blockquote className="border-l-4 border-brand-500 pl-4 py-2 bg-slate-800/50 rounded-r">
-                <p className="text-slate-300">
-                  Al enviar aceptás nuestra <strong>Política de Privacidad</strong>. Usaremos tus datos <strong>solo para contactarte</strong> y dar seguimiento a tu solicitud. Podés retirar tu consentimiento y ejercer tus derechos en <strong>jorgearturo@humanosisu.net</strong>.
-                </p>
-              </blockquote>
-              
-              <div className="mt-4 p-4 bg-slate-800/50 rounded-lg">
-                <p className="text-slate-300 font-medium">Texto de checkbox:</p>
-                <p className="text-slate-300 mt-2">
-                  ☐ Doy mi consentimiento para que <strong>Humano SISU</strong> use mis datos <strong>solo para contactarme</strong> y dar seguimiento a mi solicitud.
-                </p>
-              </div>
-            </section>
-
-            <section className="mb-8">
-              <h2 className="text-2xl font-semibold text-white mb-4">Footer ultra breve (para landing)</h2>
-              <div className="p-4 bg-slate-800/50 rounded-lg">
-                <p className="text-slate-300">
-                  &quot;Protegemos tu información. Solo la utilizamos <strong> para contactarte</strong>. Más info en la <strong>Política de Privacidad</strong>.&quot;
-                </p>
-              </div>
-            </section>
-
           </div>
         </main>
 
-        {/* Footer */}
-        <footer className="border-t border-white/10 mt-12">
-          <div className="max-w-4xl mx-auto px-4 py-6 text-center">
-            <p className="text-slate-400">
-              © 2025 Humano SISU. Todos los derechos reservados.
-            </p>
-            <p className="text-slate-500 text-sm mt-2">
-              Protegemos tu información. Solo será utilizada para contactarte.
-            </p>
-          </div>
-        </footer>
+        <DemoFooter />
       </div>
     </>
   )

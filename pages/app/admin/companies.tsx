@@ -6,6 +6,21 @@ import SuperAdminGuard from '../../../components/SuperAdminGuard'
 import { Card, CardContent, CardHeader, CardTitle } from '../../../components/ui/card'
 import { Button } from '../../../components/ui/button'
 import { useNotificationContext } from '../../../components/NotificationProvider'
+import { COMMERCIAL_PLAN_TYPES, COMMERCIAL_PLAN_LABELS, type CommercialPlanType } from '../../../lib/billing/plans'
+
+const PLAN_BADGE_CLASS: Record<CommercialPlanType, string> = {
+  trial: 'bg-amber-500/15 text-amber-200 border border-amber-300/40',
+  basic: 'bg-sky-500/15 text-sky-100 border border-sky-300/40',
+  premium: 'bg-violet-500/15 text-violet-100 border border-violet-300/40',
+  enterprise: 'bg-emerald-500/15 text-emerald-100 border border-emerald-300/40',
+}
+
+function planBadgeClass(plan: string): string {
+  return (
+    PLAN_BADGE_CLASS[(plan || '').toLowerCase() as CommercialPlanType] ||
+    'bg-white/10 text-white/80 border border-white/30'
+  )
+}
 
 interface Company {
   id: string
@@ -34,7 +49,13 @@ export default function CompaniesAdminPage() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(12)
   const [showCreate, setShowCreate] = useState(false)
-  const [createForm, setCreateForm] = useState({
+  const [createForm, setCreateForm] = useState<{
+    name: string
+    subdomain: string
+    plan_type: CommercialPlanType
+    admin_email: string
+    admin_password: string
+  }>({
     name: '',
     subdomain: '',
     plan_type: 'basic',
@@ -255,7 +276,12 @@ export default function CompaniesAdminPage() {
                         <CardContent>
                           <div className="text-sm text-white/70 space-y-1">
                             <div>Subdominio: <span className="text-white/90">{company.subdomain}</span></div>
-                            <div>Plan: <span className="text-white/90">{company.plan_type}</span></div>
+                            <div className="flex items-center gap-2">
+                              <span>Plan:</span>
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${planBadgeClass(company.plan_type)}`}>
+                                {COMMERCIAL_PLAN_LABELS[(company.plan_type || '').toLowerCase() as CommercialPlanType] || company.plan_type}
+                              </span>
+                            </div>
                             <div>Empleados: <span className="text-white/90">{company.employee_count ?? 0}</span></div>
                           </div>
                           <div className="mt-3 flex gap-2">
@@ -318,15 +344,21 @@ export default function CompaniesAdminPage() {
                 </div>
                 <div>
                   <label className="block text-sm text-white/80 mb-1">Plan</label>
-                  <select 
-                    className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50" 
-                    value={createForm.plan_type} 
-                    onChange={(e) => setCreateForm({ ...createForm, plan_type: e.target.value })}
+                  <select
+                    className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-amber-300/50 focus:border-amber-300/50"
+                    value={createForm.plan_type}
+                    onChange={(e) => setCreateForm({ ...createForm, plan_type: e.target.value as CommercialPlanType })}
                   >
-                    <option value="basic" className="bg-slate-800">basic</option>
-                    <option value="premium" className="bg-slate-800">premium</option>
-                    <option value="enterprise" className="bg-slate-800">enterprise</option>
+                    {COMMERCIAL_PLAN_TYPES.map((p) => (
+                      <option key={p} value={p} className="bg-slate-800">
+                        {COMMERCIAL_PLAN_LABELS[p]} ({p})
+                      </option>
+                    ))}
                   </select>
+                  <p className="mt-1 text-[11px] text-white/50">
+                    Los módulos incluidos por cada plan se configuran en{' '}
+                    <span className="text-amber-200/90">Admin → Planes y módulos</span>.
+                  </p>
                 </div>
                 <div>
                   <label className="block text-sm text-white/80 mb-1">Correo admin</label>

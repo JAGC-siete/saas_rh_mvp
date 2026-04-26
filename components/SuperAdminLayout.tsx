@@ -22,7 +22,9 @@ import {
   Key,
   FileText,
   Crown,
-  Activity
+  Activity,
+  Mail,
+  Layers
 } from 'lucide-react'
 
 interface SuperAdminLayoutProps {
@@ -43,15 +45,27 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
   const superAdminNavigation = [
     {
       name: 'Super Admin Panel',
-      href: '/app/admin/super-admin-dashboard',
+      href: '/app/admin',
       icon: BarChart3,
       description: 'Vista general del sistema'
+    },
+    {
+      name: 'Ventas',
+      href: '/app/admin/ventas-config',
+      icon: DollarSign,
+      description: 'Configurar /ventas'
     },
     {
       name: 'Afiliados',
       href: '/app/admin/affiliates',
       icon: Users,
       description: 'Gestión de afiliados'
+    },
+    {
+      name: 'Mail List',
+      href: '/app/admin/mail-list',
+      icon: Mail,
+      description: 'Gestión de suscripciones'
     },
     {
       name: 'Empresas',
@@ -76,6 +90,12 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
       href: '/app/admin/billing',
       icon: CreditCard,
       description: 'Gestión de pagos'
+    },
+    {
+      name: 'Planes y módulos',
+      href: '/app/admin/plan-features',
+      icon: Layers,
+      description: 'Segmentación por categoría de servicio'
     },
     {
       name: 'Sistema',
@@ -106,6 +126,12 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
       href: '/app/admin/backup',
       icon: Database,
       description: 'Respaldo de datos'
+    },
+    {
+      name: 'Tablas de Impuestos',
+      href: '/app/admin/tax-brackets',
+      icon: FileText,
+      description: 'Gestión de tablas ISR por año'
     }
   ]
 

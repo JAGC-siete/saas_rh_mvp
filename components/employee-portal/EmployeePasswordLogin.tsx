@@ -42,7 +42,10 @@ export default function EmployeePasswordLogin({ onLoginSuccess }: EmployeePasswo
   const handlePasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!formData.email || !formData.password) {
+    const email = formData.email.trim().toLowerCase()
+    const password = formData.password.replace(/[\u0009\u000A\u000D\u00A0\u200B\u200C\u200D\uFEFF]/g, '')
+
+    if (!email || !password) {
       setError('Email y contraseña son requeridos')
       return
     }
@@ -57,8 +60,8 @@ export default function EmployeePasswordLogin({ onLoginSuccess }: EmployeePasswo
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          email: formData.email,
-          password: formData.password
+          email,
+          password
         })
       })
 
@@ -66,7 +69,7 @@ export default function EmployeePasswordLogin({ onLoginSuccess }: EmployeePasswo
 
       if (response.ok) {
         clientLogger.info('Employee login successful via password', {
-          email: formData.email
+          email
         })
 
         // Pasar session si está disponible, sino pasar la data completa

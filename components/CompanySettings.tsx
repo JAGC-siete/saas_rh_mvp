@@ -6,9 +6,16 @@ import { Input } from './ui/input'
 import { Card, CardContent } from './ui/card'
 import { 
   ClockIcon,
-  CalculatorIcon
+  CalculatorIcon,
+  DocumentChartBarIcon,
+  ClipboardDocumentListIcon,
+  ChartBarIcon
 } from '@heroicons/react/24/outline'
+import LeaveTypesSettings from './LeaveTypesSettings'
 import PayrollConfigEditor from './PayrollConfigEditor'
+import ReportParamsEditor from './reports/ReportParamsEditor'
+import { BIOMETRIC_MODES, type BiometricMode } from '../lib/attendance/attendance-metadata'
+import { DEFAULT_PERFORMANCE_SETTINGS, parsePerformanceSettings } from '../lib/performance/settings'
 
 interface Company {
   id: string
@@ -81,6 +88,14 @@ export default function CompanySettings() {
   const [showScheduleForm, setShowScheduleForm] = useState(false)
   const [editingSchedule, setEditingSchedule] = useState<WorkSchedule | null>(null)
 
+  const [biometricMode, setBiometricMode] = useState<BiometricMode>('STRICT_2')
+  const [biometricSaving, setBiometricSaving] = useState(false)
+  const [biometricMsg, setBiometricMsg] = useState<string | null>(null)
+
+  const [perfSettings, setPerfSettings] = useState(() => DEFAULT_PERFORMANCE_SETTINGS)
+  const [perfSaving, setPerfSaving] = useState(false)
+  const [perfMsg, setPerfMsg] = useState<string | null>(null)
+
   // Sync error from company context
   useEffect(() => {
     if (companyError) {
@@ -109,6 +124,80 @@ export default function CompanySettings() {
       fetchWorkSchedules()
     }
   }, [companyId, fetchWorkSchedules])
+
+  useEffect(() => {
+    if (!companyId) return
+    ;(async () => {
+      try {
+        const supabaseClient = createClient() as any
+        const { data, error } = await supabaseClient
+          .from('company_metadata')
+          .select('attendance_metadata, employees_metadata')
+          .eq('company_id', companyId)
+          .maybeSingle()
+        if (error) throw error
+        const meta = (data?.attendance_metadata || {}) as { biometric_mode?: string }
+        const m = meta.biometric_mode
+        if (typeof m === 'string' && (BIOMETRIC_MODES as readonly string[]).includes(m)) {
+          setBiometricMode(m as BiometricMode)
+        } else {
+          setBiometricMode('STRICT_2')
+        }
+
+        setPerfSettings(parsePerformanceSettings(data?.employees_metadata || {}))
+      } catch (e) {
+        console.error('Error loading attendance_metadata:', e)
+      }
+    })()
+  }, [companyId])
+
+  const saveBiometricMetadata = async () => {
+    if (!companyId) return
+    setBiometricSaving(true)
+    setBiometricMsg(null)
+    try {
+      const supabaseClient = createClient() as any
+      const { data: existing, error: readErr } = await supabaseClient
+        .from('company_metadata')
+        .select('attendance_metadata')
+        .eq('company_id', companyId)
+        .maybeSingle()
+      if (readErr) throw readErr
+      const prev = (existing?.attendance_metadata || {}) as Record<string, unknown>
+      const merged = { ...prev, biometric_mode: biometricMode }
+      const { error } = await supabaseClient.from('company_metadata').upsert(
+        { company_id: companyId, attendance_metadata: merged },
+        { onConflict: 'company_id' }
+      )
+      if (error) throw error
+      setBiometricMsg('Modalidad biométrica guardada.')
+    } catch (e) {
+      setBiometricMsg(e instanceof Error ? e.message : 'Error al guardar')
+    } finally {
+      setBiometricSaving(false)
+    }
+  }
+
+  const savePerformanceMetadata = async () => {
+    if (!companyId) return
+    setPerfSaving(true)
+    setPerfMsg(null)
+    try {
+      const res = await fetch('/api/company-metadata/employees', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(perfSettings)
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || 'No se pudo guardar')
+      setPerfSettings(parsePerformanceSettings(data?.employees_metadata || {}))
+      setPerfMsg('Parámetros de desempeño guardados.')
+    } catch (e) {
+      setPerfMsg(e instanceof Error ? e.message : 'Error al guardar')
+    } finally {
+      setPerfSaving(false)
+    }
+  }
 
   const handleScheduleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -146,13 +235,35 @@ export default function CompanySettings() {
 
         if (error) throw error
       } else {
+        // Normalizar campos TIME: convertir strings vacíos a null
+        const insertData = {
+          name: scheduleForm.name,
+          company_id: company?.id,
+          monday_start: scheduleForm.monday_start || null,
+          monday_end: scheduleForm.monday_end || null,
+          tuesday_start: scheduleForm.tuesday_start || null,
+          tuesday_end: scheduleForm.tuesday_end || null,
+          wednesday_start: scheduleForm.wednesday_start || null,
+          wednesday_end: scheduleForm.wednesday_end || null,
+          thursday_start: scheduleForm.thursday_start || null,
+          thursday_end: scheduleForm.thursday_end || null,
+          friday_start: scheduleForm.friday_start || null,
+          friday_end: scheduleForm.friday_end || null,
+          saturday_start: scheduleForm.saturday_start || null,
+          saturday_end: scheduleForm.saturday_end || null,
+          sunday_start: scheduleForm.sunday_start || null,
+          sunday_end: scheduleForm.sunday_end || null,
+          break_duration: scheduleForm.break_duration,
+          timezone: scheduleForm.timezone,
+        }
         const { error } = await (supabaseClient as any)
           .from('work_schedules')
-          .insert([{ ...scheduleForm, company_id: company?.id }])
+          .insert([insertData])
 
         if (error) throw error
       }
 
+      setError(null)
       setShowScheduleForm(false)
       setEditingSchedule(null)
       setScheduleForm({
@@ -175,8 +286,12 @@ export default function CompanySettings() {
         timezone: 'America/Tegucigalpa'
       })
       fetchWorkSchedules()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving work schedule:', error)
+      const errorMessage = error?.message || 'Error al guardar el horario. Por favor, intenta nuevamente.'
+      setError(errorMessage)
+      // Auto-clear error after 5 seconds
+      setTimeout(() => setError(null), 5000)
     } finally {
       setLoading(false)
     }
@@ -231,6 +346,9 @@ export default function CompanySettings() {
   const tabs = [
     { id: 'schedules', name: 'Horarios', icon: ClockIcon },
     { id: 'payroll', name: 'Configuración Payroll', icon: CalculatorIcon },
+    { id: 'reports', name: 'Parámetros de Reportes', icon: DocumentChartBarIcon },
+    { id: 'leaveTypes', name: 'Parámetros de permisos', icon: ClipboardDocumentListIcon },
+    { id: 'performance', name: 'Desempeño', icon: ChartBarIcon },
   ]
 
   const days = [
@@ -313,6 +431,45 @@ export default function CompanySettings() {
               Nuevo Horario
             </Button>
           </div>
+
+          {error && (
+            <Card variant="glass" className="p-4 border border-red-500/30 bg-red-500/10">
+              <p className="text-red-400 text-sm">{error}</p>
+            </Card>
+          )}
+
+          <Card variant="glass" className="p-5 border border-white/15">
+            <h4 className="text-md font-medium text-white mb-1">Modalidad de marcas biométricas</h4>
+            <p className="text-xs text-gray-400 mb-3">
+              Define cómo se interpretan las marcas del reloj al consolidar el día (cierre diario). STRICT_2: entrada y
+              salida; STRICT_4: entrada, almuerzo y salida; FLEXIBLE: acepta 2 o 4 marcas según cantidad recibida.
+            </p>
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="min-w-[200px]">
+                <label className="block text-xs text-gray-400 mb-1">Modalidad</label>
+                <select
+                  value={biometricMode}
+                  onChange={(e) => setBiometricMode(e.target.value as BiometricMode)}
+                  className="w-full rounded-md bg-white/5 border border-white/20 text-white text-sm px-3 py-2"
+                >
+                  {BIOMETRIC_MODES.map((m) => (
+                    <option key={m} value={m} className="bg-gray-900">
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Button
+                type="button"
+                onClick={() => void saveBiometricMetadata()}
+                disabled={biometricSaving || !companyId}
+                className="bg-brand-600 hover:bg-brand-700 text-white"
+              >
+                {biometricSaving ? 'Guardando…' : 'Guardar modalidad'}
+              </Button>
+            </div>
+            {biometricMsg && <p className="text-xs mt-2 text-gray-300">{biometricMsg}</p>}
+          </Card>
 
           {showScheduleForm && (
             <Card variant="glass" className="p-6">
@@ -398,6 +555,7 @@ export default function CompanySettings() {
                     onClick={() => {
                       setShowScheduleForm(false)
                       setEditingSchedule(null)
+                      setError(null)
                     }}
                     className="border-white/20 hover:bg-white/10 hover:border-white/30"
                   >
@@ -497,6 +655,131 @@ export default function CompanySettings() {
             </CardContent>
           </Card>
         )
+      )}
+
+      {activeTab === 'reports' && (
+        companyId && company ? (
+          <ReportParamsEditor
+            companyId={companyId}
+            onSave={() => console.log('Report params saved')}
+          />
+        ) : (
+          <Card variant="glass" className="p-6">
+            <CardContent className="text-center">
+              <p className="text-red-400 mb-4">{error || companyError || 'No se pudo cargar la información de la empresa'}</p>
+              {!companyId && (
+                <p className="text-sm text-gray-300">Verifica que tu perfil de usuario tenga una empresa asignada.</p>
+              )}
+            </CardContent>
+          </Card>
+        )
+      )}
+
+      {activeTab === 'leaveTypes' && (
+        companyId && company ? (
+          <LeaveTypesSettings companyId={companyId} />
+        ) : (
+          <Card variant="glass" className="p-6">
+            <CardContent className="text-center">
+              <p className="text-red-400 mb-4">{error || companyError || 'No se pudo cargar la información de la empresa'}</p>
+              {!companyId && (
+                <p className="text-sm text-gray-300">Verifica que tu perfil de usuario tenga una empresa asignada.</p>
+              )}
+            </CardContent>
+          </Card>
+        )
+      )}
+
+      {activeTab === 'performance' && (
+        <div className="space-y-6">
+          <Card variant="glass" className="p-5 border border-white/15">
+            <h4 className="text-md font-medium text-white mb-1">Evaluación de desempeño</h4>
+            <p className="text-xs text-gray-400 mb-4">
+              Estos parámetros controlan validaciones al finalizar evaluaciones y el peso relativo de “Supera”.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-sm text-white font-medium">Exigir calificar todo para finalizar</div>
+                    <div className="text-xs text-gray-300">
+                      Si está activo, no se puede marcar como “Finalizada” si hay criterios sin rating.
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={perfSettings.performance_require_all_rated_to_complete}
+                    onChange={(e) =>
+                      setPerfSettings((s) => ({
+                        ...s,
+                        performance_require_all_rated_to_complete: e.target.checked,
+                      }))
+                    }
+                    className="h-4 w-4"
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-sm text-white font-medium">Exigir comentario cuando es “No cumple”</div>
+                    <div className="text-xs text-gray-300">
+                      Si está activo, al finalizar se requiere comentario en todos los ítems con rating “No cumple”.
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={perfSettings.performance_require_comment_on_no_cumple}
+                    onChange={(e) =>
+                      setPerfSettings((s) => ({
+                        ...s,
+                        performance_require_comment_on_no_cumple: e.target.checked,
+                      }))
+                    }
+                    className="h-4 w-4"
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-white/10 bg-white/5 p-4 md:col-span-2">
+                <div className="flex flex-col gap-2">
+                  <div className="text-sm text-white font-medium">Multiplicador de “Supera”</div>
+                  <div className="text-xs text-gray-300">
+                    Define cuánto pesa “Supera” comparado con “Cumple” (1.0). Rango recomendado 1.1–1.5.
+                  </div>
+                  <Input
+                    type="number"
+                    step="0.05"
+                    min="1"
+                    max="2"
+                    value={perfSettings.performance_supera_multiplier}
+                    onChange={(e) =>
+                      setPerfSettings((s) => ({
+                        ...s,
+                        performance_supera_multiplier: Number(e.target.value),
+                      }))
+                    }
+                    className="input-glass text-white placeholder:text-white/70 max-w-[220px]"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 flex items-center gap-3">
+              <Button
+                type="button"
+                onClick={() => void savePerformanceMetadata()}
+                disabled={perfSaving || !companyId}
+                className="bg-brand-600 hover:bg-brand-700 text-white"
+              >
+                {perfSaving ? 'Guardando…' : 'Guardar parámetros'}
+              </Button>
+              {perfMsg && <p className="text-xs text-gray-300">{perfMsg}</p>}
+            </div>
+          </Card>
+        </div>
       )}
 
     </div>

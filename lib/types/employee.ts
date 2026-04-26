@@ -11,6 +11,9 @@ export interface Employee {
   base_salary: number
   hire_date: string | null
   termination_date: string | null
+  /** Motivo de baja (códigos en lib/employees/termination-reasons). */
+  termination_reason_code?: string | null
+  termination_reason_detail?: string | null
   status: 'active' | 'inactive'
   bank_name: string | null
   bank_account: string | null
@@ -20,9 +23,9 @@ export interface Employee {
   metadata: Record<string, any> | null
   department_id: string | null
   work_schedule_id: string | null
+  payment_frequency: 'quincenal' | 'mensual' | 'semanal' | null
+  pay_type?: 'fixed' | 'hourly'
   employee_pin_hash: string | null
-  profile_image_path: string | null
-  profile_image_meta: Record<string, any> | null
   created_at: string
   updated_at: string
   
@@ -46,6 +49,8 @@ export interface Employee {
   attendance_records?: Array<{
     check_in?: string
     check_out?: string
+    lunch_start?: string
+    lunch_end?: string
     status?: string
   }>
 } 

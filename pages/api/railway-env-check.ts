@@ -1,9 +1,14 @@
 import { NextApiRequest, NextApiResponse } from 'next'
+import { isServerDiagnosticsEnabled } from '../../lib/server-diagnostics'
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
   // Only allow GET requests
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' })
+  }
+
+  if (!isServerDiagnosticsEnabled()) {
+    return res.status(404).json({ error: 'Not found' })
   }
 
   // Check Railway-specific environment variables

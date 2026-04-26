@@ -1,9 +1,10 @@
 import React, { createContext } from 'react'
 import { AppProps } from 'next/app'
-import Head from 'next/head'
+import { useRouter } from 'next/router'
 import { AuthProvider } from '../lib/auth'
 import { NotificationProvider } from '../components/NotificationProvider'
 import { SessionExpiryWarning } from '../components/SessionExpiryWarning'
+import { ToastContainer } from '../lib/toast'
 import '../styles/globals.css'
 import '../styles/landing.css'
 
@@ -16,18 +17,9 @@ if (typeof window === 'undefined') {
 // Create a context for Supabase client (using new SSR client)
 export const SupabaseContext = createContext<any>(null)
 
-// Simplified environment variable check
-function checkEnvironmentVariables() {
-  if (typeof window !== 'undefined') {
-    console.log('🔍 Client-side environment check:', {
-      NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ? '✅ Set' : '❌ Missing',
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '✅ Set' : '❌ Missing',
-    })
-  }
-}
-
 export default function App({ Component, pageProps }: AppProps) {
   const [isClient, setIsClient] = React.useState(false)
+  const router = useRouter()
 
   React.useEffect(() => {
     setIsClient(true)
@@ -47,22 +39,20 @@ export default function App({ Component, pageProps }: AppProps) {
       <AuthProvider>
         <NotificationProvider>
           <div className="min-h-screen bg-app">
-            <Head>
-              <title>Servicio Hondureño de Recursos Humanos | Digital & Automatizado</title>
-              <meta name="title" content="Servicio Hondureño de Recursos Humanos | Digital & Automatizado" />
-              <meta name="twitter:title" content="Servicio Hondureño de Recursos Humanos | Digital & Automatizado" />
-              <meta property="og:title" content="Servicio Hondureño de Recursos Humanos | Digital & Automatizado" />
-            </Head>
+            {/* Title tags are now handled by individual pages to avoid duplication */}
             <Component {...pageProps} />
             {/* Idle Timeout Warning - Shows at 80 minutes of inactivity */}
-            <SessionExpiryWarning 
-              onExpiry={() => {
-                // Redirect to login on session expiry
-                if (typeof window !== 'undefined') {
-                  window.location.href = '/app/login'
-                }
-              }} 
-            />
+            {router.pathname.startsWith('/app') && (
+              <SessionExpiryWarning
+                onExpiry={() => {
+                  // Redirect to login on session expiry
+                  if (typeof window !== 'undefined') {
+                    window.location.href = '/app/login'
+                  }
+                }}
+              />
+            )}
+            <ToastContainer />
           </div>
         </NotificationProvider>
       </AuthProvider>

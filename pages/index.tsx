@@ -1,222 +1,178 @@
 import Head from 'next/head'
-import Link from 'next/link'
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import DemoFooter from '../components/DemoFooter'
 import ServicesSection from '../components/ServicesSection'
 import HowItWorks from '../components/HowItWorks'
 import AWSCertificationsSection from '../components/AWSCertificationsSection'
 import LandingHero from '../components/LandingHero'
+import MainHeader from '../components/MainHeader'
 import dynamic from 'next/dynamic'
-import Image from 'next/image'
-import AffiliateProgramSection from '../components/AffiliateProgramSection'
+import MailListSection from '../components/MailListSection'
+import SchemaMarkup from '../components/SEO/SchemaMarkup'
+import { getPageTitle } from '../lib/seo/title'
+import { getPageDescription } from '../lib/seo/description'
+import { generateOrganizationSchema, generateWebSiteSchema, generateWebPageSchema, generateReviewSchema } from '../lib/seo/schema'
+import { initGoogleAdsTracking } from '../lib/analytics/googleAds'
 
 const CloudBackground = dynamic(() => import('../components/CloudBackground'), { ssr: false })
 
 export default function LandingPage() {
-  const [isScrolled, setIsScrolled] = useState(false)
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-
   useEffect(() => {
-    const handleScroll = () => {
-      const scrollTop = window.scrollY
-      setIsScrolled(scrollTop > 50)
+    // Initialize Google Ads tracking (UTM parameters)
+    initGoogleAdsTracking()
+
+    // Manejar scroll automático cuando se navega con hash
+    const handleHashScroll = () => {
+      if (window.location.hash) {
+        const hash = window.location.hash
+        const element = document.querySelector(hash)
+        if (element) {
+          setTimeout(() => {
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          }, 100)
+        }
+      }
     }
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
+
+    // Ejecutar al montar el componente
+    handleHashScroll()
+
+    // También escuchar cambios en el hash
+    window.addEventListener('hashchange', handleHashScroll)
+    return () => window.removeEventListener('hashchange', handleHashScroll)
   }, [])
 
-  const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    e.preventDefault()
-    const href = e.currentTarget.getAttribute('href')
-    if (href && href.startsWith('#')) {
-      const element = document.querySelector(href)
-      if (element) element.scrollIntoView({ behavior: 'smooth' })
-    }
-  }
+  const pageTitle = getPageTitle('home')
+  const pageDescription = getPageDescription('home')
+  // TODO: Replace with optimized 1200x630px image when available
+  const ogImage = '/og-image.png' // Fallback to logo if og-image.png doesn't exist yet
+
+  // Generate Schema.org JSON-LD
+  const organizationSchema = generateOrganizationSchema()
+  const webSiteSchema = generateWebSiteSchema()
+  const webPageSchema = generateWebPageSchema({
+    url: '/',
+    title: pageTitle,
+    description: pageDescription,
+    image: ogImage
+  })
 
   return (
-    <div className="min-h-screen bg-app pt-20 relative">
+    <div className="min-h-screen bg-app pt-16 sm:pt-20 md:pt-24 relative">
       <Head>
-        <title>Servicio Hondureño de Recursos Humanos | Digital & Automatizado</title>
+        <title>{pageTitle}</title>
         <link rel="icon" href="/logo-humano-sisu.png" />
-        <meta
-          name="description"
-          content="RH en automático y digital: asistencia, nómina con deducciones IHSS, RAP, ISR exactas, comprobantes de pago enviados directo a tus empleados."
-        />
-        <meta name="keywords" content="planilla Honduras, IHSS, RAP, ISR, automatización RH, STSS, Humano SISU, innovación" />
+        <meta name="description" content={pageDescription} />
+        <meta name="keywords" content="planilla El Salvador Guatemala Honduras, IHSS, RAP, ISR, automatización RH, STSS, Humano SISU, nómina automatizada" />
         <meta name="author" content="Humano SISU" />
         <meta name="robots" content="index, follow" />
-        <meta property="og:title" content="Servicio Hondureño de Recursos Humanos | Digital & Automatizado" />
-        <meta property="og:description" content="RH en automático y digital: asistencia, nómina con deducciones IHSS, RAP, ISR exactas, comprobantes de pago enviados directo a tus empleados." />
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={pageDescription} />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://humano-sisu.com" />
-        <meta property="og:image" content="/logo-humano-sisu.png" />
+        <meta property="og:url" content="https://humanosisu.net" />
+        <meta property="og:image" content={`https://humanosisu.net${ogImage}`} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Servicio Hondureño de Recursos Humanos | Digital & Automatizado" />
-        <meta name="twitter:description" content="RH en automático y digital: asistencia, nómina con deducciones IHSS, RAP, ISR exactas, comprobantes de pago enviados directo a tus empleados." />
-        <link rel="canonical" href="https://humano-sisu.com" />
+        <meta name="twitter:title" content={pageTitle} />
+        <meta name="twitter:description" content={pageDescription} />
+        <meta name="twitter:image" content={`https://humanosisu.net${ogImage}`} />
+        <link rel="canonical" href="https://humanosisu.net" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
       </Head>
+      
+      {/* Schema.org JSON-LD */}
+      <SchemaMarkup schema={[organizationSchema, webSiteSchema, webPageSchema]} />
 
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50">
-        {/* Fixed Header with Glass Effect */}
-        <div
-          className={`w-full transition-all duration-300 ${
-            isScrolled 
-              ? 'bg-slate-900/90 backdrop-blur-sm border-b border-white/20 shadow-lg' 
-              : 'bg-transparent border-b border-white/10'
-          }`}
-        >
-          <nav className="px-6 lg:px-8">
-            <div className="flex items-center h-16">
-              {/* Logo SISU */}
-              <div className="flex items-center">
-                <div className="bg-white/10 px-6 py-4 rounded-lg border border-white/20 backdrop-blur-sm">
-                  <Image
-                    src="/logo-humano-sisu.png"
-                    alt="Humano SISU Logo"
-                    width={128}
-                    height={128}
-                    className="rounded-lg"
-                  />
-                </div>
-              </div>
-              
-              {/* Título - Removido para mover al hero */}
-
-              <div className="hidden md:block ml-auto">
-                <div className="ml-6 flex items-center space-x-4">
-                  <a
-                    href="#como-funciona"
-                    className="text-brand-200 hover:text-white px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap"
-                    onClick={scrollToSection}
-                  >
-                    Cómo funciona
-                  </a>
-                  <a
-                    href="#servicios"
-                    className="text-brand-200 hover:text-white px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap"
-                    onClick={scrollToSection}
-                  >
-                    Servicios
-                  </a>
-                  <Link
-                    href="/afiliados"
-                    className="text-brand-200 hover:text-white px-3 py-2 rounded-full text-sm font-medium transition-all duration-300 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap"
-                  >
-                    Programa de Afiliados
-                  </Link>
-                  <button
-                    onClick={() => window.location.href = '/activar'}
-                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 shadow-lg shadow-black/20 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap min-w-[160px] text-center"
-                  >
-                    Activar demostración gratuita
-                  </button>
-                  <Link
-                    href="/app/login"
-                    className="bg-brand-600 hover:bg-brand-700 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 shadow-lg shadow-black/20 hover:-translate-y-0.5 active:translate-y-0 whitespace-nowrap min-w-[140px] text-center"
-                  >
-                    Iniciar sesión
-                  </Link>
-                </div>
-              </div>
-
-              {/* Mobile menu button */}
-              <div className="md:hidden">
-                <button
-                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                  className="glass inline-flex items-center justify-center p-2 rounded-md text-brand-200 hover:text-white hover:bg-brand-700/20 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
-                >
-                  <span className="sr-only">Open main menu</span>
-                  {isMobileMenuOpen ? (
-                    <svg className="block h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  ) : (
-                    <svg className="block h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                    </svg>
-                  )}
-                </button>
-              </div>
-            </div>
-          </nav>
-        </div>
-
-        {/* Mobile menu */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {isMobileMenuOpen && (
-            <div className="md:hidden">
-              <div className="px-2 pt-2 pb-3 space-y-1 glass-strong rounded-lg shadow-lg mt-2">
-                
-                <a
-                  href="#como-funciona"
-                  className="block px-3 py-2 text-base font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Cómo funciona
-                </a>
-                <a
-                  href="#servicios"
-                  className="block px-3 py-2 text-base font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Servicios
-                </a>
-                <Link
-                  href="/afiliados"
-                  className="block px-3 py-2 text-base font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Programa de Afiliados
-                </Link>
-                <button
-                  onClick={() => {
-                    setIsMobileMenuOpen(false)
-                    window.location.href = '/activar'
-                  }}
-                  className="bg-green-600 hover:bg-green-700 text-white w-full text-center block py-2 px-4 rounded-lg transition-colors mb-2"
-                >
-                  Activar demostración gratuita
-                </button>
-                <Link
-                  href="/app/login"
-                  className="bg-brand-900 hover:bg-brand-800 text-white w-full text-center block py-2 px-4 rounded-lg transition-colors"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Iniciar sesión
-                </Link>
-              </div>
-            </div>
-          )}
-        </div>
-      </header>
+      <MainHeader enableScrollEffect={true} fixed={true} />
 
       {/* Main Hero - LandingHero enfocado en conversión */}
-      <section className="py-8 relative overflow-hidden">
+      <section className="py-4 sm:py-6 md:py-8 relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Trust badges */}
-          <div className="flex flex-wrap justify-center gap-3 md:gap-6 mb-8 animate-fade-up-subtle">
-            <span className="text-sm bg-green-500/10 text-green-400 px-3 py-1 rounded-full border border-green-500/20 hover:bg-green-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-100">Cumplí STSS Honduras</span>
-            <span className="text-sm bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full border border-blue-500/20 hover:bg-blue-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-200">Setup en 5 minutos</span>
-            <span className="text-sm bg-purple-500/10 text-purple-400 px-3 py-1 rounded-full border border-purple-500/20 hover:bg-purple-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-300">30 días gratis</span>
-            <span className="text-sm bg-orange-500/10 text-orange-400 px-3 py-1 rounded-full border border-orange-500/20 hover:bg-orange-500/20 transition-all duration-300 hover:-translate-y-0.5 animate-delay-400">Empleados ilimitados</span>
+          <div className="flex flex-wrap justify-center gap-2 sm:gap-3 md:gap-6 mb-6 sm:mb-8 animate-fade-up-subtle">
+            <span className="px-3 py-1 bg-green-500/20 text-green-300 text-xs rounded-full border border-green-500/30">
+              ✅ Adaptado a leyes de CA (HN, SV, GT)
+            </span>
+            <span className="px-3 py-1 bg-blue-500/20 text-blue-300 text-xs rounded-full border border-blue-500/30">
+              ⚡ Implementación rápida
+            </span>
+            <span className="px-3 py-1 bg-purple-500/20 text-purple-300 text-xs rounded-full border border-purple-500/30">
+              🤝 Soporte local
+            </span>
           </div>
 
-          {/* Hero Title - Centrado */}
-          <div className="text-center mb-8">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight">
-              <span className="text-white">Recursos Humanos 100% digital y automático</span>
-              <span className="hidden sm:inline"> </span>
-              <span className="text-brand-300">activa, cumple y olvídate de las tareas repetitivas para siempre</span>
+          {/* Hero Title - Opción A (Paz Mental) */}
+          <div className="text-center mb-6 sm:mb-8 px-2">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight sm:leading-tight">
+              <span className="text-white block sm:inline">Gestión de Capital Humano 100% Automatizada:</span>
+              <span className="text-brand-300 block text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl mt-2 sm:mt-1">Dejá el Excel y eliminá los errores en tu nómina.</span>
             </h1>
+            <p className="text-lg sm:text-xl text-brand-200/90 max-w-3xl mx-auto mt-4 sm:mt-6">
+              El cerebro digital que integra biometría y software. Detén la fuga silenciosa de tiempo y automatiza tus deducciones legales, para que tu equipo deje de hacer trabajo manual y se enfoque en hacer crecer la empresa.
+            </p>
           </div>
 
           {/* LandingHero Section - Reemplaza completamente al carrusel */}
           <div className="text-center max-w-6xl mx-auto mb-6">
             <LandingHero />
+          </div>
+        </div>
+      </section>
+
+      {/* Social Proof Section */}
+      <section id="prueba-social" className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 max-w-7xl mx-auto">
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-center text-white leading-tight sm:leading-tight mb-6 sm:mb-8 px-2 max-w-5xl mx-auto">
+            <span className="text-white block sm:inline">Lo dicen nuestros clientes: </span>
+            <span className="text-brand-300 block sm:inline mt-1 sm:mt-0">la verdadera ventaja es conectar la biometría directamente con la nómina</span>
+          </h2>
+
+          <div className="grid md:grid-cols-3 gap-6 sm:gap-8">
+            {[
+              { name: 'Felix Garcia', company: 'Tony\'s Mar Restaurant', employees: '40 empleados', quote: 'Ya no pierdo domingos haciendo planilla. 4 horas ahora son 4 minutos.', rating: 5 },
+              { name: 'Nancy Urrutia', company: 'PROHALCA', employees: '37 empleados', quote: 'Habiamos contratado un sistema de asistencia que no hacia planilla, ahora tenemos dashboard interactivo.', rating: 5 },
+              { name: 'Abogado Marcio Moya', company: '', employees: '15 empleados', quote: 'Cero errores en deducciones desde que lo uso. Mis clientes están felices.', rating: 5 }
+            ].map((testimonial, i) => {
+              const reviewSchema = generateReviewSchema({
+                productName: 'Humano SISU',
+                authorName: testimonial.name,
+                rating: testimonial.rating,
+                reviewText: testimonial.quote
+              })
+              return (
+                <div key={`testimonial-${i}`}>
+                  <SchemaMarkup schema={reviewSchema} />
+                  <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-12 h-12 bg-brand-500 rounded-full flex items-center justify-center text-white font-bold">
+                        {testimonial.name[0]}
+                      </div>
+                      <div>
+                        <p className="text-white font-medium">{testimonial.name}</p>
+                        <p className="text-brand-200/80 text-sm">{testimonial.company}</p>
+                      </div>
+                    </div>
+                    <div className="mb-2">
+                      {[...Array(5)].map((_, idx) => (
+                        <span
+                          key={idx}
+                          className={`text-lg ${idx < testimonial.rating ? 'text-yellow-400' : 'text-gray-600'}`}
+                        >
+                          ★
+                        </span>
+                      ))}
+                    </div>
+                    <blockquote className="text-brand-200/90 italic mb-4">&ldquo;{testimonial.quote}&rdquo;</blockquote>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-brand-400">{testimonial.employees}</span>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </div>
       </section>
@@ -229,68 +185,14 @@ export default function LandingPage() {
         <ServicesSection />
       </div>
 
-      {/* Affiliate Program Section */}
-      <AffiliateProgramSection />
-
       {/* AWS Certifications Section */}
       <AWSCertificationsSection />
 
-      {/* Social Proof Section - Comentada temporalmente */}
-      {/* <section id="servicios" className="py-16 bg-white/5">
-        <div className="max-w-6xl mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center text-white mb-12">
-            Empresas que ya automatizaron su RH
-          </h2>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              { name: 'Felix Garcia', company: 'Tony\'s Mar Restaurant', employees: '40 empleados', quote: 'Ya no pierdo domingos haciendo planilla. 4 horas ahora son 4 minutos.' },
-              { name: 'Gustavo Argueta', company: 'Humano SISU', employees: '37 empleados', quote: 'Antes llevábamos la asistencia en un libro rojo, ahora tenemos dashboard interactivo.' },
-              { name: 'Luis Diego Maradiaga', company: 'AFI & Asociados', employees: '15 empleados', quote: 'Cero errores en IHSS desde que lo uso. Mi contador está feliz.' }
-            ].map((testimonial, i) => (
-              <div key={`testimonial-${i}`} className="bg-white/5 border border-white/10 rounded-xl p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 bg-brand-500 rounded-full flex items-center justify-center text-white font-bold">
-                    {testimonial.name[0]}
-                  </div>
-                  <div>
-                    <p className="text-white font-medium">{testimonial.name}</p>
-                    <p className="text-brand-200/80 text-sm">{testimonial.company}</p>
-                  </div>
-                </div>
-                <blockquote className="text-brand-200/90 italic mb-4">&ldquo;{testimonial.quote}&rdquo;</blockquote>
-                <div className="flex justify-between text-sm">
-                  <span className="text-brand-400">{testimonial.employees}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section> */}
+      {/* Mail List Subscription Section */}
+      <MailListSection />
 
       {/* Shared Cloud Background */}
       <CloudBackground />
-
-      {/* Footer */}
-      <footer className="border-t border-white/10 mt-20">
-        <div className="max-w-6xl mx-auto px-4 py-12">
-          <div className="text-center">
-            <p className="text-slate-400 mb-4">
-              Protegemos tu información. <strong>Solo será utilizada para contactarte</strong>.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center text-sm">
-              <Link 
-                href="/politicadeprivacidad" 
-                className="text-brand-300 hover:text-brand-400 transition-colors underline decoration-brand-400/30 hover:decoration-brand-400"
-              >
-                Política de Privacidad
-              </Link>
-              <span className="text-slate-500">•</span>
-              <span className="text-slate-500">© 2025 Humano SISU. Todos los derechos reservados.</span>
-            </div>
-          </div>
-        </div>
-      </footer>
 
       <DemoFooter />
     </div>

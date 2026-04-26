@@ -16,6 +16,12 @@ export type PlanillaRow = {
   late_days: number;
   department?: string;
   line_id?: string;
+  pay_type?: 'fixed' | 'hourly';
+  /** Horas extra (AHC diurno+nocturno+feriado) en el período — informativo en preview fijo */
+  horas_extras?: number;
+  // Campos específicos para hourly
+  total_hours_worked?: number;
+  hourly_rate?: number;
 };
 
 export type DetalleRow = {
@@ -51,7 +57,7 @@ export async function fetchUnifiedPayroll(
   month: number, 
   quincena: number,
   tipo: string = 'CON'
-): Promise<{ rows: UnifiedRow[]; resumen: UnifiedResumen; runId?: string; status?: string }> {
+): Promise<{ rows: UnifiedRow[]; resumen: UnifiedResumen; runId?: string; status?: string; incompleteRecordsAlert?: { employee_id: string; employee_name: string; dates: string[] }[] }> {
   // Validate input parameters
   if (!companyId || !year || !month || !quincena) {
     throw new Error('Parámetros requeridos faltantes')
@@ -75,10 +81,18 @@ export async function fetchUnifiedPayroll(
 
     const planillaData = await planillaRes.json();
     
-    // Extract the actual array from the API response
-    const planilla: PlanillaRow[] = Array.isArray(planillaData.planilla) ? planillaData.planilla : [];
+    // Extract separated arrays from API response (new format)
+    const planilla_fixed: PlanillaRow[] = Array.isArray(planillaData.planilla_fixed) ? planillaData.planilla_fixed : [];
+    const planilla_hourly: PlanillaRow[] = Array.isArray(planillaData.planilla_hourly) ? planillaData.planilla_hourly : [];
+    
+    // Fallback to combined planilla for backward compatibility
+    const planilla: PlanillaRow[] = planilla_fixed.length > 0 || planilla_hourly.length > 0
+      ? [...planilla_fixed, ...planilla_hourly]
+      : (Array.isArray(planillaData.planilla) ? planillaData.planilla : []);
     
     console.log('📊 Payroll data loaded:', {
+      planillaFixedCount: planilla_fixed.length,
+      planillaHourlyCount: planilla_hourly.length,
       planillaCount: planilla.length,
       planillaDataKeys: Object.keys(planillaData)
     });
@@ -86,13 +100,18 @@ export async function fetchUnifiedPayroll(
     console.log('🔍 DEBUG - Planilla data sample:', planilla.slice(0, 3));
 
     // Convert planilla data to unified format (base rows without metadata)
-    let rows: UnifiedRow[] = planilla.map(p => ({
-      ...p,
-      horas_trabajadas: 0,
-      extras: { horas: 0, monto: 0 },
-      observaciones: '',
-      status: 'completo' as const
-    }));
+    let rows: UnifiedRow[] = planilla.map((p) => {
+      const hx = Number((p as any).horas_extras)
+      const extrasHoras = Number.isFinite(hx) ? hx : 0
+      return {
+        ...p,
+        horas_trabajadas: (p as any).total_hours_worked || 0, // Para hourly, usar horas trabajadas
+        extras: { horas: extrasHoras, monto: 0 },
+        observaciones: '',
+        status: 'completo' as const,
+        pay_type: (p as any).pay_type || 'fixed', // Incluir pay_type
+      }
+    })
 
     // If we have a run_id, fetch run lines to enrich rows with metadata
     if (planillaData.run_id) {
@@ -110,9 +129,14 @@ export async function fetchUnifiedPayroll(
 
           // Merge metadata and effective values into rows
           rows = rows.map((r) => {
-            const line = (r as any).line_id ? byLineId[(r as any).line_id as string] : byEmployee[r.employee_id]
+            const lid = (r as any).line_id as string | undefined
+            const line =
+              (lid && byLineId[lid]) || byEmployee[r.employee_id]
             if (line) {
-              // Use effective values from database if available (they override preview values)
+              const effBruto = Number(line.eff_bruto) || Number(r.total_earnings) || 0
+              const effNeto = Number(line.eff_neto) ?? r.total
+              // total_deducciones = bruto - neto (incluye IHSS, RAP, ISR + deducciones de planes)
+              const totalDeducciones = effBruto - (effNeto ?? 0)
               return { 
                 ...r, 
                 ...(line.metadata ? { metadata: line.metadata } : {}),
@@ -123,10 +147,7 @@ export async function fetchUnifiedPayroll(
                 ...(line.eff_isr !== undefined ? { ISR: Number(line.eff_isr) } : {}),
                 ...(line.eff_hours !== undefined ? { days_worked: Number(line.eff_hours) } : {}),
                 ...(line.edited !== undefined ? { edited: line.edited } : {}),
-                // Recalculate total_deducciones with effective values
-                total_deducciones: (Number(line.eff_ihss) || r.IHSS || 0) + 
-                                  (Number(line.eff_rap) || r.RAP || 0) + 
-                                  (Number(line.eff_isr) || r.ISR || 0)
+                total_deducciones: Math.round(Math.max(0, totalDeducciones) * 100) / 100
               } as any
             }
             return r
@@ -161,7 +182,7 @@ export async function fetchUnifiedPayroll(
     } as UnifiedResumen);
 
     // Incluir run_id y status si están disponibles en la respuesta
-    const result: { rows: UnifiedRow[]; resumen: UnifiedResumen; runId?: string; status?: string } = { rows, resumen };
+    const result: { rows: UnifiedRow[]; resumen: UnifiedResumen; runId?: string; status?: string; incompleteRecordsAlert?: { employee_id: string; employee_name: string; dates: string[] }[] } = { rows, resumen };
     
     if (planillaData.run_id) {
       result.runId = planillaData.run_id;
@@ -171,6 +192,10 @@ export async function fetchUnifiedPayroll(
     if (planillaData.status) {
       result.status = planillaData.status;
       console.log('🔍 DEBUG - Status included in result:', planillaData.status);
+    }
+
+    if (planillaData.incompleteRecordsAlert && planillaData.incompleteRecordsAlert.length > 0) {
+      result.incompleteRecordsAlert = planillaData.incompleteRecordsAlert;
     }
 
     return result;

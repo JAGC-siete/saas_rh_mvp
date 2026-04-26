@@ -9,6 +9,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../lib/supabase/server'
 import { logger } from '../../../lib/logger'
+import { env } from '../../../lib/env'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -16,6 +17,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    if (!env.NEXT_PUBLIC_SUPABASE_URL || !env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      return res.status(503).json({
+        error: 'Service Unavailable',
+        message: 'Configuración incompleta: Supabase no está configurado en este entorno.',
+      })
+    }
+
     const supabase = createClient(req, res)
     
     // Get current user

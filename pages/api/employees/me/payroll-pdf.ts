@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireUser } from '../../../../lib/auth/requireUser'
 import { generateEmployeeReceiptPDF } from '../../../../lib/payroll/receipt'
+import { calculatePeriodBaseSalary, normalizeFrequency } from '../../../../lib/payroll/calculate-period-base-salary'
+import { assertEmployeePortalEnabled } from '../../../../lib/employee-portal/company-settings'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -18,6 +20,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
+    if (!(await assertEmployeePortalEnabled(supabase, userProfile.company_id, res))) {
+      return
+    }
+
     const { periodo, quincena } = req.body
 
     if (!periodo || !/^[0-9]{4}-[0-9]{2}$/.test(periodo)) {
@@ -33,7 +39,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const fechaInicio = Number(quincena) === 1 ? `${periodo}-01` : `${periodo}-16`
     const fechaFin = Number(quincena) === 1 ? `${periodo}-15` : `${periodo}-${ultimoDia}`
 
-    // Buscar el registro de nómina del empleado
+    // Buscar el registro de nómina del empleado (incluir pay_type para cálculo correcto)
     const { data: record, error } = await supabase
       .from('payroll_records')
       .select(`
@@ -42,10 +48,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           name,
           employee_code,
           department,
-          position,
+          role,
           bank_name,
           bank_account,
-          company_id
+          company_id,
+          pay_type,
+          payment_frequency
         )
       `)
       .eq('employee_id', employeeId)
@@ -68,16 +76,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
+    // Calcular salario base del período (sin hardcodear /2)
+    const frequency = normalizeFrequency(
+      (record as { period_type?: string })?.period_type ??
+      (record.employees as { payment_frequency?: string })?.payment_frequency
+    )
+    const hoursWorked =
+      Number((record.metadata as Record<string, unknown>)?.hours_worked) ??
+      Number((record.metadata as Record<string, unknown>)?.total_hours_worked) ??
+      0
+    const periodBaseSalary = calculatePeriodBaseSalary(
+      {
+        base_salary: Number(record.base_salary) || 0,
+        pay_type: (record.employees as { pay_type?: string })?.pay_type as 'fixed' | 'hourly' | undefined
+      },
+      frequency,
+      { hoursWorked, metadata: record.metadata as Record<string, unknown> }
+    )
+
+    const septimoDia = Number((record as { seventh_day_pay?: number })?.seventh_day_pay) || Number((record.metadata as Record<string, unknown>)?.septimo_dia) || 0
+    const grossTotal = Number(record.gross_salary) || 0
+    const baseForReceipt = septimoDia > 0 ? grossTotal - septimoDia : (periodBaseSalary || grossTotal)
+
     // Generar PDF del recibo individual
     const pdf = await generateEmployeeReceiptPDF({
       employee_code: record.employees?.employee_code,
       employee_name: record.employees?.name,
       department: record.employees?.department,
-      position: record.employees?.position,
+      position: (record.employees as { role?: string | null })?.role ?? undefined,
       period_start: record.period_start,
       period_end: record.period_end,
       days_worked: Number(record.days_worked) || 0,
-      base_salary: Number(record.base_salary) / 2 || 0, // Dividir por 2 para quincenal
+      base_salary: baseForReceipt,
+      septimo_dia: septimoDia > 0 ? septimoDia : undefined,
       income_tax: Number(record.income_tax) || 0,
       professional_tax: Number(record.professional_tax) || 0,
       social_security: Number(record.social_security) || 0,

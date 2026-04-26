@@ -1,3 +1,4 @@
+import { ChartBarIcon } from '@heroicons/react/24/outline'
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts'
 
 interface KpiBarsChartProps {
@@ -9,12 +10,13 @@ interface KpiBarsChartProps {
     total_empleados?: number
   }
   loading?: boolean
+  /** Etiqueta del eje X (ej. período filtrado), evita mostrar "Hoy" cuando el preset es otro. */
+  barLabel?: string
 }
 
-export default function KpiBarsChart({ kpis, loading = false }: KpiBarsChartProps) {
-  // Preparar datos para el gráfico de barras apiladas
+export default function KpiBarsChart({ kpis, loading = false, barLabel = 'Período' }: KpiBarsChartProps) {
   const chartData = [{
-    name: 'Hoy',
+    name: barLabel,
     presentes: kpis.presentes || 0,
     tardes: kpis.tardes || 0,
     ausentes: kpis.ausentes || 0,
@@ -32,8 +34,8 @@ export default function KpiBarsChart({ kpis, loading = false }: KpiBarsChartProp
   if (chartData[0].total === 0) {
     return (
       <div className="h-[220px] bg-gradient-to-br from-white/5 to-white/0 rounded-xl border border-white/10 backdrop-blur-sm flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-4xl mb-3">📊</div>
+        <div className="text-center px-4">
+          <ChartBarIcon className="h-12 w-12 mx-auto text-gray-600 mb-3" aria-hidden />
           <div className="text-gray-400 mb-2 font-medium">Sin datos de asistencia</div>
           <div className="text-sm text-gray-500">No hay registros disponibles</div>
         </div>
@@ -43,7 +45,7 @@ export default function KpiBarsChart({ kpis, loading = false }: KpiBarsChartProp
 
   return (
     <div className="h-[220px] w-full bg-gradient-to-br from-white/5 to-white/0 rounded-xl p-4">
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height={220} minHeight={220}>
         <BarChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
           <XAxis 
@@ -60,14 +62,14 @@ export default function KpiBarsChart({ kpis, loading = false }: KpiBarsChartProp
             axisLine={false}
           />
           <Tooltip 
-            formatter={
-              ((value: number | string | undefined, _name: string | undefined, entry: any) => {
-                const key = entry && entry.dataKey ? String(entry.dataKey) : ''
-                const label = key === 'presentes' ? 'Presentes' : key === 'tardes' ? 'Tardes' : 'Ausentes'
-                const safeValue = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : 0
-                return [safeValue, label]
-              }) as any
-            }
+            formatter={(value: any, _name: any, entry: any) => {
+              // In Recharts, Tooltip formatter's 'name' can be the display name (e.g. 'Presentes').
+              // Use the dataKey from entry to map labels reliably and avoid mismatches.
+              const numValue = typeof value === 'number' ? value : 0
+              const key = entry && entry.dataKey ? String(entry.dataKey) : ''
+              const label = key === 'presentes' ? 'Presentes' : key === 'tardes' ? 'Tardes' : 'Ausentes'
+              return [numValue, label]
+            }}
             labelFormatter={() => 'Distribución de asistencia'}
             contentStyle={{
               backgroundColor: '#1F2937',

@@ -51,6 +51,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         eff_isr,
         eff_neto,
         eff_hours,
+        seventh_day_pay,
         metadata,
         employees:employee_id (
           name,
@@ -154,13 +155,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const statutoryDeductions = (lineData.eff_ihss || 0) + (lineData.eff_rap || 0) + (lineData.eff_isr || 0)
     const totalDeductions = statutoryDeductions + customDeductions
 
+    const septimoDia = Number(lineData.seventh_day_pay) || Number((lineData.metadata as Record<string, unknown>)?.septimo_dia) || 0
+    const brutoTotal = Number(lineData.eff_bruto) || 0
+    const baseSalaryForReceipt = septimoDia > 0 ? brutoTotal - septimoDia : brutoTotal
+
     console.log('✅ Voucher data prepared:', {
       employee: employee.name,
       periodo,
       quincena: run.quincena,
       neto: lineData.eff_neto,
       customDeductions,
-      totalDeductions
+      totalDeductions,
+      septimoDia: septimoDia > 0 ? septimoDia : undefined
     })
 
     // Generate PDF
@@ -172,7 +178,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       period_start: fechaInicio,
       period_end: fechaFin,
       days_worked: Math.floor(lineData.eff_hours || 0),
-      base_salary: lineData.eff_bruto || 0,
+      base_salary: baseSalaryForReceipt,
+      septimo_dia: septimoDia > 0 ? septimoDia : undefined,
       income_tax: lineData.eff_isr || 0,
       professional_tax: lineData.eff_rap || 0,
       social_security: lineData.eff_ihss || 0,
@@ -181,7 +188,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       bank_name: employee.bank_name || '',
       bank_account: employee.bank_account || '',
       custom_deductions: customDeductionsList
-    }, periodo, run.quincena, companyId, company?.name)
+    }, periodo, run.quincena, companyId, company?.name, `Quincena ${run.quincena}`)
 
     console.log('✅ Voucher PDF generated for:', employee.name)
 

@@ -1,5 +1,14 @@
+import type { GetServerSideProps } from 'next'
 import { useEffect, useState } from 'react'
 import { env } from '../lib/env'
+import { isServerDiagnosticsEnabled } from '../lib/server-diagnostics'
+
+export const getServerSideProps: GetServerSideProps = async () => {
+  if (!isServerDiagnosticsEnabled()) {
+    return { notFound: true }
+  }
+  return { props: {} }
+}
 
 export default function DebugEnv() {
   const [clientEnv, setClientEnv] = useState<any>({})

@@ -3,13 +3,13 @@ import { Button } from './ui/button'
 
 export default function AffiliateProgramSection() {
   return (
-    <section className="py-12 bg-gray-800">
-      <div className="container mx-auto px-4 text-center">
-        <h2 className="text-3xl font-bold text-white mb-4">
-          Gana Dinero con Humano SISU
+    <section className="py-12 sm:py-16 md:py-20 bg-gray-800">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 sm:mb-6 px-2">
+          Un programa para quien entiende el problema.
         </h2>
-        <p className="text-lg text-gray-300 mb-6 max-w-2xl mx-auto">
-          ¿Conoces empresas que podrían beneficiarse de nuestra plataforma? Únete a nuestro programa de afiliados y obtén comisiones por cada cliente que refieras.
+        <p className="text-base sm:text-lg md:text-xl text-gray-300 mb-6 sm:mb-8 max-w-2xl mx-auto px-2">
+          Si ves empresas desperdiciando talento en trabajo manual, guiálas hacia SISU. Resultado: ellos ganan tiempo; vos ganás dinero.
         </p>
         <Button asChild>
           <Link href="/afiliados">Conocer Más</Link>

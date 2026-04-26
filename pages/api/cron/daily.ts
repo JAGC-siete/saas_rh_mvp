@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient } from '../../../lib/supabase/server'
 import { sendTrialReminderEmail } from '../../../lib/emails/trial-reminder'
+import { calculateAttendanceHoursForDate } from '../../../lib/attendance/calculate-hours'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Verify this is a CRON request
@@ -29,6 +30,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // 3. Clean up expired invites
     await cleanupExpiredInvites(supabase, now)
+
+    // 4. Calculate attendance hours for yesterday (end of day batch)
+    await calculateDailyAttendanceHours(supabase, now)
 
     console.log('✅ Daily CRON job completed successfully')
 
@@ -148,5 +152,21 @@ async function cleanupExpiredInvites(supabase: any, now: Date) {
     console.error('Error cleaning up expired invites:', error)
   } else {
     console.log('✅ Cleaned up expired invites')
+  }
+}
+
+async function calculateDailyAttendanceHours(supabase: any, now: Date) {
+  console.log('📊 Calculating daily attendance hours...')
+
+  // Process yesterday's records (cron runs at end of day, records are complete)
+  const yesterday = new Date(now)
+  yesterday.setDate(yesterday.getDate() - 1)
+  const dateStr = yesterday.toISOString().split('T')[0]
+
+  try {
+    const count = await calculateAttendanceHoursForDate(dateStr, supabase)
+    console.log(`✅ Calculated attendance hours for ${count} records (${dateStr})`)
+  } catch (err) {
+    console.error('Error calculating attendance hours:', err)
   }
 }

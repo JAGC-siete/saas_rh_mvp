@@ -8,6 +8,33 @@ interface NotificationToastProps {
   onRemove: (id: string) => void
 }
 
+function formatToastMessage(input: unknown): string {
+  if (typeof input === 'string') {
+    const trimmed = input.trim()
+    if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(trimmed) as any
+        if (parsed && typeof parsed === 'object') {
+          const candidates = [parsed.message, parsed.error, parsed.details, parsed.hint].filter(
+            (v) => typeof v === 'string' && v.trim().length > 0
+          ) as string[]
+          if (candidates.length > 0) return candidates.join('\n')
+        }
+      } catch {
+        // fall through: keep original string
+      }
+    }
+    return input
+  }
+
+  if (input instanceof Error) return input.message
+  try {
+    return JSON.stringify(input, null, 2)
+  } catch {
+    return String(input)
+  }
+}
+
 const iconMap = {
   success: CheckCircleIcon,
   error: ExclamationTriangleIcon,
@@ -25,9 +52,12 @@ const colorMap = {
 export default function NotificationToast({ notification, onRemove }: NotificationToastProps) {
   const Icon = iconMap[notification.type]
   const colorClass = colorMap[notification.type]
+  const message = formatToastMessage(notification.message)
 
   return (
-    <div className={`max-w-sm w-full shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden ${colorClass}`}>
+    <div
+      className={`w-[min(24rem,calc(100vw-2rem))] shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden ${colorClass}`}
+    >
       <div className="p-4">
         <div className="flex items-start">
           <div className="flex-shrink-0">
@@ -37,8 +67,8 @@ export default function NotificationToast({ notification, onRemove }: Notificati
             <p className="text-sm font-medium">
               {notification.title}
             </p>
-            <p className="mt-1 text-sm opacity-90">
-              {notification.message}
+            <p className="mt-1 text-sm opacity-90 whitespace-pre-wrap break-words max-h-32 overflow-auto">
+              {message}
             </p>
           </div>
           <div className="ml-4 flex-shrink-0 flex">

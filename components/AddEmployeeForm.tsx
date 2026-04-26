@@ -3,6 +3,9 @@ import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Textarea } from './ui/textarea'
+import EmployeeFileUpload from './EmployeeFileUpload'
+import { HONDURAS_LABOR_FACTOR } from '../lib/payroll/constants'
+import { TERMINATION_REASON_OPTIONS } from '../lib/employees/termination-reasons'
 
 interface Department {
   id: string
@@ -23,15 +26,9 @@ interface AddEmployeeFormProps {
   workSchedules: WorkSchedule[]
   loading: boolean
   isEditing?: boolean
-  profileImagePreview?: string | null
-  profileImageUploading?: boolean
-  profileImageError?: string | null
-  onProfileImageChange?: (file: File | null) => void
-  onProfileImageRemove?: () => void
-  onToggleProfileImage?: () => void
-  canRemoveProfileImage?: boolean
-  existingProfileImageUrl?: string | null
-  isProfileImageMarkedForRemoval?: boolean
+  employeeId?: string // Required for file upload
+  onProfileImageUploaded?: (fileId: string, storagePath: string) => void
+  onProfileImageError?: (error: string) => void
 }
 
 function AddEmployeeForm({
@@ -43,18 +40,22 @@ function AddEmployeeForm({
   workSchedules,
   loading,
   isEditing = false,
-  profileImagePreview,
-  profileImageUploading,
-  profileImageError,
-  onProfileImageChange,
-  onProfileImageRemove,
-  onToggleProfileImage,
-  canRemoveProfileImage,
-  existingProfileImageUrl,
-  isProfileImageMarkedForRemoval,
+  employeeId,
+  onProfileImageUploaded,
+  onProfileImageError,
 }: AddEmployeeFormProps) {
   // Helper to keep inputs controlled and avoid React warnings
   const v = (value: any) => (value ?? '')
+
+  const handleSubmit = (e: React.FormEvent) => {
+    const payType = v(formData?.pay_type) || 'fixed'
+    const baseSalary = Number(formData?.base_salary) || 0
+    if (payType === 'hourly' && baseSalary > 0 && baseSalary < 2000) {
+      e.preventDefault()
+      return
+    }
+    onSubmit(e)
+  }
 
   // Metadata can be string or object from upstream; normalize to string
   const metadataValue =
@@ -81,7 +82,7 @@ function AddEmployeeForm({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={onSubmit} className="space-y-6" aria-busy={loading}>
+        <form onSubmit={handleSubmit} className="space-y-6" aria-busy={loading}>
           {/* Información Básica */}
           <div>
             <h3 className="text-lg font-medium text-white mb-4">Información Básica</h3>
@@ -257,8 +258,35 @@ function AddEmployeeForm({
               </div>
 
               <div>
+                <label className="block text-sm font-medium text-white mb-1" htmlFor="pay_type">
+                  Tipo de Pago *
+                </label>
+                <select
+                  id="pay_type"
+                  name="pay_type"
+                  disabled={loading}
+                  value={v(formData?.pay_type) || 'fixed'}
+                  onChange={(e) => onFormChange('pay_type', e.target.value)}
+                  className="w-full p-2 border border-white/20 rounded-md focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white/10 text-white"
+                  required
+                >
+                  <option value="fixed" className="bg-brand-900 text-white">
+                    Administrativo/Permanente (Horario fijo)
+                  </option>
+                  <option value="hourly" className="bg-brand-900 text-white">
+                    Por Hora
+                  </option>
+                </select>
+                <p className="text-xs text-gray-400 mt-1">
+                  <strong>Administrativo:</strong> Salario mensual. Usa horario fijo para inferir entrada/salida.
+                  <br />
+                  <strong>Por Hora:</strong> Ingresa el salario mensual equivalente. La tarifa por hora se calcula automáticamente (base ÷ 240).
+                </p>
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium text-white mb-1" htmlFor="base_salary">
-                  Salario Base (HNL) *
+                  Salario Base Mensual (HNL) *
                 </label>
                 <Input
                   id="base_salary"
@@ -274,6 +302,38 @@ function AddEmployeeForm({
                   required
                   className="bg-white/10 border-white/20 text-white placeholder-gray-400"
                 />
+                {(v(formData?.pay_type) || 'fixed') === 'hourly' && Number(formData?.base_salary) > 0 && (
+                  <p className="text-sm text-blue-400 mt-1">
+                    Tarifa por hora: L. {(Number(formData?.base_salary) / HONDURAS_LABOR_FACTOR).toFixed(2)} (basado en 240h/mes)
+                  </p>
+                )}
+                {(v(formData?.pay_type) || 'fixed') === 'hourly' && Number(formData?.base_salary) > 0 && Number(formData?.base_salary) < 2000 && (
+                  <p className="text-sm text-amber-400 mt-1">
+                    Por favor ingresa el salario mensual equivalente. El sistema calculará la tarifa por hora automáticamente.
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-white mb-1" htmlFor="payment_frequency">
+                  Frecuencia de Pago
+                </label>
+                <select
+                  id="payment_frequency"
+                  name="payment_frequency"
+                  disabled={loading}
+                  value={v(formData?.payment_frequency)}
+                  onChange={(e) => onFormChange('payment_frequency', e.target.value)}
+                  className="w-full p-2 border border-white/20 rounded-md focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white/10 text-white"
+                >
+                  <option value="" className="bg-brand-900 text-white">Default empresa</option>
+                  <option value="quincenal" className="bg-brand-900 text-white">Quincenal</option>
+                  <option value="mensual" className="bg-brand-900 text-white">Mensual</option>
+                  <option value="semanal" className="bg-brand-900 text-white">Semanal</option>
+                </select>
+                <p className="text-xs text-gray-400 mt-1">
+                  Si está vacío, usa la configuración de la empresa (Capa 2).
+                </p>
               </div>
 
               <div>
@@ -324,6 +384,50 @@ function AddEmployeeForm({
                   <option value="on_leave" className="bg-brand-900 text-white">En Permiso</option>
                 </select>
               </div>
+
+              {v(formData?.status) !== 'active' && v(formData?.status) !== '' && (
+                <>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-white mb-1" htmlFor="termination_reason_code">
+                      Motivo de baja <span className="text-red-400">*</span>
+                    </label>
+                    <select
+                      id="termination_reason_code"
+                      name="termination_reason_code"
+                      disabled={loading}
+                      value={v(formData?.termination_reason_code)}
+                      onChange={(e) => onFormChange('termination_reason_code', e.target.value)}
+                      className="w-full p-2 border border-white/20 rounded-md focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white/10 text-white"
+                    >
+                      <option value="" className="bg-brand-900 text-white">
+                        Seleccione un motivo…
+                      </option>
+                      {TERMINATION_REASON_OPTIONS.map((opt) => (
+                        <option key={opt.code} value={opt.code} className="bg-brand-900 text-white">
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-400 mt-1">Requerido si el estado no es Activo.</p>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-white mb-1" htmlFor="termination_reason_detail">
+                      Detalle del motivo (opcional)
+                    </label>
+                    <Textarea
+                      id="termination_reason_detail"
+                      name="termination_reason_detail"
+                      disabled={loading}
+                      value={v(formData?.termination_reason_detail)}
+                      onChange={(e) => onFormChange('termination_reason_detail', e.target.value)}
+                      maxLength={2000}
+                      rows={3}
+                      placeholder="Referencias, acuerdos…"
+                      className="bg-white/10 border-white/20 text-white placeholder-gray-400"
+                    />
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -425,6 +529,32 @@ function AddEmployeeForm({
               </div>
             </div>
           </div>
+
+          {/* Foto de Perfil - Solo disponible cuando se edita un empleado existente */}
+          {employeeId && employeeId !== 'new' && (
+            <div>
+              <h3 className="text-lg font-medium text-white mb-4">Foto de Perfil</h3>
+              <p className="text-sm text-gray-400 mb-3">
+                {isEditing 
+                  ? 'Sube una nueva foto de perfil para reemplazar la actual'
+                  : 'La foto de perfil se puede agregar después de crear el empleado'}
+              </p>
+              <EmployeeFileUpload
+                employeeId={employeeId}
+                fileType="profile_photo"
+                onUploadComplete={(fileId, storagePath) => {
+                  // Update form data with the storage path
+                  onFormChange('profile_image_path', storagePath)
+                  onProfileImageUploaded?.(fileId, storagePath)
+                }}
+                onUploadError={(error) => {
+                  onProfileImageError?.(error)
+                }}
+                variant="full"
+                label="Subir foto de perfil"
+              />
+            </div>
+          )}
 
           {/* Información Adicional */}
           <div>

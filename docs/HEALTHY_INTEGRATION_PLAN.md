@@ -7,7 +7,7 @@ Existen **dos arquitecturas coexistiendo** que pueden estar causando conflictos:
 1. **Servicio Proxy Separado** (`services/hikvision-proxy/`) - DevOps Uno
    - Servicio Node.js/Express independiente
    - Funcionalidades avanzadas: BullMQ, circuit breaker, rate limiting
-   - Requiere despliegue separado y `HIKVISION_PROXY_URL`
+   - (Legacy) Requería despliegue separado y `HIKVISION_PROXY_URL` (variable obsoleta)
 
 2. **Integración en Next.js** (`lib/hikvision/sdk.ts`) - DevOps Dos
    - SDK integrado directamente en Next.js
@@ -18,11 +18,10 @@ Existen **dos arquitecturas coexistiendo** que pueden estar causando conflictos:
 
 ### 1. Endpoint de Status
 **Archivo**: `pages/api/admin/devices/status.ts`
-- **Línea 5**: Todavía usa `HIKVISION_PROXY_URL`
-- **Problema**: Intenta llamar al servicio proxy separado que puede no estar desplegado
+- **Estado esperado**: Debe usar el SDK integrado (`lib/hikvision/sdk.ts`) y NO depender de un servicio externo.
 
 ### 2. Referencias al Servicio Proxy
-- Múltiples archivos de documentación mencionan `HIKVISION_PROXY_URL`
+- Múltiples archivos de documentación mencionaban `HIKVISION_PROXY_URL` (variable ya obsoleta)
 - El servicio proxy separado todavía existe en `services/hikvision-proxy/`
 - Puede estar causando confusión sobre qué implementación usar
 
