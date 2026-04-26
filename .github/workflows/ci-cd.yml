@@ -8,8 +8,11 @@ on:
   workflow_dispatch:
 
 env:
-  NODE_VERSION: '20.x'
+  NODE_VERSION: '24.x'
   SKIP_ENV_VALIDATION: 'true'
+  # Forces JS actions to execute on Node 24 (warnings may still appear until
+  # action metadata is updated upstream).
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
   # ======================================
@@ -55,9 +58,12 @@ jobs:
         continue-on-error: true
 
       - name: 📊 Upload coverage
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v6
         if: success()
-        continue-on-error: true
+        with:
+          # Avoid failing CI when coverage is missing or token isn't configured yet.
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   # ======================================
   # 🏗️ BUILD VERIFICATION
