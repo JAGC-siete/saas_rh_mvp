@@ -72,10 +72,10 @@ export default function TrendsChart({ trends, loading = false }: TrendsChartProp
             axisLine={false}
           />
           <Tooltip 
-            formatter={(value: number, name: string) => [
-              `${value.toFixed(1)}%`, 
-              name === 'attendanceRate' ? 'Asistencia' : 'Puntualidad'
-            ]}
+            formatter={(value: number | string | undefined, name: string | undefined) => {
+              const v = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : 0
+              return [`${v.toFixed(1)}%`, name === 'attendanceRate' ? 'Asistencia' : 'Puntualidad']
+            }}
             labelFormatter={(label) => `Fecha: ${label}`}
             contentStyle={{
               backgroundColor: '#1F2937',

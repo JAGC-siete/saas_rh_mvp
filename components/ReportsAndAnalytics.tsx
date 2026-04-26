@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useSession } from '@supabase/auth-helpers-react'
 import { useCompanyContext } from '../lib/useCompanyContext'
 import { Button } from './ui/button'
 import { Card } from './ui/card'
@@ -65,7 +64,6 @@ interface AttendanceTrend {
 }
 
 export default function ReportsAndAnalytics() {
-  const session = useSession()
   const { companyId, loading: companyLoading } = useCompanyContext()
   
   // Debug logging para verificar el companyId
@@ -184,12 +182,12 @@ export default function ReportsAndAnalytics() {
 
   // Cargar datos iniciales
   useEffect(() => {
-    if (session?.user && companyId && !companyLoading) {
+    if (companyId && !companyLoading) {
       console.log('Refreshing dashboard for company:', companyId)
       fetchDashboardStats()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.user, companyId, companyLoading])
+  }, [companyId, companyLoading])
 
   // Actualizar datos cuando cambie el rango de fechas
   // Tendencias removidas de este módulo

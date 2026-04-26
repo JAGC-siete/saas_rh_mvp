@@ -5,7 +5,8 @@
  * Run: npm test -- tests/idle-timeout.test.ts
  */
 
-import { describe, it, expect, beforeEach, afterEach } from '@jest/globals'
+import { describe, it } from 'node:test'
+import assert from 'node:assert/strict'
 
 /**
  * Test 1: Session Creation
@@ -21,12 +22,12 @@ describe('Session Creation', () => {
     
     const data = await response.json()
     
-    expect(data.idle_timeout_at).toBeDefined()
-    expect(data.last_activity).toBeDefined()
+    assert.ok(data.idle_timeout_at !== undefined)
+    assert.ok(data.last_activity !== undefined)
     
     const idleDiff = new Date(data.idle_timeout_at).getTime() - 
                      new Date(data.last_activity).getTime()
-    expect(idleDiff).toBe(90 * 60 * 1000) // 90 minutes in ms
+    assert.equal(idleDiff, 90 * 60 * 1000) // 90 minutes in ms
   })
 })
 
@@ -45,7 +46,7 @@ describe('Activity Update Rate Limiting', () => {
     const data2 = await second.json()
     
     // last_activity should be the same (rate limited)
-    expect(data1.last_activity).toEqual(data2.last_activity)
+    assert.deepEqual(data1.last_activity, data2.last_activity)
   })
   
   it('should update last_activity after 60s', async () => {
@@ -55,7 +56,7 @@ describe('Activity Update Rate Limiting', () => {
     const response = await fetch('/api/auth/heartbeat', { method: 'POST' })
     const data = await response.json()
     
-    expect(data.last_activity).not.toEqual(data.previous_last_activity)
+    assert.notDeepEqual(data.last_activity, data.previous_last_activity)
   })
 })
 
@@ -71,11 +72,11 @@ describe('Idle Timeout Enforcement', () => {
     
     const response = await fetch('/api/auth/heartbeat', { method: 'POST' })
     
-    expect(response.status).toBe(440)
+    assert.equal(response.status, 440)
     const data = await response.json()
-    expect(data.error).toBe('Session expired')
-    expect(data.code).toBe('IDLE_TIMEOUT_90M')
-    expect(data.requiresReauth).toBe(true)
+    assert.equal(data.error, 'Session expired')
+    assert.equal(data.code, 'IDLE_TIMEOUT_90M')
+    assert.equal(data.requiresReauth, true)
   })
 })
 
@@ -92,7 +93,7 @@ describe('Activity Exclusion', () => {
     const after = await getSessionActivity()
     
     // last_activity should not change
-    expect(after.last_activity).toEqual(before.last_activity)
+    assert.deepEqual(after.last_activity, before.last_activity)
   })
   
   it('should not extend session for prefetch requests', async () => {
@@ -103,7 +104,7 @@ describe('Activity Exclusion', () => {
     })
     
     const after = await getSessionActivity()
-    expect(after.last_activity).toEqual(before.last_activity)
+    assert.deepEqual(after.last_activity, before.last_activity)
   })
 })
 
@@ -115,21 +116,21 @@ describe('Session Revocation', () => {
   it('should revoke session on logout', async () => {
     const response = await fetch('/api/auth/logout', { method: 'POST' })
     
-    expect(response.status).toBe(200)
+    assert.equal(response.status, 200)
     
     // Subsequent requests should fail
     const heartbeat = await fetch('/api/auth/heartbeat', { method: 'POST' })
-    expect(heartbeat.status).toBe(440)
+    assert.equal(heartbeat.status, 440)
   })
   
   it('should revoke all sessions with logout all', async () => {
     const response = await fetch('/api/auth/logout-all', { method: 'POST' })
     
-    expect(response.status).toBe(200)
+    assert.equal(response.status, 200)
     
     // Session should be revoked
     const heartbeat = await fetch('/api/auth/heartbeat', { method: 'POST' })
-    expect(heartbeat.status).toBe(440)
+    assert.equal(heartbeat.status, 440)
   })
 })
 
@@ -152,7 +153,8 @@ describe('UI Warning', () => {
     const response = await fetch('/api/auth/heartbeat', { method: 'POST' })
     const data = await response.json()
     
-    expect(data.idleTimeoutMinutes).toBeGreaterThan(beforeMinutes)
+    assert.ok(typeof data.idleTimeoutMinutes === 'number')
+    assert.ok(data.idleTimeoutMinutes > beforeMinutes)
   })
 })
 

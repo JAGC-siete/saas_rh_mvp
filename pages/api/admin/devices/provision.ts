@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { createPagesServerClient } from '@supabase/auth-helpers-nextjs';
 import { createAdminClient } from '../../../../lib/supabase/server';
 import { HikvisionSDK } from '../../../../lib/hikvision/sdk';
+import { requireUser } from '../../../../lib/auth/requireUser'
 
 /**
  * Provision a Hikvision device.
@@ -14,20 +14,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const supabase = createPagesServerClient({ req, res });
-    const { data: { session } } = await supabase.auth.getSession();
-
-    // 1. Authentication and Authorization
-    if (!session) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
+    const { user, userProfile } = await requireUser(req, res)
     const supabaseAdmin = createAdminClient();
-    const { data: userProfile } = await supabaseAdmin
-      .from('user_profiles')
-      .select('role, company_id')
-      .eq('id', session.user.id)
-      .single();
 
     if (userProfile?.role !== 'company_admin' && userProfile?.role !== 'super_admin') {
       return res.status(403).json({ error: 'Forbidden: Insufficient privileges' });
