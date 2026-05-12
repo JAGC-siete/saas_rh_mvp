@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { createClient } from './supabase/client'
 import { User, Session } from '@supabase/supabase-js'
 import { env, areEnvVarsAvailable } from './env'
@@ -23,7 +23,8 @@ interface AuthContextType {
   logout: () => void
   loading: boolean
   error: string | null
-  refreshUserProfile: () => Promise<void>
+  /** Pass `user` + `accessToken` after `setSession`/`setUser` so refresh is not skipped by stale React state (e.g. cold load with existing session). */
+  refreshUserProfile: (opts?: { user: User; accessToken: string }) => Promise<void>
 }
 
 // Create default context value
@@ -54,53 +55,60 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Create Supabase client with error handling
   const [supabase, setSupabase] = useState<any>(null)
 
+  const userRef = useRef<User | null>(null)
+  const sessionRef = useRef<Session | null>(null)
+  userRef.current = user
+  sessionRef.current = session
 
-  // Function to refresh user profile
-  const refreshUserProfile = async () => {
-    if (!supabase || !user) return
+  const refreshUserProfile = useCallback(
+    async (opts?: { user: User; accessToken: string }) => {
+      if (!supabase) return
+      const authUser = opts?.user ?? userRef.current
+      const accessToken = opts?.accessToken ?? sessionRef.current?.access_token
+      if (!authUser?.id || !accessToken) return
 
-    try {
-      const response = await fetch('/api/user-profiles', {
-        headers: {
-          'Authorization': `Bearer ${session?.access_token}`,
-        },
-      })
+      try {
+        const response = await fetch('/api/user-profiles', {
+          credentials: 'include',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        })
 
-      if (response.ok) {
-        const data = await response.json()
-        const profile = data.profiles?.find((p: any) => p.id === user.id)
-        if (profile) {
-          setUserProfile(profile)
+        if (response.ok) {
+          const data = await response.json()
+          const profile = data.profiles?.find((p: any) => p.id === authUser.id)
+          if (profile) {
+            setUserProfile(profile)
 
-          // Keep localStorage in sync with the latest permissions so that
-          // subsequent reloads rehydrate the correct gating before the
-          // network refresh completes.
-          if (typeof window !== 'undefined') {
-            try {
-              const raw = localStorage.getItem('user')
-              const existing = raw ? JSON.parse(raw) : {}
-              const merged = {
-                ...existing,
-                id: profile.id ?? existing.id,
-                email: profile.email ?? existing.email,
-                role: profile.role ?? existing.role,
-                company_id: profile.company_id ?? existing.company_id ?? null,
-                permissions:
-                  profile.permissions && typeof profile.permissions === 'object'
-                    ? profile.permissions
-                    : existing.permissions || {},
+            if (typeof window !== 'undefined') {
+              try {
+                const raw = localStorage.getItem('user')
+                const existing = raw ? JSON.parse(raw) : {}
+                const merged = {
+                  ...existing,
+                  id: profile.id ?? existing.id,
+                  email: profile.email ?? existing.email,
+                  role: profile.role ?? existing.role,
+                  company_id: profile.company_id ?? existing.company_id ?? null,
+                  permissions:
+                    profile.permissions && typeof profile.permissions === 'object'
+                      ? profile.permissions
+                      : existing.permissions || {},
+                }
+                localStorage.setItem('user', JSON.stringify(merged))
+              } catch {
+                // ignore localStorage write errors
               }
-              localStorage.setItem('user', JSON.stringify(merged))
-            } catch {
-              // ignore localStorage write errors
             }
           }
         }
+      } catch (error) {
+        console.error('Error refreshing user profile:', error)
       }
-    } catch (error) {
-      console.error('Error refreshing user profile:', error)
-    }
-  }
+    },
+    [supabase]
+  )
 
   // ✅ Factor VI: Detectar si estamos en el cliente
   useEffect(() => {
@@ -171,8 +179,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // If we have a Supabase session, always refresh the profile so that
           // permissions reflect the latest server-side state (avoids stale
           // permissions cached in localStorage gating UI like export buttons).
-          if (session?.user) {
-            await refreshUserProfile()
+          if (session?.user?.id && session.access_token) {
+            await refreshUserProfile({ user: session.user, accessToken: session.access_token })
           }
         }
         
@@ -228,9 +236,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('🔄 Auth state changed:', event, session?.user?.email)
         setSession(session)
         setUser(session?.user ?? null)
-        // Refresh profile on sign in
-        if (event === 'SIGNED_IN' && session?.user) {
-          await refreshUserProfile()
+        if (
+          (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') &&
+          session?.user?.id &&
+          session.access_token
+        ) {
+          await refreshUserProfile({ user: session.user, accessToken: session.access_token })
         }
         setLoading(false)
         setError(null)
@@ -265,7 +276,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     )
 
     return () => subscription.unsubscribe()
-  }, [isClient, supabase]) // ✅ Dependencia en isClient y supabase
+  }, [isClient, supabase, refreshUserProfile])
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
