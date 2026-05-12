@@ -149,6 +149,8 @@ export function canonicalPermissionsForRole(role: unknown): Partial<CanonicalPer
       'can_view_attendance',
       'can_manage_attendance',
       'can_view_reports',
+      // Align with `canExportReports` / EXPORT_REPORTS_ALLOWED_ROLES in permissions.ts
+      'can_export_reports',
       'can_view_own_profile',
       'can_view_own_attendance',
       'can_request_leave',
