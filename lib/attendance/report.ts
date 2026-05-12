@@ -28,13 +28,6 @@ export interface AttendanceSummary {
   average_hours_per_day: number
 }
 
-/** Líneas de contacto en el PDF; si faltan, se leen `REPORT_PDF_CONTACT_*` del entorno (servidor). */
-export interface AttendancePDFReportContact {
-  address?: string
-  phone?: string
-  email?: string
-}
-
 export interface AttendancePDFOptions {
   /** Nombre mostrado en cabecera e información de empresa */
   companyDisplayName?: string
@@ -42,17 +35,6 @@ export interface AttendancePDFOptions {
   primaryColor?: string
   /** Tabla de detalle dinámica (columnas configuradas); si no se envía, se usa el layout fijo histórico */
   detailTable?: { headers: string[]; rows: (string | number)[][] }
-  /** Datos de contacto del pie/bloque empresa (prioridad sobre variables de entorno). */
-  reportContact?: AttendancePDFReportContact
-}
-
-function resolveReportContact(options?: AttendancePDFOptions): AttendancePDFReportContact {
-  const o = options?.reportContact || {}
-  return {
-    address: o.address ?? process.env.REPORT_PDF_CONTACT_ADDRESS ?? '',
-    phone: o.phone ?? process.env.REPORT_PDF_CONTACT_PHONE ?? '',
-    email: o.email ?? process.env.REPORT_PDF_CONTACT_EMAIL ?? '',
-  }
 }
 
 /** Ancho de columnas: más ancho para la columna "Empleado" / nombre. */
@@ -76,10 +58,6 @@ function columnWidthsForHeaders(headers: string[], tableInnerWidth: number): num
 /**
  * Generates a consolidated attendance PDF (3 pages: executive summary, attendance table, department analysis)
  * Returns a Buffer that can be sent as application/pdf
- *
- * Texto de contacto (dirección / teléfono / email): ya no va hardcodeado en código.
- * Configurar en Railway/host: `REPORT_PDF_CONTACT_ADDRESS`, `REPORT_PDF_CONTACT_PHONE`, `REPORT_PDF_CONTACT_EMAIL`
- * o pasar `options.reportContact` desde el API.
  */
 export async function generateConsolidatedAttendancePDF(
   attendanceData: AttendanceItem[],
@@ -97,7 +75,6 @@ export async function generateConsolidatedAttendancePDF(
         : '#1e40af'
       const companyName = (options?.companyDisplayName || 'Empresa').trim()
       const companyLabel = companyName.toUpperCase()
-      const contact = resolveReportContact(options)
 
       const doc = new PDFDocument({
         size: 'A4',
@@ -105,10 +82,10 @@ export async function generateConsolidatedAttendancePDF(
         margin: 30,
         info: {
           Title: `Reporte de Asistencia - ${startDate} a ${endDate}`,
-          Author: 'Humano SISU',
+          Author: companyName,
           Subject: 'Reporte de Asistencia',
           Keywords: 'asistencia, reporte, Honduras',
-          Creator: 'Humano SISU',
+          Creator: 'HR SaaS',
         },
       })
 
@@ -128,7 +105,7 @@ export async function generateConsolidatedAttendancePDF(
         }
       })
 
-      const HEADER_BAND = 118
+      const HEADER_BAND = 100
       const L = left()
       const W = innerW()
 
@@ -140,10 +117,8 @@ export async function generateConsolidatedAttendancePDF(
       doc.fontSize(17)
       const companyBlockH = doc.heightOfString(companyLabel, { width: W, align: 'center' })
       doc.text(companyLabel, L, hy, { width: W, align: 'center', lineBreak: true })
-      hy += Math.min(companyBlockH, 52) + 6
+      hy += Math.min(companyBlockH, 52) + 8
 
-      doc.fontSize(11).text('Humano SISU — Recursos humanos', L, hy, { width: W, align: 'center' })
-      hy += 16
       doc.fontSize(12).text(`REPORTE DE ASISTENCIA — ${startDate} a ${endDate}`, L, hy, { width: W, align: 'center' })
 
       doc.fillColor('black')
@@ -152,33 +127,7 @@ export async function generateConsolidatedAttendancePDF(
       doc.fontSize(10).text('INFORMACIÓN DE LA EMPRESA:', L, blockY)
       doc.fontSize(10).text(companyName, L, blockY + 14, { width: 360, lineBreak: true })
 
-      const hasContact = !!(contact.address || contact.phone || contact.email)
-      let contactY = blockY + 14 + doc.heightOfString(companyName, { width: 360 }) + 4
-      if (hasContact) {
-        doc.fontSize(9)
-        if (contact.address) {
-          doc.text(`Dirección: ${contact.address}`, L, contactY, { width: 360, lineBreak: true })
-          contactY += doc.heightOfString(`Dirección: ${contact.address}`, { width: 360 }) + 2
-        }
-        if (contact.phone) {
-          doc.text(`Teléfono: ${contact.phone}`, L, contactY)
-          contactY += 12
-        }
-        if (contact.email) {
-          doc.text(`Email: ${contact.email}`, L, contactY)
-          contactY += 12
-        }
-      } else {
-        doc.fontSize(8).fillColor('#555555')
-        doc.text(
-          'Datos de contacto: defina REPORT_PDF_CONTACT_ADDRESS, REPORT_PDF_CONTACT_PHONE y REPORT_PDF_CONTACT_EMAIL en el servidor, o envíelos en reportContact.',
-          L,
-          contactY,
-          { width: 360, lineBreak: true }
-        )
-        doc.fillColor('black')
-        contactY += 28
-      }
+      const afterCompanyY = blockY + 14 + doc.heightOfString(companyName, { width: 360 }) + 10
 
       const rightColX = L + Math.min(400, Math.floor(W * 0.48))
       doc.fontSize(10).text('INFORMACIÓN DEL PERÍODO:', rightColX, blockY)
@@ -189,7 +138,7 @@ export async function generateConsolidatedAttendancePDF(
         doc.fontSize(9).text(`Generado por: ${generatedByEmail}`, rightColX, blockY + 56)
       }
 
-      const summaryTop = Math.max(contactY, blockY + 72) + 8
+      const summaryTop = Math.max(afterCompanyY, blockY + 72) + 8
       doc.rect(L, summaryTop, W, 100).stroke()
       doc.fontSize(12).text('RESUMEN EJECUTIVO', L + 5, summaryTop + 8)
       doc.fontSize(10).text('Total Empleados:', L + 10, summaryTop + 28)
