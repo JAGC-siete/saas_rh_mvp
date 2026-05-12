@@ -23,6 +23,29 @@ import { getStandardColumns } from '../../../lib/reports/standard-columns'
 import { normalizeCountryCode } from '../../../lib/country/supported'
 import { reportFormatForCountry } from '../../../lib/country/payroll-labels'
 
+// #region agent log
+function dbgExport(
+  hypothesisId: string,
+  location: string,
+  message: string,
+  data: Record<string, unknown>
+) {
+  fetch('http://127.0.0.1:7905/ingest/cca64cb9-7b9a-4f35-ab00-567718985e2d', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '1b536a' },
+    body: JSON.stringify({
+      sessionId: '1b536a',
+      runId: process.env.DEBUG_EXPORT_RUN_ID || 'export-e2e',
+      hypothesisId,
+      location,
+      message,
+      data,
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {})
+}
+// #endregion
+
 // Aplicar rate limiting, validación de entrada y seguridad de exportación
 const handlerWithSecurity = withExportRateLimit()(
   withInputValidation(
@@ -79,6 +102,18 @@ async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse
       return res.status(EXPORT_REPORTS_FORBIDDEN.status).json(EXPORT_REPORTS_FORBIDDEN.body)
     }
 
+    // #region agent log
+    dbgExport('H-A', 'export-attendance.ts:postAuth', 'handler_context', {
+      role,
+      formato,
+      startDate,
+      endDate,
+      hasDepartmentFilter: !!departmentId,
+      columnIdsLen: columnIdsInput.length,
+      employeeIdsInputLen: employeeIdsInput.length,
+    })
+    // #endregion
+
     // Obtener empleados de la empresa usando getCompanyData
     const { data: employees, error: empError } = await getCompanyData(
       supabase,
@@ -89,6 +124,13 @@ async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse
     )
     
     if (empError) {
+      // #region agent log
+      dbgExport('H-B', 'export-attendance.ts:employees', 'emp_query_error', {
+        message: empError.message,
+        code: (empError as { code?: string }).code,
+        details: (empError as { details?: string }).details,
+      })
+      // #endregion
       console.error('Error obteniendo empleados', { error: empError.message })
       return res.status(500).json({ error: 'Error obteniendo empleados' })
     }
@@ -137,9 +179,24 @@ async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse
 
     const { data: records, error } = await attendanceQuery
     if (error) {
+      // #region agent log
+      dbgExport('H-A', 'export-attendance.ts:attendanceQuery', 'attendance_query_error', {
+        message: error.message,
+        code: (error as { code?: string }).code,
+        details: (error as { details?: string }).details,
+        hint: (error as { hint?: string }).hint,
+        employeeIdsLen: employeeIds.length,
+      })
+      // #endregion
       console.error('Error obteniendo registros de asistencia:', error)
       return res.status(500).json({ error: 'Error obteniendo registros de asistencia' })
     }
+
+    // #region agent log
+    dbgExport('H-A', 'export-attendance.ts:attendanceOk', 'attendance_query_ok', {
+      recordCount: Array.isArray(records) ? records.length : -1,
+    })
+    // #endregion
 
     const resolvedConfig = await resolveReportConfig(companyId, 'attendance', supabase)
     const standardCols = getStandardColumns('attendance')
@@ -219,6 +276,12 @@ async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse
     })
 
   } catch (error: any) {
+    // #region agent log
+    dbgExport('H-C', 'export-attendance.ts:catch', 'handler_throw', {
+      message: error?.message,
+      name: error?.name,
+    })
+    // #endregion
     console.error('Error en exportación de asistencia:', error)
     return res.status(error.message === 'UNAUTHORIZED' ? 401 : 500).json({
       error: error.message || 'Internal server error'
