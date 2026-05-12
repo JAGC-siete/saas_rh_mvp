@@ -7,9 +7,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { supabase, companyId } = await requireCompanyAccess(req, res)
     
     const { preset = 'today', from, to, role, employee_id, department_id } = req.query
-    const range = typeof from === 'string' && typeof to === 'string'
-      ? { from, to }
-      : getDateRange(preset as string, undefined, typeof from === 'string' ? from : undefined, typeof to === 'string' ? to : undefined)
+    const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}/
+    const normalizeDate = (v: unknown): string | undefined => {
+      if (typeof v !== 'string') return undefined
+      const m = DATE_ONLY_RE.exec(v)
+      return m ? m[0] : undefined
+    }
+    const fromNorm = normalizeDate(from)
+    const toNorm = normalizeDate(to)
+    if ((preset as string) === 'custom' && (!fromNorm || !toNorm)) {
+      return res.status(400).json({ error: 'Rango personalizado requiere "from" y "to" en formato YYYY-MM-DD' })
+    }
+    const range = fromNorm && toNorm
+      ? { from: fromNorm, to: toNorm }
+      : getDateRange(preset as string, undefined, fromNorm, toNorm)
   
   const rpcArgs = {
     p_employee_id: (typeof employee_id === 'string' && employee_id.trim() !== '') ? employee_id.trim() : null,

@@ -73,6 +73,22 @@ function readQueryParam(q: Record<string, string | string[] | undefined>, key: s
   return typeof v === 'string' ? v : ''
 }
 
+const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}/
+
+function toFromIso(value?: string): string | undefined {
+  if (!value) return undefined
+  const match = DATE_ONLY_RE.exec(value)
+  if (!match) return undefined
+  return `${match[0]}T00:00:00.000Z`
+}
+
+function toToIso(value?: string): string | undefined {
+  if (!value) return undefined
+  const match = DATE_ONLY_RE.exec(value)
+  if (!match) return undefined
+  return `${match[0]}T23:59:59.999Z`
+}
+
 export default function AttendanceDashboardApp() {
   const router = useRouter()
   const { addNotification } = useNotificationContext()
@@ -126,8 +142,12 @@ export default function AttendanceDashboardApp() {
     if (q.role) setSelectedRole(q.role)
     if (q.department_id) setSelectedDepartmentId(q.department_id)
     if (q.preset === 'custom' && q.from && q.to) {
-      setFrom(q.from.includes('T') ? q.from : `${q.from}T00:00:00.000Z`)
-      setTo(q.to.includes('T') ? q.to : `${q.to}T23:59:59.999Z`)
+      const nextFrom = toFromIso(q.from)
+      const nextTo = toToIso(q.to)
+      if (nextFrom && nextTo) {
+        setFrom(nextFrom)
+        setTo(nextTo)
+      }
     }
     setUrlSynced(true)
   }, [router.isReady, router.query, urlSynced])
@@ -291,13 +311,13 @@ export default function AttendanceDashboardApp() {
     setPreset(p)
     if (p === 'custom' && !from && !to) {
       const { from: weekFrom, to: weekTo } = getDateRange('week')
-      setFrom(weekFrom)
-      setTo(weekTo)
+      setFrom(toFromIso(weekFrom))
+      setTo(toToIso(weekTo))
     }
   }
   const handleRangeChange = (f: string, t: string) => {
-    setFrom(f ? `${f}T00:00:00.000Z` : undefined)
-    setTo(t ? `${t}T23:59:59.999Z` : undefined)
+    setFrom(toFromIso(f))
+    setTo(toToIso(t))
   }
 
   const handleEmployeeChange = (employeeId: string) => {

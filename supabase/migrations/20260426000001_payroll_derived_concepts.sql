@@ -1,7 +1,4 @@
--- Payroll derived concepts (Derivados de nómina)
--- - Company-scoped catalog of institution/concept reports (IHSS, RAP, INFOP, custom)
--- - Allows mapping payroll_run_lines sources (columns or metadata keys) into a reportable concept
--- - Note: payroll_run_lines already has JSONB metadata; we persist patronal + salary snapshots there.
+BEGIN;
 
 CREATE TABLE IF NOT EXISTS public.payroll_derived_concepts (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -38,47 +35,79 @@ CREATE INDEX IF NOT EXISTS idx_payroll_derived_concept_sources_company ON public
 ALTER TABLE public.payroll_derived_concepts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payroll_derived_concept_sources ENABLE ROW LEVEL SECURITY;
 
--- RLS: company-scoped access using user_profiles.company_id
-CREATE POLICY payroll_derived_concepts_select ON public.payroll_derived_concepts
-  FOR SELECT
-  TO authenticated
-  USING (
-    EXISTS (SELECT 1 FROM public.user_profiles up WHERE up.id = auth.uid() AND up.role = 'super_admin')
-    OR company_id IN (SELECT company_id FROM public.user_profiles WHERE id = auth.uid() AND company_id IS NOT NULL)
-  );
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'payroll_derived_concepts' AND policyname = 'payroll_derived_concepts_select'
+  ) THEN
+    CREATE POLICY payroll_derived_concepts_select ON public.payroll_derived_concepts
+      FOR SELECT
+      TO authenticated
+      USING (
+        EXISTS (SELECT 1 FROM public.user_profiles up WHERE up.id = auth.uid() AND up.role = 'super_admin')
+        OR company_id IN (SELECT company_id FROM public.user_profiles WHERE id = auth.uid() AND company_id IS NOT NULL)
+      );
+  END IF;
+END $$;
 
-CREATE POLICY payroll_derived_concepts_write ON public.payroll_derived_concepts
-  FOR ALL
-  TO authenticated
-  USING (
-    EXISTS (SELECT 1 FROM public.user_profiles up WHERE up.id = auth.uid() AND up.role = 'super_admin')
-    OR company_id IN (SELECT company_id FROM public.user_profiles WHERE id = auth.uid() AND company_id IS NOT NULL)
-  )
-  WITH CHECK (
-    EXISTS (SELECT 1 FROM public.user_profiles up WHERE up.id = auth.uid() AND up.role = 'super_admin')
-    OR company_id IN (SELECT company_id FROM public.user_profiles WHERE id = auth.uid() AND company_id IS NOT NULL)
-  );
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'payroll_derived_concepts' AND policyname = 'payroll_derived_concepts_write'
+  ) THEN
+    CREATE POLICY payroll_derived_concepts_write ON public.payroll_derived_concepts
+      FOR ALL
+      TO authenticated
+      USING (
+        EXISTS (SELECT 1 FROM public.user_profiles up WHERE up.id = auth.uid() AND up.role = 'super_admin')
+        OR company_id IN (SELECT company_id FROM public.user_profiles WHERE id = auth.uid() AND company_id IS NOT NULL)
+      )
+      WITH CHECK (
+        EXISTS (SELECT 1 FROM public.user_profiles up WHERE up.id = auth.uid() AND up.role = 'super_admin')
+        OR company_id IN (SELECT company_id FROM public.user_profiles WHERE id = auth.uid() AND company_id IS NOT NULL)
+      );
+  END IF;
+END $$;
 
-CREATE POLICY payroll_derived_concept_sources_select ON public.payroll_derived_concept_sources
-  FOR SELECT
-  TO authenticated
-  USING (
-    EXISTS (SELECT 1 FROM public.user_profiles up WHERE up.id = auth.uid() AND up.role = 'super_admin')
-    OR company_id IN (SELECT company_id FROM public.user_profiles WHERE id = auth.uid() AND company_id IS NOT NULL)
-  );
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'payroll_derived_concept_sources' AND policyname = 'payroll_derived_concept_sources_select'
+  ) THEN
+    CREATE POLICY payroll_derived_concept_sources_select ON public.payroll_derived_concept_sources
+      FOR SELECT
+      TO authenticated
+      USING (
+        EXISTS (SELECT 1 FROM public.user_profiles up WHERE up.id = auth.uid() AND up.role = 'super_admin')
+        OR company_id IN (SELECT company_id FROM public.user_profiles WHERE id = auth.uid() AND company_id IS NOT NULL)
+      );
+  END IF;
+END $$;
 
-CREATE POLICY payroll_derived_concept_sources_write ON public.payroll_derived_concept_sources
-  FOR ALL
-  TO authenticated
-  USING (
-    EXISTS (SELECT 1 FROM public.user_profiles up WHERE up.id = auth.uid() AND up.role = 'super_admin')
-    OR company_id IN (SELECT company_id FROM public.user_profiles WHERE id = auth.uid() AND company_id IS NOT NULL)
-  )
-  WITH CHECK (
-    EXISTS (SELECT 1 FROM public.user_profiles up WHERE up.id = auth.uid() AND up.role = 'super_admin')
-    OR company_id IN (SELECT company_id FROM public.user_profiles WHERE id = auth.uid() AND up.company_id IS NOT NULL)
-  );
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'payroll_derived_concept_sources' AND policyname = 'payroll_derived_concept_sources_write'
+  ) THEN
+    CREATE POLICY payroll_derived_concept_sources_write ON public.payroll_derived_concept_sources
+      FOR ALL
+      TO authenticated
+      USING (
+        EXISTS (SELECT 1 FROM public.user_profiles up WHERE up.id = auth.uid() AND up.role = 'super_admin')
+        OR company_id IN (SELECT company_id FROM public.user_profiles WHERE id = auth.uid() AND company_id IS NOT NULL)
+      )
+      WITH CHECK (
+        EXISTS (SELECT 1 FROM public.user_profiles up WHERE up.id = auth.uid() AND up.role = 'super_admin')
+        OR company_id IN (SELECT company_id FROM public.user_profiles WHERE id = auth.uid() AND company_id IS NOT NULL)
+      );
+  END IF;
+END $$;
 
 COMMENT ON TABLE public.payroll_derived_concepts IS 'Company-scoped catalog of payroll derived reports (IHSS/RAP/INFOP/custom).';
 COMMENT ON TABLE public.payroll_derived_concept_sources IS 'Maps each derived concept to a payroll_run_lines source (column, metadata key, or run-total formula).';
 
+COMMIT;
