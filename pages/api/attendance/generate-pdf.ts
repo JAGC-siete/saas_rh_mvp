@@ -3,6 +3,7 @@ import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { getDateRange } from '../../../lib/attendance'
 import { createSecureQueryBuilder } from '../../../lib/security/secure-queries'
 import { generateAttendancePDF } from '../../../lib/pdf/attendance-pdf-generator'
+import { canExportReports, EXPORT_REPORTS_FORBIDDEN } from '../../../lib/security/permissions'
 
 /**
  * Divine PDF Generation Endpoint
@@ -25,8 +26,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // Authentication and authorization
-    const { supabase, companyId, role: userRole, user } = await requireCompanyAccess(req, res)
-    
+    const { supabase, companyId, role: userRole, user, userProfile } = await requireCompanyAccess(req, res)
+
     if (!companyId) {
       return res.status(400).json({
         error: 'Company access required',
@@ -34,13 +35,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    // Permission validation for PDF generation
-    const allowedRoles = ['admin', 'hr_manager', 'super_admin']
-    if (!allowedRoles.includes(userRole)) {
-      return res.status(403).json({
-        error: 'Insufficient permissions',
-        message: 'No tienes permisos para generar reportes PDF. Roles permitidos: ' + allowedRoles.join(', ')
-      })
+    if (!canExportReports(userRole, userProfile)) {
+      return res.status(EXPORT_REPORTS_FORBIDDEN.status).json(EXPORT_REPORTS_FORBIDDEN.body)
     }
 
     // Parameter normalization and validation

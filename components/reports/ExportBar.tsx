@@ -3,6 +3,7 @@ import { Button } from '../ui/button'
 import { PreviewData } from './ReportBuilder'
 import { Download, Loader2, CheckCircle, FileSpreadsheet } from 'lucide-react'
 import type { ReportExportCapabilities } from '../../lib/reports/report-ui-capabilities'
+import { useCanExportReports } from '../../lib/hooks/useCanonicalPermissions'
 
 interface ExportBarProps {
   data: PreviewData
@@ -15,8 +16,10 @@ interface ExportBarProps {
 export default function ExportBar({ data, onExport, disabled, capabilities, onExportError }: ExportBarProps) {
   const [exporting, setExporting] = useState<'excel' | 'pdf' | 'csv' | null>(null)
   const [exported, setExported] = useState<'excel' | 'pdf' | 'csv' | null>(null)
+  const canExport = useCanExportReports()
 
   const handleExport = async (format: 'excel' | 'pdf' | 'csv') => {
+    if (!canExport) return
     try {
       setExporting(format)
       setExported(null)
@@ -32,7 +35,9 @@ export default function ExportBar({ data, onExport, disabled, capabilities, onEx
     }
   }
 
-  const isDisabled = disabled || exporting !== null
+  const permissionBlocked = !canExport
+  const blockedTitle = 'No tiene permisos para exportar reportes'
+  const isDisabled = disabled || exporting !== null || permissionBlocked
   const count = data.totalCount ?? data.rows.length
 
   const renderButton = (
@@ -47,6 +52,8 @@ export default function ExportBar({ data, onExport, disabled, capabilities, onEx
         onClick={() => handleExport(format)}
         disabled={isDisabled}
         variant="outline"
+        title={permissionBlocked ? blockedTitle : undefined}
+        aria-disabled={isDisabled}
         className="bg-blue-600 hover:bg-blue-700 text-white border-blue-500 hover:border-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {exporting === format ? (
@@ -80,6 +87,7 @@ export default function ExportBar({ data, onExport, disabled, capabilities, onEx
           <p className="text-xs text-gray-400">
             {count} registro{count === 1 ? '' : 's'} en vista previa
             {!anyExport && ' · No hay exportación disponible para este tipo de reporte.'}
+            {anyExport && permissionBlocked && ' · No tiene permisos para exportar reportes.'}
           </p>
         </div>
       </div>

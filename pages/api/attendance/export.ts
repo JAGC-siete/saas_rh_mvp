@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
+import { canExportReports, EXPORT_REPORTS_FORBIDDEN } from '../../../lib/security/permissions'
 import { validateAttendanceExport } from '../../../lib/security/schema-validation'
 import { createSecureQueryBuilder } from '../../../lib/security/secure-queries'
 import { withExportRateLimit } from '../../../lib/security/rate-limiting'
@@ -16,15 +17,10 @@ export default handlerWithSecurity
 async function attendanceExportHandler(req: NextApiRequest, res: NextApiResponse) {
   try {
     // AUTENTICACIÓN ESTANDARIZADA - Usar requireCompanyAccess (como payroll)
-    const { supabase, companyId, role, user } = await requireCompanyAccess(req, res)
-    
-    // Verificar roles específicos para exportar asistencia (como payroll)
-    // admin es alias usado en producción (equivalente a company_admin)
-    if (!['super_admin', 'company_admin', 'hr_manager', 'manager', 'admin'].includes(role)) {
-      return res.status(403).json({ 
-        error: 'Permisos insuficientes',
-        message: 'No tiene permisos para exportar datos de asistencia'
-      })
+    const { supabase, companyId, role, user, userProfile } = await requireCompanyAccess(req, res)
+
+    if (!canExportReports(role, userProfile)) {
+      return res.status(EXPORT_REPORTS_FORBIDDEN.status).json(EXPORT_REPORTS_FORBIDDEN.body)
     }
 
     const normalizeParam = (p: string | string[] | undefined) => (Array.isArray(p) ? p[0] : p)

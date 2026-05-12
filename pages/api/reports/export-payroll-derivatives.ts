@@ -4,6 +4,7 @@ import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
 import { sanitizeFilename } from '../../../lib/security/export-security'
 import { withExportRateLimit } from '../../../lib/security/rate-limiting'
 import { calculateINFOP } from '../../../lib/payroll/employer-contributions'
+import { canExportReports, EXPORT_REPORTS_FORBIDDEN } from '../../../lib/security/permissions'
 
 function toNum(v: unknown): number {
   const n = typeof v === 'number' ? v : parseFloat(String(v ?? '0'))
@@ -24,8 +25,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   try {
-    const { supabase, companyId } = await requireCompanyAccess(req, res)
+    const { supabase, companyId, role, userProfile } = await requireCompanyAccess(req, res)
     if (!companyId) return res.status(400).json({ error: 'Company ID is required' })
+
+    if (!canExportReports(role, userProfile)) {
+      return res.status(EXPORT_REPORTS_FORBIDDEN.status).json(EXPORT_REPORTS_FORBIDDEN.body)
+    }
 
     const { format, run_id, concept } = req.body as { format?: string; run_id?: string; concept?: string }
     if (!run_id || typeof run_id !== 'string') return res.status(400).json({ error: 'run_id is required' })

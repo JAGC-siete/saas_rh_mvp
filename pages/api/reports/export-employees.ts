@@ -9,6 +9,7 @@ import {
   sanitizeFilename,
   fileFormatSchema
 } from '../../../lib/security/export-security'
+import { canExportReports, EXPORT_REPORTS_FORBIDDEN } from '../../../lib/security/permissions'
 import ExcelJS from 'exceljs'
 import { z } from 'zod'
 import { resolveReportConfig } from '../../../lib/reports/column-resolver'
@@ -71,10 +72,14 @@ export default handlerWithSecurity
 
 async function exportEmployeesHandler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const { supabase, companyId } = await requireCompanyAccess(req, res)
-    
+    const { supabase, companyId, role, userProfile } = await requireCompanyAccess(req, res)
+
     if (!companyId) {
       return res.status(400).json({ error: 'Company ID is required' })
+    }
+
+    if (!canExportReports(role, userProfile)) {
+      return res.status(EXPORT_REPORTS_FORBIDDEN.status).json(EXPORT_REPORTS_FORBIDDEN.body)
     }
 
     // Usar datos validados del middleware

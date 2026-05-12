@@ -372,3 +372,53 @@ export function validateRequiredPermissions(permissions: string[]): { valid: boo
     invalid
   }
 }
+
+// ===== HELPERS DE EXPORTACIÓN =====
+
+const EXPORT_REPORTS_ALLOWED_ROLES: ReadonlySet<string> = new Set([
+  'super_admin',
+  'company_admin',
+  'admin',
+  'hr_manager',
+  'manager',
+])
+
+function readRawPermissions(userProfile: unknown): Record<string, unknown> {
+  if (!userProfile || typeof userProfile !== 'object') return {}
+  const perms = (userProfile as { permissions?: unknown }).permissions
+  if (!perms) return {}
+  if (typeof perms === 'string') {
+    try {
+      const parsed = JSON.parse(perms)
+      return parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : {}
+    } catch {
+      return {}
+    }
+  }
+  if (typeof perms === 'object') return perms as Record<string, unknown>
+  return {}
+}
+
+/**
+ * Determina si un usuario puede exportar reportes.
+ * Regla: rol con privilegio (super_admin/company_admin/admin/hr_manager/manager)
+ * O permiso explícito `can_export_reports: true` en user_profiles.permissions.
+ */
+export function canExportReports(role: string | undefined | null, userProfile: unknown): boolean {
+  const normalized = (role || '').toString().trim().toLowerCase()
+  if (EXPORT_REPORTS_ALLOWED_ROLES.has(normalized)) return true
+  const raw = readRawPermissions(userProfile)
+  return raw.can_export_reports === true
+}
+
+/**
+ * Mensaje y código estándar para 403 cuando falla canExportReports.
+ */
+export const EXPORT_REPORTS_FORBIDDEN = {
+  status: 403 as const,
+  body: {
+    error: 'Permisos insuficientes',
+    code: 'CANT_EXPORT_REPORTS',
+    message: 'No tiene permisos para exportar reportes',
+  },
+}

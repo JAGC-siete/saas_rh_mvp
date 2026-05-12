@@ -3,6 +3,7 @@ import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
 import { getHondurasTimestamp, formatDateForHonduras, nowInHonduras, parseDateOnlyAsHonduras } from '../../../lib/timezone'
 import { createAdminClient } from '../../../lib/supabase/server'
 import { assertEmployeePortalEnabled } from '../../../lib/employee-portal/company-settings'
+import { canExportReports, EXPORT_REPORTS_FORBIDDEN } from '../../../lib/security/permissions'
 
 interface WorkCertificateData {
   employee: {
@@ -49,17 +50,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'ID de empleado requerido' })
     }
 
-    const adminRoles = ['super_admin', 'company_admin', 'hr_manager']
     const isEmployeeSelf =
       role === 'employee' &&
       Boolean(userProfile?.employee_id) &&
       employeeId === userProfile.employee_id
 
-    if (!adminRoles.includes(role) && !isEmployeeSelf) {
-      return res.status(403).json({
-        error: 'Permisos insuficientes',
-        message: 'No tiene permisos para generar constancias laborales',
-      })
+    if (!isEmployeeSelf && !canExportReports(role, userProfile)) {
+      return res.status(EXPORT_REPORTS_FORBIDDEN.status).json(EXPORT_REPORTS_FORBIDDEN.body)
     }
 
     if (isEmployeeSelf) {

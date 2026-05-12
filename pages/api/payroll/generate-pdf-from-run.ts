@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { normalizeCountryCode } from '../../../lib/country/supported'
+import { canExportReports, EXPORT_REPORTS_FORBIDDEN } from '../../../lib/security/permissions'
 import { generateConsolidatedPayrollPDF, type PlanillaItem } from '../../../lib/payroll/report'
 import {
   parsePayrollPdfGroupByQuery,
@@ -24,19 +25,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   try {
     // AUTENTICACIÓN ESTANDARIZADA - Usar requireCompanyAccess
-    const { supabase, companyId, role, user } = await requireCompanyAccess(req, res)
-    
-    // Verificar que companyId esté presente
+    const { supabase, companyId, role, user, userProfile } = await requireCompanyAccess(req, res)
+
     if (!companyId) {
       return res.status(400).json({ error: 'Company ID es requerido' })
     }
-    
-    // Verificar roles específicos para generar PDF
-    if (!['super_admin', 'company_admin', 'hr_manager'].includes(role)) {
-      return res.status(403).json({ 
-        error: 'Permisos insuficientes',
-        message: 'No tiene permisos para generar PDF de nómina'
-      })
+
+    if (!canExportReports(role, userProfile)) {
+      return res.status(EXPORT_REPORTS_FORBIDDEN.status).json(EXPORT_REPORTS_FORBIDDEN.body)
     }
 
     // Obtener información de la corrida de nómina
