@@ -32,6 +32,13 @@ const handlerWithSecurity = withExportRateLimit()(
 
 export default handlerWithSecurity
 
+function nestedDepartmentName(emp: { departments?: { name?: string } | { name?: string }[] | null } | null | undefined): string {
+  const d = emp?.departments
+  if (d == null) return 'Sin Departamento'
+  if (Array.isArray(d)) return d[0]?.name?.trim() || 'Sin Departamento'
+  return typeof d.name === 'string' && d.name.trim() ? d.name.trim() : 'Sin Departamento'
+}
+
 async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse) {
   try {
     const { supabase, companyId, role, userProfile } = await requireCompanyAccess(req, res)
@@ -100,9 +107,9 @@ async function exportAttendanceHandler(req: NextApiRequest, res: NextApiResponse
         employees!attendance_records_employee_id_fkey(
           name,
           employee_code,
-          department,
           role,
-          company_id
+          company_id,
+          departments(name)
         )
       `)
       .gte('date', startDate)
@@ -392,7 +399,7 @@ async function exportToPDF(
         id: record.id,
         employee_code: record.employees?.employee_code || '',
         name: record.employees?.name || '',
-        department: record.employees?.department || 'Sin Departamento',
+        department: nestedDepartmentName(record.employees),
         position: record.employees?.role || 'Sin Posición',
         date: record.date,
         check_in: record.check_in,
