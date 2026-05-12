@@ -15,12 +15,14 @@ export const dateValidationSchema = z.object({
       return parsedDate instanceof Date && !isNaN(parsedDate.getTime()) && 
              parsedDate.toISOString().split('T')[0] === date
     }, 'Fecha inválida')
+    // No upper bound vs server "now": reportes usan rangos de calendario (semana/mes) que
+    // pueden incluir fechas futuras sin datos; el tope de rango lo limita validateDateRange.
     .refine((date) => {
       const parsedDate = new Date(date + 'T00:00:00.000Z')
       const now = new Date()
       const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate())
-      return parsedDate >= oneYearAgo && parsedDate <= now
-    }, 'La fecha debe estar dentro del último año'),
+      return parsedDate >= oneYearAgo
+    }, 'La fecha de inicio no puede ser anterior a hace más de un año'),
   
   endDate: z.string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato de fecha inválido. Use YYYY-MM-DD')
@@ -33,8 +35,8 @@ export const dateValidationSchema = z.object({
       const parsedDate = new Date(date + 'T00:00:00.000Z')
       const now = new Date()
       const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate())
-      return parsedDate >= oneYearAgo && parsedDate <= now
-    }, 'La fecha debe estar dentro del último año')
+      return parsedDate >= oneYearAgo
+    }, 'La fecha de fin no puede ser anterior a hace más de un año')
 }).refine((data) => {
   const startDate = new Date(data.startDate + 'T00:00:00.000Z')
   const endDate = new Date(data.endDate + 'T00:00:00.000Z')
@@ -138,8 +140,7 @@ export function validateDateRange(startDate: string, endDate: string): {
 } {
   const start = new Date(startDate + 'T00:00:00.000Z')
   const end = new Date(endDate + 'T00:00:00.000Z')
-  const now = new Date()
-  
+
   // Verificar que las fechas son válidas
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     return { valid: false, error: 'Fechas inválidas' }
@@ -147,21 +148,15 @@ export function validateDateRange(startDate: string, endDate: string): {
 
   // Verificar que el rango no es muy grande (máximo 1 año)
   const diffTime = Math.abs(end.getTime() - start.getTime())
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+  // Mismo día calendario (start === end): diffTime === 0 debe contar como 1 día de rango.
+  const diffDays = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)))
   
   if (diffDays > 365) {
     return { valid: false, error: 'El rango de fechas no puede ser mayor a 1 año' }
   }
 
-  // Verificar que las fechas no son futuras
-  if (start > now || end > now) {
-    return { valid: false, error: 'Las fechas no pueden ser futuras' }
-  }
-
-  // Verificar que el rango es razonable (mínimo 1 día)
-  if (diffDays < 1) {
-    return { valid: false, error: 'El rango de fechas debe ser de al menos 1 día' }
-  }
+  // Permitir fechas "futuras" en el calendario del reporte (p. ej. fin de semana/mes en curso);
+  // no hay datos hasta que existan registros. No comparar con `now` en fecha sola UTC.
 
   return { valid: true }
 }

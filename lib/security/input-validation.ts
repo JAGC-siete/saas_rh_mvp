@@ -82,12 +82,13 @@ export const attendanceExportSchema = {
   startDate: {
     required: true,
     validator: validators.date,
-    sanitize: true
+    // `sanitizeInput` strips `-` (buggy `[--]` rule), breaking YYYY-MM-DD.
+    sanitize: false
   },
   endDate: {
     required: true,
     validator: validators.date,
-    sanitize: true
+    sanitize: false
   },
   formato: {
     required: true,
@@ -97,12 +98,12 @@ export const attendanceExportSchema = {
   employee_id: {
     required: false,
     validator: validators.uuid,
-    sanitize: true
+    sanitize: false
   },
   company_id: {
     required: false,
     validator: validators.uuid,
-    sanitize: true
+    sanitize: false
   }
 }
 
