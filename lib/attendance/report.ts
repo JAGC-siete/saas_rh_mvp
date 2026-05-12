@@ -28,6 +28,13 @@ export interface AttendanceSummary {
   average_hours_per_day: number
 }
 
+/** Líneas de contacto en el PDF; si faltan, se leen `REPORT_PDF_CONTACT_*` del entorno (servidor). */
+export interface AttendancePDFReportContact {
+  address?: string
+  phone?: string
+  email?: string
+}
+
 export interface AttendancePDFOptions {
   /** Nombre mostrado en cabecera e información de empresa */
   companyDisplayName?: string
@@ -35,11 +42,44 @@ export interface AttendancePDFOptions {
   primaryColor?: string
   /** Tabla de detalle dinámica (columnas configuradas); si no se envía, se usa el layout fijo histórico */
   detailTable?: { headers: string[]; rows: (string | number)[][] }
+  /** Datos de contacto del pie/bloque empresa (prioridad sobre variables de entorno). */
+  reportContact?: AttendancePDFReportContact
+}
+
+function resolveReportContact(options?: AttendancePDFOptions): AttendancePDFReportContact {
+  const o = options?.reportContact || {}
+  return {
+    address: o.address ?? process.env.REPORT_PDF_CONTACT_ADDRESS ?? '',
+    phone: o.phone ?? process.env.REPORT_PDF_CONTACT_PHONE ?? '',
+    email: o.email ?? process.env.REPORT_PDF_CONTACT_EMAIL ?? '',
+  }
+}
+
+/** Ancho de columnas: más ancho para la columna "Empleado" / nombre. */
+function columnWidthsForHeaders(headers: string[], tableInnerWidth: number): number[] {
+  const n = Math.max(1, headers.length)
+  const empIdx = headers.findIndex((h) => /empleado/i.test(h) || /^nombre$/i.test(h.trim()))
+  const minEmp = 168
+  if (empIdx < 0 || tableInnerWidth < minEmp + (n - 1) * 36) {
+    const w = Math.floor(tableInnerWidth / n)
+    return headers.map((_, i) => (i === n - 1 ? tableInnerWidth - w * (n - 1) : w))
+  }
+  const other = n - 1
+  const rest = tableInnerWidth - minEmp
+  const base = Math.floor(rest / other)
+  const widths = headers.map((_, i) => (i === empIdx ? minEmp : base))
+  const slack = tableInnerWidth - widths.reduce((a, b) => a + b, 0)
+  widths[empIdx] += slack
+  return widths
 }
 
 /**
  * Generates a consolidated attendance PDF (3 pages: executive summary, attendance table, department analysis)
  * Returns a Buffer that can be sent as application/pdf
+ *
+ * Texto de contacto (dirección / teléfono / email): ya no va hardcodeado en código.
+ * Configurar en Railway/host: `REPORT_PDF_CONTACT_ADDRESS`, `REPORT_PDF_CONTACT_PHONE`, `REPORT_PDF_CONTACT_EMAIL`
+ * o pasar `options.reportContact` desde el API.
  */
 export async function generateConsolidatedAttendancePDF(
   attendanceData: AttendanceItem[],
@@ -55,19 +95,27 @@ export async function generateConsolidatedAttendancePDF(
       const headerColor = options?.primaryColor && /^#[0-9A-Fa-f]{6}$/.test(options.primaryColor)
         ? options.primaryColor
         : '#1e40af'
-      const companyLabel = (options?.companyDisplayName || 'PARAGON HONDURAS').toUpperCase()
+      const companyName = (options?.companyDisplayName || 'Empresa').trim()
+      const companyLabel = companyName.toUpperCase()
+      const contact = resolveReportContact(options)
+
       const doc = new PDFDocument({
         size: 'A4',
-        layout: 'portrait',
+        layout: 'landscape',
         margin: 30,
         info: {
           Title: `Reporte de Asistencia - ${startDate} a ${endDate}`,
-          Author: 'Sistema de Recursos Humanos',
+          Author: 'Humano SISU',
           Subject: 'Reporte de Asistencia',
-          Keywords: 'asistencia, reporte, Paragon, Honduras',
-          Creator: 'HR SaaS System'
-        }
+          Keywords: 'asistencia, reporte, Honduras',
+          Creator: 'Humano SISU',
+        },
       })
+
+      const pageW = () => doc.page.width
+      const pageH = () => doc.page.height
+      const left = () => doc.page.margins.left
+      const innerW = () => pageW() - doc.page.margins.left - doc.page.margins.right
 
       const buffers: Buffer[] = []
       doc.on('data', (chunk: Buffer) => buffers.push(chunk))
@@ -80,43 +128,82 @@ export async function generateConsolidatedAttendancePDF(
         }
       })
 
+      const HEADER_BAND = 118
+      const L = left()
+      const W = innerW()
+
       // ===== PAGE 1: HEADER & EXEC SUMMARY =====
-      doc.rect(0, 0, 595, 100).fill(headerColor)
+      doc.rect(0, 0, pageW(), HEADER_BAND).fill(headerColor)
       doc.fillColor('white')
-      doc.fontSize(24).text(companyLabel, 30, 20, { align: 'center', width: 535 })
-      doc.fontSize(16).text('Sistema de Recursos Humanos', 30, 50, { align: 'center', width: 535 })
-      doc.fontSize(14).text(`REPORTE DE ASISTENCIA - ${startDate} a ${endDate}`, 30, 75, { align: 'center', width: 535 })
+
+      let hy = 14
+      doc.fontSize(17)
+      const companyBlockH = doc.heightOfString(companyLabel, { width: W, align: 'center' })
+      doc.text(companyLabel, L, hy, { width: W, align: 'center', lineBreak: true })
+      hy += Math.min(companyBlockH, 52) + 6
+
+      doc.fontSize(11).text('Humano SISU — Recursos humanos', L, hy, { width: W, align: 'center' })
+      hy += 16
+      doc.fontSize(12).text(`REPORTE DE ASISTENCIA — ${startDate} a ${endDate}`, L, hy, { width: W, align: 'center' })
 
       doc.fillColor('black')
-      doc.fontSize(10).text('INFORMACIÓN DE LA EMPRESA:', 30, 120)
-      doc.fontSize(9).text(options?.companyDisplayName || 'Paragon Honduras', 30, 135)
-      doc.fontSize(9).text('Dirección: Tegucigalpa, Honduras', 30, 150)
-      doc.fontSize(9).text('Teléfono: +504 XXXX-XXXX', 30, 165)
-      doc.fontSize(9).text('Email: info@paragonhonduras.com', 30, 180)
+      let blockY = HEADER_BAND + 14
 
-      doc.fontSize(10).text('INFORMACIÓN DEL PERÍODO:', 300, 120)
-      doc.fontSize(9).text(`Fecha inicio: ${startDate}`, 300, 135)
-      doc.fontSize(9).text(`Fecha fin: ${endDate}`, 300, 150)
-      doc.fontSize(9).text(`Fecha de generación: ${formatDateForHonduras(nowInHonduras())}`, 300, 165)
-      if (generatedByEmail) {
-        doc.fontSize(9).text(`Generado por: ${generatedByEmail}`, 300, 180)
+      doc.fontSize(10).text('INFORMACIÓN DE LA EMPRESA:', L, blockY)
+      doc.fontSize(10).text(companyName, L, blockY + 14, { width: 360, lineBreak: true })
+
+      const hasContact = !!(contact.address || contact.phone || contact.email)
+      let contactY = blockY + 14 + doc.heightOfString(companyName, { width: 360 }) + 4
+      if (hasContact) {
+        doc.fontSize(9)
+        if (contact.address) {
+          doc.text(`Dirección: ${contact.address}`, L, contactY, { width: 360, lineBreak: true })
+          contactY += doc.heightOfString(`Dirección: ${contact.address}`, { width: 360 }) + 2
+        }
+        if (contact.phone) {
+          doc.text(`Teléfono: ${contact.phone}`, L, contactY)
+          contactY += 12
+        }
+        if (contact.email) {
+          doc.text(`Email: ${contact.email}`, L, contactY)
+          contactY += 12
+        }
+      } else {
+        doc.fontSize(8).fillColor('#555555')
+        doc.text(
+          'Datos de contacto: defina REPORT_PDF_CONTACT_ADDRESS, REPORT_PDF_CONTACT_PHONE y REPORT_PDF_CONTACT_EMAIL en el servidor, o envíelos en reportContact.',
+          L,
+          contactY,
+          { width: 360, lineBreak: true }
+        )
+        doc.fillColor('black')
+        contactY += 28
       }
 
-      doc.rect(30, 200, 535, 100).stroke()
-      doc.fontSize(12).text('RESUMEN EJECUTIVO', 35, 210)
-      doc.fontSize(10).text('Total Empleados:', 40, 230)
-      doc.fontSize(10).text(summary.total_employees.toString(), 200, 230)
-      doc.fontSize(10).text('Total Días Registrados:', 40, 245)
-      doc.fontSize(10).text(summary.total_days.toString(), 200, 245)
-      doc.fontSize(10).text('Total Horas Trabajadas:', 40, 260)
-      doc.fontSize(10).text(`${summary.total_hours_worked.toFixed(2)} hrs`, 200, 260)
-      doc.fontSize(10).text('Tasa de Asistencia:', 40, 275)
-      doc.fontSize(10).text(`${summary.attendance_rate.toFixed(1)}%`, 200, 275)
-      doc.fontSize(10).text('Tasa de Puntualidad:', 40, 290)
-      doc.fontSize(10).text(`${summary.punctuality_rate.toFixed(1)}%`, 200, 290)
+      const rightColX = L + Math.min(400, Math.floor(W * 0.48))
+      doc.fontSize(10).text('INFORMACIÓN DEL PERÍODO:', rightColX, blockY)
+      doc.fontSize(9).text(`Fecha inicio: ${startDate}`, rightColX, blockY + 14)
+      doc.fontSize(9).text(`Fecha fin: ${endDate}`, rightColX, blockY + 28)
+      doc.fontSize(9).text(`Fecha de generación: ${formatDateForHonduras(nowInHonduras())}`, rightColX, blockY + 42)
+      if (generatedByEmail) {
+        doc.fontSize(9).text(`Generado por: ${generatedByEmail}`, rightColX, blockY + 56)
+      }
 
-      // Totales por departamento
-      const deptTotals: { [key: string]: { count: number, hours: number, attendance: number } } = {}
+      const summaryTop = Math.max(contactY, blockY + 72) + 8
+      doc.rect(L, summaryTop, W, 100).stroke()
+      doc.fontSize(12).text('RESUMEN EJECUTIVO', L + 5, summaryTop + 8)
+      doc.fontSize(10).text('Total Empleados:', L + 10, summaryTop + 28)
+      doc.fontSize(10).text(summary.total_employees.toString(), L + 200, summaryTop + 28)
+      doc.fontSize(10).text('Total Días Registrados:', L + 10, summaryTop + 43)
+      doc.fontSize(10).text(summary.total_days.toString(), L + 200, summaryTop + 43)
+      doc.fontSize(10).text('Total Horas Trabajadas:', L + 10, summaryTop + 58)
+      doc.fontSize(10).text(`${summary.total_hours_worked.toFixed(2)} hrs`, L + 200, summaryTop + 58)
+      doc.fontSize(10).text('Tasa de Asistencia:', L + 10, summaryTop + 73)
+      doc.fontSize(10).text(`${summary.attendance_rate.toFixed(1)}%`, L + 200, summaryTop + 73)
+      doc.fontSize(10).text('Tasa de Puntualidad:', L + 10, summaryTop + 88)
+      doc.fontSize(10).text(`${summary.punctuality_rate.toFixed(1)}%`, L + 200, summaryTop + 88)
+
+      const deptTotals: { [key: string]: { count: number; hours: number; attendance: number } } = {}
       attendanceData.forEach((row) => {
         const dept = row.department || 'Sin Departamento'
         if (!deptTotals[dept]) {
@@ -127,34 +214,40 @@ export async function generateConsolidatedAttendancePDF(
         deptTotals[dept].attendance += row.status === 'present' ? 1 : 0
       })
 
-      doc.fontSize(10).text('TOTALES POR DEPARTAMENTO:', 300, 230)
-      let summaryDeptY = 245
+      doc.fontSize(10).text('TOTALES POR DEPARTAMENTO:', rightColX, summaryTop + 28)
+      let summaryDeptY = summaryTop + 44
       Object.entries(deptTotals).forEach(([dept, totals]) => {
-        if (summaryDeptY < 290) {
+        if (summaryDeptY < summaryTop + 92) {
           const attendanceRate = totals.count > 0 ? (totals.attendance / totals.count) * 100 : 0
-          doc.fontSize(9).text(`${dept}: ${totals.count} reg. - ${totals.hours.toFixed(1)}h - ${attendanceRate.toFixed(1)}%`, 300, summaryDeptY)
-          summaryDeptY += 12
+          doc
+            .fontSize(9)
+            .text(`${dept}: ${totals.count} reg. — ${totals.hours.toFixed(1)}h — ${attendanceRate.toFixed(1)}%`, rightColX, summaryDeptY, {
+              width: W - (rightColX - L) - 10,
+              lineBreak: true,
+            })
+          summaryDeptY += 14
         }
       })
 
       // ===== PAGE 2: ATTENDANCE TABLE =====
       doc.addPage()
-      doc.fontSize(14).text('DETALLE DE ASISTENCIA POR EMPLEADO', 30, 30, { align: 'center', width: 535 })
+      doc.fontSize(14).text('DETALLE DE ASISTENCIA POR EMPLEADO', L, 28, { align: 'center', width: W })
 
-      const tableInnerWidth = 535
-      const startX = 30
-      let y = 70
-      const rowHeight = 15
+      const tableInnerWidth = W
+      const startX = L
+      let y = 58
+      const headerRowH = 22
+      const minDataRowH = 18
 
       const drawAttendanceHeaderRow = (headers: string[], colWidths: number[]) => {
         headers.forEach((h, i) => {
           const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0)
-          doc.rect(x, y, colWidths[i], rowHeight).fillAndStroke(headerColor, '#000')
+          doc.rect(x, y, colWidths[i], headerRowH).fillAndStroke(headerColor, '#000')
           doc.fillColor('white')
-          doc.fontSize(8).text(h, x + 2, y + 4, { width: colWidths[i] - 4, align: 'center' })
+          doc.fontSize(8).text(h, x + 3, y + 6, { width: colWidths[i] - 6, align: 'center', lineBreak: true })
           doc.fillColor('black')
         })
-        y += rowHeight
+        y += headerRowH
       }
 
       let headers: string[]
@@ -163,15 +256,13 @@ export async function generateConsolidatedAttendancePDF(
 
       if (options?.detailTable?.headers?.length && options.detailTable.rows) {
         headers = options.detailTable.headers
-        const n = Math.max(1, headers.length)
-        const w = Math.floor(tableInnerWidth / n)
-        colWidths = headers.map((_, i) => (i === n - 1 ? tableInnerWidth - w * (n - 1) : w))
+        colWidths = columnWidthsForHeaders(headers, tableInnerWidth)
         dataRows = options.detailTable.rows.map((r) =>
           headers.map((_, i) => (r[i] !== undefined && r[i] !== null ? r[i] : ''))
         )
       } else {
         headers = ['Código', 'Nombre', 'Departamento', 'Fecha', 'Entrada', 'Salida', 'Horas', 'Estado', 'Tardanza', 'Extra']
-        colWidths = [50, 80, 60, 60, 50, 50, 40, 50, 40, 40]
+        colWidths = columnWidthsForHeaders(headers, tableInnerWidth)
         dataRows = attendanceData.map((row) => [
           row.employee_code || '',
           row.name,
@@ -182,60 +273,78 @@ export async function generateConsolidatedAttendancePDF(
           `${row.hours_worked.toFixed(1)}h`,
           row.status === 'present' ? 'Presente' : row.status === 'late' ? 'Tardanza' : 'Ausente',
           row.late_minutes > 0 ? `${row.late_minutes}min` : '0min',
-          row.overtime_hours > 0 ? `${row.overtime_hours.toFixed(1)}h` : '0h'
+          row.overtime_hours > 0 ? `${row.overtime_hours.toFixed(1)}h` : '0h',
         ])
       }
+
+      const empColIdx = headers.findIndex((h) => /empleado/i.test(h) || /^nombre$/i.test(h.trim()))
 
       drawAttendanceHeaderRow(headers, colWidths)
 
       let pageCount = 1
+      const bottomSafe = pageH() - doc.page.margins.bottom - 24
+
       dataRows.forEach((values) => {
-        if (y > 750) {
+        const cellHeights = values.map((val, i) => {
+          const cw = colWidths[i] - 6
+          const s = String(val ?? '')
+          doc.fontSize(8)
+          const align = i === empColIdx ? 'left' : 'center'
+          return doc.heightOfString(s, { width: cw, align }) + 8
+        })
+        const rowH = Math.min(48, Math.max(minDataRowH, Math.max(...cellHeights)))
+
+        if (y + rowH > bottomSafe) {
           doc.addPage()
-          y = 30
+          y = doc.page.margins.top
           pageCount++
-          doc.fontSize(10).text(`Página ${pageCount} - Continuación`, 30, 15)
+          doc.fontSize(10).text(`Página ${pageCount} — Continuación`, L, y - 6)
           drawAttendanceHeaderRow(headers, colWidths)
         }
+
         values.forEach((val, i) => {
           const x = startX + colWidths.slice(0, i).reduce((a, b) => a + b, 0)
-          doc.rect(x, y, colWidths[i], rowHeight).stroke()
-          doc.fontSize(7).text(String(val ?? ''), x + 2, y + 4, { width: colWidths[i] - 4, align: 'center' })
+          doc.rect(x, y, colWidths[i], rowH).stroke()
+          doc.fillColor('black')
+          doc.fontSize(8)
+          const cw = colWidths[i] - 6
+          const align = i === empColIdx ? 'left' : 'center'
+          doc.text(String(val ?? ''), x + 3, y + 4, { width: cw, align, lineBreak: true })
         })
-        y += rowHeight
+        y += rowH
       })
 
-      y += 5
-      doc.rect(startX, y, 535, rowHeight).fillAndStroke('#f3f4f6', '#000')
-      doc.fontSize(9).text('TOTALES:', startX + 5, y + 4)
-      doc.fontSize(9).text(`${summary.total_days} días`, startX + 200, y + 4)
-      doc.fontSize(9).text(`${summary.total_hours_worked.toFixed(1)}h`, startX + 300, y + 4)
-      doc.fontSize(9).text(`${summary.attendance_rate.toFixed(1)}%`, startX + 400, y + 4)
+      y += 6
+      doc.rect(startX, y, W, minDataRowH).fillAndStroke('#f3f4f6', '#000')
+      doc.fontSize(9).text('TOTALES:', startX + 6, y + 5)
+      doc.fontSize(9).text(`${summary.total_days} días`, startX + 220, y + 5)
+      doc.fontSize(9).text(`${summary.total_hours_worked.toFixed(1)}h`, startX + 360, y + 5)
+      doc.fontSize(9).text(`${summary.attendance_rate.toFixed(1)}%`, startX + 480, y + 5)
 
       // ===== PAGE 3: DEPARTMENT ANALYSIS & NOTES =====
       doc.addPage()
-      doc.fontSize(14).text('ANÁLISIS POR DEPARTAMENTO Y NOTAS', 30, 30, { align: 'center', width: 535 })
+      doc.fontSize(14).text('ANÁLISIS POR DEPARTAMENTO Y NOTAS', L, 28, { align: 'center', width: W })
 
-      doc.fontSize(10).text('ANÁLISIS POR DEPARTAMENTO:', 30, 60)
+      doc.fontSize(10).text('ANÁLISIS POR DEPARTAMENTO:', L, 56)
       const deptHeaders = ['Departamento', 'Registros', 'Horas Totales', 'Promedio/Día', 'Tasa Asistencia']
-      const deptColWidths = [120, 60, 80, 80, 80]
-      const deptStartX = 30
-      let deptY = 80
-      const deptRowHeight = 15
+      const deptColWidths = columnWidthsForHeaders(deptHeaders, Math.min(520, W))
+      const deptStartX = L
+      let deptY = 76
+      const deptHeaderH = 20
 
       deptHeaders.forEach((h, i) => {
         const x = deptStartX + deptColWidths.slice(0, i).reduce((a, b) => a + b, 0)
-        doc.rect(x, deptY, deptColWidths[i], deptRowHeight).fillAndStroke(headerColor, '#000')
+        doc.rect(x, deptY, deptColWidths[i], deptHeaderH).fillAndStroke(headerColor, '#000')
         doc.fillColor('white')
-        doc.fontSize(8).text(h, x + 2, deptY + 4, { width: deptColWidths[i] - 4, align: 'center' })
+        doc.fontSize(8).text(h, x + 2, deptY + 5, { width: deptColWidths[i] - 4, align: 'center', lineBreak: true })
         doc.fillColor('black')
       })
-      deptY += deptRowHeight
+      deptY += deptHeaderH
 
       Object.entries(deptTotals).forEach(([dept, totals]) => {
-        if (deptY > 750) {
+        if (deptY > bottomSafe - 40) {
           doc.addPage()
-          deptY = 30
+          deptY = doc.page.margins.top + 20
         }
         const attendanceRate = totals.count > 0 ? (totals.attendance / totals.count) * 100 : 0
         const avgHours = totals.count > 0 ? totals.hours / totals.count : 0
@@ -244,32 +353,33 @@ export async function generateConsolidatedAttendancePDF(
           totals.count.toString(),
           `${totals.hours.toFixed(1)}h`,
           `${avgHours.toFixed(1)}h`,
-          `${attendanceRate.toFixed(1)}%`
+          `${attendanceRate.toFixed(1)}%`,
         ]
+        const drh = 16
         deptValues.forEach((val, i) => {
           const x = deptStartX + deptColWidths.slice(0, i).reduce((a, b) => a + b, 0)
-          doc.rect(x, deptY, deptColWidths[i], deptRowHeight).stroke()
-          doc.fontSize(8).text(val.toString(), x + 2, deptY + 4, { width: deptColWidths[i] - 4, align: 'center' })
+          doc.rect(x, deptY, deptColWidths[i], drh).stroke()
+          doc.fontSize(8).text(val.toString(), x + 2, deptY + 4, { width: deptColWidths[i] - 4, align: 'center', lineBreak: true })
         })
-        deptY += deptRowHeight
+        deptY += drh
       })
 
-      doc.fontSize(10).text('MÉTRICAS CLAVE:', 30, deptY + 20)
-      doc.fontSize(9).text(`• Tasa de Asistencia General: ${summary.attendance_rate.toFixed(1)}%`, 30, deptY + 35)
-      doc.fontSize(9).text(`• Tasa de Puntualidad: ${summary.punctuality_rate.toFixed(1)}%`, 30, deptY + 50)
-      doc.fontSize(9).text(`• Promedio de Horas por Día: ${summary.average_hours_per_day.toFixed(1)} horas`, 30, deptY + 65)
-      doc.fontSize(9).text(`• Total de Horas Extra: ${summary.total_overtime_hours.toFixed(1)} horas`, 30, deptY + 80)
-      doc.fontSize(9).text(`• Total de Minutos de Tardanza: ${summary.total_late_minutes} minutos`, 30, deptY + 95)
+      doc.fontSize(10).text('MÉTRICAS CLAVE:', L, deptY + 18)
+      doc.fontSize(9).text(`• Tasa de Asistencia General: ${summary.attendance_rate.toFixed(1)}%`, L, deptY + 34)
+      doc.fontSize(9).text(`• Tasa de Puntualidad: ${summary.punctuality_rate.toFixed(1)}%`, L, deptY + 49)
+      doc.fontSize(9).text(`• Promedio de Horas por Día: ${summary.average_hours_per_day.toFixed(1)} horas`, L, deptY + 64)
+      doc.fontSize(9).text(`• Total de Horas Extra: ${summary.total_overtime_hours.toFixed(1)} horas`, L, deptY + 79)
+      doc.fontSize(9).text(`• Total de Minutos de Tardanza: ${summary.total_late_minutes} minutos`, L, deptY + 94)
 
-      doc.fontSize(10).text('NOTAS IMPORTANTES:', 30, deptY + 120)
-      doc.fontSize(9).text('• Este reporte ha sido generado automáticamente por el sistema de recursos humanos.', 30, deptY + 135)
-      doc.fontSize(9).text('• Los datos de asistencia se registran en tiempo real con validación de geofence.', 30, deptY + 150)
-      doc.fontSize(9).text('• Las horas extra se calculan automáticamente según el horario de trabajo configurado.', 30, deptY + 165)
-      doc.fontSize(9).text('• La puntualidad se considera con una tolerancia de 15 minutos.', 30, deptY + 180)
-      doc.fontSize(9).text('• Para consultas, contactar al departamento de recursos humanos.', 30, deptY + 195)
+      doc.fontSize(10).text('NOTAS IMPORTANTES:', L, deptY + 118)
+      doc.fontSize(9).text('• Este reporte ha sido generado automáticamente por el sistema.', L, deptY + 134)
+      doc.fontSize(9).text('• Los datos de asistencia provienen de los registros consolidados en el sistema.', L, deptY + 149)
+      doc.fontSize(9).text('• Las horas extra dependen del horario y reglas configuradas para la empresa.', L, deptY + 164)
+      doc.fontSize(9).text('• Para aclaraciones, contacte al área de recursos humanos de su organización.', L, deptY + 179)
 
-      doc.fontSize(8).text('Documento generado automáticamente - Paragon Honduras - Sistema de Recursos Humanos', 30, 800, { align: 'center', width: 535 })
-      doc.fontSize(8).text(`Fecha de generación: ${formatDateTimeForHonduras(nowInHonduras())}`, 30, 815, { align: 'center', width: 535 })
+      const fy = pageH() - 36
+      doc.fontSize(8).text(`Documento generado automáticamente — ${companyName}`, L, fy, { align: 'center', width: W })
+      doc.fontSize(8).text(`Fecha de generación: ${formatDateTimeForHonduras(nowInHonduras())}`, L, fy + 12, { align: 'center', width: W })
 
       doc.end()
     } catch (error) {
