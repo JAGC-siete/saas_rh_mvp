@@ -68,10 +68,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (response.ok) {
         const data = await response.json()
-        // Find the current user's profile
         const profile = data.profiles?.find((p: any) => p.id === user.id)
         if (profile) {
           setUserProfile(profile)
+
+          // Keep localStorage in sync with the latest permissions so that
+          // subsequent reloads rehydrate the correct gating before the
+          // network refresh completes.
+          if (typeof window !== 'undefined') {
+            try {
+              const raw = localStorage.getItem('user')
+              const existing = raw ? JSON.parse(raw) : {}
+              const merged = {
+                ...existing,
+                id: profile.id ?? existing.id,
+                email: profile.email ?? existing.email,
+                role: profile.role ?? existing.role,
+                company_id: profile.company_id ?? existing.company_id ?? null,
+                permissions:
+                  profile.permissions && typeof profile.permissions === 'object'
+                    ? profile.permissions
+                    : existing.permissions || {},
+              }
+              localStorage.setItem('user', JSON.stringify(merged))
+            } catch {
+              // ignore localStorage write errors
+            }
+          }
         }
       }
     } catch (error) {
@@ -145,8 +168,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(session?.user ?? null)
           setError(null)
 
-          // If we have a supabase session and no profile yet, try to refresh it
-          if (session?.user && !userProfile) {
+          // If we have a Supabase session, always refresh the profile so that
+          // permissions reflect the latest server-side state (avoids stale
+          // permissions cached in localStorage gating UI like export buttons).
+          if (session?.user) {
             await refreshUserProfile()
           }
         }
@@ -160,8 +185,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               const user = JSON.parse(userData)
               console.log('🔑 Found user data in localStorage:', user.email)
               setUser(user)
-              
-              // Create a proper user profile object from localStorage data
+
+              const persistedPermissions =
+                user && typeof user.permissions === 'object' && user.permissions !== null
+                  ? user.permissions
+                  : {}
+
               const userProfile = {
                 id: user.id,
                 email: user.email,
@@ -169,11 +198,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 role: user.role,
                 company_id: user.company_id,
                 is_active: true,
-                permissions: {},
+                permissions: persistedPermissions,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
               }
-              
+
               setUserProfile(userProfile)
               console.log('✅ User profile set from localStorage:', userProfile)
             } catch (err) {
@@ -259,13 +288,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const data = await response.json()
-      
-      // Store user data in localStorage (no custom JWT needed)
+
+      // Prefer the full profile (with real permissions) returned by the API.
+      const apiProfile = data.userProfile || null
+      const apiPermissions =
+        apiProfile && typeof apiProfile.permissions === 'object' && apiProfile.permissions !== null
+          ? apiProfile.permissions
+          : {}
+
+      // Store user data in localStorage so we can rehydrate permissions on
+      // subsequent reloads without re-fetching.
       if (typeof window !== 'undefined') {
-        localStorage.setItem('user', JSON.stringify(data.user))
+        const persisted = {
+          ...data.user,
+          permissions: apiPermissions,
+        }
+        localStorage.setItem('user', JSON.stringify(persisted))
       }
 
-      // Create a proper user profile object from login response
+      // Create a proper user profile object from login response.
+      // IMPORTANT: use real permissions from the API; never hardcode {}.
       const userProfile = {
         id: data.user.id,
         email: data.user.email,
@@ -273,12 +315,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         role: data.user.role,
         company_id: data.user.company_id,
         is_active: true,
-        permissions: {},
+        permissions: apiPermissions,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }
-      
-      // Set user profile from login response
+
       setUserProfile(userProfile)
       setUser(data.user)
       setSession(data.session) // Use Supabase session directly
