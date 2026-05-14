@@ -30,7 +30,8 @@ import {
   DollarSign,
   Coins,
   CheckSquare,
-  Square
+  Square,
+  Clock
 } from 'lucide-react'
 
 import { parseOrdinaryHoursOverrideInput } from '../lib/payroll/ordinary-hours-override'
@@ -151,7 +152,8 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     calculationMode: false, // Método de cálculo (Por Día / Por Hora Exacta)
     currency: false, // Retraída por defecto
     legalDeductions: false, // Retraída por defecto
-    paymentCutDates: false // Retraída por defecto
+    paymentCutDates: false, // Retraída por defecto
+    ordinaryDailyCap: false // Tope horas ordinarias / día (previo a extras)
   })
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   const [confirmAction, setConfirmAction] = useState('')
@@ -840,7 +842,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                 </div>
               </button>
               <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                expandedSections.calculationMode ? 'max-h-[520px] opacity-100 mt-4' : 'max-h-0 opacity-0'
+                expandedSections.calculationMode ? 'max-h-[320px] opacity-100 mt-4' : 'max-h-0 opacity-0'
               }`}>
                 <div className="flex flex-col gap-4">
                   <div className="flex gap-4">
@@ -879,34 +881,6 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                         <p className="text-xs text-gray-400 mt-0.5">Calcula según sumatoria de horas efectivas</p>
                       </div>
                     </label>
-                  </div>
-                  <div className="p-3 glass border border-white/10 rounded-lg">
-                    <label className="text-sm text-gray-200 font-medium">Tope diario de horas ordinarias (antes de extras)</label>
-                    <p className="text-xs text-gray-500 mt-1 mb-2">
-                      Opcional. Horas netas por encima de este tope cuentan como extraordinarias en el cálculo batch.
-                      Vacío = usar legal_daily_hours de la ley (p. ej. 8 h). Valores 1–16. Tras cambiar, recalcule horas
-                      de asistencia del período.
-                    </p>
-                    <Input
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="Ej: 7.5"
-                      value={
-                        config.ordinary_hours_override == null ? '' : String(config.ordinary_hours_override)
-                      }
-                      onChange={(e) => {
-                        const raw = e.target.value.trim().replace(',', '.')
-                        if (raw === '') {
-                          setConfig((prev) => ({ ...prev, ordinary_hours_override: null }))
-                          return
-                        }
-                        const n = parseOrdinaryHoursOverrideInput(raw)
-                        if (n !== null) {
-                          setConfig((prev) => ({ ...prev, ordinary_hours_override: n }))
-                        }
-                      }}
-                      className="bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm max-w-[200px]"
-                    />
                   </div>
                   {(config.calculation_mode ?? 'daily') === 'hourly' && (
                     <div className="p-3 glass border border-amber-500/30 rounded-lg">
@@ -1409,6 +1383,76 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                   <p className="text-sm text-gray-500">No se pudo calcular la vista previa</p>
                 )}
               </div>
+              </div>
+            </div>
+
+            {/* Tope diario de horas ordinarias (AHC / extras) */}
+            <div className="glass border border-white/20 rounded-lg p-4">
+              <button
+                type="button"
+                onClick={() =>
+                  setExpandedSections((prev) => ({ ...prev, ordinaryDailyCap: !prev.ordinaryDailyCap }))
+                }
+                className="w-full flex items-center justify-between p-3 hover:bg-white/5 rounded-lg transition-all duration-200 cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <Clock className="h-4 w-4 text-sky-300" />
+                  <label className="text-sm font-medium text-white">
+                    Tope de horas ordinarias (día)
+                  </label>
+                </div>
+                <div className="flex items-center gap-2">
+                  {expandedSections.ordinaryDailyCap ? (
+                    <ChevronUp className="h-5 w-5 text-sky-300 transition-transform duration-200" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-sky-300 transition-transform duration-200" />
+                  )}
+                </div>
+              </button>
+              <div
+                className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                  expandedSections.ordinaryDailyCap ? 'max-h-[280px] opacity-100 mt-4' : 'max-h-0 opacity-0'
+                }`}
+              >
+                <div className="flex flex-col gap-4">
+                  <div className="p-3 glass border border-sky-500/30 rounded-lg">
+                    <label className="flex items-start gap-2 text-sm text-sky-200">
+                      <Info className="h-4 w-4 shrink-0 mt-0.5" />
+                      <span className="font-medium leading-snug">Horas ordinarias máximas por día</span>
+                    </label>
+                    <p className="text-xs text-gray-400 mt-2 leading-relaxed">
+                      Opcional. Las horas netas por encima de este tope se tratan como extraordinarias en el cálculo
+                      batch. Vacío = se usa legal_daily_hours de la ley (p. ej. 8 h). Valores entre 1 y 16. Tras
+                      cambiar, recalcule las horas de asistencia del período.
+                    </p>
+                    <div className="mt-3 flex flex-wrap items-end gap-3">
+                      <div className="min-w-[160px] max-w-[240px] flex-1">
+                        <Input
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="Ej: 7.5"
+                          value={
+                            config.ordinary_hours_override == null
+                              ? ''
+                              : String(config.ordinary_hours_override)
+                          }
+                          onChange={(e) => {
+                            const raw = e.target.value.trim().replace(',', '.')
+                            if (raw === '') {
+                              setConfig((prev) => ({ ...prev, ordinary_hours_override: null }))
+                              return
+                            }
+                            const n = parseOrdinaryHoursOverrideInput(raw)
+                            if (n !== null) {
+                              setConfig((prev) => ({ ...prev, ordinary_hours_override: n }))
+                            }
+                          }}
+                          className="w-full px-3 py-2 input-glass text-white text-sm placeholder:text-white/50"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
