@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
 import { createAdminClient } from '../../../lib/supabase/server'
+import { parseOrdinaryHoursOverrideInput } from '../../../lib/payroll/ordinary-hours-override'
 
 /**
  * API para gestionar configuraciones de payroll por empresa
@@ -159,7 +160,11 @@ async function getPayrollConfig(
       earning_impact_rules:
         metadata.earning_impact_rules && typeof metadata.earning_impact_rules === 'object'
           ? metadata.earning_impact_rules
-          : {}
+          : {},
+      ordinary_hours_override:
+        metadata.ordinary_hours_override != null && String(metadata.ordinary_hours_override).trim() !== ''
+          ? Number(metadata.ordinary_hours_override)
+          : null
     }
 
     return res.status(200).json({
@@ -197,6 +202,7 @@ async function upsertPayrollConfig(
       currency,
       calculation_mode = 'daily',
       incomplete_record_default_hours = null,
+      ordinary_hours_override: ordinary_hours_override_body,
       legal_deductions,
       payment_cut_dates,
       semanal_proration = 'proportional'
@@ -269,8 +275,23 @@ async function upsertPayrollConfig(
       second_start: cutDates.biweekly_second_start ?? 16,
       second_end: cutDates.biweekly_second_end ?? 30
     }
-    const payrollMetadata = {
-      ...metadata,
+
+    const { data: existingPayrollRow } = await supabase
+      .from('company_payroll_configs')
+      .select('metadata')
+      .eq('company_id', companyId)
+      .eq('is_active', true)
+      .maybeSingle()
+
+    const priorMetadata =
+      existingPayrollRow?.metadata && typeof existingPayrollRow.metadata === 'object' && !Array.isArray(existingPayrollRow.metadata)
+        ? (existingPayrollRow.metadata as Record<string, unknown>)
+        : {}
+    const mergedMetaFromBody =
+      metadata && typeof metadata === 'object' && !Array.isArray(metadata) ? { ...priorMetadata, ...metadata } : { ...priorMetadata }
+
+    const payrollMetadata: Record<string, unknown> = {
+      ...mergedMetaFromBody,
       payment_frequency: payment_frequency || 'biweekly',
       currency: currency || 'HNL',
       legal_deductions: legal_deductions || {
@@ -284,6 +305,17 @@ async function upsertPayrollConfig(
       ...(earning_impact_rules != null && typeof earning_impact_rules === 'object'
         ? { earning_impact_rules }
         : {})
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, 'ordinary_hours_override')) {
+      if (ordinary_hours_override_body === null || ordinary_hours_override_body === '') {
+        delete payrollMetadata.ordinary_hours_override
+      } else {
+        const parsed = parseOrdinaryHoursOverrideInput(ordinary_hours_override_body)
+        if (parsed !== null) {
+          payrollMetadata.ordinary_hours_override = parsed
+        }
+      }
     }
 
     // Validar calculation_mode
@@ -357,7 +389,11 @@ async function upsertPayrollConfig(
       incomplete_record_default_hours: data.incomplete_record_default_hours ?? meta.incomplete_record_default_hours ?? null,
       legal_deductions: meta.legal_deductions || { ihss: true, rap: true, isr: true, infop: false },
       payment_cut_dates: cutDatesRes,
-      semanal_proration: meta.semanal_proration || 'proportional'
+      semanal_proration: meta.semanal_proration || 'proportional',
+      ordinary_hours_override:
+        meta.ordinary_hours_override != null && String(meta.ordinary_hours_override).trim() !== ''
+          ? Number(meta.ordinary_hours_override)
+          : null
     }
 
     return res.status(200).json({

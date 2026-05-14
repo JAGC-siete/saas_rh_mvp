@@ -33,6 +33,8 @@ import {
   Square
 } from 'lucide-react'
 
+import { parseOrdinaryHoursOverrideInput } from '../lib/payroll/ordinary-hours-override'
+
 interface CustomFieldParameter {
   key: string
   label: string
@@ -58,6 +60,8 @@ interface PayrollConfig {
   calculation_mode?: 'daily' | 'hourly' // Por día (asistencia) o por hora exacta
   semanal_proration?: 'proportional' | 'fixed' // Semanal: proporcional a días o monto fijo (mensual/4)
   incomplete_record_default_hours?: number | null // Horas por defecto si falta check_out (solo hourly)
+  /** Tope diario de horas ordinarias antes de HE; null = usar labor_laws.legal_daily_hours en el RPC. */
+  ordinary_hours_override?: number | null
   legal_deductions: {
     ihss: boolean
     rap: boolean
@@ -106,6 +110,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     currency: 'HNL',
     calculation_mode: 'daily',
     incomplete_record_default_hours: null,
+    ordinary_hours_override: null,
     legal_deductions: {
       ihss: true,
       rap: true,
@@ -202,6 +207,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     // Comparar calculation_mode
     if ((config.calculation_mode ?? 'daily') !== (initialConfig.calculation_mode ?? 'daily')) return true
     if ((config.incomplete_record_default_hours ?? null) !== (initialConfig.incomplete_record_default_hours ?? null)) return true
+    if ((config.ordinary_hours_override ?? null) !== (initialConfig.ordinary_hours_override ?? null)) return true
     if ((config.semanal_proration ?? 'proportional') !== (initialConfig.semanal_proration ?? 'proportional')) return true
     
     // Comparar legal_deductions (deep comparison)
@@ -247,6 +253,10 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
       currency: apiConfig.currency || 'HNL',
       calculation_mode: apiConfig.calculation_mode || 'daily',
       incomplete_record_default_hours: apiConfig.incomplete_record_default_hours ?? null,
+      ordinary_hours_override:
+        apiConfig.ordinary_hours_override != null && apiConfig.ordinary_hours_override !== ''
+          ? Number(apiConfig.ordinary_hours_override)
+          : null,
       legal_deductions: {
         ihss: apiConfig.legal_deductions?.ihss ?? true,
         rap: apiConfig.legal_deductions?.rap ?? true,
@@ -300,6 +310,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
             currency: 'HNL',
             calculation_mode: 'daily',
             incomplete_record_default_hours: null,
+            ordinary_hours_override: null,
             legal_deductions: {
               ihss: true,
               rap: true,
@@ -332,6 +343,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
           currency: 'HNL',
           calculation_mode: 'daily',
           incomplete_record_default_hours: null,
+          ordinary_hours_override: null,
           legal_deductions: {
             ihss: true,
             rap: true,
@@ -403,6 +415,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
           currency: config.currency,
           calculation_mode: config.calculation_mode ?? 'daily',
           incomplete_record_default_hours: config.incomplete_record_default_hours ?? null,
+          ordinary_hours_override: config.ordinary_hours_override ?? null,
           legal_deductions: config.legal_deductions,
           payment_cut_dates: config.payment_cut_dates,
           semanal_proration: config.semanal_proration ?? 'proportional',
@@ -550,7 +563,10 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     if ((config.incomplete_record_default_hours ?? null) !== (initialConfig.incomplete_record_default_hours ?? null)) {
       changes.push('horas por defecto para marcas incompletas')
     }
-    
+    if ((config.ordinary_hours_override ?? null) !== (initialConfig.ordinary_hours_override ?? null)) {
+      changes.push('tope de horas ordinarias diarias (previo a extras)')
+    }
+
     const deductionsStr = JSON.stringify(config.legal_deductions)
     const initialDeductionsStr = JSON.stringify(initialConfig.legal_deductions)
     if (deductionsStr !== initialDeductionsStr) {
@@ -824,7 +840,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                 </div>
               </button>
               <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                expandedSections.calculationMode ? 'max-h-[280px] opacity-100 mt-4' : 'max-h-0 opacity-0'
+                expandedSections.calculationMode ? 'max-h-[520px] opacity-100 mt-4' : 'max-h-0 opacity-0'
               }`}>
                 <div className="flex flex-col gap-4">
                   <div className="flex gap-4">
@@ -863,6 +879,34 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                         <p className="text-xs text-gray-400 mt-0.5">Calcula según sumatoria de horas efectivas</p>
                       </div>
                     </label>
+                  </div>
+                  <div className="p-3 glass border border-white/10 rounded-lg">
+                    <label className="text-sm text-gray-200 font-medium">Tope diario de horas ordinarias (antes de extras)</label>
+                    <p className="text-xs text-gray-500 mt-1 mb-2">
+                      Opcional. Horas netas por encima de este tope cuentan como extraordinarias en el cálculo batch.
+                      Vacío = usar legal_daily_hours de la ley (p. ej. 8 h). Valores 1–16. Tras cambiar, recalcule horas
+                      de asistencia del período.
+                    </p>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="Ej: 7.5"
+                      value={
+                        config.ordinary_hours_override == null ? '' : String(config.ordinary_hours_override)
+                      }
+                      onChange={(e) => {
+                        const raw = e.target.value.trim().replace(',', '.')
+                        if (raw === '') {
+                          setConfig((prev) => ({ ...prev, ordinary_hours_override: null }))
+                          return
+                        }
+                        const n = parseOrdinaryHoursOverrideInput(raw)
+                        if (n !== null) {
+                          setConfig((prev) => ({ ...prev, ordinary_hours_override: n }))
+                        }
+                      }}
+                      className="bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm max-w-[200px]"
+                    />
                   </div>
                   {(config.calculation_mode ?? 'daily') === 'hourly' && (
                     <div className="p-3 glass border border-amber-500/30 rounded-lg">
