@@ -35,6 +35,9 @@ import {
 } from 'lucide-react'
 
 import { parseOrdinaryHoursOverrideInput } from '../lib/payroll/ordinary-hours-override'
+import { cn } from '../lib/utils'
+
+const ORDINARY_HOURS_PRESETS = [7, 7.5, 8, 8.5, 9] as const
 
 interface CustomFieldParameter {
   key: string
@@ -159,6 +162,8 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
   const [confirmAction, setConfirmAction] = useState('')
   const [periodPreview, setPeriodPreview] = useState<Array<{ label: string; fechaInicio: string; fechaFin: string }>>([])
   const [periodPreviewLoading, setPeriodPreviewLoading] = useState(false)
+  /** Texto libre del tope diario; se valida al blur y al guardar (evita cierres al escribir "7."). */
+  const [ordinaryHoursDraft, setOrdinaryHoursDraft] = useState('')
 
   // Load current configuration
   useEffect(() => {
@@ -209,7 +214,14 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     // Comparar calculation_mode
     if ((config.calculation_mode ?? 'daily') !== (initialConfig.calculation_mode ?? 'daily')) return true
     if ((config.incomplete_record_default_hours ?? null) !== (initialConfig.incomplete_record_default_hours ?? null)) return true
-    if ((config.ordinary_hours_override ?? null) !== (initialConfig.ordinary_hours_override ?? null)) return true
+    const tOrd = ordinaryHoursDraft.trim().replace(',', '.')
+    if (tOrd === '') {
+      if ((initialConfig.ordinary_hours_override ?? null) !== null) return true
+    } else {
+      const nOrd = parseOrdinaryHoursOverrideInput(tOrd)
+      if (nOrd === null) return true
+      if ((initialConfig.ordinary_hours_override ?? null) !== nOrd) return true
+    }
     if ((config.semanal_proration ?? 'proportional') !== (initialConfig.semanal_proration ?? 'proportional')) return true
     
     // Comparar legal_deductions (deep comparison)
@@ -241,7 +253,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
   // Calcular si hay cambios usando useMemo para mejor rendimiento
   const hasChangesResult = useMemo(() => {
     return hasChanges()
-  }, [config, initialConfig])
+  }, [config, initialConfig, ordinaryHoursDraft])
 
   // Actualizar estado cuando cambie el resultado
   useEffect(() => {
@@ -303,6 +315,11 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
           const loadedConfig = buildPayrollConfigFromApiResponse(data.config)
           setConfig(loadedConfig)
           setInitialConfig(loadedConfig) // Guardar como referencia inicial
+          setOrdinaryHoursDraft(
+            loadedConfig.ordinary_hours_override == null
+              ? ''
+              : String(loadedConfig.ordinary_hours_override)
+          )
           console.log('✅ PayrollConfigEditor: Config loaded successfully')
         } else {
           // No config exists yet, use defaults
@@ -335,6 +352,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
           }
           setConfig(defaultConfig)
           setInitialConfig(defaultConfig)
+          setOrdinaryHoursDraft('')
         }
       } else {
         // No config exists yet, use defaults
@@ -368,6 +386,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
         }
         setConfig(defaultConfig)
         setInitialConfig(defaultConfig)
+        setOrdinaryHoursDraft('')
       }
     } catch (err: any) {
       console.error('❌ PayrollConfigEditor: Error loading config:', err)
@@ -395,8 +414,22 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
       // Semanal: no requiere fechas de corte (usa estándar 1-7, 8-14, 15-21, 22-fin)
     }
 
+    const tOrd = ordinaryHoursDraft.trim().replace(',', '.')
+    if (tOrd !== '') {
+      if (parseOrdinaryHoursOverrideInput(tOrd) === null) {
+        setError(
+          'Tope de horas ordinarias: use un número entre 1 y 16 (incrementos de 0,5), o vacío para usar la ley del país.'
+        )
+        return
+      }
+    }
+    const parsedOrdinary = tOrd === '' ? null : parseOrdinaryHoursOverrideInput(tOrd)!
+    const nextConfig: PayrollConfig = { ...config, ordinary_hours_override: parsedOrdinary }
+    setConfig(nextConfig)
+    setOrdinaryHoursDraft(parsedOrdinary === null ? '' : String(parsedOrdinary))
+
     // Obtener descripción de cambios y mostrar dialog de confirmación
-    const { action, description } = getChangesDescription()
+    const { action } = getChangesDescription(nextConfig)
     setConfirmAction(action)
     setShowConfirmDialog(true)
   }
@@ -439,6 +472,9 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
         const savedConfig = buildPayrollConfigFromApiResponse(data.config)
         setConfig(savedConfig)
         setInitialConfig(savedConfig) // Actualizar inmediatamente sin necesidad de loadConfig()
+        setOrdinaryHoursDraft(
+          savedConfig.ordinary_hours_override == null ? '' : String(savedConfig.ordinary_hours_override)
+        )
         console.log('✅ PayrollConfigEditor: Config saved and updated from POST response')
       } else {
         // Fallback: si por alguna razón no viene config, hacer loadConfig
@@ -538,7 +574,8 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
   }
 
   // Función para detectar qué cambios se están haciendo y generar mensaje de confirmación
-  const getChangesDescription = (): { action: string, description: string } => {
+  const getChangesDescription = (snapshot?: PayrollConfig): { action: string; description: string } => {
+    const cfg = snapshot ?? config
     if (!initialConfig) {
       return { action: 'guardar configuración', description: 'Está guardando la configuración inicial de payroll' }
     }
@@ -546,56 +583,56 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     const changes: string[] = []
     
     // Detectar cambios específicos
-    if (config.payment_frequency !== initialConfig.payment_frequency) {
+    if (cfg.payment_frequency !== initialConfig.payment_frequency) {
       const freqLabel = (f: string) => f === 'biweekly' ? 'quincenal' : f === 'weekly' ? 'semanal' : 'mensual'
-      changes.push(`frecuencia de pago de ${freqLabel(initialConfig.payment_frequency)} a ${freqLabel(config.payment_frequency)}`)
+      changes.push(`frecuencia de pago de ${freqLabel(initialConfig.payment_frequency)} a ${freqLabel(cfg.payment_frequency)}`)
     }
     
-    if (config.currency !== initialConfig.currency) {
+    if (cfg.currency !== initialConfig.currency) {
       const oldCurr = initialConfig.currency === 'HNL' ? 'Lempiras' : 'Dólares'
-      const newCurr = config.currency === 'HNL' ? 'Lempiras' : 'Dólares'
+      const newCurr = cfg.currency === 'HNL' ? 'Lempiras' : 'Dólares'
       changes.push(`moneda de ${oldCurr} a ${newCurr}`)
     }
     
-    if ((config.calculation_mode ?? 'daily') !== (initialConfig.calculation_mode ?? 'daily')) {
+    if ((cfg.calculation_mode ?? 'daily') !== (initialConfig.calculation_mode ?? 'daily')) {
       const oldMode = (initialConfig.calculation_mode ?? 'daily') === 'daily' ? 'Por Día' : 'Por Hora Exacta'
-      const newMode = (config.calculation_mode ?? 'daily') === 'daily' ? 'Por Día' : 'Por Hora Exacta'
+      const newMode = (cfg.calculation_mode ?? 'daily') === 'daily' ? 'Por Día' : 'Por Hora Exacta'
       changes.push(`método de cálculo de ${oldMode} a ${newMode}`)
     }
-    if ((config.incomplete_record_default_hours ?? null) !== (initialConfig.incomplete_record_default_hours ?? null)) {
+    if ((cfg.incomplete_record_default_hours ?? null) !== (initialConfig.incomplete_record_default_hours ?? null)) {
       changes.push('horas por defecto para marcas incompletas')
     }
-    if ((config.ordinary_hours_override ?? null) !== (initialConfig.ordinary_hours_override ?? null)) {
+    if ((cfg.ordinary_hours_override ?? null) !== (initialConfig.ordinary_hours_override ?? null)) {
       changes.push('tope de horas ordinarias diarias (previo a extras)')
     }
 
-    const deductionsStr = JSON.stringify(config.legal_deductions)
+    const deductionsStr = JSON.stringify(cfg.legal_deductions)
     const initialDeductionsStr = JSON.stringify(initialConfig.legal_deductions)
     if (deductionsStr !== initialDeductionsStr) {
       changes.push('deducciones legales')
     }
     
-    const cutDatesStr = JSON.stringify(config.payment_cut_dates)
+    const cutDatesStr = JSON.stringify(cfg.payment_cut_dates)
     const initialCutDatesStr = JSON.stringify(initialConfig.payment_cut_dates)
     if (cutDatesStr !== initialCutDatesStr) {
       changes.push('fechas de corte de pago')
     }
     
-    if (config.calculation_script !== initialConfig.calculation_script) {
+    if (cfg.calculation_script !== initialConfig.calculation_script) {
       changes.push('script de cálculo')
     }
     
-    const configStr = JSON.stringify(config.calculation_config)
+    const configStr = JSON.stringify(cfg.calculation_config)
     const initialStr = JSON.stringify(initialConfig.calculation_config)
     if (configStr !== initialStr) {
       changes.push('configuración de cálculo')
     }
     
-    const fieldsStr = JSON.stringify(config.custom_fields)
+    const fieldsStr = JSON.stringify(cfg.custom_fields)
     const initialFieldsStr = JSON.stringify(initialConfig.custom_fields)
     if (fieldsStr !== initialFieldsStr) {
       const oldFieldsCount = Object.keys(initialConfig.custom_fields).length
-      const newFieldsCount = Object.keys(config.custom_fields).length
+      const newFieldsCount = Object.keys(cfg.custom_fields).length
       if (newFieldsCount > oldFieldsCount) {
         changes.push(`campos personalizados (agregado${newFieldsCount - oldFieldsCount > 1 ? 's' : ''} ${newFieldsCount - oldFieldsCount} campo${newFieldsCount - oldFieldsCount > 1 ? 's' : ''})`)
       } else if (newFieldsCount < oldFieldsCount) {
@@ -1411,7 +1448,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
               </button>
               <div
                 className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                  expandedSections.ordinaryDailyCap ? 'max-h-[280px] opacity-100 mt-4' : 'max-h-0 opacity-0'
+                  expandedSections.ordinaryDailyCap ? 'max-h-[720px] opacity-100 mt-4' : 'max-h-0 opacity-0'
                 }`}
               >
                 <div className="flex flex-col gap-4">
@@ -1421,35 +1458,127 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                       <span className="font-medium leading-snug">Horas ordinarias máximas por día</span>
                     </label>
                     <p className="text-xs text-gray-400 mt-2 leading-relaxed">
-                      Opcional. Las horas netas por encima de este tope se tratan como extraordinarias en el cálculo
-                      batch. Vacío = se usa legal_daily_hours de la ley (p. ej. 8 h). Valores entre 1 y 16. Tras
-                      cambiar, recalcule las horas de asistencia del período.
+                      Opcional. Las horas netas por encima de este tope pasan al tramo extraordinario en el cálculo
+                      batch (luego se reparten en diurna / nocturna / feriado según reglas). Vacío = se usa{' '}
+                      <span className="text-gray-300">legal_daily_hours</span> de la ley del país (habitualmente 8 h).
+                      Rango permitido: 1 a 16 h, en incrementos de 0,5. Tras cambiar, recalcule las horas de
+                      asistencia del período.
                     </p>
-                    <div className="mt-3 flex flex-wrap items-end gap-3">
-                      <div className="min-w-[160px] max-w-[240px] flex-1">
+                    <div className="mt-3 space-y-2">
+                      <span className="text-xs text-gray-500 block">Valor (1–16, paso 0,5)</span>
+                      <div className="flex flex-wrap items-center gap-3">
                         <Input
-                          type="text"
+                          type="number"
+                          min={1}
+                          max={16}
+                          step={0.5}
                           inputMode="decimal"
-                          placeholder="Ej: 7.5"
-                          value={
-                            config.ordinary_hours_override == null
-                              ? ''
-                              : String(config.ordinary_hours_override)
-                          }
+                          placeholder="Ej. 8"
+                          value={ordinaryHoursDraft}
                           onChange={(e) => {
-                            const raw = e.target.value.trim().replace(',', '.')
-                            if (raw === '') {
+                            const v = e.target.value
+                            setOrdinaryHoursDraft(v)
+                            if (v.trim() === '') {
                               setConfig((prev) => ({ ...prev, ordinary_hours_override: null }))
                               return
                             }
-                            const n = parseOrdinaryHoursOverrideInput(raw)
+                            const n = parseOrdinaryHoursOverrideInput(v.trim().replace(',', '.'))
                             if (n !== null) {
                               setConfig((prev) => ({ ...prev, ordinary_hours_override: n }))
                             }
                           }}
-                          className="w-full px-3 py-2 input-glass text-white text-sm placeholder:text-white/50"
+                          onBlur={() => {
+                            const t = ordinaryHoursDraft.trim().replace(',', '.')
+                            if (t === '') {
+                              setConfig((prev) => ({ ...prev, ordinary_hours_override: null }))
+                              setOrdinaryHoursDraft('')
+                              return
+                            }
+                            const n = parseOrdinaryHoursOverrideInput(t)
+                            if (n === null) {
+                              setOrdinaryHoursDraft(
+                                config.ordinary_hours_override == null
+                                  ? ''
+                                  : String(config.ordinary_hours_override)
+                              )
+                              return
+                            }
+                            setConfig((prev) => ({ ...prev, ordinary_hours_override: n }))
+                            setOrdinaryHoursDraft(String(n))
+                          }}
+                          className="w-[140px] px-3 py-2 input-glass text-white text-sm placeholder:text-white/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setConfig((prev) => ({ ...prev, ordinary_hours_override: null }))
+                            setOrdinaryHoursDraft('')
+                          }}
+                          className="text-xs text-sky-300/90 hover:text-sky-200 underline-offset-2 hover:underline"
+                        >
+                          Usar ley (vacío)
+                        </button>
                       </div>
+                    </div>
+                    <div className="mt-3">
+                      <p className="text-xs text-gray-500 mb-2">Valores comunes</p>
+                      <div className="flex flex-wrap gap-2">
+                        {ORDINARY_HOURS_PRESETS.map((h) => {
+                          const tChip = ordinaryHoursDraft.trim().replace(',', '.')
+                          const parsedChip = tChip === '' ? null : parseOrdinaryHoursOverrideInput(tChip)
+                          const chipSelected =
+                            parsedChip !== null ? parsedChip : config.ordinary_hours_override
+                          return (
+                          <button
+                            key={h}
+                            type="button"
+                            onClick={() => {
+                              setConfig((prev) => ({ ...prev, ordinary_hours_override: h }))
+                              setOrdinaryHoursDraft(String(h))
+                            }}
+                            className={cn(
+                              'px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors',
+                              chipSelected === h
+                                ? 'bg-sky-500/25 border-sky-400/50 text-sky-100'
+                                : 'bg-white/5 border-white/15 text-gray-300 hover:bg-white/10'
+                            )}
+                          >
+                            {h.toFixed(1)}
+                          </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                    <div className="mt-4 p-3 rounded-lg border border-white/10 bg-white/[0.04]">
+                      <p className="text-xs font-medium text-sky-200/90 mb-1.5">Vista previa del significado</p>
+                      <p className="text-xs text-gray-300 leading-relaxed">
+                        {(() => {
+                          const ejemploNetas = 9
+                          const cap = config.ordinary_hours_override
+                          if (cap == null) {
+                            return (
+                              <>
+                                Sin tope propio: el límite de ordinarias en el batch sale de la ley (p. ej. 8 h). Con
+                                una jornada neta de ejemplo de {ejemploNetas} h en un día, lo que exceda ese límite
+                                legal pasa al bloque extraordinario antes del reparto diurno/nocturno/feriado.
+                              </>
+                            )
+                          }
+                          const alExtra = Math.max(0, ejemploNetas - cap)
+                          return (
+                            <>
+                              Con tope <span className="text-white font-medium">{cap} h</span> de ordinarias, una
+                              jornada neta de ejemplo de {ejemploNetas} h dejaría unas{' '}
+                              <span className="text-white font-medium">
+                                {Math.min(cap, ejemploNetas).toFixed(1)} h
+                              </span>{' '}
+                              por debajo o igual al tope (tratamiento ordinario en ese tramo) y unas{' '}
+                              <span className="text-white font-medium">{alExtra.toFixed(1)} h</span> por encima del
+                              tope en el bloque extraordinario (luego se clasifican según reglas de turno).
+                            </>
+                          )
+                        })()}
+                      </p>
                     </div>
                   </div>
                 </div>
