@@ -6,6 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Button } from '../../components/ui/button'
 import { useCompanyContext } from '../../lib/useCompanyContext'
 import { formatDateOnlyForHonduras } from '../../lib/timezone'
+import { useAuth } from '../../lib/auth'
+import { canAccessPayrollNavigation } from '../../lib/auth/role-access'
 
 interface DashboardStats {
   totalEmployees: number
@@ -31,7 +33,10 @@ type RecentPayroll = {
 }
 
 export default function Dashboard() {
+  const { userProfile, loading: authLoading } = useAuth()
   const { companyId, loading: companyLoading } = useCompanyContext()
+  const allowPayrollDashboard =
+    !!(userProfile?.role && canAccessPayrollNavigation(userProfile.role))
   const [stats, setStats] = useState<DashboardStats>({
     totalEmployees: 0,
     activeEmployees: 0,
@@ -102,7 +107,7 @@ export default function Dashboard() {
     }
   }, [fetchDashboardData])
 
-  if (companyLoading || loading) {
+  if (authLoading || companyLoading || loading) {
     return (
       <ProtectedRoute>
         <DashboardLayout>
@@ -137,15 +142,17 @@ export default function Dashboard() {
               <p className="text-gray-300">Vista general del sistema de recursos humanos</p>
             </div>
             <div className="flex gap-2">
+              {allowPayrollDashboard && (
               <Button 
-                onClick={() => router.push('/payroll')}
+                onClick={() => router.push('/app/payroll')}
                 className="bg-brand-900 hover:bg-brand-800 text-white font-medium"
               >
                 Gestión de Nómina
               </Button>
+              )}
               <Button 
                 variant="outline" 
-                onClick={() => router.push('/employees')}
+                onClick={() => router.push('/app/employees')}
                 className="border-brand-600 bg-white/10 text-white hover:bg-brand-800 hover:text-white font-medium"
               >
                 Empleados
@@ -154,7 +161,7 @@ export default function Dashboard() {
           </div>
 
           {/* Main Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 ${allowPayrollDashboard ? 'lg:grid-cols-4' : 'lg:grid-cols-2'}`}>
             <Card variant="glass">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-200">Total Empleados</CardTitle>
@@ -181,6 +188,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
+            {allowPayrollDashboard && (
             <Card variant="glass">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-gray-200">Nómina Total</CardTitle>
@@ -193,6 +201,7 @@ export default function Dashboard() {
                 </p>
               </CardContent>
             </Card>
+            )}
 
             <Card variant="glass">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -223,23 +232,25 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
+                  {allowPayrollDashboard && (
                   <Button 
                     className="w-full bg-brand-900 hover:bg-brand-800 text-white font-medium" 
-                    onClick={() => router.push('/payroll')}
+                    onClick={() => router.push('/app/payroll')}
                   >
                     Generar Nómina
                   </Button>
+                  )}
                   <Button 
                     variant="outline" 
                     className="w-full border-brand-600 bg-white/10 text-white hover:bg-brand-800 hover:text-white font-medium"
-                    onClick={() => router.push('/employees')}
+                    onClick={() => router.push('/app/employees')}
                   >
                     Gestionar Empleados
                   </Button>
                   <Button 
                     variant="outline" 
                     className="w-full border-brand-600 bg-white/10 text-white hover:bg-brand-800 hover:text-white font-medium"
-                    onClick={() => router.push('/departments')}
+                    onClick={() => router.push('/app/departments')}
                   >
                     Gestión de Departamentos
                   </Button>
@@ -250,17 +261,19 @@ export default function Dashboard() {
                   >
                     Ver Asistencia
                   </Button>
+                  {allowPayrollDashboard && (
                   <Button 
                     variant="outline" 
                     className="w-full border-brand-600 bg-white/10 text-white hover:bg-brand-800 hover:text-white font-medium"
-                    onClick={() => router.push('/reports')}
+                    onClick={() => router.push('/app/reports')}
                   >
                     Reportes
                   </Button>
+                  )}
                   <Button 
                     variant="outline" 
                     className="w-full border-brand-600 bg-white/10 text-white hover:bg-brand-800 hover:text-white font-medium"
-                    onClick={() => router.push('/gamification')}
+                    onClick={() => router.push('/app/gamification')}
                   >
                     Gamificación
                   </Button>
@@ -270,6 +283,7 @@ export default function Dashboard() {
           </div>
 
           {/* Recent Payrolls */}
+          {allowPayrollDashboard && (
           <Card variant="glass">
             <CardHeader>
               <CardTitle className="text-white">Nóminas Recientes</CardTitle>
@@ -304,6 +318,7 @@ export default function Dashboard() {
               )}
             </CardContent>
           </Card>
+          )}
 
           {/* System Status */}
           <Card variant="glass">

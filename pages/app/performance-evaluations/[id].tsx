@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/router'
 import ProtectedRoute from '../../../components/ProtectedRoute'
+import AppRoleGate from '../../../components/AppRoleGate'
 import DashboardLayout from '../../../components/DashboardLayout'
 import { Button } from '../../../components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card'
@@ -9,6 +10,7 @@ import { Textarea } from '../../../components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select'
 import { computeOverallScore } from '../../../lib/performance/score'
 import { parsePerformanceSettings } from '../../../lib/performance/settings'
+import { PAYROLL_NAV_ROLES } from '../../../lib/auth/role-access'
 
 type Rating = 'no_cumple' | 'cumple' | 'supera'
 
@@ -170,6 +172,7 @@ export default function PerformanceEvaluationEditor() {
 
   return (
     <ProtectedRoute>
+      <AppRoleGate allowRoles={PAYROLL_NAV_ROLES}>
       <DashboardLayout>
         <div className="p-6 space-y-6">
           <div className="flex items-start justify-between gap-4">
@@ -342,6 +345,7 @@ export default function PerformanceEvaluationEditor() {
           )}
         </div>
       </DashboardLayout>
+      </AppRoleGate>
     </ProtectedRoute>
   )
 }

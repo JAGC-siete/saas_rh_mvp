@@ -1,7 +1,9 @@
 import dynamic from 'next/dynamic'
 import { Suspense } from 'react'
 import ProtectedRoute from '../../../components/ProtectedRoute'
+import AppRoleGate from '../../../components/AppRoleGate'
 import DashboardLayout from '../../../components/DashboardLayout'
+import { PAYROLL_NAV_ROLES } from '../../../lib/auth/role-access'
 
 const DeduccionesManager = dynamic(
   () => import('../../../components/DeduccionesManager'),
@@ -18,6 +20,7 @@ const DeduccionesManager = dynamic(
 export default function DeduccionesPage() {
   return (
     <ProtectedRoute>
+      <AppRoleGate allowRoles={PAYROLL_NAV_ROLES}>
       <DashboardLayout>
         <Suspense
           fallback={
@@ -29,6 +32,7 @@ export default function DeduccionesPage() {
           <DeduccionesManager />
         </Suspense>
       </DashboardLayout>
+      </AppRoleGate>
     </ProtectedRoute>
   )
 }

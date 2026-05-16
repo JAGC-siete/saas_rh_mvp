@@ -1,7 +1,9 @@
 import dynamic from 'next/dynamic'
 import { Suspense } from 'react'
 import ProtectedRoute from '../../../components/ProtectedRoute'
+import AppRoleGate from '../../../components/AppRoleGate'
 import DashboardLayout from '../../../components/DashboardLayout'
+import { PAYROLL_NAV_ROLES } from '../../../lib/auth/role-access'
 
 // Import the new payroll manager component
 const PayrollManagerNew = dynamic(() => import('../../../components/PayrollManagerNew'), {
@@ -16,6 +18,7 @@ const PayrollManagerNew = dynamic(() => import('../../../components/PayrollManag
 export default function PayrollPage() {
   return (
     <ProtectedRoute>
+      <AppRoleGate allowRoles={PAYROLL_NAV_ROLES}>
       <DashboardLayout>
         <Suspense fallback={
           <div className="flex items-center justify-center min-h-[400px]">
@@ -25,6 +28,7 @@ export default function PayrollPage() {
           <PayrollManagerNew />
         </Suspense>
       </DashboardLayout>
+      </AppRoleGate>
     </ProtectedRoute>
   )
 }

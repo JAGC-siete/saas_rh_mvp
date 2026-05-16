@@ -25,6 +25,7 @@ import { ClipboardList } from 'lucide-react'
 import { ClipboardCheck } from 'lucide-react'
 import NotificationBell from './ui/NotificationBell'
 import { normalizePermissionsToCanonical } from '../lib/security/canonical-permissions'
+import { canAccessPayrollNavigation } from '../lib/auth/role-access'
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -111,24 +112,25 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           const normalizedRole = (userProfile.role || '').toString().trim().toLowerCase()
           const canonical = normalizePermissionsToCanonical(normalizedRole, rawPermissions)
           const isAdmin = ['super_admin', 'company_admin', 'hr_manager', 'manager', 'admin'].includes(normalizedRole)
+          const showPayrollSidebarGroup = canAccessPayrollNavigation(normalizedRole)
           // #region agent log
           fetch('/api/__debug/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'25b418',runId:'pre-fix',hypothesisId:'H2',location:'components/DashboardLayout.tsx:userProfileBranch',message:'Computed canonical permissions (userProfile branch)',data:{normalizedRole,hasRawPermissions:!!userProfile.permissions,rawPermissionKeys:Object.keys(rawPermissions||{}).slice(0,50),can_view_settings:canonical.can_view_settings,can_manage_settings:canonical.can_manage_settings,can_view_reports:canonical.can_view_reports,isAdmin},timestamp:Date.now()})}).catch(()=>{});
           // #endregion agent log
 
           const permissions: UserPermissions = {
             dashboard: true,
-            employees: true,
-            departments: true,
-            attendance: true,
-            leave: true,
-            payroll: true,
-            reports: canonical.can_view_reports,
+            employees: !!(canonical.can_view_employees ?? canonical.can_view_own_profile),
+            departments: !!canonical.can_view_departments,
+            attendance: !!canonical.can_view_attendance,
+            leave: !!canonical.can_request_leave,
+            payroll: showPayrollSidebarGroup && !!(canonical.can_view_payroll || canonical.can_manage_payroll),
+            reports: showPayrollSidebarGroup && !!canonical.can_view_reports,
             gamification: true,
-            settings: canonical.can_view_settings,
+            settings: !!canonical.can_view_settings,
             admin: isAdmin,
             affiliates: true, // Show affiliates link to all users
-            mtp: true,
-            performance: true
+            mtp: !!showPayrollSidebarGroup,
+            performance: !!showPayrollSidebarGroup,
           }
           // #region agent log
           fetch('/api/__debug/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'25b418',runId:'pre-fix',hypothesisId:'H3',location:'components/DashboardLayout.tsx:userProfileBranch(setUserPermissions)',message:'Setting UI permissions (userProfile branch)',data:{settings:permissions.settings,reports:permissions.reports,admin:permissions.admin},timestamp:Date.now()})}).catch(()=>{});
@@ -186,6 +188,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         
         const canonical = normalizePermissionsToCanonical(normalizedRole, rawPermissions)
         const isAdmin = ['super_admin', 'company_admin', 'hr_manager', 'manager', 'admin'].includes(normalizedRole)
+        const showPayrollSidebarGroup = canAccessPayrollNavigation(normalizedRole)
         // #region agent log
         fetch('/api/__debug/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'25b418',runId:'pre-fix',hypothesisId:'H4',location:'components/DashboardLayout.tsx:apiProfileBranch',message:'Computed canonical permissions (API profile branch)',data:{normalizedRole,rawPermissionKeys:Object.keys(rawPermissions||{}).slice(0,50),can_view_settings:canonical.can_view_settings,can_manage_settings:canonical.can_manage_settings,can_view_reports:canonical.can_view_reports,isAdmin,selectedProfileId:profile?.id===user?.id?'self':'other'},timestamp:Date.now()})}).catch(()=>{});
         // #endregion agent log
@@ -195,19 +198,18 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         // Construir objeto de permisos final - FORZAR settings y admin basado en rol
         const permissions: UserPermissions = {
           dashboard: true,
-          employees: true,
-          departments: true,
-          attendance: true,
-          leave: true,
-          payroll: true,
-          reports: canonical.can_view_reports,
+          employees: !!(canonical.can_view_employees ?? canonical.can_view_own_profile),
+          departments: !!canonical.can_view_departments,
+          attendance: !!canonical.can_view_attendance,
+          leave: !!canonical.can_request_leave,
+          payroll: showPayrollSidebarGroup && !!(canonical.can_view_payroll || canonical.can_manage_payroll),
+          reports: showPayrollSidebarGroup && !!canonical.can_view_reports,
           gamification: true,
-          // Canonical can_* keys decide UX visibility (backend remains source of truth)
-          settings: canonical.can_view_settings,
+          settings: !!canonical.can_view_settings,
           admin: isAdmin,
           affiliates: true, // Show affiliates link to all users
-          mtp: true,
-          performance: true
+          mtp: !!showPayrollSidebarGroup,
+          performance: !!showPayrollSidebarGroup,
         }
         // #region agent log
         fetch('/api/__debug/log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'25b418',runId:'pre-fix',hypothesisId:'H5',location:'components/DashboardLayout.tsx:apiProfileBranch(setUserPermissions)',message:'Setting UI permissions (API profile branch)',data:{settings:permissions.settings,reports:permissions.reports,admin:permissions.admin},timestamp:Date.now()})}).catch(()=>{});

@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import ProtectedRoute from '../../components/ProtectedRoute'
+import AppRoleGate from '../../components/AppRoleGate'
 import DashboardLayout from '../../components/DashboardLayout'
+import { PAYROLL_NAV_ROLES } from '../../lib/auth/role-access'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
@@ -230,6 +232,7 @@ export default function CesantiasPage() {
 
   return (
     <ProtectedRoute>
+      <AppRoleGate allowRoles={PAYROLL_NAV_ROLES}>
       <DashboardLayout>
         <div className="space-y-6 p-4 md:p-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -621,6 +624,7 @@ export default function CesantiasPage() {
           </div>
         </div>
       </DashboardLayout>
+      </AppRoleGate>
     </ProtectedRoute>
   )
 }

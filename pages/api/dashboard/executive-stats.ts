@@ -1,6 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
-import { getHondurasTimestamp, nowInHonduras, getHondurasTime } from '../../../lib/timezone'
+import { getHondurasTimestamp } from '../../../lib/timezone'
+import { DateTime } from 'luxon'
+import { getDateRange } from '../../../lib/attendance'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -18,28 +20,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     
     console.log('🔍 Executive Dashboard stats: Iniciando...')
     console.log('📅 Timestamp:', getHondurasTimestamp())
-    
-    // Use Tegucigalpa timezone for today's date
-    const tegucigalpaTime = getHondurasTime()
-    const today = tegucigalpaTime.toISOString().split('T')[0]
-    const sevenDaysAgo = new Date(nowInHonduras().getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 
-    console.log('📅 Fechas calculadas:', { today, sevenDaysAgo })
-
-    // 1. Obtener total de empleados activos - DE LA EMPRESA DEL USUARIO
     console.log('👥 PASO 1: Obteniendo empleados activos de la empresa:', companyId)
     let employeesQuery = supabase
       .from('employees')
       .select('id, name, employee_code, base_salary, department_id, status')
       .eq('status', 'active')
-    
-    // Solo filtrar por company_id si no es super_admin o si companyId existe
-    if (companyId && role !== 'super_admin') {
+
+    if (companyId) {
       employeesQuery = employeesQuery.eq('company_id', companyId)
-    } else if (role === 'super_admin' && !companyId) {
-      // Para super_admin sin companyId, no filtrar por company (ver todos)
-      // O retornar datos vacíos si se prefiere
-      employeesQuery = employeesQuery.limit(0) // No mostrar empleados para super_admin sin company
+    } else if (role === 'super_admin') {
+      employeesQuery = employeesQuery.limit(0)
     }
     
     const { data: employees, error: empError } = await employeesQuery
@@ -52,32 +43,68 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('✅ Empleados obtenidos:', employees?.length || 0)
     const totalEmployees = employees?.length || 0
 
-    // 2. Obtener registros de asistencia de hoy - DE EMPLEADOS DE LA EMPRESA
-    console.log('📊 PASO 2: Obteniendo registros de asistencia de hoy de la empresa...')
-    const employeeIds = (employees || []).map((e: any) => e.id)
-    let attendanceQuery = supabase
-      .from('attendance_records')
-      .select('*')
-      .eq('date', today)
-    
-    if (employeeIds.length > 0) {
-      attendanceQuery = attendanceQuery.in('employee_id', employeeIds)
-    } else {
-      // Si no hay empleados, no hay asistencia - usar un ID que no existe
-      attendanceQuery = attendanceQuery.eq('employee_id', '00000000-0000-0000-0000-000000000000')
+    /**
+     * Misma fuente que /api/attendance/kpis (`attendance_kpis_filtered`): SECURITY DEFINER.
+     * El conteo directo sobre `attendance_records` suele verse vacío por RLS aunque el RPC sea correcto.
+     */
+    const pullKpisFromRpc = async (range: { from: string; to: string }) => {
+      if (!companyId) {
+        return { presentes: 0, ausentes: 0, tardes: 0 }
+      }
+      const { data, error } = await supabase.rpc('attendance_kpis_filtered', {
+        p_employee_id: null,
+        p_from: range.from,
+        p_to: range.to,
+        p_role: null,
+        p_department_id: null,
+        p_company_id: companyId,
+      })
+      if (error) {
+        console.error('❌ attendance_kpis_filtered:', error)
+        return { presentes: 0, ausentes: 0, tardes: 0 }
+      }
+      const row = Array.isArray(data) ? data[0] : data
+      return {
+        presentes: typeof row?.presentes === 'number' ? row.presentes : Number(row?.presentes) || 0,
+        ausentes: typeof row?.ausentes === 'number' ? row.ausentes : Number(row?.ausentes) || 0,
+        tardes: typeof row?.tardes === 'number' ? row.tardes : Number(row?.tardes) || 0,
+      }
     }
-    
-    const { data: todayAttendance, error: attError } = await attendanceQuery
 
-    if (attError) {
-      console.error('❌ Error fetching attendance:', attError)
-      return res.status(500).json({ error: 'Error fetching attendance', details: attError })
+    console.log('📊 PASO 2: KPI asistencia (RPC, alineado a módulo Asistencia)...')
+    const zoneNow = DateTime.now().setZone('America/Tegucigalpa')
+    const todayRange = getDateRange('today', zoneNow)
+    const todayKpis = await pullKpisFromRpc(todayRange)
+    const presentToday = todayKpis.presentes
+    const absentToday = todayKpis.ausentes
+    const lateToday = todayKpis.tardes
+    console.log('✅ KPI día actual:', todayKpis)
+    const onTimeToday = Math.max(0, presentToday - lateToday)
+
+    // Tasa últimos 7 días corridos (promedio simple del % presentes sobre plantilla cada día).
+    console.log('📊 PASO 2b: Tasa asistencia 7 días (RPC por día)...')
+    let attendanceRate = 0
+    if (companyId && totalEmployees > 0) {
+      const pctSamples: number[] = []
+      for (let offset = 0; offset < 7; offset += 1) {
+        const day = zoneNow.minus({ days: offset })
+        const r = getDateRange('today', day)
+        const k = await pullKpisFromRpc(r)
+        const denom = typeof k.presentes === 'number' && typeof k.ausentes === 'number'
+          ? k.presentes + k.ausentes
+          : 0
+        if (denom > 0) {
+          pctSamples.push((k.presentes / denom) * 100)
+        }
+      }
+      attendanceRate = pctSamples.length > 0
+        ? pctSamples.reduce((s, x) => s + x, 0) / pctSamples.length
+        : 0
     }
-
-    console.log('✅ Asistencia de hoy:', todayAttendance?.length || 0)
 
     // 3. Obtener nóminas recientes - SOLO DE EMPLEADOS DE LA EMPRESA
     console.log('💰 PASO 3: Obteniendo nóminas recientes de empleados...')
+    const employeeIds = (employees || []).map((e: any) => e.id)
     let payrollQuery = supabase
       .from('payroll_records')
       .select(`
@@ -109,25 +136,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('✅ Nóminas recientes:', recentPayrolls?.length || 0)
 
     // 4. Calcular estadísticas del día
-    console.log('🧮 PASO 4: Calculando estadísticas del día...')
-    const presentToday = todayAttendance?.length || 0
-    const absentToday = totalEmployees - presentToday
-    const lateToday = todayAttendance?.filter((r: any) => r.late_minutes > 0).length || 0
-    const onTimeToday = presentToday - lateToday
-
-    console.log('📊 Estadísticas calculadas:', {
+    console.log('🧮 PASO 4: Estadísticas asistencia hoy desde RPC:', {
       totalEmployees,
       presentToday,
       absentToday,
       lateToday,
-      onTimeToday
     })
 
     // 5. Calcular estadísticas financieras
     console.log('💰 PASO 5: Calculando estadísticas financieras...')
     const totalPayroll = employees?.reduce((sum: number, emp: any) => sum + (emp.base_salary || 0), 0) || 0
     const averageSalary = totalEmployees > 0 ? totalPayroll / totalEmployees : 0
-    const attendanceRate = totalEmployees > 0 ? (presentToday / totalEmployees) * 100 : 0
 
     console.log('💰 Estadísticas financieras:', {
       totalPayroll,

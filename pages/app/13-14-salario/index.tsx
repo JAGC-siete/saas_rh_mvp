@@ -1,7 +1,9 @@
 import dynamic from 'next/dynamic'
 import { Suspense } from 'react'
 import ProtectedRoute from '../../../components/ProtectedRoute'
+import AppRoleGate from '../../../components/AppRoleGate'
 import DashboardLayout from '../../../components/DashboardLayout'
+import { PAYROLL_NAV_ROLES } from '../../../lib/auth/role-access'
 
 const ThirteenthFourteenthManager = dynamic(
   () => import('../../../components/13-14-salario/ThirteenthFourteenthManager'),
@@ -18,6 +20,7 @@ const ThirteenthFourteenthManager = dynamic(
 export default function ThirteenthFourteenthSalaryPage() {
   return (
     <ProtectedRoute>
+      <AppRoleGate allowRoles={PAYROLL_NAV_ROLES}>
       <DashboardLayout>
         <Suspense
           fallback={
@@ -29,6 +32,7 @@ export default function ThirteenthFourteenthSalaryPage() {
           <ThirteenthFourteenthManager />
         </Suspense>
       </DashboardLayout>
+      </AppRoleGate>
     </ProtectedRoute>
   )
 }

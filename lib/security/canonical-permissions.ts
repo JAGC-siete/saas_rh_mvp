@@ -148,9 +148,6 @@ export function canonicalPermissionsForRole(role: unknown): Partial<CanonicalPer
       'can_view_departments',
       'can_view_attendance',
       'can_manage_attendance',
-      'can_view_reports',
-      // Align with `canExportReports` / EXPORT_REPORTS_ALLOWED_ROLES in permissions.ts
-      'can_export_reports',
       'can_view_own_profile',
       'can_view_own_attendance',
       'can_request_leave',
@@ -198,6 +195,15 @@ export function normalizePermissionsToCanonical(
   if (base.can_manage_attendance) base.can_view_attendance = true
   if (base.can_manage_payroll) base.can_view_payroll = true
   if (base.can_export_reports) base.can_view_reports = true
+
+  // 4) Manager: sin nómina ni reportes aunque el JSON legacy active payroll/reports
+  if (normalizeRole(role) === 'manager') {
+    base.can_view_payroll = false
+    base.can_manage_payroll = false
+    base.can_authorize_payroll = false
+    base.can_view_reports = false
+    base.can_export_reports = false
+  }
 
   return base
 }

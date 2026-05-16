@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/router'
 import dynamic from 'next/dynamic'
 import ProtectedRoute from '../../components/ProtectedRoute'
+import AppRoleGate from '../../components/AppRoleGate'
 import DashboardLayout from '../../components/DashboardLayout'
+import { PAYROLL_NAV_ROLES } from '../../lib/auth/role-access'
 import { Button } from '../../components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
 import { Input } from '../../components/ui/input'
@@ -150,6 +152,7 @@ export default function PerformanceEvaluationsPage() {
 
   return (
     <ProtectedRoute>
+      <AppRoleGate allowRoles={PAYROLL_NAV_ROLES}>
       <DashboardLayout>
         <div className="p-6 space-y-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -316,6 +319,7 @@ export default function PerformanceEvaluationsPage() {
           </div>
         </div>
       </DashboardLayout>
+      </AppRoleGate>
     </ProtectedRoute>
   )
 }

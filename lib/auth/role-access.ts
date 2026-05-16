@@ -43,6 +43,19 @@ export function canLoginToApp(role: unknown): boolean {
   return !!r && (ADMIN_ROLES as readonly string[]).includes(r)
 }
 
+/** Sidebar + páginas: nómina, cesantías, deducciones, 13–14, reportes, MTP, evaluaciones. */
+export const PAYROLL_NAV_ROLES = [
+  'super_admin',
+  'admin',
+  'company_admin',
+  'hr_manager',
+] as const satisfies readonly RoleId[]
+
+export function canAccessPayrollNavigation(role: unknown): boolean {
+  const r = normalizeRole(role)
+  return !!(r && (PAYROLL_NAV_ROLES as readonly string[]).includes(r))
+}
+
 export function canAccessAdminFeatures(role: unknown): boolean {
   // For now, same as "admin roles" used at login.
   // If later you want managers to login but not see admin areas, split these functions.
