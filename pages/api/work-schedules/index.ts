@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../lib/supabase/server'
+import { authenticateUser } from '../../../lib/auth/api-auth-fixed'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -7,40 +7,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    console.log('⏰ Work Schedules API: Iniciando fetch de datos...')
+    const { supabase, companyId } = await authenticateUser(req, res, {
+      requireProfile: true,
+      allowSuperAdminWithoutCompany: true,
+    })
 
-    // Create Supabase client for Pages API
-    const supabase = createClient(req, res)
-
-    // Get user (more secure than getSession)
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
-    if (authError || !user) {
-      console.error('❌ Auth error:', authError)
-      return res.status(401).json({ error: 'Unauthorized' })
-    }
-
-    // Get user's company_id (optional for now)
-    let companyId = '00000000-0000-0000-0000-000000000001' // Default company ID
-    
-    try {
-      const { data: userProfile, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('company_id')
-        .eq('id', user.id)
-        .single()
-
-      if (!profileError && userProfile?.company_id) {
-        companyId = userProfile.company_id
-        console.log('✅ Found company_id for user:', companyId)
-      } else {
-        console.log('⚠️ No user profile found or no company_id:', profileError)
+    if (!companyId) {
+      if (!res.headersSent) {
+        return res.status(200).json({ schedules: [], totalSchedules: 0 })
       }
-    } catch (error) {
-      console.log('⚠️ Error fetching user profile, using default company ID:', error)
+      return
     }
 
-    // 1. Obtener todos los horarios de la compañía del usuario
     const { data: schedules, error: schedError } = await supabase
       .from('work_schedules')
       .select('id, name')
@@ -52,21 +30,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: 'Error fetching work schedules', details: schedError.message })
     }
 
-    console.log('✅ Work schedules obtenidos:', schedules?.length || 0)
+    return res.status(200).json({
+      schedules: schedules || [],
+      totalSchedules: schedules?.length || 0,
+    })
+  } catch (error) {
+    if (res.headersSent) return
 
-    const response = {
-      schedules: schedules || []
+    console.error('Work Schedules API error:', error)
+
+    const msg = error instanceof Error ? error.message : ''
+
+    if (msg === 'UNAUTHORIZED') {
+      return res.status(401).json({ error: 'Unauthorized' })
     }
 
-    console.log('✅ Work Schedules API: Datos procesados exitosamente')
-    console.log('📊 Resumen:', {
-      totalSchedules: response.schedules.length
-    })
+    if (msg === 'PROFILE_REQUIRED' || msg === 'ACCOUNT_DEACTIVATED' || msg === 'INSUFFICIENT_PERMISSIONS') {
+      return res.status(403).json({ error: 'Forbidden' })
+    }
 
-    res.status(200).json(response)
-
-  } catch (error) {
-    console.error('💥 Work Schedules API: Error inesperado:', error)
-    res.status(500).json({ error: 'Internal server error' })
+    return res.status(500).json({ error: 'Internal server error' })
   }
 }

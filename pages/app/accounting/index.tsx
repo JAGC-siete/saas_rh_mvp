@@ -2,7 +2,9 @@ import React from 'react'
 import dynamic from 'next/dynamic'
 import { Suspense } from 'react'
 import ProtectedRoute from '../../../components/ProtectedRoute'
+import AppRoleGate from '../../../components/AppRoleGate'
 import DashboardLayout from '../../../components/DashboardLayout'
+import { PAYROLL_NAV_ROLES } from '../../../lib/auth/role-access'
 import { useCompanyContext } from '../../../lib/useCompanyContext'
 import { CalculatorIcon } from '@heroicons/react/24/outline'
 
@@ -45,6 +47,7 @@ export default function AccountingPage() {
 
   return (
     <ProtectedRoute>
+      <AppRoleGate allowRoles={PAYROLL_NAV_ROLES}>
       <DashboardLayout>
         <div className="p-6 space-y-6">
           <div className="flex items-start gap-3">
@@ -124,6 +127,7 @@ export default function AccountingPage() {
           )}
         </div>
       </DashboardLayout>
+      </AppRoleGate>
     </ProtectedRoute>
   )
 }

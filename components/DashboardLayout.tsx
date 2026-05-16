@@ -47,25 +47,34 @@ interface UserPermissions {
   performance?: boolean
 }
 
+/** Ocultarse mientras cargan permisos o si el estado quedara ambiguo (fail-safe). */
+const GUARD_WHILE_RESOLVING: (keyof UserPermissions)[] = [
+  'payroll',
+  'reports',
+  'mtp',
+  'performance',
+]
+
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user, userProfile, logout } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  // Estado inicial con permisos por defecto para company_admin
+  // Deny-by-default en módulos sensibles hasta resolver rol/canónico (evita sidebar “todo abierto”).
   const [userPermissions, setUserPermissions] = useState<UserPermissions>({
     dashboard: true,
     employees: true,
     departments: true,
     attendance: true,
     leave: true,
-    payroll: true,
-    reports: true,
+    payroll: false,
+    reports: false,
     gamification: true,
-    settings: true, // Por defecto true, se ajustará según rol
-    admin: true,    // Por defecto true, se ajustará según rol
-    affiliates: true, // Show affiliates link to all users
-    mtp: true,
-    performance: true
+    settings: false,
+    admin: false,
+    affiliates: true,
+    mtp: false,
+    performance: false,
   })
+  /** true hasta conocer canon+rol aplicado (OK o fallback explícito). */
   const [loadingPermissions, setLoadingPermissions] = useState(true)
   /**
    * Feature flags derived from the company's plan + per-company overrides
@@ -83,8 +92,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   // Obtener permisos del usuario
   useEffect(() => {
     const fetchUserPermissions = async () => {
-      if (!user?.id) return
-      
+      if (!user?.id) {
+        setLoadingPermissions(false)
+        return
+      }
+
       try {
         setLoadingPermissions(true)
         console.log('🔍 Fetching permissions for user:', user.id, user.email)
@@ -147,7 +159,22 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         
         if (!response.ok) {
           console.error('Error fetching user profile from API:', response.status)
-          console.warn('No user profile data found, using default permissions')
+          console.warn('No user profile data found, using deny-by-default for sensitive routes')
+          setUserPermissions({
+            dashboard: true,
+            employees: false,
+            departments: false,
+            attendance: false,
+            leave: false,
+            payroll: false,
+            reports: false,
+            gamification: false,
+            settings: false,
+            admin: false,
+            affiliates: false,
+            mtp: false,
+            performance: false,
+          })
           setLoadingPermissions(false)
           return
         }
@@ -157,7 +184,22 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         const profile = (profiles || []).find((p: any) => p?.id === user?.id) || profiles?.[0]
         
         if (!profile) {
-          console.warn('No user profile data found, using default permissions')
+          console.warn('No user profile data found — deny payroll-nav and guarded actions')
+          setUserPermissions({
+            dashboard: true,
+            employees: false,
+            departments: false,
+            attendance: false,
+            leave: false,
+            payroll: false,
+            reports: false,
+            gamification: false,
+            settings: false,
+            admin: false,
+            affiliates: false,
+            mtp: false,
+            performance: false,
+          })
           setLoadingPermissions(false)
           return
         }
@@ -228,9 +270,22 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         setUserPermissions(permissions)
       } catch (error) {
         console.error('Error in fetchUserPermissions:', error)
-        // En caso de error, mantener permisos por defecto (ya están en el estado inicial)
-        // No resetear a false porque puede causar que desaparezcan las opciones
-        console.warn('⚠️ Error loading permissions, keeping default permissions')
+        setUserPermissions({
+          dashboard: true,
+          employees: false,
+          departments: false,
+          attendance: false,
+          leave: false,
+          payroll: false,
+          reports: false,
+          gamification: false,
+          settings: false,
+          admin: false,
+          affiliates: false,
+          mtp: false,
+          performance: false,
+        })
+        console.warn('⚠️ Error loading permissions, applied pessimistic sidebar')
       } finally {
         setLoadingPermissions(false)
       }
@@ -291,7 +346,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     { name: 'Reportes',         href: '/app/reports',              icon: DocumentChartBarIcon,  permission: 'reports',     feature_key: 'reports' },
     { name: 'MTP Puestos',      href: '/app/mtp',                  icon: ClipboardList,         permission: 'mtp',         feature_key: 'mtp_job_descriptions' },
     { name: 'Evaluaciones',     href: '/app/performance-evaluations', icon: ClipboardCheck,      permission: 'performance', feature_key: 'performance_evaluations' },
-    { name: 'Contabilidad',     href: '/app/accounting',           icon: CalculatorIcon,        permission: 'settings',    feature_key: 'contabilidad' },
+    { name: 'Contabilidad',     href: '/app/accounting',           icon: CalculatorIcon,        permission: 'payroll',     feature_key: 'contabilidad' },
     // { name: 'Gamificación',  href: '/app/gamification',         icon: TrophyIcon,            permission: 'gamification' },
     // { name: 'Programa de Afiliados', href: '/app/affiliates',   icon: CurrencyDollarIcon,    permission: 'affiliates' },
     { name: 'Parametros',       href: '/app/settings',             icon: Cog6ToothIcon,         permission: 'settings' },
@@ -299,9 +354,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   // Filtrar navegación basada en permisos (rol) + features (plan/overrides).
   const filteredNavigation = navigationItems.filter(item => {
-    if (loadingPermissions) return true // Mostrar todo mientras carga
+    const permKey = item.permission as keyof UserPermissions
+    const isGuardedRoute = GUARD_WHILE_RESOLVING.includes(permKey)
+    if (loadingPermissions && isGuardedRoute) {
+      return false
+    }
 
-    const hasPermission = userPermissions[item.permission as keyof UserPermissions]
+    const hasPermission = userPermissions[permKey]
     // Role-based gate: hide only on explicit false (undefined = show).
     if (hasPermission === false) {
       console.log(`🚫 Filtering out (role): ${item.name}`, {

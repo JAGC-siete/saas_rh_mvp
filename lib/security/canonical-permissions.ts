@@ -203,6 +203,8 @@ export function normalizePermissionsToCanonical(
     base.can_authorize_payroll = false
     base.can_view_reports = false
     base.can_export_reports = false
+    base.can_view_settings = false
+    base.can_manage_settings = false
   }
 
   return base
