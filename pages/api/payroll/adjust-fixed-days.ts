@@ -12,6 +12,7 @@ import {
   type PreviewPaymentFrequency,
   type PaymentCutDatesInput
 } from '../../../lib/payroll/fixed-line-recalc'
+import { resolveEffectivePayType } from '../../../lib/payroll/resolve-effective-pay-type'
 import {
   assertNonHndStatutoryConfigParses,
   payrollStatutoryErrorResponse,
@@ -182,15 +183,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(404).json({ error: 'Empleado no encontrado' })
     }
 
-    if ((employee.pay_type ?? 'fixed') !== 'fixed') {
-      return res.status(400).json({
-        error: 'Solo aplica a empleados con salario fijo (fixed)'
-      })
-    }
-
     const { data: payrollConfig, error: configError } = await supabase
       .from('company_payroll_configs')
-      .select('metadata, payment_frequency, quincena_config')
+      .select('metadata, payment_frequency, quincena_config, calculation_mode')
       .eq('company_id', companyId)
       .eq('is_active', true)
       .maybeSingle()
@@ -200,6 +195,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const payrollMetadata = payrollConfig?.metadata || {}
+    const companyCalculationMode =
+      (payrollConfig?.calculation_mode as string) === 'hourly' ||
+      payrollMetadata.calculation_mode === 'hourly'
+        ? 'hourly'
+        : 'daily'
+
+    if (resolveEffectivePayType(employee.pay_type, companyCalculationMode) !== 'fixed') {
+      return res.status(400).json({
+        error: 'Solo aplica a empleados con salario fijo (fixed)'
+      })
+    }
     const qcCol = payrollConfig?.quincena_config as {
       first_start?: number
       first_end?: number

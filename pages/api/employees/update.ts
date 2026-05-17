@@ -136,6 +136,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         pf === 'quincenal' || pf === 'mensual' || pf === 'semanal' ? pf : null
     }
 
+    if ('pay_type' in updateData) {
+      const pt = updateData.pay_type
+      if (pt === '' || pt === null) {
+        updateData.pay_type = null
+      } else if (pt === 'fixed' || pt === 'hourly') {
+        updateData.pay_type = pt
+      } else {
+        return res.status(400).json({
+          error: 'pay_type inválido',
+          message: "pay_type debe ser 'fixed', 'hourly' o null (default de la empresa)."
+        })
+      }
+    }
+
     const existingStatus = (existing.status as string) || 'active'
     const nextStatus =
       updateData.status !== undefined && updateData.status !== null

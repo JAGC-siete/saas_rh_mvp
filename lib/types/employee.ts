@@ -24,7 +24,7 @@ export interface Employee {
   department_id: string | null
   work_schedule_id: string | null
   payment_frequency: 'quincenal' | 'mensual' | 'semanal' | null
-  pay_type?: 'fixed' | 'hourly'
+  pay_type?: 'fixed' | 'hourly' | null
   employee_pin_hash: string | null
   created_at: string
   updated_at: string

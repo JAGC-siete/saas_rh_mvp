@@ -29,6 +29,8 @@ interface AddEmployeeFormProps {
   employeeId?: string // Required for file upload
   onProfileImageUploaded?: (fileId: string, storagePath: string) => void
   onProfileImageError?: (error: string) => void
+  /** Company calculation_mode for dynamic "Default de la empresa" label */
+  companyCalculationMode?: 'daily' | 'hourly'
 }
 
 function AddEmployeeForm({
@@ -43,12 +45,25 @@ function AddEmployeeForm({
   employeeId,
   onProfileImageUploaded,
   onProfileImageError,
+  companyCalculationMode = 'daily',
 }: AddEmployeeFormProps) {
   // Helper to keep inputs controlled and avoid React warnings
   const v = (value: any) => (value ?? '')
 
+  const resolvedPayType =
+    v(formData?.pay_type) === ''
+      ? companyCalculationMode === 'hourly'
+        ? 'hourly'
+        : 'fixed'
+      : v(formData?.pay_type) || 'fixed'
+
+  const defaultPayTypeLabel =
+    companyCalculationMode === 'hourly'
+      ? 'Default de la empresa (Por Hora)'
+      : 'Default de la empresa (Administrativo)'
+
   const handleSubmit = (e: React.FormEvent) => {
-    const payType = v(formData?.pay_type) || 'fixed'
+    const payType = resolvedPayType
     const baseSalary = Number(formData?.base_salary) || 0
     if (payType === 'hourly' && baseSalary > 0 && baseSalary < 2000) {
       e.preventDefault()
@@ -265,11 +280,14 @@ function AddEmployeeForm({
                   id="pay_type"
                   name="pay_type"
                   disabled={loading}
-                  value={v(formData?.pay_type) || 'fixed'}
+                  value={v(formData?.pay_type)}
                   onChange={(e) => onFormChange('pay_type', e.target.value)}
                   className="w-full p-2 border border-white/20 rounded-md focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white/10 text-white"
                   required
                 >
+                  <option value="" className="bg-brand-900 text-white">
+                    {defaultPayTypeLabel}
+                  </option>
                   <option value="fixed" className="bg-brand-900 text-white">
                     Administrativo/Permanente (Horario fijo)
                   </option>
@@ -278,6 +296,8 @@ function AddEmployeeForm({
                   </option>
                 </select>
                 <p className="text-xs text-gray-400 mt-1">
+                  <strong>Default de la empresa:</strong> hereda el método configurado en Nómina (por día → administrativo, por hora exacta → por hora).
+                  <br />
                   <strong>Administrativo:</strong> Salario mensual. Usa horario fijo para inferir entrada/salida.
                   <br />
                   <strong>Por Hora:</strong> Ingresa el salario mensual equivalente. La tarifa por hora se calcula automáticamente (base ÷ 240).
@@ -302,12 +322,12 @@ function AddEmployeeForm({
                   required
                   className="bg-white/10 border-white/20 text-white placeholder-gray-400"
                 />
-                {(v(formData?.pay_type) || 'fixed') === 'hourly' && Number(formData?.base_salary) > 0 && (
+                {resolvedPayType === 'hourly' && Number(formData?.base_salary) > 0 && (
                   <p className="text-sm text-blue-400 mt-1">
                     Tarifa por hora: L. {(Number(formData?.base_salary) / HONDURAS_LABOR_FACTOR).toFixed(2)} (basado en 240h/mes)
                   </p>
                 )}
-                {(v(formData?.pay_type) || 'fixed') === 'hourly' && Number(formData?.base_salary) > 0 && Number(formData?.base_salary) < 2000 && (
+                {resolvedPayType === 'hourly' && Number(formData?.base_salary) > 0 && Number(formData?.base_salary) < 2000 && (
                   <p className="text-sm text-amber-400 mt-1">
                     Por favor ingresa el salario mensual equivalente. El sistema calculará la tarifa por hora automáticamente.
                   </p>

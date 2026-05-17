@@ -164,7 +164,8 @@ async function getPayrollConfig(
       ordinary_hours_override:
         metadata.ordinary_hours_override != null && String(metadata.ordinary_hours_override).trim() !== ''
           ? Number(metadata.ordinary_hours_override)
-          : null
+          : null,
+      pay_overtime: metadata.pay_overtime !== false
     }
 
     return res.status(200).json({
@@ -205,7 +206,8 @@ async function upsertPayrollConfig(
       ordinary_hours_override: ordinary_hours_override_body,
       legal_deductions,
       payment_cut_dates,
-      semanal_proration = 'proportional'
+      semanal_proration = 'proportional',
+      pay_overtime: pay_overtime_body
     } = body
 
     // Validar calculation_type
@@ -318,6 +320,10 @@ async function upsertPayrollConfig(
       }
     }
 
+    if (Object.prototype.hasOwnProperty.call(body, 'pay_overtime')) {
+      payrollMetadata.pay_overtime = pay_overtime_body === false ? false : true
+    }
+
     // Validar calculation_mode
     const validCalcModes = ['daily', 'hourly']
     if (calculation_mode && !validCalcModes.includes(calculation_mode)) {
@@ -393,7 +399,8 @@ async function upsertPayrollConfig(
       ordinary_hours_override:
         meta.ordinary_hours_override != null && String(meta.ordinary_hours_override).trim() !== ''
           ? Number(meta.ordinary_hours_override)
-          : null
+          : null,
+      pay_overtime: meta.pay_overtime !== false
     }
 
     return res.status(200).json({

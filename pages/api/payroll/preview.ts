@@ -25,6 +25,11 @@ import { calculateSeptimoDia } from '../../../lib/payroll/septimo-dia'
 import { HONDURAS_LABOR_FACTOR, HORAS_PERIODO_MENSUAL, HORAS_PERIODO_QUINCENAL } from '../../../lib/payroll/constants'
 import { buildAuthorizedPayrollPreviewPayload } from '../../../lib/payroll/preview-authorized-readonly'
 import { calculateEmployerContributions } from '../../../lib/payroll/employer-contributions'
+import { resolveEffectivePayType } from '../../../lib/payroll/resolve-effective-pay-type'
+import {
+  resolveCompanyPayOvertime,
+  shouldPayOvertimeToEmployee
+} from '../../../lib/payroll/overtime-pay'
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -151,6 +156,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       infop: false
     }
     const calculationMode = (payrollConfig as any)?.calculation_mode ?? payrollMetadata?.calculation_mode ?? 'daily'
+    const companyCalculationMode = calculationMode === 'hourly' ? 'hourly' : 'daily'
+    const companyPayOvertime = resolveCompanyPayOvertime(payrollMetadata as Record<string, unknown>)
     const incompleteRecordDefaultHours = (payrollConfig as any)?.incomplete_record_default_hours ?? payrollMetadata?.incomplete_record_default_hours ?? null
     const semanalProration = (payrollMetadata?.semanal_proration || 'proportional') as 'proportional' | 'fixed'
 
@@ -389,8 +396,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       }
     }
 
-    // attendance_hours_calculation: (1) overtime hours por empleado en el período — todos los pay_type (UX preview)
-    // (2) agregados hourly — solo si calculationMode === 'hourly' (bruto hourly + séptimo día)
+    // attendance_hours_calculation:
+    // (1) Tracking overtime hours — ALL employees (columna Horas extra AHC); independent of calculation_mode.
+    // (2) Hour aggregates for bruto — only effectivePayType === 'hourly' (inherits pay_type null from company).
+    const effectivePayTypeByEmployee: Record<string, 'fixed' | 'hourly'> = {}
+    for (const emp of employees || []) {
+      effectivePayTypeByEmployee[emp.id] = resolveEffectivePayType(emp.pay_type, companyCalculationMode)
+    }
+
     let ahcByEmployee: Record<string, { total_hours: number; normal_hours: number; by_record: Record<string, number> }> = {}
     const ahcOvertimeByEmployee: Record<string, number> = {}
     if (employeeIds.length > 0) {
@@ -415,7 +428,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           .gte('date', fechaInicio)
           .lte('date', fechaFin)
         const validArIds = new Set((arDates || []).map((r: any) => r.id))
-        const hourlyMode = calculationMode === 'hourly'
         for (const row of ahcData) {
           if (!validArIds.has(row.attendance_record_id)) continue
           const ot =
@@ -424,7 +436,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
             Number(row.overtime_feriado_hours || 0)
           const eid = row.employee_id as string
           ahcOvertimeByEmployee[eid] = (ahcOvertimeByEmployee[eid] || 0) + ot
-          if (!hourlyMode) continue
+          if (effectivePayTypeByEmployee[eid] !== 'hourly') continue
           if (!ahcByEmployee[eid]) {
             ahcByEmployee[eid] = { total_hours: 0, normal_hours: 0, by_record: {} }
           }
@@ -487,7 +499,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         }
 
         // Resolución: employees.pay_type > company calculation_mode
-        const effectivePayType = emp.pay_type ?? (calculationMode === 'hourly' ? 'hourly' : 'fixed')
+        const effectivePayType = resolveEffectivePayType(emp.pay_type, companyCalculationMode)
 
         if (effectivePayType === 'fixed') {
           // Administrativos: requieren check_in (check_out opcional para MVP)
@@ -624,11 +636,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     for (const emp of empleadosParaNomina) {
-      const payType = emp.pay_type ?? (calculationMode === 'hourly' ? 'hourly' : 'fixed')
+      const effectivePayType = resolveEffectivePayType(emp.pay_type, companyCalculationMode)
 
       // Filtrar registros según tipo de pago
       let registros: any[];
-      if (payType === 'fixed') {
+      if (effectivePayType === 'fixed') {
         // Administrativos: contar días con check_in (check_out opcional)
         registros = attendanceRecords.filter((record: any) => 
           record.employee_id === emp.id && 
@@ -653,7 +665,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         }
       }
 
-      if (payType === 'fixed') {
+      if (effectivePayType === 'fixed') {
         // ========== EMPLEADOS FIJOS (FIXED) ==========
         const prevLine = existingLineByEmployee[emp.id]
         const prevMeta = prevLine?.metadata as Record<string, unknown> | null | undefined
@@ -887,8 +899,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
         let total_hours_worked: number
         const ahcEmp = ahcByEmployee[emp.id]
-        if (ahcEmp && ahcEmp.total_hours > 0) {
-          total_hours_worked = ahcEmp.total_hours
+        const payOvertimeMoney = shouldPayOvertimeToEmployee(companyPayOvertime, effectivePayType)
+        if (ahcEmp && (ahcEmp.total_hours > 0 || ahcEmp.normal_hours > 0)) {
+          // Statu quo when paying OT: all AHC hours at base rate. When off: only ordinary hours count toward bruto.
+          total_hours_worked = payOvertimeMoney ? ahcEmp.total_hours : ahcEmp.normal_hours
           if (incompleteRecordDefaultHours != null && incompleteRecordDefaultHours > 0 && incompleteRegistros.length > 0) {
             total_hours_worked += incompleteRecordDefaultHours * incompleteRegistros.length
           }
@@ -910,7 +924,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
         // Séptimo Día (Art. 338-340): solo para pay_type === 'hourly'
         let septimoDia = 0
-        if (emp.pay_type === 'hourly' && hourly_rate > 0) {
+        if (effectivePayType === 'hourly' && hourly_rate > 0) {
           const ahcEmp = ahcByEmployee[emp.id]
           const ordinaryHours = ahcEmp?.normal_hours ?? Math.max(0, total_hours_worked)
           septimoDia = calculateSeptimoDia({

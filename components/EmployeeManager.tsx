@@ -46,7 +46,7 @@ const INITIAL_FORM_DATA = {
   department_id: '',
   work_schedule_id: '',
   base_salary: '',
-  pay_type: 'fixed', // Default: fixed (administrativo/permanente)
+  pay_type: '', // vacío = default de empresa (hereda calculation_mode)
   payment_frequency: '', // vacío = usa default de empresa (Capa 2)
   hire_date: '',
   termination_date: '',
@@ -209,6 +209,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
   const [searchTerm, setSearchTerm] = useState('')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [departmentFilter, setDepartmentFilter] = useState('all')
+  const [companyCalculationMode, setCompanyCalculationMode] = useState<'daily' | 'hourly'>('daily')
   const [sortBy, setSortBy] = useState<EmployeeListSortBy>('name')
   const [currentPage, setCurrentPage] = useState(1)
   const [uploadedProfileImagePath, setUploadedProfileImagePath] = useState<string | null>(null)
@@ -554,7 +555,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       department_id: employee.department_id || '',
       work_schedule_id: employee.work_schedule_id || '',
       base_salary: employee.base_salary?.toString() || '',
-      pay_type: (employee as any).pay_type || 'fixed',
+      pay_type: (employee as any).pay_type ?? '',
       payment_frequency: (employee as any).payment_frequency || '',
       hire_date: employee.hire_date || '',
       termination_date: employee.termination_date || '',
@@ -902,6 +903,17 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
   }, [shouldFetch, fetchEmployees, fetchDepartments, fetchWorkSchedules])
 
   useEffect(() => {
+    if (!companyId) return
+    fetch('/api/payroll/config')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        const mode = data?.config?.calculation_mode
+        setCompanyCalculationMode(mode === 'hourly' ? 'hourly' : 'daily')
+      })
+      .catch(() => setCompanyCalculationMode('daily'))
+  }, [companyId])
+
+  useEffect(() => {
     if (detailsActiveTab === 'files' && selectedEmployee?.id) {
       fetchEmployeeFiles(selectedEmployee.id)
     }
@@ -1031,6 +1043,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
             employeeId={editingEmployee?.id}
             onProfileImageUploaded={handleProfileImageUploaded}
             onProfileImageError={handleProfileImageError}
+            companyCalculationMode={companyCalculationMode}
           />
         </div>
       ) : (

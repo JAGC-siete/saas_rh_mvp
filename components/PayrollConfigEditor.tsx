@@ -66,6 +66,8 @@ interface PayrollConfig {
   incomplete_record_default_hours?: number | null // Horas por defecto si falta check_out (solo hourly)
   /** Tope diario de horas ordinarias antes de HE; null = usar labor_laws.legal_daily_hours en el RPC. */
   ordinary_hours_override?: number | null
+  /** Master switch: pagar horas extras en nómina (false = solo informativo). */
+  pay_overtime?: boolean
   legal_deductions: {
     ihss: boolean
     rap: boolean
@@ -115,6 +117,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     calculation_mode: 'daily',
     incomplete_record_default_hours: null,
     ordinary_hours_override: null,
+    pay_overtime: true,
     legal_deductions: {
       ihss: true,
       rap: true,
@@ -156,7 +159,8 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     currency: false, // Retraída por defecto
     legalDeductions: false, // Retraída por defecto
     paymentCutDates: false, // Retraída por defecto
-    ordinaryDailyCap: false // Tope horas ordinarias / día (previo a extras)
+    ordinaryDailyCap: false, // Tope horas ordinarias / día (previo a extras)
+    overtimePay: false // Horas extras en nómina
   })
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   const [confirmAction, setConfirmAction] = useState('')
@@ -223,6 +227,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
       if ((initialConfig.ordinary_hours_override ?? null) !== nOrd) return true
     }
     if ((config.semanal_proration ?? 'proportional') !== (initialConfig.semanal_proration ?? 'proportional')) return true
+    if ((config.pay_overtime !== false) !== (initialConfig.pay_overtime !== false)) return true
     
     // Comparar legal_deductions (deep comparison)
     const deductionsStr = JSON.stringify(config.legal_deductions)
@@ -278,6 +283,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
         infop: apiConfig.legal_deductions?.infop ?? false
       },
       semanal_proration: apiConfig.semanal_proration ?? 'proportional',
+      pay_overtime: apiConfig.pay_overtime !== false,
       payment_cut_dates: {
         biweekly_type: apiConfig.payment_cut_dates?.biweekly_type || 'standard',
         biweekly_first_start: apiConfig.payment_cut_dates?.biweekly_first_start ?? 1,
@@ -348,7 +354,8 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
             },
             custom_fields: {},
             calculation_config: {},
-            calculation_script: null
+            calculation_script: null,
+            pay_overtime: true
           }
           setConfig(defaultConfig)
           setInitialConfig(defaultConfig)
@@ -382,7 +389,8 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
           },
           custom_fields: {},
           calculation_config: {},
-          calculation_script: null
+          calculation_script: null,
+          pay_overtime: true
         }
         setConfig(defaultConfig)
         setInitialConfig(defaultConfig)
@@ -454,6 +462,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
           legal_deductions: config.legal_deductions,
           payment_cut_dates: config.payment_cut_dates,
           semanal_proration: config.semanal_proration ?? 'proportional',
+          pay_overtime: config.pay_overtime !== false,
           custom_fields: config.custom_fields,
           calculation_config: config.calculation_config,
           calculation_script: config.calculation_script || null
@@ -604,6 +613,13 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     }
     if ((cfg.ordinary_hours_override ?? null) !== (initialConfig.ordinary_hours_override ?? null)) {
       changes.push('tope de horas ordinarias diarias (previo a extras)')
+    }
+    if ((cfg.pay_overtime !== false) !== (initialConfig.pay_overtime !== false)) {
+      changes.push(
+        cfg.pay_overtime !== false
+          ? 'pago de horas extras en nómina (activado)'
+          : 'pago de horas extras en nómina (solo informativo)'
+      )
     }
 
     const deductionsStr = JSON.stringify(cfg.legal_deductions)
@@ -1581,6 +1597,60 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                       </p>
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Horas extras */}
+            <div className="glass border border-white/20 rounded-lg p-4 mt-4">
+              <button
+                type="button"
+                onClick={() =>
+                  setExpandedSections((prev) => ({ ...prev, overtimePay: !prev.overtimePay }))
+                }
+                className="w-full flex items-center justify-between p-3 hover:bg-white/5 rounded-lg transition-all duration-200 cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <Clock className="h-4 w-4 text-amber-300" />
+                  <label className="text-sm font-medium text-white">Horas extras</label>
+                </div>
+                <div className="flex items-center gap-2">
+                  {expandedSections.overtimePay ? (
+                    <ChevronUp className="h-5 w-5 text-amber-300 transition-transform duration-200" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-amber-300 transition-transform duration-200" />
+                  )}
+                </div>
+              </button>
+              <div
+                className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                  expandedSections.overtimePay ? 'max-h-[280px] opacity-100 mt-4' : 'max-h-0 opacity-0'
+                }`}
+              >
+                <div className="p-3 glass border border-amber-500/30 rounded-lg">
+                  <label className="flex items-start justify-between gap-4 cursor-pointer">
+                    <div>
+                      <span className="text-sm font-medium text-amber-200 block">
+                        Pagar horas extras en nómina
+                      </span>
+                      <span className="text-xs text-gray-400 mt-1 block leading-relaxed">
+                        Activado: las horas extraordinarias impactan el bruto de empleados por hora.
+                        Desactivado: solo se registran y muestran en asistencia/nómina sin monto adicional.
+                        Los empleados administrativos (fijos) siguen viendo horas AHC de forma informativa.
+                      </span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={config.pay_overtime !== false}
+                      onChange={(e) =>
+                        setConfig((prev) => ({
+                          ...prev,
+                          pay_overtime: e.target.checked
+                        }))
+                      }
+                      className="w-5 h-5 mt-1 shrink-0 text-amber-600 rounded"
+                    />
+                  </label>
                 </div>
               </div>
             </div>

@@ -22,6 +22,12 @@ import {
 import { calculatePeriodBaseSalary, normalizeFrequency } from '../../../lib/payroll/calculate-period-base-salary'
 import { calculateSeptimoDia } from '../../../lib/payroll/septimo-dia'
 import { HONDURAS_LABOR_FACTOR } from '../../../lib/payroll/constants'
+import { resolveEffectivePayType } from '../../../lib/payroll/resolve-effective-pay-type'
+import {
+  calculateOvertimePayFromAhc,
+  resolveCompanyPayOvertime,
+  shouldPayOvertimeToEmployee
+} from '../../../lib/payroll/overtime-pay'
 
 interface PlanillaItem {
   id: string
@@ -158,12 +164,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Configuración 3 capas: company_payroll_configs (Capa 2) > labor_laws (Capa 1)
     const { data: payrollConfig } = await supabase
       .from('company_payroll_configs')
-      .select('metadata, payment_frequency, quincena_config')
+      .select('metadata, payment_frequency, quincena_config, calculation_mode')
       .eq('company_id', companyId)
       .eq('is_active', true)
       .single()
     
     const payrollMetadata = payrollConfig?.metadata || {}
+    const calculationMode =
+      (payrollConfig?.calculation_mode as string) ||
+      (payrollMetadata.calculation_mode as string) ||
+      'daily'
+    const companyCalculationMode =
+      calculationMode === 'hourly' ? 'hourly' : 'daily'
+    const companyPayOvertime = resolveCompanyPayOvertime(payrollMetadata as Record<string, unknown>)
     const quincenaConfig = payrollConfig?.quincena_config || {}
     const metaCutDates = payrollMetadata?.payment_cut_dates || {}
     
@@ -363,31 +376,40 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const late_days = calcularTardanzas(registros)
       
       const base_salary = Number(emp.base_salary) || 0
-      const payType = emp.pay_type ?? 'fixed'
+      const effectivePayType = resolveEffectivePayType(emp.pay_type, companyCalculationMode)
       // base_salary siempre mensual. Tarifa horaria = base_salary / 240.
       const hourlyRate = base_salary / HONDURAS_LABOR_FACTOR
 
       // Horas extras desde attendance_hours_calculation (Capa 3) si existen
       const overtime = hoursCalculations[emp.id] || { total_hours: 0, normal_hours: 0, overtime_diurno: 0, overtime_nocturno: 0, overtime_feriado: 0 }
-      const overtimePay =
-        overtime.overtime_diurno * hourlyRate * 1.25 +   // +25%
-        overtime.overtime_nocturno * hourlyRate * 1.50 + // +50%
-        overtime.overtime_feriado * hourlyRate * 1.75   // +75%
+      const overtimePay = calculateOvertimePayFromAhc(
+        {
+          diurno: Number(overtime.overtime_diurno) || 0,
+          nocturno: Number(overtime.overtime_nocturno) || 0,
+          feriado: Number(overtime.overtime_feriado) || 0
+        },
+        hourlyRate
+      )
 
       // CALCULAR SALARIO SEGÚN payment_frequency y pay_type (helper unificado)
       // Hourly: salario_bruto = base_salary (tarifa/hora) * hours_worked
       // Fixed: periodBase (mensual/2 o /4) * (days_worked/diasPeriodo)
       let total_earnings = 0
       let septimoDia = 0
-      if (payType === 'hourly') {
-        const hoursWorked = overtime.total_hours || 0
+      if (effectivePayType === 'hourly') {
+        const otSum =
+          (overtime.overtime_diurno || 0) +
+          (overtime.overtime_nocturno || 0) +
+          (overtime.overtime_feriado || 0)
+        const hoursWorked = shouldPayOvertimeToEmployee(companyPayOvertime, effectivePayType)
+          ? overtime.total_hours || 0
+          : overtime.normal_hours ?? Math.max(0, (overtime.total_hours || 0) - otSum)
         total_earnings = calculatePeriodBaseSalary(
           { base_salary, pay_type: 'hourly' },
           frequencyForCalc,
           { hoursWorked }
         )
         // Séptimo Día (Art. 338-340): 1 día descanso por cada 6 trabajados. Solo horas ordinarias.
-        const otSum = (overtime.overtime_diurno || 0) + (overtime.overtime_nocturno || 0) + (overtime.overtime_feriado || 0)
         const ordinaryHours = overtime.normal_hours ?? Math.max(0, (overtime.total_hours || 0) - otSum)
         septimoDia = calculateSeptimoDia({
           hourlyRate: base_salary / HONDURAS_LABOR_FACTOR,
@@ -408,7 +430,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           ? periodBase * (days_worked / diasPeriodo)
           : periodBase
       }
-      total_earnings += overtimePay
+      if (shouldPayOvertimeToEmployee(companyPayOvertime, effectivePayType)) {
+        total_earnings += overtimePay
+      }
       
       let IHSS = 0, RAP = 0, ISR = 0, total_deductions = 0, total = 0
       let notes_on_ingress = ''
@@ -420,7 +444,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const baseParaDeducciones = base_salary
         const factor2Pagos = tipoDeduccion === '2PAGOS' ? 0.5 : 1
 
-        const periodIncomeForIsr = payType === 'hourly' ? total_earnings : baseParaDeducciones
+        const periodIncomeForIsr = effectivePayType === 'hourly' ? total_earnings : baseParaDeducciones
 
         const statutory = await computePayrollEmployeeStatutoryDeductions({
           countryCode,
@@ -515,8 +539,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         total: Math.round(total * 100) / 100,
         notes_on_ingress,
         notes_on_deductions,
-        total_hours_worked: payType === 'hourly' ? overtime.total_hours : undefined,
-        pay_type: payType,
+        total_hours_worked: effectivePayType === 'hourly' ? overtime.total_hours : undefined,
+        pay_type: effectivePayType,
         septimo_dia: septimoDia > 0 ? septimoDia : undefined
       }
     }))
@@ -544,7 +568,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       metadata: {
         tax_year: year,
         country_code: countryCode,
-        ...(item.pay_type === 'hourly' && item.total_hours_worked != null && { total_hours_worked: item.total_hours_worked }),
+        ...(item.pay_type === 'hourly' && item.total_hours_worked != null
+          ? { total_hours_worked: item.total_hours_worked }
+          : {}),
         ...(item.septimo_dia != null && item.septimo_dia > 0 && { septimo_dia: item.septimo_dia })
       },
       generated_by: user.id || 'system',
