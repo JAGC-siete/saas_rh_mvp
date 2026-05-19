@@ -12,6 +12,10 @@ import { getBiweeklyPeriodDates } from '../../../lib/payroll/period-dates'
 import { normalizeCountryCode, type CountryCode } from '../../../lib/country/supported'
 import { reportFormatForCountry } from '../../../lib/country/payroll-labels'
 import { createEmployeeSalaryClient } from '../../../lib/security/employee-data-access'
+import { createAdminClient } from '../../../lib/supabase/server'
+import { resolveFieldAccessContext } from '../../../lib/security/field-access'
+import { canExportReports, EXPORT_REPORTS_FORBIDDEN } from '../../../lib/security/permissions'
+import { applyFieldAccessToReportData } from '../../../lib/security/apply-field-access-to-report'
 
 interface ReportData {
   employees: any[]
@@ -43,19 +47,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { supabase, companyId, role, user: authUser, userProfile } = authResult
     user = authUser
 
-    // Verificar permisos: rol permitido O permiso can_export_reports en JSON
-    const allowedRoles = ['super_admin', 'company_admin', 'hr_manager', 'manager']
-    const rawPerms = typeof userProfile?.permissions === 'string'
-      ? (() => { try { return JSON.parse(userProfile.permissions) } catch { return {} } })()
-      : (userProfile?.permissions || {})
-    const hasExportPermission = rawPerms.can_export_reports === true
-
-    if (!allowedRoles.includes(role) && !hasExportPermission) {
-      return res.status(403).json({
-        error: 'Permisos insuficientes',
-        message: 'No tiene permisos para generar reportes'
-      })
+    if (!canExportReports(role, userProfile)) {
+      return res.status(EXPORT_REPORTS_FORBIDDEN.status).json(EXPORT_REPORTS_FORBIDDEN.body)
     }
+
+    const fieldCtx = await resolveFieldAccessContext(userProfile, createAdminClient())
 
     console.log('🔐 Usuario autenticado para reportes:', { 
       userId: user.id, 
@@ -110,6 +106,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       // General report (backward compatibility)
       reportData = await generateReportData(supabase, dateFilter, companyId)
     }
+
+    reportData = applyFieldAccessToReportData(reportData, fieldCtx)
     
     const companyCountry = normalizeCountryCode(company?.country_code)
     reportData.reportFmt = reportFormatForCountry(companyCountry)

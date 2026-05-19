@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
-import { getCompanyData } from '../../../lib/helpers/company-filter'
 import { getHondurasTimestamp, formatDateForHonduras, nowInHonduras, formatDateTimeForHonduras, formatDateOnlyForHonduras } from '../../../lib/timezone'
 import { 
   validateCompanyAccess, 
@@ -10,6 +9,10 @@ import {
   fileFormatSchema
 } from '../../../lib/security/export-security'
 import { canExportReports, EXPORT_REPORTS_FORBIDDEN } from '../../../lib/security/permissions'
+import { createAdminClient } from '../../../lib/supabase/server'
+import { resolveFieldAccessContext } from '../../../lib/security/field-access'
+import { createEmployeeSalaryClient } from '../../../lib/security/employee-data-access'
+import { shapeEmployeeExportReportData } from '../../../lib/security/apply-field-access-to-report'
 import ExcelJS from 'exceljs'
 import { z } from 'zod'
 import { resolveReportConfig } from '../../../lib/reports/column-resolver'
@@ -82,6 +85,8 @@ async function exportEmployeesHandler(req: NextApiRequest, res: NextApiResponse)
       return res.status(EXPORT_REPORTS_FORBIDDEN.status).json(EXPORT_REPORTS_FORBIDDEN.body)
     }
 
+    const fieldCtx = await resolveFieldAccessContext(userProfile, createAdminClient())
+
     // Usar datos validados del middleware
     const validatedData = (req as any).validatedData || req.body
     const { format = 'pdf', filters } = validatedData
@@ -97,8 +102,9 @@ async function exportEmployeesHandler(req: NextApiRequest, res: NextApiResponse)
       filters 
     })
 
-    // Obtener datos del reporte con filtros
-    const reportData = await generateEmployeeReportData(supabase, companyId, filters)
+    // Obtener datos del reporte con filtros (service role + shaping)
+    const rawReportData = await generateEmployeeReportData(companyId, filters)
+    const reportData = shapeEmployeeExportReportData(rawReportData, fieldCtx)
     const resolvedConfig = await resolveReportConfig(companyId, 'employees', supabase)
 
     const exportFormat = format === 'xlsx' ? 'excel' : format
@@ -119,17 +125,16 @@ async function exportEmployeesHandler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-async function generateEmployeeReportData(supabase: any, companyId: string, filters?: {
+async function generateEmployeeReportData(companyId: string, filters?: {
   status?: string[]
   departmentIds?: string[]
   employeeIds?: string[]
 }) {
-  // Construir query base
-  let query = getCompanyData(
-    supabase,
-    'employees',
-    companyId,
-    `
+  const salaryClient = createEmployeeSalaryClient()
+
+  let query = salaryClient
+    .from('employees')
+    .select(`
       id,
       name,
       email,
@@ -138,6 +143,7 @@ async function generateEmployeeReportData(supabase: any, companyId: string, filt
       role,
       hire_date,
       base_salary,
+      hourly_rate_reference,
       status,
       bank_name,
       bank_account,
@@ -145,8 +151,8 @@ async function generateEmployeeReportData(supabase: any, companyId: string, filt
       created_at,
       departments!employees_department_id_fkey(name),
       companies(name)
-    `
-  )
+    `)
+    .eq('company_id', companyId)
 
   // Aplicar filtros
   if (filters?.status && filters.status.length > 0) {
@@ -169,13 +175,10 @@ async function generateEmployeeReportData(supabase: any, companyId: string, filt
     throw new Error('Error obteniendo empleados')
   }
 
-  // Obtener departamentos usando getCompanyData
-  const { data: departments, error: deptError } = await getCompanyData(
-    supabase,
-    'departments',
-    companyId,
-    'id, name'
-  )
+  const { data: departments, error: deptError } = await salaryClient
+    .from('departments')
+    .select('id, name')
+    .eq('company_id', companyId)
 
   if (deptError) {
     console.error('Error obteniendo departamentos:', deptError)

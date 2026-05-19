@@ -3,6 +3,7 @@ import type { Employee } from './employee'
 /** Employee record after API field-level shaping (salary may be omitted). */
 export type EmployeeShaped = Omit<Employee, 'base_salary'> & {
   base_salary?: number
+  hourly_rate_reference?: number
   base_salary_masked?: boolean
 }
 

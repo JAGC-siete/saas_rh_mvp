@@ -5,8 +5,16 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import { resolveSalaryAccessFromSources } from '../lib/security/field-access'
-import { buildEmployeeWritePayload, shapeEmployees } from '../lib/security/shape-employee'
+import {
+  buildEmployeeWritePayload,
+  computeSalaryAggregates,
+  shapeEmployee,
+  shapeEmployees,
+  shapeEmployeeExportReportData,
+} from '../lib/security/shape-employee'
 import { buildDepartmentStatsPayload } from '../lib/security/shape-departments'
+import { applyFieldAccessToReportData } from '../lib/security/apply-field-access-to-report'
+import { canExportReports } from '../lib/security/permissions'
 
 describe('field-level-security-read', () => {
   it('manager GET shape: base_salary absent and base_salary_masked true', () => {
@@ -22,6 +30,62 @@ describe('field-level-security-read', () => {
       assert.equal(emp.base_salary, undefined)
       assert.equal(emp.base_salary_masked, true)
     }
+  })
+
+  it('manager shape strips hourly_rate_reference', () => {
+    const fieldCtx = resolveSalaryAccessFromSources({ role: 'manager', permissions: {} })
+    const shaped = shapeEmployee(
+      { id: '1', base_salary: 12000, hourly_rate_reference: 50 },
+      fieldCtx
+    )
+    assert.equal(shaped.base_salary, undefined)
+    assert.equal(shaped.hourly_rate_reference, undefined)
+    assert.equal(shaped.base_salary_masked, true)
+  })
+
+  it('computeSalaryAggregates omits totals for manager', () => {
+    const fieldCtx = resolveSalaryAccessFromSources({ role: 'manager', permissions: {} })
+    const agg = computeSalaryAggregates([{ base_salary: 10000 }, { base_salary: 8000 }], fieldCtx)
+    assert.equal(agg.totalPayroll, undefined)
+    assert.equal(agg.averageSalary, undefined)
+  })
+
+  it('shapeEmployeeExportReportData redacts salary stats', () => {
+    const fieldCtx = resolveSalaryAccessFromSources({ role: 'manager', permissions: {} })
+    const shaped = shapeEmployeeExportReportData(
+      {
+        employees: [{ id: '1', base_salary: 5000, hourly_rate_reference: 20 }],
+        stats: { totalEmployees: 1, totalSalary: 5000, averageSalary: 5000 },
+        departmentStats: [{ department: { name: 'Ops' }, totalSalary: 5000 }],
+      },
+      fieldCtx
+    )
+    assert.equal(shaped.employees[0].base_salary, undefined)
+    assert.equal(shaped.stats?.totalSalary, undefined)
+    assert.equal(shaped.departmentStats?.[0].totalSalary, undefined)
+  })
+
+  it('applyFieldAccessToReportData redacts payroll amounts', () => {
+    const fieldCtx = resolveSalaryAccessFromSources({ role: 'manager', permissions: {} })
+    const out = applyFieldAccessToReportData(
+      {
+        employees: [{ id: '1', base_salary: 9000 }],
+        stats: { totalPayroll: 9000 },
+        payroll: [{ net_salary: 7500, gross_salary: 9000 }],
+      },
+      fieldCtx
+    )
+    assert.equal((out.employees as Array<Record<string, unknown>>)[0].base_salary, undefined)
+    assert.equal((out.stats as Record<string, unknown>).totalPayroll, undefined)
+    assert.equal((out.payroll as Array<Record<string, unknown>>)[0].net_salary, undefined)
+  })
+
+  it('manager cannot export by default role', () => {
+    assert.equal(canExportReports('manager', { permissions: {} }), false)
+    assert.equal(
+      canExportReports('manager', { permissions: { can_export_reports: true } }),
+      true
+    )
   })
 
   it('manager departments stats: no base_salary in employees or salary aggregates', () => {

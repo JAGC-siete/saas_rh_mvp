@@ -380,7 +380,6 @@ const EXPORT_REPORTS_ALLOWED_ROLES: ReadonlySet<string> = new Set([
   'company_admin',
   'admin',
   'hr_manager',
-  'manager',
 ])
 
 function readRawPermissions(userProfile: unknown): Record<string, unknown> {

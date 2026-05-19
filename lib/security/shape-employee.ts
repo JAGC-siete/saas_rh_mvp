@@ -4,6 +4,14 @@
  */
 import type { FieldAccessContext } from './field-access'
 
+/** Columns that must never appear in API/export payloads when salary view is denied. */
+export const SALARY_SENSITIVE_EMPLOYEE_KEYS = [
+  'base_salary',
+  'hourly_rate_reference',
+  'monthly_salary',
+  'base_salary_used',
+] as const
+
 export const EMPLOYEE_WRITE_ALLOWLIST = [
   'employee_code',
   'dni',
@@ -55,6 +63,14 @@ export function isValidBaseSalaryValue(value: unknown): value is number {
   return false
 }
 
+function stripSalarySensitiveFields<T extends Record<string, unknown>>(record: T): T {
+  const shaped = { ...record }
+  for (const key of SALARY_SENSITIVE_EMPLOYEE_KEYS) {
+    delete shaped[key]
+  }
+  return shaped
+}
+
 export function shapeEmployee<T extends Record<string, unknown>>(
   employee: T,
   ctx: FieldAccessContext
@@ -62,9 +78,76 @@ export function shapeEmployee<T extends Record<string, unknown>>(
   if (ctx.canViewSalary) {
     return employee
   }
-  const shaped = { ...employee }
-  delete shaped.base_salary
-  return { ...shaped, base_salary_masked: true }
+  return { ...stripSalarySensitiveFields(employee), base_salary_masked: true }
+}
+
+/** Sum/average salary aggregates; empty when view is denied (omit from JSON responses). */
+export function computeSalaryAggregates(
+  employees: Array<{ base_salary?: number | null }>,
+  ctx: FieldAccessContext
+): { totalPayroll?: number; averageSalary?: number; totalSalary?: number } {
+  if (!ctx.canViewSalary || employees.length === 0) {
+    return {}
+  }
+  const totalSalary = employees.reduce((sum, emp) => sum + (Number(emp.base_salary) || 0), 0)
+  const averageSalary = totalSalary / employees.length
+  return {
+    totalSalary,
+    totalPayroll: totalSalary,
+    averageSalary,
+  }
+}
+
+/** Redact payroll monetary fields for users without salary view. */
+export function shapePayrollRecord<T extends Record<string, unknown>>(
+  record: T,
+  ctx: FieldAccessContext
+): T {
+  if (ctx.canViewSalary) return record
+  const shaped = { ...record }
+  for (const key of [
+    'net_salary',
+    'gross_salary',
+    'base_salary',
+    'total_earnings',
+    'total_deductions',
+    'eff_bruto',
+    'eff_neto',
+    'eff_ihss',
+    'eff_rap',
+    'eff_isr',
+  ] as const) {
+    delete shaped[key]
+  }
+  return shaped
+}
+
+export type EmployeeExportReportData = {
+  employees: Record<string, unknown>[]
+  stats?: Record<string, unknown>
+  departmentStats?: Array<Record<string, unknown>>
+}
+
+export function shapeEmployeeExportReportData(
+  data: EmployeeExportReportData,
+  ctx: FieldAccessContext
+): EmployeeExportReportData {
+  const employees = shapeEmployees(data.employees || [], ctx)
+  if (ctx.canViewSalary) {
+    return { ...data, employees }
+  }
+  const stats = data.stats ? { ...data.stats } : undefined
+  if (stats) {
+    delete stats.totalSalary
+    delete stats.averageSalary
+    delete stats.totalPayroll
+  }
+  const departmentStats = data.departmentStats?.map((row) => {
+    const next = { ...row }
+    delete next.totalSalary
+    return next
+  })
+  return { employees, stats, departmentStats }
 }
 
 export function shapeEmployees<T extends Record<string, unknown>>(

@@ -4,6 +4,9 @@ import { getHondurasTimestamp } from '../../../lib/timezone'
 import { DateTime } from 'luxon'
 import { getDateRange } from '../../../lib/attendance'
 import { createEmployeeSalaryClient } from '../../../lib/security/employee-data-access'
+import { createAdminClient } from '../../../lib/supabase/server'
+import { resolveFieldAccessContext } from '../../../lib/security/field-access'
+import { computeSalaryAggregates, shapePayrollRecord } from '../../../lib/security/shape-employee'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -11,7 +14,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { supabase, companyId, role } = await requireCompanyAccess(req, res)
+    const { supabase, companyId, role, userProfile } = await requireCompanyAccess(req, res)
     
     // Para super_admin, companyId puede ser null - no es error
     // Solo validar companyId para otros roles
@@ -23,6 +26,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('📅 Timestamp:', getHondurasTimestamp())
 
     const salaryClient = createEmployeeSalaryClient()
+    const adminClient = createAdminClient()
+    const fieldCtx = await resolveFieldAccessContext(userProfile, adminClient)
 
     console.log('👥 PASO 1: Obteniendo empleados activos de la empresa:', companyId)
     let employeesQuery = salaryClient
@@ -146,14 +151,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       lateToday,
     })
 
-    // 5. Calcular estadísticas financieras
+    // 5. Estadísticas financieras (solo si el rol puede ver salario)
     console.log('💰 PASO 5: Calculando estadísticas financieras...')
-    const totalPayroll = employees?.reduce((sum: number, emp: any) => sum + (emp.base_salary || 0), 0) || 0
-    const averageSalary = totalEmployees > 0 ? totalPayroll / totalEmployees : 0
+    const salaryAggregates = computeSalaryAggregates(employees || [], fieldCtx)
+    const totalPayroll = salaryAggregates.totalPayroll
+    const averageSalary = salaryAggregates.averageSalary
 
     console.log('💰 Estadísticas financieras:', {
-      totalPayroll,
-      averageSalary,
+      hasSalaryMetrics: fieldCtx.canViewSalary,
       attendanceRate
     })
 
@@ -179,29 +184,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
 
     // 8. Preparar respuesta
-    const result = {
+    const result: Record<string, unknown> = {
       totalEmployees,
       activeEmployees: totalEmployees,
       presentToday,
       absentToday,
       lateToday,
       onTimeToday,
-      totalPayroll,
-      averageSalary,
       attendanceRate,
       departmentStats,
-      recentPayrolls: recentPayrolls?.map((payroll: any) => ({
-        id: payroll.id,
-        period_start: payroll.period_start,
-        period_end: payroll.period_end,
-        net_salary: payroll.net_salary,
-        status: payroll.status,
-        employee_name: payroll.employees?.name || 'N/A',
-        department: payroll.employees?.department_id || 'N/A',
-        created_at: payroll.created_at
-      })) || [],
+      recentPayrolls:
+        recentPayrolls?.map((payroll: any) => {
+          const row = {
+            id: payroll.id,
+            period_start: payroll.period_start,
+            period_end: payroll.period_end,
+            net_salary: payroll.net_salary,
+            status: payroll.status,
+            employee_name: payroll.employees?.name || 'N/A',
+            department: payroll.employees?.department_id || 'N/A',
+            created_at: payroll.created_at,
+          }
+          return shapePayrollRecord(row, fieldCtx)
+        }) || [],
       pendingPayrolls,
-      completedPayrolls
+      completedPayrolls,
+    }
+
+    if (fieldCtx.canViewSalary) {
+      result.totalPayroll = totalPayroll ?? 0
+      result.averageSalary = averageSalary ?? 0
     }
 
     console.log('✅ RESPUESTA FINAL GENERADA:')
