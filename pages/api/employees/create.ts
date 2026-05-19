@@ -9,6 +9,8 @@ import {
   isAllowedTerminationReasonCode,
   normalizeTerminationReasonDetail
 } from '../../../lib/employees/termination-reasons'
+import { resolveFieldAccessContext } from '../../../lib/security/field-access'
+import { shapeEmployee, validateCreateSalaryRequirement } from '../../../lib/security/shape-employee'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -28,11 +30,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const companyId = userProfile.company_id
 
+    const adminSupabase = createAdminClient()
+    const fieldCtx = await resolveFieldAccessContext(userProfile, adminSupabase)
+
     // Check plan and quota before processing
     await requirePlanAndQuota(supabase, companyId, 'create_employee')
 
     // Use admin client for database operations
-    const adminSupabase = createAdminClient()
+    // (adminSupabase already created above)
+
+    const body = req.body || {}
+
+    const salaryCheck = validateCreateSalaryRequirement(body, fieldCtx)
+    if (!salaryCheck.ok) {
+      return res.status(salaryCheck.error === 'Insufficient permissions' ? 403 : 400).json({
+        error: salaryCheck.error,
+        message: salaryCheck.message,
+      })
+    }
 
     // Validate required fields
     const {
@@ -58,11 +73,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       emergency_contact_phone,
       address,
       metadata
-    } = req.body || {}
+    } = body
 
-    if (!employee_code || !dni || !name || base_salary === undefined || base_salary === null) {
+    if (!employee_code || !dni || !name) {
       return res.status(400).json({
-        error: 'Missing required fields: employee_code, dni, name, and base_salary are required'
+        error: 'Missing required fields: employee_code, dni, and name are required',
       })
     }
 
@@ -72,7 +87,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (!code || !isAllowedTerminationReasonCode(code)) {
         return res.status(400).json({
           error: 'Motivo de baja requerido',
-          message: 'Si crea el empleado como inactivo, debe enviar termination_reason_code válido.'
+          message: 'Si crea el empleado como inactivo, debe enviar termination_reason_code válido.',
         })
       }
     }
@@ -161,7 +176,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     });
 
-    res.status(201).json(newEmployee);
+    res.status(201).json({ employee: shapeEmployee(newEmployee, fieldCtx) })
 
   } catch (error: any) {
     console.error('Error in protected employee create API:', error)

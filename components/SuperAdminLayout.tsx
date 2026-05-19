@@ -98,6 +98,12 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
       description: 'Segmentación por categoría de servicio'
     },
     {
+      name: 'Permisos de campo',
+      href: '/app/admin/role-field-permissions',
+      icon: Key,
+      description: 'Salario y campos sensibles por rol'
+    },
+    {
       name: 'Sistema',
       href: '/app/admin/system',
       icon: Server,

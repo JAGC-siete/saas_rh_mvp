@@ -23,6 +23,8 @@ export type CanonicalPermissionKey =
   | 'can_view_own_attendance'
   | 'can_request_leave'
   | 'can_approve_leave'
+  | 'can_view_salary'
+  | 'can_edit_salary'
 
 export type CanonicalPermissions = Record<CanonicalPermissionKey, boolean>
 
@@ -50,6 +52,8 @@ function emptyCanonical(): CanonicalPermissions {
     can_view_own_attendance: false,
     can_request_leave: false,
     can_approve_leave: false,
+    can_view_salary: false,
+    can_edit_salary: false,
   }
 }
 
@@ -95,6 +99,8 @@ export function canonicalPermissionsForRole(role: unknown): Partial<CanonicalPer
     grant([
       'can_access_dashboard',
       'can_view_employees',
+      'can_view_salary',
+      'can_edit_salary',
       'can_manage_employees',
       'can_view_departments',
       'can_manage_departments',
@@ -123,6 +129,8 @@ export function canonicalPermissionsForRole(role: unknown): Partial<CanonicalPer
     grant([
       'can_access_dashboard',
       'can_view_employees',
+      'can_view_salary',
+      'can_edit_salary',
       'can_manage_employees',
       'can_view_departments',
       'can_manage_departments',
@@ -195,6 +203,7 @@ export function normalizePermissionsToCanonical(
   if (base.can_manage_attendance) base.can_view_attendance = true
   if (base.can_manage_payroll) base.can_view_payroll = true
   if (base.can_export_reports) base.can_view_reports = true
+  if (base.can_edit_salary) base.can_view_salary = true
 
   // 4) Manager: sin nómina ni reportes aunque el JSON legacy active payroll/reports
   if (normalizeRole(role) === 'manager') {
@@ -205,6 +214,8 @@ export function normalizePermissionsToCanonical(
     base.can_export_reports = false
     base.can_view_settings = false
     base.can_manage_settings = false
+    base.can_view_salary = false
+    base.can_edit_salary = false
   }
 
   return base

@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
 import { getTodayInHonduras, getHondurasTime, getHondurasTimeISO } from '../../../lib/timezone'
+import { createEmployeeSalaryClient } from '../../../lib/security/employee-data-access'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -25,9 +26,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log('📅 Fechas calculadas:', { today, sevenDaysAgo })
 
+    const salaryClient = createEmployeeSalaryClient()
+
     // 1. Obtener total de empleados activos
     console.log('👥 PASO 1: Obteniendo empleados activos...')
-    const { data: employees, error: empError } = await supabase
+    const { data: employees, error: empError } = await salaryClient
       .from('employees')
       .select('id, name, employee_code, base_salary, department_id, status, team')
       .eq('company_id', companyId)

@@ -11,6 +11,7 @@ import { getCustomFields, calculatePayroll } from '../../../lib/payroll-client-s
 import { getBiweeklyPeriodDates } from '../../../lib/payroll/period-dates'
 import { normalizeCountryCode, type CountryCode } from '../../../lib/country/supported'
 import { reportFormatForCountry } from '../../../lib/country/payroll-labels'
+import { createEmployeeSalaryClient } from '../../../lib/security/employee-data-access'
 
 interface ReportData {
   employees: any[]
@@ -183,8 +184,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 export default withExportRateLimit()(handler)
 
 async function generateReportData(supabase: any, dateFilter: any, companyId: string | null): Promise<ReportData> {
+  const salaryClient = createEmployeeSalaryClient()
   // Obtener empleados activos
-  let employeesQuery = supabase
+  let employeesQuery = salaryClient
     .from('employees')
     .select('id, name, dni, base_salary, department_id, status, created_at')
     .eq('status', 'active')
@@ -711,7 +713,8 @@ async function generatePayrollReportData(supabase: any, dateFilter: any, company
 }
 
 async function generateEmployeesReportData(supabase: any, companyId: string | null) {
-  let employeesQuery = supabase
+  const salaryClient = createEmployeeSalaryClient()
+  let employeesQuery = salaryClient
     .from('employees')
     .select(`
       id,
@@ -1246,7 +1249,8 @@ async function generatePayrollPDF(
     return res.status(404).json({ error: 'No hay corrida de nómina para el período indicado. Use /api/payroll/report con periodo y quincena específicos.' })
   }
 
-  const { data: payrollLines, error: linesError } = await supabase
+  const salaryClient = createEmployeeSalaryClient()
+  const { data: payrollLines, error: linesError } = await salaryClient
     .from('payroll_run_lines')
     .select(`
       *,

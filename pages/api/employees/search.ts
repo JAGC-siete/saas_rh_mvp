@@ -1,6 +1,10 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
+import { createAdminClient } from '../../../lib/supabase/server'
 import { getHondurasTimestamp } from '../../../lib/timezone'
+import { resolveFieldAccessContext, userHasPermission } from '../../../lib/security/field-access'
+import { shapeEmployees } from '../../../lib/security/shape-employee'
+import { createEmployeeSalaryClient } from '../../../lib/security/employee-data-access'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -11,11 +15,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('🔍 Employees Search API: Iniciando...')
 
     // Use the new authentication method that handles company context properly
-    const { supabase, companyId } = await requireCompanyAccess(req, res)
+    const { supabase, companyId, userProfile } = await requireCompanyAccess(req, res)
     
     if (!companyId) {
       return res.status(400).json({ error: 'Company ID is required' })
     }
+
+    if (!userHasPermission(userProfile, 'can_view_employees')) {
+      return res.status(403).json({ error: 'Insufficient permissions to view employees' })
+    }
+
+    const adminClient = createAdminClient()
+    const salaryClient = createEmployeeSalaryClient()
+    const fieldCtx = await resolveFieldAccessContext(userProfile, adminClient)
 
     // Get query parameters
     const { 
@@ -36,7 +48,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('📋 Query parameters:', { search, page: pageNum, limit: limitNum, status, department_id, sort_by, sort_order })
 
     // Build the query - REMOVED position since it doesn't exist in employees table
-    let query = supabase
+    let query = salaryClient
       .from('employees')
       .select(`
         id,
@@ -148,7 +160,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
 
     return res.status(200).json({
-      employees: processedEmployees || [],
+      employees: shapeEmployees(processedEmployees || [], fieldCtx),
       pagination: {
         currentPage: pageNum,
         totalPages: Math.ceil((count || 0) / limitNum),

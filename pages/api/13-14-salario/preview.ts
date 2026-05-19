@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
 import { withGeneralRateLimit } from '../../../lib/security/rate-limiting'
+import { createEmployeeSalaryClient } from '../../../lib/security/employee-data-access'
 
 /**
  * Preview API para 13avo y 14avo salario
@@ -22,6 +23,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   try {
     const { supabase, companyId } = await requireCompanyAccess(req, res)
+    const salaryClient = createEmployeeSalaryClient()
 
     if (!companyId) {
       return res.status(400).json({ error: 'Company ID is required' })
@@ -54,7 +56,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     // Consultar empleados activos de la empresa
-    const { data: employees, error: empError } = await supabase
+    const { data: employees, error: empError } = await salaryClient
       .from('employees')
       .select('id, name, base_salary, hire_date, termination_date')
       .eq('company_id', companyId)

@@ -3,6 +3,7 @@ import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { getHondurasTimestamp } from '../../../lib/timezone'
 import { DateTime } from 'luxon'
 import { getDateRange } from '../../../lib/attendance'
+import { createEmployeeSalaryClient } from '../../../lib/security/employee-data-access'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -21,8 +22,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('🔍 Executive Dashboard stats: Iniciando...')
     console.log('📅 Timestamp:', getHondurasTimestamp())
 
+    const salaryClient = createEmployeeSalaryClient()
+
     console.log('👥 PASO 1: Obteniendo empleados activos de la empresa:', companyId)
-    let employeesQuery = supabase
+    let employeesQuery = salaryClient
       .from('employees')
       .select('id, name, employee_code, base_salary, department_id, status')
       .eq('status', 'active')

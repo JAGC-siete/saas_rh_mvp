@@ -8,6 +8,11 @@ import {
   isAllowedTerminationReasonCode,
   normalizeTerminationReasonDetail
 } from '../../../lib/employees/termination-reasons'
+import { resolveFieldAccessContext, type FieldAccessContext } from '../../../lib/security/field-access'
+import {
+  buildEmployeeWritePayload,
+  shapeEmployee,
+} from '../../../lib/security/shape-employee'
 
 /** Solo columnas permitidas vía API (evita mass-assignment). */
 const ALLOWED_UPDATE_KEYS = new Set([
@@ -47,6 +52,20 @@ function pickAllowedBody(body: Record<string, unknown>): Record<string, unknown>
   return out
 }
 
+async function applyFieldLevelWriteFilter(
+  body: Record<string, unknown>,
+  fieldCtx: FieldAccessContext
+): Promise<Record<string, unknown>> {
+  try {
+    return buildEmployeeWritePayload(body, fieldCtx)
+  } catch (err: any) {
+    if (err?.message === 'INVALID_BASE_SALARY') {
+      throw Object.assign(new Error('INVALID_BASE_SALARY'), { statusCode: 400 })
+    }
+    throw err
+  }
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'PUT' && req.method !== 'PATCH') {
     return res.status(405).json({ error: 'Method not allowed' })
@@ -73,6 +92,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const supabase = createAdminClient()
+    const fieldCtx = await resolveFieldAccessContext(auth.userProfile, supabase)
 
     const { id } = (req.query || {}) as { id?: string }
     const body = (req.body || {}) as Record<string, unknown>
@@ -103,7 +123,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(403).json({ error: 'Access denied: Employee does not belong to your company' })
     }
 
-    const updateData = pickAllowedBody(body) as Record<string, unknown>
+    const updateData = await applyFieldLevelWriteFilter(pickAllowedBody(body), fieldCtx)
 
     if ('termination_reason_code' in updateData) {
       const c = updateData.termination_reason_code
@@ -241,12 +261,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     secureLog('Employee updated successfully', { employeeId, companyId })
 
-    res.status(200).json({ employee: updated })
-
     res.on('finish', () => {
       addEmployeeSyncJob(updated.id)
     })
-  } catch (error) {
+
+    return res.status(200).json({ employee: shapeEmployee(updated, fieldCtx) })
+  } catch (error: any) {
+    if (error?.message === 'INVALID_BASE_SALARY') {
+      return res.status(400).json({
+        error: 'Invalid base_salary',
+        message: 'El salario base debe ser un número válido mayor a cero.',
+      })
+    }
     secureErrorLog('Error in protected employee update API', error)
     return res.status(500).json({ error: 'Internal server error' })
   }

@@ -3,6 +3,7 @@ import { createClient } from '../../../lib/supabase/server'
 import { authenticateUser } from '../../../lib/auth-helpers'
 import { notificationManager } from '../../../lib/notification-providers'
 import { emailService } from '../../../lib/email-service'
+import { createEmployeeSalaryClient } from '../../../lib/security/employee-data-access'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -28,6 +29,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const supabase = createClient(req, res)
+    const salaryClient = createEmployeeSalaryClient()
     const companyId = auth.userProfile.company_id
 
     if (!companyId) {
@@ -41,7 +43,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Obtener empleados activos
-    const { data: employees, error: empError } = await supabase
+    const { data: employees, error: empError } = await salaryClient
       .from('employees')
       .select('id, name, employee_code, email, phone, base_salary, department_id')
       .eq('company_id', companyId)

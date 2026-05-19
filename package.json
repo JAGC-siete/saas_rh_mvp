@@ -16,6 +16,7 @@
     "start:trace": "node -r ./lib/tracing.js node_modules/.bin/next start",
     "dev:trace": "node -r ./lib/tracing.js node_modules/.bin/next dev",
     "test": "npx tsx --test tests/multipay-statutory.test.ts",
+    "test:security": "npx tsx --test tests/shape-employee.test.ts tests/field-level-security.test.ts tests/field-level-security-phase2.test.ts",
     "audit": "./scripts/run-complete-audit.sh",
     "audit:system": "node scripts/audit-system.js",
     "audit:supabase": "node scripts/audit-supabase.js",

@@ -30,6 +30,7 @@ import {
   resolveCompanyPayOvertime,
   shouldPayOvertimeToEmployee
 } from '../../../lib/payroll/overtime-pay'
+import { createEmployeeSalaryClient } from '../../../lib/security/employee-data-access'
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -39,6 +40,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     // Use the new authentication method that handles company context properly
     const { supabase, companyId, user, companyCountryCode, companyTimezone } = await requireCompanyAccess(req, res)
+    const salaryClient = createEmployeeSalaryClient()
     
     if (!companyId) {
       return res.status(400).json({ error: 'Company ID is required' })
@@ -302,7 +304,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const taxConstants = yearCtx.hndTaxConstants ?? undefined
 
     // Obtener empleados activos con información de departamento, pay_type y horario (Capa 3: días Extra/Especial)
-    const { data: employees, error: empError } = await supabase
+    const { data: employees, error: empError } = await salaryClient
       .from('employees')
       .select(`
         id, name, dni, base_salary, bank_name, bank_account, status, department_id, pay_type, work_schedule_id, position, role,

@@ -28,6 +28,7 @@ import {
   resolveCompanyPayOvertime,
   shouldPayOvertimeToEmployee
 } from '../../../lib/payroll/overtime-pay'
+import { createEmployeeSalaryClient } from '../../../lib/security/employee-data-access'
 
 interface PlanillaItem {
   id: string
@@ -83,6 +84,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // AUTENTICACIÓN ESTANDARIZADA - Usar requireCompanyAccess
     const { supabase, companyId, role, user, userProfile, companyCountryCode, companyTimezone } =
       await requireCompanyAccess(req, res)
+    const salaryClient = createEmployeeSalaryClient()
     
     // Verificar roles específicos para generar nómina
     if (!['super_admin', 'company_admin', 'hr_manager'].includes(role)) {
@@ -273,7 +275,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
 
     // Obtener empleados activos (incluir pay_type para cálculo hourly)
-    let employeesQuery = supabase
+    let employeesQuery = salaryClient
       .from('employees')
       .select('id, name, dni, base_salary, bank_name, bank_account, status, department_id, pay_type')
       .eq('status', 'active')

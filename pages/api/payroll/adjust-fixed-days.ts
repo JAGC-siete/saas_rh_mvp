@@ -18,6 +18,7 @@ import {
   payrollStatutoryErrorResponse,
   payrollStatutoryYearUnavailable
 } from '../../../lib/payroll/statutory-api-guard'
+import { createEmployeeSalaryClient } from '../../../lib/security/employee-data-access'
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100
@@ -98,6 +99,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const { supabase, companyId, role, user, companyCountryCode } = await requireCompanyAccess(req, res)
+    const salaryClient = createEmployeeSalaryClient()
 
     if (!companyId) {
       return res.status(400).json({ error: 'Company ID is required' })
@@ -172,7 +174,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Tipo de corrida no soportado' })
     }
 
-    const { data: employee, error: empError } = await supabase
+    const { data: employee, error: empError } = await salaryClient
       .from('employees')
       .select('id, pay_type, base_salary')
       .eq('id', line.employee_id)

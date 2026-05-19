@@ -1,10 +1,14 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
+import { createAdminClient } from '../../../lib/supabase/server'
 import { getCompanyData, addCompanyToInsertData } from '../../../lib/helpers/company-filter'
+import { resolveFieldAccessContext } from '../../../lib/security/field-access'
+import { buildDepartmentStatsPayload } from '../../../lib/security/shape-departments'
+import { createEmployeeSalaryClient } from '../../../lib/security/employee-data-access'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const { supabase, companyId } = await requireCompanyAccess(req, res)
+    const { supabase, companyId, userProfile } = await requireCompanyAccess(req, res)
 
     if (!companyId) {
       return res.status(400).json({ error: 'Company ID is required' })
@@ -22,55 +26,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         if (fetchError) throw fetchError
 
-        // Get employees for each department to calculate stats
+        const salaryClient = createEmployeeSalaryClient()
+        const adminClient = createAdminClient()
+        const fieldCtx = await resolveFieldAccessContext(userProfile, adminClient)
+
+        // Get employees for each department to calculate stats (service role: salary columns revoked for JWT)
         const { data: employees, error: empError } = await getCompanyData(
-          supabase,
+          salaryClient,
           'employees',
           companyId,
           'id, name, base_salary, department_id, status'
         ).eq('status', 'active')
 
         if (empError) throw empError
-
-        // Calculate department stats
-        const departmentStats: { [key: string]: any } = {}
-        const summary = {
-          totalDepartments: departments?.length || 0,
-          totalEmployees: employees?.length || 0,
-          totalSalary: 0,
-          averageSalary: 0
-        }
-
-        // Process each department
-        departments?.forEach((dept: any) => {
-          const deptEmployees = employees?.filter((emp: any) => emp.department_id === dept.id) || []
-          const totalSalary = deptEmployees.reduce((sum: number, emp: any) => sum + (emp.base_salary || 0), 0)
-          const averageSalary = deptEmployees.length > 0 ? totalSalary / deptEmployees.length : 0
-
-          departmentStats[dept.name] = {
-            id: dept.id,
-            name: dept.name,
-            description: dept.description,
-            employeeCount: deptEmployees.length,
-            totalSalary,
-            averageSalary,
-            employees: deptEmployees.map((emp: any) => ({
-              id: emp.id,
-              name: emp.name,
-              base_salary: emp.base_salary,
-              status: emp.status
-            }))
-          }
-
-          summary.totalSalary += totalSalary
-        })
-
-        summary.averageSalary = summary.totalEmployees > 0 ? summary.totalSalary / summary.totalEmployees : 0
+        const { departmentStats, summary } = buildDepartmentStatsPayload(
+          departments,
+          employees,
+          fieldCtx
+        )
 
         return res.json({
           departments,
           departmentStats,
-          summary
+          summary,
         })
 
       case 'POST':

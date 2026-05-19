@@ -5,6 +5,7 @@ import {
   assertEmployeePortalEnabled,
   resolveEmployeeAndCompanyId,
 } from '../../../../lib/employee-portal/company-settings'
+import { createEmployeeSalaryClient } from '../../../../lib/security/employee-data-access'
 
 interface PayrollResponse {
   records: any[]
@@ -51,6 +52,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
       return
     }
     const { employeeId } = ctx
+    const salaryClient = createEmployeeSalaryClient()
 
     // Get current month for payroll data
     const now = new Date()
@@ -119,7 +121,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     })
 
     // Get employee base salary for reference
-    const { data: employee, error: empError } = await supabase
+    const { data: employee, error: empError } = await salaryClient
       .from('employees')
       .select('base_salary, name')
       .eq('id', employeeId)

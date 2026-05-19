@@ -31,6 +31,8 @@ interface AddEmployeeFormProps {
   onProfileImageError?: (error: string) => void
   /** Company calculation_mode for dynamic "Default de la empresa" label */
   companyCalculationMode?: 'daily' | 'hourly'
+  canEditSalary?: boolean
+  canViewSalary?: boolean
 }
 
 function AddEmployeeForm({
@@ -46,6 +48,7 @@ function AddEmployeeForm({
   onProfileImageUploaded,
   onProfileImageError,
   companyCalculationMode = 'daily',
+  canEditSalary = true,
 }: AddEmployeeFormProps) {
   // Helper to keep inputs controlled and avoid React warnings
   const v = (value: any) => (value ?? '')
@@ -59,7 +62,7 @@ function AddEmployeeForm({
 
   const defaultPayTypeLabel =
     companyCalculationMode === 'hourly'
-      ? 'Default de la empresa (Por Hora)'
+      ? 'Default de la empresa (Por hora)'
       : 'Default de la empresa (Administrativo)'
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -289,21 +292,22 @@ function AddEmployeeForm({
                     {defaultPayTypeLabel}
                   </option>
                   <option value="fixed" className="bg-brand-900 text-white">
-                    Administrativo/Permanente (Horario fijo)
+                    Administrativo (por día de asistencia)
                   </option>
                   <option value="hourly" className="bg-brand-900 text-white">
-                    Por Hora
+                    Por hora
                   </option>
                 </select>
                 <p className="text-xs text-gray-400 mt-1">
-                  <strong>Default de la empresa:</strong> hereda el método configurado en Nómina (por día → administrativo, por hora exacta → por hora).
+                  <strong>Default de la empresa:</strong> hereda el método por defecto de Nómina (administrativo o por hora).
                   <br />
-                  <strong>Administrativo:</strong> Salario mensual. Usa horario fijo para inferir entrada/salida.
+                  <strong>Administrativo:</strong> Salario mensual por día de asistencia. Usa horario fijo para inferir entrada/salida.
                   <br />
-                  <strong>Por Hora:</strong> Ingresa el salario mensual equivalente. La tarifa por hora se calcula automáticamente (base ÷ 240).
+                  <strong>Por hora:</strong> Ingresa el salario mensual equivalente. La tarifa por hora se calcula automáticamente (base ÷ 240).
                 </p>
               </div>
 
+              {canEditSalary && (
               <div>
                 <label className="block text-sm font-medium text-white mb-1" htmlFor="base_salary">
                   Salario Base Mensual (HNL) *
@@ -333,6 +337,7 @@ function AddEmployeeForm({
                   </p>
                 )}
               </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-white mb-1" htmlFor="payment_frequency">

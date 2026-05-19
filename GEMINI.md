@@ -9,7 +9,7 @@
 - **Framework**: [Next.js 15](https://nextjs.org/) (React 19) con TypeScript.
 - **Base de Datos & Auth**: [Supabase](https://supabase.com/) (PostgreSQL, Edge Functions, Storage, RLS).
 - **Estilos**: Tailwind CSS con diseño Glass Morphism y componentes shadcn/ui.
-- **Infraestructura**: Desplegado en Railway y Vercel, con soporte para Docker.
+- **Infraestructura**: Desplegado en Railway, con soporte para Docker.
 - **Backend Adicional**: 
   - Node.js (scripts de auditoría, cron jobs).
   - BullMQ con Redis para colas de trabajo.

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Head from 'next/head'
 import SuperAdminLayout from '../../../components/SuperAdminLayout'
 import SuperAdminGuard from '../../../components/SuperAdminGuard'
@@ -12,6 +12,9 @@ import {
   passwordStrengthLabel,
   validateAdminPassword
 } from '../../../lib/auth/password-policy'
+import {
+  canonicalPermissionsForRole,
+} from '../../../lib/security/canonical-permissions'
 
 function PasswordStrengthHint({ password }: { password: string }) {
   const score = computePasswordStrength(password)
@@ -93,6 +96,9 @@ export default function UsersAdminPage() {
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null)
   const [userDetails, setUserDetails] = useState<any>(null)
   const [loadingDetails, setLoadingDetails] = useState(false)
+  const [savingFieldPerms, setSavingFieldPerms] = useState(false)
+  const [fieldPermView, setFieldPermView] = useState<boolean | null>(null)
+  const [fieldPermEdit, setFieldPermEdit] = useState<boolean | null>(null)
 
   const buildUsersListQueryString = useCallback(
     (pageNum: number, size: number) => {
@@ -343,6 +349,25 @@ export default function UsersAdminPage() {
       if (!res.ok) throw new Error('Error cargando detalles')
       const data = await res.json()
       setUserDetails(data.user)
+      const perms = data.user?.permissions
+      const raw =
+        perms && typeof perms === 'object'
+          ? perms
+          : typeof perms === 'string'
+            ? (() => {
+                try {
+                  return JSON.parse(perms)
+                } catch {
+                  return {}
+                }
+              })()
+            : {}
+      setFieldPermView(
+        raw.can_view_salary === true ? true : raw.can_view_salary === false ? false : null
+      )
+      setFieldPermEdit(
+        raw.can_edit_salary === true ? true : raw.can_edit_salary === false ? false : null
+      )
     } catch (err: any) {
       addNotification({ type: 'error', title: 'Error', message: err.message || 'No se pudieron cargar los detalles' })
       setUserDetails(null)
@@ -354,6 +379,50 @@ export default function UsersAdminPage() {
   const closeUserDetails = () => {
     setSelectedUser(null)
     setUserDetails(null)
+    setFieldPermView(null)
+    setFieldPermEdit(null)
+  }
+
+  const roleSalaryDefaults = useMemo(() => {
+    if (!userDetails?.role) return { view: false, edit: false }
+    const base = canonicalPermissionsForRole(userDetails.role)
+    return {
+      view: base.can_view_salary === true,
+      edit: base.can_edit_salary === true,
+    }
+  }, [userDetails?.role])
+
+  const saveFieldPermissions = async () => {
+    if (!selectedUser || !userDetails) return
+    setSavingFieldPerms(true)
+    try {
+      const existing =
+        userDetails.permissions && typeof userDetails.permissions === 'object'
+          ? { ...userDetails.permissions }
+          : {}
+
+      const nextPermissions = { ...existing }
+      if (fieldPermView === null) delete nextPermissions.can_view_salary
+      else nextPermissions.can_view_salary = fieldPermView
+      if (fieldPermEdit === null) delete nextPermissions.can_edit_salary
+      else nextPermissions.can_edit_salary = fieldPermEdit
+
+      const res = await fetch(`/api/admin/users/${selectedUser.id}`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ permissions: nextPermissions }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Error al guardar permisos')
+
+      addNotification({ type: 'success', title: 'Permisos actualizados', message: 'Campos sensibles guardados.' })
+      setUserDetails((prev: any) => (prev ? { ...prev, permissions: nextPermissions } : prev))
+    } catch (err: any) {
+      addNotification({ type: 'error', title: 'Error', message: err.message || 'No se pudieron guardar los permisos' })
+    } finally {
+      setSavingFieldPerms(false)
+    }
   }
 
   return (
@@ -873,9 +942,72 @@ export default function UsersAdminPage() {
                       </div>
                     )}
                   </div>
+                  <div>
+                    <label className="text-xs uppercase tracking-wider text-white/60 mb-2 block">
+                      Campos sensibles (override)
+                    </label>
+                    <div className="bg-white/5 rounded-md p-4 border border-white/10 space-y-4">
+                      <p className="text-xs text-white/60">
+                        Default del rol{' '}
+                        <span className="text-white/80 font-medium">{userDetails.role}</span>: ver salario{' '}
+                        {roleSalaryDefaults.view ? 'sí' : 'no'}, editar{' '}
+                        {roleSalaryDefaults.edit ? 'sí' : 'no'}. Deje en &quot;Usar rol&quot; para no override.
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm text-white/80 mb-1 block">Ver salario</label>
+                          <select
+                            value={
+                              fieldPermView === null ? 'inherit' : fieldPermView ? 'true' : 'false'
+                            }
+                            onChange={(e) => {
+                              const v = e.target.value
+                              setFieldPermView(v === 'inherit' ? null : v === 'true')
+                            }}
+                            className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white text-sm"
+                          >
+                            <option value="inherit" className="text-black">Usar rol</option>
+                            <option value="true" className="text-black">Permitir</option>
+                            <option value="false" className="text-black">Denegar</option>
+                          </select>
+                          {fieldPermView !== null && fieldPermView !== roleSalaryDefaults.view && (
+                            <p className="text-xs text-amber-300 mt-1">Override activo</p>
+                          )}
+                        </div>
+                        <div>
+                          <label className="text-sm text-white/80 mb-1 block">Editar salario</label>
+                          <select
+                            value={
+                              fieldPermEdit === null ? 'inherit' : fieldPermEdit ? 'true' : 'false'
+                            }
+                            onChange={(e) => {
+                              const v = e.target.value
+                              setFieldPermEdit(v === 'inherit' ? null : v === 'true')
+                            }}
+                            className="w-full border border-white/20 rounded-md px-3 py-2 bg-white/10 text-white text-sm"
+                          >
+                            <option value="inherit" className="text-black">Usar rol</option>
+                            <option value="true" className="text-black">Permitir</option>
+                            <option value="false" className="text-black">Denegar</option>
+                          </select>
+                          {fieldPermEdit !== null && fieldPermEdit !== roleSalaryDefaults.edit && (
+                            <p className="text-xs text-amber-300 mt-1">Override activo</p>
+                          )}
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={savingFieldPerms}
+                        onClick={saveFieldPermissions}
+                      >
+                        {savingFieldPerms ? 'Guardando…' : 'Guardar permisos de campo'}
+                      </Button>
+                    </div>
+                  </div>
                   {userDetails.permissions && (
                     <div>
-                      <label className="text-xs uppercase tracking-wider text-white/60 mb-2 block">Permisos</label>
+                      <label className="text-xs uppercase tracking-wider text-white/60 mb-2 block">Permisos JSON</label>
                       <div className="bg-white/5 rounded-md p-4 border border-white/10">
                         <pre className="text-xs text-white/80 overflow-x-auto">
                           {JSON.stringify(userDetails.permissions, null, 2)}

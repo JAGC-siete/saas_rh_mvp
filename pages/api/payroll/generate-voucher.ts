@@ -9,6 +9,7 @@ import {
   calculateRAP 
 } from '../../../lib/tax/honduras-tax'
 import { getBiweeklyPeriodDates } from '../../../lib/payroll/period-dates'
+import { createEmployeeSalaryClient } from '../../../lib/security/employee-data-access'
 
 interface VoucherData {
   employee_id: string
@@ -51,6 +52,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // AUTENTICACIÓN REQUERIDA
     // AUTENTICACIÓN ESTANDARIZADA - Usar requireCompanyAccess
     const { supabase, companyId, role, user } = await requireCompanyAccess(req, res)
+    const salaryClient = createEmployeeSalaryClient()
     
     // Verificar roles específicos para generar voucher
     if (!['super_admin', 'company_admin', 'hr_manager'].includes(role)) {
@@ -92,7 +94,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Obtener información del empleado
-    const { data: employee, error: empError } = await supabase
+    const { data: employee, error: empError } = await salaryClient
       .from('employees')
       .select('id, name, employee_code, base_salary, department_id, position, bank_name, bank_account, company_id, status')
       .eq('id', employee_id)

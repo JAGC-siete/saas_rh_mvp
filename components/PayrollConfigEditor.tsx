@@ -61,7 +61,7 @@ interface PayrollConfig {
   // Configuración básica de payroll
   payment_frequency: 'monthly' | 'biweekly' | 'weekly' // mensual, quincenal o semanal
   currency: 'HNL' | 'USD' // Lempiras o Dólares
-  calculation_mode?: 'daily' | 'hourly' // Por día (asistencia) o por hora exacta
+  calculation_mode?: 'daily' | 'hourly' // Default empresa: administrativo (daily) o por hora (hourly)
   semanal_proration?: 'proportional' | 'fixed' // Semanal: proporcional a días o monto fijo (mensual/4)
   incomplete_record_default_hours?: number | null // Horas por defecto si falta check_out (solo hourly)
   /** Tope diario de horas ordinarias antes de HE; null = usar labor_laws.legal_daily_hours en el RPC. */
@@ -155,7 +155,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     earnings: false, // Retraída por defecto
     deductions: false, // Retraída por defecto
     paymentFrequency: false, // Retraída por defecto
-    calculationMode: false, // Método de cálculo (Por Día / Por Hora Exacta)
+    calculationMode: false, // Método de cálculo por defecto (administrativo / por hora)
     currency: false, // Retraída por defecto
     legalDeductions: false, // Retraída por defecto
     paymentCutDates: false, // Retraída por defecto
@@ -604,8 +604,14 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
     }
     
     if ((cfg.calculation_mode ?? 'daily') !== (initialConfig.calculation_mode ?? 'daily')) {
-      const oldMode = (initialConfig.calculation_mode ?? 'daily') === 'daily' ? 'Por Día' : 'Por Hora Exacta'
-      const newMode = (cfg.calculation_mode ?? 'daily') === 'daily' ? 'Por Día' : 'Por Hora Exacta'
+      const oldMode =
+        (initialConfig.calculation_mode ?? 'daily') === 'daily'
+          ? 'Administrativo (por día de asistencia)'
+          : 'Por hora'
+      const newMode =
+        (cfg.calculation_mode ?? 'daily') === 'daily'
+          ? 'Administrativo (por día de asistencia)'
+          : 'Por hora'
       changes.push(`método de cálculo de ${oldMode} a ${newMode}`)
     }
     if ((cfg.incomplete_record_default_hours ?? null) !== (initialConfig.incomplete_record_default_hours ?? null)) {
@@ -874,7 +880,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
               </div>
             </div>
 
-            {/* Método de Cálculo de Salario */}
+            {/* Método de cálculo por defecto */}
             <div className="glass border border-white/20 rounded-lg p-4">
               <button
                 onClick={() => setExpandedSections(prev => ({ ...prev, calculationMode: !prev.calculationMode }))}
@@ -883,7 +889,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                 <div className="flex items-center gap-3">
                   <Calculator className="h-4 w-4 text-emerald-300" />
                   <label className="text-sm font-medium text-white">
-                    Método de Cálculo de Salario
+                    Método de cálculo por defecto
                   </label>
                 </div>
                 <div className="flex items-center gap-2">
@@ -913,7 +919,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                         className="w-4 h-4 text-emerald-600"
                       />
                       <div>
-                        <span className="text-white font-medium">Por Día (Asistencia)</span>
+                        <span className="text-white font-medium">Administrativo (por día de asistencia)</span>
                         <p className="text-xs text-gray-400 mt-0.5">Paga el día completo si hay registro de asistencia</p>
                       </div>
                     </label>
@@ -930,7 +936,7 @@ export default function PayrollConfigEditor({ companyId, onSave }: PayrollConfig
                         className="w-4 h-4 text-emerald-600"
                       />
                       <div>
-                        <span className="text-white font-medium">Por Hora Exacta</span>
+                        <span className="text-white font-medium">Por hora</span>
                         <p className="text-xs text-gray-400 mt-0.5">Calcula según sumatoria de horas efectivas</p>
                       </div>
                     </label>

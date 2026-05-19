@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useMemo, Fragment } from 'react'
-import { createClient } from '../lib/supabase/client'
 import { Button } from './ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Input } from './ui/input'
 import { useAuth } from '../lib/auth'
 import { useCompanyContext } from '../lib/useCompanyContext'
-import { Employee } from '../lib/types/employee'
+import { EmployeeShaped, isSalaryMasked } from '../lib/types/employee-shaped'
+import { useSalaryFieldAccess } from '../lib/hooks/useSalaryFieldAccess'
+import SensitiveField from './security/SensitiveField'
 import AddEmployeeForm from './AddEmployeeForm'
 import WorkCertificateModal from './WorkCertificateModal'
 import EmployeeFileUpload from './EmployeeFileUpload'
@@ -146,7 +147,7 @@ const parseMaybeJsonObject = (value: unknown): Record<string, any> | null => {
   return null
 }
 
-const formatAddress = (address: Employee['address']) => {
+const formatAddress = (address: EmployeeShaped['address']) => {
   if (!address) return 'No especificada'
 
   if (typeof address === 'string') {
@@ -162,7 +163,7 @@ const formatAddress = (address: Employee['address']) => {
 
 const EMPLOYEE_SORT_CYCLE: EmployeeListSortBy[] = ['name', 'department', 'team', 'position']
 
-function employeeToPlanillaRow(emp: Employee): PlanillaRowForGrouping {
+function employeeToPlanillaRow(emp: EmployeeShaped): PlanillaRowForGrouping {
   return {
     department: emp.departments?.name,
     team: emp.team,
@@ -183,8 +184,9 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
   
   // Usar companyId de props si está disponible, sino del contexto
   const companyId = propCompanyId || contextCompanyId
+  const { canViewSalary, canEditSalary, salaryDisplayMode } = useSalaryFieldAccess()
   
-  const [employees, setEmployees] = useState<Employee[]>([])
+  const [employees, setEmployees] = useState<EmployeeShaped[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
   const [workSchedules, setWorkSchedules] = useState<WorkSchedule[]>([])
   const [employeesLoading, setEmployeesLoading] = useState(false)
@@ -196,16 +198,16 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState(INITIAL_FORM_DATA)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null)
+  const [editingEmployee, setEditingEmployee] = useState<EmployeeShaped | null>(null)
   const [showDeactivateModal, setShowDeactivateModal] = useState(false)
-  const [employeeToDeactivate, setEmployeeToDeactivate] = useState<Employee | null>(null)
+  const [employeeToDeactivate, setEmployeeToDeactivate] = useState<EmployeeShaped | null>(null)
   const [terminationDate, setTerminationDate] = useState('')
   const [terminationReasonCode, setTerminationReasonCode] = useState('')
   const [terminationReasonDetail, setTerminationReasonDetail] = useState('')
   const [showDetailsModal, setShowDetailsModal] = useState(false)
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
+  const [selectedEmployee, setSelectedEmployee] = useState<EmployeeShaped | null>(null)
   const [showCertificateModal, setShowCertificateModal] = useState(false)
-  const [employeeForCertificate, setEmployeeForCertificate] = useState<Employee | null>(null)
+  const [employeeForCertificate, setEmployeeForCertificate] = useState<EmployeeShaped | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [departmentFilter, setDepartmentFilter] = useState('all')
@@ -280,29 +282,25 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
     setEmployeesError(null)
     
     try {
-      console.log('🔍 Fetching employees for user:', user.id)
-      
-      const supabaseClient = createClient()
-      let query = (supabaseClient as any)
-        .from('employees')
-        .select(`
-          *,
-          departments!employees_department_id_fkey(name),
-          work_schedules!employees_work_schedule_id_fkey(name, monday_start, monday_end)
-        `)
-      if (companyId) {
-        query = query.eq('company_id', companyId)
+      const params = new URLSearchParams({ order: 'name' })
+      const response = await fetch(`/api/employees?${params.toString()}`, {
+        credentials: 'include',
+      })
+
+      if (!response.ok) {
+        const errBody = await response.text()
+        throw new Error(`Error fetching employees: ${response.status} - ${errBody}`)
       }
-      const { data, error } = await query
-      if (error) throw error
-      setEmployees((data || []) as Employee[])
+
+      const data = await response.json()
+      setEmployees((data.employees || []) as EmployeeShaped[])
     } catch (err) {
       console.error('Fetch error:', err)
       setEmployeesError(getErrorMessage(err))
     } finally {
       setEmployeesLoading(false)
     }
-  }, [user?.id, getErrorMessage, companyId])
+  }, [user?.id, getErrorMessage])
 
   const fetchDepartments = useCallback(async () => {
     setDepartmentsLoading(true)
@@ -415,7 +413,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
 
       const sanitizedFormData: any = { ...formData }
       // Normalizar tipos para evitar fallos silenciosos en la API/DB
-      if (typeof sanitizedFormData.base_salary === 'string') {
+      if (canEditSalary && typeof sanitizedFormData.base_salary === 'string') {
         const trimmed = sanitizedFormData.base_salary.trim()
         const parsed = trimmed === '' ? NaN : Number.parseFloat(trimmed)
         if (Number.isNaN(parsed)) {
@@ -496,6 +494,10 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       // Profile images are managed through employee_files table, not employees table
       delete sanitizedFormData.profile_image_path
 
+      if (!canEditSalary) {
+        delete sanitizedFormData.base_salary
+      }
+
       const url = editingEmployee 
         ? '/api/employees/update'
         : '/api/employees/create'
@@ -532,14 +534,15 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
     formData,
     editingEmployee,
     resetForm,
-    fetchEmployees
+    fetchEmployees,
+    canEditSalary,
   ])
 
   const handleCancel = useCallback(() => {
     resetForm()
   }, [resetForm])
 
-  const handleEdit = useCallback((employee: Employee) => {
+  const handleEdit = useCallback((employee: EmployeeShaped) => {
     // IMPORTANTE: no activar el loading global de empleados aquí.
     // `employeesLoading` se usa para fetchEmployees() y controla el "Cargando empleados...".
     // Si lo ponemos en true en modo edición y no lo apagamos, la UI queda bloqueada.
@@ -554,7 +557,9 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
       team: employee.team || '',
       department_id: employee.department_id || '',
       work_schedule_id: employee.work_schedule_id || '',
-      base_salary: employee.base_salary?.toString() || '',
+      base_salary: canEditSalary && employee.base_salary != null
+        ? employee.base_salary.toString()
+        : '',
       pay_type: (employee as any).pay_type ?? '',
       payment_frequency: (employee as any).payment_frequency || '',
       hire_date: employee.hire_date || '',
@@ -585,9 +590,9 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
         })
       }
     }, 100)
-  }, [])
+  }, [canEditSalary])
 
-  const handleDeactivate = useCallback((employee: Employee) => {
+  const handleDeactivate = useCallback((employee: EmployeeShaped) => {
     setEmployeeToDeactivate(employee)
     setTerminationDate('')
     setTerminationReasonCode('')
@@ -673,7 +678,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
     }
   }, [])
 
-  const handleViewDetails = useCallback(async (employee: Employee) => {
+  const handleViewDetails = useCallback(async (employee: EmployeeShaped) => {
     setSelectedEmployee(employee)
     setShowDetailsModal(true)
     setDetailsActiveTab('personal')
@@ -684,7 +689,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
     setSelectedEmployeeImageLoading(false)
   }, [loadProfileImageForHeader])
 
-  const handleOpenCertificateModal = useCallback((employee: Employee) => {
+  const handleOpenCertificateModal = useCallback((employee: EmployeeShaped) => {
     setEmployeeForCertificate(employee)
     setShowCertificateModal(true)
   }, [])
@@ -1044,6 +1049,8 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
             onProfileImageUploaded={handleProfileImageUploaded}
             onProfileImageError={handleProfileImageError}
             companyCalculationMode={companyCalculationMode}
+            canEditSalary={canEditSalary}
+            canViewSalary={canViewSalary}
           />
         </div>
       ) : (
@@ -1597,10 +1604,13 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
                           ) : null}
                         </>
                       )}
-                      <div>
-                        <label className="text-sm font-medium text-gray-400">Salario Base</label>
-                        <div className="text-green-400 font-medium">{formatCurrency(selectedEmployee.base_salary)}</div>
-                      </div>
+                      <SensitiveField
+                        label="Salario Base"
+                        value={selectedEmployee.base_salary}
+                        masked={isSalaryMasked(selectedEmployee) || !canViewSalary}
+                        displayMode={salaryDisplayMode}
+                        formatValue={formatCurrency}
+                      />
                       <div>
                         <label className="text-sm font-medium text-gray-400">Banco</label>
                         <div className="text-white font-medium">{selectedEmployee.bank_name || 'No especificado'}</div>
