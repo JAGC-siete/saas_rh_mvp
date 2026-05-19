@@ -657,13 +657,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       
       const base_salary = Number(emp.base_salary) || 0
       
-      // Manejar el caso donde departments puede ser null o un array
+      // Manejar el caso donde departments puede ser null, objeto o un array
       let departmentName = 'Sin Departamento'
-      if (emp.departments) {
-        if (Array.isArray(emp.departments) && emp.departments.length > 0) {
-          departmentName = emp.departments[0]?.name || 'Sin Departamento'
-        } else if (typeof emp.departments === 'object' && emp.departments.name) {
-          departmentName = emp.departments.name
+      const dept = emp.departments
+      if (dept) {
+        if (Array.isArray(dept) && dept.length > 0) {
+          departmentName = dept[0]?.name || 'Sin Departamento'
+        } else if (!Array.isArray(dept) && typeof dept === 'object' && 'name' in dept) {
+          departmentName = String((dept as { name?: string }).name || 'Sin Departamento')
         }
       }
 
@@ -708,7 +709,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         const days_absent = diasPeriodo - days_worked
 
         // Capa 3: Días Extra/Especial (festivo o descanso con asistencia)
-        const schedule = emp.work_schedules as Record<string, string | null> | null
+        const rawSchedule = emp.work_schedules
+        const schedule: Record<string, string | null> | null = Array.isArray(rawSchedule)
+          ? (rawSchedule[0] as Record<string, string | null> | undefined) ?? null
+          : (rawSchedule as Record<string, string | null> | null)
         const dayCols: Record<number, string> = {
           0: 'sunday_start', 1: 'monday_start', 2: 'tuesday_start', 3: 'wednesday_start',
           4: 'thursday_start', 5: 'friday_start', 6: 'saturday_start',

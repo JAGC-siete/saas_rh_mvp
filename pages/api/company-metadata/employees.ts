@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
 import { createAdminClient } from '../../../lib/supabase/server'
 import { withGeneralRateLimit } from '../../../lib/security/rate-limiting'
+import { userCanAccessFullSettings } from '../../../lib/security/settings-access'
 import { DEFAULT_PERFORMANCE_SETTINGS, parsePerformanceSettings } from '../../../lib/performance/settings'
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -13,6 +14,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const supabase = createAdminClient()
 
     if (req.method === 'GET') {
+      if (!userCanAccessFullSettings(auth.userProfile) && auth.role !== 'super_admin') {
+        return res.status(403).json({ error: 'Insufficient permissions' })
+      }
       const { data, error } = await supabase
         .from('company_metadata')
         .select('employees_metadata')

@@ -3,6 +3,7 @@ import { requireCompanyAccess } from '../../../../lib/auth/api-auth-fixed'
 import { reportConfigSchema, reportTypeEnum } from '../../../../lib/reports/report-config-schema'
 import { getStandardColumns } from '../../../../lib/reports/standard-columns'
 import type { ReportType } from '../../../../lib/reports/report-config-schema'
+import { userCanAccessFullSettings } from '../../../../lib/security/settings-access'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const id = typeof req.query.id === 'string' ? req.query.id : Array.isArray(req.query.id) ? req.query.id[0] : undefined
@@ -12,7 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { supabase, companyId, role } = await requireCompanyAccess(req, res)
+    const { supabase, companyId, role, userProfile } = await requireCompanyAccess(req, res)
 
     const canAccess =
       role === 'super_admin' || (companyId && companyId === id)
@@ -20,6 +21,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(403).json({
         error: 'Forbidden',
         message: 'No tiene permisos para acceder a la configuración de reportes de esta empresa'
+      })
+    }
+
+    if (!userCanAccessFullSettings(userProfile) && role !== 'super_admin') {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'No tiene acceso a parámetros de reportes',
       })
     }
 

@@ -16,6 +16,7 @@ import PayrollConfigEditor from './PayrollConfigEditor'
 import ReportParamsEditor from './reports/ReportParamsEditor'
 import { BIOMETRIC_MODES, type BiometricMode } from '../lib/attendance/attendance-metadata'
 import { DEFAULT_PERFORMANCE_SETTINGS, parsePerformanceSettings } from '../lib/performance/settings'
+import { useSettingsAccess } from '../lib/hooks/useSettingsAccess'
 
 interface Company {
   id: string
@@ -48,6 +49,16 @@ interface WorkSchedule {
 }
 
 export default function CompanySettings() {
+  const settingsAccess = useSettingsAccess()
+  const {
+    canViewFullSettings,
+    canCreateWorkSchedules,
+    canManageWorkSchedules,
+    canAccessSchedulesCreateOnly,
+    showSettingsNav,
+    loading: settingsAccessLoading,
+  } = settingsAccess
+
   // Use the same pattern as EmployeeManager and PayrollManagerNew
   const { companyId, company: contextCompany, loading: companyLoading, error: companyError } = useCompanyContext()
   const [workSchedules, setWorkSchedules] = useState<WorkSchedule[]>([])
@@ -127,6 +138,8 @@ export default function CompanySettings() {
 
   useEffect(() => {
     if (!companyId) return
+    if (canAccessSchedulesCreateOnly) return
+    if (!canViewFullSettings) return
     ;(async () => {
       try {
         const supabaseClient = createClient() as any
@@ -149,7 +162,7 @@ export default function CompanySettings() {
         console.error('Error loading attendance_metadata:', e)
       }
     })()
-  }, [companyId])
+  }, [companyId, canAccessSchedulesCreateOnly, canViewFullSettings])
 
   const saveBiometricMetadata = async () => {
     if (!companyId) return
@@ -202,6 +215,15 @@ export default function CompanySettings() {
   const handleScheduleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    if (editingSchedule && !canManageWorkSchedules) {
+      setError('No tiene permiso para editar horarios existentes.')
+      return
+    }
+    if (!editingSchedule && !canCreateWorkSchedules) {
+      setError('No tiene permiso para crear horarios.')
+      return
+    }
+
     try {
       setLoading(true)
       
@@ -235,10 +257,8 @@ export default function CompanySettings() {
 
         if (error) throw error
       } else {
-        // Normalizar campos TIME: convertir strings vacíos a null
-        const insertData = {
+        const insertPayload = {
           name: scheduleForm.name,
-          company_id: company?.id,
           monday_start: scheduleForm.monday_start || null,
           monday_end: scheduleForm.monday_end || null,
           tuesday_start: scheduleForm.tuesday_start || null,
@@ -256,11 +276,29 @@ export default function CompanySettings() {
           break_duration: scheduleForm.break_duration,
           timezone: scheduleForm.timezone,
         }
-        const { error } = await (supabaseClient as any)
-          .from('work_schedules')
-          .insert([insertData])
 
-        if (error) throw error
+        if (canAccessSchedulesCreateOnly) {
+          const res = await fetch('/api/work-schedules', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(insertPayload),
+          })
+          const data = await res.json()
+          if (!res.ok) {
+            throw new Error(data?.message || data?.error || 'Error al crear horario')
+          }
+        } else {
+          const insertData = {
+            ...insertPayload,
+            company_id: company?.id,
+          }
+          const { error } = await (supabaseClient as any)
+            .from('work_schedules')
+            .insert([insertData])
+
+          if (error) throw error
+        }
       }
 
       setError(null)
@@ -298,6 +336,7 @@ export default function CompanySettings() {
   }
 
   const handleEditSchedule = (schedule: WorkSchedule) => {
+    if (!canManageWorkSchedules) return
     setEditingSchedule(schedule)
     setScheduleForm({
       name: schedule.name,
@@ -322,6 +361,10 @@ export default function CompanySettings() {
   }
 
   const handleDeleteSchedule = async (id: string) => {
+    if (!canManageWorkSchedules) {
+      setError('No tiene permiso para eliminar horarios.')
+      return
+    }
     if (!confirm('¿Estás seguro de que quieres eliminar este horario?')) {
       return
     }
@@ -343,13 +386,19 @@ export default function CompanySettings() {
     }
   }
 
-  const tabs = [
+  const allTabs = [
     { id: 'schedules', name: 'Horarios', icon: ClockIcon },
     { id: 'payroll', name: 'Configuración Payroll', icon: CalculatorIcon },
     { id: 'reports', name: 'Parámetros de Reportes', icon: DocumentChartBarIcon },
     { id: 'leaveTypes', name: 'Parámetros de permisos', icon: ClipboardDocumentListIcon },
     { id: 'performance', name: 'Desempeño', icon: ChartBarIcon },
   ]
+
+  const tabs = canViewFullSettings
+    ? allTabs
+    : canCreateWorkSchedules
+      ? allTabs.filter((t) => t.id === 'schedules')
+      : []
 
   const days = [
     { key: 'monday', label: 'Lunes' },
@@ -361,8 +410,16 @@ export default function CompanySettings() {
     { key: 'sunday', label: 'Domingo' }
   ]
 
+  useEffect(() => {
+    if (settingsAccessLoading) return
+    if (tabs.length === 0) return
+    if (!tabs.some((t) => t.id === activeTab)) {
+      setActiveTab('schedules')
+    }
+  }, [settingsAccessLoading, tabs, activeTab])
+
   // Show loading state while company context is loading
-  if (companyLoading || (!company && !error)) {
+  if (companyLoading || settingsAccessLoading || (!company && !error)) {
     return (
       <div className="flex flex-col items-center justify-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
@@ -385,14 +442,31 @@ export default function CompanySettings() {
     )
   }
 
+  if (!settingsAccess.showSettingsNav) {
+    return (
+      <Card variant="glass" className="p-6">
+        <CardContent className="text-center">
+          <p className="text-red-400">No tiene permiso para acceder a parámetros.</p>
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-white">Configuración de la Empresa</h2>
-        <p className="text-gray-300">Administra la configuración y ajustes de tu empresa</p>
+        <h2 className="text-xl font-semibold text-white">
+          {canAccessSchedulesCreateOnly ? 'Horarios de trabajo' : 'Configuración de la Empresa'}
+        </h2>
+        <p className="text-gray-300">
+          {canAccessSchedulesCreateOnly
+            ? 'Crea nuevos horarios para asignar a empleados'
+            : 'Administra la configuración y ajustes de tu empresa'}
+        </p>
       </div>
 
       {/* Tabs */}
+      {tabs.length > 1 && (
       <div className="border-b border-white/20">
         <nav className="-mb-px flex space-x-8">
           {tabs.map((tab) => {
@@ -414,9 +488,10 @@ export default function CompanySettings() {
           })}
         </nav>
       </div>
+      )}
 
       {/* Tab Content */}
-      {activeTab === 'schedules' && (
+      {(activeTab === 'schedules' || canAccessSchedulesCreateOnly) && (
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <div>
@@ -424,7 +499,11 @@ export default function CompanySettings() {
               <p className="text-sm text-gray-400 mt-1">Gestiona los horarios de trabajo de tu empresa</p>
             </div>
             <Button 
-              onClick={() => setShowScheduleForm(true)}
+              onClick={() => {
+                setEditingSchedule(null)
+                setShowScheduleForm(true)
+              }}
+              disabled={!canCreateWorkSchedules}
               className="bg-brand-600 hover:bg-brand-700 text-white font-medium"
             >
               <ClockIcon className="h-4 w-4 mr-2" />
@@ -438,6 +517,7 @@ export default function CompanySettings() {
             </Card>
           )}
 
+          {canViewFullSettings && (
           <Card variant="glass" className="p-5 border border-white/15">
             <h4 className="text-md font-medium text-white mb-1">Modalidad de marcas biométricas</h4>
             <p className="text-xs text-gray-400 mb-3">
@@ -470,6 +550,7 @@ export default function CompanySettings() {
             </div>
             {biometricMsg && <p className="text-xs mt-2 text-gray-300">{biometricMsg}</p>}
           </Card>
+          )}
 
           {showScheduleForm && (
             <Card variant="glass" className="p-6">
@@ -587,6 +668,7 @@ export default function CompanySettings() {
                         </span>
                       </div>
                     </div>
+                    {canManageWorkSchedules && (
                     <div className="flex space-x-2 ml-3">
                       <Button
                         size="sm"
@@ -605,6 +687,7 @@ export default function CompanySettings() {
                         Eliminar
                       </Button>
                     </div>
+                    )}
                   </div>
                   
                   <div className="space-y-2.5 pt-3 border-t border-white/10">
@@ -636,7 +719,7 @@ export default function CompanySettings() {
         </div>
       )}
 
-      {activeTab === 'payroll' && (
+      {canViewFullSettings && activeTab === 'payroll' && (
         companyId && company ? (
           <PayrollConfigEditor 
             companyId={companyId}
@@ -657,7 +740,7 @@ export default function CompanySettings() {
         )
       )}
 
-      {activeTab === 'reports' && (
+      {canViewFullSettings && activeTab === 'reports' && (
         companyId && company ? (
           <ReportParamsEditor
             companyId={companyId}
@@ -675,7 +758,7 @@ export default function CompanySettings() {
         )
       )}
 
-      {activeTab === 'leaveTypes' && (
+      {canViewFullSettings && activeTab === 'leaveTypes' && (
         companyId && company ? (
           <LeaveTypesSettings companyId={companyId} />
         ) : (
@@ -690,7 +773,7 @@ export default function CompanySettings() {
         )
       )}
 
-      {activeTab === 'performance' && (
+      {canViewFullSettings && activeTab === 'performance' && (
         <div className="space-y-6">
           <Card variant="glass" className="p-5 border border-white/15">
             <h4 className="text-md font-medium text-white mb-1">Evaluación de desempeño</h4>

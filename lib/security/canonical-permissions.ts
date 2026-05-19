@@ -15,6 +15,7 @@ export type CanonicalPermissionKey =
   | 'can_export_reports'
   | 'can_view_settings'
   | 'can_manage_settings'
+  | 'can_create_work_schedules'
   | 'can_view_audit_logs'
   | 'can_manage_roles'
   | 'can_manage_company'
@@ -44,6 +45,7 @@ function emptyCanonical(): CanonicalPermissions {
     can_export_reports: false,
     can_view_settings: false,
     can_manage_settings: false,
+    can_create_work_schedules: false,
     can_view_audit_logs: false,
     can_manage_roles: false,
     can_manage_company: false,
@@ -71,6 +73,7 @@ const LEGACY_TO_CANONICAL: Array<{ when: string; set: CanonicalPermissionKey; va
 
   // capability-style
   { when: 'manage_settings', set: 'can_manage_settings' },
+  { when: 'create_work_schedules', set: 'can_create_work_schedules' },
   { when: 'manage_employees', set: 'can_manage_employees' },
   { when: 'manage_attendance', set: 'can_manage_attendance' },
   { when: 'manage_payroll', set: 'can_manage_payroll' },
@@ -198,6 +201,7 @@ export function normalizePermissionsToCanonical(
 
   // 3) Derivations: manage implies view
   if (base.can_manage_settings) base.can_view_settings = true
+  if (base.can_manage_settings) base.can_create_work_schedules = true
   if (base.can_manage_employees) base.can_view_employees = true
   if (base.can_manage_departments) base.can_view_departments = true
   if (base.can_manage_attendance) base.can_view_attendance = true

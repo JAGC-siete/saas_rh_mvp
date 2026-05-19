@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { Button } from './ui/button'
 import { Card, CardContent } from './ui/card'
-import { Employee } from '../lib/types/employee'
+import type { EmployeeShaped } from '../lib/types/employee-shaped'
 
 interface WorkCertificateModalProps {
   isOpen: boolean
   onClose: () => void
-  employee: Employee | null
+  employee: EmployeeShaped | null
 }
 
 export default function WorkCertificateModal({

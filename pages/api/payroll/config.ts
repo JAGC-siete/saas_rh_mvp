@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { requireCompanyAccess } from '../../../lib/auth/api-auth-fixed'
 import { createAdminClient } from '../../../lib/supabase/server'
 import { parseOrdinaryHoursOverrideInput } from '../../../lib/payroll/ordinary-hours-override'
+import { userCanAccessFullSettings } from '../../../lib/security/settings-access'
 
 /**
  * API para gestionar configuraciones de payroll por empresa
@@ -31,11 +32,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    // Para super_admin, usar admin client para bypass RLS
+    const fullSettings = userCanAccessFullSettings(userProfile)
     const dbClient = role === 'super_admin' ? createAdminClient() : supabase
 
     switch (req.method) {
       case 'GET':
+        if (!fullSettings && role !== 'super_admin') {
+          return res.status(403).json({
+            error: 'Permisos insuficientes',
+            message: 'No tiene acceso a la configuración de payroll',
+          })
+        }
         return await getPayrollConfig(dbClient, targetCompanyId, res)
 
       case 'POST':

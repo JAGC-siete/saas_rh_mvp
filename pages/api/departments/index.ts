@@ -3,7 +3,11 @@ import { requireCompanyAccess } from "../../../lib/auth/api-auth-fixed"
 import { createAdminClient } from '../../../lib/supabase/server'
 import { getCompanyData, addCompanyToInsertData } from '../../../lib/helpers/company-filter'
 import { resolveFieldAccessContext } from '../../../lib/security/field-access'
-import { buildDepartmentStatsPayload } from '../../../lib/security/shape-departments'
+import {
+  buildDepartmentStatsPayload,
+  type DepartmentRow,
+  type DeptEmployeeRow,
+} from '../../../lib/security/shape-departments'
 import { createEmployeeSalaryClient } from '../../../lib/security/employee-data-access'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -40,8 +44,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         if (empError) throw empError
         const { departmentStats, summary } = buildDepartmentStatsPayload(
-          departments,
-          employees,
+          (departments ?? []) as unknown as DepartmentRow[],
+          (employees ?? []) as unknown as DeptEmployeeRow[],
           fieldCtx
         )
 

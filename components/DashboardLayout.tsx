@@ -138,7 +138,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             payroll: showPayrollSidebarGroup && !!(canonical.can_view_payroll || canonical.can_manage_payroll),
             reports: showPayrollSidebarGroup && !!canonical.can_view_reports,
             gamification: true,
-            settings: !!canonical.can_view_settings,
+            settings: !!(canonical.can_view_settings || canonical.can_create_work_schedules),
             admin: isAdmin,
             affiliates: true, // Show affiliates link to all users
             mtp: !!showPayrollSidebarGroup,
@@ -247,7 +247,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           payroll: showPayrollSidebarGroup && !!(canonical.can_view_payroll || canonical.can_manage_payroll),
           reports: showPayrollSidebarGroup && !!canonical.can_view_reports,
           gamification: true,
-          settings: !!canonical.can_view_settings,
+          settings: !!(canonical.can_view_settings || canonical.can_create_work_schedules),
           admin: isAdmin,
           affiliates: true, // Show affiliates link to all users
           mtp: !!showPayrollSidebarGroup,

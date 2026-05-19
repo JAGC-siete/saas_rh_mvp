@@ -1,4 +1,4 @@
-import type { FieldDisplayMode } from '../lib/security/field-access'
+import type { FieldDisplayMode } from '../../lib/security/field-access'
 
 type SensitiveFieldProps = {
   label: string

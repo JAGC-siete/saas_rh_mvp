@@ -1,7 +1,7 @@
 import type { FieldAccessContext } from './field-access'
 import { shapeEmployees } from './shape-employee'
 
-type DeptEmployeeRow = {
+export type DeptEmployeeRow = {
   id: string
   name: string
   base_salary?: number
@@ -9,7 +9,7 @@ type DeptEmployeeRow = {
   status?: string
 }
 
-type DepartmentRow = {
+export type DepartmentRow = {
   id: string
   name: string
   description?: string | null
