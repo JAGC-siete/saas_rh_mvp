@@ -462,7 +462,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
         password: env.tempPassword,
         loginUrl,
       })
-      const activationSubject = generateVentasActivationEmailSubject(companyName)
+      const activationSubject = generateVentasActivationEmailSubject(contactName)
 
       await sendEmailHtmlOnly({
         to: contactEmail,
