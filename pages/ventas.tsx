@@ -12,8 +12,9 @@ import {
 } from '@heroicons/react/24/outline'
 import { Card, CardContent, CardTitle } from '../components/ui/card'
 import MainHeader from '../components/MainHeader'
-import type { QuotationQuote, QuotationRequest, QuotationResponse } from '../lib/ventas/types'
+import type { QuotationQuote, QuotationRequest, QuotationResponse, QuotationUrgencyOffer } from '../lib/ventas/types'
 import { formatMoney } from '../lib/ventas/pricing'
+import { formatUrgencyOfferExpiry, urgencyOfferCtaText } from '../lib/ventas/urgency-offer'
 import type { CountryCode } from '../lib/country/supported'
 import { isCountryCode } from '../lib/country/supported'
 
@@ -71,6 +72,7 @@ export default function VentasPage() {
   const [isSuccess, setIsSuccess] = useState(false)
   const [errors, setErrors] = useState<ValidationErrors>({})
   const [quote, setQuote] = useState<QuotationQuote | null>(null)
+  const [urgencyOffer, setUrgencyOffer] = useState<QuotationUrgencyOffer | null>(null)
 
   const [formData, setFormData] = useState<QuotationRequest>({
     contact_email: '',
@@ -158,6 +160,7 @@ export default function VentasPage() {
       }
 
       setQuote((data as QuotationResponse).quote || null)
+      setUrgencyOffer((data as QuotationResponse).urgency_offer || null)
       setIsSuccess(true)
     } catch (e) {
       setErrors({ submit: 'No se pudo enviar. Revise su conexión e intente de nuevo.' })
@@ -197,6 +200,19 @@ export default function VentasPage() {
             {quote && (
               <Card variant="glass" className="mb-8">
                 <CardContent className="p-8">
+                  {urgencyOffer?.is_active && (
+                    <div className="mb-6 rounded-xl border border-amber-400/30 bg-amber-500/10 p-4 text-left">
+                      <p className="text-sm text-amber-100 leading-relaxed">
+                        <strong>{urgencyOfferCtaText()}</strong>
+                      </p>
+                      <p className="mt-2 text-xs text-amber-200/80">
+                        Válida hasta el{' '}
+                        <strong>{formatUrgencyOfferExpiry(new Date(urgencyOffer.expires_at))}</strong>{' '}
+                        (hora de Honduras).
+                      </p>
+                    </div>
+                  )}
+
                   <h2 className="text-2xl font-bold text-white mb-4">Resumen de Inversión</h2>
                   <div className="space-y-2 text-brand-200 text-left">
                     <p>
@@ -205,8 +221,25 @@ export default function VentasPage() {
                     {quote.billing_modality === 'monthly' ? (
                       <>
                         <p>
-                          <strong>Total mensual estimado:</strong> {formatMoney(quote.currency, quote.monthly_total)}
+                          <strong>Total mensual estimado:</strong>{' '}
+                          {urgencyOffer?.is_active ? (
+                            <>
+                              <span className="line-through text-brand-400/70">
+                                {formatMoney(quote.currency, urgencyOffer.quoted_total)}
+                              </span>{' '}
+                              <span className="text-emerald-300 font-semibold">
+                                {formatMoney(quote.currency, urgencyOffer.discounted_total)}
+                              </span>
+                            </>
+                          ) : (
+                            formatMoney(quote.currency, quote.monthly_total)
+                          )}
                         </p>
+                        {urgencyOffer?.is_active && (
+                          <p className="text-sm text-emerald-300">
+                            Ahorro inmediato: {formatMoney(quote.currency, urgencyOffer.discount_amount)} / mes al contratar en las próximas 72 horas.
+                          </p>
+                        )}
                         <p className="text-sm text-cyan-100/70">
                           Incluye software mensual y continuidad de hardware según terminales indicadas.
                         </p>
@@ -214,8 +247,25 @@ export default function VentasPage() {
                     ) : (
                       <>
                         <p>
-                          <strong>Total anual (software):</strong> {formatMoney(quote.currency, quote.annual_total)}
+                          <strong>Total anual (software):</strong>{' '}
+                          {urgencyOffer?.is_active ? (
+                            <>
+                              <span className="line-through text-brand-400/70">
+                                {formatMoney(quote.currency, urgencyOffer.quoted_total)}
+                              </span>{' '}
+                              <span className="text-emerald-300 font-semibold">
+                                {formatMoney(quote.currency, urgencyOffer.discounted_total)}
+                              </span>
+                            </>
+                          ) : (
+                            formatMoney(quote.currency, quote.annual_total)
+                          )}
                         </p>
+                        {urgencyOffer?.is_active && (
+                          <p className="text-sm text-emerald-300">
+                            Ahorro inmediato: {formatMoney(quote.currency, urgencyOffer.discount_amount)} / año al contratar en las próximas 72 horas.
+                          </p>
+                        )}
                         <p className="text-sm text-cyan-100/70">
                           Modalidad anual: hasta tres terminales cubiertas en esta propuesta. Declaradas:{' '}
                           <strong>{quote.terminals_count}</strong>{' '}

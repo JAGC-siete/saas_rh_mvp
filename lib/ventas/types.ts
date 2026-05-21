@@ -57,10 +57,19 @@ export interface QuotationQuote {
   terminals_count: number
 }
 
+export interface QuotationUrgencyOffer {
+  is_active: boolean
+  quoted_total: number
+  discount_amount: number
+  discounted_total: number
+  expires_at: string
+}
+
 export interface QuotationResponse {
   success: boolean
   message: string
   quote_id?: string
   quote?: QuotationQuote
+  urgency_offer?: QuotationUrgencyOffer
 }
 

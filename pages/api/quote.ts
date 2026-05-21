@@ -11,6 +11,7 @@ import { clampInt, normalizeCouponCode, resolveTierByEmployees, roundMoney } fro
 import { generateVentasQuotationPDF } from '../../lib/ventas/pdf'
 import { generateVentasQuotationEmailHTML, generateVentasQuotationEmailSubject } from '../../lib/ventas/email-template'
 import { generateVentasActivationEmailHTML, generateVentasActivationEmailSubject } from '../../lib/ventas/activation-email'
+import { computeUrgencyOffer } from '../../lib/ventas/urgency-offer'
 import {
   generateVentasBankDetailsEmailHTML,
   generateVentasBankDetailsEmailSubject,
@@ -356,6 +357,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
     }
 
     const quoteId = inserted?.id as string
+    const sentAt = new Date()
+    const quotedTotalForUrgency = billingModality === 'monthly' ? monthlyTotal : annualTotal
+    const urgencyOffer = computeUrgencyOffer({ quotedTotal: quotedTotalForUrgency, sentAt })
 
     // Generate PDF
     const pdf = await generateVentasQuotationPDF({
@@ -375,6 +379,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       contactName,
       companyName,
       countryLabel,
+      sentAt,
     })
     const subject = generateVentasQuotationEmailSubject(companyName)
     const filename = `cotizacion-sisu-${quote.tier.min_employees}-${quote.tier.max_employees}.pdf`
@@ -416,7 +421,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
 
     await (supabase as any)
       .from('cotizaciones')
-      .update({ status: 'sent', email_message_id: (result as any)?.id || null })
+      .update({
+        status: 'sent',
+        email_message_id: (result as any)?.id || null,
+        meta: {
+          ...meta,
+          urgency_offer_expires_at: urgencyOffer.expiresAt.toISOString(),
+          urgency_offer_discount_pct: 0.2,
+        },
+      })
       .eq('id', quoteId)
 
     // Activar entorno automáticamente (no romper cotización si falla).
@@ -491,6 +504,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       message: 'Cotización enviada a su correo',
       quote_id: quoteId,
       quote,
+      urgency_offer: {
+        is_active: urgencyOffer.isActive,
+        quoted_total: urgencyOffer.quotedTotal,
+        discount_amount: urgencyOffer.discountAmount,
+        discounted_total: urgencyOffer.discountedTotal,
+        expires_at: urgencyOffer.expiresAt.toISOString(),
+      },
     })
   } catch (error: any) {
     const duration = Date.now() - startTime
