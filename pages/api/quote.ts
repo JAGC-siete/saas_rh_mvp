@@ -381,7 +381,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       countryLabel,
       sentAt,
     })
-    const subject = generateVentasQuotationEmailSubject(companyName)
+    const subject = generateVentasQuotationEmailSubject({
+      contactName,
+      discountAmount: urgencyOffer.discountAmount,
+      currency,
+    })
     const filename = `cotizacion-sisu-${quote.tier.min_employees}-${quote.tier.max_employees}.pdf`
 
     const systemCompanyId = 'system-public-tool'

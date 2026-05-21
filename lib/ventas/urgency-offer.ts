@@ -1,5 +1,6 @@
-import { formatDateTimeForHonduras } from '../timezone'
-import { roundMoney } from './pricing'
+import { formatDateTimeForHonduras, HONDURAS_TIMEZONE } from '../timezone'
+import type { CurrencyCode } from './types'
+import { formatMoney, roundMoney } from './pricing'
 
 /** 20% de descuento sobre el total cotizado al contratar dentro de la ventana. */
 export const URGENCY_OFFER_DISCOUNT_PCT = 0.2
@@ -41,6 +42,23 @@ export function computeUrgencyOffer(params: {
 
 export function formatUrgencyOfferExpiry(expiresAt: Date): string {
   return formatDateTimeForHonduras(expiresAt)
+}
+
+/** Ej. "23 de mayo a las 06:17 p. m." */
+export function formatUrgencyOfferExpiryFriendly(expiresAt: Date): string {
+  const day = new Intl.DateTimeFormat('es-HN', { timeZone: HONDURAS_TIMEZONE, day: 'numeric' }).format(expiresAt)
+  const month = new Intl.DateTimeFormat('es-HN', { timeZone: HONDURAS_TIMEZONE, month: 'long' }).format(expiresAt)
+  const time = new Intl.DateTimeFormat('es-HN', {
+    timeZone: HONDURAS_TIMEZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  }).format(expiresAt)
+  return `${day} de ${month} a las ${time}`
+}
+
+export function formatUrgencyOfferSavings(currency: CurrencyCode, amount: number): string {
+  return formatMoney(currency, roundMoney(amount))
 }
 
 export function urgencyOfferCtaText(): string {

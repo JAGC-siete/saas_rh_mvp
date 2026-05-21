@@ -1,14 +1,26 @@
-import type { QuotationQuote } from './types'
+import type { CurrencyCode, QuotationQuote } from './types'
 import { formatMoney } from './pricing'
 import {
   computeUrgencyOffer,
-  formatUrgencyOfferExpiry,
-  urgencyOfferCtaText,
+  formatUrgencyOfferExpiryFriendly,
+  formatUrgencyOfferSavings,
 } from './urgency-offer'
 
-export function generateVentasQuotationEmailSubject(companyName?: string): string {
-  const suffix = companyName?.trim() ? ` — ${companyName.trim()}` : ''
-  return `Cotización Humano SISU${suffix}`
+function firstNameFromContact(contactName?: string): string {
+  const trimmed = contactName?.trim()
+  if (!trimmed) return ''
+  return trimmed.split(/\s+/)[0] || trimmed
+}
+
+export function generateVentasQuotationEmailSubject(params: {
+  contactName?: string
+  discountAmount: number
+  currency: CurrencyCode
+}): string {
+  const firstName = firstNameFromContact(params.contactName)
+  const savings = formatUrgencyOfferSavings(params.currency, params.discountAmount)
+  if (firstName) return `Tus números (y cómo ahorrarte ${savings}), ${firstName}.`
+  return `Tus números (y cómo ahorrarte ${savings}).`
 }
 
 export function generateVentasQuotationEmailHTML(params: {
@@ -25,13 +37,18 @@ export function generateVentasQuotationEmailHTML(params: {
   const salesWhatsApp = (process.env.NEXT_PUBLIC_SALES_WHATSAPP || '').trim()
   const waNumber = salesWhatsApp.replace(/[^\d]/g, '')
   const waText = encodeURIComponent(
-    'Hola. Recibí la cotización de Humano SISU por correo y quiero contratar con el descuento del 20% por pronta contratación.'
+    'Hola. Revisé mi cotización de Humano SISU y quiero entrar al panel para reclamar el descuento del 20%.'
   )
   const waUrl = waNumber ? `https://wa.me/${waNumber}?text=${waText}` : ''
 
-  const greeting = contactName?.trim()
-    ? `Buen día, ${escapeHtml(contactName.trim())}`
-    : 'Buen día'
+  const firstName = firstNameFromContact(contactName)
+  const opening = firstName
+    ? `${escapeHtml(firstName)}, aquí están tus números.`
+    : 'Aquí están tus números.'
+
+  const companyLabel = companyName?.trim()
+    ? escapeHtml(companyName.trim())
+    : 'tu empresa'
 
   const fmt = (n: number) => formatMoney(quote.currency, n)
   const isMonthly = quote.billing_modality === 'monthly'
@@ -39,126 +56,100 @@ export function generateVentasQuotationEmailHTML(params: {
   const urgency = computeUrgencyOffer({ quotedTotal, sentAt })
   const periodLabel = isMonthly ? 'mes' : 'año'
 
-  const urgencyBanner = urgency.isActive
+  const terminalsNote = isMonthly
+    ? `Incluye ${quote.terminals_count} terminal${quote.terminals_count === 1 ? '' : 'es'} con continuidad de hardware según tu cotización.`
+    : `Es decir, te ahorras ${fmt(urgency.discountAmount)} de inmediato. Además, ya te incluimos hasta 3 terminales sin ningún cargo mensual extra.`
+
+  const planSummary = urgency.isActive
     ? `
-      <div style="background: #fff8e6; border-left: 4px solid #d97706; padding: 14px 16px; border-radius: 6px; margin: 0 0 18px 0;">
-        <p style="margin: 0; font-size: 14px; line-height: 1.55; color: #92400e;">
-          <strong>${escapeHtml(urgencyOfferCtaText())}</strong>
+      <div style="background: #f6f8fa; padding: 18px 20px; border-radius: 8px; margin: 22px 0;">
+        <p style="margin: 0 0 14px 0; font-size: 15px; font-weight: bold; color: #111;">
+          El resumen de tu plan (${quote.tier.min_employees} a ${quote.tier.max_employees} empleados):
         </p>
-        <p style="margin: 8px 0 0 0; font-size: 12px; color: #a16207;">
-          Válida hasta el <strong>${escapeHtml(formatUrgencyOfferExpiry(urgency.expiresAt))}</strong> (hora de Honduras).
-        </p>
+        <ul style="margin: 0; padding: 0 0 0 18px; color: #333; font-size: 14px; line-height: 1.7;">
+          <li style="margin-bottom: 8px;"><strong>Precio normal:</strong> ${fmt(urgency.quotedTotal)} / ${periodLabel}</li>
+          <li style="margin-bottom: 8px;"><strong>Descuento por acción rápida:</strong> −${fmt(urgency.discountAmount)} / ${periodLabel}</li>
+          <li style="margin-bottom: 0;">
+            <strong>Tu precio hoy:</strong>
+            <span style="color: #0d5c2f; font-weight: bold;"> ${fmt(urgency.discountedTotal)} / ${periodLabel}</span>
+            <span style="color: #555;"> (${terminalsNote})</span>
+          </li>
+        </ul>
       </div>
+
+      <p style="margin: 0 0 18px 0; font-size: 14px; line-height: 1.55; color: #333;">
+        ⏳ <strong>Esta oferta expira exactamente el ${escapeHtml(formatUrgencyOfferExpiryFriendly(urgency.expiresAt))}</strong> (Hora de Honduras).
+      </p>
+    `
+    : `
+      <div style="background: #f6f8fa; padding: 18px 20px; border-radius: 8px; margin: 22px 0;">
+        <p style="margin: 0 0 14px 0; font-size: 15px; font-weight: bold; color: #111;">
+          El resumen de tu plan (${quote.tier.min_employees} a ${quote.tier.max_employees} empleados):
+        </p>
+        <ul style="margin: 0; padding: 0 0 0 18px; color: #333; font-size: 14px; line-height: 1.7;">
+          <li style="margin-bottom: 8px;"><strong>Total ${isMonthly ? 'mensual estimado' : 'anual (software)'}:</strong> ${fmt(quotedTotal)} / ${periodLabel}</li>
+          ${!isMonthly ? `<li style="margin-bottom: 0;"><strong>Terminales:</strong> ${quote.terminals_count} · hasta 3 incluidas sin cargo mensual de continuidad</li>` : ''}
+        </ul>
+      </div>
+    `
+
+  const offerParagraph = urgency.isActive
+    ? `
+      <p style="margin: 0 0 18px 0; line-height: 1.6; color: #333;">
+        Queremos que tomes la decisión sin fricciones. Por eso, si contratas tu licencia en las próximas
+        <strong>72 horas</strong>, te aplicamos un <strong>20% de descuento directo</strong> sobre el total ${isMonthly ? 'mensual' : 'anual'}.
+      </p>
     `
     : ''
 
-  const renderTotalCell = (originalTotal: number) => {
-    if (!urgency.isActive) {
-      return `${fmt(originalTotal)} / ${periodLabel}`
-    }
-    return `
-      <span style="text-decoration: line-through; color: #888; font-weight: normal;">${fmt(originalTotal)}</span>
-      <span style="font-weight: bold; color: #0d5c2f;"> ${fmt(urgency.discountedTotal)}</span> / ${periodLabel}
-    `
-  }
-
-  const renderUrgencyDiscountRow = () => {
-    if (!urgency.isActive) return ''
-    return `
-      <tr>
-        <td style="padding: 6px 0; color: #555;">Descuento (oferta 72 h · 20%)</td>
-        <td style="padding: 6px 0; text-align: right; color: #0d5c2f; font-weight: 600;">−${fmt(urgency.discountAmount)} / ${periodLabel}</td>
-      </tr>
-    `
-  }
-
-  const renderSavingsNote = () => {
-    if (!urgency.isActive) return ''
-    return `
-      <p style="margin: 12px 0 0 0; font-size: 13px; line-height: 1.5; color: #0d5c2f; font-weight: 600;">
-        Ahorro inmediato: ${fmt(urgency.discountAmount)} / ${periodLabel} al contratar dentro de la ventana de 72 horas.
+  const closingParagraph = urgency.isActive
+    ? `
+      <p style="margin: 0 0 22px 0; line-height: 1.6; color: #333;">
+        Si los números te hacen sentido y quieres asegurar este precio, entra a tu panel ahora.
+        Un asesor confirmará los últimos detalles operativos contigo y aplicará el descuento.
       </p>
     `
-  }
+    : `
+      <p style="margin: 0 0 22px 0; line-height: 1.6; color: #333;">
+        Si los números te hacen sentido, entra a tu panel para revisar el entorno configurado con tus parámetros.
+        Un asesor puede confirmar alcance e implementación contigo.
+      </p>
+    `
+
+  const ctaLabel = urgency.isActive ? 'Entrar al panel y reclamar descuento' : 'Entrar al panel'
 
   return `
     <div style="font-family: Arial, Helvetica, sans-serif; max-width: 640px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
       <div style="border-bottom: 3px solid #0b4fa1; padding-bottom: 16px; margin-bottom: 20px;">
         <p style="margin: 0; font-size: 14px; color: #555; letter-spacing: 0.02em;">Humano SISU</p>
-        <h1 style="margin: 8px 0 0 0; font-size: 20px; color: #111;">Cotización</h1>
       </div>
 
-      <p style="margin: 0 0 14px 0; line-height: 1.55;">${greeting}${companyName?.trim() ? ` — <strong>${escapeHtml(companyName.trim())}</strong>` : ''}.</p>
-      <p style="margin: 0 0 18px 0; line-height: 1.55;">
-        Adjuntamos el PDF con el detalle. El importe del software se calculó según la plantilla y la modalidad indicadas;
-        el país de operación queda registrado como <strong>${escapeHtml(countryLabel)}</strong> (reglas de nómina y zona horaria acordes a esa jurisdicción en el producto).
+      <p style="margin: 0 0 16px 0; font-size: 18px; line-height: 1.45; font-weight: bold; color: #111;">${opening}</p>
+
+      <p style="margin: 0 0 14px 0; line-height: 1.6; color: #333;">
+        Hicimos el trabajo pesado. Tu cotización para <strong>${companyLabel}</strong> ya está calculada
+        y el sistema está configurado para operar con las reglas de nómina y zona horaria de <strong>${escapeHtml(countryLabel)}</strong>.
       </p>
 
-      ${urgencyBanner}
+      <p style="margin: 0 0 18px 0; line-height: 1.6; color: #333;">
+        Tienes el PDF adjunto con los detalles técnicos, pero vamos directo a lo que importa.
+      </p>
 
-      <div style="background: #f6f8fa; padding: 16px 18px; border-radius: 8px; margin: 18px 0;">
-        <p style="margin: 0 0 12px 0; font-size: 13px; font-weight: bold; color: #333;">Resumen</p>
-        <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-          <tr>
-            <td style="padding: 6px 0; color: #555;">País de operación</td>
-            <td style="padding: 6px 0; text-align: right;">${escapeHtml(countryLabel)}</td>
-          </tr>
-          <tr>
-            <td style="padding: 6px 0; color: #555;">Empleados (rango tarifario)</td>
-            <td style="padding: 6px 0; text-align: right;">${quote.tier.min_employees}–${quote.tier.max_employees}</td>
-          </tr>
-            ${
-              isMonthly
-                ? `
-              <tr>
-                <td style="padding: 6px 0; color: #555;">Software (mensual)</td>
-                <td style="padding: 6px 0; text-align: right;">${fmt(quote.monthly_software_total)} / mes</td>
-              </tr>
-              <tr>
-                <td style="padding: 6px 0; color: #555;">Continuidad de hardware</td>
-                <td style="padding: 6px 0; text-align: right;">${fmt(quote.monthly_hardware_fee)} / mes (${quote.terminals_count} terminal${quote.terminals_count === 1 ? '' : 'es'})</td>
-              </tr>
-              ${renderUrgencyDiscountRow()}
-              <tr>
-                <td style="padding: 6px 0; color: #333; font-weight: bold;">Total mensual estimado</td>
-                <td style="padding: 6px 0; text-align: right; font-weight: bold; color: #0d5c2f;">${renderTotalCell(quote.monthly_total)}</td>
-              </tr>
-            `
-                : `
-              <tr>
-                <td style="padding: 6px 0; color: #555;">Subtotal anual (software)</td>
-                <td style="padding: 6px 0; text-align: right;">${fmt(quote.annual_subtotal)} / año</td>
-              </tr>
-              <tr>
-                <td style="padding: 6px 0; color: #555;">Descuento${quote.coupon_applied ? ' (cupón)' : ''}</td>
-                <td style="padding: 6px 0; text-align: right;">${quote.coupon_applied ? `−${fmt(quote.annual_discount_amount)}` : fmt(0)} / año</td>
-              </tr>
-              ${renderUrgencyDiscountRow()}
-              <tr>
-                <td style="padding: 6px 0; color: #333; font-weight: bold;">Total anual (software)</td>
-                <td style="padding: 6px 0; text-align: right; font-weight: bold; color: #0d5c2f;">${renderTotalCell(quote.annual_total)}</td>
-              </tr>
-              <tr>
-                <td style="padding: 6px 0; color: #555;">Terminales (modalidad anual)</td>
-                <td style="padding: 6px 0; text-align: right;">${quote.terminals_count} · hasta 3 incluidas sin cargo mensual de continuidad</td>
-              </tr>
-            `
-            }
-        </table>
-        ${renderSavingsNote()}
-      </div>
+      ${offerParagraph}
+      ${planSummary}
+      ${closingParagraph}
 
       <div style="text-align: center; margin: 24px 0;">
         <a href="${siteUrl}/app/login"
-           style="background: #0b4fa1; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600; font-size: 14px;">
-          Acceso al panel
+           style="background: #0b4fa1; color: #fff; padding: 14px 28px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 700; font-size: 15px;">
+          ${ctaLabel}
         </a>
       </div>
 
       ${
         waUrl
           ? `<div style="text-align: center; margin: 16px 0 0 0;">
-               <p style="margin: 0 0 10px 0; font-size: 14px; color: #444;">Para activar la oferta del 20% o resolver dudas sobre alcance:</p>
+               <p style="margin: 0 0 10px 0; font-size: 13px; color: #555;">¿Prefieres hablar con alguien antes de entrar?</p>
                <a href="${waUrl}"
                   style="display: inline-block; padding: 10px 20px; text-decoration: none; border-radius: 999px; font-weight: 600; font-size: 14px; border: 1px solid #0f766e; color: #0f766e;">
                  WhatsApp comercial
@@ -166,11 +157,6 @@ export function generateVentasQuotationEmailHTML(params: {
              </div>`
           : ''
       }
-
-      <p style="color: #666; font-size: 12px; line-height: 1.5; margin-top: 22px;">
-        Esta cotización es orientativa; un asesor puede confirmar alcance, integraciones y calendario según su operación.
-        ${urgency.isActive ? ' El descuento del 20% por pronta contratación aplica al total indicado y requiere confirmación comercial dentro de las 72 horas.' : ''}
-      </p>
     </div>
   `
 }
