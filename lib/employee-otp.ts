@@ -41,7 +41,7 @@ export async function sendOtp(email: string, employeeId: string, employeeName: s
     const resend = new Resend(resendApiKey)
     
     const { data, error: resendError } = await resend.emails.send({
-      from: 'Portal de Empleados <noreply@humanosisu.net>',
+      from: process.env.RESEND_FROM || 'Portal de Empleados <jorgearturo@humanosisu.net>',
       to: [email],
       subject: 'Código de Acceso - Portal de Empleados',
       html: `

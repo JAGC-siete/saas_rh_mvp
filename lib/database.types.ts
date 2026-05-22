@@ -3370,7 +3370,6 @@ export type Database = {
         }
         Returns: string
       }
-      create_user_profile: { Args: { user_id: string }; Returns: undefined }
       create_user_session: {
         Args: {
           p_access_token_ttl_seconds?: number

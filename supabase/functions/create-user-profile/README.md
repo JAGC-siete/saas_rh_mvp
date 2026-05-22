@@ -1,30 +1,32 @@
 # Create User Profile Edge Function
 
-This Edge Function is triggered when a new user is created in Supabase Auth.
+This Edge Function can be wired to `auth.users` INSERT webhooks. It intentionally **does not** create profiles anymore.
+
+Profiles and companies are provisioned through the authenticated onboarding flow:
+
+- `POST /api/user-profiles/create-profile` (requires session; uses service role server-side)
 
 ## Setup
 
 1. Deploy the function:
+
 ```bash
 supabase functions deploy create-user-profile
 ```
 
-2. Set up the webhook in Supabase Dashboard:
-   - Go to Database > Webhooks
-   - Create a new webhook
+2. Optional webhook in Supabase Dashboard:
    - Table: `auth.users`
    - Events: `INSERT`
-   - Type: `HTTP Request`
    - URL: `https://your-project-ref.supabase.co/functions/v1/create-user-profile`
-   - HTTP Method: `POST`
-   - HTTP Headers: `Authorization: Bearer YOUR_SERVICE_ROLE_KEY`
 
-## Alternative: Use the function directly
+The function returns `{ success: true, skipped: true }` when no profile exists, so existing webhooks remain safe.
 
-You can also call this function directly from your application when a user signs up:
+## Disable legacy bootstrap
 
-```javascript
-const { data, error } = await supabase.functions.invoke('create-user-profile', {
-  body: { user: { id: userId } }
-})
-```
+Remove any HTTP calls to:
+
+- `/api/auth/create-profile-bypass`
+- `/api/auth/create-profile`
+- `/api/auth/fix-user-creation`
+
+These endpoints were removed from the application.

@@ -180,7 +180,7 @@ export async function generateEmployeeReceiptPDF(
       yPos += 10
       doc.fontSize(8).fillColor('#000000').text('• Los montos están calculados según la legislación laboral de Honduras.', 30, yPos)
       yPos += 10
-      doc.fontSize(8).fillColor('#000000').text('• Para consultas, contactar al departamento de recursos humanos.', 30, yPos)
+      doc.fontSize(8).fillColor('#000000').text('• ¿Preguntas? Contacte a su manager de recursos humanos.', 30, yPos)
       
       yPos += 15
       doc.fontSize(9).fillColor('#000000').text('Firma del Empleado:', 30, yPos)

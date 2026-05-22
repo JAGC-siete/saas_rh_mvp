@@ -1,7 +1,11 @@
+import { randomUUID } from 'crypto'
 import { NextApiRequest, NextApiResponse } from 'next'
-import { authenticateUser } from "../../../lib/auth/api-auth-fixed"
-import { normalizeCountryCode } from "../../../lib/country/supported"
+import { authenticateUser } from '../../../lib/auth/api-auth-fixed'
+import { normalizeCountryCode } from '../../../lib/country/supported'
 import { timezoneForCountry } from '../../../lib/country/payroll-labels'
+import { createAdminClient } from '../../../lib/supabase/server'
+
+const ONBOARDING_ROLE = 'hr_manager'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -9,35 +13,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Authenticate user but don't require profile (since they don't have one yet)
-    const { supabase, user } = await authenticateUser(req, res, { requireProfile: false })
+    const { user } = await authenticateUser(req, res, { requireProfile: false })
 
-    const { 
+    const {
       company_name,
-      company_id, 
+      company_id,
       country_code: bodyCountryCode,
       employee_id,
-      role = 'hr_manager', 
-      permissions = {},
-      is_active = true 
     } = req.body
 
     if (!company_name && !company_id) {
       return res.status(400).json({ error: 'Company name is required' })
     }
 
-    // Validate role
-    const validRoles = ['super_admin', 'company_admin', 'hr_manager', 'manager', 'employee']
-    if (!validRoles.includes(role)) {
-      return res.status(400).json({ error: 'Invalid role' })
-    }
+    const adminSupabase = createAdminClient()
 
-    // Check if profile already exists
-    const { data: existingProfile } = await supabase
+    const { data: existingProfile } = await adminSupabase
       .from('user_profiles')
       .select('id')
       .eq('id', user.id)
-      .single()
+      .maybeSingle()
 
     if (existingProfile) {
       return res.status(409).json({ error: 'User profile already exists' })
@@ -45,26 +40,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     let finalCompanyId = company_id
 
-    // If company_name is provided, create or find company
     if (company_name && !company_id) {
-      // Generate a unique company ID
-      const companyId = `comp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-      
-      // Create new company
       const cc = normalizeCountryCode(
         typeof bodyCountryCode === 'string' ? bodyCountryCode.toUpperCase() : 'HND'
       )
 
-      const { data: newCompany, error: companyError } = await supabase
+      const { data: newCompany, error: companyError } = await adminSupabase
         .from('companies')
         .insert([{
-          id: companyId,
+          id: randomUUID(),
           name: company_name,
-          created_by: user.id,
+          plan_type: 'trial',
           is_active: true,
           country_code: cc,
           timezone: timezoneForCountry(cc),
-          created_at: new Date().toISOString()
+          settings: {
+            timezone: timezoneForCountry(cc),
+            language: 'es',
+          },
         }])
         .select('id')
         .single()
@@ -77,19 +70,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       finalCompanyId = newCompany.id
     }
 
-    // Generate employee ID: use provided ID or default to EMP001
-    const employeeId = employee_id || 'EMP001'
+    const employeeCode = typeof employee_id === 'string' && employee_id.trim().length > 0
+      ? employee_id.trim()
+      : 'EMP001'
 
-    // Create new user profile
-    const { data: newProfile, error: createError } = await supabase
+    const { data: newProfile, error: createError } = await adminSupabase
       .from('user_profiles')
       .insert([{
         id: user.id,
         company_id: finalCompanyId,
-        employee_id: employeeId,
-        role,
-        permissions,
-        is_active
+        role: ONBOARDING_ROLE,
+        permissions: {},
+        is_active: true,
       }])
       .select(`
         *,
@@ -103,44 +95,46 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: 'Failed to create user profile' })
     }
 
-    // Normalize null role to empty string
-    const normalizedProfile = newProfile ? {
-      ...newProfile,
-      employees: newProfile.employees ? {
-        ...newProfile.employees,
-        role: newProfile.employees.role ?? ''
-      } : null
-    } : newProfile
+    const normalizedProfile = newProfile
+      ? {
+          ...newProfile,
+          employees: newProfile.employees
+            ? {
+                ...newProfile.employees,
+                role: newProfile.employees.role ?? '',
+              }
+            : null,
+        }
+      : newProfile
 
-    // Store the employee ID pattern for future employees
-    if (employee_id) {
-      // Store the pattern in company metadata for future use
-      await supabase
-        .from('companies')
-        .update({ 
-          metadata: { 
-            employee_id_pattern: employee_id,
-            last_employee_number: 1 
-          } 
-        })
-        .eq('id', finalCompanyId)
+    if (employeeCode) {
+      await adminSupabase.from('company_metadata').upsert({
+        company_id: finalCompanyId,
+        employees_metadata: {
+          employee_id_pattern: employeeCode,
+          last_employee_number: 1,
+        },
+      })
     }
 
-    return res.status(201).json({ 
+    return res.status(201).json({
       profile: normalizedProfile,
       message: 'User profile created successfully',
-      employee_id: employeeId
+      employee_id: employeeCode,
     })
-
   } catch (error: any) {
     console.error('Create profile API error:', error)
-    
+
     if (error.message === 'UNAUTHORIZED') {
       return res.status(401).json({ error: 'Unauthorized' })
     }
-    
-    return res.status(500).json({ 
-      error: error.message || 'Internal server error' 
+
+    if (error.message?.includes('SUPABASE_SERVICE_ROLE_KEY')) {
+      return res.status(503).json({ error: 'Server configuration error' })
+    }
+
+    return res.status(500).json({
+      error: error.message || 'Internal server error',
     })
   }
 }

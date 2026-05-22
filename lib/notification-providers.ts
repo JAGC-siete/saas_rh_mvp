@@ -62,7 +62,7 @@ export class NotificationProviderManager {
       const defaultEmailProvider: EmailProvider = {
         type: 'resend',
         apiKey: process.env.RESEND_API_KEY,
-        fromEmail: 'noreply@humanosisu.net',
+        fromEmail: process.env.RESEND_FROM || 'jorgearturo@humanosisu.net',
         fromName: 'Humano SISU'
       }
 
@@ -96,7 +96,7 @@ export class NotificationProviderManager {
       return {
         type: 'resend',
         apiKey: process.env.RESEND_API_KEY,
-        fromEmail: process.env.RESEND_FROM || 'noreply@cloudhr.hn',
+        fromEmail: process.env.RESEND_FROM || 'jorgearturo@humanosisu.net',
         fromName: 'CloudHR',
         timeout: 10000
       }
@@ -109,7 +109,7 @@ export class NotificationProviderManager {
       port: providerData.port,
       user: providerData.user,
       pass: providerData.pass,
-      fromEmail: providerData.from_email || 'noreply@cloudhr.hn',
+      fromEmail: providerData.from_email || 'jorgearturo@humanosisu.net',
       fromName: providerData.from_name || 'CloudHR',
       timeout: providerData.timeout || 10000
     }

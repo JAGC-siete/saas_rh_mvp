@@ -122,47 +122,21 @@ export async function createServerComponentClient() {
 
 // Admin client for server-side operations with service role
 export function createAdminClient() {
-  try {
-    // Get environment variables from centralized config
-    const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL
-    const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY
-    const anonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY
 
-    // Check if environment variables are available
-    if (!supabaseUrl) {
-      console.error('❌ Missing Supabase URL environment variable (NEXT_PUBLIC_SUPABASE_URL)')
-      // Return a mock client to prevent server crash - requests will fail but server stays up
-      return createSupabaseClient('https://placeholder.supabase.co', 'placeholder-key', {
-        auth: { autoRefreshToken: false, persistSession: false }
-      })
-    }
-
-    // Prefer service role for server-side operations; fall back to anon to avoid hard crashes.
-    const keyToUse = serviceKey || anonKey
-    if (!keyToUse) {
-      console.error('❌ Missing Supabase keys (SUPABASE_SERVICE_ROLE_KEY and NEXT_PUBLIC_SUPABASE_ANON_KEY)')
-      // Return a mock client to prevent server crash
-      return createSupabaseClient(supabaseUrl, 'placeholder-key', {
-        auth: { autoRefreshToken: false, persistSession: false }
-      })
-    }
-
-    if (!serviceKey) {
-      console.warn('⚠️ SUPABASE_SERVICE_ROLE_KEY is missing. Falling back to anon key for server client.')
-    }
-
-    // Use the standard client for admin operations instead of server client
-    return createSupabaseClient(supabaseUrl, keyToUse, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    })
-  } catch (error) {
-    console.error('Fatal error in createAdminClient:', error)
-    // Return a mock client to prevent server crash
-    return createSupabaseClient('https://placeholder.supabase.co', 'fatal-error-key', {
-      auth: { autoRefreshToken: false, persistSession: false }
-    })
+  if (!supabaseUrl) {
+    throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL for admin client')
   }
+
+  if (!serviceKey) {
+    throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY for admin client')
+  }
+
+  return createSupabaseClient(supabaseUrl, serviceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  })
 }

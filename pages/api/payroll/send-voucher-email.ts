@@ -86,7 +86,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Validar credenciales SMTP
     const apiKey = process.env['RESEND_API_KEY'] || ''
-    const fromEmail = process.env.RESEND_FROM || 'noreply@cloudhr.hn'
+    const fromEmail = process.env.RESEND_FROM || 'jorgearturo@humanosisu.net'
     
     if (!apiKey) {
       console.error('❌ RESEND_API_KEY missing - no se puede enviar email')

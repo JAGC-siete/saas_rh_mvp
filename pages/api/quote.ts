@@ -391,7 +391,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
     const systemCompanyId = 'system-public-tool'
     const notificationConfig = await notificationManager.getConfigForCompany(systemCompanyId)
     const apiKey = notificationConfig?.emailProvider.apiKey || process.env.RESEND_API_KEY
-    const fromEmail = notificationConfig?.emailProvider.fromEmail || process.env.RESEND_FROM || 'noreply@humanosisu.net'
+    const fromEmail = notificationConfig?.emailProvider.fromEmail || process.env.RESEND_FROM || 'jorgearturo@humanosisu.net'
 
     if (!apiKey) {
       logger.error('RESEND_API_KEY no configurado (ventas)', { quoteId })

@@ -46,7 +46,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Failed to create user' })
     }
 
-    // The trigger will automatically create company, profile, and demo data
+    // Profile and company are created during onboarding (/onboarding)
     return res.status(201).json({
       message: 'User registered successfully',
       user: {

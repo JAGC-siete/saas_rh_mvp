@@ -205,7 +205,7 @@ async function sendReportHandler(
 
     // Determinar configuración de email
     const apiKey = notificationConfig?.emailProvider.apiKey || process.env.RESEND_API_KEY
-    const fromEmail = notificationConfig?.emailProvider.fromEmail || process.env.RESEND_FROM || 'noreply@humanosisu.net'
+    const fromEmail = notificationConfig?.emailProvider.fromEmail || process.env.RESEND_FROM || 'jorgearturo@humanosisu.net'
 
     if (!apiKey) {
       logger.error('RESEND_API_KEY no configurado')

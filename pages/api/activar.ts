@@ -952,7 +952,7 @@ async function enviarCorreoBienvenida(data: {
     `
 
     const result = await resend.emails.send({
-      from: process.env.RESEND_FROM || 'SISU <noreply@humanosisu.net>',
+      from: process.env.RESEND_FROM || 'SISU <jorgearturo@humanosisu.net>',
       to: data.email,
       subject: `🎉 ¡Bienvenido a SISU! - ${data.empresa}`,
       html: emailHtml
@@ -1209,7 +1209,7 @@ async function enviarEmailResumenRegistro(data: {
     `
 
     const result = await resend.emails.send({
-      from: process.env.RESEND_FROM || 'SISU <noreply@humanosisu.net>',
+      from: process.env.RESEND_FROM || 'SISU <jorgearturo@humanosisu.net>',
       to: emailDestino,
       subject: `📋 Nuevo Registro: ${data.empresa} - ${data.nombre}`,
       html: emailHtml,
