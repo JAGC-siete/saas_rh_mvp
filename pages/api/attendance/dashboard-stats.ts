@@ -32,7 +32,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('👥 PASO 1: Obteniendo empleados activos...')
     const { data: employees, error: empError } = await salaryClient
       .from('employees')
-      .select('id, name, employee_code, base_salary, department_id, status, team')
+      .select('id, name, employee_code, base_salary, department_id, status, team, attendance_required')
       .eq('company_id', companyId)
       .eq('status', 'active')
 
@@ -43,7 +43,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log('✅ Empleados obtenidos:', employees?.length || 0)
     console.log('📋 Ejemplos de empleados:', employees?.slice(0, 3).map((emp: any) => ({ name: emp.name, code: emp.employee_code })))
-    const totalEmployees = employees?.length || 0
+    const attendanceRequiredEmployees = (employees || []).filter(
+      (e: any) => e.attendance_required !== false
+    )
+    const totalEmployees = attendanceRequiredEmployees.length
+    const requiredEmployeeIds = new Set(attendanceRequiredEmployees.map((e: any) => e.id))
 
     // 2. Obtener registros de asistencia de hoy (filtrando por company_id a través de employees)
     console.log('📊 PASO 2: Obteniendo registros de asistencia de hoy...')
@@ -84,9 +88,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // 4. Calcular estadísticas del día
     console.log('🧮 PASO 4: Calculando estadísticas del día...')
-    const presentToday = todayAttendance?.length || 0
-    const absentToday = totalEmployees - presentToday
-    const lateToday = todayAttendance?.filter((r: any) => (r.late_minutes || 0) > 0).length || 0
+    const presentToday = (todayAttendance || []).filter(
+      (r: any) => requiredEmployeeIds.has(r.employee_id) && r.check_in
+    ).length
+    const absentToday = Math.max(0, totalEmployees - presentToday)
+    const lateToday = (todayAttendance || []).filter(
+      (r: any) => requiredEmployeeIds.has(r.employee_id) && (r.late_minutes || 0) > 0
+    ).length
     const onTimeToday = presentToday - lateToday
 
     console.log('📊 Estadísticas calculadas:', {
@@ -106,7 +114,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const dailyStats = [] as any[]
     for (let i = 6; i >= 0; i--) {
       const date = new Date(hondurasTime.getTime() - i * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-      const dayAttendance = weeklyAttendance?.filter((r: any) => r.date === date) || []
+      const dayAttendance = (weeklyAttendance?.filter((r: any) => r.date === date) || []).filter(
+        (r: any) => requiredEmployeeIds.has(r.employee_id)
+      )
       const attendanceRate = totalEmployees > 0 ? (dayAttendance.length / totalEmployees) * 100 : 0
       
       dailyStats.push({
@@ -125,6 +135,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log('🏢 PASO 6: Agrupando por departamento...')
     const departmentStats: Record<string, { present: number; total: number }> = {}
     employees?.forEach((emp: any) => {
+      if (emp.attendance_required === false) return
       const dept = emp.department_id || 'Sin Departamento'
       if (!departmentStats[dept]) {
         departmentStats[dept] = { present: 0, total: 0 }
@@ -145,7 +156,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const presentSet = new Set((todayAttendance || []).map((a: any) => a.employee_id))
 
     const absentList = (employees || [])
-      .filter((e: any) => e.status === 'active' && !presentSet.has(e.id))
+      .filter((e: any) => e.status === 'active' && e.attendance_required !== false && !presentSet.has(e.id))
       .map((e: any) => ({ id: e.id, name: e.name, team: e.team || null }))
 
     function parseExpectedToMinutes(t: string | null | undefined): number | null {

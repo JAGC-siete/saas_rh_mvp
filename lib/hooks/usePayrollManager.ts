@@ -473,6 +473,12 @@ export const usePayrollManager = () => {
           `${response.noAttendanceWarning.message} ${response.noAttendanceWarning.detail}`,
           10000
         )
+      } else if (response?.attendanceExemptSummary?.count) {
+        toast.warning(
+          'Exentos de asistencia',
+          response.attendanceExemptSummary.message,
+          8000
+        )
       } else if (response?.incompleteRecordsAlert?.length) {
         toast.warning(
           'Marcas incompletas detectadas',

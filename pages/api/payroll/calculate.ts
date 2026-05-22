@@ -24,6 +24,11 @@ import { calculateSeptimoDia } from '../../../lib/payroll/septimo-dia'
 import { HONDURAS_LABOR_FACTOR } from '../../../lib/payroll/constants'
 import { resolveEffectivePayType } from '../../../lib/payroll/resolve-effective-pay-type'
 import {
+  hasValidPayrollAttendanceRecords,
+  resolveFixedDaysWorkedForPayroll,
+  shouldIncludeEmployeeInPayrollPreview,
+} from '../../../lib/payroll/payroll-attendance-inclusion'
+import {
   calculateOvertimePayFromAhc,
   resolveCompanyPayOvertime,
   shouldPayOvertimeToEmployee
@@ -277,7 +282,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Obtener empleados activos (incluir pay_type para cálculo hourly)
     let employeesQuery = salaryClient
       .from('employees')
-      .select('id, name, dni, base_salary, bank_name, bank_account, status, department_id, pay_type')
+      .select('id, name, dni, base_salary, bank_name, bank_account, status, department_id, pay_type, attendance_required')
       .eq('status', 'active')
       .order('name')
 
@@ -337,24 +342,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    // Filtrar empleados según criterio de asistencia
+    const periodHasAttendanceRecords = (attendanceRecords?.length ?? 0) > 0
     let empleadosParaNomina = employees
     
-    if (tipoCalculo === 'con_asistencia') {
-      empleadosParaNomina = employees.filter((emp: any) =>
-        attendanceRecords.some((record: any) => 
-          record.employee_id === emp.id && 
-          record.check_in && 
+    if (periodHasAttendanceRecords) {
+      empleadosParaNomina = employees.filter((emp: any) => {
+        const empRecords = (attendanceRecords || []).filter(
+          (record: any) => record.employee_id === emp.id
+        )
+        const effectivePayType = resolveEffectivePayType(emp.pay_type, companyCalculationMode)
+        if (effectivePayType === 'hourly') {
+          return shouldIncludeEmployeeInPayrollPreview(
+            emp.attendance_required,
+            effectivePayType,
+            hasValidPayrollAttendanceRecords(empRecords),
+            periodHasAttendanceRecords
+          )
+        }
+        if (emp.attendance_required === false) return true
+        const requiresComplete = empRecords.some((record: any) =>
+          record.check_in &&
           record.check_out &&
-          record.status !== 'absent')
-      )
-    } else {
-      empleadosParaNomina = employees.filter((emp: any) =>
-        attendanceRecords.some((record: any) => 
-          record.employee_id === emp.id && 
-          record.check_in && 
-          record.check_out)
-      )
+          (tipoCalculo !== 'con_asistencia' || record.status !== 'absent')
+        )
+        return requiresComplete
+      })
     }
 
     if (empleadosParaNomina.length === 0) {
@@ -373,12 +385,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         record.check_in && 
         record.check_out)
       
-      const days_worked = registros.length
+      const effectivePayType = resolveEffectivePayType(emp.pay_type, companyCalculationMode)
+      const fixedDays = resolveFixedDaysWorkedForPayroll(
+        effectivePayType,
+        emp.attendance_required,
+        registros.length,
+        diasPeriodo
+      )
+      const days_worked =
+        effectivePayType === 'fixed' ? fixedDays.daysWorked : registros.length
       const days_absent = diasPeriodo - days_worked
       const late_days = calcularTardanzas(registros)
       
       const base_salary = Number(emp.base_salary) || 0
-      const effectivePayType = resolveEffectivePayType(emp.pay_type, companyCalculationMode)
       // base_salary siempre mensual. Tarifa horaria = base_salary / 240.
       const hourlyRate = base_salary / HONDURAS_LABOR_FACTOR
 

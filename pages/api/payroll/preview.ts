@@ -27,6 +27,11 @@ import { buildAuthorizedPayrollPreviewPayload } from '../../../lib/payroll/previ
 import { calculateEmployerContributions } from '../../../lib/payroll/employer-contributions'
 import { resolveEffectivePayType } from '../../../lib/payroll/resolve-effective-pay-type'
 import {
+  hasValidPayrollAttendanceRecords,
+  resolveFixedDaysWorkedForPayroll,
+  shouldIncludeEmployeeInPayrollPreview,
+} from '../../../lib/payroll/payroll-attendance-inclusion'
+import {
   resolveCompanyPayOvertime,
   shouldPayOvertimeToEmployee
 } from '../../../lib/payroll/overtime-pay'
@@ -313,7 +318,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { data: employees, error: empError } = await salaryClient
       .from('employees')
       .select(`
-        id, name, dni, base_salary, bank_name, bank_account, status, department_id, pay_type, work_schedule_id, position, role,
+        id, name, dni, base_salary, bank_name, bank_account, status, department_id, pay_type, attendance_required, work_schedule_id, position, role,
         departments:department_id(name),
         work_schedules:work_schedule_id(monday_start, tuesday_start, wednesday_start, thursday_start, friday_start, saturday_start, sunday_start)
       `)
@@ -472,61 +477,38 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     console.log('🔍 DEBUG - Total empleados activos antes del filtro:', employees.length)
     console.log('🔍 DEBUG - IDs de empleados activos:', employees.map((e: any) => ({ id: e.id, name: e.name, pay_type: e.pay_type })))
 
-    // Filtrar empleados según criterio de asistencia (diferente por pay_type)
+    // Filtrar empleados según criterio de asistencia (pay_type + attendance_required)
     let empleadosParaNomina = employees
     let noAttendanceWarning = null
+    const periodHasAttendanceRecords = attendanceRecords.length > 0
+    const attendanceExemptIncluded: { employee_id: string; employee_name: string }[] = []
     
-    // Si hay registros de asistencia, filtrar según tipo de pago
-    if (attendanceRecords.length > 0) {
+    if (periodHasAttendanceRecords) {
       empleadosParaNomina = employees.filter((emp: any) => {
-        // Buscar TODOS los registros del empleado (sin filtrar por check_in todavía)
         const allEmpRecords = attendanceRecords.filter((record: any) => 
           record.employee_id === emp.id
-        );
-        
-        console.log(`🔍 DEBUG - Empleado ${emp.name} (${emp.id}):`, {
-          pay_type: emp.pay_type,
-          totalRecords: allEmpRecords.length,
-          records: allEmpRecords.map((r: any) => ({
-            date: r.date,
-            check_in: r.check_in,
-            check_out: r.check_out,
-            status: r.status
-          }))
-        });
-        
-        // Filtrar registros válidos (con check_in y no ausentes)
-        const empRecords = allEmpRecords.filter((record: any) => 
-          record.check_in &&
-          record.status !== 'absent'
-        );
-
-        if (empRecords.length === 0) {
-          console.log(`❌ DEBUG - Empleado ${emp.name} rechazado: sin registros válidos`)
-          return false;
-        }
-
-        // Resolución: employees.pay_type > company calculation_mode
+        )
+        const hasValidRecord = hasValidPayrollAttendanceRecords(allEmpRecords)
         const effectivePayType = resolveEffectivePayType(emp.pay_type, companyCalculationMode)
+        const include = shouldIncludeEmployeeInPayrollPreview(
+          emp.attendance_required,
+          effectivePayType,
+          hasValidRecord,
+          periodHasAttendanceRecords
+        )
 
-        if (effectivePayType === 'fixed') {
-          // Administrativos: requieren check_in (check_out opcional para MVP)
-          // Aceptar si tiene al menos check_in
-          const hasValidRecord = empRecords.some((record: any) => record.check_in);
-          console.log(`✅ DEBUG - Empleado ${emp.name} (fixed): ${hasValidRecord ? 'ACEPTADO' : 'RECHAZADO'}`)
-          return hasValidRecord;
-        } else if (effectivePayType === 'hourly') {
-          // Por hora: aceptar si tiene check_in (completo o incompleto; los incompletos se alertan)
-          const hasValidRecord = empRecords.some((record: any) => record.check_in);
-          console.log(`✅ DEBUG - Empleado ${emp.name} (hourly): ${hasValidRecord ? 'ACEPTADO' : 'RECHAZADO'}`)
-          return hasValidRecord;
+        if (include && effectivePayType === 'fixed' && emp.attendance_required === false && !hasValidRecord) {
+          attendanceExemptIncluded.push({
+            employee_id: emp.id,
+            employee_name: emp.name || 'Sin nombre',
+          })
         }
 
-        // Default: aceptar si tiene check_in
-        const hasValidRecord = empRecords.some((record: any) => record.check_in);
-        console.log(`✅ DEBUG - Empleado ${emp.name} (default): ${hasValidRecord ? 'ACEPTADO' : 'RECHAZADO'}`)
-        return hasValidRecord;
-      });
+        if (!include) {
+          console.log(`❌ DEBUG - Empleado ${emp.name} rechazado: sin registros válidos (requiere asistencia)`)
+        }
+        return include
+      })
     } else {
       // Si no hay registros de asistencia, incluir todos los empleados activos
       empleadosParaNomina = employees
@@ -740,7 +722,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           continue
         }
 
-        const days_worked = registros.length > 0 ? registros.length : diasPeriodo
+        const { daysWorked: days_worked, includedWithoutAttendance } = resolveFixedDaysWorkedForPayroll(
+          effectivePayType,
+          emp.attendance_required,
+          registros.length,
+          diasPeriodo
+        )
         const days_absent = diasPeriodo - days_worked
 
         // Capa 3: Días Extra/Especial (festivo o descanso con asistencia)
@@ -845,7 +832,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
                 days_extra,
                 notes_extra: `${days_extra} día(s) Extra/Especial (festivo/descanso)`
               }
-            : {})
+            : {}),
+          ...(includedWithoutAttendance ? { included_without_attendance: true } : {}),
         })
 
         // Insertar línea en payroll_run_lines
@@ -917,7 +905,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           total: Math.round(total * 100) / 100,
           line_id: insertedLine.id,
           pay_type: 'fixed',
-          metadata: lineMetadata
+          metadata: lineMetadata,
+          included_without_attendance: includedWithoutAttendance || undefined,
         })
         
       } else {
@@ -1260,6 +1249,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       planilla: [...planilla_fixed, ...planilla_hourly],
       warning: isRegeneration ? 'Ya existía un registro generado para el período seleccionado. Esta acción actualizó el registro.' : null,
       noAttendanceWarning,
+      attendanceExemptSummary:
+        attendanceExemptIncluded.length > 0
+          ? {
+              count: attendanceExemptIncluded.length,
+              employees: attendanceExemptIncluded,
+              message: `${attendanceExemptIncluded.length} empleado(s) administrativo(s) incluido(s) sin asistencia (exento de checada).`,
+            }
+          : undefined,
       incompleteRecordsAlert: incompleteRecordsAlert.length > 0 ? incompleteRecordsAlert : undefined
     })
 

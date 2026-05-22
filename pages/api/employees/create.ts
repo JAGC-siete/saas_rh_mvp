@@ -11,6 +11,7 @@ import {
 } from '../../../lib/employees/termination-reasons'
 import { resolveFieldAccessContext } from '../../../lib/security/field-access'
 import { shapeEmployee, validateCreateSalaryRequirement } from '../../../lib/security/shape-employee'
+import { parseAttendanceRequiredInput } from '../../../lib/payroll/payroll-attendance-inclusion'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -62,6 +63,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       work_schedule_id,
       base_salary,
       payment_frequency,
+      pay_type,
+      attendance_required,
       hire_date,
       termination_date,
       termination_reason_code,
@@ -120,6 +123,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       work_schedule_id: work_schedule_id || null,
       base_salary: typeof base_salary === 'string' ? parseFloat(base_salary) : base_salary,
       payment_frequency: (payment_frequency === 'quincenal' || payment_frequency === 'mensual' || payment_frequency === 'semanal') ? payment_frequency : null,
+      pay_type: pay_type === 'fixed' || pay_type === 'hourly' ? pay_type : null,
+      attendance_required:
+        pay_type === 'hourly'
+          ? true
+          : parseAttendanceRequiredInput(attendance_required),
       hire_date: hire_date || null,
       termination_date: termination_date || null,
       termination_reason_code:

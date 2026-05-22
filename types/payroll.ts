@@ -54,6 +54,11 @@ export interface PreviewResponse {
     detail: string;
     action: string;
   } | null;
+  attendanceExemptSummary?: {
+    count: number;
+    employees: { employee_id: string; employee_name: string }[];
+    message: string;
+  };
 }
 
 export interface EditRequest {

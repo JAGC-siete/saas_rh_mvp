@@ -48,6 +48,7 @@ const INITIAL_FORM_DATA = {
   work_schedule_id: '',
   base_salary: '',
   pay_type: '', // vacío = default de empresa (hereda calculation_mode)
+  attendance_required: true,
   payment_frequency: '', // vacío = usa default de empresa (Capa 2)
   hire_date: '',
   termination_date: '',
@@ -461,6 +462,19 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
           sanitizedFormData.pay_type = 'fixed'
         }
       }
+      const resolvedPayForAttendance =
+        sanitizedFormData.pay_type === 'hourly'
+          ? 'hourly'
+          : sanitizedFormData.pay_type === 'fixed'
+            ? 'fixed'
+            : companyCalculationMode === 'hourly'
+              ? 'hourly'
+              : 'fixed'
+      if (resolvedPayForAttendance === 'hourly') {
+        sanitizedFormData.attendance_required = true
+      } else {
+        sanitizedFormData.attendance_required = sanitizedFormData.attendance_required !== false
+      }
       // payment_frequency: vacío = usa default de empresa (Capa 2)
       if (typeof sanitizedFormData.payment_frequency === 'string') {
         const pf = sanitizedFormData.payment_frequency.trim()
@@ -536,6 +550,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
     resetForm,
     fetchEmployees,
     canEditSalary,
+    companyCalculationMode,
   ])
 
   const handleCancel = useCallback(() => {
@@ -561,6 +576,7 @@ export default function EmployeeManager({ companyId: propCompanyId }: { companyI
         ? employee.base_salary.toString()
         : '',
       pay_type: (employee as any).pay_type ?? '',
+      attendance_required: (employee as any).attendance_required !== false,
       payment_frequency: (employee as any).payment_frequency || '',
       hire_date: employee.hire_date || '',
       termination_date: employee.termination_date || '',

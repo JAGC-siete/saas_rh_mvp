@@ -13,6 +13,7 @@ import {
   buildEmployeeWritePayload,
   shapeEmployee,
 } from '../../../lib/security/shape-employee'
+import { parseAttendanceRequiredInput } from '../../../lib/payroll/payroll-attendance-inclusion'
 
 /** Solo columnas permitidas vía API (evita mass-assignment). */
 const ALLOWED_UPDATE_KEYS = new Set([
@@ -38,6 +39,7 @@ const ALLOWED_UPDATE_KEYS = new Set([
   'payment_frequency',
   'pay_type',
   'quincena_config',
+  'attendance_required',
   'termination_reason_code',
   'termination_reason_detail'
 ])
@@ -107,7 +109,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { data: existing, error: fetchErr } = await supabase
       .from('employees')
-      .select('id, company_id, status, termination_reason_code')
+      .select('id, company_id, status, termination_reason_code, pay_type')
       .eq('id', employeeId)
       .single()
 
@@ -168,6 +170,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           message: "pay_type debe ser 'fixed', 'hourly' o null (default de la empresa)."
         })
       }
+    }
+
+    if ('attendance_required' in updateData) {
+      updateData.attendance_required = parseAttendanceRequiredInput(updateData.attendance_required)
+    }
+
+    const effectivePayTypeForAttendance =
+      updateData.pay_type !== undefined
+        ? (updateData.pay_type as string | null)
+        : (existing as { pay_type?: string | null }).pay_type
+    if (effectivePayTypeForAttendance === 'hourly') {
+      updateData.attendance_required = true
     }
 
     const existingStatus = (existing.status as string) || 'active'

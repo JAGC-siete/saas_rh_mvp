@@ -307,6 +307,35 @@ function AddEmployeeForm({
                 </p>
               </div>
 
+              {resolvedPayType === 'fixed' && (
+                <div className="md:col-span-2 rounded-lg border border-white/15 bg-white/5 p-4">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      id="attendance_required"
+                      name="attendance_required"
+                      disabled={loading}
+                      checked={formData?.attendance_required !== false}
+                      onChange={(e) => onFormChange('attendance_required', e.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-white/30 bg-white/10 text-brand-500 focus:ring-brand-500"
+                    />
+                    <span>
+                      <span className="block text-sm font-medium text-white">Control de asistencia</span>
+                      <span className="block text-xs text-gray-400 mt-1">
+                        Activado: debe registrar asistencia para la nómina (días con check-in).
+                        Desactivado: exento de checada — se paga el período completo sin marcas.
+                      </span>
+                    </span>
+                  </label>
+                </div>
+              )}
+
+              {resolvedPayType === 'hourly' && (
+                <div className="md:col-span-2 text-xs text-gray-400">
+                  Empleados por hora siempre requieren control de asistencia. Sin marcas en el período aparecen con 0 horas en la nómina para que pueda ajustarlas manualmente.
+                </div>
+              )}
+
               {canEditSalary && (
               <div>
                 <label className="block text-sm font-medium text-white mb-1" htmlFor="base_salary">
