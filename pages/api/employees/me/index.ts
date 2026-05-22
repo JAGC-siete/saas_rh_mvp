@@ -67,7 +67,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!(await assertEmployeePortalEnabled(supabase, ctx.companyId, res))) {
       return
     }
-    const { employeeId } = ctx
+    const { employeeId, companyId } = ctx
+    if (!companyId) {
+      return res.status(401).json({ error: 'Empresa no encontrada' })
+    }
 
     // Get detailed employee information (RLS will filter automatically)
     const { data: employeeDetails, error: detailsError } = await supabase
@@ -117,7 +120,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const admin = createAdminClient()
     const effectiveLoaded = await loadEffectiveWorkSchedule({
       supabase: admin,
-      companyId: ctx.companyId,
+      companyId,
       employeeId,
       date: getTodayInHonduras(),
       fallbackWorkScheduleId: employeeDetails.work_schedule_id,

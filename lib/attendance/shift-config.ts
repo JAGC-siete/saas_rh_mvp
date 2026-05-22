@@ -101,14 +101,21 @@ export type ScheduleToleranceFields = {
   early_absent_minutes?: number | null
 }
 
-export const DEFAULT_SCHEDULE_TOLERANCE: Required<ScheduleToleranceFields> = {
+export type ScheduleToleranceValues = {
+  late_grace_minutes: number
+  late_absent_minutes: number
+  early_grace_minutes: number
+  early_absent_minutes: number
+}
+
+export const DEFAULT_SCHEDULE_TOLERANCE: ScheduleToleranceValues = {
   late_grace_minutes: 5,
   late_absent_minutes: 60,
   early_grace_minutes: 5,
   early_absent_minutes: 60,
 }
 
-function toleranceFromRow(row: ScheduleToleranceFields): Required<ScheduleToleranceFields> {
+function toleranceFromRow(row: ScheduleToleranceFields): ScheduleToleranceValues {
   return {
     late_grace_minutes: row.late_grace_minutes ?? DEFAULT_SCHEDULE_TOLERANCE.late_grace_minutes,
     late_absent_minutes: row.late_absent_minutes ?? DEFAULT_SCHEDULE_TOLERANCE.late_absent_minutes,
@@ -286,7 +293,7 @@ export function legacyScheduleToShiftConfig(row: LegacyScheduleColumns): WeekShi
 }
 
 export function shiftConfigToFormState(
-  row: LegacyScheduleColumns & ScheduleToleranceFields & { name?: string; timezone?: string },
+  row: LegacyScheduleColumns & ScheduleToleranceFields & { name?: string; timezone?: string | null },
   base?: ScheduleEditorFormState
 ): ScheduleEditorFormState {
   const config = legacyScheduleToShiftConfig(row)

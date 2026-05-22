@@ -17,6 +17,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Employee ID is required' })
     }
 
+    if (!companyId) {
+      return res.status(400).json({ error: 'Company ID is required' })
+    }
+
     const range = typeof from === 'string' && typeof to === 'string'
       ? { from, to }
       : getDateRange(preset as string)
