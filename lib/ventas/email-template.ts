@@ -34,6 +34,9 @@ export function generateVentasQuotationEmailHTML(params: {
 }) {
   const { quote, contactName, companyName, countryLabel, sentAt = new Date() } = params
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net').replace(/\/$/, '')
+  const supportWhatsAppUrl = `https://api.whatsapp.com/send/?phone=50432226773&text=${encodeURIComponent(
+    'Hola Jorge, me interesa la solución de Humano SISU y quisiera más información.'
+  )}`
   const salesWhatsApp = (process.env.NEXT_PUBLIC_SALES_WHATSAPP || '').trim()
   const waNumber = salesWhatsApp.replace(/[^\d]/g, '')
   const waText = encodeURIComponent(
@@ -157,6 +160,12 @@ export function generateVentasQuotationEmailHTML(params: {
              </div>`
           : ''
       }
+
+      <div style="text-align: center; margin: 20px 0;">
+        <a href="${supportWhatsAppUrl}" style="display: inline-block; padding: 12px 24px; background-color: #25D366; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: bold; font-family: Arial, sans-serif;">
+          💬 Contactar vía WhatsApp
+        </a>
+      </div>
     </div>
   `
 }

@@ -21,7 +21,10 @@ export interface DeductionEmailData {
  */
 export function generateDeductionEmailHTML(data: DeductionEmailData): string {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net'
-  
+  const supportWhatsAppUrl = `https://api.whatsapp.com/send/?phone=50432226773&text=${encodeURIComponent(
+    'Hola Jorge, tengo una consulta sobre la validación de deducciones de mi nómina.'
+  )}`
+
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
       <div style="background: linear-gradient(135deg, #0b4fa1 0%, #1976d2 100%); padding: 30px; text-align: center; color: white; border-radius: 8px 8px 0 0;">
@@ -86,6 +89,12 @@ export function generateDeductionEmailHTML(data: DeductionEmailData): string {
           Si tiene alguna pregunta, no dude en contactarnos.<br>
           <strong>Humano SISU</strong> — RRHH y nómina regional (El Salvador, Guatemala y Honduras)
         </p>
+
+        <div style="text-align: center; margin: 20px 0;">
+          <a href="${supportWhatsAppUrl}" style="display: inline-block; padding: 12px 24px; background-color: #25D366; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: bold; font-family: Arial, sans-serif;">
+            💬 Contactar vía WhatsApp
+          </a>
+        </div>
       </div>
       
       <div style="background: #333; padding: 20px; text-align: center; color: #999; font-size: 12px; border-radius: 8px; margin-top: 20px;">
@@ -104,4 +113,3 @@ export function generateDeductionEmailHTML(data: DeductionEmailData): string {
 export function generateDeductionEmailSubject(year: number): string {
   return `Reporte de Deducciones de Nómina - ${year} - Humano SISU`
 }
-

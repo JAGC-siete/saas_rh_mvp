@@ -26,6 +26,9 @@ export function generatePrestacionesEmailSubject(): string {
 
 export function generatePrestacionesEmailHTML(data: PrestacionesEmailData): string {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net'
+  const supportWhatsAppUrl = `https://api.whatsapp.com/send/?phone=50432226773&text=${encodeURIComponent(
+    'Hola Jorge, revisé mi cálculo de prestaciones laborales y tengo una pregunta.'
+  )}`
   const fmt = (n: number) => `L. ${Number(n || 0).toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
   return `
@@ -97,8 +100,13 @@ export function generatePrestacionesEmailHTML(data: PrestacionesEmailData): stri
         <p style="color: #666; font-size: 13px; margin-top: 18px;">
           Humano SISU — RRHH y nómina regional (HN, SV, GT)
         </p>
+
+        <div style="text-align: center; margin: 20px 0;">
+          <a href="${supportWhatsAppUrl}" style="display: inline-block; padding: 12px 24px; background-color: #25D366; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: bold; font-family: Arial, sans-serif;">
+            💬 Contactar vía WhatsApp
+          </a>
+        </div>
       </div>
     </div>
   `
 }
-
