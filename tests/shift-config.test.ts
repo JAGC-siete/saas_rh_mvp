@@ -2,7 +2,9 @@ import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
+  applyDayBooleanState,
   buildSchedulePayload,
+  dayFormStateToUiConfig,
   computeExpectedMinutesForDay,
   computeDayOffMask,
   createDefaultScheduleFormState,
@@ -35,7 +37,7 @@ describe('shift-config', () => {
     const form = createDefaultScheduleFormState()
     form.days.tuesday = {
       ...form.days.tuesday,
-      isSplit: true,
+      is_split_shift: true,
       m_start: '11:00',
       m_end: '14:00',
       a_start: '18:00',
@@ -89,7 +91,7 @@ describe('shift-config', () => {
 
   it('syncs legacy columns for backward compatibility', () => {
     const form = createDefaultScheduleFormState()
-    form.days.monday.isSplit = true
+    form.days.monday.is_split_shift = true
     form.days.monday.m_start = '08:00'
     form.days.monday.m_end = '12:00'
     form.days.monday.a_start = '13:00'
@@ -140,10 +142,30 @@ describe('shift-config', () => {
     assert.equal(config.saturday?.type, 'off')
   })
 
+  it('forces is_split_shift false when is_day_off is true', () => {
+    const day = createDefaultScheduleFormState().days.tuesday
+    const splitDay = applyDayBooleanState(day, { is_split_shift: true })
+    assert.equal(splitDay.is_split_shift, true)
+
+    const dayOff = applyDayBooleanState(splitDay, { is_day_off: true })
+    assert.equal(dayOff.is_day_off, true)
+    assert.equal(dayOff.is_split_shift, false)
+  })
+
+  it('serializes day UI config JSON shape', () => {
+    const form = createDefaultScheduleFormState()
+    form.days.tuesday.is_split_shift = true
+    assert.deepEqual(dayFormStateToUiConfig('tuesday', form.days.tuesday), {
+      day: 'Martes',
+      is_day_off: false,
+      is_split_shift: true,
+    })
+  })
+
   it('validates split shift afternoon after morning', () => {
     const form = createDefaultScheduleFormState()
     form.name = 'Test'
-    form.days.monday.isSplit = true
+    form.days.monday.is_split_shift = true
     form.days.monday.m_end = '14:00'
     form.days.monday.a_start = '13:00'
     assert.match(validateScheduleForm(form) ?? '', /tarde/)

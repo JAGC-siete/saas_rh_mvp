@@ -15,6 +15,17 @@ export const DAY_KEYS = [
 
 export type DayKey = (typeof DAY_KEYS)[number]
 
+/** Spanish labels for UI / JSON `day` field */
+export const DAY_LABELS_ES: Record<DayKey, string> = {
+  monday: 'Lunes',
+  tuesday: 'Martes',
+  wednesday: 'Miércoles',
+  thursday: 'Jueves',
+  friday: 'Viernes',
+  saturday: 'Sábado',
+  sunday: 'Domingo',
+}
+
 /** 0 = Sunday … 6 = Saturday (matches JS Date.getUTCDay) */
 export const DOW_TO_DAY_KEY: readonly DayKey[] = [
   'sunday',
@@ -71,15 +82,28 @@ export type LegacyScheduleColumns = {
   day_off_mask?: number | null
 }
 
+/** Per-day UI state booleans (mirrors JSON sent to/from the editor). */
+export type DayUiConfig = {
+  day: string
+  is_day_off: boolean
+  is_split_shift: boolean
+}
+
 export type DayFormState = {
-  isOff: boolean
-  isSplit: boolean
+  is_day_off: boolean
+  is_split_shift: boolean
+  /** Entrada 1 (jornada continua) */
   start: string
+  /** Salida 1 (jornada continua) */
   end: string
   breakMinutes: string
+  /** Entrada 1 (turno partido) */
   m_start: string
+  /** Salida 1 (turno partido) */
   m_end: string
+  /** Entrada 2 (turno partido) */
   a_start: string
+  /** Salida 2 (turno partido) */
   a_end: string
 }
 
@@ -131,8 +155,8 @@ const DEFAULT_CONTINUOUS: Pick<DayFormState, 'start' | 'end'> = {
 
 export function createDefaultDayFormState(overrides?: Partial<DayFormState>): DayFormState {
   return {
-    isOff: false,
-    isSplit: false,
+    is_day_off: false,
+    is_split_shift: false,
     start: DEFAULT_CONTINUOUS.start,
     end: DEFAULT_CONTINUOUS.end,
     breakMinutes: '',
@@ -144,11 +168,38 @@ export function createDefaultDayFormState(overrides?: Partial<DayFormState>): Da
   }
 }
 
+/** JSON representation of a day row in the schedule editor UI. */
+export function dayFormStateToUiConfig(dayKey: DayKey, day: DayFormState): DayUiConfig {
+  return {
+    day: DAY_LABELS_ES[dayKey],
+    is_day_off: day.is_day_off,
+    is_split_shift: day.is_split_shift,
+  }
+}
+
+/**
+ * Apply boolean toggles with partial mutual exclusion:
+ * if is_day_off is true, is_split_shift is forced to false.
+ */
+export function applyDayBooleanState(
+  day: DayFormState,
+  patch: Partial<Pick<DayUiConfig, 'is_day_off' | 'is_split_shift'>>
+): DayFormState {
+  const is_day_off = patch.is_day_off ?? day.is_day_off
+  let is_split_shift = patch.is_split_shift ?? day.is_split_shift
+
+  if (is_day_off) {
+    is_split_shift = false
+  }
+
+  return { ...day, is_day_off, is_split_shift }
+}
+
 export function createDefaultScheduleFormState(): ScheduleEditorFormState {
   const days = {} as Record<DayKey, DayFormState>
   for (const key of DAY_KEYS) {
     if (key === 'saturday' || key === 'sunday') {
-      days[key] = createDefaultDayFormState({ isOff: true, start: '', end: '' })
+      days[key] = createDefaultDayFormState({ is_day_off: true, start: '', end: '' })
     } else {
       days[key] = createDefaultDayFormState()
     }
@@ -210,8 +261,8 @@ export function isDayOffMask(mask: number, dow: number): boolean {
 }
 
 export function dayFormToConfig(day: DayFormState, globalBreak: number): ShiftDayConfig {
-  if (day.isOff) return { type: 'off' }
-  if (day.isSplit) {
+  if (day.is_day_off) return { type: 'off' }
+  if (day.is_split_shift) {
     return {
       type: 'split',
       m_start: normalizeTimeValue(day.m_start),
@@ -307,12 +358,12 @@ export function shiftConfigToFormState(
   for (const key of DAY_KEYS) {
     const day = config[key]
     if (!day || day.type === 'off') {
-      form.days[key] = createDefaultDayFormState({ isOff: true, start: '', end: '' })
+      form.days[key] = createDefaultDayFormState({ is_day_off: true, start: '', end: '' })
       continue
     }
     if (day.type === 'split') {
       form.days[key] = createDefaultDayFormState({
-        isSplit: true,
+        is_split_shift: true,
         m_start: day.m_start,
         m_end: day.m_end,
         a_start: day.a_start,
@@ -411,9 +462,9 @@ export function validateScheduleForm(form: ScheduleEditorFormState): string | nu
   for (const key of DAY_KEYS) {
     const day = form.days[key]
     const label = key.charAt(0).toUpperCase() + key.slice(1)
-    if (day.isOff) continue
+    if (day.is_day_off) continue
 
-    if (day.isSplit) {
+    if (day.is_split_shift) {
       const fields = [day.m_start, day.m_end, day.a_start, day.a_end]
       if (fields.some((f) => !normalizeTimeValue(f))) {
         return `${label}: complete las 4 horas del turno partido.`

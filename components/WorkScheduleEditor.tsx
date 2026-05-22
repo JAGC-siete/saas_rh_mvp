@@ -1,5 +1,7 @@
 import {
   DAY_KEYS,
+  DAY_LABELS_ES,
+  applyDayBooleanState,
   type DayKey,
   type LegacyScheduleColumns,
   type ScheduleEditorFormState,
@@ -10,18 +12,9 @@ import {
   validateScheduleForm,
   weekFormToShiftConfig,
 } from '../lib/attendance/shift-config'
+import { cn } from '../lib/utils'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
-
-const DAY_LABELS: Record<DayKey, string> = {
-  monday: 'Lunes',
-  tuesday: 'Martes',
-  wednesday: 'Miércoles',
-  thursday: 'Jueves',
-  friday: 'Viernes',
-  saturday: 'Sábado',
-  sunday: 'Domingo',
-}
 
 type WorkScheduleEditorProps = {
   form: ScheduleEditorFormState
@@ -44,6 +37,59 @@ function updateDay(
       [dayKey]: { ...form.days[dayKey], ...patch },
     },
   }
+}
+
+function updateDayBooleans(
+  form: ScheduleEditorFormState,
+  dayKey: DayKey,
+  patch: Parameters<typeof applyDayBooleanState>[1]
+): ScheduleEditorFormState {
+  return updateDay(form, dayKey, applyDayBooleanState(form.days[dayKey], patch))
+}
+
+type BooleanToggleProps = {
+  value: boolean
+  onChange: (value: boolean) => void
+  disabled?: boolean
+  ariaLabel: string
+}
+
+function BooleanToggle({ value, onChange, disabled = false, ariaLabel }: BooleanToggleProps) {
+  return (
+    <div
+      role="group"
+      aria-label={ariaLabel}
+      className={cn(
+        'inline-flex rounded-md border border-white/20 overflow-hidden',
+        disabled && 'opacity-40 pointer-events-none'
+      )}
+    >
+      <button
+        type="button"
+        aria-pressed={!value}
+        disabled={disabled}
+        onClick={() => onChange(false)}
+        className={cn(
+          'px-2.5 py-1 text-xs font-medium transition-colors min-w-[2.5rem]',
+          !value ? 'bg-brand-600 text-white' : 'text-gray-300 hover:bg-white/5'
+        )}
+      >
+        No
+      </button>
+      <button
+        type="button"
+        aria-pressed={value}
+        disabled={disabled}
+        onClick={() => onChange(true)}
+        className={cn(
+          'px-2.5 py-1 text-xs font-medium transition-colors min-w-[2.5rem] border-l border-white/20',
+          value ? 'bg-brand-600 text-white' : 'text-gray-300 hover:bg-white/5'
+        )}
+      >
+        Sí
+      </button>
+    </div>
+  )
 }
 
 export function scheduleFromRow(row: LegacyScheduleColumns & { name?: string; timezone?: string | null }): ScheduleEditorFormState {
@@ -107,7 +153,7 @@ export default function WorkScheduleEditor({
         <div className="glass p-4 rounded-lg border border-white/10 space-y-4">
           {DAY_KEYS.map((dayKey) => {
             const day = form.days[dayKey]
-            const disabled = day.isOff
+            const { is_day_off, is_split_shift } = day
 
             return (
               <div
@@ -116,45 +162,35 @@ export default function WorkScheduleEditor({
               >
                 <span className="text-sm font-medium text-white flex items-center pt-2">
                   <span className="w-2 h-2 rounded-full bg-brand-400 mr-2 shrink-0" />
-                  {DAY_LABELS[dayKey]}
+                  {DAY_LABELS_ES[dayKey]}
                 </span>
 
-                <label className="flex items-center gap-2 text-sm text-gray-200 pt-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={day.isOff}
-                    onChange={(e) => {
-                      const isOff = e.target.checked
-                      onChange(
-                        updateDay(form, dayKey, {
-                          isOff,
-                          isSplit: isOff ? false : day.isSplit,
-                        })
-                      )
-                    }}
-                    className="h-4 w-4"
+                <div className="flex flex-col gap-1 pt-2">
+                  <BooleanToggle
+                    ariaLabel={`Día libre — ${DAY_LABELS_ES[dayKey]}`}
+                    value={is_day_off}
+                    onChange={(is_day_off) => onChange(updateDayBooleans(form, dayKey, { is_day_off }))}
                   />
-                  <span className="md:hidden text-xs text-gray-400">Libre</span>
-                </label>
+                  <span className="md:hidden text-xs text-gray-400">Día libre</span>
+                </div>
 
-                <label className="flex items-center gap-2 text-sm text-gray-200 pt-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={day.isSplit}
-                    disabled={disabled}
-                    onChange={(e) => onChange(updateDay(form, dayKey, { isSplit: e.target.checked }))}
-                    className="h-4 w-4 disabled:opacity-40"
+                <div className="flex flex-col gap-1 pt-2">
+                  <BooleanToggle
+                    ariaLabel={`Turno partido — ${DAY_LABELS_ES[dayKey]}`}
+                    value={is_split_shift}
+                    disabled={is_day_off}
+                    onChange={(is_split_shift) => onChange(updateDayBooleans(form, dayKey, { is_split_shift }))}
                   />
-                  <span className="md:hidden text-xs text-gray-400">Partido</span>
-                </label>
+                  <span className="md:hidden text-xs text-gray-400">Turno partido</span>
+                </div>
 
                 <div className="space-y-2">
-                  {disabled ? (
+                  {is_day_off ? (
                     <p className="text-sm text-gray-400 italic pt-2">Día libre — sin horario laboral</p>
-                  ) : day.isSplit ? (
+                  ) : is_split_shift ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                       <label className="text-xs text-gray-300">
-                        Entrada mañana
+                        Entrada 1
                         <Input
                           type="time"
                           value={day.m_start}
@@ -163,7 +199,7 @@ export default function WorkScheduleEditor({
                         />
                       </label>
                       <label className="text-xs text-gray-300">
-                        Salida mañana
+                        Salida 1
                         <Input
                           type="time"
                           value={day.m_end}
@@ -172,7 +208,7 @@ export default function WorkScheduleEditor({
                         />
                       </label>
                       <label className="text-xs text-gray-300">
-                        Entrada tarde
+                        Entrada 2
                         <Input
                           type="time"
                           value={day.a_start}
@@ -181,7 +217,7 @@ export default function WorkScheduleEditor({
                         />
                       </label>
                       <label className="text-xs text-gray-300">
-                        Salida tarde
+                        Salida 2
                         <Input
                           type="time"
                           value={day.a_end}
@@ -193,7 +229,7 @@ export default function WorkScheduleEditor({
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       <label className="text-xs text-gray-300">
-                        Entrada
+                        Entrada 1
                         <Input
                           type="time"
                           value={day.start}
@@ -202,7 +238,7 @@ export default function WorkScheduleEditor({
                         />
                       </label>
                       <label className="text-xs text-gray-300">
-                        Salida
+                        Salida 1
                         <Input
                           type="time"
                           value={day.end}
@@ -254,11 +290,11 @@ export function WorkScheduleCardSummary({ schedule }: { schedule: LegacySchedule
     <div className="space-y-2 pt-3 border-t border-white/10">
       {DAY_KEYS.map((key) => {
         const summary = formatDayConfigSummary(config[key])
-        const isOff = config[key]?.type === 'off'
+        const isDayOff = config[key]?.type === 'off'
         return (
           <div key={key} className="flex justify-between items-start gap-3 py-1">
-            <span className="text-sm text-gray-300 font-medium shrink-0">{DAY_LABELS[key]}</span>
-            <span className={`text-sm text-right ${isOff ? 'text-gray-500 italic' : 'text-white font-medium'}`}>
+            <span className="text-sm text-gray-300 font-medium shrink-0">{DAY_LABELS_ES[key]}</span>
+            <span className={`text-sm text-right ${isDayOff ? 'text-gray-500 italic' : 'text-white font-medium'}`}>
               {summary}
             </span>
           </div>
