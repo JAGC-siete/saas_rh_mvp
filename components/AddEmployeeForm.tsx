@@ -308,25 +308,32 @@ function AddEmployeeForm({
               </div>
 
               {resolvedPayType === 'fixed' && (
-                <div className="md:col-span-2 rounded-lg border border-white/15 bg-white/5 p-4">
-                  <label className="flex items-start gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      id="attendance_required"
-                      name="attendance_required"
-                      disabled={loading}
-                      checked={formData?.attendance_required !== false}
-                      onChange={(e) => onFormChange('attendance_required', e.target.checked)}
-                      className="mt-1 h-4 w-4 rounded border-white/30 bg-white/10 text-brand-500 focus:ring-brand-500"
-                    />
-                    <span>
-                      <span className="block text-sm font-medium text-white">Control de asistencia</span>
-                      <span className="block text-xs text-gray-400 mt-1">
-                        Activado: debe registrar asistencia para la nómina (días con check-in).
-                        Desactivado: exento de checada — se paga el período completo sin marcas.
-                      </span>
-                    </span>
+                <div>
+                  <label className="block text-sm font-medium text-white mb-1" htmlFor="attendance_required">
+                    Control de asistencia
                   </label>
+                  <select
+                    id="attendance_required"
+                    name="attendance_required"
+                    disabled={loading}
+                    value={formData?.attendance_required === false ? 'false' : 'true'}
+                    onChange={(e) =>
+                      onFormChange('attendance_required', e.target.value === 'true')
+                    }
+                    className="w-full p-2 border border-white/20 rounded-md focus:ring-2 focus:ring-brand-500 focus:border-brand-500 bg-white/10 text-white"
+                  >
+                    <option value="true" className="bg-brand-900 text-white">
+                      Requiere asistencia
+                    </option>
+                    <option value="false" className="bg-brand-900 text-white">
+                      Exento de asistencia
+                    </option>
+                  </select>
+                  <p className="text-xs text-gray-400 mt-1">
+                    <strong>Requiere asistencia:</strong> la nómina cuenta días con check-in.
+                    <br />
+                    <strong>Exento:</strong> se paga el período completo sin marcas (directores, administrativos sin reloj).
+                  </p>
                 </div>
               )}
 
