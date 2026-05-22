@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createAdminClient } from '../../../lib/supabase/server'
 import {  getTodayInHonduras, nowInHonduras } from '../../../lib/timezone'
+import { loadEffectiveWorkSchedule } from '../../../lib/attendance/load-effective-schedule'
 
 // Horarios por defecto por departamento
 const DEFAULT_SCHEDULES = {
@@ -100,16 +101,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    // Get current work schedule if exists
+    // Get effective work schedule for today (assignment → default)
     let currentSchedule = null
-    if ((employee as Record<string, any>).work_schedule_id) {
-      const { data: schedule } = await supabase
-        .from('work_schedules')
-        .select('*')
-        .eq('id', (employee as Record<string, any>).work_schedule_id)
-        .single()
-      
-      currentSchedule = schedule
+    let todayStart: string | null = null
+    let todayEnd: string | null = null
+    if (employee.id && !String(employee.id).startsWith('temp_') && (employee as Record<string, any>).company_id) {
+      const loaded = await loadEffectiveWorkSchedule({
+        supabase,
+        companyId: (employee as Record<string, any>).company_id,
+        employeeId: employee.id,
+        date: today,
+        fallbackWorkScheduleId: (employee as Record<string, any>).work_schedule_id,
+      })
+      currentSchedule = loaded.schedule
+      todayStart = loaded.times.start
+      todayEnd = loaded.times.end
     }
 
     // Get department name
@@ -120,9 +126,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                            DEFAULT_SCHEDULES['hr'] // Fallback to HR schedule
 
     // Determine if schedule needs verification
-    const needsScheduleVerification = !currentSchedule || 
-                                    currentSchedule.monday_start !== defaultSchedule.start ||
-                                    currentSchedule.monday_end !== defaultSchedule.end
+    const needsScheduleVerification = !currentSchedule ||
+                                    !todayStart || !todayEnd ||
+                                    (todayStart !== defaultSchedule.start || todayEnd !== defaultSchedule.end)
 
     const welcomeMessage = isFirstDayOfSaaS 
       ? `¡Bienvenido ${employee.name}! Este es el primer día de nuestro nuevo sistema de asistencia.`
@@ -137,9 +143,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         department: employee.departments?.name,
         department_id: employee.department_id
       },
-      currentSchedule: currentSchedule ? {
-        start: currentSchedule.monday_start,
-        end: currentSchedule.monday_end
+      currentSchedule: currentSchedule && todayStart && todayEnd ? {
+        start: todayStart,
+        end: todayEnd
       } : null,
       defaultSchedule,
       needsScheduleVerification,

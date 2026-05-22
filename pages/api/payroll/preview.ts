@@ -31,6 +31,12 @@ import {
   shouldPayOvertimeToEmployee
 } from '../../../lib/payroll/overtime-pay'
 import { createEmployeeSalaryClient } from '../../../lib/security/employee-data-access'
+import {
+  loadEmployeeScheduleAssignments,
+  resolveEffectiveWorkScheduleIdFromAssignments,
+} from '../../../lib/attendance/resolve-schedule-batch'
+import { isRestDayForDate } from '../../../lib/attendance/schedule-times'
+import type { LegacyScheduleColumns } from '../../../lib/attendance/shift-config'
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -637,6 +643,35 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       if (row.employee_id) existingLineByEmployee[row.employee_id] = row
     }
 
+    const payrollAssignmentMap = await loadEmployeeScheduleAssignments({
+      supabase,
+      companyId,
+      employeeIds: empleadosParaNomina.map((e: any) => e.id),
+      rangeFrom: fechaInicio,
+      rangeTo: fechaFin,
+    })
+
+    const payrollScheduleIds = new Set<string>()
+    for (const emp of empleadosParaNomina as any[]) {
+      if (emp.work_schedule_id) payrollScheduleIds.add(emp.work_schedule_id)
+      for (const a of payrollAssignmentMap.get(emp.id) || []) {
+        if (a.work_schedule_id) payrollScheduleIds.add(a.work_schedule_id)
+      }
+    }
+
+    const payrollScheduleById = new Map<string, LegacyScheduleColumns>()
+    if (payrollScheduleIds.size > 0) {
+      const { data: schedRows } = await supabase
+        .from('work_schedules')
+        .select(
+          'id, monday_start, monday_end, tuesday_start, tuesday_end, wednesday_start, wednesday_end, thursday_start, thursday_end, friday_start, friday_end, saturday_start, saturday_end, sunday_start, sunday_end, shift_config, break_duration'
+        )
+        .in('id', [...payrollScheduleIds])
+      for (const row of schedRows || []) {
+        payrollScheduleById.set(row.id, row as LegacyScheduleColumns)
+      }
+    }
+
     for (const emp of empleadosParaNomina) {
       const effectivePayType = resolveEffectivePayType(emp.pay_type, companyCalculationMode)
 
@@ -709,21 +744,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         const days_absent = diasPeriodo - days_worked
 
         // Capa 3: Días Extra/Especial (festivo o descanso con asistencia)
-        const rawSchedule = emp.work_schedules
-        const schedule: Record<string, string | null> | null = Array.isArray(rawSchedule)
-          ? (rawSchedule[0] as Record<string, string | null> | undefined) ?? null
-          : (rawSchedule as Record<string, string | null> | null)
-        const dayCols: Record<number, string> = {
-          0: 'sunday_start', 1: 'monday_start', 2: 'tuesday_start', 3: 'wednesday_start',
-          4: 'thursday_start', 5: 'friday_start', 6: 'saturday_start',
-        }
         let days_extra = 0
         for (const r of registros) {
           const isHoliday = holidayDates.has(r.date)
-          const d = new Date(r.date + 'T12:00:00')
-          const dow = d.getDay()
-          const col = dayCols[dow]
-          const isRestDay = schedule && col && !schedule[col]
+          const eff = resolveEffectiveWorkScheduleIdFromAssignments({
+            assignments: payrollAssignmentMap.get(emp.id) || [],
+            date: r.date,
+            fallbackWorkScheduleId: emp.work_schedule_id,
+          })
+          const sched = eff.found && eff.workScheduleId ? payrollScheduleById.get(eff.workScheduleId) : null
+          const isRestDay = sched ? isRestDayForDate(sched, r.date) : false
           if (isHoliday || isRestDay) days_extra++
         }
         

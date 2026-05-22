@@ -14,6 +14,13 @@ import {
 import LeaveTypesSettings from './LeaveTypesSettings'
 import PayrollConfigEditor from './PayrollConfigEditor'
 import ReportParamsEditor from './reports/ReportParamsEditor'
+import WorkScheduleEditor, {
+  WorkScheduleCardSummary,
+  emptyScheduleForm,
+  scheduleFromRow,
+} from './WorkScheduleEditor'
+import { buildSchedulePayload, validateScheduleForm } from '../lib/attendance/shift-config'
+import type { ScheduleEditorFormState } from '../lib/attendance/shift-config'
 import { BIOMETRIC_MODES, type BiometricMode } from '../lib/attendance/attendance-metadata'
 import { DEFAULT_PERFORMANCE_SETTINGS, parsePerformanceSettings } from '../lib/performance/settings'
 import { useSettingsAccess } from '../lib/hooks/useSettingsAccess'
@@ -46,6 +53,8 @@ interface WorkSchedule {
   sunday_end?: string | null
   break_duration: number | null
   timezone: string | null
+  shift_config?: Record<string, unknown> | null
+  day_off_mask?: number | null
 }
 
 export default function CompanySettings() {
@@ -76,25 +85,7 @@ export default function CompanySettings() {
     created_at: new Date().toISOString()
   } as Company : null
 
-  const [scheduleForm, setScheduleForm] = useState({
-    name: '',
-    monday_start: '08:00',
-    monday_end: '17:00',
-    tuesday_start: '08:00',
-    tuesday_end: '17:00',
-    wednesday_start: '08:00',
-    wednesday_end: '17:00',
-    thursday_start: '08:00',
-    thursday_end: '17:00',
-    friday_start: '08:00',
-    friday_end: '17:00',
-    saturday_start: '',
-    saturday_end: '',
-    sunday_start: '',
-    sunday_end: '',
-    break_duration: 60,
-    timezone: 'America/Tegucigalpa'
-  })
+  const [scheduleForm, setScheduleForm] = useState<ScheduleEditorFormState>(() => emptyScheduleForm())
 
   const [showScheduleForm, setShowScheduleForm] = useState(false)
   const [editingSchedule, setEditingSchedule] = useState<WorkSchedule | null>(null)
@@ -224,111 +215,52 @@ export default function CompanySettings() {
       return
     }
 
+    const validationError = validateScheduleForm(scheduleForm)
+    if (validationError) {
+      setError(validationError)
+      return
+    }
+
     try {
       setLoading(true)
-      
+      const payload = buildSchedulePayload(scheduleForm)
       const supabaseClient = createClient()
+
       if (editingSchedule) {
-        // Convert empty strings to null for time fields, and keep valid time strings as-is
-        // Supabase accepts string format for time fields (e.g., "08:00:00")
-        const updateData = {
-          name: scheduleForm.name,
-          monday_start: scheduleForm.monday_start || null,
-          monday_end: scheduleForm.monday_end || null,
-          tuesday_start: scheduleForm.tuesday_start || null,
-          tuesday_end: scheduleForm.tuesday_end || null,
-          wednesday_start: scheduleForm.wednesday_start || null,
-          wednesday_end: scheduleForm.wednesday_end || null,
-          thursday_start: scheduleForm.thursday_start || null,
-          thursday_end: scheduleForm.thursday_end || null,
-          friday_start: scheduleForm.friday_start || null,
-          friday_end: scheduleForm.friday_end || null,
-          saturday_start: scheduleForm.saturday_start || null,
-          saturday_end: scheduleForm.saturday_end || null,
-          sunday_start: scheduleForm.sunday_start || null,
-          sunday_end: scheduleForm.sunday_end || null,
-          break_duration: scheduleForm.break_duration,
-          timezone: scheduleForm.timezone,
-        };
         const { error } = await (supabaseClient as any)
           .from('work_schedules')
-          .update(updateData)
+          .update(payload)
           .eq('id', editingSchedule.id)
 
         if (error) throw error
+      } else if (canAccessSchedulesCreateOnly) {
+        const res = await fetch('/api/work-schedules', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+        const data = await res.json()
+        if (!res.ok) {
+          throw new Error(data?.message || data?.error || 'Error al crear horario')
+        }
       } else {
-        const insertPayload = {
-          name: scheduleForm.name,
-          monday_start: scheduleForm.monday_start || null,
-          monday_end: scheduleForm.monday_end || null,
-          tuesday_start: scheduleForm.tuesday_start || null,
-          tuesday_end: scheduleForm.tuesday_end || null,
-          wednesday_start: scheduleForm.wednesday_start || null,
-          wednesday_end: scheduleForm.wednesday_end || null,
-          thursday_start: scheduleForm.thursday_start || null,
-          thursday_end: scheduleForm.thursday_end || null,
-          friday_start: scheduleForm.friday_start || null,
-          friday_end: scheduleForm.friday_end || null,
-          saturday_start: scheduleForm.saturday_start || null,
-          saturday_end: scheduleForm.saturday_end || null,
-          sunday_start: scheduleForm.sunday_start || null,
-          sunday_end: scheduleForm.sunday_end || null,
-          break_duration: scheduleForm.break_duration,
-          timezone: scheduleForm.timezone,
-        }
+        const { error } = await (supabaseClient as any)
+          .from('work_schedules')
+          .insert([{ ...payload, company_id: company?.id }])
 
-        if (canAccessSchedulesCreateOnly) {
-          const res = await fetch('/api/work-schedules', {
-            method: 'POST',
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(insertPayload),
-          })
-          const data = await res.json()
-          if (!res.ok) {
-            throw new Error(data?.message || data?.error || 'Error al crear horario')
-          }
-        } else {
-          const insertData = {
-            ...insertPayload,
-            company_id: company?.id,
-          }
-          const { error } = await (supabaseClient as any)
-            .from('work_schedules')
-            .insert([insertData])
-
-          if (error) throw error
-        }
+        if (error) throw error
       }
 
       setError(null)
       setShowScheduleForm(false)
       setEditingSchedule(null)
-      setScheduleForm({
-        name: '',
-        monday_start: '08:00',
-        monday_end: '17:00',
-        tuesday_start: '08:00',
-        tuesday_end: '17:00',
-        wednesday_start: '08:00',
-        wednesday_end: '17:00',
-        thursday_start: '08:00',
-        thursday_end: '17:00',
-        friday_start: '08:00',
-        friday_end: '17:00',
-        saturday_start: '',
-        saturday_end: '',
-        sunday_start: '',
-        sunday_end: '',
-        break_duration: 60,
-        timezone: 'America/Tegucigalpa'
-      })
+      setScheduleForm(emptyScheduleForm())
       fetchWorkSchedules()
     } catch (error: any) {
       console.error('Error saving work schedule:', error)
       const errorMessage = error?.message || 'Error al guardar el horario. Por favor, intenta nuevamente.'
       setError(errorMessage)
-      // Auto-clear error after 5 seconds
       setTimeout(() => setError(null), 5000)
     } finally {
       setLoading(false)
@@ -338,25 +270,7 @@ export default function CompanySettings() {
   const handleEditSchedule = (schedule: WorkSchedule) => {
     if (!canManageWorkSchedules) return
     setEditingSchedule(schedule)
-    setScheduleForm({
-      name: schedule.name,
-      monday_start: schedule.monday_start || '08:00',
-      monday_end: schedule.monday_end || '17:00',
-      tuesday_start: schedule.tuesday_start || '08:00',
-      tuesday_end: schedule.tuesday_end || '17:00',
-      wednesday_start: schedule.wednesday_start || '08:00',
-      wednesday_end: schedule.wednesday_end || '17:00',
-      thursday_start: schedule.thursday_start || '08:00',
-      thursday_end: schedule.thursday_end || '17:00',
-      friday_start: schedule.friday_start || '08:00',
-      friday_end: schedule.friday_end || '17:00',
-      saturday_start: schedule.saturday_start || '',
-      saturday_end: schedule.saturday_end || '',
-      sunday_start: schedule.sunday_start || '',
-      sunday_end: schedule.sunday_end || '',
-      break_duration: schedule.break_duration || 60,
-      timezone: schedule.timezone || 'America/Tegucigalpa'
-    })
+    setScheduleForm(scheduleFromRow(schedule))
     setShowScheduleForm(true)
   }
 
@@ -399,16 +313,6 @@ export default function CompanySettings() {
     : canCreateWorkSchedules
       ? allTabs.filter((t) => t.id === 'schedules')
       : []
-
-  const days = [
-    { key: 'monday', label: 'Lunes' },
-    { key: 'tuesday', label: 'Martes' },
-    { key: 'wednesday', label: 'Miércoles' },
-    { key: 'thursday', label: 'Jueves' },
-    { key: 'friday', label: 'Viernes' },
-    { key: 'saturday', label: 'Sábado' },
-    { key: 'sunday', label: 'Domingo' }
-  ]
 
   useEffect(() => {
     if (settingsAccessLoading) return
@@ -501,6 +405,7 @@ export default function CompanySettings() {
             <Button 
               onClick={() => {
                 setEditingSchedule(null)
+                setScheduleForm(emptyScheduleForm())
                 setShowScheduleForm(true)
               }}
               disabled={!canCreateWorkSchedules}
@@ -557,93 +462,19 @@ export default function CompanySettings() {
               <h4 className="text-md font-medium text-white mb-4">
                 {editingSchedule ? 'Editar Horario' : 'Nuevo Horario'}
               </h4>
-              
-              <form onSubmit={handleScheduleSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-white mb-1">
-                      Nombre del Horario *
-                    </label>
-                    <Input
-                      type="text"
-                      value={scheduleForm.name}
-                      onChange={(e) => setScheduleForm({ ...scheduleForm, name: e.target.value })}
-                      required
-                      placeholder="Ej: Horario Estándar"
-                      className="input-glass text-white placeholder:text-white/70"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-white mb-1">
-                      Duración del Almuerzo (minutos)
-                    </label>
-                    <Input
-                      type="number"
-                      value={scheduleForm.break_duration}
-                      onChange={(e) => setScheduleForm({ ...scheduleForm, break_duration: parseInt(e.target.value) })}
-                      min="0"
-                      className="input-glass text-white placeholder:text-white/70"
-                    />
-                  </div>
-                </div>
 
-                <div className="space-y-3">
-                  <h5 className="font-medium text-white mb-3">Horarios por Día</h5>
-                  <div className="glass p-4 rounded-lg border border-white/10 space-y-3">
-                    {days.map((day) => (
-                      <div key={day.key} className="grid grid-cols-3 gap-4 items-center py-2 border-b border-white/5 last:border-0">
-                        <span className="text-sm font-medium text-white flex items-center">
-                          <span className="w-2 h-2 rounded-full bg-brand-400 mr-2"></span>
-                          {day.label}
-                        </span>
-                        <Input
-                          type="time"
-                          value={scheduleForm[`${day.key}_start` as keyof typeof scheduleForm] as string}
-                          onChange={(e) => setScheduleForm({ 
-                            ...scheduleForm, 
-                            [`${day.key}_start`]: e.target.value 
-                          })}
-                          placeholder="Entrada"
-                          className="input-glass text-white placeholder:text-white/70"
-                        />
-                        <Input
-                          type="time"
-                          value={scheduleForm[`${day.key}_end` as keyof typeof scheduleForm] as string}
-                          onChange={(e) => setScheduleForm({ 
-                            ...scheduleForm, 
-                            [`${day.key}_end`]: e.target.value 
-                          })}
-                          placeholder="Salida"
-                          className="input-glass text-white placeholder:text-white/70"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                
-                <div className="flex space-x-3 pt-4 border-t border-white/10">
-                  <Button 
-                    type="submit" 
-                    disabled={loading}
-                    className="bg-brand-600 hover:bg-brand-700 text-white font-medium"
-                  >
-                    {loading ? 'Guardando...' : editingSchedule ? 'Actualizar' : 'Crear'}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setShowScheduleForm(false)
-                      setEditingSchedule(null)
-                      setError(null)
-                    }}
-                    className="border-white/20 hover:bg-white/10 hover:border-white/30"
-                  >
-                    Cancelar
-                  </Button>
-                </div>
-              </form>
+              <WorkScheduleEditor
+                form={scheduleForm}
+                onChange={setScheduleForm}
+                loading={loading}
+                isEditing={!!editingSchedule}
+                onSubmit={handleScheduleSubmit}
+                onCancel={() => {
+                  setShowScheduleForm(false)
+                  setEditingSchedule(null)
+                  setError(null)
+                }}
+              />
             </Card>
           )}
 
@@ -690,28 +521,7 @@ export default function CompanySettings() {
                     )}
                   </div>
                   
-                  <div className="space-y-2.5 pt-3 border-t border-white/10">
-                    <div className="flex justify-between items-center py-1">
-                      <span className="text-sm text-gray-300 font-medium">Lun - Vie</span>
-                      <span className="text-sm text-white font-semibold">{schedule.monday_start || '--:--'} - {schedule.monday_end || '--:--'}</span>
-                    </div>
-                    {schedule.saturday_start && (
-                      <div className="flex justify-between items-center py-1">
-                        <span className="text-sm text-gray-300 font-medium">Sábado</span>
-                        <span className="text-sm text-white font-semibold">{schedule.saturday_start} - {schedule.saturday_end}</span>
-                      </div>
-                    )}
-                    {schedule.sunday_start && (
-                      <div className="flex justify-between items-center py-1">
-                        <span className="text-sm text-gray-300 font-medium">Domingo</span>
-                        <span className="text-sm text-white font-semibold">{schedule.sunday_start} - {schedule.sunday_end}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between items-center py-1 pt-2 border-t border-white/5">
-                      <span className="text-xs text-gray-400">Duración del almuerzo</span>
-                      <span className="text-xs text-gray-300 font-medium">{schedule.break_duration} min</span>
-                    </div>
-                  </div>
+                  <WorkScheduleCardSummary schedule={schedule} />
                 </Card>
               ))
             )}

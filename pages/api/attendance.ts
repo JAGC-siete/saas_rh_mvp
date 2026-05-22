@@ -1,7 +1,7 @@
 import { createAdminClient, createClient } from '../../lib/supabase/server'
 import { getTodayInHonduras, getHondurasTime, nowInHonduras } from '../../lib/timezone'
 import { incrementUsage } from '../../lib/billing/enforce'
-import { resolveEffectiveWorkScheduleId } from '../../lib/attendance/effective-work-schedule'
+import { loadEffectiveWorkSchedule } from '../../lib/attendance/load-effective-schedule'
 import { 
   getAchievementTypeByName, 
   validateAchievementRequirements, 
@@ -147,29 +147,27 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
 
     if (!existingRecord) {
       // Check-in
-      const eff = await resolveEffectiveWorkScheduleId({
+      const loaded = await loadEffectiveWorkSchedule({
         supabase,
         companyId: employee.company_id ?? '',
         employeeId: employee.id,
         date: today,
-        fallbackWorkScheduleId: employee.work_schedule_id
+        fallbackWorkScheduleId: employee.work_schedule_id,
       })
-      const { data: schedule } = await supabase
-        .from('work_schedules')
-        .select('*')
-        .eq('id', eff.found ? eff.workScheduleId : (employee.work_schedule_id ?? ''))
-        .single()
+      const schedule = loaded.schedule
 
-      // Get today's expected start time based on day of week
-      const dayOfWeek = now.getDay() // 0 = Sunday, 1 = Monday, etc.
-      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
-      const todayName = dayNames[dayOfWeek]
-      const expectedCheckIn = (schedule as Record<string, any>)?.[`${todayName}_start`] || (schedule as Record<string, any>)?.monday_start || '08:00'
-      
+      if (loaded.times.type === 'off') {
+        return res.status(422).json({
+          error: 'Día libre según horario asignado',
+          code: 'SCHEDULE_DAY_OFF',
+        })
+      }
+
+      const expectedCheckIn = loaded.times.start || '08:00'
       const currentTime = now.toTimeString().slice(0, 5)
       
-      const shiftType = ((schedule as Record<string, any>)?.shift_type as string | undefined) || 'normal'
-      const lateGrace = Number((schedule as Record<string, any>)?.late_grace_minutes ?? 5)
+      const shiftType = (schedule?.shift_type as string | undefined) || 'normal'
+      const lateGrace = Number(schedule?.late_grace_minutes ?? 5)
 
       // Calculate if late (normal shift). Flexible shift doesn't penalize by clock time.
       const [expectedHour, expectedMin] = expectedCheckIn.split(':').map(Number)
@@ -312,29 +310,19 @@ async function handleCheckInOut(req: NextApiRequest, res: NextApiResponse) {
 
     } else if (!existingRecord.check_out) {
       // Check-out
-      const eff = await resolveEffectiveWorkScheduleId({
+      const loaded = await loadEffectiveWorkSchedule({
         supabase,
         companyId: employee.company_id ?? '',
         employeeId: employee.id,
         date: today,
-        fallbackWorkScheduleId: employee.work_schedule_id
+        fallbackWorkScheduleId: employee.work_schedule_id,
       })
-      const { data: schedule } = await supabase
-        .from('work_schedules')
-        .select('*')
-        .eq('id', eff.found ? eff.workScheduleId : (employee.work_schedule_id ?? ''))
-        .single()
-
-      // Get today's expected end time based on day of week
-      const dayOfWeek = now.getDay() // 0 = Sunday, 1 = Monday, etc.
-      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
-      const todayName = dayNames[dayOfWeek]
-      const expectedCheckOut = (schedule as Record<string, any>)?.[`${todayName}_end`] || (schedule as Record<string, any>)?.monday_end || '17:00'
-      
+      const schedule = loaded.schedule
+      const expectedCheckOut = loaded.times.end || '17:00'
       const currentTime = now.toTimeString().slice(0, 5)
       
-      const shiftType = ((schedule as Record<string, any>)?.shift_type as string | undefined) || 'normal'
-      const earlyGrace = Number((schedule as Record<string, any>)?.early_grace_minutes ?? 5)
+      const shiftType = (schedule?.shift_type as string | undefined) || 'normal'
+      const earlyGrace = Number(schedule?.early_grace_minutes ?? 5)
 
       // Calculate early departure (normal shift). Flexible shift doesn't penalize by clock time.
       const [expectedHour, expectedMin] = expectedCheckOut.split(':').map(Number)

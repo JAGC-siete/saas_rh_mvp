@@ -1,6 +1,12 @@
 import type { BiometricMode } from './attendance-metadata'
 import { getResolvedAttendanceConfig } from './attendance-metadata'
 import { DateTime } from 'luxon'
+import { getScheduleTimesForDate } from './schedule-times'
+import type { LegacyScheduleColumns } from './shift-config'
+import {
+  loadEmployeeScheduleAssignments,
+  resolveEffectiveWorkScheduleIdFromAssignments,
+} from './resolve-schedule-batch'
 
 /** super_admin must pass explicit company_id (query/body). */
 export function resolveCompanyIdForDailyClose(
@@ -449,45 +455,17 @@ function removeMissingPunchWhenInProgress(anomalyTypes: string[], inProgress: bo
   return anomalyTypes.filter((t) => t !== 'missing_punch')
 }
 
-type WorkScheduleRow = {
-  id: string
-  monday_start: string | null
-  monday_end: string | null
-  tuesday_start: string | null
-  tuesday_end: string | null
-  wednesday_start: string | null
-  wednesday_end: string | null
-  thursday_start: string | null
-  thursday_end: string | null
-  friday_start: string | null
-  friday_end: string | null
-  saturday_start: string | null
-  saturday_end: string | null
-  sunday_start: string | null
-  sunday_end: string | null
+type WorkScheduleRow = LegacyScheduleColumns & { id: string }
+
+function getScheduleEndForDate(schedule: WorkScheduleRow | null, localDate: string, zone: string): string | null {
+  if (!schedule) return null
+  const times = getScheduleTimesForDate(schedule, localDate)
+  return times.end
 }
 
-function getScheduleTimesForDate(schedule: WorkScheduleRow, localDate: string, zone: string): { start: string | null; end: string | null } {
-  const dt = DateTime.fromISO(localDate, { zone })
-  const weekday = dt.weekday // 1=Mon ... 7=Sun
-  switch (weekday) {
-    case 1:
-      return { start: schedule.monday_start, end: schedule.monday_end }
-    case 2:
-      return { start: schedule.tuesday_start, end: schedule.tuesday_end }
-    case 3:
-      return { start: schedule.wednesday_start, end: schedule.wednesday_end }
-    case 4:
-      return { start: schedule.thursday_start, end: schedule.thursday_end }
-    case 5:
-      return { start: schedule.friday_start, end: schedule.friday_end }
-    case 6:
-      return { start: schedule.saturday_start, end: schedule.saturday_end }
-    case 7:
-      return { start: schedule.sunday_start, end: schedule.sunday_end }
-    default:
-      return { start: null, end: null }
-  }
+function getScheduleStartForDate(schedule: WorkScheduleRow | null, localDate: string): string | null {
+  if (!schedule) return null
+  return getScheduleTimesForDate(schedule, localDate).start
 }
 
 function parseTimeToMinutes(t: string | null): number | null {
@@ -511,7 +489,7 @@ function computeInProgress(params: {
   if (!today || today !== localDate) return false
   if (!schedule) return false
 
-  const { start, end } = getScheduleTimesForDate(schedule, localDate, zone)
+  const { start, end } = { start: getScheduleStartForDate(schedule, localDate), end: getScheduleEndForDate(schedule, localDate, zone) }
   const endMin = parseTimeToMinutes(end)
   if (endMin == null) return false
   const startMin = parseTimeToMinutes(start)
@@ -623,16 +601,35 @@ export async function buildDailyCloseReportPayload(params: {
     list = list.filter((e) => withEvents.has(e.id))
   }
 
-  // Load schedules for in-progress suppression (missing_punch after shift end).
+  const assignmentMap = await loadEmployeeScheduleAssignments({
+    supabase,
+    companyId,
+    employeeIds: list.map((e) => e.id),
+    rangeFrom: localDate,
+    rangeTo: localDate,
+  })
+
+  const effectiveScheduleIdByEmployee = new Map<string, string | null>()
+  for (const emp of list) {
+    const eff = resolveEffectiveWorkScheduleIdFromAssignments({
+      assignments: assignmentMap.get(emp.id) || [],
+      date: localDate,
+      fallbackWorkScheduleId: emp.work_schedule_id,
+    })
+    effectiveScheduleIdByEmployee.set(emp.id, eff.found ? eff.workScheduleId : null)
+  }
+
   const scheduleIds = Array.from(
-    new Set(list.map((e) => e.work_schedule_id).filter((x): x is string => typeof x === 'string' && x.length > 0))
+    new Set(
+      [...effectiveScheduleIdByEmployee.values()].filter((x): x is string => typeof x === 'string' && x.length > 0)
+    )
   )
   const scheduleById = new Map<string, WorkScheduleRow>()
   if (scheduleIds.length > 0) {
     const { data: schedData } = await supabase
       .from('work_schedules')
       .select(
-        'id, monday_start, monday_end, tuesday_start, tuesday_end, wednesday_start, wednesday_end, thursday_start, thursday_end, friday_start, friday_end, saturday_start, saturday_end, sunday_start, sunday_end'
+        'id, monday_start, monday_end, tuesday_start, tuesday_end, wednesday_start, wednesday_end, thursday_start, thursday_end, friday_start, friday_end, saturday_start, saturday_end, sunday_start, sunday_end, shift_config, break_duration'
       )
       .in('id', scheduleIds)
     for (const s of (schedData || []) as WorkScheduleRow[]) {
@@ -707,10 +704,8 @@ export async function buildDailyCloseReportPayload(params: {
       anomaly_types = mapPunchesToDay(punches, biometric_mode).anomalyTypes
     }
 
-    const schedule =
-      emp.work_schedule_id && typeof emp.work_schedule_id === 'string'
-        ? (scheduleById.get(emp.work_schedule_id) ?? null)
-        : null
+    const effectiveId = effectiveScheduleIdByEmployee.get(emp.id) ?? null
+    const schedule = effectiveId ? (scheduleById.get(effectiveId) ?? null) : null
     const in_progress = computeInProgress({
       localDate,
       zone: timezone,

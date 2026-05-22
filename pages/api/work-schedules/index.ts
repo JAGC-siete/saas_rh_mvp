@@ -21,6 +21,12 @@ const SCHEDULE_WRITE_FIELDS = [
   'sunday_end',
   'break_duration',
   'timezone',
+  'shift_config',
+  'day_off_mask',
+  'late_grace_minutes',
+  'late_absent_minutes',
+  'early_grace_minutes',
+  'early_absent_minutes',
 ] as const
 
 function pickScheduleBody(body: Record<string, unknown>) {

@@ -26,7 +26,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         dni,
         employee_code,
         status,
-        company_id
+        company_id,
+        department_id,
+        departments:department_id(id, name)
       `,
       { status: 'active' }
     ).order('name', { ascending: true })

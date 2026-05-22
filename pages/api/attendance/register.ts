@@ -6,6 +6,7 @@ import {
 import { CALL_CENTER_MESSAGES, generateContextualMessage } from '../../../lib/call-center-config'
 import { withAttendancePublicRateLimit } from '../../../lib/security/rate-limiting'
 import { getTrustedClientIp } from '../../../lib/security/trusted-client-ip'
+import { loadEffectiveWorkSchedule } from '../../../lib/attendance/load-effective-schedule'
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   
@@ -228,24 +229,24 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       })
     }
 
-    // PASO 3: Obtener horario del empleado
-    if (!employee.work_schedule_id) {
-      logger.error('Employee has no work schedule assigned', { employeeId: employee.id })
-      return res.status(400).json({ error: 'Empleado sin horario asignado. Contacte a RRHH.' })
+    const nowUtc = nowInHonduras()
+    const nowLocal = toHN(nowUtc)
+
+    const loaded = await loadEffectiveWorkSchedule({
+      supabase,
+      companyId: employee.company_id ?? '',
+      employeeId: employee.id,
+      date: nowLocal.date,
+      fallbackWorkScheduleId: employee.work_schedule_id,
+    })
+
+    if (!loaded.result.found || !loaded.schedule) {
+      logger.error('Employee has no effective work schedule', { employeeId: employee.id, date: nowLocal.date })
+      return res.status(400).json({ error: 'Empleado sin horario asignado para hoy. Contacte a RRHH.' })
     }
 
-    const { data: schedule, error: schedError } = await supabase
-      .from('work_schedules')
-      .select('*')
-      .eq('id', employee.work_schedule_id)
-      .single()
-
-    if (schedError || !schedule) {
-      logger.error('Error fetching work schedule', schedError)
-      return res.status(500).json({ error: 'Error al obtener horario de trabajo' })
-    }
-
-    logger.debug('Work schedule loaded', { scheduleId: schedule.id })
+    const schedule = loaded.schedule
+    logger.debug('Work schedule loaded', { scheduleId: schedule.id, source: loaded.result.source })
 
     // PASO 4: Obtener geofence de la empresa
     const { data: company, error: compError } = await supabase
@@ -285,22 +286,24 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     // PASO 6: Obtener tiempo actual y convertir a Honduras
-    const nowUtc = nowInHonduras()
-    const nowLocal = toHN(nowUtc)
-    
     logger.debug('Attendance registration time context', { date: nowLocal.date, dow: nowLocal.dow })
 
-    // PASO 7: Obtener horario esperado para el día actual
-    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
-    const todayName = dayNames[nowLocal.dow]
-    const expectedIn = (schedule as Record<string, any>)[`${todayName}_start`] || (schedule as Record<string, any>).monday_start || '08:00'
-    const expectedOut = (schedule as Record<string, any>)[`${todayName}_end`] || (schedule as Record<string, any>).monday_end || '17:00'
+    const dayTimes = loaded.times
+    if (dayTimes.type === 'off') {
+      return res.status(422).json({
+        error: 'Día libre según horario asignado',
+        code: 'SCHEDULE_DAY_OFF',
+      })
+    }
+
+    const expectedIn = dayTimes.start || '08:00'
+    const expectedOut = dayTimes.end || '17:00'
 
     // Aplicar override para sábado (medio día 08:00-12:00)
     const adjustedExpectedIn = overrideIfSaturdayHalfDay(expectedIn, schedule, nowLocal)
     const adjustedExpectedOut = nowLocal.dow === 6 ? '12:00' : expectedOut
 
-    logger.debug('Expected schedule for today resolved', { day: todayName })
+    logger.debug('Expected schedule for today resolved', { date: nowLocal.date, type: dayTimes.type })
 
     // PASO 8: Validar ventanas duras según política Call Center
     // const checkInWindow = { 

@@ -1,10 +1,12 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../../lib/supabase/server'
+import { createClient, createAdminClient } from '../../../../lib/supabase/server'
 import { logger } from '../../../../lib/logger'
 import {
   assertEmployeePortalEnabled,
   resolveEmployeeAndCompanyId,
 } from '../../../../lib/employee-portal/company-settings'
+import { getTodayInHonduras } from '../../../../lib/timezone'
+import { loadEffectiveWorkSchedule, workScheduleToPortalPayload } from '../../../../lib/attendance/load-effective-schedule'
 
 interface EmployeeProfileResponse {
   employee: {
@@ -80,6 +82,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         hire_date,
         base_salary,
         status,
+        work_schedule_id,
         departments:department_id(
           id,
           name
@@ -111,6 +114,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(404).json({ error: 'Empleado no encontrado' })
     }
 
+    const admin = createAdminClient()
+    const effectiveLoaded = await loadEffectiveWorkSchedule({
+      supabase: admin,
+      companyId: ctx.companyId,
+      employeeId,
+      date: getTodayInHonduras(),
+      fallbackWorkScheduleId: employeeDetails.work_schedule_id,
+    })
+    const portalSchedule = workScheduleToPortalPayload(
+      effectiveLoaded.schedule ?? (employeeDetails.work_schedules as any),
+      effectiveLoaded.result.found ? effectiveLoaded : null
+    )
+
     // Mask sensitive information
     const dniMasked = employeeDetails.dni?.length > 9 
       ? `${employeeDetails.dni.substring(0, 4)}****${employeeDetails.dni.slice(-5)}`
@@ -137,24 +153,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           id: (employeeDetails.departments as any).id,
           name: (employeeDetails.departments as any).name
         } : undefined,
-        work_schedule: (employeeDetails.work_schedules as any) ? {
-          id: (employeeDetails.work_schedules as any).id,
-          name: (employeeDetails.work_schedules as any).name,
-          monday_start: (employeeDetails.work_schedules as any).monday_start,
-          monday_end: (employeeDetails.work_schedules as any).monday_end,
-          tuesday_start: (employeeDetails.work_schedules as any).tuesday_start,
-          tuesday_end: (employeeDetails.work_schedules as any).tuesday_end,
-          wednesday_start: (employeeDetails.work_schedules as any).wednesday_start,
-          wednesday_end: (employeeDetails.work_schedules as any).wednesday_end,
-          thursday_start: (employeeDetails.work_schedules as any).thursday_start,
-          thursday_end: (employeeDetails.work_schedules as any).thursday_end,
-          friday_start: (employeeDetails.work_schedules as any).friday_start,
-          friday_end: (employeeDetails.work_schedules as any).friday_end,
-          saturday_start: (employeeDetails.work_schedules as any).saturday_start,
-          saturday_end: (employeeDetails.work_schedules as any).saturday_end,
-          sunday_start: (employeeDetails.work_schedules as any).sunday_start,
-          sunday_end: (employeeDetails.work_schedules as any).sunday_end
-        } : undefined,
+        work_schedule: portalSchedule as EmployeeProfileResponse['employee']['work_schedule'],
         base_salary_masked: true, // Indicate salary is not exposed
         status: employeeDetails.status ?? 'active'
       }

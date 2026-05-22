@@ -3,6 +3,8 @@ import { createAdminClient } from '../../../../lib/supabase/server'
 import { getDateRange } from '../../../../lib/attendance'
 import { requireCompanyAccess } from '../../../../lib/auth/api-auth-fixed'
 import { RAW_PUNCH_EVENT_TYPE } from '../../../../lib/attendance/daily-close'
+import { loadEffectiveWorkSchedule } from '../../../../lib/attendance/load-effective-schedule'
+import { getTodayInHonduras } from '../../../../lib/timezone'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query
@@ -140,15 +142,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.error('attendance_events raw_punch:', rawErr)
     }
 
-    // Get today's day of week for expected check-in
-    const today = new Date()
-    const dayOfWeek = today.getDay() // 0 = Sunday, 1 = Monday, etc.
-    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
-    const todayName = dayNames[dayOfWeek]
-    const schedule = employee.work_schedules as any
-    
-    // Get expected check-in time for today
-    const expectedCheckIn = schedule?.[`${todayName}_start`] || schedule?.monday_start || null
+    // Expected check-in for today (effective schedule: assignment → default)
+    const today = getTodayInHonduras()
+    const loaded = await loadEffectiveWorkSchedule({
+      supabase: admin,
+      companyId,
+      employeeId: id as string,
+      date: today,
+      fallbackWorkScheduleId: employee.work_schedule_id,
+    })
+    const expectedCheckIn = loaded.times.start
+    const schedule = loaded.schedule ?? (employee.work_schedules as any)
 
     // Calculate attendance average (present days / working days in last 30 days)
     // Use working days instead of calendar days for more accurate calculation
@@ -172,7 +176,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return workingDays
     }
     
-    const totalWorkingDays = getWorkingDays(thirtyDaysAgo, today)
+    const todayDate = new Date()
+    const totalWorkingDays = getWorkingDays(thirtyDaysAgo, todayDate)
     
     // Count present days (days with check_in) in the last 30 days
     const { count: presentDays } = await supabase
@@ -197,7 +202,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
       schedule: {
         expectedCheckIn,
-        scheduleName: schedule?.name
+        expectedCheckOut: loaded.times.end,
+        scheduleName: schedule?.name,
+        scheduleSource: loaded.result.source,
+        dayType: loaded.times.type,
       }
     })
   } catch (error: any) {

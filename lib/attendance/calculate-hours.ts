@@ -4,6 +4,24 @@
  */
 
 import { createAdminClient } from '../supabase/server'
+import {
+  computeExpectedMinutesForDate,
+  computeExpectedMinutesForDay,
+  getDayConfigForDate,
+  legacyScheduleToShiftConfig,
+  resolveImplicitBreakMinutes,
+  type LegacyScheduleColumns,
+  type ShiftDayConfig,
+} from './shift-config'
+
+export {
+  computeExpectedMinutesForDate,
+  computeExpectedMinutesForDay,
+  getDayConfigForDate,
+  legacyScheduleToShiftConfig,
+  resolveImplicitBreakMinutes,
+}
+export type { LegacyScheduleColumns, ShiftDayConfig }
 
 export interface AttendanceHoursResult {
   attendance_record_id: string
@@ -97,4 +115,26 @@ export async function calculateAttendanceHoursForCompanyAndDate(
   const recordIds = records.map((r: { id: string }) => r.id)
   const results = await calculateAttendanceHoursBatch(recordIds, undefined, client)
   return results.length
+}
+
+/**
+ * Expected scheduled minutes for a date from shift_config topology.
+ * off → 0, continuous → (end - start) - break, split → sum of blocks.
+ */
+export function getExpectedScheduledMinutes(
+  schedule: LegacyScheduleColumns,
+  dateStr: string
+): number {
+  return computeExpectedMinutesForDate(schedule, dateStr)
+}
+
+/**
+ * Break minutes to subtract when lunch punches are absent.
+ */
+export function getImplicitBreakMinutesForDate(
+  schedule: LegacyScheduleColumns,
+  dateStr: string
+): number {
+  const day = getDayConfigForDate(schedule, dateStr)
+  return resolveImplicitBreakMinutes(day, schedule.break_duration ?? 60)
 }

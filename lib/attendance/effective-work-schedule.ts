@@ -29,12 +29,13 @@ export async function resolveEffectiveWorkScheduleId(params: {
     .order('valid_from', { ascending: false })
 
   if (Array.isArray(rows) && rows.length > 0) {
-    // If repeat_weekdays is set, ensure day-of-week matches (0=Sun..6=Sat)
     const d = new Date(`${date}T12:00:00.000Z`)
     const dow = d.getUTCDay()
     for (const r of rows as any[]) {
-      const weekdays = Array.isArray(r.repeat_weekdays) ? (r.repeat_weekdays as number[]) : null
-      if (weekdays && weekdays.length > 0 && !weekdays.includes(dow)) continue
+      if (r.repeat_weekly === true) {
+        const weekdays = Array.isArray(r.repeat_weekdays) ? (r.repeat_weekdays as number[]) : null
+        if (weekdays && weekdays.length > 0 && !weekdays.includes(dow)) continue
+      }
       if (typeof r.work_schedule_id === 'string' && r.work_schedule_id) {
         return { found: true, workScheduleId: r.work_schedule_id, source: 'assignment' }
       }
