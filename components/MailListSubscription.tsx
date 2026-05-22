@@ -52,7 +52,7 @@ export default function MailListSubscription({ source = 'landing', className = '
 
       if (response.ok && data.success) {
         setStatus('success')
-        setMessage('¡Perfecto! Revisa tu correo para confirmar tu suscripción.')
+        setMessage('¡Perfecto! Ya estás dentro. Revisa tu correo para el primer consejo de optimización.')
         setEmail('')
       } else {
         setStatus('error')
