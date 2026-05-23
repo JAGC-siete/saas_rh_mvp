@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/router'
 import { ArrowLeftIcon, CheckCircleIcon, RocketLaunchIcon, CpuChipIcon } from '@heroicons/react/24/outline'
 import dynamic from 'next/dynamic'
 import { Card, CardContent, CardTitle } from '../components/ui/card'
@@ -109,6 +110,7 @@ function computeActivarErrors(fd: FormData): ValidationErrors {
 }
 
 export default function ActivarPage() {
+  const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [errors, setErrors] = useState<ValidationErrors>({})
@@ -129,6 +131,18 @@ export default function ActivarPage() {
   useEffect(() => {
     initGoogleAdsTracking()
   }, [])
+
+  useEffect(() => {
+    const raw = router.query.country
+    if (typeof raw !== 'string') return
+    const cc = raw.trim().toUpperCase()
+    if (!isCountryCode(cc)) return
+    setFormData((prev) => ({
+      ...prev,
+      countryCode: cc,
+      whatsappCountryCallingCode: defaultCallingCodeForPayrollCountry(cc)
+    }))
+  }, [router.query.country])
 
   const handleEmpleadosChange = (value: number) => {
     const newValue = Math.max(TRIAL_CONFIG.MIN_EMPLOYEES, Math.min(TRIAL_CONFIG.MAX_EMPLOYEES, value))
