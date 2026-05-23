@@ -72,6 +72,8 @@ export const MIDDLEWARE_CONFIG = {
       '/politicadeprivacidad',
       '/terminos-de-servicio',
       '/calculadora-deducciones',
+      '/calculadora-deducciones-el-salvador',
+      '/calculadora-deducciones-guatemala',
       '/alternativa-odoo-honduras',
       '/sistema-biometrico-nomina',
       '/implementacion-48-horas',

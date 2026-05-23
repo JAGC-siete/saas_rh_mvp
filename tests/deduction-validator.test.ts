@@ -64,7 +64,7 @@ describe('Validación de Salario', () => {
   it('debe redondear a 2 decimales', () => {
     const result = validateSalary(15000.999)
     assert.equal(result.valid, true)
-    assert.equal(result.sanitized, 15000.0)
+    assert.equal(result.sanitized, 15001)
   })
 })
 

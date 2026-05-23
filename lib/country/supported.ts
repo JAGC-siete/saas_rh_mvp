@@ -3,13 +3,37 @@ export const SUPPORTED_COUNTRY_CODES = ['HND', 'SLV', 'GTM'] as const
 
 export type CountryCode = (typeof SUPPORTED_COUNTRY_CODES)[number]
 
+/** Alias comunes (alpha-2 / marketing) → ISO alpha-3 del SaaS */
+const COUNTRY_CODE_ALIASES: Record<string, CountryCode> = {
+  HN: 'HND',
+  SV: 'SLV',
+  GT: 'GTM',
+}
+
 export function isCountryCode(v: string | null | undefined): v is CountryCode {
   return v != null && (SUPPORTED_COUNTRY_CODES as readonly string[]).includes(v)
 }
 
 export function normalizeCountryCode(v: string | null | undefined): CountryCode {
-  if (isCountryCode(v)) return v
+  if (v == null || (typeof v === 'string' && v.trim() === '')) return 'HND'
+  const upper = typeof v === 'string' ? v.trim().toUpperCase() : String(v).toUpperCase()
+  if (isCountryCode(upper)) return upper
+  const aliased = COUNTRY_CODE_ALIASES[upper]
+  if (aliased) return aliased
   return 'HND'
+}
+
+/**
+ * Entrada estricta para calculadoras/APIs públicas.
+ * Devuelve null si el código no es reconocido (sin fallback silencioso).
+ */
+export function parseCountryCodeInput(v: string | null | undefined): CountryCode | null {
+  if (v == null || (typeof v === 'string' && v.trim() === '')) return 'HND'
+  const upper = typeof v === 'string' ? v.trim().toUpperCase() : String(v).toUpperCase()
+  if (isCountryCode(upper)) return upper
+  const aliased = COUNTRY_CODE_ALIASES[upper]
+  if (aliased) return aliased
+  return null
 }
 
 /** IANA tz alineado con companies.timezone y migraciones multipaís. */

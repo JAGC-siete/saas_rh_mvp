@@ -93,8 +93,9 @@ export function generateWebPageSchema(options: {
   title: string
   description?: string
   image?: string
+  inLanguage?: string
 }): WebPageSchema {
-  const { url, title, description, image } = options
+  const { url, title, description, image, inLanguage = 'es-HN' } = options
   const fullUrl = url.startsWith('http') ? url : `${BASE_URL}${url}`
 
   return {
@@ -104,7 +105,7 @@ export function generateWebPageSchema(options: {
     url: fullUrl,
     name: title,
     description: description,
-    inLanguage: 'es-HN',
+    inLanguage: inLanguage,
     isPartOf: {
       '@id': `${BASE_URL}/#website`
     },

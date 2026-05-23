@@ -53,6 +53,16 @@ const publicPages: SitemapUrl[] = [
     priority: 0.7
   },
   {
+    loc: '/calculadora-deducciones-el-salvador',
+    changefreq: 'monthly',
+    priority: 0.75
+  },
+  {
+    loc: '/calculadora-deducciones-guatemala',
+    changefreq: 'monthly',
+    priority: 0.75
+  },
+  {
     loc: '/politicadeprivacidad',
     changefreq: 'yearly',
     priority: 0.5

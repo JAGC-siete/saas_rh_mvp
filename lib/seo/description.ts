@@ -42,6 +42,8 @@ export const pageDescriptions = {
   activate: 'Activa tu cuenta en Humano SISU y comienza a automatizar tu nómina. Configuración en minutos, sin complicaciones.',
   affiliates: 'Únete al programa de afiliados de Humano SISU. Gana comisiones recomendando la mejor solución de nómina para MIPYMES en la región.',
   calculator: 'Valida IHSS, RAP e ISR sin cálculos manuales. Herramienta gratuita según leyes locales (ej. Honduras). ¿Automatizamos tu nómina? Activar gratis hoy.',
+  calculatorSlv: 'Calculadora ISR El Salvador: ISSS, AFP y sueldo neto en USD. Motor de nómina Humano SISU. Automatiza planilla en El Salvador.',
+  calculatorGtm: 'Calculadora sueldo neto Guatemala: IGSS e ISR en quetzales. Mismo motor de nómina Humano SISU. Prueba gratis.',
   privacy: 'Política de privacidad de Humano SISU. Conoce cómo protegemos y manejamos tus datos personales y de tus empleados.',
   subscription: 'Elige el plan perfecto para tu empresa. Desde startups hasta empresas establecidas, tenemos el plan ideal para ti.',
   login: 'Inicia sesión en tu cuenta de Humano SISU. Accede a tu dashboard, gestiona empleados, nómina y más.',

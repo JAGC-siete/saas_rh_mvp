@@ -50,6 +50,8 @@ export const pageTitles = {
   activate: 'Activar Cuenta | Nómina y asistencia regional | Humano SISU',
   affiliates: 'Programa de Afiliados | Humano SISU',
   calculator: 'Calculadora IHSS, RAP, ISR (Honduras) | Sin cálculos manuales | Humano SISU',
+  calculatorSlv: 'Calculadora ISR El Salvador | ISSS, AFP y sueldo neto | Humano SISU',
+  calculatorGtm: 'Calculadora sueldo neto Guatemala | IGSS e ISR | Humano SISU',
   privacy: 'Política de Privacidad | Humano SISU',
   subscription: 'Suscripción | Planes y Precios | Humano SISU',
   login: 'Iniciar Sesión | Humano SISU',

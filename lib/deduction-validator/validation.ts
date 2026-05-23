@@ -9,26 +9,55 @@ export interface ValidationResult {
 }
 
 /**
+ * Parsea montos con separadores locales (ej. L. 15,000.50 o 15.000,50).
+ */
+function parseLocalizedSalary(value: string): number | null {
+  let cleaned = value.trim().replace(/[^\d.,]/g, '')
+  if (!cleaned) return null
+
+  const commaCount = (cleaned.match(/,/g) || []).length
+  const dotCount = (cleaned.match(/\./g) || []).length
+
+  if (commaCount > 0 && dotCount > 0) {
+    const lastComma = cleaned.lastIndexOf(',')
+    const lastDot = cleaned.lastIndexOf('.')
+    if (lastComma > lastDot) {
+      cleaned = cleaned.replace(/\./g, '').replace(',', '.')
+    } else {
+      cleaned = cleaned.replace(/,/g, '')
+    }
+  } else if (commaCount > 0) {
+    const parts = cleaned.split(',')
+    if (parts.length === 2 && parts[1].length > 0 && parts[1].length <= 2) {
+      cleaned = parts[0].replace(/\./g, '') + '.' + parts[1]
+    } else {
+      cleaned = cleaned.replace(/,/g, '')
+    }
+  } else if (dotCount > 1) {
+    const lastDot = cleaned.lastIndexOf('.')
+    const fraction = cleaned.slice(lastDot + 1)
+    const integerPart = cleaned.slice(0, lastDot).replace(/\./g, '')
+    cleaned = `${integerPart}.${fraction}`
+  }
+
+  cleaned = cleaned.replace(/^\.+/, '').replace(/\.+$/, '')
+  if (!cleaned) return null
+
+  const numValue = parseFloat(cleaned)
+  return Number.isNaN(numValue) ? null : numValue
+}
+
+/**
  * Valida y sanitiza el salario
  */
 export function validateSalary(value: string | number): ValidationResult {
   if (typeof value === 'string') {
-    // Remover caracteres no numéricos excepto punto decimal
-    const cleaned = value.replace(/[^\d.]/g, '')
+    const numValue = parseLocalizedSalary(value)
     
-    if (!cleaned || cleaned.trim() === '') {
+    if (numValue === null) {
       return {
         valid: false,
-        error: 'El salario es requerido'
-      }
-    }
-
-    const numValue = parseFloat(cleaned)
-    
-    if (isNaN(numValue)) {
-      return {
-        valid: false,
-        error: 'El salario debe ser un número válido'
+        error: value.trim() === '' ? 'El salario es requerido' : 'El salario debe ser un número válido'
       }
     }
 
