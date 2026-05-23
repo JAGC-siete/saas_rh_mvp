@@ -99,6 +99,7 @@ describe('shift-config', () => {
     const payload = buildSchedulePayload(form)
     assert.equal(payload.monday_start, '08:00')
     assert.equal(payload.monday_end, '17:00')
+    assert.ok(payload.shift_config)
     assert.equal(payload.day_off_mask, computeDayOffMask(payload.shift_config))
   })
 
