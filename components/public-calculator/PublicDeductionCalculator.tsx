@@ -7,7 +7,7 @@ import DemoFooter from '../DemoFooter'
 import SchemaMarkup from '../SEO/SchemaMarkup'
 import { validateFormInputs } from '../../lib/deduction-validator/client-validation'
 import type { PublicCalculatorConfig, PublicCalculatorDeductionKey } from '../../lib/public-calculator/config'
-import { generateFAQPageSchema, generateWebPageSchema } from '../../lib/seo/schema'
+import { generateFAQPageSchema, generateWebPageSchema, generateBreadcrumbListSchema } from '../../lib/seo/schema'
 
 const CloudBackground = dynamic(() => import('../CloudBackground'), { ssr: false })
 
@@ -233,6 +233,11 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
     inLanguage: config.seo.inLanguage
   })
   const faqSchema = generateFAQPageSchema(config.faqs)
+  const breadcrumbSchema = generateBreadcrumbListSchema([
+    { name: 'Inicio', url: '/' },
+    { name: 'Calculadoras', url: '/calculadora' },
+    { name: config.breadcrumbLabel, url: config.path }
+  ])
 
   const renderResultRow = (
     key: PublicCalculatorDeductionKey,
@@ -274,7 +279,7 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
         <meta property="og:url" content={config.canonicalUrl} />
         <link rel="canonical" href={config.canonicalUrl} />
       </Head>
-      <SchemaMarkup schema={[webPageSchema, faqSchema]} />
+      <SchemaMarkup schema={[webPageSchema, faqSchema, breadcrumbSchema]} />
 
       <MainHeader enableScrollEffect fixed />
 
@@ -589,7 +594,39 @@ export default function PublicDeductionCalculator({ config }: { config: PublicCa
           </div>
         </div>
 
-        <div className="mt-8 glass-strong rounded-2xl shadow-2xl p-6 sm:p-8 text-center">
+        <div className="mt-8 glass-strong rounded-2xl shadow-2xl p-6 sm:p-8 text-center border border-white/10">
+          <h3 className="text-lg font-bold text-white mb-2">{config.landingBridge.title}</h3>
+          <p className="text-brand-200/90 mb-4 max-w-2xl mx-auto">{config.landingBridge.body}</p>
+          <Link
+            href={config.landingBridge.href}
+            className="inline-block py-2.5 px-6 bg-white/10 hover:bg-white/15 text-white font-semibold rounded-xl border border-white/20 transition-all"
+          >
+            {config.landingBridge.cta}
+          </Link>
+        </div>
+
+        {config.seoGuide && (
+          <section className="mt-6 glass-strong rounded-2xl shadow-2xl p-6 sm:p-8 border border-white/10 text-left">
+            <h2 className="text-xl sm:text-2xl font-bold text-white mb-3">{config.seoGuide.title}</h2>
+            <p className="text-brand-200/90 mb-6">{config.seoGuide.intro}</p>
+            <div className="space-y-4">
+              {config.seoGuide.sections.map((section) => (
+                <details
+                  key={section.heading}
+                  className="glass rounded-xl border border-white/10 p-4 group open:bg-white/5"
+                >
+                  <summary className="cursor-pointer font-semibold text-white list-none flex items-center justify-between gap-3">
+                    <span>{section.heading}</span>
+                    <span className="text-brand-300 text-sm group-open:rotate-180 transition-transform">▼</span>
+                  </summary>
+                  <p className="mt-3 text-sm text-brand-200/90 leading-relaxed">{section.body}</p>
+                </details>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <div className="mt-6 glass-strong rounded-2xl shadow-2xl p-6 sm:p-8 text-center">
           <h3 className="text-xl font-bold text-white mb-4">{config.conversion.footerTitle}</h3>
           <p className="text-brand-200/90 mb-6">{config.conversion.footerBody}</p>
           <Link

@@ -170,10 +170,28 @@ export default function MainHeader({ enableScrollEffect = false, fixed = true }:
                             </svg>
                           </span>
                           <div>
-                            <div className="font-semibold text-white">Deducciones del salario</div>
-                            <div className="text-xs text-brand-200/80 mt-0.5">ISR · IHSS · RAP</div>
+                            <div className="font-semibold text-white">Honduras · IHSS · RAP · ISR</div>
+                            <div className="text-xs text-brand-200/80 mt-0.5">Calculadora deducciones (HNL)</div>
                           </div>
                         </div>
+                      </Link>
+                      <Link
+                        href="/calculadora-deducciones-el-salvador"
+                        role="menuitem"
+                        className="block px-4 py-3 text-sm text-brand-100 hover:bg-white/10 transition-colors"
+                        onClick={() => setIsCalculatorMenuOpen(false)}
+                      >
+                        <div className="font-semibold text-white">El Salvador · ISSS · AFP · ISR</div>
+                        <div className="text-xs text-brand-200/80 mt-0.5">Calculadora sueldo neto (USD)</div>
+                      </Link>
+                      <Link
+                        href="/calculadora-deducciones-guatemala"
+                        role="menuitem"
+                        className="block px-4 py-3 text-sm text-brand-100 hover:bg-white/10 transition-colors"
+                        onClick={() => setIsCalculatorMenuOpen(false)}
+                      >
+                        <div className="font-semibold text-white">Guatemala · IGSS · ISR</div>
+                        <div className="text-xs text-brand-200/80 mt-0.5">Calculadora sueldo neto (GTQ)</div>
                       </Link>
                       <Link
                         href="/calculadora-prestaciones"
@@ -303,7 +321,27 @@ export default function MainHeader({ enableScrollEffect = false, fixed = true }:
                       setIsMobileMenuOpen(false)
                     }}
                   >
-                    Deducciones del salario (ISR / IHSS / RAP)
+                    Honduras · IHSS / RAP / ISR
+                  </Link>
+                  <Link
+                    href="/calculadora-deducciones-el-salvador"
+                    className="block px-3 py-2 text-sm font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"
+                    onClick={() => {
+                      setIsCalculatorMobileOpen(false)
+                      setIsMobileMenuOpen(false)
+                    }}
+                  >
+                    El Salvador · ISSS / AFP / ISR
+                  </Link>
+                  <Link
+                    href="/calculadora-deducciones-guatemala"
+                    className="block px-3 py-2 text-sm font-medium text-brand-200/90 hover:text-white hover:bg-brand-800/20 rounded-md transition-colors"
+                    onClick={() => {
+                      setIsCalculatorMobileOpen(false)
+                      setIsMobileMenuOpen(false)
+                    }}
+                  >
+                    Guatemala · IGSS / ISR
                   </Link>
                   <Link
                     href="/calculadora-prestaciones"

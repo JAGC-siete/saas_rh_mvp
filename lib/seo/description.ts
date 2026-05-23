@@ -41,7 +41,7 @@ export const pageDescriptions = {
   home: 'Control de asistencia y nómina en un solo lugar. Integra biométricos con software regional (SV, GT, HN). Automatiza deducciones locales. Activar gratis hoy, sin tarjeta.',
   activate: 'Activa tu cuenta en Humano SISU y comienza a automatizar tu nómina. Configuración en minutos, sin complicaciones.',
   affiliates: 'Únete al programa de afiliados de Humano SISU. Gana comisiones recomendando la mejor solución de nómina para MIPYMES en la región.',
-  calculator: 'Valida IHSS, RAP e ISR sin cálculos manuales. Herramienta gratuita según leyes locales (ej. Honduras). ¿Automatizamos tu nómina? Activar gratis hoy.',
+  calculator: 'Calculadora ISR Honduras y calculadora RAP gratis. IHSS, deducciones y sueldo neto con el motor de nómina Humano SISU.',
   calculatorSlv: 'Calculadora ISR El Salvador: ISSS, AFP y sueldo neto en USD. Motor de nómina Humano SISU. Automatiza planilla en El Salvador.',
   calculatorGtm: 'Calculadora sueldo neto Guatemala: IGSS e ISR en quetzales. Mismo motor de nómina Humano SISU. Prueba gratis.',
   privacy: 'Política de privacidad de Humano SISU. Conoce cómo protegemos y manejamos tus datos personales y de tus empleados.',

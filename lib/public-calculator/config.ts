@@ -68,6 +68,19 @@ export type PublicCalculatorConfig = {
   }
   faqs: FAQItem[]
   relatedCalculators: Array<{ href: string; label: string }>
+  breadcrumbLabel: string
+  landingBridge: {
+    title: string
+    body: string
+    href: string
+    cta: string
+  }
+  /** Bloque editorial SEO (opcional). Alineado a queries de Search Console. */
+  seoGuide?: {
+    title: string
+    intro: string
+    sections: Array<{ heading: string; body: string }>
+  }
 }
 
 const BASE = 'https://humanosisu.net'
@@ -83,19 +96,19 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
     currencyPrefix: 'Lps.',
     phonePlaceholder: 'Ej: +504 9999-9999',
     seo: {
-      title: 'Calculadora IHSS, RAP, ISR (Honduras) | Sin cálculos manuales | Humano SISU',
+      title: 'Calculadora ISR Honduras y Calculadora RAP | IHSS · Sueldo neto | Humano SISU',
       description:
-        'Valida IHSS, RAP e ISR sin cálculos manuales. Herramienta gratuita según leyes de Honduras. ¿Automatizamos tu nómina? Activar gratis hoy.',
+        'Calculadora ISR Honduras y calculadora RAP gratis. Calcula IHSS, deducciones de ley y salario neto en lempiras con el mismo motor de nómina Humano SISU.',
       keywords:
-        'calculadora IHSS RAP ISR, deducciones nómina Honduras, sueldo neto Honduras, planilla Honduras, INFOP, nómina regional',
+        'calculadora isr honduras, calculadora rap, calculadora ihss honduras, sueldo neto honduras, deducciones planilla Honduras, IHSS RAP ISR',
       inLanguage: 'es-HN'
     },
     hero: {
-      badges: ['Valida deducciones de ley', 'Honduras · ISR · IHSS · RAP', 'Gratis y en 30 segundos'],
-      headlineLead: '¿Te están deduciendo lo justo?',
-      headlineAccent: 'Sal de dudas en 30 segundos.',
+      badges: ['Calculadora ISR Honduras', 'Calculadora RAP · IHSS', 'Gratis en 30 segundos'],
+      headlineLead: 'Calculadora ISR Honduras',
+      headlineAccent: 'Calculadora RAP, IHSS y sueldo neto.',
       subheadline:
-        'Esta calculadora te ayuda a validar si tus deducciones de ley (ISR, IHSS, RAP) en Honduras son correctas, de forma gratuita y sin errores.'
+        'Ingresa tu salario mensual o quincenal y valida al instante cuánto te descuentan de ISR, RAP e IHSS según las leyes vigentes en Honduras.'
     },
     defaultDeductions: { ihss: true, rap: true, afp: false, infop: false, isr: true },
     deductionOptions: [
@@ -139,13 +152,65 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
       footerHref: '/activar?country=HND'
     },
     faqs: [
-      { question: '¿Cómo calcular IHSS en Honduras?', answer: 'El aporte obrero de IHSS es el 5% del salario hasta el tope legal vigente. Esta calculadora usa el mismo motor de nómina de Humano SISU.' },
-      { question: '¿Qué deducciones incluye la calculadora?', answer: 'Puedes incluir IHSS, RAP, ISR y opcionalmente INFOP según tu caso. Los resultados reflejan las leyes vigentes para Honduras.' }
+      {
+        question: '¿Cómo funciona la calculadora ISR Honduras?',
+        answer:
+          'Ingresas tu salario bruto (mensual o quincenal), seleccionas ISR en las deducciones y la herramienta aplica la tabla progresiva vigente en Honduras. El resultado muestra cuánto se retiene de impuesto sobre la renta y tu salario neto estimado.'
+      },
+      {
+        question: '¿Qué es la calculadora RAP y cómo se calcula?',
+        answer:
+          'La calculadora RAP estima el aporte obrero al Régimen de Ahorro para Pensiones: 1.5% sobre el excedente del salario mínimo. Puedes activar o desactivar RAP junto con IHSS e ISR para ver el total de deducciones.'
+      },
+      {
+        question: '¿Cómo calcular IHSS en Honduras con esta herramienta?',
+        answer:
+          'El IHSS obrero es el 5% del salario hasta el tope legal del año. La calculadora usa los mismos parámetros que el motor de nómina profesional de Humano SISU.'
+      },
+      {
+        question: '¿Sirve para planilla quincenal y mensual?',
+        answer:
+          'Sí. Elige modalidad quincenal o mensual; la herramienta prorratea las deducciones de ley para mostrarte el monto del período que estás revisando.'
+      }
     ],
     relatedCalculators: [
       { href: '/calculadora-deducciones-el-salvador', label: 'Calculadora El Salvador' },
       { href: '/calculadora-deducciones-guatemala', label: 'Calculadora Guatemala' }
-    ]
+    ],
+    breadcrumbLabel: 'Deducciones Honduras',
+    landingBridge: {
+      title: '¿Tu empresa calcula planilla en Excel?',
+      body: 'Humano SISU conecta asistencia biométrica y nómina automatizada para Honduras — mismo motor que esta calculadora.',
+      href: '/#como-funciona',
+      cta: 'Ver cómo automatizar nómina en Humano SISU'
+    },
+    seoGuide: {
+      title: 'Guía rápida: calculadora ISR Honduras y calculadora RAP',
+      intro:
+        'Esta página concentra las búsquedas más frecuentes sobre deducciones de salario en Honduras. Usa el formulario arriba para obtener cifras exactas; aquí el contexto legal en lenguaje claro.',
+      sections: [
+        {
+          heading: 'Calculadora ISR Honduras: ¿qué calcula?',
+          body:
+            'El Impuesto sobre la Renta (ISR) en Honduras se calcula con una tabla progresiva según tu ingreso gravable. Nuestra calculadora ISR Honduras aplica los tramos vigentes del año en curso y te muestra la retención mensual o quincenal, según el salario que ingreses.'
+        },
+        {
+          heading: 'Calculadora RAP: deducción de pensiones',
+          body:
+            'El Régimen de Ahorro para Pensiones (RAP) descuenta el 1.5% sobre la parte del salario que excede el salario mínimo. La calculadora RAP te permite ver ese rubro por separado o junto con IHSS e ISR para conocer tu sueldo neto real.'
+        },
+        {
+          heading: 'IHSS y salario neto en lempiras',
+          body:
+            'Además de ISR y RAP, el IHSS obrero (5% con tope) suele ser la otra deducción principal. Al sumar los rubros que correspondan a tu caso, obtienes el total descontado y el neto a recibir — útil para validar tu voucher o negociar con RR.HH.'
+        },
+        {
+          heading: '¿Empresa o empleado?',
+          body:
+            'Si solo quieres validar tu recibo, basta con la calculadora gratuita. Si gestionas planilla para varios colaboradores, Humano SISU automatiza IHSS, RAP e ISR desde la asistencia biométrica hasta el comprobante de pago.'
+        }
+      ]
+    }
   },
   SLV: {
     countryCode: 'SLV',
@@ -213,7 +278,14 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
     relatedCalculators: [
       { href: '/calculadora-deducciones', label: 'Calculadora Honduras' },
       { href: '/calculadora-deducciones-guatemala', label: 'Calculadora Guatemala' }
-    ]
+    ],
+    breadcrumbLabel: 'Deducciones El Salvador',
+    landingBridge: {
+      title: '¿Gestionas planilla en El Salvador?',
+      body: 'Descubre cómo Humano SISU automatiza ISSS, AFP e ISR desde la asistencia hasta el comprobante en USD.',
+      href: '/#como-funciona',
+      cta: 'Conocer Humano SISU para empresas en El Salvador'
+    }
   },
   GTM: {
     countryCode: 'GTM',
@@ -278,6 +350,13 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
     relatedCalculators: [
       { href: '/calculadora-deducciones', label: 'Calculadora Honduras' },
       { href: '/calculadora-deducciones-el-salvador', label: 'Calculadora El Salvador' }
-    ]
+    ],
+    breadcrumbLabel: 'Deducciones Guatemala',
+    landingBridge: {
+      title: '¿Tu equipo aún concilia IGSS e ISR a mano?',
+      body: 'Humano SISU integra asistencia y nómina en quetzales con el mismo motor legal que esta calculadora.',
+      href: '/#como-funciona',
+      cta: 'Ver la plataforma de nómina para Guatemala'
+    }
   }
 }

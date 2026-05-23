@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import DemoFooter from '../components/DemoFooter'
 import ServicesSection from '../components/ServicesSection'
 import HowItWorks from '../components/HowItWorks'
+import FreeToolsSection from '../components/FreeToolsSection'
 import AWSCertificationsSection from '../components/AWSCertificationsSection'
 import LandingHero from '../components/LandingHero'
 import MainHeader from '../components/MainHeader'
@@ -179,6 +180,9 @@ export default function LandingPage() {
 
       {/* How It Works Section */}
       <HowItWorks />
+
+      {/* Organic funnel: landing ↔ calculadoras (cluster que ya rankea) */}
+      <FreeToolsSection />
 
       {/* Services Section - Rediseñada */}
       <div className="mt-4">
