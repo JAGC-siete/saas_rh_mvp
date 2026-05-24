@@ -1,6 +1,7 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
 import { logger } from '../logger'
+import { getResendFromContact } from '../resend-from'
 import {
   getWatchWindowKey,
   isBiMonthlyWatchDay,
@@ -15,8 +16,6 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 const resend = new Resend(process.env.RESEND_API_KEY)
-
-const FROM_ADDRESS = 'jorgearturo@humanosisu.net'
 
 async function hasWatchmanSendInWindow(
   supabase: SupabaseClient,
@@ -102,7 +101,7 @@ export async function runSequenceWatchman(now: Date = new Date()) {
 
     try {
       await resend.emails.send({
-        from: FROM_ADDRESS,
+        from: getResendFromContact(),
         to: lead.email,
         subject: content.subject,
         text: content.text,

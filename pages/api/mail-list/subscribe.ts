@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
 import { createSuccessResponse, createErrorResponse } from '../../../lib/security/api-responses'
 import { logger } from '../../../lib/logger'
+import { getResendFromContact } from '../../../lib/resend-from'
 import {
   getWatchWindowKey,
   SEQUENCE_CONTENT,
@@ -16,7 +17,6 @@ const supabaseAdmin = createClient(
 )
 
 const resend = new Resend(process.env.RESEND_API_KEY)
-const FROM_ADDRESS = 'jorgearturo@humanosisu.net'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -52,7 +52,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     try {
       await resend.emails.send({
-        from: FROM_ADDRESS,
+        from: getResendFromContact(),
         to: trimmedEmail,
         subject: welcomeContent.subject,
         text: welcomeContent.text,

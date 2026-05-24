@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { generateDeductionReportPDF } from '../../../lib/deduction-validator/pdf-report'
 import { notificationManager } from '../../../lib/notification-providers'
+import { getResendFromContact } from '../../../lib/resend-from'
 import { generateDeductionEmailHTML, generateDeductionEmailSubject } from '../../../lib/deduction-validator/email-template'
 import { validateEmail } from '../../../lib/deduction-validator/validation'
 import { withRateLimit } from '../../../lib/deduction-validator/rate-limit-wrapper'
@@ -205,7 +206,7 @@ async function sendReportHandler(
 
     // Determinar configuración de email
     const apiKey = notificationConfig?.emailProvider.apiKey || process.env.RESEND_API_KEY
-    const fromEmail = notificationConfig?.emailProvider.fromEmail || process.env.RESEND_FROM || 'jorgearturo@humanosisu.net'
+    const fromEmail = getResendFromContact()
 
     if (!apiKey) {
       logger.error('RESEND_API_KEY no configurado')

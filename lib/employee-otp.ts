@@ -1,5 +1,6 @@
 import { Resend } from 'resend'
 import { logger } from './logger'
+import { getResendFromNoreply } from './resend-from'
 
 // Store OTP codes temporarily (in production, use Redis or database)
 // Rate limiting for send/verify is enforced in API routes via lib/security/rate-limiting
@@ -41,7 +42,7 @@ export async function sendOtp(email: string, employeeId: string, employeeName: s
     const resend = new Resend(resendApiKey)
     
     const { data, error: resendError } = await resend.emails.send({
-      from: process.env.RESEND_FROM || 'Portal de Empleados <jorgearturo@humanosisu.net>',
+      from: getResendFromNoreply({ displayName: 'Portal de Empleados' }),
       to: [email],
       subject: 'Código de Acceso - Portal de Empleados',
       html: `

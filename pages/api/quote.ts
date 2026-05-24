@@ -6,6 +6,7 @@ import { createAdminClient } from '../../lib/supabase/server'
 import { logger } from '../../lib/logger'
 import { maskEmail, normalizeSoftPhone } from '../../lib/privacy'
 import { notificationManager } from '../../lib/notification-providers'
+import { getResendFromContact } from '../../lib/resend-from'
 import type { QuotationRequest, QuotationResponse, VentasPricingTier, CurrencyCode } from '../../lib/ventas/types'
 import { clampInt, normalizeCouponCode, resolveTierByEmployees, roundMoney } from '../../lib/ventas/pricing'
 import { generateVentasQuotationPDF } from '../../lib/ventas/pdf'
@@ -391,7 +392,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
     const systemCompanyId = 'system-public-tool'
     const notificationConfig = await notificationManager.getConfigForCompany(systemCompanyId)
     const apiKey = notificationConfig?.emailProvider.apiKey || process.env.RESEND_API_KEY
-    const fromEmail = notificationConfig?.emailProvider.fromEmail || process.env.RESEND_FROM || 'jorgearturo@humanosisu.net'
+    const fromEmail = getResendFromContact()
 
     if (!apiKey) {
       logger.error('RESEND_API_KEY no configurado (ventas)', { quoteId })

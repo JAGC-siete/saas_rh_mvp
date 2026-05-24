@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../lib/supabase/server'
 import { authenticateUser } from '../../../lib/auth-helpers'
+import { getResendFromNoreply } from '../../../lib/resend-from'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
@@ -86,7 +87,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Validar credenciales SMTP
     const apiKey = process.env['RESEND_API_KEY'] || ''
-    const fromEmail = process.env.RESEND_FROM || 'jorgearturo@humanosisu.net'
+    const fromEmail = getResendFromNoreply()
     
     if (!apiKey) {
       console.error('❌ RESEND_API_KEY missing - no se puede enviar email')
