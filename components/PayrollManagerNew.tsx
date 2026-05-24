@@ -725,6 +725,8 @@ export default function PayrollManagerNew({ companyId: propCompanyId }: { compan
           loading={payroll.loading}
           canAuthorize={payroll.canAuthorize}
           canSend={payroll.canSend}
+          isBulkEmailBlocked={payroll.isBulkEmailBlocked}
+          bulkEmailBlockedMessage={payroll.bulkEmailBlockedMessage}
           runId={payroll.runId}
           status={payroll.status}
           period={payroll.currentPeriod}

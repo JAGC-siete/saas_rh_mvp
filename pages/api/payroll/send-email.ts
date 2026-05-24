@@ -4,6 +4,20 @@ import { authenticateUser } from '../../../lib/auth-helpers'
 import { notificationManager } from '../../../lib/notification-providers'
 import { emailService } from '../../../lib/email-service'
 import { withExportRateLimit } from '../../../lib/security/rate-limiting'
+import {
+  getBillingErrorCode,
+  incrementUsage,
+  requirePaidPlanForBulkVoucherEmail,
+} from '../../../lib/billing/enforce'
+import {
+  BULK_VOUCHER_EMAIL_PAID_FEATURE_CODE,
+  BULK_VOUCHER_EMAIL_TRIAL_MESSAGE,
+} from '../../../lib/billing/messages'
+import {
+  buildPayrollReceiptEmailHtml,
+  buildPayrollReceiptEmailSubject,
+  buildPayrollReceiptEmailText,
+} from '../../../lib/emails/payroll-receipt-email'
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -33,7 +47,20 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     
     const supabase = createClient(req, res)
 
-    console.log('Usuario autenticado para envío de email:', { 
+    try {
+      await requirePaidPlanForBulkVoucherEmail(supabase, userProfile.company_id)
+    } catch (billingError: any) {
+      if (billingError?.message === BULK_VOUCHER_EMAIL_PAID_FEATURE_CODE) {
+        return res.status(getBillingErrorCode(BULK_VOUCHER_EMAIL_PAID_FEATURE_CODE)).json({
+          error: BULK_VOUCHER_EMAIL_PAID_FEATURE_CODE,
+          code: BULK_VOUCHER_EMAIL_PAID_FEATURE_CODE,
+          message: BULK_VOUCHER_EMAIL_TRIAL_MESSAGE,
+        })
+      }
+      throw billingError
+    }
+
+    console.log('Usuario autenticado para envío de email:', {
       userId: user.id, 
       role: userProfile.role,
       companyId: userProfile.company_id 
@@ -128,30 +155,26 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         }
         
         const periodo = `${run.year}-${run.month.toString().padStart(2, '0')} Q${run.quincena}`
-        
+        const receiptData = {
+          employeeName: employee.name,
+          periodLabel: periodo,
+          hoursWorked: line.eff_hours,
+          grossSalary: line.eff_bruto,
+          ihss: line.eff_ihss,
+          rap: line.eff_rap,
+          isr: line.eff_isr,
+          netSalary: line.eff_neto,
+        }
+
         const emailResult = await emailService.sendEmail(notificationConfig, {
           to: employee.email,
-          subject: `Recibo de Nómina - ${periodo}`,
-          text: `Recibo de Nómina - ${periodo} para ${employee.name}`,
-          html: `
-            <h2>Recibo de Nómina - ${periodo}</h2>
-            <p>Estimado/a ${employee.name},</p>
-            <p>Adjunto encontrará su recibo de nómina correspondiente al período ${periodo}.</p>
-            <h3>Resumen de Nómina:</h3>
-            <ul>
-              <li><strong>Horas trabajadas:</strong> ${line.eff_hours}</li>
-              <li><strong>Salario bruto:</strong> L. ${line.eff_bruto.toFixed(2)}</li>
-              <li><strong>IHSS:</strong> L. ${line.eff_ihss.toFixed(2)}</li>
-              <li><strong>RAP:</strong> L. ${line.eff_rap.toFixed(2)}</li>
-              <li><strong>ISR:</strong> L. ${line.eff_isr.toFixed(2)}</li>
-              <li><strong>Salario neto:</strong> L. ${line.eff_neto.toFixed(2)}</li>
-            </ul>
-            <p>Si tiene alguna pregunta, no dude en contactarnos.</p>
-            <p>Saludos cordiales,<br>Equipo de Recursos Humanos</p>
-          `
+          subject: buildPayrollReceiptEmailSubject(periodo),
+          text: buildPayrollReceiptEmailText(receiptData),
+          html: buildPayrollReceiptEmailHtml(receiptData),
         })
 
         if (emailResult.success) {
+          await incrementUsage(supabase, userProfile.company_id, 'send_voucher')
           results.push({
             employee_id: employee.id || line.employee_id,
             email: employee.email,

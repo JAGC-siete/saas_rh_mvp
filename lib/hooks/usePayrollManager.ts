@@ -2,12 +2,13 @@
 // Consolidates all payroll state management into a single, cohesive system
 // Replaces the dual state system with a single source of truth
 
-import { useReducer, useCallback, useMemo, useEffect } from 'react'
+import { useReducer, useCallback, useMemo, useEffect, useState } from 'react'
 import { useCompanyContext } from '../useCompanyContext'
 import { useToast } from '../toast'
 import { fetchUnifiedPayroll, getCurrentPeriod, UnifiedRow, UnifiedResumen } from '../payroll-unified'
 import { usePayrollMetrics } from './usePayrollMetrics'
 import { payrollApi, mapPayrollError } from '../payroll-api'
+import { BULK_VOUCHER_EMAIL_TRIAL_MESSAGE } from '../billing/messages'
 import type { PayrollPdfGroupBy } from '../payroll/pdf-layout'
 import { PayrollFilters, UIRunStatus } from '../../types/payroll'
 
@@ -156,11 +157,22 @@ export const usePayrollManager = () => {
   const [state, dispatch] = useReducer(payrollManagerReducer, getInitialState())
   const { companyId, loading: companyLoading } = useCompanyContext()
   const toast = useToast()
+  const [commercialPlan, setCommercialPlan] = useState<string | null>(null)
 
   // Metrics calculation
   const metrics = usePayrollMetrics(state.unifiedData?.rows || [])
 
-  // Action Creators
+  useEffect(() => {
+    if (!companyId) {
+      setCommercialPlan(null)
+      return
+    }
+
+    fetch('/api/me/features', { credentials: 'include' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => setCommercialPlan(data?.plan?.commercial ?? null))
+      .catch(() => setCommercialPlan(null))
+  }, [companyId])
   const setLoading = useCallback((loading: boolean) => {
     dispatch({ type: 'SET_LOADING', payload: loading })
   }, [])
@@ -622,6 +634,11 @@ export const usePayrollManager = () => {
       throw new Error('No hay una corrida de nómina activa')
     }
 
+    if (commercialPlan === 'trial') {
+      toast.info('Función de plan de pago', BULK_VOUCHER_EMAIL_TRIAL_MESSAGE, 10000)
+      return
+    }
+
     setStatus('distributing')
     setLoading(true)
     clearError()
@@ -648,8 +665,10 @@ export const usePayrollManager = () => {
       setError(errorMessage)
       toast.error('Error Enviando Emails', errorMessage, 8000)
       throw error
+    } finally {
+      setLoading(false)
     }
-  }, [state.runId, setStatus, setLoading, clearError, setError, toast])
+  }, [state.runId, commercialPlan, setStatus, setLoading, clearError, setError, toast])
 
   const generatePDF = useCallback(
     async (groupBy: PayrollPdfGroupBy = 'none') => {
@@ -820,6 +839,7 @@ export const usePayrollManager = () => {
   const canAuthorize = (state.status === 'draft' || state.status === 'edited') && !!state.runId
   const canSend =
     (state.status === 'authorized' || state.status === 'distributed') && !!state.runId
+  const isBulkEmailBlocked = commercialPlan === 'trial'
   const canReset = state.status !== 'idle'
   
   // DEBUG: Log current state for debugging
@@ -874,6 +894,8 @@ export const usePayrollManager = () => {
     canEdit,
     canAuthorize,
     canSend,
+    isBulkEmailBlocked,
+    bulkEmailBlockedMessage: BULK_VOUCHER_EMAIL_TRIAL_MESSAGE,
     canReset,
     
     // Legacy Compatibility

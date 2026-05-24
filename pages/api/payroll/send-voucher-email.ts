@@ -2,6 +2,11 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '../../../lib/supabase/server'
 import { authenticateUser } from '../../../lib/auth-helpers'
 import { getResendFromNoreply } from '../../../lib/resend-from'
+import {
+  buildVoucherLinkEmailHtml,
+  buildVoucherLinkEmailSubject,
+  buildVoucherLinkEmailText,
+} from '../../../lib/emails/payroll-receipt-email'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
@@ -118,30 +123,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const { Resend } = await import('resend')
       const resend = new Resend(apiKey)
       
-      const subject = `Voucher de Pago ${periodo} Q${quincena} - ${employee.name}`
-      
-      const body = `Hola,
-
-Has recibido el voucher de pago individual para:
-
-👤 Empleado: ${employee.name}
-🆔 Código: ${employee.employee_code}
-📅 Período: ${periodo} Q${quincena}
-
-Para descargar el voucher, haz clic en el siguiente enlace seguro:
-${downloadUrl}
-
-**IMPORTANTE**: Este enlace es válido solo para usuarios autorizados de la empresa.
-
-Si tienes alguna pregunta, contacta al departamento de RRHH.
-
-Saludos.`
+      const periodLabel = `${periodo} Q${quincena}`
+      const voucherEmail = {
+        employeeName: employee.name,
+        employeeCode: employee.employee_code,
+        periodLabel,
+        downloadUrl,
+      }
 
       const result = await resend.emails.send({
         from: fromEmail,
         to,
-        subject,
-        text: body,
+        subject: buildVoucherLinkEmailSubject(voucherEmail),
+        text: buildVoucherLinkEmailText(voucherEmail),
+        html: buildVoucherLinkEmailHtml(voucherEmail),
       })
 
       if ((result as any)?.error) {

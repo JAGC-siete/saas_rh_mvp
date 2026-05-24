@@ -12,6 +12,10 @@ import {
   SendResponse,
   PayrollError
 } from '../types/payroll'
+import {
+  BULK_VOUCHER_EMAIL_PAID_FEATURE_CODE,
+  BULK_VOUCHER_EMAIL_TRIAL_MESSAGE,
+} from './billing/messages'
 import type { PayrollPdfGroupBy } from './payroll/pdf-layout'
 
 // Generic API function with timeout and error handling
@@ -115,6 +119,13 @@ export const payrollApi = {
 
 // Error mapping for better UX
 export const mapPayrollError = (error: any): string => {
+  if (
+    error?.code === BULK_VOUCHER_EMAIL_PAID_FEATURE_CODE ||
+    error?.error === BULK_VOUCHER_EMAIL_PAID_FEATURE_CODE
+  ) {
+    return error?.message || BULK_VOUCHER_EMAIL_TRIAL_MESSAGE
+  }
+
   if (error?.errorCode) {
     switch (error.errorCode) {
       case 'TENANT_MISMATCH':

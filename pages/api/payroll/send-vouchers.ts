@@ -4,6 +4,20 @@ import { authenticateUser } from '../../../lib/auth-helpers'
 import { notificationManager } from '../../../lib/notification-providers'
 import { emailService } from '../../../lib/email-service'
 import { createEmployeeSalaryClient } from '../../../lib/security/employee-data-access'
+import {
+  getBillingErrorCode,
+  incrementUsage,
+  requirePaidPlanForBulkVoucherEmail,
+} from '../../../lib/billing/enforce'
+import {
+  BULK_VOUCHER_EMAIL_PAID_FEATURE_CODE,
+  BULK_VOUCHER_EMAIL_TRIAL_MESSAGE,
+} from '../../../lib/billing/messages'
+import {
+  buildPayrollReceiptEmailHtml,
+  buildPayrollReceiptEmailSubject,
+  buildPayrollReceiptEmailText,
+} from '../../../lib/emails/payroll-receipt-email'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -34,6 +48,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (!companyId) {
       return res.status(400).json({ error: 'Usuario no tiene empresa asignada' })
+    }
+
+    if (delivery === 'email' || delivery === 'both') {
+      try {
+        await requirePaidPlanForBulkVoucherEmail(supabase, companyId)
+      } catch (billingError: any) {
+        if (billingError?.message === BULK_VOUCHER_EMAIL_PAID_FEATURE_CODE) {
+          return res.status(getBillingErrorCode(BULK_VOUCHER_EMAIL_PAID_FEATURE_CODE)).json({
+            error: BULK_VOUCHER_EMAIL_PAID_FEATURE_CODE,
+            code: BULK_VOUCHER_EMAIL_PAID_FEATURE_CODE,
+            message: BULK_VOUCHER_EMAIL_TRIAL_MESSAGE,
+          })
+        }
+        throw billingError
+      }
     }
 
     // Obtener configuración de notificaciones para la empresa
@@ -139,40 +168,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Enviar por email si está habilitado
         if ((delivery === 'email' || delivery === 'both') && employee.email && options?.attach_pdf) {
           try {
+            const periodLabel = `${periodo} Q${quincena}`
+            const receiptData = {
+              employeeName: employee.name,
+              periodLabel,
+              grossSalary: payrollData?.gross_salary ?? 0,
+              ihss: payrollData?.social_security ?? 0,
+              rap: payrollData?.professional_tax ?? 0,
+              isr: payrollData?.income_tax ?? 0,
+              netSalary: payrollData?.net_salary ?? 0,
+            }
+
             const emailResult = await emailService.sendEmail(notificationConfig, {
               to: employee.email,
-              subject: `Recibo de Nómina - ${periodo} Q${quincena} - Humano SISU`,
-              text: `
-Recibo de Nómina Quincenal
-
-Estimado/a ${employee.name},
-
-Adjunto encontrará su recibo de nómina para el período ${periodo} Q${quincena}.
-
-Resumen:
-• Salario Bruto: L. ${payrollData?.gross_salary?.toFixed(2) || '0.00'}
-• Total Deducciones: L. ${payrollData?.total_deductions?.toFixed(2) || '0.00'}
-• Salario Neto: L. ${payrollData?.net_salary?.toFixed(2) || '0.00'}
-
-Saludos,
-Departamento de Recursos Humanos
-Humano SISU
-              `,
-              html: `
-                <h2>Recibo de Nómina Quincenal</h2>
-                <p>Estimado/a ${employee.name},</p>
-                <p>Adjunto encontrará su recibo de nómina para el período ${periodo} Q${quincena}.</p>
-                <p><strong>Resumen:</strong></p>
-                <ul>
-                  <li>Salario Bruto: L. ${payrollData?.gross_salary?.toFixed(2) || '0.00'}</li>
-                  <li>Total Deducciones: L. ${payrollData?.total_deductions?.toFixed(2) || '0.00'}</li>
-                  <li>Salario Neto: L. ${payrollData?.net_salary?.toFixed(2) || '0.00'}</li>
-                </ul>
-                <p>Saludos,<br>Departamento de Recursos Humanos<br>Humano SISU</p>
-              `
+              subject: buildPayrollReceiptEmailSubject(periodLabel),
+              text: buildPayrollReceiptEmailText(receiptData),
+              html: buildPayrollReceiptEmailHtml(receiptData),
             })
 
             if (emailResult.success) {
+              await incrementUsage(supabase, companyId, 'send_voucher')
               emailSent = true
               console.log(`✅ Email enviado a ${employee.email}:`, emailResult.messageId)
             } else {

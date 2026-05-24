@@ -1,6 +1,12 @@
 import { Resend } from 'resend'
 import { logger } from './logger'
 import { getResendFromNoreply } from './resend-from'
+import {
+  escapeHtml,
+  transactionalInfoBox,
+  transactionalParagraph,
+  wrapTransactionalEmail,
+} from './emails/transactional-layout'
 
 // Store OTP codes temporarily (in production, use Redis or database)
 // Rate limiting for send/verify is enforced in API routes via lib/security/rate-limiting
@@ -19,106 +25,99 @@ setInterval(() => {
 
 export async function sendOtp(email: string, employeeId: string, employeeName: string) {
   try {
-    // Generate 6-digit OTP code
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString()
-    const expiresAt = Date.now() + (10 * 60 * 1000) // 10 minutes
+    const expiresAt = Date.now() + 10 * 60 * 1000
 
     otpStore.set(email.trim().toLowerCase(), {
       code: otpCode,
-      expires: expiresAt
+      expires: expiresAt,
     })
 
-    // Send email using Resend
     const resendApiKey = process.env.RESEND_API_KEY
-    
+
     if (!resendApiKey) {
       logger.error('RESEND_API_KEY not configured')
       return {
         success: false,
-        error: 'Configuración de email no disponible'
+        error: 'Configuración de email no disponible',
       }
     }
 
     const resend = new Resend(resendApiKey)
-    
+
+    const bodyHtml = [
+      transactionalParagraph(`Hola <strong style="color: #1a1a1a;">${escapeHtml(employeeName)}</strong>,`),
+      transactionalParagraph('Use este código para acceder al portal de empleados:'),
+      `<div style="text-align: center; margin: 20px 0;">
+        <motion></motion>
+      </div>`.replace(
+        '<motion></motion>',
+        `<motion></motion>`.replace(
+          '<motion></motion>',
+          `<div style="display: inline-block; font-size: 32px; font-weight: 700; color: #0b4fa1; letter-spacing: 8px; font-family: monospace; background: #f8fafc; padding: 16px 24px; border-radius: 8px; border: 1px solid #e2e8f0;">${otpCode}</div>`
+        )
+      ),
+      transactionalParagraph('Este código expira en <strong>10 minutos</strong>.'),
+      transactionalInfoBox(
+        '<strong>Seguridad:</strong> si no solicitó este código, ignore este mensaje. Nunca lo comparta con terceros.',
+        'warning'
+      ),
+    ].join('')
+
+    const html = wrapTransactionalEmail({
+      title: 'Código de acceso',
+      subtitle: 'Portal de Empleados',
+      bodyHtml,
+      footerNote: 'Correo automático de acceso. No responda a este mensaje.',
+    })
+
     const { data, error: resendError } = await resend.emails.send({
       from: getResendFromNoreply({ displayName: 'Portal de Empleados' }),
       to: [email],
       subject: 'Código de Acceso - Portal de Empleados',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="text-align: center; margin-bottom: 30px;">
-            <h1 style="color: #1e293b; margin-bottom: 10px;">Portal de Empleados</h1>
-            <p style="color: #64748b; font-size: 16px;">Humano SISU</p>
-          </div>
-          
-          <div style="background: #f8fafc; border-radius: 8px; padding: 30px; text-align: center; margin-bottom: 20px;">
-            <h2 style="color: #1e293b; margin-bottom: 15px;">Hola ${employeeName}</h2>
-            <p style="color: #64748b; margin-bottom: 20px;">Su código de acceso es:</p>
-            <div style="font-size: 32px; font-weight: bold; color: #3b82f6; letter-spacing: 8px; font-family: monospace; background: white; padding: 15px; border-radius: 6px; border: 2px solid #e2e8f0;">
-              ${otpCode}
-            </div>
-            <p style="color: #64748b; margin-top: 15px; font-size: 14px;">
-              Este código expira en <strong>10 minutos</strong>
-            </p>
-          </div>
-          
-          <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin-bottom: 20px;">
-            <p style="color: #92400e; margin: 0; font-size: 14px;">
-              <strong>Importante:</strong> Si no solicitó este código, ignore este mensaje. 
-              Nunca comparta este código con nadie.
-            </p>
-          </div>
-          
-          <div style="text-align: center; color: #64748b; font-size: 12px;">
-            <p>Humano SISU - Sistema de Recursos Humanos</p>
-            <p>Este es un mensaje automático, no responda a este email.</p>
-          </div>
-        </div>
-      `
+      html,
     })
 
     if (resendError) {
       logger.error('Failed to send OTP email via Resend', {
         email,
         employeeId,
-        error: resendError.message
+        error: resendError.message,
       })
-      
+
       return {
         success: false,
-        error: 'Error enviando código. Intente nuevamente.'
+        error: 'Error enviando código. Intente nuevamente.',
       }
     }
 
     logger.info('OTP email sent successfully', {
       employeeId,
       email,
-      messageId: data?.id
+      messageId: data?.id,
     })
 
     return {
       success: true,
       message: 'Código enviado a su email. Revise su bandeja de entrada.',
-      expiresIn: 600
+      expiresIn: 600,
     }
-
   } catch (error: any) {
     logger.error('Send OTP error', error)
     return {
       success: false,
-      error: 'Error interno del servidor'
+      error: 'Error interno del servidor',
     }
   }
 }
 
 export function verifyOtp(email: string, code: string) {
   const storedOtp = otpStore.get(email.trim().toLowerCase())
-  
+
   if (!storedOtp) {
     return {
       success: false,
-      error: 'Código no encontrado o expirado'
+      error: 'Código no encontrado o expirado',
     }
   }
 
@@ -126,20 +125,20 @@ export function verifyOtp(email: string, code: string) {
     otpStore.delete(email.trim().toLowerCase())
     return {
       success: false,
-      error: 'Código expirado'
+      error: 'Código expirado',
     }
   }
 
   if (storedOtp.code !== code) {
     return {
       success: false,
-      error: 'Código inválido'
+      error: 'Código inválido',
     }
   }
 
   otpStore.delete(email.trim().toLowerCase())
-  
+
   return {
-    success: true
+    success: true,
   }
 }

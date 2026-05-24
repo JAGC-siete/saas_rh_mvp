@@ -44,6 +44,8 @@ interface UnifiedPayrollTableProps {
   loading?: boolean
   canAuthorize?: boolean
   canSend?: boolean
+  isBulkEmailBlocked?: boolean
+  bulkEmailBlockedMessage?: string
   runId?: string
   status?: string
   period: {
@@ -74,8 +76,9 @@ export default function UnifiedPayrollTable({
   loading = false,
   // eslint-disable-next-line no-unused-vars
   canAuthorize: _canAuthorize = false,
-  // eslint-disable-next-line no-unused-vars
-  canSend: _canSend = false,
+  canSend = false,
+  isBulkEmailBlocked = false,
+  bulkEmailBlockedMessage,
   runId,
   status,
   period,
@@ -578,17 +581,19 @@ export default function UnifiedPayrollTable({
           {/* Send Email - Only enabled after PDF generation (tracked separately) */}
           <Button
             onClick={onSendEmail}
-            disabled={!runId || loading || (status !== 'authorized' && status !== 'distributed')}
+            disabled={!runId || loading || !canSend}
             variant="outline"
-            className="flex items-center gap-2 bg-white/10 border-white/30 text-white hover:bg-white/20 disabled:opacity-50"
+            className={`flex items-center gap-2 bg-white/10 border-white/30 text-white hover:bg-white/20 disabled:opacity-50 ${isBulkEmailBlocked && canSend ? 'border-amber-400/40' : ''}`}
             title={
-              status !== 'authorized' && status !== 'distributed'
+              !canSend
                 ? 'Autorice y genere PDF primero'
-                : 'Enviar recibos por email'
+                : isBulkEmailBlocked
+                  ? bulkEmailBlockedMessage || 'Función disponible en plan de pago'
+                  : 'Enviar recibos por email'
             }
           >
             <Icon name="envelope" className="h-4 w-4" />
-            Enviar por Email
+            {isBulkEmailBlocked && canSend ? 'Enviar por Email (plan de pago)' : 'Enviar por Email'}
           </Button>
         </div>
       </CardContent>
