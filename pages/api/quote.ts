@@ -10,7 +10,7 @@ import { getResendFromContact } from '../../lib/resend-from'
 import type { QuotationRequest, QuotationResponse, VentasPricingTier, CurrencyCode } from '../../lib/ventas/types'
 import { clampInt, normalizeCouponCode, resolveTierByEmployees, roundMoney } from '../../lib/ventas/pricing'
 import { generateVentasQuotationPDF } from '../../lib/ventas/pdf'
-import { generateVentasQuotationEmailHTML, generateVentasQuotationEmailSubject } from '../../lib/ventas/email-template'
+import { generateVentasQuotationEmailHTML, generateVentasQuotationEmailSubject, generateVentasQuotationEmailText } from '../../lib/ventas/email-template'
 import { generateVentasActivationEmailHTML, generateVentasActivationEmailSubject } from '../../lib/ventas/activation-email'
 import { computeUrgencyOffer } from '../../lib/ventas/urgency-offer'
 import {
@@ -59,6 +59,7 @@ async function sendEmailWithResend(params: {
   to: string | string[]
   subject: string
   html: string
+  text?: string
   attachments?: { filename: string; contentBase64: string }[]
   pdfBuffer: Buffer
   filename: string
@@ -72,6 +73,7 @@ async function sendEmailWithResend(params: {
     to: params.to,
     subject: params.subject,
     html: params.html,
+    ...(params.text ? { text: params.text } : {}),
     attachments: [
       { filename: params.filename, content: params.pdfBuffer.toString('base64') },
       ...(params.attachments || []).map((a) => ({ filename: a.filename, content: a.contentBase64 })),
@@ -362,6 +364,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
     const quotedTotalForUrgency = billingModality === 'monthly' ? monthlyTotal : annualTotal
     const urgencyOffer = computeUrgencyOffer({ quotedTotal: quotedTotalForUrgency, sentAt })
 
+    const bankDetails = getVentasBankDetailsFromEnv()
+
     // Generate PDF
     const pdf = await generateVentasQuotationPDF({
       quote,
@@ -373,6 +377,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       terminalsCount: terminalsForPricing,
       couponCodeSubmitted: couponSubmittedNorm || undefined,
       countryLabel,
+      urgencyOffer,
+      bankDetails,
     })
 
     const html = generateVentasQuotationEmailHTML({
@@ -381,11 +387,21 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       companyName,
       countryLabel,
       sentAt,
+      bankDetails,
+    })
+    const text = generateVentasQuotationEmailText({
+      quote,
+      contactName,
+      companyName,
+      countryLabel,
+      sentAt,
+      bankDetails,
     })
     const subject = generateVentasQuotationEmailSubject({
       contactName,
       discountAmount: urgencyOffer.discountAmount,
       currency,
+      urgencyActive: urgencyOffer.isActive,
     })
     const filename = `cotizacion-sisu-${quote.tier.min_employees}-${quote.tier.max_employees}.pdf`
 
@@ -407,6 +423,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       to: toList,
       subject,
       html,
+      text,
       attachments: [],
       pdfBuffer: pdf,
       filename,
@@ -466,6 +483,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
         email: contactEmail,
         password: env.tempPassword,
         loginUrl,
+        bankDetails,
       })
       const activationSubject = generateVentasActivationEmailSubject(contactName)
 
@@ -478,7 +496,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       })
 
       const bank = getVentasBankDetailsFromEnv()
-      if (bank) {
+      if (bank && !bankDetails) {
         const bankHtml = generateVentasBankDetailsEmailHTML({ contactName, companyName, bank })
         const bankSubject = generateVentasBankDetailsEmailSubject(companyName)
         await sendEmailHtmlOnly({
