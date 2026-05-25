@@ -9,6 +9,7 @@ import { notificationManager } from '../../lib/notification-providers'
 import { getResendFromContact } from '../../lib/resend-from'
 import type { QuotationRequest, QuotationResponse, VentasPricingTier, CurrencyCode } from '../../lib/ventas/types'
 import { clampInt, normalizeCouponCode, resolveTierByEmployees, roundMoney } from '../../lib/ventas/pricing'
+import { hardwareFeeMonthly, ventasTooManyTerminalsErrorMessage } from '../../lib/ventas/modality-includes'
 import { generateVentasQuotationPDF } from '../../lib/ventas/pdf'
 import { generateVentasQuotationEmailHTML, generateVentasQuotationEmailSubject, generateVentasQuotationEmailText } from '../../lib/ventas/email-template'
 import { generateVentasActivationEmailHTML, generateVentasActivationEmailSubject } from '../../lib/ventas/activation-email'
@@ -36,23 +37,9 @@ const FALLBACK_TIERS: VentasPricingTier[] = [
   { min_employees: 101, max_employees: 200, price: 97450, is_active: true, sort_order: 40 },
 ]
 
-// Tarifa de continuidad de hardware (modalidad mensual, 1–3 terminales). Más de 3: cotización especial (anual o mensual).
-const HARDWARE_FEES_MONTHLY: Record<number, number> = {
-  1: 958.33,
-  2: 1320.0,
-  3: 1624.7,
-}
-
 function normalizeBillingModality(v: unknown): 'annual' | 'monthly' {
   const raw = typeof v === 'string' ? v.trim().toLowerCase() : ''
   return raw === 'monthly' || raw === 'mensual' ? 'monthly' : 'annual'
-}
-
-function hardwareFeeMonthly(terminalsCount: number): { fee: number; special: boolean } {
-  if (terminalsCount <= 0) return { fee: 0, special: false }
-  const fee = HARDWARE_FEES_MONTHLY[terminalsCount]
-  if (typeof fee === 'number' && Number.isFinite(fee)) return { fee: roundMoney(fee), special: false }
-  return { fee: 0, special: true }
 }
 
 async function sendEmailWithResend(params: {
@@ -287,10 +274,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
     const terminalsForPricing = terminalsCount >= 1 ? terminalsCount : 1
     const hwQuote = hardwareFeeMonthly(terminalsForPricing)
     if (hwQuote.special) {
-      return res.status(400).json({
-        error:
-          'Para más de 3 terminales cotizamos aparte según la tarifa de continuidad de hardware (misma base que en modalidad mensual). Escríbenos y te confirmamos el monto.',
-      })
+      return res.status(400).json({ error: ventasTooManyTerminalsErrorMessage() })
     }
     const monthlyHardwareFee = billingModality === 'monthly' ? hwQuote.fee : 0
     const monthlyTotal = roundMoney(monthlySoftwareTotal + monthlyHardwareFee)
@@ -377,7 +361,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       terminalsCount: terminalsForPricing,
       couponCodeSubmitted: couponSubmittedNorm || undefined,
       countryLabel,
-      urgencyOffer,
       bankDetails,
     })
 

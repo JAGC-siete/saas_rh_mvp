@@ -5,6 +5,11 @@ import type { UrgencyOffer } from './urgency-offer'
 import { formatUrgencyOfferExpiryFriendly } from './urgency-offer'
 import type { VentasBankDetails } from './bank-details'
 import { buildBankDetailsPlainText } from './bank-details'
+import {
+  buildModalityIncludesPlainLines,
+  buildTerminalsPricingNote,
+  VENTAS_MAX_AUTO_QUOTE_TERMINALS,
+} from './modality-includes'
 
 export async function generateVentasQuotationPDF(params: {
   quote: QuotationQuote
@@ -74,15 +79,31 @@ export async function generateVentasQuotationPDF(params: {
         .text(`Rango tarifario: ${quote.tier.min_employees}–${quote.tier.max_employees}`, 40, 256)
         .text(`Modalidad de facturación: ${quote.billing_modality === 'monthly' ? 'Mensual' : 'Anual'}`, 40, 272)
         .text(
-          quote.billing_modality === 'monthly'
-            ? `Terminales: ${quote.terminals_count || terminalsCount || 1}`
-            : `Terminales (anual): ${quote.terminals_count || terminalsCount || 1} · hasta 3 incluidas; más de 3: cotización aparte`,
+          buildTerminalsPricingNote({
+            modality: quote.billing_modality,
+            terminalsCount: quote.terminals_count || terminalsCount || 1,
+          }),
           40,
-          288
+          288,
+          { width: doc.page.width - 80 }
         )
-        .text(`Cupón: ${couponCodeSubmitted?.trim() ? couponCodeSubmitted.trim() : '—'}`, 40, 304)
+        .text(`Cupón: ${couponCodeSubmitted?.trim() ? couponCodeSubmitted.trim() : '—'}`, 40, 318)
 
-      let cursorY = 344
+      let cursorY = 358
+      doc.fontSize(11).text('QUÉ INCLUYE ESTA MODALIDAD', 40, cursorY)
+      cursorY += 18
+      doc.fontSize(9).fillColor('#334155')
+      for (const line of buildModalityIncludesPlainLines(quote.billing_modality)) {
+        if (cursorY > doc.page.height - 80) {
+          doc.addPage()
+          cursorY = 40
+        }
+        doc.text(line, 40, cursorY, { width: doc.page.width - 80 })
+        cursorY += line.startsWith('Plan') ? 16 : 13
+      }
+      doc.fillColor('#0f172a')
+      cursorY += 10
+
       const isMonthly = quote.billing_modality === 'monthly'
       const boxHeight = isMonthly ? 132 : 132
       doc.roundedRect(40, cursorY, doc.page.width - 80, boxHeight, 12).stroke('#cbd5e1')
@@ -113,7 +134,7 @@ export async function generateVentasQuotationPDF(params: {
         doc.fillColor('#0f172a')
 
         doc.fontSize(9).fillColor('#475569')
-        doc.text(`Terminales: ${quote.terminals_count || terminalsCount || 1}`, 56, lineY(3), {
+        doc.text('Terminal biométrica: venta por separado', 56, lineY(3), {
           width: doc.page.width - 120,
         })
         doc.fillColor('#0f172a')
@@ -141,7 +162,7 @@ export async function generateVentasQuotationPDF(params: {
 
         doc.fontSize(9).fillColor('#475569')
         doc.text(
-          `Terminales declaradas (anual): ${quote.terminals_count || terminalsCount || 1} · hasta tres sin cargo mensual de continuidad`,
+          `Terminal biométrica incluida · ${quote.terminals_count || terminalsCount || 1} declarada(s) (hasta ${VENTAS_MAX_AUTO_QUOTE_TERMINALS} en cotización automática)`,
           56,
           lineY(3),
           { width: doc.page.width - 120 }
@@ -205,7 +226,7 @@ export async function generateVentasQuotationPDF(params: {
         .fontSize(9)
         .fillColor('#475569')
         .text(
-          'Nota: cotización orientativa. Los montos de este PDF coinciden con el resumen del correo. Un asesor confirma alcance, integraciones y vigencia.',
+          'Nota: cotización orientativa con precio de lista. Si aplica oferta por contratación en 72 h, el descuento se confirma en el correo y al formalizar. Un asesor confirma alcance, integraciones y vigencia.',
           40,
           cursorY + 6,
           { width: doc.page.width - 80 }

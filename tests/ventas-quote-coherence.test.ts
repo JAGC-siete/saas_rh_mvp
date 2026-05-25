@@ -45,12 +45,18 @@ describe('ventas quote coherence', () => {
       companyName: 'Acme SA',
       countryLabel: 'Honduras',
       sentAt,
+      now: sentAt,
     })
 
     assert.equal(urgency.discountAmount, 18000)
     assert.equal(urgency.discountedTotal, 72000)
-    assert.match(text, /Descuento por contratación en 72 h \(20%\): −L\.\s?18,000\.00 \/ año/)
-    assert.match(text, /Precio con descuento: L\.\s?72,000\.00 \/ año/)
+    assert.match(text, /verdaderamente queremos ayudarte/)
+    assert.match(text, /enorme 20% sobre el total anual/)
+    assert.match(text, /Precio normal: L\.\s?90,000\.00 \/ año/)
+    assert.match(text, /Tu precio hoy: L\.\s?72,000\.00 \/ año/)
+    assert.match(text, /Lo que incluye tu Plan Anual/)
+    assert.match(text, /Terminal biométrica incluida/)
+    assert.match(text, /precio de lista/)
   })
 
   it('WhatsApp message references quote review and bank confirmation', () => {

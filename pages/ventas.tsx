@@ -19,6 +19,7 @@ import {
   buildQuotationAcquisitionWhatsAppText,
   buildVentasSupportWhatsAppUrl,
 } from '../lib/ventas/bank-details'
+import { getVentasModalityDefinition } from '../lib/ventas/modality-includes'
 import type { CountryCode } from '../lib/country/supported'
 import { isCountryCode } from '../lib/country/supported'
 
@@ -241,7 +242,7 @@ export default function VentasPage() {
                           </p>
                         )}
                         <p className="text-sm text-cyan-100/70">
-                          Incluye software mensual y continuidad de hardware según terminales indicadas.
+                          {getVentasModalityDefinition('monthly').successSummaryLine}
                         </p>
                       </>
                     ) : (
@@ -267,7 +268,7 @@ export default function VentasPage() {
                           </p>
                         )}
                         <p className="text-sm text-cyan-100/70">
-                          Modalidad anual: hasta tres terminales cubiertas en esta propuesta. Declaradas:{' '}
+                          {getVentasModalityDefinition('annual').successSummaryLine} Declaradas:{' '}
                           <strong>{quote.terminals_count}</strong>{' '}
                           {quote.terminals_count === 1 ? 'terminal' : 'terminales'}.
                         </p>
@@ -447,15 +448,19 @@ export default function VentasPage() {
                   </div>
 
                   <div className="text-xs text-brand-300 bg-black/20 p-3 rounded-lg border border-white/10 leading-relaxed">
-                    {(formData.billing_modality || 'annual') === 'monthly' ? (
-                      <p>
-                        <strong>Plan Mensual:</strong> Suma continuidad de hardware por terminal (hasta tres). Más de tres requiere ajuste especial.
-                      </p>
-                    ) : (
-                      <p>
-                        <strong>Plan Anual:</strong> Incluye hasta 3 terminales biométricas cubiertas en la propuesta inicial.
-                      </p>
-                    )}
+                    <p>
+                      <strong>
+                        {getVentasModalityDefinition(
+                          (formData.billing_modality || 'annual') === 'monthly' ? 'monthly' : 'annual'
+                        ).label}
+                        :
+                      </strong>{' '}
+                      {
+                        getVentasModalityDefinition(
+                          (formData.billing_modality || 'annual') === 'monthly' ? 'monthly' : 'annual'
+                        ).formHint
+                      }
+                    </p>
                   </div>
 
                   <div>

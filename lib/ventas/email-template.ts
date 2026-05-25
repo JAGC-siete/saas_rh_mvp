@@ -12,6 +12,11 @@ import {
   buildQuotationAcquisitionWhatsAppText,
   buildVentasSupportWhatsAppUrl,
 } from './bank-details'
+import {
+  buildModalityPerksSummaryLines,
+  buildUrgencyOfferPitchText,
+  getVentasModalityDefinition,
+} from './modality-includes'
 
 function firstNameFromContact(contactName?: string): string {
   const trimmed = contactName?.trim()
@@ -43,6 +48,17 @@ export function generateVentasQuotationEmailSubject(params: {
   return `Tus números (y cómo ahorrarte ${savings}).`
 }
 
+function buildPerksListHtml(modality: QuotationQuote['billing_modality']): string {
+  const def = getVentasModalityDefinition(modality)
+  const items = buildModalityPerksSummaryLines(modality)
+    .map((line) => `<li style="margin-bottom: 5px;">${escapeHtml(line)}</li>`)
+    .join('')
+  return `
+    <p style="margin: 14px 0 8px 0; font-size: 14px; font-weight: bold; color: #111;">Lo que incluye tu ${escapeHtml(def.label)}:</p>
+    <ul style="margin: 0; padding: 0 0 0 18px; color: #333; font-size: 14px; line-height: 1.65;">${items}</ul>
+  `
+}
+
 function buildPlanSummary(params: {
   quote: QuotationQuote
   urgency: ReturnType<typeof computeUrgencyOffer>
@@ -50,28 +66,28 @@ function buildPlanSummary(params: {
   isMonthly: boolean
   quotedTotal: number
   periodLabel: string
-  terminalsNote: string
-  couponLine: string
 }): string {
-  const { quote, urgency, fmt, isMonthly, quotedTotal, periodLabel, terminalsNote, couponLine } = params
+  const { quote, urgency, fmt, isMonthly, quotedTotal, periodLabel } = params
+  const perksHtml = buildPerksListHtml(quote.billing_modality)
+  const tierLabel = `${quote.tier.min_employees} a ${quote.tier.max_employees} empleados`
 
   if (urgency.isActive) {
+    const savingsNote = `Es decir, te ahorras ${fmt(urgency.discountAmount)} de inmediato al contratar en las próximas 72 horas.`
     return `
       <div style="background: #f6f8fa; padding: 18px 20px; border-radius: 8px; margin: 22px 0;">
         <p style="margin: 0 0 14px 0; font-size: 15px; font-weight: bold; color: #111;">
-          Resumen de cotización (${quote.tier.min_employees} a ${quote.tier.max_employees} empleados):
+          El resumen de tu plan (${tierLabel}):
         </p>
         <ul style="margin: 0; padding: 0 0 0 18px; color: #333; font-size: 14px; line-height: 1.7;">
-          ${!isMonthly ? `<li style="margin-bottom: 8px;"><strong>Subtotal anual:</strong> ${fmt(quote.annual_subtotal)} / ${periodLabel}</li>` : ''}
-          ${couponLine}
-          ${isMonthly ? `<li style="margin-bottom: 8px;"><strong>Total mensual cotizado:</strong> ${fmt(quotedTotal)} / ${periodLabel}</li>` : `<li style="margin-bottom: 8px;"><strong>Total anual cotizado:</strong> ${fmt(quotedTotal)} / ${periodLabel}</li>`}
+          <li style="margin-bottom: 8px;"><strong>Precio normal:</strong> ${fmt(quotedTotal)} / ${periodLabel}</li>
           <li style="margin-bottom: 8px;"><strong>Descuento por contratación en 72 h (20%):</strong> −${fmt(urgency.discountAmount)} / ${periodLabel}</li>
-          <li style="margin-bottom: 0;">
-            <strong>Precio con descuento:</strong>
+          <li style="margin-bottom: 8px;">
+            <strong>Tu precio hoy:</strong>
             <span style="color: #0d5c2f; font-weight: bold;"> ${fmt(urgency.discountedTotal)} / ${periodLabel}</span>
-            <span style="color: #555;"> (${terminalsNote})</span>
+            <span style="color: #555;"> (${escapeHtml(savingsNote)})</span>
           </li>
         </ul>
+        ${perksHtml}
       </div>
       <p style="margin: 0 0 18px 0; font-size: 14px; line-height: 1.55; color: #333;">
         ⏳ <strong>Esta oferta expira el ${escapeHtml(formatUrgencyOfferExpiryFriendly(urgency.expiresAt))}</strong> (hora Honduras).
@@ -82,14 +98,12 @@ function buildPlanSummary(params: {
   return `
     <div style="background: #f6f8fa; padding: 18px 20px; border-radius: 8px; margin: 22px 0;">
       <p style="margin: 0 0 14px 0; font-size: 15px; font-weight: bold; color: #111;">
-        Resumen de cotización (${quote.tier.min_employees} a ${quote.tier.max_employees} empleados):
+        El resumen de tu plan (${tierLabel}):
       </p>
       <ul style="margin: 0; padding: 0 0 0 18px; color: #333; font-size: 14px; line-height: 1.7;">
-        ${!isMonthly ? `<li style="margin-bottom: 8px;"><strong>Subtotal anual:</strong> ${fmt(quote.annual_subtotal)} / ${periodLabel}</li>` : ''}
-        ${couponLine}
         <li style="margin-bottom: 8px;"><strong>Total ${isMonthly ? 'mensual' : 'anual'} cotizado:</strong> ${fmt(quotedTotal)} / ${periodLabel}</li>
-        ${!isMonthly ? `<li style="margin-bottom: 0;"><strong>Terminales:</strong> ${quote.terminals_count} · ${terminalsNote}</li>` : ''}
       </ul>
+      ${perksHtml}
     </div>
   `
 }
@@ -100,9 +114,10 @@ export function generateVentasQuotationEmailHTML(params: {
   companyName?: string
   countryLabel: string
   sentAt?: Date
+  now?: Date
   bankDetails?: VentasBankDetails | null
 }) {
-  const { quote, contactName, companyName, countryLabel, sentAt = new Date(), bankDetails } = params
+  const { quote, contactName, companyName, countryLabel, sentAt = new Date(), now, bankDetails } = params
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net').replace(/\/$/, '')
 
   const hasBankDetails = !!bankDetails
@@ -126,17 +141,9 @@ export function generateVentasQuotationEmailHTML(params: {
   const fmt = (n: number) => formatMoney(quote.currency, n)
   const isMonthly = quote.billing_modality === 'monthly'
   const quotedTotal = isMonthly ? quote.monthly_total : quote.annual_total
-  const urgency = computeUrgencyOffer({ quotedTotal, sentAt })
+  const urgency = computeUrgencyOffer({ quotedTotal, sentAt, now })
   const periodLabel = isMonthly ? 'mes' : 'año'
-
-  const terminalsNote = isMonthly
-    ? `Incluye ${quote.terminals_count} terminal${quote.terminals_count === 1 ? '' : 'es'} con continuidad de hardware según tu cotización.`
-    : 'Incluye hasta 3 terminales sin cargo mensual extra de continuidad.'
-
-  const couponLine =
-    !isMonthly && quote.coupon_applied
-      ? `<li style="margin-bottom: 8px;"><strong>Descuento por cupón:</strong> −${fmt(quote.annual_discount_amount)} / ${periodLabel}</li>`
-      : ''
+  const modality = quote.billing_modality
 
   const planSummary = buildPlanSummary({
     quote,
@@ -145,13 +152,15 @@ export function generateVentasQuotationEmailHTML(params: {
     isMonthly,
     quotedTotal,
     periodLabel,
-    terminalsNote,
-    couponLine,
   })
 
-  const offerParagraph = urgency.isActive
+  const urgencyPitch = urgency.isActive
+    ? `<p style="margin: 0 0 18px 0; line-height: 1.6; color: #333;">${escapeHtml(buildUrgencyOfferPitchText(modality))}</p>`
+    : ''
+
+  const pdfNote = urgency.isActive
     ? `<p style="margin: 0 0 18px 0; line-height: 1.6; color: #333;">
-        Si contratas en las próximas <strong>72 horas</strong>, aplicamos un <strong>20% de descuento</strong> sobre el total ${isMonthly ? 'mensual' : 'anual'} cotizado. El PDF adjunto refleja los mismos montos de este resumen.
+        Tienes el PDF adjunto con el precio de lista y los detalles técnicos de tu plan. El <strong>20% de descuento por contratar en 72 horas</strong> aparece solo en este correo; un asesor lo aplica al formalizar dentro del plazo.
       </p>`
     : `<p style="margin: 0 0 18px 0; line-height: 1.6; color: #333;">
         El PDF adjunto refleja el mismo desglose de montos que ves en este correo.
@@ -159,14 +168,14 @@ export function generateVentasQuotationEmailHTML(params: {
 
   const closingParagraph = urgency.isActive
     ? `<p style="margin: 0 0 22px 0; line-height: 1.6; color: #333;">
-        Si los números te hacen sentido, puedes entrar al panel o escribirnos por WhatsApp para confirmar datos bancarios y formalizar la contratación.
+        Si los números te hacen sentido y quieres asegurar este precio, entra a tu panel ahora. Un asesor confirmará los últimos detalles operativos contigo y aplicará el descuento.
       </p>`
     : `<p style="margin: 0 0 22px 0; line-height: 1.6; color: #333;">
         Si los números te hacen sentido, entra a tu panel o contáctanos para continuar con la contratación.
       </p>`
 
   const bankBlock = bankDetails ? buildBankDetailsInlineHtml(bankDetails, contactName) : ''
-  const ctaLabel = urgency.isActive ? 'Entrar al panel y continuar' : 'Entrar al panel'
+  const ctaLabel = urgency.isActive ? 'Entrar al panel y asegurar precio' : 'Entrar al panel'
 
   return `
     <div style="font-family: Arial, Helvetica, sans-serif; max-width: 640px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
@@ -177,10 +186,15 @@ export function generateVentasQuotationEmailHTML(params: {
       <p style="margin: 0 0 16px 0; font-size: 18px; line-height: 1.45; font-weight: bold; color: #111;">${opening}</p>
 
       <p style="margin: 0 0 14px 0; line-height: 1.6; color: #333;">
-        Tu cotización para <strong>${companyLabel}</strong> está calculada para operar con las reglas de nómina y zona horaria de <strong>${escapeHtml(countryLabel)}</strong>.
+        Hicimos el trabajo pesado. Tu cotización para <strong>${companyLabel}</strong> ya está calculada y el sistema está configurado para operar con las reglas de nómina y zona horaria de <strong>${escapeHtml(countryLabel)}</strong>.
       </p>
 
-      ${offerParagraph}
+      <p style="margin: 0 0 14px 0; line-height: 1.6; color: #333;">
+        Vamos directo a lo que importa.
+      </p>
+
+      ${urgencyPitch}
+      ${pdfNote}
       ${planSummary}
       ${closingParagraph}
       ${bankBlock}
@@ -201,9 +215,10 @@ export function generateVentasQuotationEmailText(params: {
   companyName?: string
   countryLabel: string
   sentAt?: Date
+  now?: Date
   bankDetails?: VentasBankDetails | null
 }): string {
-  const { quote, contactName, companyName, countryLabel, sentAt = new Date(), bankDetails } = params
+  const { quote, contactName, companyName, countryLabel, sentAt = new Date(), now, bankDetails } = params
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net').replace(/\/$/, '')
 
   const firstName = firstNameFromContact(contactName)
@@ -212,43 +227,51 @@ export function generateVentasQuotationEmailText(params: {
   const fmt = (n: number) => formatMoney(quote.currency, n)
   const isMonthly = quote.billing_modality === 'monthly'
   const quotedTotal = isMonthly ? quote.monthly_total : quote.annual_total
-  const urgency = computeUrgencyOffer({ quotedTotal, sentAt })
+  const urgency = computeUrgencyOffer({ quotedTotal, sentAt, now })
   const periodLabel = isMonthly ? 'mes' : 'año'
+  const modality = quote.billing_modality
+  const def = getVentasModalityDefinition(modality)
+  const tierLabel = `${quote.tier.min_employees} a ${quote.tier.max_employees} empleados`
 
   const lines: string[] = [
     'Humano SISU',
     '',
     opening,
     '',
-    `Tu cotización para ${companyLabel} está calculada para operar con las reglas de nómina y zona horaria de ${countryLabel}.`,
+    `Hicimos el trabajo pesado. Tu cotización para ${companyLabel} ya está calculada y el sistema está configurado para operar con las reglas de nómina y zona horaria de ${countryLabel}.`,
+    '',
+    'Vamos directo a lo que importa.',
     '',
   ]
 
   if (urgency.isActive) {
     lines.push(
-      'Si contratas en las próximas 72 horas, aplicamos un 20% de descuento sobre el total cotizado. El PDF adjunto refleja los mismos montos de este resumen.',
+      buildUrgencyOfferPitchText(modality),
       '',
-      `Resumen (${quote.tier.min_employees} a ${quote.tier.max_employees} empleados):`
-    )
-    if (!isMonthly) lines.push(`- Subtotal anual: ${fmt(quote.annual_subtotal)} / ${periodLabel}`)
-    if (!isMonthly && quote.coupon_applied) {
-      lines.push(`- Descuento por cupón: −${fmt(quote.annual_discount_amount)} / ${periodLabel}`)
-    }
-    lines.push(
-      `- Total ${isMonthly ? 'mensual' : 'anual'} cotizado: ${fmt(quotedTotal)} / ${periodLabel}`,
-      `- Descuento por contratación en 72 h (20%): −${fmt(urgency.discountAmount)} / ${periodLabel}`,
-      `- Precio con descuento: ${fmt(urgency.discountedTotal)} / ${periodLabel}`,
+      'Tienes el PDF adjunto con el precio de lista y los detalles técnicos. El 20% por contratar en las próximas 72 horas aparece solo en este correo; un asesor lo aplica al formalizar dentro del plazo.',
+      '',
+      `El resumen de tu plan (${tierLabel}):`,
+      `Precio normal: ${fmt(quotedTotal)} / ${periodLabel}`,
+      `Descuento por contratación en 72 h (20%): −${fmt(urgency.discountAmount)} / ${periodLabel}`,
+      `Tu precio hoy: ${fmt(urgency.discountedTotal)} / ${periodLabel}`,
+      `Te ahorras ${fmt(urgency.discountAmount)} de inmediato al contratar en las próximas 72 horas.`,
+      '',
+      `Lo que incluye tu ${def.label}:`,
+      ...buildModalityPerksSummaryLines(modality),
       '',
       `Esta oferta expira el ${formatUrgencyOfferExpiryFriendly(urgency.expiresAt)} (hora Honduras).`,
       '',
-      'Si los números te hacen sentido, entra al panel o escríbenos por WhatsApp para confirmar datos bancarios y formalizar la contratación.'
+      'Si los números te hacen sentido y quieres asegurar este precio, entra a tu panel ahora. Un asesor confirmará los últimos detalles operativos contigo y aplicará el descuento.'
     )
   } else {
     lines.push(
       'El PDF adjunto refleja el mismo desglose de montos que ves en este correo.',
       '',
-      `Resumen (${quote.tier.min_employees} a ${quote.tier.max_employees} empleados):`,
-      `- Total ${isMonthly ? 'mensual' : 'anual'} cotizado: ${fmt(quotedTotal)} / ${periodLabel}`,
+      `El resumen de tu plan (${tierLabel}):`,
+      `Total ${isMonthly ? 'mensual' : 'anual'} cotizado: ${fmt(quotedTotal)} / ${periodLabel}`,
+      '',
+      `Lo que incluye tu ${def.label}:`,
+      ...buildModalityPerksSummaryLines(modality),
       '',
       'Si los números te hacen sentido, entra a tu panel o contáctanos para continuar con la contratación.'
     )
