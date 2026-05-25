@@ -1,4 +1,5 @@
 import { createAdminClient } from './supabase/server'
+import { getResendNoreplyEmail } from './resend-from'
 import { nowInHonduras } from './timezone'
 
 
@@ -62,7 +63,7 @@ export class NotificationProviderManager {
       const defaultEmailProvider: EmailProvider = {
         type: 'resend',
         apiKey: process.env.RESEND_API_KEY,
-        fromEmail: process.env.RESEND_FROM || 'jorgearturo@humanosisu.net',
+        fromEmail: getResendNoreplyEmail(),
         fromName: 'Humano SISU'
       }
 
@@ -96,8 +97,8 @@ export class NotificationProviderManager {
       return {
         type: 'resend',
         apiKey: process.env.RESEND_API_KEY,
-        fromEmail: process.env.RESEND_FROM || 'jorgearturo@humanosisu.net',
-        fromName: 'CloudHR',
+        fromEmail: getResendNoreplyEmail(),
+        fromName: 'Humano SISU',
         timeout: 10000
       }
     }
@@ -109,8 +110,8 @@ export class NotificationProviderManager {
       port: providerData.port,
       user: providerData.user,
       pass: providerData.pass,
-      fromEmail: providerData.from_email || 'jorgearturo@humanosisu.net',
-      fromName: providerData.from_name || 'CloudHR',
+      fromEmail: providerData.from_email || getResendNoreplyEmail(),
+      fromName: providerData.from_name || 'Humano SISU',
       timeout: providerData.timeout || 10000
     }
   }

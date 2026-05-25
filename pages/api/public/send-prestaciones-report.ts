@@ -4,6 +4,7 @@ import { RATE_LIMITS } from '../../../lib/rate-limit'
 import { logger } from '../../../lib/logger'
 import { validateEmail } from '../../../lib/deduction-validator/validation'
 import { notificationManager } from '../../../lib/notification-providers'
+import { getResendFromContact } from '../../../lib/resend-from'
 import { generatePrestacionesReportPDF } from '../../../lib/prestaciones-public/pdf-report'
 import { createAdminClient } from '../../../lib/supabase/server'
 import { maskEmail, normalizeSoftPhone } from '../../../lib/privacy'
@@ -165,7 +166,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const systemCompanyId = 'system-public-tool'
     const notificationConfig = await notificationManager.getConfigForCompany(systemCompanyId)
     const apiKey = notificationConfig?.emailProvider.apiKey || process.env.RESEND_API_KEY
-    const fromEmail = notificationConfig?.emailProvider.fromEmail || process.env.RESEND_FROM || 'jorgearturo@humanosisu.net'
+    const fromEmail = getResendFromContact()
 
     if (!apiKey) {
       logger.error('RESEND_API_KEY no configurado (prestaciones)')

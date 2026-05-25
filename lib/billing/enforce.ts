@@ -1,6 +1,7 @@
 import { startOfMonth } from 'date-fns'
 import { createAdminClient } from '../supabase/server'
 import { PAID_PLAN_TYPES, TRIAL_PLAN_TYPE, normalizePlanType } from './plans'
+import { BULK_VOUCHER_EMAIL_PAID_FEATURE_CODE } from './messages'
 
 export type BillingAction = 'create_employee' | 'generate_payroll' | 'view_reports' | 'send_voucher'
 
@@ -157,6 +158,20 @@ export async function requirePlanAndQuota(
   }
 }
 
+/** Bloquea envío masivo de recibos por correo en plan trial (función de pago). */
+export async function requirePaidPlanForBulkVoucherEmail(
+  supabase: any,
+  company_id: string
+): Promise<SubscriptionStatus> {
+  const subscription = await requirePlanAndQuota(supabase, company_id, 'view_reports')
+
+  if (subscription.inTrial || subscription.plan === TRIAL_PLAN_TYPE) {
+    throw new Error(BULK_VOUCHER_EMAIL_PAID_FEATURE_CODE)
+  }
+
+  return subscription
+}
+
 export async function incrementUsage(
   supabase: any,
   company_id: string,
@@ -198,6 +213,8 @@ export function getBillingErrorCode(error: string): number {
   switch (error) {
     case 'PLAN_REQUIRED':
       return 402 // Payment Required
+    case 'PAID_FEATURE_REQUIRED':
+      return 402
     case 'PDF_LIMIT_REACHED':
     case 'VOUCHER_LIMIT_REACHED':
     case 'EMPLOYEE_LIMIT_REACHED':

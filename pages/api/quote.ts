@@ -6,10 +6,12 @@ import { createAdminClient } from '../../lib/supabase/server'
 import { logger } from '../../lib/logger'
 import { maskEmail, normalizeSoftPhone } from '../../lib/privacy'
 import { notificationManager } from '../../lib/notification-providers'
+import { getResendFromContact } from '../../lib/resend-from'
 import type { QuotationRequest, QuotationResponse, VentasPricingTier, CurrencyCode } from '../../lib/ventas/types'
 import { clampInt, normalizeCouponCode, resolveTierByEmployees, roundMoney } from '../../lib/ventas/pricing'
+import { hardwareFeeMonthly, ventasTooManyTerminalsErrorMessage } from '../../lib/ventas/modality-includes'
 import { generateVentasQuotationPDF } from '../../lib/ventas/pdf'
-import { generateVentasQuotationEmailHTML, generateVentasQuotationEmailSubject } from '../../lib/ventas/email-template'
+import { generateVentasQuotationEmailHTML, generateVentasQuotationEmailSubject, generateVentasQuotationEmailText } from '../../lib/ventas/email-template'
 import { generateVentasActivationEmailHTML, generateVentasActivationEmailSubject } from '../../lib/ventas/activation-email'
 import { computeUrgencyOffer } from '../../lib/ventas/urgency-offer'
 import {
@@ -35,29 +37,16 @@ const FALLBACK_TIERS: VentasPricingTier[] = [
   { min_employees: 101, max_employees: 200, price: 97450, is_active: true, sort_order: 40 },
 ]
 
-// Tarifa de continuidad de hardware (modalidad mensual, 1–3 terminales). Más de 3: cotización especial (anual o mensual).
-const HARDWARE_FEES_MONTHLY: Record<number, number> = {
-  1: 958.33,
-  2: 1320.0,
-  3: 1624.7,
-}
-
 function normalizeBillingModality(v: unknown): 'annual' | 'monthly' {
   const raw = typeof v === 'string' ? v.trim().toLowerCase() : ''
   return raw === 'monthly' || raw === 'mensual' ? 'monthly' : 'annual'
-}
-
-function hardwareFeeMonthly(terminalsCount: number): { fee: number; special: boolean } {
-  if (terminalsCount <= 0) return { fee: 0, special: false }
-  const fee = HARDWARE_FEES_MONTHLY[terminalsCount]
-  if (typeof fee === 'number' && Number.isFinite(fee)) return { fee: roundMoney(fee), special: false }
-  return { fee: 0, special: true }
 }
 
 async function sendEmailWithResend(params: {
   to: string | string[]
   subject: string
   html: string
+  text?: string
   attachments?: { filename: string; contentBase64: string }[]
   pdfBuffer: Buffer
   filename: string
@@ -71,6 +60,7 @@ async function sendEmailWithResend(params: {
     to: params.to,
     subject: params.subject,
     html: params.html,
+    ...(params.text ? { text: params.text } : {}),
     attachments: [
       { filename: params.filename, content: params.pdfBuffer.toString('base64') },
       ...(params.attachments || []).map((a) => ({ filename: a.filename, content: a.contentBase64 })),
@@ -284,10 +274,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
     const terminalsForPricing = terminalsCount >= 1 ? terminalsCount : 1
     const hwQuote = hardwareFeeMonthly(terminalsForPricing)
     if (hwQuote.special) {
-      return res.status(400).json({
-        error:
-          'Para más de 3 terminales cotizamos aparte según la tarifa de continuidad de hardware (misma base que en modalidad mensual). Escríbenos y te confirmamos el monto.',
-      })
+      return res.status(400).json({ error: ventasTooManyTerminalsErrorMessage() })
     }
     const monthlyHardwareFee = billingModality === 'monthly' ? hwQuote.fee : 0
     const monthlyTotal = roundMoney(monthlySoftwareTotal + monthlyHardwareFee)
@@ -361,6 +348,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
     const quotedTotalForUrgency = billingModality === 'monthly' ? monthlyTotal : annualTotal
     const urgencyOffer = computeUrgencyOffer({ quotedTotal: quotedTotalForUrgency, sentAt })
 
+    const bankDetails = getVentasBankDetailsFromEnv()
+
     // Generate PDF
     const pdf = await generateVentasQuotationPDF({
       quote,
@@ -372,6 +361,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       terminalsCount: terminalsForPricing,
       couponCodeSubmitted: couponSubmittedNorm || undefined,
       countryLabel,
+      bankDetails,
     })
 
     const html = generateVentasQuotationEmailHTML({
@@ -380,18 +370,28 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       companyName,
       countryLabel,
       sentAt,
+      bankDetails,
+    })
+    const text = generateVentasQuotationEmailText({
+      quote,
+      contactName,
+      companyName,
+      countryLabel,
+      sentAt,
+      bankDetails,
     })
     const subject = generateVentasQuotationEmailSubject({
       contactName,
       discountAmount: urgencyOffer.discountAmount,
       currency,
+      urgencyActive: urgencyOffer.isActive,
     })
     const filename = `cotizacion-sisu-${quote.tier.min_employees}-${quote.tier.max_employees}.pdf`
 
     const systemCompanyId = 'system-public-tool'
     const notificationConfig = await notificationManager.getConfigForCompany(systemCompanyId)
     const apiKey = notificationConfig?.emailProvider.apiKey || process.env.RESEND_API_KEY
-    const fromEmail = notificationConfig?.emailProvider.fromEmail || process.env.RESEND_FROM || 'jorgearturo@humanosisu.net'
+    const fromEmail = getResendFromContact()
 
     if (!apiKey) {
       logger.error('RESEND_API_KEY no configurado (ventas)', { quoteId })
@@ -406,6 +406,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       to: toList,
       subject,
       html,
+      text,
       attachments: [],
       pdfBuffer: pdf,
       filename,
@@ -465,6 +466,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
         email: contactEmail,
         password: env.tempPassword,
         loginUrl,
+        bankDetails,
       })
       const activationSubject = generateVentasActivationEmailSubject(contactName)
 
@@ -477,7 +479,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       })
 
       const bank = getVentasBankDetailsFromEnv()
-      if (bank) {
+      if (bank && !bankDetails) {
         const bankHtml = generateVentasBankDetailsEmailHTML({ contactName, companyName, bank })
         const bankSubject = generateVentasBankDetailsEmailSubject(companyName)
         await sendEmailHtmlOnly({

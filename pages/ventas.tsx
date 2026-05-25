@@ -15,6 +15,11 @@ import MainHeader from '../components/MainHeader'
 import type { QuotationQuote, QuotationRequest, QuotationResponse, QuotationUrgencyOffer } from '../lib/ventas/types'
 import { formatMoney } from '../lib/ventas/pricing'
 import { formatUrgencyOfferExpiry, urgencyOfferCtaText } from '../lib/ventas/urgency-offer'
+import {
+  buildQuotationAcquisitionWhatsAppText,
+  buildVentasSupportWhatsAppUrl,
+} from '../lib/ventas/bank-details'
+import { getVentasModalityDefinition } from '../lib/ventas/modality-includes'
 import type { CountryCode } from '../lib/country/supported'
 import { isCountryCode } from '../lib/country/supported'
 
@@ -88,19 +93,15 @@ export default function VentasPage() {
     consent_newsletter: true,
   })
 
-  const salesWhatsApp = (process.env.NEXT_PUBLIC_SALES_WHATSAPP || '').trim()
   const whatsappUrl = useMemo(() => {
-    if (!salesWhatsApp) return ''
-    const normalized = salesWhatsApp.replace(/[^\d]/g, '')
-    if (!normalized) return ''
-    const pais = formData.country_code && isCountryCode(formData.country_code)
-      ? COUNTRY_LABEL[formData.country_code]
-      : ''
-    const msg = encodeURIComponent(
-      `Hola. Solicité cotización en humanosisu.net — ${formData.company_name?.trim() || 'mi empresa'}, ${Number(formData.employees_count)} empleados${pais ? `, ${pais}` : ''}. Quiero revisar alcance e implementación.`
-    )
-    return `https://wa.me/${normalized}?text=${msg}`
-  }, [salesWhatsApp, formData.company_name, formData.employees_count, formData.country_code])
+    if (!isSuccess) return ''
+    const msg = buildQuotationAcquisitionWhatsAppText({
+      contactName: formData.contact_name,
+      companyName: formData.company_name,
+      includeBankPrompt: true,
+    })
+    return buildVentasSupportWhatsAppUrl(msg)
+  }, [isSuccess, formData.contact_name, formData.company_name])
 
   useEffect(() => {
     setErrors(computeVentasErrors(formData))
@@ -241,7 +242,7 @@ export default function VentasPage() {
                           </p>
                         )}
                         <p className="text-sm text-cyan-100/70">
-                          Incluye software mensual y continuidad de hardware según terminales indicadas.
+                          {getVentasModalityDefinition('monthly').successSummaryLine}
                         </p>
                       </>
                     ) : (
@@ -267,7 +268,7 @@ export default function VentasPage() {
                           </p>
                         )}
                         <p className="text-sm text-cyan-100/70">
-                          Modalidad anual: hasta tres terminales cubiertas en esta propuesta. Declaradas:{' '}
+                          {getVentasModalityDefinition('annual').successSummaryLine} Declaradas:{' '}
                           <strong>{quote.terminals_count}</strong>{' '}
                           {quote.terminals_count === 1 ? 'terminal' : 'terminales'}.
                         </p>
@@ -281,9 +282,9 @@ export default function VentasPage() {
             {whatsappUrl && (
               <Card variant="glass" className="mb-8 border-emerald-400/20">
                 <CardContent className="p-8">
-                  <h2 className="text-2xl font-bold text-white mb-2">¿Listo para dejar el trabajo manual?</h2>
+                  <h2 className="text-2xl font-bold text-white mb-2">¿Listo para formalizar la contratación?</h2>
                   <p className="text-sm text-cyan-100/80 mb-6">
-                    Hablemos sobre cómo implementar la biometría y parametrizar la nómina según las particularidades de su operación.
+                    Ya tiene su cotización en el correo. Escríbanos para confirmar datos bancarios y los pasos para continuar.
                   </p>
                   <a
                     href={whatsappUrl}
@@ -291,7 +292,7 @@ export default function VentasPage() {
                     rel="noreferrer"
                     className="w-full inline-flex items-center justify-center rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-4 font-semibold transition-colors"
                   >
-                    Hablar con un asesor por WhatsApp
+                    Continuar contratación por WhatsApp
                   </a>
                   <p className="text-xs text-white/60 text-center mt-3">
                     También puede responder directamente al correo donde llegó la propuesta.
@@ -447,15 +448,19 @@ export default function VentasPage() {
                   </div>
 
                   <div className="text-xs text-brand-300 bg-black/20 p-3 rounded-lg border border-white/10 leading-relaxed">
-                    {(formData.billing_modality || 'annual') === 'monthly' ? (
-                      <p>
-                        <strong>Plan Mensual:</strong> Suma continuidad de hardware por terminal (hasta tres). Más de tres requiere ajuste especial.
-                      </p>
-                    ) : (
-                      <p>
-                        <strong>Plan Anual:</strong> Incluye hasta 3 terminales biométricas cubiertas en la propuesta inicial.
-                      </p>
-                    )}
+                    <p>
+                      <strong>
+                        {getVentasModalityDefinition(
+                          (formData.billing_modality || 'annual') === 'monthly' ? 'monthly' : 'annual'
+                        ).label}
+                        :
+                      </strong>{' '}
+                      {
+                        getVentasModalityDefinition(
+                          (formData.billing_modality || 'annual') === 'monthly' ? 'monthly' : 'annual'
+                        ).formHint
+                      }
+                    </p>
                   </div>
 
                   <div>

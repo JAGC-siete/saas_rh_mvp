@@ -1,3 +1,10 @@
+import type { VentasBankDetails } from './bank-details'
+import {
+  buildBankDetailsInlineHtml,
+  buildQuotationAcquisitionWhatsAppText,
+  buildVentasSupportWhatsAppUrl,
+} from './bank-details'
+
 function firstNameFromContact(contactName?: string): string {
   const trimmed = contactName?.trim()
   if (!trimmed) return ''
@@ -16,6 +23,7 @@ export function generateVentasActivationEmailHTML(params: {
   email: string
   password: string
   loginUrl: string
+  bankDetails?: VentasBankDetails | null
 }) {
   const firstName = firstNameFromContact(params.contactName)
   const greeting = firstName ? `Hola ${escapeHtml(firstName)},` : 'Hola,'
@@ -23,6 +31,19 @@ export function generateVentasActivationEmailHTML(params: {
   const companyLabel = params.companyName?.trim()
     ? escapeHtml(params.companyName.trim())
     : 'tu empresa'
+
+  const hasBankDetails = !!params.bankDetails
+  const supportWhatsAppUrl = buildVentasSupportWhatsAppUrl(
+    buildQuotationAcquisitionWhatsAppText({
+      contactName: params.contactName,
+      companyName: params.companyName,
+      includeBankPrompt: hasBankDetails,
+      context: 'activation',
+    })
+  )
+  const bankBlock = params.bankDetails
+    ? buildBankDetailsInlineHtml(params.bankDetails, params.contactName)
+    : ''
 
   return `
     <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; padding: 20px;">
@@ -59,6 +80,12 @@ export function generateVentasActivationEmailHTML(params: {
              style="background: #0b4fa1; color: white; padding: 12px 26px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: bold;">
             Entrar al panel ahora
           </a>
+        </div>
+
+        ${bankBlock}
+
+        <div style="text-align: center; margin: 20px 0 8px 0;">
+          <a href="${supportWhatsAppUrl}" style="display: inline-block; padding: 12px 24px; background-color: #25D366; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: bold; font-family: Arial, sans-serif;">💬 Continuar contratación por WhatsApp</a>
         </div>
 
         <p style="color: #666; font-size: 12px; margin-top: 18px; line-height: 1.5;">

@@ -10,6 +10,7 @@ import {
   type CountryCode,
 } from '../../lib/country/supported'
 import { normalizeSoftPhone } from '../../lib/privacy'
+import { getResendFromContact } from '../../lib/resend-from'
 
 export const config = {
   api: {
@@ -952,7 +953,7 @@ async function enviarCorreoBienvenida(data: {
     `
 
     const result = await resend.emails.send({
-      from: process.env.RESEND_FROM || 'SISU <jorgearturo@humanosisu.net>',
+      from: getResendFromContact(),
       to: data.email,
       subject: `🎉 ¡Bienvenido a SISU! - ${data.empresa}`,
       html: emailHtml
@@ -1210,7 +1211,7 @@ async function enviarEmailResumenRegistro(data: {
     `
 
     const result = await resend.emails.send({
-      from: process.env.RESEND_FROM || 'SISU <jorgearturo@humanosisu.net>',
+      from: getResendFromContact(),
       to: emailDestino,
       subject: `📋 Nuevo Registro: ${data.empresa} - ${data.nombre}`,
       html: emailHtml,
