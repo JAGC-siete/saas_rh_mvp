@@ -105,8 +105,8 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
     },
     hero: {
       badges: ['Calculadora ISR Honduras', 'Calculadora RAP · IHSS', 'Gratis en 30 segundos'],
-      headlineLead: 'Calculadora ISR Honduras',
-      headlineAccent: 'Calculadora RAP, IHSS y sueldo neto.',
+      headlineLead: '¿Cuánto te pagan neto en Honduras?',
+      headlineAccent: 'Calcula IHSS, RAP e ISR al instante.',
       subheadline:
         'Ingresa tu salario mensual o quincenal y valida al instante cuánto te descuentan de ISR, RAP e IHSS según las leyes vigentes en Honduras.'
     },
