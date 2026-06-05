@@ -1033,6 +1033,25 @@ async function dispararWebhookActivaciones(data: {
   }
 }
 
+function getWhatsAppCallingCode(countryCode: CountryCode): string {
+  if (countryCode === 'SLV') return '503'
+  if (countryCode === 'GTM') return '502'
+  return '504'
+}
+
+function normalizeWhatsAppForWaMe(
+  whatsapp: string,
+  countryCode: CountryCode
+): string {
+  const digits = whatsapp.replace(/\D/g, '')
+  const calling = getWhatsAppCallingCode(countryCode)
+  if (digits.startsWith(calling)) return digits
+  return `${calling}${digits}`
+}
+
+const REGISTRO_FOLLOW_UP_WHATSAPP_MESSAGE =
+  'Ya hiciste lo más difícil. En serio. Tu sistema SISU ya está activo. El 90% de las empresas se traban ahí. El siguiente paso para completar la automatización: digitalizar la asistencia. Hagámoslo hoy.'
+
 // Función para generar vCard (formato de contacto)
 function generarVCard(data: {
   nombre: string
@@ -1099,6 +1118,10 @@ async function enviarEmailResumenRegistro(data: {
 
     // Convertir vCard a buffer para adjuntarlo
     const vcardBuffer = Buffer.from(vcardContent, 'utf-8')
+
+    const whatsappContactUrl = data.whatsapp
+      ? `https://wa.me/${normalizeWhatsAppForWaMe(data.whatsapp, data.country_code)}?text=${encodeURIComponent(REGISTRO_FOLLOW_UP_WHATSAPP_MESSAGE)}`
+      : null
 
     const emailHtml = `
       <!DOCTYPE html>
@@ -1198,7 +1221,7 @@ async function enviarEmailResumenRegistro(data: {
               <p><strong>Para importar en iPhone:</strong> Abre el archivo adjunto y toca "Agregar a contactos"</p>
               <p><strong>Para importar en Android:</strong> Descarga el archivo y ábrelo con la app de Contactos</p>
             </div>
-          <div style="text-align: center; margin: 20px 0;"><a href="https://api.whatsapp.com/send/?phone=50432226773&text=Hola%20Jorge,%20estoy%20activando%20mi%20cuenta%20en%20Humano%20SISU%20y%20tengo%20una%20consulta." style="display: inline-block; padding: 12px 24px; background-color: #25D366; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: bold; font-family: Arial, sans-serif;">💬 Contactar vía WhatsApp</a></div>
+          ${whatsappContactUrl ? `<div style="text-align: center; margin: 20px 0;"><a href="${whatsappContactUrl}" style="display: inline-block; padding: 12px 24px; background-color: #25D366; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: bold; font-family: Arial, sans-serif;">💬 Contactar vía WhatsApp</a></div>` : ''}
 </div>
         </body>
       </html>
