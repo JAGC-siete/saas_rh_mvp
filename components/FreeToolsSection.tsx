@@ -7,7 +7,7 @@ export default function FreeToolsSection() {
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-8 sm:mb-10">
           <span className="inline-block px-3 py-1 mb-4 text-xs rounded-full bg-cyan-500/20 text-cyan-200 border border-cyan-500/30">
-            Herramientas gratuitas · mismo motor de nómina
+            Herramientas gratuitas
           </span>
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-4">
             Valida deducciones antes de automatizar tu planilla
