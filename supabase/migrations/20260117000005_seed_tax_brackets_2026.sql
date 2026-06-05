@@ -18,8 +18,8 @@ INSERT INTO tax_brackets (
   2026,
   'HND',
   true,
-  11903.13, -- Mantener hasta confirmar nuevo salario mínimo 2026
-  11903.13, -- Mantener hasta confirmar nuevo techo IHSS 2026
+  14917.20, -- Salario mínimo promedio 2026 (Acuerdo SETRASS-233-2026 / SAR-19-2026)
+  11903.13, -- Techo IHSS 2025 vigente; sin ajuste oficial IHSS 2026 al cierre de fuentes
   0.05,     -- 5% IHSS empleado
   0.015,    -- 1.5% RAP
   '[

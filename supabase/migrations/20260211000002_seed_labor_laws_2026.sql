@@ -1,7 +1,7 @@
 -- Migration: Seed labor_laws for Honduras 2026
 -- Date: 2026-02-11
 -- Description: Inserts legal default values for Honduras 2026.
--- Values: minimum_wage, ihss_ceiling - mantener hasta confirmación oficial.
+-- Values: minimum_wage promedio SAR 2026 (SETRASS-233-2026); ihss_ceiling sin ajuste IHSS 2026.
 -- Holidays: 11 días incluyendo Semana Morazánica 7-9 octubre.
 
 INSERT INTO labor_laws (
@@ -55,8 +55,8 @@ INSERT INTO labor_laws (
   5.00,
   10.00,
   
-  -- Fiscales (mantener hasta confirmación oficial)
-  11903.13,
+  -- Fiscales (salario mínimo promedio 2026; techo IHSS 2025)
+  14917.20,
   11903.13,
   0.05,
   0.015,
@@ -75,7 +75,7 @@ INSERT INTO labor_laws (
     {"date": "2026-10-09", "name": "Semana Morazánica (día 3)", "movable": true},
     {"date": "2026-12-25", "name": "Navidad", "movable": false}
   ]'::jsonb,
-  'Valores Honduras 2026. minimum_wage e ihss_ceiling pendientes de confirmación oficial.'
+  'Salario mínimo promedio 2026 (SETRASS-233-2026). Techo IHSS L. 11,903.13 hasta resolución IHSS.'
 )
 ON CONFLICT (country_code, year) DO UPDATE SET
   legal_daily_hours = EXCLUDED.legal_daily_hours,

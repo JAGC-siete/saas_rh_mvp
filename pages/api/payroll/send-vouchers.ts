@@ -18,6 +18,7 @@ import {
   buildPayrollReceiptEmailSubject,
   buildPayrollReceiptEmailText,
 } from '../../../lib/emails/payroll-receipt-email'
+import { calculateIHSS, calculateRAP, getTaxBracketsForYear } from '../../../lib/tax/honduras-tax'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -98,6 +99,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: 'Error cargando registros de nómina' })
     }
 
+    const payrollYear = Number(periodo.split('-')[0])
+    const taxConstants = await getTaxBracketsForYear(payrollYear, 'HND')
+
     const results = {
       sent: true,
       summary: { total: employees.length, ok: 0, failed: 0 },
@@ -118,9 +122,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           const daysInQuincena = quincena === 1 ? 15 : (lastDay - 15)
           const grossSalary = dailyRate * daysInQuincena
           
-          // Cálculos básicos de deducciones (simplificados)
-          const ihss = Math.min(employee.base_salary, 11903.13) * 0.05 / 2
-          const rap = Math.max(0, employee.base_salary - 11903.13) * 0.015 / 2
+          // Cálculos básicos de deducciones (preview cuando no hay registro de nómina)
+          const ihss = (calculateIHSS(employee.base_salary, taxConstants) / 2)
+          const rap = (calculateRAP(employee.base_salary, taxConstants) / 2)
           const isr = 0 // Simplificado para preview
           
           payrollData = {

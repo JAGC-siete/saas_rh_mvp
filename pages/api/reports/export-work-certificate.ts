@@ -4,6 +4,12 @@ import { getHondurasTimestamp, formatDateForHonduras, nowInHonduras, parseDateOn
 import { createAdminClient } from '../../../lib/supabase/server'
 import { assertEmployeePortalEnabled } from '../../../lib/employee-portal/company-settings'
 import { canExportReports, EXPORT_REPORTS_FORBIDDEN } from '../../../lib/security/permissions'
+import {
+  calculateIHSS,
+  calculateRAP,
+  getTaxBracketsForYear,
+  type TaxConstants
+} from '../../../lib/tax/honduras-tax'
 
 interface WorkCertificateData {
   employee: {
@@ -94,11 +100,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
+    const taxYear = nowInHonduras().getFullYear()
+    const taxConstants = await getTaxBracketsForYear(taxYear, 'HND')
+
     // Generar reporte según formato
     if (format === 'pdf') {
-      await generateWorkCertificatePDF(res, certificateData, includeDeductions)
+      await generateWorkCertificatePDF(res, certificateData, includeDeductions, taxConstants)
     } else {
-      generateWorkCertificateCSV(res, certificateData, includeDeductions)
+      generateWorkCertificateCSV(res, certificateData, includeDeductions, taxConstants)
     }
 
   } catch (error) {
@@ -261,20 +270,13 @@ async function generateWorkCertificateData(
   }
 }
 
-// Constantes para cálculos de deducciones (Honduras 2025)
-const IHSS_TECHO = 11903.13 // Techo IHSS 2025
-const IHSS_PORCENTAJE_EMPLEADO = 0.05 // 5% total (2.5% EM + 2.5% IVM)
-const SALARIO_MINIMO = 11903.13
-
-// Calcular IHSS
-function calcularIHSS(salarioBase: number): number {
-  const ihssBase = Math.min(salarioBase, IHSS_TECHO)
-  return Math.round((ihssBase * IHSS_PORCENTAJE_EMPLEADO) * 100) / 100
+// Calcular IHSS / RAP con parámetros estatutarios del año vigente
+function calcularIHSSConstancia(salarioBase: number, constants: TaxConstants): number {
+  return Math.round(calculateIHSS(salarioBase, constants) * 100) / 100
 }
 
-// Calcular RAP
-function calcularRAP(salarioBase: number): number {
-  return Math.round(Math.max(0, salarioBase - SALARIO_MINIMO) * 0.015 * 100) / 100
+function calcularRAPConstancia(salarioBase: number, constants: TaxConstants): number {
+  return Math.round(calculateRAP(salarioBase, constants) * 100) / 100
 }
 
 // Formatear fecha en formato español completo (DOS de ENERO)
@@ -289,7 +291,12 @@ function formatDateInWords(date: Date): string {
   return `${dayCapitalized} de ${month}`
 }
 
-function generateWorkCertificatePDF(res: NextApiResponse, certificateData: WorkCertificateData, includeDeductions: boolean = true) {
+function generateWorkCertificatePDF(
+  res: NextApiResponse,
+  certificateData: WorkCertificateData,
+  includeDeductions: boolean = true,
+  taxConstants: TaxConstants
+) {
   return new Promise<void>((resolve, reject) => {
     try {
       const PDFDocument = require('pdfkit')
@@ -390,8 +397,8 @@ function generateWorkCertificatePDF(res: NextApiResponse, certificateData: WorkC
     // Tabla de deducciones (solo si includeDeductions es true)
     if (includeDeductions) {
       // Calcular deducciones mensuales
-      const ihssMonthly = calcularIHSS(certificateData.employee.base_salary)
-      const rapMonthly = calcularRAP(certificateData.employee.base_salary)
+      const ihssMonthly = calcularIHSSConstancia(certificateData.employee.base_salary, taxConstants)
+      const rapMonthly = calcularRAPConstancia(certificateData.employee.base_salary, taxConstants)
       const totalDeductions = ihssMonthly + rapMonthly
       const netSalary = certificateData.employee.base_salary - totalDeductions
 
@@ -517,7 +524,12 @@ function numberToWords(num: number): string {
   return intNum.toString() // Fallback para números extremadamente grandes
 }
 
-function generateWorkCertificateCSV(res: NextApiResponse, certificateData: WorkCertificateData, includeDeductions: boolean = true) {
+function generateWorkCertificateCSV(
+  res: NextApiResponse,
+  certificateData: WorkCertificateData,
+  includeDeductions: boolean = true,
+  taxConstants: TaxConstants
+) {
   try {
     let csvContent = 'CONSTANCIA LABORAL\n\n'
     
@@ -557,8 +569,8 @@ function generateWorkCertificateCSV(res: NextApiResponse, certificateData: WorkC
     // Desglose salarial (solo si includeDeductions es true)
     if (includeDeductions) {
       // Calcular deducciones mensuales (igual que en PDF)
-      const ihssMonthly = calcularIHSS(certificateData.employee.base_salary)
-      const rapMonthly = calcularRAP(certificateData.employee.base_salary)
+      const ihssMonthly = calcularIHSSConstancia(certificateData.employee.base_salary, taxConstants)
+      const rapMonthly = calcularRAPConstancia(certificateData.employee.base_salary, taxConstants)
       const totalDeductions = ihssMonthly + rapMonthly
       const netSalary = certificateData.employee.base_salary - totalDeductions
       

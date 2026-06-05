@@ -1,0 +1,13 @@
+{
+  "minimum_wage": 14917.2,
+  "ihss_ceiling": 11903.13,
+  "ihss_employee_rate": 0.05,
+  "rap_rate": 0.015,
+  "medical_deduction_limit": 40000,
+  "isr_brackets": [
+    { "limit": 22360.36, "rate": 0, "base": 0, "lower": 0 },
+    { "limit": 32346.18, "rate": 0.15, "base": 0, "lower": 22360.36 },
+    { "limit": 70805.06, "rate": 0.2, "base": 1497.87, "lower": 32346.18 },
+    { "limit": 999999999, "rate": 0.25, "base": 9189.65, "lower": 70805.06 }
+  ]
+}

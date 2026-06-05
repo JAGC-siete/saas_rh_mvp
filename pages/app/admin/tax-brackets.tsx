@@ -19,6 +19,7 @@ import {
   X,
   Info
 } from 'lucide-react'
+import { HND_FALLBACK_2025_CONSTANTS, HND_FALLBACK_2026_CONSTANTS } from '../../../lib/tax/honduras-tax'
 
 interface TaxBracket {
   id: string
@@ -117,19 +118,20 @@ export default function TaxBracketsPage() {
   }
 
   const handleCreate = () => {
-    // Default values for new bracket
+    const nextYear = new Date().getFullYear() + 1
+    const hndDefaults = nextYear >= 2026 ? HND_FALLBACK_2026_CONSTANTS : HND_FALLBACK_2025_CONSTANTS
     setFormData({
-      year: new Date().getFullYear() + 1,
-      minimum_wage: 11903.13,
-      ihss_ceiling: 11903.13,
-      ihss_employee_rate: 0.05,
-      rap_rate: 0.015,
-      isr_brackets: [
-        { limit: 21457.76, rate: 0.00, base: 0, lower: 0 },
-        { limit: 30969.88, rate: 0.15, base: 0, lower: 21457.76 },
-        { limit: 67604.36, rate: 0.20, base: 1428.32, lower: 30969.88 },
-        { limit: Infinity, rate: 0.25, base: 8734.32, lower: 67604.36 }
-      ],
+      year: nextYear,
+      minimum_wage: hndDefaults.minimum_wage,
+      ihss_ceiling: hndDefaults.ihss_ceiling,
+      ihss_employee_rate: hndDefaults.ihss_employee_rate,
+      rap_rate: hndDefaults.rap_rate,
+      isr_brackets: hndDefaults.isr_brackets.map(b => ({
+        limit: b.limit === Infinity ? Infinity : b.limit,
+        rate: b.rate,
+        base: b.base,
+        lower: b.lower
+      })),
       source: 'manual',
       notes: ''
     })
@@ -167,7 +169,7 @@ export default function TaxBracketsPage() {
     const ihss = ihssBase * formData.ihss_employee_rate
     
     // Calculate RAP
-    const rap = Math.max(0, previewSalary - formData.minimum_wage) * formData.rap_rate
+    const rap = Math.max(0, previewSalary - formData.ihss_ceiling) * formData.rap_rate
     
     setPreviewResult({
       isr: Math.round(isr * 100) / 100,
