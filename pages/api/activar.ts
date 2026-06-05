@@ -699,7 +699,8 @@ async function enviarCorreoBienvenida(data: {
 
         const { Resend } = await import('resend')
         const resend = new Resend(apiKey)
-        
+        const whatsappContratarUrl = `https://wa.me/50432226773?text=${encodeURIComponent('deseo contratar')}`
+
     const emailHtml = `
       <!DOCTYPE html>
       <html>
@@ -885,13 +886,10 @@ async function enviarCorreoBienvenida(data: {
             <div class="card">
               <div class="hero">
                 <div class="badge">Acceso Exclusivo</div>
-                <h1>¡Has sido seleccionado para explorar SISU!</h1>
-                <p>${data.nombre || 'Equipo'}, te damos la bienvenida a SISU, el sistema regional de recursos humanos para El Salvador, Guatemala y Honduras, diseñado para transformar la forma en que gestionás tu equipo. Has recibido este acceso limitado y gratuito por 7 días para descubrir cómo SISU elimina tareas repetitivas y libera tiempo valioso para lo que realmente importa.</p>
+                <h1>${data.nombre || 'Equipo'}, te damos la bienvenida a SISU</h1>
+                <p>El sistema regional de recursos humanos para El Salvador, Guatemala y Honduras, diseñado para transformar la forma en que gestionás tu equipo. Acceso exclusivo ilimitado gratuito por 7 días.</p>
               </div>
               <div class="content">
-                <div class="pill">
-                  SISU convierte horas de trabajo operativo en minutos: asistencia automática, nómina precisa, portal para empleados y dashboards inteligentes. Todo en una plataforma segura y fácil de usar, con reglas nacionales según tu país.
-                </div>
 
                 <div class="section-title">Credenciales seguras</div>
                 <div class="credentials">
@@ -913,11 +911,11 @@ async function enviarCorreoBienvenida(data: {
                 <div class="section-title">Explora SISU: Tu entorno exclusivo ya está listo</div>
                 <div class="grid">
                   <div>
-                    <h4>🚀 Asistencia sin fricciones</h4>
+                    <h4>Asistencia Digitalizada</h4>
                     <p>Registro por DNI, huella, rostro o tarjeta. Detecta retrasos y genera reportes automáticos.</p>
                   </div>
                   <div>
-                    <h4>👥 Empleados y Nómina</h4>
+                    <h4>Operación Automatizada</h4>
                     <p>Fichas completas, cálculos IHSS/RAP/ISR exactos, ajustes y envíos automáticos de comprobantes.</p>
                   </div>
                   <div>
@@ -934,11 +932,7 @@ async function enviarCorreoBienvenida(data: {
                 <div class="grid">
                   <div>
                     <h4>📱 WhatsApp</h4>
-                    <p>+504 3222-6773 • Respuesta en horario laboral.</p>
-                  </div>
-                  <div>
-                    <h4>📧 Email</h4>
-                    <p>Escribe a contrataciones@humanosisu.net para contactar a ventas.</p>
+                    <p><a href="${whatsappContratarUrl}" style="color: #5eead4; text-decoration: underline;">+504 3222-6773</a> · Respuesta en horario laboral. Tocá el número para enviar: «deseo contratar».</p>
                   </div>
                 </div>
               </div>
