@@ -23,6 +23,16 @@ export default function MailListConfirmPage() {
         case 'invalid_token':
           setErrorMessage('El enlace de confirmación no es válido o ha expirado.')
           break
+        case 'expired':
+          setErrorMessage(
+            'Este enlace de confirmación expiró (más de 30 días sin confirmar). Puedes suscribirte de nuevo desde nuestra página.'
+          )
+          break
+        case 'legacy_retired':
+          setErrorMessage(
+            'El sistema de confirmación por correo ya no está activo. Suscríbete directamente desde nuestra página para recibir contenido.'
+          )
+          break
         case 'update_failed':
           setErrorMessage('No se pudo confirmar tu suscripción. Por favor intenta de nuevo.')
           break
@@ -105,6 +115,13 @@ export default function MailListConfirmPage() {
                   {errorMessage}
                 </p>
                 <div className="space-y-4">
+                  {(router.query.error === 'expired' || router.query.error === 'legacy_retired') && (
+                    <Link href="/suscripcion">
+                      <button className="inline-flex items-center justify-center rounded-xl px-6 py-3 text-base font-semibold shadow-sm bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all duration-300 hover:-translate-y-1">
+                        Suscribirme ahora
+                      </button>
+                    </Link>
+                  )}
                   <Link href="/">
                     <button className="inline-flex items-center justify-center rounded-xl px-6 py-3 text-base font-semibold shadow-sm bg-sky-600 text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 transition-all duration-300 hover:-translate-y-1">
                       Volver al Inicio

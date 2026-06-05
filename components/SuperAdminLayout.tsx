@@ -62,10 +62,10 @@ export default function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
       description: 'Gestión de afiliados'
     },
     {
-      name: 'Mail List',
+      name: 'Leads marketing',
       href: '/app/admin/mail-list',
       icon: Mail,
-      description: 'Gestión de suscripciones'
+      description: 'Secuencia de email y suscriptores'
     },
     {
       name: 'Empresas',
