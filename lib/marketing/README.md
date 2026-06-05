@@ -59,3 +59,32 @@ Migration `20260606140000_p5_drop_legacy_mail_list.sql`:
 - Removed: `lib/emails/mail-list-confirmation.ts`
 
 Restore if needed: `SELECT * FROM mail_list_subscriptions_archive;`
+
+## activaciones → marketing_leads
+
+Migration `20260606150000_backfill_activaciones_to_marketing_leads.sql`:
+
+| activaciones.status | Age | → marketing_leads |
+|---------------------|-----|-------------------|
+| `rejected` | any | `unsubscribed`, step 5 |
+| `pending`, `trial_pending_data` | ≤ **30 days** | `active`, step 1, ledger marker |
+| `pending`, `trial_pending_data` | > 30 days | `unsubscribed`, step 5 |
+| `verified`, `active`, `trial_live`, `ready_for_conversion` | any | `active`, step 1, ledger marker |
+
+- Dedupes by `contacto_email` (best status, newest row).
+- Idempotent: `ON CONFLICT (email) DO NOTHING`.
+- Verify: `SELECT * FROM marketing_activaciones_backfill_summary;`
+
+## Current customers (excluded from sequence)
+
+Migration `20260606160000_marketing_exclude_current_customers.sql` marks contacts from these companies as `completed` (no watchman emails):
+
+| Company ID | Empresa |
+|------------|---------|
+| `4dc1c9de-dd12-4e4b-b76a-783d4ee5d07c` | Prohalca |
+| `48ab60e4-83ff-4a76-9310-cf32e076d1a3` | Grupo Gastro Cueva |
+| `7a0278af-4c01-4dfb-a098-7fb2b8090d3f` | Tony's Mar Restaurante |
+| `c419b1a5-32de-4518-8ff2-e7ebd6318a9f` | Enlace |
+
+Contact resolved via `activaciones` + `empresa` name match. View: `SELECT * FROM marketing_current_customer_contacts;`
+All other leads → `active`, step 1 (watchman eligible).
