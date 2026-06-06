@@ -9,7 +9,7 @@
  * Píxel base en pages/_document.tsx.
  */
 
-export const META_PIXEL_ID = '1167705867436827'
+export const META_PIXEL_ID = '833142547420951'
 
 type MetaStandardEvent = 'Lead' | 'CompleteRegistration' | 'StartTrial'
 

@@ -70,7 +70,7 @@ function getMetaCapiConfig(): { pixelId: string; accessToken: string } | null {
   const pixelId =
     process.env['META_PIXEL_ID']?.trim() ||
     process.env['NEXT_PUBLIC_META_PIXEL_ID']?.trim() ||
-    '1167705867436827'
+    '833142547420951'
   const accessToken = process.env.META_CAPI_ACCESS_TOKEN?.trim()
   if (!accessToken) return null
   return { pixelId, accessToken }
