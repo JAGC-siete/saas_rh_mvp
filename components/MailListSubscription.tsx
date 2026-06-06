@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Button } from './ui/button'
+import { trackNewsletterSubscribe } from '../lib/analytics/metaPixel'
 
 interface MailListSubscriptionProps {
   source?: string
@@ -51,6 +52,7 @@ export default function MailListSubscription({ source = 'landing', className = '
       const data = await response.json()
 
       if (response.ok && data.success) {
+        trackNewsletterSubscribe(source)
         setStatus('success')
         setMessage('¡Perfecto! Ya estás dentro. Revisa tu correo para el primer consejo de optimización.')
         setEmail('')

@@ -22,6 +22,7 @@ import {
 import { getVentasModalityDefinition } from '../lib/ventas/modality-includes'
 import type { CountryCode } from '../lib/country/supported'
 import { isCountryCode } from '../lib/country/supported'
+import { trackQuotationSubmit } from '../lib/analytics/metaPixel'
 
 const COUNTRY_LABEL: Record<CountryCode, string> = {
   HND: 'Honduras',
@@ -160,8 +161,19 @@ export default function VentasPage() {
         return
       }
 
-      setQuote((data as QuotationResponse).quote || null)
+      const responseQuote = (data as QuotationResponse).quote || null
+      setQuote(responseQuote)
       setUrgencyOffer((data as QuotationResponse).urgency_offer || null)
+      trackQuotationSubmit({
+        employeesCount: payload.employees_count,
+        countryCode: payload.country_code,
+        billingModality: payload.billing_modality,
+        quoteValue:
+          responseQuote?.billing_modality === 'monthly'
+            ? responseQuote.monthly_total
+            : responseQuote?.annual_total,
+        currency: responseQuote?.currency,
+      })
       setIsSuccess(true)
     } catch (e) {
       setErrors({ submit: 'No se pudo enviar. Revise su conexión e intente de nuevo.' })

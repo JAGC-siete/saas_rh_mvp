@@ -1,9 +1,26 @@
-import { Html, Head, Main, NextScript } from 'next/document'
+import Document, {
+  Html,
+  Head,
+  Main,
+  NextScript,
+  type DocumentContext,
+  type DocumentInitialProps,
+} from 'next/document'
 
-const metaPixelId =
-  process.env.META_PIXEL_ID?.trim() || process.env.NEXT_PUBLIC_META_PIXEL_ID?.trim()
+interface MyDocumentProps extends DocumentInitialProps {
+  metaPixelId: string
+}
 
-export default function Document() {
+/** Lee en runtime (Railway/Docker); evita inlining vacío en `next build`. */
+function readMetaPixelId(): string {
+  return (
+    process.env['META_PIXEL_ID']?.trim() ||
+    process.env['NEXT_PUBLIC_META_PIXEL_ID']?.trim() ||
+    ''
+  )
+}
+
+export default function MyDocument({ metaPixelId }: MyDocumentProps) {
   return (
     <Html lang="es">
       <Head>
@@ -50,11 +67,11 @@ export default function Document() {
             </noscript>
           </>
         ) : null}
-        
+
         <link rel="icon" href="/logo-humano-sisu.png" />
         <link rel="shortcut icon" href="/logo-humano-sisu.png" />
         <link rel="apple-touch-icon" href="/logo-humano-sisu.png" />
-        
+
         {/* Inject environment variables for client-side access */}
         <script
           dangerouslySetInnerHTML={{
@@ -73,4 +90,9 @@ export default function Document() {
       </body>
     </Html>
   )
-} 
+}
+
+MyDocument.getInitialProps = async (ctx: DocumentContext): Promise<MyDocumentProps> => {
+  const initialProps = await Document.getInitialProps(ctx)
+  return { ...initialProps, metaPixelId: readMetaPixelId() }
+}
