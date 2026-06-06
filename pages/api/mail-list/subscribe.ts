@@ -10,6 +10,10 @@ import {
 } from '../../../lib/marketing/email-sequence-ledger'
 import { generateUnsubscribeToken } from '../../../lib/marketing/unsubscribe'
 import { sendSequenceEmail } from '../../../lib/marketing/send-sequence-email'
+import {
+  parseMetaTrackingPayload,
+  sendMetaWebsiteConversionFireAndForget,
+} from '../../../lib/analytics/metaCapiServer'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -145,6 +149,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         })
       }
     }
+
+    const metaTracking = parseMetaTrackingPayload(req.body)
+    sendMetaWebsiteConversionFireAndForget({
+      req,
+      eventName: 'CompleteRegistration',
+      tracking: metaTracking,
+      userData: { email: trimmedEmail },
+      customData: {
+        content_name: typeof source === 'string' ? source : 'web-subscription',
+        content_category: 'newsletter',
+        value: 0,
+        currency: 'USD',
+        status: true,
+      },
+    })
 
     return res.status(200).json(
       createSuccessResponse({

@@ -1,6 +1,10 @@
 import { useState } from 'react'
 import { Button } from './ui/button'
-import { trackNewsletterSubscribe } from '../lib/analytics/metaPixel'
+import {
+  buildMetaApiTrackingFields,
+  createMetaEventId,
+  trackNewsletterCompleteRegistration,
+} from '../lib/analytics/metaPixel'
 
 interface MailListSubscriptionProps {
   source?: string
@@ -38,21 +42,28 @@ export default function MailListSubscription({ source = 'landing', className = '
     setMessage('')
 
     try {
+      const metaEventId = createMetaEventId('subscribe')
+      const trimmedEmail = email.trim()
       const response = await fetch('/api/mail-list/subscribe', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          email: email.trim(),
+          email: trimmedEmail,
           source,
+          ...buildMetaApiTrackingFields(metaEventId),
         }),
       })
 
       const data = await response.json()
 
       if (response.ok && data.success) {
-        trackNewsletterSubscribe(source)
+        trackNewsletterCompleteRegistration({
+          eventId: metaEventId,
+          email: trimmedEmail,
+          source,
+        })
         setStatus('success')
         setMessage('¡Perfecto! Ya estás dentro. Revisa tu correo para el primer consejo de optimización.')
         setEmail('')

@@ -8,7 +8,11 @@ import { TRIAL_CONFIG } from '../lib/config/trial'
 import { motion } from 'framer-motion'
 import MainHeader from '../components/MainHeader'
 import { trackActivationFormSubmit, initGoogleAdsTracking } from '../lib/analytics/googleAds'
-import { trackActivationTrialSubmit } from '../lib/analytics/metaPixel'
+import {
+  buildMetaApiTrackingFields,
+  createMetaEventId,
+  trackActivationTrialSubmit,
+} from '../lib/analytics/metaPixel'
 import type { CountryCode } from '../lib/country/supported'
 import { isCountryCode } from '../lib/country/supported'
 import { normalizeSoftPhone } from '../lib/privacy'
@@ -192,6 +196,7 @@ export default function ActivarPage() {
     setErrors({}) // Limpiar errores antes de enviar
     
     try {
+      const metaEventId = createMetaEventId('activar')
       const submitData = {
         empleados: formData.empleados,
         empresa: formData.empresa.trim(),
@@ -202,6 +207,7 @@ export default function ActivarPage() {
         departamentos: formData.departamentos,
         aceptaTrial: formData.aceptaTrial || false,
         countryCode: formData.countryCode,
+        ...buildMetaApiTrackingFields(metaEventId),
       }
 
       const response = await fetch('/api/activar', {
@@ -224,7 +230,13 @@ export default function ActivarPage() {
           submitData.empresa,
           submitData.empleados
         )
-        trackActivationTrialSubmit(submitData.empleados, submitData.countryCode)
+        trackActivationTrialSubmit({
+          eventId: metaEventId,
+          email: submitData.contactoEmail,
+          phone: submitData.contactoWhatsApp || undefined,
+          firstName: submitData.nombre || undefined,
+          countryCode: submitData.countryCode,
+        })
         setIsSuccess(true)
       } else {
         // Manejar errores del servidor

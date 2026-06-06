@@ -26,6 +26,10 @@ import {
   isCountryCode,
   type CountryCode,
 } from '../../lib/country/supported'
+import {
+  parseMetaTrackingPayload,
+  sendMetaWebsiteConversionFireAndForget,
+} from '../../lib/analytics/metaCapiServer'
 
 const FALLBACK_CURRENCY: CurrencyCode = 'HNL'
 const FALLBACK_COUPON_CODE = 'gastro2026'
@@ -503,6 +507,27 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       quoteId,
       email: maskEmail(contactEmail),
       duration,
+    })
+
+    const metaTracking = parseMetaTrackingPayload(body)
+    const leadValue =
+      quote.billing_modality === 'monthly' ? quote.monthly_total : quote.annual_total
+    sendMetaWebsiteConversionFireAndForget({
+      req,
+      eventName: 'Lead',
+      tracking: metaTracking,
+      userData: {
+        email: contactEmail,
+        phone: phoneNorm || undefined,
+        firstName: contactName || undefined,
+      },
+      customData: {
+        content_name: 'ventas',
+        content_category: countryCode,
+        value: leadValue,
+        currency: quote.currency,
+        status: billingModality,
+      },
     })
 
     return res.status(200).json({

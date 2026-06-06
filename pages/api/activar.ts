@@ -11,6 +11,10 @@ import {
 } from '../../lib/country/supported'
 import { normalizeSoftPhone } from '../../lib/privacy'
 import { getResendFromContact } from '../../lib/resend-from'
+import {
+  parseMetaTrackingPayload,
+  sendMetaWebsiteConversionFireAndForget,
+} from '../../lib/analytics/metaCapiServer'
 
 export const config = {
   api: {
@@ -227,7 +231,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     console.log('🎉 Activación completada exitosamente')
 
-    return res.status(200).json({ 
+    const metaTracking = parseMetaTrackingPayload(req.body)
+    sendMetaWebsiteConversionFireAndForget({
+      req,
+      eventName: 'StartTrial',
+      tracking: metaTracking,
+      userData: {
+        email: contactoEmail,
+        phone: contactoWhatsApp || undefined,
+        firstName: nombre || undefined,
+      },
+      customData: {
+        content_name: 'activar',
+        content_category: countryCode,
+        value: 0,
+        currency: 'USD',
+        status: true,
+      },
+    })
+
+    return res.status(200).json({
       message: 'Trial activado exitosamente',
       data: {
         // ...activacion[0],

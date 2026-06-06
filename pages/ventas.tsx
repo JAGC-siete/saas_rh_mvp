@@ -22,7 +22,11 @@ import {
 import { getVentasModalityDefinition } from '../lib/ventas/modality-includes'
 import type { CountryCode } from '../lib/country/supported'
 import { isCountryCode } from '../lib/country/supported'
-import { trackQuotationSubmit } from '../lib/analytics/metaPixel'
+import {
+  buildMetaApiTrackingFields,
+  createMetaEventId,
+  trackQuotationSubmit,
+} from '../lib/analytics/metaPixel'
 
 const COUNTRY_LABEL: Record<CountryCode, string> = {
   HND: 'Honduras',
@@ -135,7 +139,8 @@ export default function VentasPage() {
     setErrors({})
 
     try {
-      const payload: QuotationRequest = {
+      const metaEventId = createMetaEventId('ventas')
+      const quotationPayload: QuotationRequest = {
         contact_email: formData.contact_email.trim(),
         contact_name: formData.contact_name?.trim() || '',
         company_name: formData.company_name?.trim() || '',
@@ -147,6 +152,10 @@ export default function VentasPage() {
         sector_rubro: formData.sector_rubro?.trim() || '',
         coupon_code: formData.coupon_code?.trim() || '',
         consent_newsletter: formData.consent_newsletter === true,
+      }
+      const payload = {
+        ...quotationPayload,
+        ...buildMetaApiTrackingFields(metaEventId),
       }
 
       const resp = await fetch('/api/quote', {
@@ -165,9 +174,13 @@ export default function VentasPage() {
       setQuote(responseQuote)
       setUrgencyOffer((data as QuotationResponse).urgency_offer || null)
       trackQuotationSubmit({
-        employeesCount: payload.employees_count,
-        countryCode: payload.country_code,
-        billingModality: payload.billing_modality,
+        eventId: metaEventId,
+        email: payload.contact_email,
+        phone: quotationPayload.phone || undefined,
+        firstName: quotationPayload.contact_name || undefined,
+        employeesCount: quotationPayload.employees_count,
+        countryCode: quotationPayload.country_code,
+        billingModality: quotationPayload.billing_modality,
         quoteValue:
           responseQuote?.billing_modality === 'monthly'
             ? responseQuote.monthly_total
