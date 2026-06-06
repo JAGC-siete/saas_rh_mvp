@@ -163,12 +163,12 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value:
               "default-src 'self'; " +
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com; " +
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://connect.facebook.net; " +
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
               "style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
               "img-src 'self' data: https:; " +
               "font-src 'self' data: https://fonts.gstatic.com; " +
-              "connect-src 'self' https://*.supabase.co https://*.supabase.com https://www.googletagmanager.com https://www.google-analytics.com; " +
+              "connect-src 'self' https://*.supabase.co https://*.supabase.com https://www.googletagmanager.com https://www.google-analytics.com https://www.facebook.com https://connect.facebook.net; " +
               "frame-ancestors 'none';",
           },
           // Permissions policy (restricts browser features)

@@ -1,5 +1,8 @@
 import { Html, Head, Main, NextScript } from 'next/document'
 
+const metaPixelId =
+  process.env.META_PIXEL_ID?.trim() || process.env.NEXT_PUBLIC_META_PIXEL_ID?.trim()
+
 export default function Document() {
   return (
     <Html lang="es">
@@ -16,6 +19,37 @@ export default function Document() {
             `,
           }}
         />
+
+        {/* Meta Pixel Code */}
+        {metaPixelId ? (
+          <>
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `
+                  !function(f,b,e,v,n,t,s)
+                  {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+                  n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+                  if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+                  n.queue=[];t=b.createElement(e);t.async=!0;
+                  t.src=v;s=b.getElementsByTagName(e)[0];
+                  s.parentNode.insertBefore(t,s)}(window, document,'script',
+                  'https://connect.facebook.net/en_US/fbevents.js');
+                  fbq('init', ${JSON.stringify(metaPixelId)});
+                  fbq('track', 'PageView');
+                `,
+              }}
+            />
+            <noscript>
+              <img
+                height="1"
+                width="1"
+                style={{ display: 'none' }}
+                alt=""
+                src={`https://www.facebook.com/tr?id=${encodeURIComponent(metaPixelId)}&ev=PageView&noscript=1`}
+              />
+            </noscript>
+          </>
+        ) : null}
         
         <link rel="icon" href="/logo-humano-sisu.png" />
         <link rel="shortcut icon" href="/logo-humano-sisu.png" />
