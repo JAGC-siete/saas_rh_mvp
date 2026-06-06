@@ -10,9 +10,6 @@ on:
 env:
   NODE_VERSION: '24.x'
   SKIP_ENV_VALIDATION: 'true'
-  # Forces JS actions to execute on Node 24 (warnings may still appear until
-  # action metadata is updated upstream).
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
   # ======================================
@@ -24,16 +21,16 @@ jobs:
     
     steps:
       - name: 📦 Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 🏗️ Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
 
       - name: 📋 Cache dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.npm
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
@@ -75,10 +72,10 @@ jobs:
     
     steps:
       - name: 📦 Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 🏗️ Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
@@ -93,7 +90,7 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
       - name: 📦 Cache build artifacts
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: .next
           key: ${{ runner.os }}-build-${{ github.sha }}
@@ -112,7 +109,7 @@ jobs:
     
     steps:
       - name: 📦 Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 🚀 Deploy to Railway (Staging)
         run: |
@@ -145,7 +142,7 @@ jobs:
     
     steps:
       - name: 📦 Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 🛡️ Security check
         run: |
@@ -187,10 +184,10 @@ jobs:
     
     steps:
       - name: 📦 Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: 🏗️ Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
 
