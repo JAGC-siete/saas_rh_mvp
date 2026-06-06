@@ -129,7 +129,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       new Set(
         (sourceRows || [])
           .map((r: { source: string | null }) => r.source)
-          .filter((s): s is string => Boolean(s && s.trim()))
+          .filter((s: string | null): s is string => Boolean(s && s.trim()))
       )
     ).sort()
 

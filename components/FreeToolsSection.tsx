@@ -28,7 +28,7 @@ export default function FreeToolsSection() {
               <div className="text-xs text-brand-300 mb-1">{item.country}</div>
               <div className="text-lg font-semibold text-white group-hover:text-brand-200">{item.title}</div>
               <div className="text-sm text-brand-200/80 mt-1">{item.subtitle}</div>
-              {'badge' in item && item.badge && (
+              {'badge' in item && typeof item.badge === 'string' && (
                 <div className="mt-3 text-xs text-cyan-300">{item.badge}</div>
               )}
             </Link>

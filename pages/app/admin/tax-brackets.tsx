@@ -19,7 +19,7 @@ import {
   X,
   Info
 } from 'lucide-react'
-import { HND_FALLBACK_2025_CONSTANTS, HND_FALLBACK_2026_CONSTANTS } from '../../../lib/tax/honduras-tax'
+import { HND_FALLBACK_2025_CONSTANTS, HND_FALLBACK_2026_CONSTANTS } from '../../../lib/tax/hnd-fallback-constants'
 
 interface TaxBracket {
   id: string

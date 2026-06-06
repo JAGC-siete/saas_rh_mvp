@@ -80,7 +80,7 @@ export default function CalculadoraHubPage() {
               <div className="text-xs text-brand-300 mb-1">{item.country}</div>
               <div className="text-lg font-bold text-white">{item.title}</div>
               <div className="text-sm text-brand-200/80 mt-2">{item.subtitle}</div>
-              {'badge' in item && item.badge && (
+              {'badge' in item && typeof item.badge === 'string' && (
                 <div className="mt-3 text-xs text-cyan-300">{item.badge}</div>
               )}
             </Link>
