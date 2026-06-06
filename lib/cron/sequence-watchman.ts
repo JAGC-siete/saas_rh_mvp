@@ -1,21 +1,19 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
-import { Resend } from 'resend'
 import { logger } from '../logger'
-import { getResendFromContact } from '../resend-from'
 import {
   getWatchWindowKey,
   isBiMonthlyWatchDay,
-  SEQUENCE_CONTENT,
   SEQUENCE_COMPLETE_STEP,
+  SEQUENCE_CONTENT,
   WATCHMAN_FIRST_STEP,
   WATCHMAN_LAST_STEP,
 } from '../marketing/email-sequence-ledger'
+import { sendSequenceEmail } from '../marketing/send-sequence-email'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
-const resend = new Resend(process.env.RESEND_API_KEY)
 
 async function hasWatchmanSendInWindow(
   supabase: SupabaseClient,
@@ -59,31 +57,42 @@ async function recordLedgerEntry(
   }
 }
 
-export async function runSequenceWatchman(now: Date = new Date()) {
-  logger.info('Sequence Watchman: checking bi-monthly watch window...')
+export type SequenceWatchmanResult = {
+  skipped: boolean
+  sent: number
+  windowKey?: string
+  eligible?: number
+  dryRun?: boolean
+  error?: string
+}
+
+export async function runSequenceWatchman(now: Date = new Date()): Promise<SequenceWatchmanResult> {
+  const dryRun = process.env.WATCHMAN_DRY_RUN === 'true'
+  logger.info('Sequence Watchman: checking bi-monthly watch window...', { dryRun })
 
   if (!isBiMonthlyWatchDay(now)) {
     logger.info('Outside bi-monthly watch window (days 12–16 and 26–30). Skipping.')
-    return { skipped: true, sent: 0 }
+    return { skipped: true, sent: 0, dryRun }
   }
 
   const windowKey = getWatchWindowKey(now)
   if (!windowKey) {
-    return { skipped: true, sent: 0 }
+    return { skipped: true, sent: 0, dryRun }
   }
 
   const { data: leads, error } = await supabaseAdmin
     .from('marketing_leads')
-    .select('id, email, current_step')
+    .select('id, email, current_step, unsubscribe_token')
     .eq('status', 'active')
     .gte('current_step', WATCHMAN_FIRST_STEP)
     .lt('current_step', SEQUENCE_COMPLETE_STEP)
 
   if (error) {
     logger.error('Watchman failed to fetch leads', { error: error.message })
-    return { skipped: false, sent: 0, error: error.message }
+    return { skipped: false, sent: 0, error: error.message, dryRun }
   }
 
+  const eligible = leads?.length ?? 0
   let sent = 0
 
   for (const lead of leads ?? []) {
@@ -94,38 +103,52 @@ export async function runSequenceWatchman(now: Date = new Date()) {
       continue
     }
 
+    if (!lead.unsubscribe_token) {
+      logger.warn('Lead missing unsubscribe_token; skipping', { leadId: lead.id })
+      continue
+    }
+
     if (await hasWatchmanSendInWindow(supabaseAdmin, lead.id, windowKey)) {
       logger.info(`Skipping ${lead.email}: already received a pain-point email this window`)
       continue
     }
 
     try {
-      await resend.emails.send({
-        from: getResendFromContact(),
+      await sendSequenceEmail({
         to: lead.email,
-        subject: content.subject,
-        text: content.text,
+        step,
+        unsubscribeToken: lead.unsubscribe_token,
+        dryRun,
       })
 
-      await recordLedgerEntry(supabaseAdmin, lead.id, step, windowKey)
+      if (!dryRun) {
+        await recordLedgerEntry(supabaseAdmin, lead.id, step, windowKey)
 
-      await supabaseAdmin
-        .from('marketing_leads')
-        .update({
-          current_step: step + 1,
-          last_mail_sent_at: now.toISOString(),
-          status: step + 1 >= SEQUENCE_COMPLETE_STEP ? 'completed' : 'active',
-        })
-        .eq('id', lead.id)
+        await supabaseAdmin
+          .from('marketing_leads')
+          .update({
+            current_step: step + 1,
+            last_mail_sent_at: now.toISOString(),
+            status: step + 1 >= SEQUENCE_COMPLETE_STEP ? 'completed' : 'active',
+          })
+          .eq('id', lead.id)
+      }
 
       sent += 1
-      logger.info(`Sent sequence email Step ${step} (${content.label}) to ${lead.email}`)
+      logger.info(`Sent sequence email Step ${step} (${content.label}) to ${lead.email}`, { dryRun })
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : 'Unknown error'
       logger.error(`Failed to send Step ${step} to ${lead.email}`, { error: message })
     }
   }
 
-  logger.info('Sequence Watchman finished', { windowKey, sent })
-  return { skipped: false, sent, windowKey }
+  if (!dryRun && eligible > 0 && sent === 0) {
+    logger.warn('Sequence Watchman: eligible leads but zero sends this run', {
+      windowKey,
+      eligible,
+    })
+  }
+
+  logger.info('Sequence Watchman finished', { windowKey, sent, eligible, dryRun })
+  return { skipped: false, sent, windowKey, eligible, dryRun }
 }

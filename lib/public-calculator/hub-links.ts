@@ -8,7 +8,6 @@ export const CALCULATOR_HUB_LINKS = {
       country: 'Honduras',
       title: 'IHSS, RAP e ISR',
       subtitle: 'Deducciones en lempiras (HNL)',
-      badge: 'Motor orgánico principal'
     },
     {
       href: '/calculadora-deducciones-el-salvador',

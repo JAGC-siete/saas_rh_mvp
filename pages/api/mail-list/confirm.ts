@@ -1,8 +1,19 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../lib/supabase/server'
 import { logger } from '../../../lib/logger'
-import { env } from '../../../lib/env'
+import { confirmLegacySubscription } from '../../../lib/marketing/legacy-token-fallback'
 
+function siteUrl(): string {
+  return process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net'
+}
+
+function redirect(res: NextApiResponse, query: string) {
+  return res.redirect(`${siteUrl()}/mail-list/confirm?${query}`)
+}
+
+/**
+ * P4: Legacy double opt-in confirm links → marketing_leads.
+ * P5: When mail_list_subscriptions is dropped, redirects to legacy_retired.
+ */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method Not Allowed' })
@@ -11,100 +22,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const { token } = req.query
 
   if (!token || typeof token !== 'string') {
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net'
-    return res.redirect(`${siteUrl}/mail-list/confirm?error=invalid_token`)
+    return redirect(res, 'error=invalid_token')
   }
-
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net'
-  
-  // Usar cliente anónimo - RLS permitirá SELECT/UPDATE por token
-  if (!env.NEXT_PUBLIC_SUPABASE_URL || !env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    logger.error('Supabase env missing - cannot confirm mail list', { source: 'mail_list_confirm' })
-    return res.redirect(`${siteUrl}/mail-list/confirm?error=server_error`)
-  }
-
-  const supabase = createClient(req, res)
 
   try {
-    // Buscar suscripción por token (RLS policy permite SELECT por token)
-    const { data: subscription, error: fetchError } = await supabase
-      .from('mail_list_subscriptions')
-      .select('id, email, status')
-      .eq('confirmation_token', token)
-      .single()
+    const result = await confirmLegacySubscription(token)
 
-    if (fetchError || !subscription) {
-      logger.warn('Invalid confirmation token used', {
-        token: token.substring(0, 8) + '...' // Log partial token for debugging
-      })
-      return res.redirect(`${siteUrl}/mail-list/confirm?error=invalid_token`)
+    if (result.ok) {
+      return redirect(res, 'success=true')
     }
 
-    // Si ya está confirmado, redirigir a éxito
-    if (subscription.status === 'confirmed') {
-      logger.debug('Subscription already confirmed', {
-        subscriptionId: subscription.id
-      })
-      return res.redirect(`${siteUrl}/mail-list/confirm?success=true`)
+    switch (result.reason) {
+      case 'expired':
+        return redirect(res, 'error=expired')
+      case 'table_missing':
+        return redirect(res, 'error=legacy_retired')
+      case 'not_found':
+        logger.warn('Invalid confirmation token', { tokenPrefix: token.substring(0, 8) })
+        return redirect(res, 'error=invalid_token')
+      default:
+        return redirect(res, 'error=update_failed')
     }
-
-    // Si está unsubscribed, permitir reconfirmar
-    if (subscription.status === 'unsubscribed') {
-      const { error: updateError } = await supabase
-        .from('mail_list_subscriptions')
-        .update({
-          status: 'confirmed',
-          confirmed_at: new Date().toISOString(),
-          unsubscribed_at: null,
-        })
-        .eq('id', subscription.id)
-
-      if (updateError) {
-        logger.error('Error updating subscription status', {
-          subscriptionId: subscription.id,
-          error: updateError.message
-        })
-        return res.redirect(`${siteUrl}/mail-list/confirm?error=update_failed`)
-      }
-
-      logger.info('Subscription reconfirmed after unsubscribe', {
-        subscriptionId: subscription.id,
-        email: subscription.email
-      })
-      return res.redirect(`${siteUrl}/mail-list/confirm?success=true`)
-    }
-
-    // Actualizar status a confirmed (RLS policy permite UPDATE por token)
-    const { error: updateError } = await supabase
-      .from('mail_list_subscriptions')
-      .update({
-        status: 'confirmed',
-        confirmed_at: new Date().toISOString(),
-      })
-      .eq('id', subscription.id)
-
-    if (updateError) {
-      logger.error('Error confirming subscription', {
-        subscriptionId: subscription.id,
-        error: updateError.message
-      })
-      return res.redirect(`${siteUrl}/mail-list/confirm?error=update_failed`)
-    }
-
-    logger.info('Mail list subscription confirmed', {
-      subscriptionId: subscription.id,
-      email: subscription.email
-    })
-
-    // Redirigir a página de éxito
-    return res.redirect(`${siteUrl}/mail-list/confirm?success=true`)
-  } catch (error: any) {
-    logger.error('Unexpected error confirming subscription', {
-      error: error?.message || error,
-      stack: error?.stack,
-      token: token.substring(0, 8) + '...'
-    })
-    return res.redirect(`${siteUrl}/mail-list/confirm?error=server_error`)
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    logger.error('Unexpected error confirming legacy subscription', { error: message })
+    return redirect(res, 'error=server_error')
   }
 }
-

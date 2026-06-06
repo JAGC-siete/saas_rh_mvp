@@ -105,15 +105,15 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
     },
     hero: {
       badges: ['Calculadora ISR Honduras', 'Calculadora RAP · IHSS', 'Gratis en 30 segundos'],
-      headlineLead: 'Calculadora ISR Honduras',
-      headlineAccent: 'Calculadora RAP, IHSS y sueldo neto.',
+      headlineLead: '¿Cuánto te pagan neto en Honduras?',
+      headlineAccent: 'Calcula IHSS, RAP e ISR al instante.',
       subheadline:
         'Ingresa tu salario mensual o quincenal y valida al instante cuánto te descuentan de ISR, RAP e IHSS según las leyes vigentes en Honduras.'
     },
     defaultDeductions: { ihss: true, rap: true, afp: false, infop: false, isr: true },
     deductionOptions: [
       { key: 'ihss', title: 'IHSS', subtitle: 'Seguridad social', hint: 'Instituto Hondureño de Seguridad Social. 5% hasta el tope.', showInSelector: true, showInResults: true },
-      { key: 'rap', title: 'RAP', subtitle: 'Ahorro pensiones', hint: 'Régimen de Ahorro para Pensiones. 1.5% sobre excedente del salario mínimo.', showInSelector: true, showInResults: true },
+      { key: 'rap', title: 'RAP', subtitle: 'Ahorro pensiones', hint: 'FOVIIF: 1.5% sobre el excedente del techo IHSS IVM.', showInSelector: true, showInResults: true },
       { key: 'afp', title: 'AFP', subtitle: 'Fondo de pensiones', hint: 'En Honduras esta calculadora pública muestra AFP como opción; el cálculo obrero va en 0.', showInSelector: true, showInResults: true },
       { key: 'infop', title: 'INFOP', subtitle: 'Formación (1%)', hint: 'Normalmente aporte patronal. Si lo activas, lo incluimos como 1% del salario.', showInSelector: true, showInResults: true },
       { key: 'isr', title: 'ISR', subtitle: 'Impuesto renta', hint: 'Impuesto progresivo según tablas vigentes.', showInSelector: true, showInResults: true }
@@ -124,7 +124,7 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
       socialPrimaryTooltip: 'Se calcula como el 5% del salario hasta el tope máximo establecido por ley.',
       socialSecondary: 'RAP',
       socialSecondaryLong: '(Régimen de Ahorro para Pensiones)',
-      socialSecondaryTooltip: 'Se calcula como el 1.5% sobre el excedente del salario sobre el salario mínimo.',
+      socialSecondaryTooltip: 'Se calcula como el 1.5% sobre el excedente del salario respecto al techo IHSS IVM.',
       afp: 'AFP',
       afpLong: '(Fondo de pensiones)',
       afpTooltip: 'En esta calculadora pública para Honduras se muestra como opción pero actualmente retorna 0.',
@@ -160,7 +160,7 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
       {
         question: '¿Qué es la calculadora RAP y cómo se calcula?',
         answer:
-          'La calculadora RAP estima el aporte obrero al Régimen de Ahorro para Pensiones: 1.5% sobre el excedente del salario mínimo. Puedes activar o desactivar RAP junto con IHSS e ISR para ver el total de deducciones.'
+          'La calculadora RAP estima el aporte obrero al FOVIIF: 1.5% sobre el excedente del techo IHSS IVM. Puedes activar o desactivar RAP junto con IHSS e ISR para ver el total de deducciones.'
       },
       {
         question: '¿Cómo calcular IHSS en Honduras con esta herramienta?',
@@ -197,7 +197,7 @@ export const PUBLIC_CALCULATOR_CONFIGS: Record<CountryCode, PublicCalculatorConf
         {
           heading: 'Calculadora RAP: deducción de pensiones',
           body:
-            'El Régimen de Ahorro para Pensiones (RAP) descuenta el 1.5% sobre la parte del salario que excede el salario mínimo. La calculadora RAP te permite ver ese rubro por separado o junto con IHSS e ISR para conocer tu sueldo neto real.'
+            'El RAP descuenta el 1.5% sobre la parte del salario que excede el techo IHSS IVM. La calculadora RAP te permite ver ese rubro por separado o junto con IHSS e ISR para conocer tu sueldo neto real.'
         },
         {
           heading: 'IHSS y salario neto en lempiras',

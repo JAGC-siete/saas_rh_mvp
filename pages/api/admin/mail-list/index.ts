@@ -3,9 +3,47 @@ import { requireSuperAdminWithAudit } from '../../../../lib/auth/api-guards'
 import { createSuccessResponse, createErrorResponse } from '../../../../lib/security/api-responses'
 import { logger } from '../../../../lib/logger'
 
+const VALID_STATUSES = ['active', 'completed', 'unsubscribed'] as const
+const VALID_ORDER_BY = [
+  'created_at',
+  'email',
+  'status',
+  'source',
+  'current_step',
+  'last_mail_sent_at',
+  'unsubscribed_at',
+] as const
+
+type MarketingLeadRow = {
+  id: string
+  email: string
+  source: string | null
+  status: string
+  current_step: number
+  last_mail_sent_at: string | null
+  unsubscribed_at: string | null
+  created_at: string
+  marketing_email_ledger?: { count: number }[]
+}
+
+function emailsSentCount(row: MarketingLeadRow): number {
+  const nested = row.marketing_email_ledger
+  if (Array.isArray(nested) && nested[0]?.count != null) {
+    return Number(nested[0].count) || 0
+  }
+  return 0
+}
+
+function serializeLead(row: MarketingLeadRow) {
+  const { marketing_email_ledger: _ledger, ...rest } = row
+  return {
+    ...rest,
+    emails_sent_count: emailsSentCount(row),
+  }
+}
+
 /**
- * List mail list subscriptions with filtering, search, and pagination
- * Requires super admin authentication
+ * List marketing leads (email sequence) with filtering, search, and pagination.
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -13,23 +51,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Authenticate and get admin context with audit logging
     const { adminClient, user, auditLog } = await requireSuperAdminWithAudit(req, res)
 
-    // Validate user exists (should always be present after auth, but be defensive)
-    if (!user || !user.id) {
-      logger.error('User not available after authentication', {
-        hasUser: !!user,
-        userId: user?.id
-      })
-      return res.status(500).json(createErrorResponse(
-        'Authentication error',
-        'AUTH_ERROR',
-        { details: 'User information not available' }
-      ))
+    if (!user?.id) {
+      return res.status(500).json(
+        createErrorResponse('Authentication error', 'AUTH_ERROR', {
+          details: 'User information not available',
+        })
+      )
     }
 
-    // Validate and sanitize query params
     const status = req.query.status as string | undefined
     const source = req.query.source as string | undefined
     const search = (req.query.search as string | undefined)?.trim() || ''
@@ -38,134 +69,112 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const orderBy = (req.query.orderBy as string) || 'created_at'
     const orderDir = ((req.query.orderDir as string) || 'desc').toLowerCase() === 'asc' ? 'asc' : 'desc'
 
-    // Validate status if provided
-    const validStatuses = ['pending', 'confirmed', 'unsubscribed']
-    if (status && !validStatuses.includes(status)) {
-      return res.status(400).json(createErrorResponse(
-        `Invalid status. Must be one of: ${validStatuses.join(', ')}`,
-        'VALIDATION_ERROR'
-      ))
+    if (status && !VALID_STATUSES.includes(status as (typeof VALID_STATUSES)[number])) {
+      return res.status(400).json(
+        createErrorResponse(`Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}`, 'VALIDATION_ERROR')
+      )
     }
 
-    // Validate orderBy column (prevent SQL injection)
-    const validOrderByColumns = ['created_at', 'email', 'status', 'source', 'confirmed_at', 'unsubscribed_at']
-    if (!validOrderByColumns.includes(orderBy)) {
-      return res.status(400).json(createErrorResponse(
-        `Invalid orderBy column. Must be one of: ${validOrderByColumns.join(', ')}`,
-        'VALIDATION_ERROR'
-      ))
+    if (!VALID_ORDER_BY.includes(orderBy as (typeof VALID_ORDER_BY)[number])) {
+      return res.status(400).json(
+        createErrorResponse(`Invalid orderBy. Must be one of: ${VALID_ORDER_BY.join(', ')}`, 'VALIDATION_ERROR')
+      )
     }
 
-    // Validate pagination params
     const page = Math.max(1, isFinite(pageParam) ? pageParam : 1)
     const pageSize = Math.min(100, Math.max(1, isFinite(pageSizeParam) ? pageSizeParam : 50))
     const from = (page - 1) * pageSize
     const to = from + pageSize - 1
-
-    // Sanitize search query (limit length to prevent DoS)
     const sanitizedSearch = search.length > 100 ? search.substring(0, 100) : search
+    const sanitizedSource = source && source.length > 50 ? source.substring(0, 50) : source
 
-    // Build query
     let query = adminClient
-      .from('mail_list_subscriptions')
-      .select('*', { count: 'exact' })
+      .from('marketing_leads')
+      .select(
+        `
+        id,
+        email,
+        source,
+        status,
+        current_step,
+        last_mail_sent_at,
+        unsubscribed_at,
+        created_at,
+        marketing_email_ledger(count)
+      `,
+        { count: 'exact' }
+      )
       .order(orderBy, { ascending: orderDir === 'asc' })
 
-    // Apply filters
-    if (status) {
-      query = query.eq('status', status)
-    }
+    if (status) query = query.eq('status', status)
+    if (sanitizedSource) query = query.eq('source', sanitizedSource)
+    if (sanitizedSearch) query = query.ilike('email', `%${sanitizedSearch}%`)
 
-    if (source) {
-      // Sanitize source (limit length)
-      const sanitizedSource = source.length > 50 ? source.substring(0, 50) : source
-      query = query.eq('source', sanitizedSource)
-    }
-
-    // Search by email (if search provided)
-    if (sanitizedSearch) {
-      query = query.ilike('email', `%${sanitizedSearch}%`)
-    }
-
-    // Apply pagination
-    const { data: subscriptions, error, count } = await query.range(from, to)
+    const { data: rows, error, count } = await query.range(from, to)
 
     if (error) {
-      logger.error('Error fetching mail list subscriptions', {
-        userId: user?.id || 'unknown',
-        error: error?.message || String(error),
-        code: error?.code,
-        status,
-        source,
-        search: sanitizedSearch,
-        page,
-        pageSize
+      logger.error('Error fetching marketing leads', {
+        userId: user.id,
+        error: error.message,
       })
-      return res.status(500).json(createErrorResponse(
-        'Error al obtener suscripciones de la base de datos',
-        'DATABASE_ERROR',
-        { details: error?.message || String(error) }
-      ))
+      return res.status(500).json(
+        createErrorResponse('Error al obtener leads de marketing', 'DATABASE_ERROR', {
+          details: error.message,
+        })
+      )
     }
 
-    // Audit log the access (protected - don't fail endpoint if audit fails)
+    const { data: sourceRows } = await adminClient.from('marketing_leads').select('source')
+    const availableSources = Array.from(
+      new Set(
+        (sourceRows || [])
+          .map((r: { source: string | null }) => r.source)
+          .filter((s: string | null): s is string => Boolean(s && s.trim()))
+      )
+    ).sort()
+
     try {
-      await auditLog('mail_list_accessed', {
+      await auditLog('marketing_leads_accessed', {
         filters: {
           status: status || 'all',
-          source: source || 'all',
+          source: sanitizedSource || 'all',
           search: sanitizedSearch ? 'yes' : 'no',
           page,
           pageSize,
-          totalResults: count || 0
-        }
+          totalResults: count || 0,
+        },
       })
-    } catch (auditError: any) {
-      logger.warn('Error logging audit (continuing)', {
-        error: auditError?.message || String(auditError)
-      })
+    } catch (auditError: unknown) {
+      const message = auditError instanceof Error ? auditError.message : String(auditError)
+      logger.warn('Error logging audit (continuing)', { error: message })
     }
 
-    return res.status(200).json(createSuccessResponse({
-      subscriptions: subscriptions || [],
-      pagination: {
-        page,
-        pageSize,
-        total: count || 0,
-        totalPages: Math.ceil((count || 0) / pageSize)
-      }
-    }))
-  } catch (error: any) {
-    // Handle auth errors (already sent response)
-    if (error?.message === 'UNAUTHORIZED' || error?.message === 'INSUFFICIENT_PERMISSIONS') {
-      return // Response already sent by guard
-    }
+    const leads = ((rows || []) as MarketingLeadRow[]).map(serializeLead)
 
-    // Check if response was already sent
-    if (res.headersSent) {
-      logger.error('Error after response sent in mail-list index', {
-        error: error?.message || String(error)
+    return res.status(200).json(
+      createSuccessResponse({
+        leads,
+        subscriptions: leads,
+        availableSources,
+        pagination: {
+          page,
+          pageSize,
+          total: count || 0,
+          totalPages: Math.ceil((count || 0) / pageSize),
+        },
       })
+    )
+  } catch (error: unknown) {
+    if (error instanceof Error && (error.message === 'UNAUTHORIZED' || error.message === 'INSUFFICIENT_PERMISSIONS')) {
       return
     }
+    if (res.headersSent) return
 
-    logger.error('Unexpected error fetching mail list subscriptions', {
-      error: error?.message || String(error),
-      stack: error?.stack
-    })
+    const message = error instanceof Error ? error.message : String(error)
+    logger.error('Unexpected error fetching marketing leads', { error: message })
 
-    return res.status(500).json(createErrorResponse(
-      'An internal server error occurred',
-      'INTERNAL_ERROR',
-      { details: error?.message || 'Unknown error' }
-    ))
+    return res.status(500).json(
+      createErrorResponse('An internal server error occurred', 'INTERNAL_ERROR', { details: message })
+    )
   }
 }
-
-
-
-
-
-
-
-

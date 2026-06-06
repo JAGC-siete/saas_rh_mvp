@@ -8,7 +8,8 @@ import {
   calculateIHSS,
   calculateISR,
   calculateRAP,
-  HND_FALLBACK_2025_CONSTANTS
+  HND_FALLBACK_2025_CONSTANTS,
+  HND_FALLBACK_2026_CONSTANTS
 } from '../lib/tax/honduras-tax'
 import { calculateSlvMonthlyIsrUsd, normalizeSlvMonthlyBrackets } from '../lib/tax/slv-isr'
 import { calculateGtmMonthlyIsrFromAnnualConfig } from '../lib/tax/gtm-isr'
@@ -29,7 +30,20 @@ const hndFallbackRaw = JSON.parse(fs.readFileSync(jsonPath, 'utf8')) as {
   isr_brackets: Array<{ limit: number; rate: number; base: number; lower: number }>
 }
 
+const hndFallback2026Path = path.join(process.cwd(), 'lib/tax/hnd-fallback-2026.json')
+const hndFallback2026Raw = JSON.parse(fs.readFileSync(hndFallback2026Path, 'utf8')) as {
+  minimum_wage: number
+  ihss_ceiling: number
+}
+
 describe('multipay statutory (HND)', () => {
+  it('exported HND_FALLBACK_2026_CONSTANTS matches hnd-fallback-2026.json', () => {
+    assert.equal(HND_FALLBACK_2026_CONSTANTS.minimum_wage, hndFallback2026Raw.minimum_wage)
+    assert.equal(HND_FALLBACK_2026_CONSTANTS.ihss_ceiling, hndFallback2026Raw.ihss_ceiling)
+    assert.equal(HND_FALLBACK_2026_CONSTANTS.minimum_wage, 14917.2)
+    assert.equal(HND_FALLBACK_2026_CONSTANTS.ihss_ceiling, 11903.13)
+  })
+
   it('exported HND_FALLBACK_2025_CONSTANTS matches hnd-fallback-2025.json', () => {
     assert.equal(HND_FALLBACK_2025_CONSTANTS.minimum_wage, hndFallbackRaw.minimum_wage)
     assert.equal(HND_FALLBACK_2025_CONSTANTS.ihss_ceiling, hndFallbackRaw.ihss_ceiling)
@@ -50,6 +64,14 @@ describe('multipay statutory (HND)', () => {
     assert.ok(c)
     assert.equal(c!.ihss_employee_rate, 0.05)
     assert.equal(c!.isr_brackets[0].limit, Infinity)
+  })
+
+  it('2026: RAP usa techo IHSS aunque salario mínimo promedio sea distinto', () => {
+    const c = HND_FALLBACK_2026_CONSTANTS
+    const gross = 20000
+    const rap = Math.round(calculateRAP(gross, c) * 100) / 100
+    assert.equal(rap, 121.45)
+    assert.notEqual(c.minimum_wage, c.ihss_ceiling)
   })
 
   it('numeric regression IHSS/RAP/ISR via honduras-tax + JSON constants', () => {

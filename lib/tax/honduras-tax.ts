@@ -8,42 +8,16 @@
 import { createAdminClient } from '../supabase/server'
 import { statutoryJsonToHndTaxConstants } from './statutory-config'
 import type { PayrollStatutoryTrace } from './statutory-trace'
-import hndFallbackJson from './hnd-fallback-2025.json'
+import {
+  embeddedHndFallbackForYear,
+  HND_FALLBACK_2025_CONSTANTS,
+  HND_FALLBACK_2026_CONSTANTS,
+  type TaxBracket,
+  type TaxConstants,
+} from './hnd-fallback-constants'
 
-export interface TaxBracket {
-  limit: number
-  rate: number
-  base: number
-  lower: number
-}
-
-export interface TaxConstants {
-  minimum_wage: number
-  ihss_ceiling: number
-  ihss_employee_rate: number
-  rap_rate: number
-  isr_brackets: TaxBracket[]
-  medical_deduction_limit?: number
-}
-
-function taxConstantsFromHndFallbackJson(j: typeof hndFallbackJson): TaxConstants {
-  return {
-    minimum_wage: j.minimum_wage,
-    ihss_ceiling: j.ihss_ceiling,
-    ihss_employee_rate: j.ihss_employee_rate,
-    rap_rate: j.rap_rate,
-    medical_deduction_limit: j.medical_deduction_limit,
-    isr_brackets: j.isr_brackets.map(b => ({
-      limit: b.limit >= 999999999 ? Infinity : b.limit,
-      rate: b.rate,
-      base: b.base,
-      lower: b.lower
-    }))
-  }
-}
-
-/** Misma fuente que `lib/tax/hnd-fallback-2025.json` (tests leen el JSON). */
-export const HND_FALLBACK_2025_CONSTANTS: TaxConstants = taxConstantsFromHndFallbackJson(hndFallbackJson)
+export type { TaxBracket, TaxConstants }
+export { HND_FALLBACK_2025_CONSTANTS, HND_FALLBACK_2026_CONSTANTS }
 
 const DEFAULT_2025_CONSTANTS = HND_FALLBACK_2025_CONSTANTS
 
@@ -161,14 +135,16 @@ export async function getTaxBracketsForYearWithTrace(
     console.error('Error fetching tax brackets from DB:', error)
   }
 
-  console.warn(`Tax brackets for year ${year} not found, using default 2025 constants`)
+  console.warn(`Tax brackets for year ${year} not found, using embedded HND fallback`)
+  const fallback = embeddedHndFallbackForYear(year)
+  const fallbackYear = year >= 2026 ? 2026 : 2025
   return {
-    constants: DEFAULT_2025_CONSTANTS,
+    constants: fallback,
     trace: baseTrace('fallback_default', {
-      resolvedYear: 2025,
+      resolvedYear: fallbackYear,
       usedFallback: true,
-      sourceLabel: 'HND_FALLBACK_2025_CONSTANTS',
-      notes: 'No DB row; embedded fallback constants'
+      sourceLabel: fallbackYear >= 2026 ? 'HND_FALLBACK_2026_CONSTANTS' : 'HND_FALLBACK_2025_CONSTANTS',
+      notes: `No DB row; embedded fallback constants for ${fallbackYear}`
     })
   }
 }
@@ -258,10 +234,10 @@ export function calculateIHSS(salary: number, constants: TaxConstants): number {
 }
 
 /**
- * Calculate RAP (Régimen de Ahorro para Pensiones) for employee
+ * Calculate RAP (FOVIIF obrero): 1.5% sobre excedente del techo IHSS IVM.
  */
 export function calculateRAP(salary: number, constants: TaxConstants): number {
-  return Math.max(0, salary - constants.minimum_wage) * constants.rap_rate
+  return Math.max(0, salary - constants.ihss_ceiling) * constants.rap_rate
 }
 
 /**

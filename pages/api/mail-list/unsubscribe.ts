@@ -1,6 +1,51 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { createClient } from '../../../lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
 import { logger } from '../../../lib/logger'
+import { unsubscribeLegacySubscription } from '../../../lib/marketing/legacy-token-fallback'
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
+
+async function unsubscribeMarketingLead(token: string): Promise<{ ok: boolean; already: boolean }> {
+  const { data: lead, error: fetchError } = await supabaseAdmin
+    .from('marketing_leads')
+    .select('id, email, status')
+    .eq('unsubscribe_token', token)
+    .maybeSingle()
+
+  if (fetchError || !lead) {
+    return { ok: false, already: false }
+  }
+
+  if (lead.status === 'unsubscribed') {
+    return { ok: true, already: true }
+  }
+
+  const { error: updateError } = await supabaseAdmin
+    .from('marketing_leads')
+    .update({
+      status: 'unsubscribed',
+      unsubscribed_at: new Date().toISOString(),
+    })
+    .eq('id', lead.id)
+
+  if (updateError) {
+    logger.error('Error unsubscribing marketing lead', {
+      leadId: lead.id,
+      error: updateError.message,
+    })
+    return { ok: false, already: false }
+  }
+
+  logger.info('Marketing lead unsubscribed', {
+    leadId: lead.id,
+    emailPartial: lead.email?.substring(0, 3) + '***',
+  })
+
+  return { ok: true, already: false }
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -8,71 +53,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const { token } = req.query
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net'
 
   if (!token || typeof token !== 'string') {
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net'
     return res.redirect(`${siteUrl}/mail-list/unsubscribe?error=invalid_token`)
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://humanosisu.net'
-  
-  // Usar cliente anónimo - RLS permitirá SELECT/UPDATE por token
-  const supabase = createClient(req, res)
-
   try {
-    // Buscar suscripción por token (RLS policy permite SELECT por token)
-    const { data: subscription, error: fetchError } = await supabase
-      .from('mail_list_subscriptions')
-      .select('id, email, status')
-      .eq('confirmation_token', token)
-      .single()
-
-    if (fetchError || !subscription) {
-      logger.warn('Invalid unsubscribe token used', {
-        token: token.substring(0, 8) + '...' // Log partial token for debugging
-      })
-      return res.redirect(`${siteUrl}/mail-list/unsubscribe?error=invalid_token`)
-    }
-
-    // Si ya está unsubscribed, redirigir a confirmación
-    if (subscription.status === 'unsubscribed') {
-      logger.debug('Subscription already unsubscribed', {
-        subscriptionId: subscription.id
-      })
+    const marketing = await unsubscribeMarketingLead(token)
+    if (marketing.ok) {
       return res.redirect(`${siteUrl}/mail-list/unsubscribe?success=true`)
     }
 
-    // Actualizar status a unsubscribed (RLS policy permite UPDATE por token)
-    const { error: updateError } = await supabase
-      .from('mail_list_subscriptions')
-      .update({
-        status: 'unsubscribed',
-        unsubscribed_at: new Date().toISOString(),
-      })
-      .eq('id', subscription.id)
-
-    if (updateError) {
-      logger.error('Error unsubscribing from mail list', {
-        subscriptionId: subscription.id,
-        error: updateError.message
-      })
-      return res.redirect(`${siteUrl}/mail-list/unsubscribe?error=update_failed`)
+    const legacy = await unsubscribeLegacySubscription(token)
+    if (legacy.ok) {
+      return res.redirect(`${siteUrl}/mail-list/unsubscribe?success=true`)
     }
 
-    logger.info('Mail list subscription unsubscribed', {
-      subscriptionId: subscription.id,
-      email: subscription.email
-    })
+    if (legacy.reason === 'table_missing') {
+      logger.warn('Unsubscribe token not found (legacy table removed)', {
+        tokenPrefix: token.substring(0, 8),
+      })
+    } else {
+      logger.warn('Invalid unsubscribe token used', { tokenPrefix: token.substring(0, 8) })
+    }
 
-    // Redirigir a página de confirmación
-    return res.redirect(`${siteUrl}/mail-list/unsubscribe?success=true`)
-  } catch (error: any) {
-    logger.error('Unexpected error unsubscribing from mail list', {
-      error: error?.message || error,
-      stack: error?.stack,
-      token: token.substring(0, 8) + '...'
-    })
+    return res.redirect(`${siteUrl}/mail-list/unsubscribe?error=invalid_token`)
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    logger.error('Unexpected error unsubscribing', { error: message })
     return res.redirect(`${siteUrl}/mail-list/unsubscribe?error=server_error`)
   }
 }
-

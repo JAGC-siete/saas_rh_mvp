@@ -175,45 +175,6 @@ export type Database = {
         }
         Relationships: []
       }
-      mail_list_subscriptions: {
-        Row: {
-          confirmation_token: string
-          confirmed_at: string | null
-          created_at: string
-          email: string
-          id: string
-          metadata: Json | null
-          source: string | null
-          status: Database["public"]["Enums"]["mail_list_status"]
-          unsubscribed_at: string | null
-          updated_at: string
-        }
-        Insert: {
-          confirmation_token: string
-          confirmed_at?: string | null
-          created_at?: string
-          email: string
-          id?: string
-          metadata?: Json | null
-          source?: string | null
-          status?: Database["public"]["Enums"]["mail_list_status"]
-          unsubscribed_at?: string | null
-          updated_at?: string
-        }
-        Update: {
-          confirmation_token?: string
-          confirmed_at?: string | null
-          created_at?: string
-          email?: string
-          id?: string
-          metadata?: Json | null
-          source?: string | null
-          status?: Database["public"]["Enums"]["mail_list_status"]
-          unsubscribed_at?: string | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
       attendance_events: {
         Row: {
           device_id: string | null
@@ -3663,7 +3624,6 @@ export type Database = {
     Enums: {
       affiliate_status: "pending" | "approved" | "rejected"
       commission_status: "pending" | "paid" | "cancelled"
-      mail_list_status: "pending" | "confirmed" | "unsubscribed"
       paragon_role: "gerente_general" | "supervisor" | "empleado"
     }
     CompositeTypes: {
@@ -3794,7 +3754,6 @@ export const Constants = {
     Enums: {
       affiliate_status: ["pending", "approved", "rejected"],
       commission_status: ["pending", "paid", "cancelled"],
-      mail_list_status: ["pending", "confirmed", "unsubscribed"],
       paragon_role: ["gerente_general", "supervisor", "empleado"],
     },
   },

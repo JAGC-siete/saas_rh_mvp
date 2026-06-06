@@ -25,28 +25,28 @@ export const SEQUENCE_CONTENT: Record<
 > = {
   [SEQUENCE_STEP.WELCOME]: {
     label: 'Welcome',
-    subject: 'Bienvenida: Un nuevo enfoque para tu empresa',
-    text: 'Hola, gracias por unirte. A partir de ahora, quiero que veas este espacio como un recurso para modernizar la gestión de tu negocio...',
+    subject: 'La trampa de \"siempre lo hemos hecho así\"',
+    text: 'Hola, gracias por unirte.\n\nLa mayoría de los negocios no mueren por falta de clientes, sino por la fricción interna. Se quedan atrapados en formas de trabajar desfasadas porque el miedo a \"lo nuevo\" es más fuerte que el deseo de crecer.\n\nEl problema no es la tecnología, sino la creencia de que implementar algo moderno es complejo, lento y arriesgado. Mientras tanto, la empresa sigue perdiendo horas en procesos manuales y errores que un sistema simple podría resolver en segundos.\n\nEn Humano SISU innovamos precisamente para romper esa barrera: soluciones modernas que no requieren que te detengas para implementarlas, sino que te permiten acelerar la gestión de tu personal mientras el negocio sigue operando.\n\nNo permitas que la inercia de \"cómo se hacía antes\" sea la limitación de lo que tu empresa puede llegar a ser hoy.',
   },
   [SEQUENCE_STEP.PAIN_POINT_1]: {
     label: 'Pain Point 1',
-    subject: '¿Por qué nos da miedo digitalizar?',
-    text: 'Hola, muchos gerentes me dicen lo mismo: "Me gustaría automatizar, pero no quiero pasar seis meses implementando un sistema complejo..."',
+    subject: 'El mito de los \"6 meses de implementación\"',
+    text: 'Hola.\n\nHablemos de la mentira más común en el software empresarial: \"Para que esto funcione, primero tenemos que pasar tres meses configurándolo y otros tres entrenando al personal\".\n\nEse es el miedo que mantiene a la mayoría de los negocios atrapados en procesos manuales. Creen que para ganar eficiencia primero deben aceptar un caos operativo.\n\nPero aquí está la verdad: si un sistema requiere que detengas tu negocio para poder implementarlo, entonces el sistema está mal diseñado. La verdadera innovación no es la que te pide tiempo, sino la que te lo devuelve desde el primer día.\n\nEn Humano SISU diseñamos la herramienta para que la curva de aprendizaje sea casi invisible. No se trata de cambiar cómo trabajás, sino de eliminar las tareas repetitivas que te roban la energía para hacer crecer tu empresa.\n\nLa pregunta no es si tenés tiempo para implementar un sistema, sino cuánto tiempo estás perdiendo hoy por no tener uno.',
   },
   [SEQUENCE_STEP.PAIN_POINT_2]: {
     label: 'Pain Point 2',
-    subject: 'El peligro de lo "aproximado"',
-    text: 'Hola, en la gestión de personas, lo que se mide se mejora; lo que se ignora, se deteriora...',
+    subject: 'El costo real de gestionar \"a mano\"',
+    text: 'Hola.\n\nEn la gestión de personas, hay una regla implacable: lo que se mide se mejora, y lo que se ignora, se deteriora.\n\nLa mayoría de las empresas operan bajo el peligro de gestionar todo a mano. Confían en que la memoria del encargado de nómina es perfecta o que el registro de asistencia es \"suficientemente bueno\". \n\nEl problema es que los errores invisibles son los más caros. Un error de cálculo en una prestación, un descuido en el control de horas extras o una falla en el registro de asistencia no se notan hoy, pero explotan en el futuro en forma de demandas laborales, multas gubernamentales o un clima laboral tóxico.\n\nGestionar la operación basándose en la intuición y el papel es jugar a la ruleta rusa con la rentabilidad de tu negocio.\n\nSisu elimina la incertidumbre. Transformamos el \"yo creo que todo está bien\" en \"tengo el dato exacto en tiempo real\". Porque en los negocios, la precisión no es un lujo, es la única forma de dormir tranquilo.',
   },
   [SEQUENCE_STEP.PAIN_POINT_3]: {
     label: 'Pain Point 3',
-    subject: 'Del dato muerto al dato vivo',
-    text: 'Hola, hay un proceso que sigo viendo en miles de empresas y que es un asesino silencioso de productividad: la memoria USB...',
+    subject: 'Tus herramientas actuales te están frenando',
+    text: 'Hola.\n\nHay un proceso que sigo viendo en miles de empresas y que es un asesino silencioso de productividad: el uso de herramientas que fueron diseñadas para la era del papel, pero que hoy solo viven en una pantalla.\n\nMe refiero a esos Excels infinitos, carpetas compartidas que nadie encuentra y el eterno \"estoy revisando el archivo\" que tarda dos horas en llegar a tu escritorio.\n\nEl problema no es que la herramienta no funcione; el problema es que se ha vuelto un ancla. Te obliga a gastar el 80% de tu tiempo en coordinar el dato y solo el 20% en tomar decisiones con ese dato.\n\nSisu no es solo un software de gestión, es un liberador de tiempo. Al centralizar la información y automatizar el flujo, eliminamos el ruido administrativo para que podás enfocarte en lo que realmente mueve la aguja de tu negocio.\n\nSi sentís que pasás más tiempo buscando información que gestionándola, es momento de soltar el ancla.',
   },
   [SEQUENCE_STEP.PAIN_POINT_4]: {
-    label: 'Pain Point 4',
-    subject: 'Cómo empezar a experimentar (sin riesgo)',
-    text: 'Hola, después de hablar sobre la resistencia, la medición y la automatización, la pregunta es: ¿Cómo empezar?',
+    label: 'El Salto al Control Real',
+    subject: '¿Cómo empezar a experimentar (sin riesgo)?',
+    text: 'Hola.\n\nDespués de hablar sobre el miedo a la implementación, el peligro de gestionar a mano y el lastre de las herramientas obsoletas, queda una sola pregunta: ¿Cómo se sale de ahí sin poner en riesgo la operación?\n\nLa mayoría cree que el salto debe ser total y traumático: apagar todo y encender un sistema nuevo. Ese es el camino al fracaso.\n\nLa forma correcta es la experimentación controlada. Empezar con un módulo, validar que el dato es exacto, sentir la liberación de tiempo y luego expandir.\n\nSisu fue diseñado precisamente para este camino. No te pedimos que confíes ciegamente en una promesa, sino que veas la precisión de la herramienta en tu propio negocio.\n\nSi ya te cansaste de luchar contra la fricción administrativa y querés que tu gestión sea tan moderna como el servicio que ofrecés a tus clientes, es momento de dar el paso.\n\nEscribime al privado o activá tu solución en www.humanosisu.net/activar. Hagamos que la gestión de tu personal deje de ser un dolor de cabeza y se convierta en tu ventaja competitiva.',
   },
 }
 

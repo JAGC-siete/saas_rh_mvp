@@ -7,7 +7,7 @@ export default function FreeToolsSection() {
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-8 sm:mb-10">
           <span className="inline-block px-3 py-1 mb-4 text-xs rounded-full bg-cyan-500/20 text-cyan-200 border border-cyan-500/30">
-            Herramientas gratuitas · mismo motor de nómina
+            Herramientas gratuitas
           </span>
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-4">
             Valida deducciones antes de automatizar tu planilla
@@ -28,7 +28,7 @@ export default function FreeToolsSection() {
               <div className="text-xs text-brand-300 mb-1">{item.country}</div>
               <div className="text-lg font-semibold text-white group-hover:text-brand-200">{item.title}</div>
               <div className="text-sm text-brand-200/80 mt-1">{item.subtitle}</div>
-              {'badge' in item && item.badge && (
+              {'badge' in item && typeof item.badge === 'string' && (
                 <div className="mt-3 text-xs text-cyan-300">{item.badge}</div>
               )}
             </Link>
