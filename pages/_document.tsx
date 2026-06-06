@@ -1,26 +1,15 @@
-import Document, {
-  Html,
-  Head,
-  Main,
-  NextScript,
-  type DocumentContext,
-  type DocumentInitialProps,
-} from 'next/document'
+import { Html, Head, Main, NextScript } from 'next/document'
 
-interface MyDocumentProps extends DocumentInitialProps {
-  metaPixelId: string
-}
+/**
+ * Mismo patrón que gtag (AW-…): ID público en el HTML.
+ * Env opcional en build/runtime; fallback al píxel de Events Manager.
+ */
+const META_PIXEL_ID =
+  process.env['META_PIXEL_ID']?.trim() ||
+  process.env['NEXT_PUBLIC_META_PIXEL_ID']?.trim() ||
+  '1167705867436827'
 
-/** Lee en runtime (Railway/Docker); evita inlining vacío en `next build`. */
-function readMetaPixelId(): string {
-  return (
-    process.env['META_PIXEL_ID']?.trim() ||
-    process.env['NEXT_PUBLIC_META_PIXEL_ID']?.trim() ||
-    ''
-  )
-}
-
-export default function MyDocument({ metaPixelId }: MyDocumentProps) {
+export default function Document() {
   return (
     <Html lang="es">
       <Head>
@@ -38,35 +27,31 @@ export default function MyDocument({ metaPixelId }: MyDocumentProps) {
         />
 
         {/* Meta Pixel Code */}
-        {metaPixelId ? (
-          <>
-            <script
-              dangerouslySetInnerHTML={{
-                __html: `
-                  !function(f,b,e,v,n,t,s)
-                  {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-                  n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-                  if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-                  n.queue=[];t=b.createElement(e);t.async=!0;
-                  t.src=v;s=b.getElementsByTagName(e)[0];
-                  s.parentNode.insertBefore(t,s)}(window, document,'script',
-                  'https://connect.facebook.net/en_US/fbevents.js');
-                  fbq('init', ${JSON.stringify(metaPixelId)});
-                  fbq('track', 'PageView');
-                `,
-              }}
-            />
-            <noscript>
-              <img
-                height="1"
-                width="1"
-                style={{ display: 'none' }}
-                alt=""
-                src={`https://www.facebook.com/tr?id=${encodeURIComponent(metaPixelId)}&ev=PageView&noscript=1`}
-              />
-            </noscript>
-          </>
-        ) : null}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              !function(f,b,e,v,n,t,s)
+              {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+              n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+              if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+              n.queue=[];t=b.createElement(e);t.async=!0;
+              t.src=v;s=b.getElementsByTagName(e)[0];
+              s.parentNode.insertBefore(t,s)}(window, document,'script',
+              'https://connect.facebook.net/en_US/fbevents.js');
+              fbq('init', ${JSON.stringify(META_PIXEL_ID)});
+              fbq('track', 'PageView');
+            `,
+          }}
+        />
+        <noscript>
+          <img
+            height="1"
+            width="1"
+            style={{ display: 'none' }}
+            alt=""
+            src={`https://www.facebook.com/tr?id=${encodeURIComponent(META_PIXEL_ID)}&ev=PageView&noscript=1`}
+          />
+        </noscript>
 
         <link rel="icon" href="/logo-humano-sisu.png" />
         <link rel="shortcut icon" href="/logo-humano-sisu.png" />
@@ -90,9 +75,4 @@ export default function MyDocument({ metaPixelId }: MyDocumentProps) {
       </body>
     </Html>
   )
-}
-
-MyDocument.getInitialProps = async (ctx: DocumentContext): Promise<MyDocumentProps> => {
-  const initialProps = await Document.getInitialProps(ctx)
-  return { ...initialProps, metaPixelId: readMetaPixelId() }
 }
