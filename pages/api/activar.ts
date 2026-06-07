@@ -15,6 +15,7 @@ import {
   parseMetaTrackingPayload,
   sendMetaWebsiteConversionFireAndForget,
 } from '../../lib/analytics/metaCapiServer'
+import { enrollMarketingLead } from '../../lib/marketing/enroll-lead'
 
 export const config = {
   api: {
@@ -183,6 +184,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     console.log('✅ Datos guardados exitosamente en activaciones')
+
+    void enrollMarketingLead({
+      email: contactoEmail.trim().toLowerCase(),
+      source: 'activar',
+    }).catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      console.warn('⚠️ Marketing enroll failed after activar (non-blocking):', message)
+    })
 
     // Crear entorno de trial (Company + Owner + Demo data)
     console.log('🏗️ Creando entorno de trial...')

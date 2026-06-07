@@ -19,6 +19,51 @@ export const WATCHMAN_LAST_STEP = SEQUENCE_STEP.PAIN_POINT_4
 /** Leads with current_step >= this value have finished the sequence. */
 export const SEQUENCE_COMPLETE_STEP = WATCHMAN_LAST_STEP + 1
 
+export type LeadSourceKind = 'suscripcion' | 'ventas' | 'activar'
+
+export const WELCOME_GREETINGS: Record<LeadSourceKind, string> = {
+  suscripcion: 'Hola, gracias por unirte.',
+  ventas: 'Hola, estás más cerca que nunca.',
+  activar: 'Hola, tu intuición es acertada.',
+}
+
+export const WELCOME_BODY_AFTER_GREETING =
+  'La mayoría de los negocios no mueren por falta de clientes, sino por la fricción interna. Se quedan atrapados en formas de trabajar desfasadas porque el miedo a "lo nuevo" es más fuerte que el deseo de crecer.\n\nEl problema no es la tecnología, sino la creencia de que implementar algo moderno es complejo, lento y arriesgado. Mientras tanto, la empresa sigue perdiendo horas en procesos manuales y errores que un sistema simple podría resolver en segundos.\n\nEn Humano SISU innovamos precisamente para romper esa barrera: soluciones modernas que no requieren que te detengas para implementarlas, sino que te permiten acelerar la gestión de tu personal mientras el negocio sigue operando.\n\nNo permitas que la inercia de "cómo se hacía antes" sea la limitación de lo que tu empresa puede llegar a ser hoy.'
+
+const SOURCE_SPECIFICITY: Record<LeadSourceKind, number> = {
+  suscripcion: 1,
+  ventas: 2,
+  activar: 3,
+}
+
+/** Maps raw source strings (API, backfill, landing) to a greeting kind. */
+export function normalizeLeadSource(raw?: string | null): LeadSourceKind {
+  const s = (raw ?? '').trim().toLowerCase()
+  if (!s) return 'suscripcion'
+  if (s === 'activar' || s.startsWith('activaciones:') || s.startsWith('activar:')) {
+    return 'activar'
+  }
+  if (s === 'ventas' || s.startsWith('ventas:')) {
+    return 'ventas'
+  }
+  return 'suscripcion'
+}
+
+export function buildWelcomeText(source?: string | null): string {
+  const kind = normalizeLeadSource(source)
+  return `${WELCOME_GREETINGS[kind]}\n\n${WELCOME_BODY_AFTER_GREETING}`
+}
+
+/** Prefer more specific sources when updating an existing lead (activar > ventas > suscripcion). */
+export function isMoreSpecificSource(
+  incoming: string | null | undefined,
+  existing: string | null | undefined
+): boolean {
+  const incomingKind = normalizeLeadSource(incoming)
+  const existingKind = normalizeLeadSource(existing)
+  return SOURCE_SPECIFICITY[incomingKind] > SOURCE_SPECIFICITY[existingKind]
+}
+
 export const SEQUENCE_CONTENT: Record<
   SequenceStep,
   { label: string; subject: string; text: string }
@@ -26,7 +71,7 @@ export const SEQUENCE_CONTENT: Record<
   [SEQUENCE_STEP.WELCOME]: {
     label: 'Welcome',
     subject: 'La trampa de \"siempre lo hemos hecho así\"',
-    text: 'Hola, gracias por unirte.\n\nLa mayoría de los negocios no mueren por falta de clientes, sino por la fricción interna. Se quedan atrapados en formas de trabajar desfasadas porque el miedo a \"lo nuevo\" es más fuerte que el deseo de crecer.\n\nEl problema no es la tecnología, sino la creencia de que implementar algo moderno es complejo, lento y arriesgado. Mientras tanto, la empresa sigue perdiendo horas en procesos manuales y errores que un sistema simple podría resolver en segundos.\n\nEn Humano SISU innovamos precisamente para romper esa barrera: soluciones modernas que no requieren que te detengas para implementarlas, sino que te permiten acelerar la gestión de tu personal mientras el negocio sigue operando.\n\nNo permitas que la inercia de \"cómo se hacía antes\" sea la limitación de lo que tu empresa puede llegar a ser hoy.',
+    text: buildWelcomeText('suscripcion'),
   },
   [SEQUENCE_STEP.PAIN_POINT_1]: {
     label: 'Pain Point 1',

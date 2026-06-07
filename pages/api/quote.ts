@@ -30,6 +30,7 @@ import {
   parseMetaTrackingPayload,
   sendMetaWebsiteConversionFireAndForget,
 } from '../../lib/analytics/metaCapiServer'
+import { enrollMarketingLead } from '../../lib/marketing/enroll-lead'
 
 const FALLBACK_CURRENCY: CurrencyCode = 'HNL'
 const FALLBACK_COUPON_CODE = 'gastro2026'
@@ -348,6 +349,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
     }
 
     const quoteId = inserted?.id as string
+
+    void enrollMarketingLead({ email: contactEmail, source: 'ventas' }).catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      logger.warn('Marketing enroll failed after ventas quote (non-blocking)', {
+        email: maskEmail(contactEmail),
+        error: message,
+      })
+    })
+
     const sentAt = new Date()
     const quotedTotalForUrgency = billingModality === 'monthly' ? monthlyTotal : annualTotal
     const urgencyOffer = computeUrgencyOffer({ quotedTotal: quotedTotalForUrgency, sentAt })
