@@ -28,7 +28,7 @@ export const WELCOME_GREETINGS: Record<LeadSourceKind, string> = {
 }
 
 export const WELCOME_BODY_AFTER_GREETING =
-  'La mayoría de los negocios no mueren por falta de clientes, sino por la fricción interna. Se quedan atrapados en formas de trabajar desfasadas porque el miedo a "lo nuevo" es más fuerte que el deseo de crecer.\n\nEl problema no es la tecnología, sino la creencia de que implementar algo moderno es complejo, lento y arriesgado. Mientras tanto, la empresa sigue perdiendo horas en procesos manuales y errores que un sistema simple podría resolver en segundos.\n\nEn Humano SISU innovamos precisamente para romper esa barrera: soluciones modernas que no requieren que te detengas para implementarlas, sino que te permiten acelerar la gestión de tu personal mientras el negocio sigue operando.\n\nNo permitas que la inercia de "cómo se hacía antes" sea la limitación de lo que tu empresa puede llegar a ser hoy.'
+  'La mayoría de los negocios mueren por falta de clientes. Y sucede que se quedan atrapados, limitados mentalmente con el epitafio "la forma en que trabajamos es la mejor".\n\nEl problema no siempre es la economía, sino la creencia de que implementar algo moderno, nuevo o una nueva tecnología es complejo, la curva de aprendizaje alta y arriesgado. Sin embargo la empresa subestima las horas invertidas en procesos manuales propensos a errores que un sistema podría resolver en segundos.\n\nNota mental: No permitir que la inercia del "Siempre lo hemos hecho así" sea la limitante de lo que mi negocio podría llegar a ser.'
 
 const SOURCE_SPECIFICITY: Record<LeadSourceKind, number> = {
   suscripcion: 1,

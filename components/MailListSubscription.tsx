@@ -65,7 +65,7 @@ export default function MailListSubscription({ source = 'landing', className = '
           source,
         })
         setStatus('success')
-        setMessage('¡Perfecto! Ya estás dentro. Revisa tu correo para el primer consejo de optimización.')
+        setMessage('¡Te estábamos esperando!')
         setEmail('')
       } else {
         setStatus('error')
