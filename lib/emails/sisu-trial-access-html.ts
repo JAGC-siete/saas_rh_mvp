@@ -4,6 +4,8 @@
  * - lead_invite: one-time invite for migrated marketing leads without trial yet.
  */
 
+import { MARKETING_UNSUBSCRIBE_FOOTER_TEXT } from '../marketing/unsubscribe'
+
 export const SISU_TRIAL_WARNING_TEXT =
   '⚠️ Acceso exclusivo y limitado: prueba gratuita por 7 días. SISU se integra con un biométrico en tiempo real y libera a tu equipo para enfocarse en lo que mueve tu empresa.'
 
@@ -209,7 +211,7 @@ function featuresSectionTitle(input: BuildSisuTrialAccessEmailHtmlInput): string
 
 function footerBlock(input: BuildSisuTrialAccessEmailHtmlInput): string {
   const unsubscribeLine = input.unsubscribeUrl
-    ? `<p style="margin-top: 12px;"><a href="${escapeHtml(input.unsubscribeUrl)}" style="color: #94a3b8;">Darte de baja de estos correos</a></p>`
+    ? `<p style="margin-top: 12px;">${MARKETING_UNSUBSCRIBE_FOOTER_TEXT} <a href="${escapeHtml(input.unsubscribeUrl)}" style="color: #94a3b8;">${escapeHtml(input.unsubscribeUrl)}</a></p>`
     : ''
 
   return `

@@ -12,7 +12,10 @@ export function buildUnsubscribeUrl(token: string): string {
   return `${getMarketingSiteUrl()}/api/mail-list/unsubscribe?token=${encodeURIComponent(token)}`
 }
 
+export const MARKETING_UNSUBSCRIBE_FOOTER_TEXT =
+  'La serie contiene únicamente 4 correos, pero podes dejar de recibirlos aquí:'
+
 export function appendUnsubscribeFooter(body: string, unsubscribeToken: string): string {
   const url = buildUnsubscribeUrl(unsubscribeToken)
-  return `${body.trim()}\n\n---\nLa serie contiene únicamente 4 correos, pero podes dejar de recibirlos aquí:\n${url}`
+  return `${body.trim()}\n\n---\n${MARKETING_UNSUBSCRIBE_FOOTER_TEXT}\n${url}`
 }

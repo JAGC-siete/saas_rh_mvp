@@ -41,7 +41,8 @@ describe('sisu-trial-access-html', () => {
     assert.ok(html.includes(SISU_TRIAL_WARNING_TEXT))
     assert.ok(!html.includes('Credenciales seguras'))
     assert.ok(!html.includes('Contraseña temporal'))
-    assert.ok(html.includes('Darte de baja'))
+    assert.ok(html.includes('La serie contiene únicamente 4 correos'))
+    assert.ok(!html.includes('Darte de baja de estos correos'))
   })
 
   it('warning text no longer mentions cambiar contraseña', () => {
