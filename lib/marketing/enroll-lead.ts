@@ -56,11 +56,6 @@ async function hasWelcomeInLedger(
   return (count ?? 0) > 0
 }
 
-function resolveStoredSource(incoming: string, existing: string | null | undefined): string {
-  if (!existing) return incoming
-  return isMoreSpecificSource(incoming, existing) ? incoming : existing
-}
-
 export async function enrollMarketingLead(
   input: EnrollMarketingLeadInput
 ): Promise<EnrollMarketingLeadResult> {
@@ -86,7 +81,10 @@ export async function enrollMarketingLead(
     throw new Error('Database error fetching marketing lead')
   }
 
-  if (existing?.status === 'completed' || (existing?.current_step ?? 0) >= SEQUENCE_COMPLETE_STEP) {
+  if (
+    existing &&
+    (existing.status === 'completed' || existing.current_step >= SEQUENCE_COMPLETE_STEP)
+  ) {
     return { leadId: existing.id, welcomeSent: false, skippedReason: 'completed' }
   }
 
