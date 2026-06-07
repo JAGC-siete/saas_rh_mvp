@@ -12,6 +12,8 @@ export type SendSequenceEmailInput = {
   unsubscribeToken: string
   /** Used only for Step 0 Welcome greeting line. */
   source?: string
+  /** Step 0 only: overrides source-based greeting (bulk manual send). */
+  welcomeTextOverride?: string
   dryRun?: boolean
 }
 
@@ -21,10 +23,14 @@ export async function sendSequenceEmail(input: SendSequenceEmailInput): Promise<
     throw new Error(`Unknown sequence step: ${input.step}`)
   }
 
-  const bodyText =
-    input.step === SEQUENCE_STEP.WELCOME && input.source
-      ? buildWelcomeText(input.source)
-      : content.text
+  let bodyText = content.text
+  if (input.step === SEQUENCE_STEP.WELCOME) {
+    if (input.welcomeTextOverride) {
+      bodyText = input.welcomeTextOverride
+    } else if (input.source) {
+      bodyText = buildWelcomeText(input.source)
+    }
+  }
 
   const text = appendUnsubscribeFooter(bodyText, input.unsubscribeToken)
 

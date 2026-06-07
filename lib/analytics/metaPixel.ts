@@ -3,7 +3,7 @@
  *
  * Eventos:
  * - /activar  → StartTrial
- * - /ventas   → Lead
+ * - /ventas   → SubmitApplication
  * - /suscripcion → CompleteRegistration
  *
  * Píxel base en pages/_document.tsx.
@@ -11,7 +11,7 @@
 
 export const META_PIXEL_ID = '833142547420951'
 
-type MetaStandardEvent = 'Lead' | 'CompleteRegistration' | 'StartTrial'
+type MetaStandardEvent = 'SubmitApplication' | 'CompleteRegistration' | 'StartTrial'
 
 interface MetaAdvancedMatching {
   em?: string
@@ -144,7 +144,7 @@ export function trackActivationTrialSubmit(params: {
   )
 }
 
-/** Cotización comercial en /ventas */
+/** Solicitud de cotización / acceso al servicio en /ventas */
 export function trackQuotationSubmit(params: {
   eventId: string
   email?: string
@@ -157,7 +157,7 @@ export function trackQuotationSubmit(params: {
   currency?: string
 }): void {
   fireMetaPixelEvent(
-    'Lead',
+    'SubmitApplication',
     {
       content_name: 'ventas',
       content_category: params.countryCode || 'unknown',

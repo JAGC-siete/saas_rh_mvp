@@ -524,7 +524,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse<QuotationRespon
       quote.billing_modality === 'monthly' ? quote.monthly_total : quote.annual_total
     sendMetaWebsiteConversionFireAndForget({
       req,
-      eventName: 'Lead',
+      eventName: 'SubmitApplication',
       tracking: metaTracking,
       userData: {
         email: contactEmail,

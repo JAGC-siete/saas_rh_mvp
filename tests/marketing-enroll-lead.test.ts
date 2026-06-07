@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  buildBulkManualWelcomeText,
   buildWelcomeText,
   isMoreSpecificSource,
   normalizeLeadSource,
@@ -56,6 +57,13 @@ describe('marketing welcome greetings by source', () => {
     assert.equal(isMoreSpecificSource('ventas', 'suscripcion-page'), true)
     assert.equal(isMoreSpecificSource('suscripcion-page', 'activar'), false)
     assert.equal(isMoreSpecificSource('ventas', 'ventas'), false)
+  })
+
+  it('buildBulkManualWelcomeText uses personalized opener for one-time bulk send', () => {
+    const text = buildBulkManualWelcomeText('Delia')
+    assert.ok(text.startsWith('Hola Delia, me dejaste en el olvido.'))
+    assert.ok(text.includes(WELCOME_BODY_AFTER_GREETING))
+    assert.ok(!text.includes('gracias por unirte'))
   })
 })
 

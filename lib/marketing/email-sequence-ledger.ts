@@ -54,6 +54,12 @@ export function buildWelcomeText(source?: string | null): string {
   return `${WELCOME_GREETINGS[kind]}\n\n${WELCOME_BODY_AFTER_GREETING}`
 }
 
+/** One-time manual bulk send (Jul 2026): personalized opener, shared body. */
+export function buildBulkManualWelcomeText(nombre: string): string {
+  const displayName = nombre.trim() || 'Equipo'
+  return `Hola ${displayName}, me dejaste en el olvido.\n\n${WELCOME_BODY_AFTER_GREETING}`
+}
+
 /** Prefer more specific sources when updating an existing lead (activar > ventas > suscripcion). */
 export function isMoreSpecificSource(
   incoming: string | null | undefined,
